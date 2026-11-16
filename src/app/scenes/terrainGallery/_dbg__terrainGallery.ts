@@ -31,6 +31,11 @@ import {
 } from './_dbg__terrainGallerySplatting';
 import { clearRulesSelection, getRulesSections, startRulesTab } from './_dbg__terrainGalleryRules';
 import {
+  clearCliffsSelection,
+  getCliffsSections,
+  startCliffsTab,
+} from './_dbg__terrainGalleryCliffs';
+import {
   clearGeneratorSelection,
   getProceduralSections,
   refreshProceduralFigures,
@@ -51,6 +56,7 @@ import {
   SPLATTING_BLOCKS,
 } from './splattingRow';
 import { getRulesAppId, getRulesTerrain, RULES_BLOCKS, setRulesDebugView } from './rulesRow';
+import { CLIFFS_BLOCK_Y, CLIFFS_BLOCKS, getCliffsAppId, setCliffsDebugView } from './cliffsRow';
 import {
   getProceduralBakeSettings,
   PROCEDURAL_BLOCKS,
@@ -116,8 +122,6 @@ let selectedSetId: string | null = null;
 /** The latest packing apply: an older one that finishes later is dropped */
 let packingRequest = 0;
 
-/** Every block the checker covers: the library's, the Anti-tiling row's, the Splatting row's, the
- * Rules row's and the Procedural row's (its key names its checker's mesh) */
 /** A block the checker covers: its key, where it stands (`y` only when lifted) and its geometry */
 type CheckerBlock = { key: string; x: number; y?: number; z: number; geometryId: string };
 
@@ -143,6 +147,13 @@ const CHECKER_BLOCKS: CheckerBlock[] = [
     get y() {
       return getRulesTerrain().y;
     },
+    z,
+    geometryId,
+  })),
+  ...CLIFFS_BLOCKS.map(({ key, x, z, geometryId }) => ({
+    key: `cliffs_${key}`,
+    x,
+    y: CLIFFS_BLOCK_Y,
     z,
     geometryId,
   })),
@@ -211,8 +222,8 @@ const applyDebugViewAsync = async () => {
   if (startedOn.isCurrent) applyMaterial();
 };
 
-/** Every library block (and wall) in the material mode, and the Anti-tiling, Splatting and Rules
- * rows in the view */
+/** Every library block (and wall) in the material mode, and the Anti-tiling, Splatting, Rules and
+ * Cliffs rows in the view */
 const applyMaterial = () => {
   for (const block of GALLERY_BLOCKS) {
     swapSurface(getBlockAppId(block.setId), block.setId, false);
@@ -221,6 +232,7 @@ const applyMaterial = () => {
   setAntiTilingRowState({ debugView: state.debugView });
   setSplattingDebugView(state.debugView);
   setRulesDebugView(state.debugView);
+  setCliffsDebugView(state.debugView);
 };
 
 /**
@@ -307,6 +319,7 @@ const getOtherAppIds = () => [
   ...ANTI_TILING_BLOCKS.map(({ mode }) => getAntiTilingAppId(mode)),
   ...SPLATTING_BLOCKS.map(({ key }) => getSplattingAppId(key)),
   ...RULES_BLOCKS.map(({ key }) => getRulesAppId(key)),
+  ...CLIFFS_BLOCKS.map(({ key }) => getCliffsAppId(key)),
   ...CHECKER_BLOCKS.map(({ key }) => getCheckerAppId(key)),
 ];
 
@@ -317,6 +330,7 @@ const flyToBlock = (block: GalleryBlock) => {
   clearAntiTilingSelection();
   clearSplattingSelection();
   clearRulesSelection();
+  clearCliffsSelection();
   flyToGalleryBlock(block);
 };
 
@@ -343,6 +357,7 @@ const proceduralOpts: ProceduralSectionsOpts = {
     clearAntiTilingSelection();
     clearSplattingSelection();
     clearRulesSelection();
+    clearCliffsSelection();
   },
   getOtherAppIds,
 };
@@ -363,6 +378,7 @@ export const createTerrainGalleryTab = () => {
   startAntiTilingTab();
   startSplattingTab();
   startRulesTab();
+  startCliffsTab();
   const endProceduralTab = startProceduralTab(proceduralOpts);
   addGalleryExitCleanup(() => {
     thisVisit.isCurrent = false;
@@ -403,7 +419,7 @@ export const createTerrainGalleryTab = () => {
             label: 'Debug view',
             kind: 'select',
             options: DEBUG_VIEWS.map((option) => ({ ...option })),
-            hint: 'The terrain material’s debug view on the library (not the baseline), the Anti-tiling, Splatting and Rules rows: texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048), the shaded normal in world space, the layers’ weights (layer 0 white, 1 red, 2 green, 3 blue, 4 yellow, …), the projections’ planes (X red, Y green, Z blue; a slope gate’s band striped) or the material’s own texture fetches a pixel (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more magenta)',
+            hint: 'The terrain material’s debug view on the library (not the baseline), the Anti-tiling, Splatting, Rules and Cliffs rows: texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048), the shaded normal in world space, the layers’ weights (layer 0 white, 1 red, 2 green, 3 blue, 4 yellow, …), the projections’ planes (X red, Y green, Z blue; a slope gate’s band striped) or the material’s own texture fetches a pixel (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more magenta)',
             onChange: () => void applyDebugViewAsync(),
           },
           {
@@ -442,6 +458,7 @@ export const createTerrainGalleryTab = () => {
         clearGeneratorSelection();
         clearSplattingSelection();
         clearRulesSelection();
+        clearCliffsSelection();
       }) as DebuggerTabSection<GalleryTabState>[]),
       // Its fields bind their own targets, none of this tab's state keys
       ...(getSplattingSections(TAB_ID, () => {
@@ -449,6 +466,7 @@ export const createTerrainGalleryTab = () => {
         clearGeneratorSelection();
         clearAntiTilingSelection();
         clearRulesSelection();
+        clearCliffsSelection();
       }) as DebuggerTabSection<GalleryTabState>[]),
       // Its fields bind their own targets, none of this tab's state keys
       ...(getRulesSections(TAB_ID, () => {
@@ -456,6 +474,15 @@ export const createTerrainGalleryTab = () => {
         clearGeneratorSelection();
         clearAntiTilingSelection();
         clearSplattingSelection();
+        clearCliffsSelection();
+      }) as DebuggerTabSection<GalleryTabState>[]),
+      // Its fields bind their own targets, none of this tab's state keys
+      ...(getCliffsSections(TAB_ID, () => {
+        selectedSetId = null;
+        clearGeneratorSelection();
+        clearAntiTilingSelection();
+        clearSplattingSelection();
+        clearRulesSelection();
       }) as DebuggerTabSection<GalleryTabState>[]),
       // Its fields bind their own targets, none of this tab's state keys
       ...(getProceduralSections(proceduralOpts) as DebuggerTabSection<GalleryTabState>[]),

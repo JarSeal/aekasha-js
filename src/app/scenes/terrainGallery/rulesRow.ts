@@ -2,7 +2,8 @@
 // one generated terrain (rolling hills and a step whose face is a cliff band), their layers laid by
 // the terrain material's procedural rules: grass everywhere, rocks by slope (broken up by the
 // macro noise's A), snow above a height on the slopes that face north (−z) and on flat tops (R
-// breaking its edge), cliffs on the steep faces. The left block is `RULES` alone; the right one
+// breaking its edge), cliffs on the steep faces (slope-gated `TRIPLANAR`, p305 Phase 5: planar
+// tiling streaked them). The left block is `RULES` alone; the right one
 // paints a sandy path and mud in the hollows into a splat map (`paintedLayers: 3`, one map: R
 // sand, G mud) under the same rules (`SPLAT_MAP_AND_RULES`). Code route materials, storage `AUTO`:
 // the rules block binds its 4 sets' 8 textures and the noise texture (`SEPARATE`), the combo's 6
@@ -25,6 +26,7 @@ import {
   createTerrainMaterial,
   getTerrainMaterialProps,
   type TerrainMaterialConfig,
+  type TerrainProjection,
 } from 'aekasha/toolkit/terrain';
 import { BLOCK_GAP, NO_SHADOWS, setMaterialUniform, type GalleryDebugView } from './galleryBlocks';
 
@@ -170,10 +172,18 @@ const getRules = (first: number): TerrainRule[] => [
   { layer: first + 2, slope: { min: values.cliffSlope, softness: 6 } },
 ];
 
+/**
+ * The cliffs' layer's projection (p305 Phase 5): planar world tiling streaks on its steep faces, so
+ * it's projected past the gate (the other layers lie on gentler slopes: planar)
+ */
+const CLIFF_PROJECTION: TerrainProjection = { mode: 'TRIPLANAR', slopeGate: [35, 50] };
+
 /** A block's code route config: its sets and rules, the combo's splat map; storage `AUTO` */
 const getBlockConfig = (block: RulesBlock): TerrainMaterialConfig => {
   const id = `terrainGalleryRules_${block.key}`;
-  const layers = block.sets.map((set) => ({ set }));
+  const layers = block.sets.map((set) =>
+    set === 'cliffs01' ? { set, projection: CLIFF_PROJECTION } : { set }
+  );
   if (block.key === 'RULES') {
     return { id, layers, blend: { source: 'RULES', rules: getRules(1) } };
   }

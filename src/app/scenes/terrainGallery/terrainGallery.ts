@@ -19,6 +19,7 @@ import {
 import { ANTI_TILING_ROW_BOUNDS, createAntiTilingRow } from './antiTilingRow';
 import { createSplattingRow, SPLATTING_ROW_BOUNDS } from './splattingRow';
 import { createRulesRow, RULES_ROW_BOUNDS } from './rulesRow';
+import { CLIFFS_ROW_BOUNDS, createCliffsRow } from './cliffsRow';
 import {
   createProceduralRowAsync,
   PROCEDURAL_ROW_DEPTH,
@@ -54,8 +55,12 @@ import {
  * - **The Rules row** (`rulesRow.ts`, p305 Phase 4): two 64 × 64 m blocks in front of the library on
  *   one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks by
  *   slope, snow by height and facing, cliffs on steep faces): the rules alone, and a splat map's
- *   sandy path and mud under the same rules (its 6 sets a set array the scene lists); the tab
- *   tunes the rules.
+ *   sandy path and mud under the same rules (its 6 sets a set array the scene lists); the cliffs'
+ *   layer is slope-gated `TRIPLANAR` (p305 Phase 5); the tab tunes the rules.
+ * - **The Cliffs row** (`cliffsRow.ts`, p305 Phase 5): four 40 × 40 m blocks in front of the Rules
+ *   row on one generated mesa (its face about 48° on one side, 85° on the other), `cliffs01` in
+ *   each projection: `PLANAR`, `BIPLANAR`, `TRIPLANAR` and slope-gated `TRIPLANAR`; the tab
+ *   switches the normal blend and the gated block's mode and tunes the sharpness and the gate.
  * - **The Procedural row** (`proceduralRow.ts`): five rows of two blocks 8 m right of the library,
  *   a generator each (`PROCEDURAL_BLOCKS`: sand, mud, rocks and strata, snow and ice, grass and
  *   concrete from the back), baked during the load (`bakeSurfaceGenerator`, 1024² `LITE`: the
@@ -168,17 +173,22 @@ export const scene = async () => {
     for (const cleanup of exitCleanups.splice(0)) cleanup();
   });
   // The ground under the library (centred on x = 0), the Procedural row right of it, the
-  // Splatting row left of it, the Anti-tiling row behind it and the Rules row in front
+  // Splatting row left of it, the Anti-tiling row behind it, the Rules row in front and the Cliffs
+  // row in front of that
   const left = Math.min(
     -(ROWS[0].length * BLOCK_PITCH) / 2 - BLOCK_GAP / 2,
     ANTI_TILING_ROW_BOUNDS.minX - BLOCK_GAP,
-    SPLATTING_ROW_BOUNDS.minX - BLOCK_GAP
+    SPLATTING_ROW_BOUNDS.minX - BLOCK_GAP,
+    CLIFFS_ROW_BOUNDS.minX - BLOCK_GAP
   );
-  const right = Math.max(PROCEDURAL_ROW_EDGE_X, ANTI_TILING_ROW_BOUNDS.maxX) + BLOCK_GAP;
+  const right =
+    Math.max(PROCEDURAL_ROW_EDGE_X, ANTI_TILING_ROW_BOUNDS.maxX, CLIFFS_ROW_BOUNDS.maxX) +
+    BLOCK_GAP;
   const front = Math.max(
     (Math.max(ROWS.length * BLOCK_PITCH, PROCEDURAL_ROW_DEPTH + BLOCK_GAP) + BLOCK_GAP) / 2,
     SPLATTING_ROW_BOUNDS.maxZ + BLOCK_GAP,
-    RULES_ROW_BOUNDS.maxZ + BLOCK_GAP
+    RULES_ROW_BOUNDS.maxZ + BLOCK_GAP,
+    CLIFFS_ROW_BOUNDS.maxZ + BLOCK_GAP
   );
   const back = ANTI_TILING_ROW_BOUNDS.minZ - BLOCK_GAP;
   createMeshEntity(
@@ -202,6 +212,7 @@ export const scene = async () => {
   createAntiTilingRow();
   createSplattingRow();
   createRulesRow();
+  createCliffsRow();
   await createProceduralRowAsync(addGalleryExitCleanup);
 
   // Debug env only: a dynamic import, so the tab's code isn't in a production build. It applies
