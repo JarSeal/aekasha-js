@@ -69,6 +69,7 @@ const stubs = vi.hoisted(() => ({
   materials: new Map<string, MeshStandardNodeMaterial>(),
   variants: [] as { id: string; overrides: unknown }[],
   warnings: [] as string[],
+  logs: [] as string[],
   renderer: null as unknown,
   sets: {} as Record<string, { defaultPacking: string }>,
   // A live layer's bundle's set, and the loaded generators (p305 Phase 8)
@@ -88,6 +89,7 @@ vi.mock('aekasha', async (importOriginal) => ({
   IS_DEBUG_ENV: true,
   getRenderer: () => stubs.renderer,
   lwarn: (message: string) => stubs.warnings.push(message),
+  llog: (message: string) => stubs.logs.push(message),
   getMaterial: (id: string) => stubs.materials.get(id),
   getMaterialVariant: (id: string, overrides: unknown) => {
     stubs.variants.push({ id, overrides });
@@ -856,17 +858,21 @@ describe('setupTerrainMaterial: storage', () => {
     expect(samples.filter((sample) => sample.depthNode?.value === 1)).toHaveLength(2 * 3);
   });
 
-  it('refuses both storages at once, a non-array layers input and another layer count', () => {
+  it('refuses a non-array layers input, another layer count, and an array no layer takes', () => {
     const define = { layers: layersOf(2), blend: { source: 'VERTEX_COLOR' } };
-    expect(() => build(define, { layers: makeArrayBundle(2), layer0: makeBundle() })).toThrow(
-      /Inputs "layers" .* and "layer0" .* are both given/
-    );
     expect(() => build(define, { layers: makeBundle() })).toThrow(
       /Input "layers" isn't a texture set array/
     );
     expect(() => build(define, { layers: makeArrayBundle(3) })).toThrow(
-      /Input "layers" has 3 layers, staticDefines.terrain.layers 2/
+      /Input "layers" has 3 layers, and 2 layers take theirs from it/
     );
+    // A layer with its own input takes none of the array's (D9's mixed sources)
+    expect(() => build(define, { layers: makeArrayBundle(2), layer0: makeBundle() })).toThrow(
+      /Input "layers" has 2 layers, and 1 layers take theirs from it/
+    );
+    expect(() =>
+      build(define, { layers: makeArrayBundle(1), layer0: makeBundle(), layer1: makeBundle() })
+    ).toThrow(/Input "layers" has no layer to hold/);
   });
 
   it("throws over the texture budget, naming what's bound, by the renderer's limit", () => {
@@ -1350,13 +1356,108 @@ describe('live layers (p305 Phase 8)', () => {
     expect(countMethod(minimal, 'dFdx')).toBeGreaterThan(0);
   });
 
-  it("refuses a live layer on a set array's layer, and a set whose generator isn't loaded", () => {
-    expect(() => build({ layers: [{}, live], ...painted }, { layers: makeArrayBundle(2) })).toThrow(
-      /Layer 1 is live \(source PROCEDURAL_LIVE\): it takes its own input "layer1"/
+  it("takes a live layer's own input beside a set array; refuses an unloaded generator", () => {
+    const define = { layers: [{}, live], ...painted };
+    expect(() => build(define, { layers: makeArrayBundle(2) })).toThrow(
+      /Input "layers" has 2 layers, and 1 layers take theirs from it/
     );
+    expect(() => build(define, { layers: makeArrayBundle(1) })).toThrow(/Missing input "layer1"/);
+    build(define, { layers: makeArrayBundle(1), layer1: makeLiveBundle() });
+    expect(builds).toHaveLength(1);
     stubs.generators.clear();
     expect(() =>
       build({ layers: [{}, live], ...painted }, { layer0: makeBundle(), layer1: makeLiveBundle() })
     ).toThrow(/the generator "testMaterialRipples" of the texture set "liveRipples" isn't loaded/);
+  });
+});
+
+describe("mixed sources: a set array's layers and layers of their own inputs (p305 D9)", () => {
+  const vertexRgba = { blend: { source: 'VERTEX_COLOR', vertexColor: { layout: 'RGBA' } } };
+
+  beforeEach(() => {
+    stubs.renderer = null;
+  });
+
+  it("samples the array's layers at their place in it and the others' own inputs", () => {
+    const inputs = { layers: makeArrayBundle(3), layer1: makeBundle() };
+    const material = build({ layers: layersOf(4), ...vertexRgba }, inputs);
+    // Four layers of two LITE slots each, dense
+    expect(countSamples(material, inputs)).toBe(8);
+    // The budget counts the arrays and the own input's slots
+    expect(() =>
+      build(
+        { layers: layersOf(4), ...vertexRgba, reservedTextures: 13 },
+        { layers: makeArrayBundle(3), layer1: makeBundle() }
+      )
+    ).toThrow(
+      'layers (arrays albedoRough, normalHeight): 2; layer1 (albedoRough, normalHeight each): 2'
+    );
+  });
+
+  it("keeps the slots to the array's layers and samples the others beside them", () => {
+    const sampled = (maxLayers: number, inputs: Record<string, unknown>) =>
+      countSamples(
+        build({ layers: layersOf(4), ...vertexRgba, sparse: { maxLayers } }, inputs),
+        inputs
+      );
+    // Top-2 of the array's three, layer 3 beside them: three layers' samples
+    expect(sampled(2, { layers: makeArrayBundle(3), layer3: makeBundle() })).toBe(6);
+    // Top-3 keeps all three: every layer at its own index
+    expect(sampled(3, { layers: makeArrayBundle(3), layer3: makeBundle() })).toBe(8);
+    // DOMINANT samples the array's layers in slots however many it keeps
+    const dominant = { mode: 'HEX', apply: 'DOMINANT' };
+    const inputs = { layers: makeArrayBundle(3), layer0: makeBundle() };
+    const material = build({ layers: layersOf(4), ...vertexRgba, antiTiling: dominant }, inputs);
+    expect(getUniformKeys(material)).toContain('terrain_l1_farScale');
+  });
+
+  it('builds the debug views over the slots and the layers beside them', async () => {
+    expect(await loadTerrainDebugViewsAsync()).toBe(true);
+    for (const debugView of ['WEIGHTS', 'LAYER_COUNT', 'TAPS'] as const) {
+      const material = build(
+        { layers: layersOf(4), ...vertexRgba, sparse: { maxLayers: 2 }, debugView },
+        { layers: makeArrayBundle(3), layer3: makeBundle() }
+      );
+      expect(material.emissiveNode, debugView).toBeTruthy();
+    }
+  });
+
+  it("gives the code route's procedural sets and live layers their own inputs, logged", () => {
+    stubs.logs.length = 0;
+    stubs.sets = {
+      grass01: { defaultPacking: 'LITE' },
+      rocks01: { defaultPacking: 'LITE' },
+      dunes: { defaultPacking: 'FULL', procedural: { generator: 'sandRipples' } },
+    } as never;
+    const config = {
+      id: 'mixed',
+      layers: [
+        { set: 'grass01' },
+        { set: 'dunes' },
+        { set: 'rocks01' },
+        { set: 'grass01', source: 'PROCEDURAL_LIVE' as const },
+      ],
+      blend: { source: 'VERTEX_COLOR' as const, vertexColor: { layout: 'RGBA' as const } },
+      storage: 'ARRAY' as const,
+    };
+    expect(getTerrainMaterialProps(config).inputs).toEqual({
+      layers: { textureSetArray: ['grass01', 'rocks01'], packing: 'LITE' },
+      layer1: { textureSet: 'dunes' },
+      layer3: { textureSet: 'grass01' },
+    });
+    expect(stubs.logs).toEqual([
+      '[terrain] Material "mixed": a set array takes imported sets, so layer1 (dunes), layer3 (grass01) take their own inputs beside it (procedural sets, live layers).',
+    ]);
+    // A tier's live layer too: its variant shares the inputs
+    const tiered = {
+      ...config,
+      layers: config.layers.slice(0, 3),
+      quality: { ULTRA: { layers: [{}, {}, { source: 'PROCEDURAL_LIVE' as const }] } },
+    };
+    expect(getTerrainMaterialProps(tiered).inputs).toEqual({
+      layers: { textureSetArray: ['grass01'], packing: 'LITE' },
+      layer1: { textureSet: 'dunes' },
+      layer2: { textureSet: 'rocks01' },
+    });
   });
 });

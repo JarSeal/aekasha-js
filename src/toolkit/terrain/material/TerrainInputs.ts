@@ -7,6 +7,7 @@
 // another shader.
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node, TextureNode } from 'three/webgpu';
+import { IS_DEBUG_ENV, llog } from 'aekasha';
 import {
   getTextureSet,
   getTextureSetLayerParams,
@@ -112,61 +113,62 @@ const getSetParams = (bundle: TextureSetInput) => bundle as unknown as LayerPara
 const readsAverageColor = (define: ResolvedTerrainDefine) =>
   define.colorMap?.mode === 'DETAIL' || define.far?.mode === 'AVERAGE_COLOR';
 
-/** The `ARRAY` storage's layers: each a layer of the one set array bundle `layers` */
-const readArraySources = (
-  bundle: unknown,
-  define: ResolvedTerrainDefine,
-  separateKey: string | undefined
-): LayerSources => {
-  if (separateKey) {
+/** A `{ textureSet }` bundle of a layer's own input (`layer<i>`), checked for what it must carry */
+const readOwnBundle = (
+  inputs: Record<string, unknown>,
+  key: string,
+  define: ResolvedTerrainDefine
+) => {
+  const bundle = inputs[key] as TextureSetInput | undefined;
+  if (!bundle || typeof bundle !== 'object' || !('physicalSize' in bundle)) {
     throw new Error(
-      `[terrain] Inputs "${ARRAY_INPUT_KEY}" (ARRAY storage, a set array for every layer) and "${separateKey}" (SEPARATE, a set per layer) are both given: use one.`
+      `[terrain] Missing input "${key}": a { "textureSet": id } (the textureSets() feature) for each layer, or a { "textureSetArray": [ids], "packing" } "${ARRAY_INPUT_KEY}" for all (a procedural set's layer keeping its own).`
     );
   }
-  if (!isArrayBundle(bundle)) {
+  if (readsAverageColor(define) && !bundle.averageColor) {
+    throw new Error(
+      `[terrain] Input "${key}": its texture set has no averageColor, which ${define.colorMap?.mode === 'DETAIL' ? "the DETAIL colour map's detail" : 'the AVERAGE_COLOR far surface'} reads (a procedural set has none): give the set's JSON one, or encode its albedo (yarn assets).`
+    );
+  }
+  return bundle;
+};
+
+/**
+ * The set array bundle `layers` (`ARRAY` storage) checked: its layer count the array layers'
+ * (the layers without an input of their own)
+ */
+const readArrayBundle = (value: unknown, arrayCount: number) => {
+  if (!isArrayBundle(value)) {
     throw new Error(
       `[terrain] Input "${ARRAY_INPUT_KEY}" isn't a texture set array: give { "textureSetArray": [ids], "packing" } (or a built set array's id).`
     );
   }
-  const count = (bundle.layerCount as unknown as { value?: unknown }).value;
-  if (typeof count === 'number' && count !== define.layers.length) {
+  if (!arrayCount) {
     throw new Error(
-      `[terrain] Input "${ARRAY_INPUT_KEY}" has ${count} layers, staticDefines.terrain.layers ${define.layers.length}: one set per layer.`
+      `[terrain] Input "${ARRAY_INPUT_KEY}" has no layer to hold: every layer has an input of its own (layer<i>).`
     );
   }
-  const slots = getBundleSlots(bundle);
-  return {
-    isArray: true,
-    layers: define.layers.map((_, i) => ({
-      bundle,
-      layer: i,
-      params: getTextureSetLayerParams(bundle.layerParams, i) as unknown as LayerParams,
-    })),
-    bindings: [{ name: `${ARRAY_INPUT_KEY} (arrays ${slots.join(', ')})`, count: slots.length }],
-  };
+  const count = (value.layerCount as unknown as { value?: unknown }).value;
+  if (typeof count === 'number' && count !== arrayCount) {
+    throw new Error(
+      `[terrain] Input "${ARRAY_INPUT_KEY}" has ${count} layers, and ${arrayCount} layers take theirs from it (those without an input "layer<i>" of their own): one set per layer, in the layers' order.`
+    );
+  }
+  return value;
 };
 
 /**
  * The layers' sets in the define's order: the `{ textureSet }` bundles `layer<i>` (`SEPARATE`,
- * all present, no other `layer<i>`), or the `{ textureSetArray }` bundle `layers` (`ARRAY`, its
- * layer count the define's), and the textures they bind
+ * all present, no other `layer<i>`), or with the `{ textureSetArray }` bundle `layers` (`ARRAY`)
+ * each layer without an input of its own at its place in the array, in order (D9's mixed sources:
+ * a set array takes imported sets, so a procedural set's layer keeps its own `layer<i>`, and a
+ * live layer must); and the textures they bind (a live layer's none: it runs its generator)
  * @internal
  */
 export const readLayerSources = (
   inputs: Record<string, unknown>,
   define: ResolvedTerrainDefine
 ): LayerSources => {
-  const separateKey = Object.keys(inputs).find((key) => /^layer\d+$/.test(key));
-  if (inputs[ARRAY_INPUT_KEY] !== undefined) {
-    // TODO(p305 Phase 8 section 4): a live layer's own input beside the set array
-    const liveIndex = define.layers.findIndex((layer) => layer.live);
-    if (liveIndex >= 0) {
-      throw new Error(
-        `[terrain] Layer ${liveIndex} is live (source PROCEDURAL_LIVE): it takes its own input "${getLayerInputKey(liveIndex)}", not a set array's layer.`
-      );
-    }
-    return readArraySources(inputs[ARRAY_INPUT_KEY], define, separateKey);
-  }
   const keys = define.layers.map((_, i) => getLayerInputKey(i));
   checkNumberedKeys(
     inputs,
@@ -174,45 +176,48 @@ export const readLayerSources = (
     keys,
     `has no layer: staticDefines.terrain.layers has ${keys.length}`
   );
-  const bundles = keys.map((key) => {
-    const bundle = inputs[key] as TextureSetInput | undefined;
-    if (!bundle || typeof bundle !== 'object' || !('physicalSize' in bundle)) {
-      throw new Error(
-        `[terrain] Missing input "${key}": a { "textureSet": id } (the textureSets() feature) for each layer, or a { "textureSetArray": [ids], "packing" } "${ARRAY_INPUT_KEY}" for all.`
-      );
-    }
-    if (readsAverageColor(define) && !bundle.averageColor) {
-      throw new Error(
-        `[terrain] Input "${key}": its texture set has no averageColor, which ${define.colorMap?.mode === 'DETAIL' ? "the DETAIL colour map's detail" : 'the AVERAGE_COLOR far surface'} reads (a procedural set has none): give the set's JSON one, or encode its albedo (yarn assets).`
-      );
-    }
-    return bundle;
-  });
-  const slots = getBundleSlots(bundles[0]);
-  const last = keys.length - 1;
-  // A live layer runs its generator: its input's textures (its set's bake) aren't bound
-  const live = bundles.map((bundle, i) =>
-    define.layers[i].live ? readLiveSource(bundle, keys[i]) : undefined
+  const hasArray = inputs[ARRAY_INPUT_KEY] !== undefined;
+  const isOwn = keys.map(
+    (key, i) => !hasArray || inputs[key] !== undefined || !!define.layers[i].live
   );
-  const liveCount = live.filter(Boolean).length;
-  return {
-    isArray: false,
-    layers: bundles.map((bundle, i) => ({
-      bundle,
-      layer: undefined,
-      params: getSetParams(bundle),
-      ...(live[i] ? { live: live[i] } : {}),
-    })),
-    bindings: [
-      {
-        name: `${last ? `layer0-layer${last}` : 'layer0'} (${slots.join(', ')} each${liveCount ? `, ${liveCount} live none` : ''})`,
-        count: bundles.reduce(
-          (total, bundle, i) => total + (live[i] ? 0 : getBundleSlots(bundle).length),
-          0
-        ),
-      },
-    ],
-  };
+  const arrayCount = isOwn.filter((own) => !own).length;
+  const array = hasArray ? readArrayBundle(inputs[ARRAY_INPUT_KEY], arrayCount) : null;
+  let arrayLayer = 0;
+  const layers = keys.map((key, i): LayerSource => {
+    if (!isOwn[i] && array) {
+      const layer = arrayLayer++;
+      const params = getTextureSetLayerParams(array.layerParams, layer) as unknown as LayerParams;
+      return { bundle: array, layer, params };
+    }
+    const bundle = readOwnBundle(inputs, key, define);
+    const live = define.layers[i].live ? readLiveSource(bundle, key) : undefined;
+    return { bundle, layer: undefined, params: getSetParams(bundle), ...(live ? { live } : {}) };
+  });
+  const own = layers.filter((layer) => layer.layer === undefined);
+  const live = own.filter((layer) => layer.live).length;
+  const ownSlots = own.find((layer) => !layer.live) ?? own[0];
+  const ownKeys = keys.filter((_, i) => layers[i].layer === undefined);
+  const bindings: TerrainBinding[] = [];
+  if (array) {
+    const slots = getBundleSlots(array);
+    bindings.push({
+      name: `${ARRAY_INPUT_KEY} (arrays ${slots.join(', ')})`,
+      count: slots.length,
+    });
+  }
+  if (own.length) {
+    const range = ownKeys.length > 1 ? `${ownKeys[0]}-${ownKeys.at(-1)}` : ownKeys[0];
+    // Beside a set array the own inputs needn't be in a row
+    const names = array ? ownKeys.join(', ') : range;
+    bindings.push({
+      name: `${names} (${getBundleSlots(ownSlots.bundle).join(', ')} each${live ? `, ${live} live none` : ''})`,
+      count: own.reduce(
+        (total, layer) => total + (layer.live ? 0 : getBundleSlots(layer.bundle).length),
+        0
+      ),
+    });
+  }
+  return { isArray: array !== null, layers, bindings };
 };
 
 /**
@@ -303,9 +308,26 @@ export const readColorMapTexture = (
 const getLayerPacking = (config: TerrainMaterialConfig, setId: string) =>
   config.packing ?? getTextureSet(setId)?.defaultPacking;
 
+/**
+ * Whether a code-route layer takes an input of its own beside a set array (D9's mixed sources): a
+ * procedural set (a set array takes imported sets), or a layer live in the material or a tier (it
+ * runs its set's generator); a set no data has goes in the array (its input throws then)
+ */
+const takesOwnInput = (config: TerrainMaterialConfig, index: number) => {
+  const layer = config.layers[index];
+  const tiers = Object.values(config.quality ?? {});
+  const isLive = [layer.source, ...tiers.map((tier) => tier?.layers?.[index]?.source)].includes(
+    'PROCEDURAL_LIVE'
+  );
+  return isLive || Boolean(getTextureSet(layer.set)?.procedural);
+};
+
 /** The code route's set array packing: the config's, else the sets' defaults, which must agree */
-const getArrayPacking = (config: TerrainMaterialConfig): TextureSetPacking => {
-  const packings = config.layers.map((layer) => {
+const getArrayPacking = (
+  config: TerrainMaterialConfig,
+  layers: TerrainMaterialConfig['layers']
+): TextureSetPacking => {
+  const packings = layers.map((layer) => {
     const packing = getLayerPacking(config, layer.set);
     if (!packing) {
       throw new Error(
@@ -316,7 +338,7 @@ const getArrayPacking = (config: TerrainMaterialConfig): TextureSetPacking => {
   });
   if (packings.some((packing) => packing !== packings[0])) {
     throw new Error(
-      `[terrain] Material "${config.id}": the sets' default packings differ (${config.layers.map((layer, i) => `${layer.set}: ${packings[i]}`).join(', ')}): give the config's packing.`
+      `[terrain] Material "${config.id}": the sets' default packings differ (${layers.map((layer, i) => `${layer.set}: ${packings[i]}`).join(', ')}): give the config's packing.`
     );
   }
   return packings[0];
@@ -389,9 +411,11 @@ const getStorage = (config: TerrainMaterialConfig, define: TerrainMaterialDefine
   const storage = config.storage ?? 'AUTO';
   if (storage !== 'AUTO') return storage;
   if (takesSlots(define)) return 'ARRAY';
+  // A live layer runs its generator: it binds nothing
   const layerSlots = config.layers.map((layer) => {
     const packing = getLayerPacking(config, layer.set);
-    return packing ? TERRAIN_PACKING_SLOTS[packing].length : 0;
+    const isLive = layer.source === 'PROCEDURAL_LIVE';
+    return packing && !isLive ? TERRAIN_PACKING_SLOTS[packing].length : 0;
   });
   const extra =
     (config.splatMaps?.length ?? 0) +
@@ -404,30 +428,53 @@ const getStorage = (config: TerrainMaterialConfig, define: TerrainMaterialDefine
   );
 };
 
+/** A code-route layer's own input: its set, in the config's packing when it gives one */
+const getOwnInput = (config: TerrainMaterialConfig, setId: string) =>
+  config.packing ? { textureSet: setId, packing: config.packing } : { textureSet: setId };
+
+/**
+ * The code route's layer inputs for `ARRAY` storage: the imported sets in the set array `layers`,
+ * a procedural set's layer and a live one on its own `layer<i>` (D9's mixed sources: a set array
+ * takes imported sets), said in a dev log when it splits
+ */
+const getArrayInputs = (config: TerrainMaterialConfig) => {
+  const own = config.layers.map((_, i) => takesOwnInput(config, i));
+  const arrayLayers = config.layers.filter((_, i) => !own[i]);
+  const inputs: Record<string, unknown> = {};
+  if (arrayLayers.length) {
+    inputs[ARRAY_INPUT_KEY] = {
+      textureSetArray: arrayLayers.map((layer) => layer.set),
+      packing: getArrayPacking(config, arrayLayers),
+    };
+  }
+  config.layers.forEach((layer, i) => {
+    if (own[i]) inputs[getLayerInputKey(i)] = getOwnInput(config, layer.set);
+  });
+  if (IS_DEBUG_ENV && arrayLayers.length && arrayLayers.length < config.layers.length) {
+    const named = config.layers.flatMap((layer, i) =>
+      own[i] ? [`${getLayerInputKey(i)} (${layer.set})`] : []
+    );
+    llog(
+      `[terrain] Material "${config.id}": a set array takes imported sets, so ${named.join(', ')} take their own inputs beside it (procedural sets, live layers).`
+    );
+  }
+  return inputs;
+};
+
 /**
  * The code route's inputs: the layers' sets (`SEPARATE`: `layer<i>`, `{ textureSet, packing? }`
- * each; `ARRAY`: `layers`, `{ textureSetArray, packing }`, `AUTO` choosing), the splat maps
- * (`splat<i>`), the macro texture (`macro`: the macro variation's, or the rules' noise
- * texture) and the colour map (`colorMap`)
+ * each; `ARRAY`: `layers`, `{ textureSetArray, packing }`, a procedural set's or a live layer
+ * keeping its own `layer<i>`; `AUTO` choosing), the splat maps (`splat<i>`), the macro texture
+ * (`macro`: the macro variation's, or the rules' noise texture) and the colour map (`colorMap`)
  * @internal
  * @param define the config's static define (`getTerrainDefine`'s): `AUTO` reads its slots
  */
 export const getTerrainInputs = (config: TerrainMaterialConfig, define: TerrainMaterialDefine) => {
   const inputs: Record<string, unknown> =
     getStorage(config, define) === 'ARRAY'
-      ? {
-          [ARRAY_INPUT_KEY]: {
-            textureSetArray: config.layers.map((layer) => layer.set),
-            packing: getArrayPacking(config),
-          },
-        }
+      ? getArrayInputs(config)
       : Object.fromEntries(
-          config.layers.map((layer, i) => [
-            getLayerInputKey(i),
-            config.packing
-              ? { textureSet: layer.set, packing: config.packing }
-              : { textureSet: layer.set },
-          ])
+          config.layers.map((layer, i) => [getLayerInputKey(i), getOwnInput(config, layer.set)])
         );
   config.splatMaps?.forEach((id, i) => {
     inputs[getSplatInputKey(i)] = { texture: id };

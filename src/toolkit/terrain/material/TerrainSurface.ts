@@ -5,7 +5,7 @@
 // builds it directly, or the far branch inside its `If` (`TerrainFar.ts`), from inputs declared
 // before it: so every uniform it reads is made before (`createSurfaceUniforms`), and the material
 // has them at setup however late the branch is built.
-import { uniform } from 'three/tsl';
+import { float, uniform } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import { Vector2, type Node, type NodeMaterial } from 'three/webgpu';
 import { existsOrThrow } from 'aekasha';
@@ -13,7 +13,7 @@ import type { TextureSetArrayInput, TextureSetPacking } from 'aekasha/textureset
 import { applyColorMapDetail } from '../nodes/ColorMap';
 import { blendWeightsByHeight, getBlendHeight, normalizeWeights } from '../nodes/HeightBlend';
 import type { ProjectionContext } from '../nodes/Projection';
-import { selectTopLayers, type KeptLayer } from '../nodes/Sparse';
+import { selectTopLayers, spreadSlotWeights, type KeptLayer } from '../nodes/Sparse';
 import { getSurfaceSpace } from '../nodes/SurfaceSpace';
 import type { ResolvedTerrainDefine } from './TerrainDefine';
 import type { LayerSources } from './TerrainInputs';
@@ -98,11 +98,15 @@ export type LayerBuildContext = {
 };
 
 /**
- * Every layer at its own index: its tiling, anti-tiling and projection, its own seed; a live
- * layer through its generator's sampler
+ * Layers at their own index (every layer, or those given): its tiling, anti-tiling and
+ * projection, its own seed; a live layer through its generator's sampler
  */
-const buildLayers = (ctx: LayerBuildContext): BuiltLayer[] =>
-  ctx.sources.layers.map((source, i) => {
+const buildLayers = (
+  ctx: LayerBuildContext,
+  indices = ctx.sources.layers.map((_, i) => i)
+): BuiltLayer[] =>
+  indices.map((i) => {
+    const source = ctx.sources.layers[i];
     const uniforms = ctx.uniforms[i];
     const uv = getLayerUv(ctx.define, source.params, uniforms, ctx.shared);
     const live = ctx.live[i];
@@ -131,36 +135,78 @@ const buildLayers = (ctx: LayerBuildContext): BuiltLayer[] =>
   });
 
 /**
- * The layers the graph blends and their raw weights: every layer at its own index, or (sparse,
- * `DOMINANT`) the slots the top-K selection keeps of the raw weights, each at its layer, and the
- * slots' layers; null weights for `SINGLE`
+ * The layers the graph blends: built (layers, or slots then the layers beside them), their raw
+ * weights in that order, the slots, and each built one's layer (null for a slot)
  */
-const buildBlendedLayers = (ctx: LayerBuildContext, raw: Node<'float'>[] | null) => {
+type BlendedLayers = {
+  layers: BuiltLayer[];
+  weights: Node<'float'>[] | null;
+  slots: KeptLayer[] | null;
+  layerIndices: (number | null)[];
+  /** The layers the set array holds, in its order: the slots' (the selection's index into it) */
+  arrayLayers: number[];
+};
+
+/**
+ * Whether the set array's layers sample in slots: sparse keeping fewer of them than there are
+ * (the define's count, which counts the procedural sets' layers too), or `DOMINANT` over two
+ */
+const getArraySlotCount = (define: ResolvedTerrainDefine, arrayLayers: number[]) => {
+  const count = Math.min(define.slotCount ?? 0, arrayLayers.length);
+  const isDominant = arrayLayers.some((i) => {
+    const { antiTiling } = define.layers[i];
+    return antiTiling.mode === 'HEX' && antiTiling.dominant !== null;
+  });
+  return count < arrayLayers.length || (isDominant && arrayLayers.length > 1) ? count : null;
+};
+
+/**
+ * The layers the graph blends and their raw weights: every layer at its own index, or (sparse,
+ * `DOMINANT`) the slots the top-K selection keeps of the set array's layers' raw weights, each at
+ * its layer, and the layers of their own inputs beside them (D9's mixed sources: a procedural
+ * set's, a live one), each at its own index; null weights for `SINGLE`
+ */
+const buildBlendedLayers = (ctx: LayerBuildContext, raw: Node<'float'>[] | null): BlendedLayers => {
   const { define, sources } = ctx;
-  if (define.slotCount === null || !raw) {
-    return { layers: buildLayers(ctx), weights: raw, slots: null };
-  }
-  // TODO(p305 Phase 8 section 4): the live layers sampled beside the slots
-  if (ctx.live.some(Boolean)) {
-    throw new Error(
-      "[terrain] Sparse sampling and DOMINANT beside a live layer (source PROCEDURAL_LIVE) aren't built yet."
-    );
-  }
+  const all = sources.layers.map((_, i) => i);
+  const arrayLayers = all.filter((i) => sources.layers[i].layer !== undefined);
+  const dense = () => ({
+    layers: buildLayers(ctx),
+    weights: raw,
+    slots: null,
+    layerIndices: all,
+    arrayLayers,
+  });
+  if (define.slotCount === null || !raw) return dense();
   if (!sources.isArray) {
     throw new Error(
       '[terrain] Sparse sampling and HEX\'s apply DOMINANT read each layer at a per-pixel index, which needs ARRAY storage: give a { "textureSetArray": [ids], "packing" } input "layers" (createTerrainMaterial\'s storage AUTO or ARRAY).'
     );
   }
-  const slots = selectTopLayers(raw, define.slotCount);
-  const layers = buildSlots(slots, {
+  const count = getArraySlotCount(define, arrayLayers);
+  if (count === null) return dense();
+  const beside = all.filter((i) => sources.layers[i].layer === undefined);
+  const slots = selectTopLayers(
+    arrayLayers.map((i) => raw[i]),
+    count
+  );
+  const slotLayers = buildSlots(slots, {
     define,
-    bundle: sources.layers[0].bundle as TextureSetArrayInput,
-    layers: ctx.uniforms,
+    bundle: sources.layers[arrayLayers[0]].bundle as TextureSetArrayInput,
+    layers: arrayLayers.map((i) => ctx.uniforms[i]),
+    // A layer's seed is its index in the material, not in the array
+    seeds: beside.length ? arrayLayers : undefined,
     antiTiling: { viewDistance: ctx.viewDistance, patches: ctx.patches },
     getProjectionContext: ctx.getProjectionContext,
     shared: ctx.shared,
   });
-  return { layers, weights: slots.map((slot) => slot.weight), slots };
+  return {
+    layers: [...slotLayers, ...buildLayers(ctx, beside)],
+    weights: [...slots.map((slot) => slot.weight), ...beside.map((i) => raw[i])],
+    slots,
+    layerIndices: [...slots.map(() => null), ...beside],
+    arrayLayers,
+  };
 };
 
 /**
@@ -190,9 +236,34 @@ const blendWeights = (
  */
 export type NearSurface = {
   surface: LayerSurface;
+  /** The layers, or the slots then the layers beside them */
   layers: BuiltLayer[];
   weights: Node<'float'>[] | null;
   slots: KeptLayer[] | null;
+  /** Each built layer's index in the material, null for a slot */
+  layerIndices: (number | null)[];
+  /** The layers the set array holds, in its order (a slot's layer is an index into it) */
+  arrayLayers: number[];
+};
+
+/**
+ * Each layer's final weight (the debug views'): a slot's goes to the layer kept there, a layer's
+ * own to it; null for `SINGLE`.
+ * @internal
+ */
+export const getLayerWeights = (near: NearSurface, count: number) => {
+  const { weights, slots, layerIndices, arrayLayers } = near;
+  if (!weights || !slots) return weights;
+  const spread = spreadSlotWeights(slots, weights.slice(0, slots.length), arrayLayers.length);
+  const perLayer: Node<'float'>[] = Array.from(
+    { length: count },
+    () => float(0) as unknown as Node<'float'>
+  );
+  arrayLayers.forEach((layer, j) => (perLayer[layer] = spread[j]));
+  layerIndices.forEach((layer, k) => {
+    if (layer !== null) perLayer[layer] = weights[k];
+  });
+  return perLayer;
 };
 
 /**
@@ -212,13 +283,22 @@ export const buildNearSurface = (
   nodes: { uniforms: SurfaceUniforms; colorMap: Node<'vec3'> | null; deferBump: boolean }
 ): NearSurface => {
   const { define } = ctx;
-  const { layers, weights: rawWeights, slots } = buildBlendedLayers(ctx, raw);
+  const blendedLayers = buildBlendedLayers(ctx, raw);
+  const { layers, weights: rawWeights, slots, layerIndices } = blendedLayers;
   const { uniforms } = nodes;
   const getAoInfluence = () =>
     existsOrThrow(uniforms.aoTextureInfluence, 'A FULL material has its AO influence.');
-  // A slot's bump is the blend's: its own height jumps where its layer changes
+  // A slot's bump is the blend's: its own height jumps where its layer changes (a layer beside the
+  // slots is continuous: its own bump, unless a branch defers it)
   const deferBump = nodes.deferBump || slots !== null;
-  const surfaces = layers.map((layer) => getLayerSurface(define, layer, getAoInfluence, deferBump));
+  const surfaces = layers.map((layer, k) =>
+    getLayerSurface(
+      define,
+      layer,
+      getAoInfluence,
+      nodes.deferBump || (slots !== null && layerIndices[k] === null)
+    )
+  );
   const weights = rawWeights && blendWeights(define, rawWeights, layers, uniforms.heightBlendDepth);
   const space = getSurfaceSpace(define.space);
   const blended = weights ? blendSurfaces(surfaces, weights, deferBump, space) : surfaces[0];
@@ -230,5 +310,5 @@ export const buildNearSurface = (
   const surface = nodes.colorMap
     ? { ...blended, albedo: applyColorMapDetail(nodes.colorMap, blended.albedo, fade) }
     : blended;
-  return { surface, layers, weights, slots };
+  return { ...blendedLayers, surface, weights };
 };

@@ -1682,7 +1682,9 @@ export const TerrainMaterialConfigSchema = z
     /**
      * How the layers' textures bind (default `AUTO`: `SEPARATE` while it fits the texture budget
      * and nothing samples the layers in slots, else `ARRAY`). Sparse sampling and `HEX`'s
-     * `apply: 'DOMINANT'` (the material's or a tier's) need `ARRAY`. An `ARRAY` material's set
+     * `apply: 'DOMINANT'` (the material's or a tier's) need `ARRAY`. A set array takes imported
+     * sets: under `ARRAY` a procedural set's layer, and a layer live in the material or a tier,
+     * keeps an input of its own beside it (sampled beside the slots). An `ARRAY` material's set
      * array must be built before it's created (`buildTextureSetArray({ sets, packing })`, or a
      * scene's `textureSetArrays`).
      */

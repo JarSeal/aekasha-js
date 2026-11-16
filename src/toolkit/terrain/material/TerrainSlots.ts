@@ -9,7 +9,7 @@
 // planar tap and branch into the projection where the kept layer's gate opens). Every tap samples
 // with the gradients of the coordinates, which are continuous: a slot's UV jumps where its layer
 // changes, and the GPU's own derivatives there would pick the smallest mip in a seam.
-import { dFdx, dFdy, float, vec2 } from 'three/tsl';
+import { dFdx, dFdy, float, int, vec2 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node } from 'three/webgpu';
 import { getTextureSetLayerParams, type TextureSetArrayInput } from 'aekasha/texturesets';
@@ -137,8 +137,13 @@ export type SlotContext = {
   define: ResolvedTerrainDefine;
   /** The layers' set array bundle (`ARRAY` storage) */
   bundle: TextureSetArrayInput;
-  /** Every layer's uniforms, in the layers' order */
+  /** The set array's layers' uniforms, in its order */
   layers: LayerUniforms[];
+  /**
+   * Each array layer's index in the material, its seed (`HEX`), where they differ (layers of their
+   * own inputs beside the array); undefined: the array's index
+   */
+  seeds?: number[];
   /** The anti-tiling's view distance and macro patches, shared */
   antiTiling: Pick<AntiTilingContext, 'viewDistance' | 'patches'>;
   getProjectionContext: () => ProjectionContext;
@@ -178,7 +183,12 @@ export const buildSlots = (slots: KeptLayer[], ctx: SlotContext): BuiltLayer[] =
     const uv = getLayerUv(define, params, uniforms, shared);
     const antiTiling: AntiTilingContext = {
       ...ctx.antiTiling,
-      seed: layer,
+      seed: ctx.seeds
+        ? pickByLayer(
+            layer,
+            ctx.seeds.map((seed) => int(seed) as unknown as Node<'int'>)
+          )
+        : layer,
       layer,
       grad: uv.grad ?? undefined,
     };

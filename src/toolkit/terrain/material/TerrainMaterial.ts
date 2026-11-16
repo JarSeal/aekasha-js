@@ -33,7 +33,6 @@ import { sampleMacroTexture, varyAlbedo, varyRoughness, type MacroNodes } from '
 import { createProjectionContext, type ProjectionContext } from '../nodes/Projection';
 import { applyRules, createRuleContext, createRuleNodes } from '../nodes/Rules';
 import { getBundlePacking } from '../nodes/SampleTextureSet';
-import { spreadSlotWeights } from '../nodes/Sparse';
 import { getSurfaceSpace } from '../nodes/SurfaceSpace';
 import { bumpNormalWorld, transformWorldNormalToView } from '../nodes/TerrainNormals';
 import { getSplatMapWeights, getVertexColorWeights, type PaintedWeights } from '../nodes/Weights';
@@ -60,7 +59,12 @@ import {
 } from './TerrainLayers';
 import { createLiveLayer } from './TerrainLive';
 import { checkTextureBudget, type TerrainBinding } from './TerrainStorage';
-import { buildNearSurface, createSurfaceUniforms, type NearSurface } from './TerrainSurface';
+import {
+  buildNearSurface,
+  createSurfaceUniforms,
+  getLayerWeights,
+  type NearSurface,
+} from './TerrainSurface';
 import {
   getPaintedLayerCount,
   getPaintedSource,
@@ -212,7 +216,9 @@ const getAoNode = (
  * The terrain material's graph (p305 D2), the TSL `setup` both routes run: reads the static define
  * `terrain` ({@link TerrainMaterialDefine}), samples each layer's texture set (`SEPARATE`: the
  * inputs `layer0`, `layer1`, …, a `{ textureSet }` bundle each; `ARRAY`: the input `layers`, one `{
- * textureSetArray }` bundle whose layer `i` is layer `i`; one packing), weighs the layers by the
+ * textureSetArray }` bundle holding, in order, the layers without an input of their own, which a
+ * procedural set's layer keeps (a set array takes imported sets) and a live one must; one
+ * packing), weighs the layers by the
  * blend source and sets the material's sockets: the colour, the normal (each layer's in world
  * space, blended, into view space once), the roughness, metalness 0, and the AO to `aoNode`, which
  * darkens indirect light only (the texture AO of `FULL`, whose `LITE` and `MINIMAL` have it baked
@@ -228,8 +234,9 @@ const getAoNode = (
  * over the weights so far where the geometry's slope, the world height and the facing are in its
  * ranges, its coverage moved by a channel of the input `macro`, one fetch a rule with noise);
  * `blend.mode` `HEIGHT` (default) lets the layers' heights decide the borders, `LINEAR` the weights
- * alone. With `sparse` (fewer layers kept than there are) or `HEX`'s `apply: 'DOMINANT'`, the
- * layers are sampled in slots: at each pixel the layers weighing most, sorted (sparse's `maxLayers`
+ * alone. With `sparse` (fewer of the set array's layers kept than it holds) or `HEX`'s `apply:
+ * 'DOMINANT'`, the set array's layers are sampled in slots (the layers of their own inputs beside
+ * them, each at its own index): at each pixel the layers weighing most, sorted (sparse's `maxLayers`
  * of them, else all), each read from the `ARRAY` input at its layer, their weights renormalized
  * (the height blend among them); `DOMINANT` samples `HEX` in the first slot and `DUAL_SCALE` in the
  * others. With `macro`, one fetch of the input `macro` at the world's XZ varies the surface (R the
@@ -274,7 +281,8 @@ const getAoNode = (
  * @throws for a missing or wrong define field, a field it doesn't know, a layer count the blend
  * source doesn't take, a missing layer, splat map or macro input (or one the define doesn't
  * take), a layer's set without an average colour that a `DETAIL` colour map or the `AVERAGE_COLOR`
- * far surface reads, `layer<i>` and `layers` both, a set array of another layer count, layers in
+ * far surface reads, a set array whose layer count isn't that of the layers without their own
+ * input (or that none takes), layers in
  * different packings, slots (sparse, `DOMINANT`) without the `layers` set array, a live layer
  * whose set isn't procedural or whose generator isn't loaded, or textures over the budget (naming
  * what it binds)
@@ -451,10 +459,9 @@ export const buildTerrainGraph = (
   if (ao) standard.aoNode = ao;
 
   if (IS_DEBUG_ENV && define.debugView && near) {
-    const { layers, weights, slots } = near;
+    const { layers, slots, layerIndices } = near;
     // Per layer: a slot's weight goes to the layer kept there
-    const layerWeights =
-      weights && slots ? spreadSlotWeights(slots, weights, define.layers.length) : weights;
+    const layerWeights = getLayerWeights(near, define.layers.length);
     applyDebugView(standard, define.debugView, {
       coords: layers[0].uv.coords,
       layers: sources.layers.map(({ bundle, params }, i) => ({
@@ -463,13 +470,13 @@ export const buildTerrainGraph = (
         projection: uniforms[i].projection,
       })),
       weights: layerWeights,
-      sampled: layers.map(({ uniforms: { antiTiling, projection } }, i) => ({
-        antiTiling: antiTiling.mode,
-        projection,
-        isLive: !slots && live[i] !== null,
-      })),
+      sampled: layers.map(({ uniforms: { antiTiling, projection } }, k) => {
+        const layer = layerIndices[k];
+        return { antiTiling: antiTiling.mode, projection, isLive: layer !== null && !!live[layer] };
+      }),
+      // The slots and the layers beside them are what's kept
       slots:
-        slots && raw ? { count: slots.length, layerWeights: normalizeWeights(raw.weights) } : null,
+        slots && raw ? { count: layers.length, layerWeights: normalizeWeights(raw.weights) } : null,
       far:
         distance.fade && distance.farBlend
           ? { share: getFarShare(viewDistance, distance.fade.y, distance.farBlend) }

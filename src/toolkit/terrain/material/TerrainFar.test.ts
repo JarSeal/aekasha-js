@@ -295,6 +295,16 @@ const CASES: [string, object, () => Record<string, unknown>][] = [
     () => ({ layer0: makeBundle('LITE'), layer1: makeLiveBundle('LITE') }),
   ],
   [
+    'sparse slots, a live layer beside them',
+    {
+      layers: [{}, {}, {}, { source: 'PROCEDURAL_LIVE' }],
+      blend: { source: 'VERTEX_COLOR', vertexColor: { layout: 'RGBA' } },
+      sparse: { maxLayers: 2 },
+      distance: FAR,
+    },
+    () => ({ layers: makeArrayBundle(3), layer3: makeLiveBundle('LITE') }),
+  ],
+  [
     'COLOR_MAP far, DETAIL',
     {
       layers: [{}],
