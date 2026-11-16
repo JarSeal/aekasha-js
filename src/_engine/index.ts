@@ -315,6 +315,7 @@ export type {
   BakeBuildContext,
   BakedTexture,
   BakedTextureExport,
+  BakeMesh,
   BakeOutput,
   BakeTextureOpts,
   ExportBakedTextureOpts,

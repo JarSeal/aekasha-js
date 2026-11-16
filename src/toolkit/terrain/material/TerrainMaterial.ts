@@ -276,6 +276,35 @@ export const setupTerrainMaterial = (
   material: NodeMaterial,
   staticDefines: Record<string, unknown>
 ) => {
+  materialInputs.set(material, inputs);
+  buildTerrainGraph(inputs, material, staticDefines);
+};
+
+/**
+ * The inputs each terrain material was built from (its resolved bundles and texture nodes), for a
+ * bake of its surface (`bakeTerrainColorMap`): a material doesn't keep them, and `userData` is
+ * cloned as JSON
+ */
+const materialInputs = new WeakMap<NodeMaterial, Record<string, unknown>>();
+
+/**
+ * The resolved inputs a terrain material was built from, or undefined for a material that isn't
+ * one.
+ * @internal
+ */
+export const getTerrainMaterialInputs = (material: NodeMaterial) => materialInputs.get(material);
+
+/**
+ * The terrain material's graph ({@link setupTerrainMaterial}'s), with what a bake overrides: the
+ * view distance (default the camera's), which a bake's camera at the origin can't give.
+ * @internal
+ */
+export const buildTerrainGraph = (
+  inputs: Record<string, unknown>,
+  material: NodeMaterial,
+  staticDefines: Record<string, unknown>,
+  opts: { viewDistance?: Node<'float'> } = {}
+) => {
   const define = readTerrainDefine(staticDefines);
   const sources = readLayerSources(inputs, define);
   // Read for every source: one without splat maps refuses a splat input, and a define that takes
@@ -298,7 +327,7 @@ export const setupTerrainMaterial = (
   // one macro fetch, the colour map's, the raw weights (the paint, the rules' noise)
   const surfaceUniforms = createSurfaceUniforms(material, define, packing);
   const distance = createDistanceUniforms(material, define);
-  const viewDistance = positionView.length() as unknown as Node<'float'>;
+  const viewDistance = opts.viewDistance ?? (positionView.length() as unknown as Node<'float'>);
   const macro = createMacro(material, macroTexture, define);
   const patches = macro ? (macro.sample.b as unknown as Node<'float'>) : null;
   const colorMap =
