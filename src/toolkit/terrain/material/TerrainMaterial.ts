@@ -36,6 +36,7 @@ import {
 import type { TextureSetInput } from 'aekasha/texturesets';
 import { sampleAntiTiled, type AntiTilingNodes } from '../nodes/AntiTiling';
 import { fadeDetailNormal } from '../nodes/Distance';
+import { blendWeightsByHeight, getBlendHeight, normalizeWeights } from '../nodes/HeightBlend';
 import { applyMacroVariation, sampleMacroTexture, type MacroNodes } from '../nodes/Macro';
 import type { TextureSetSample } from '../nodes/SampleTextureSet';
 import {
@@ -45,11 +46,17 @@ import {
   transformTangentNormalToWorld,
   transformWorldNormalToView,
 } from '../nodes/TerrainNormals';
+import { getSplatMapWeights, getVertexColorWeights, type PaintedWeights } from '../nodes/Weights';
+import {
+  getTerrainInputs,
+  readLayerBundles,
+  readMacroTexture,
+  readSplatMaps,
+} from './TerrainInputs';
 import {
   readTerrainDefine,
   type ResolvedTerrainDefine,
   type TerrainAntiTilingDefine,
-  type TerrainLayerDefine,
 } from './TerrainDefine';
 import type { TerrainDebugView, TerrainDebugViewContext } from '../debug/_dbg__DebugViews';
 import { getLoadedTerrainDebugViews, loadTerrainDebugViewsAsync } from './TerrainDebugViews';
@@ -66,11 +73,6 @@ const DEG_TO_RAD = Math.PI / 180;
 /** `MINIMAL`'s roughness before the scales: the packing has no roughness map (the baseline's) */
 const MINIMAL_ROUGHNESS = 0.8;
 
-/** A layer's input key: `layer0`, `layer1`, … */
-const getLayerInputKey = (index: number) => `layer${index}`;
-/** The macro texture's input key */
-const MACRO_INPUT_KEY = 'macro';
-
 /** A layer's uniforms, kept at `userData.uniforms.terrain_l<i>_<name>` */
 type LayerUniforms = {
   tiling: Node<'float'>;
@@ -78,6 +80,8 @@ type LayerUniforms = {
   tint: Node<'color'>;
   normalStrength: Node<'float'>;
   roughnessScale: Node<'float'>;
+  /** The height blend's `heightContrast` and `heightOffset`, or null without the height blend */
+  height: { contrast: Node<'float'>; offset: Node<'float'> } | null;
   /** The anti-tiling's mode and its uniforms (`farScale`, `antiTilingDistance`; `hexContrast`,
    * `hexRotation`) */
   antiTiling: AntiTilingNodes;
@@ -97,27 +101,6 @@ const keepUniform = <T>(material: NodeMaterial, name: string, node: T) => {
   const uniforms = (material.userData.uniforms ??= {}) as Record<string, unknown>;
   uniforms[`terrain_${name}`] = node;
   return node;
-};
-
-/** A layer's input bundles in the define's order, all present, the input keys none but theirs */
-const readLayerBundles = (inputs: Record<string, unknown>, define: ResolvedTerrainDefine) => {
-  const keys = define.layers.map((_, i) => getLayerInputKey(i));
-  for (const key of Object.keys(inputs)) {
-    if (/^layer\d+$/.test(key) && !keys.includes(key)) {
-      throw new Error(
-        `[terrain] Input "${key}" has no layer: staticDefines.terrain.layers has ${keys.length}.`
-      );
-    }
-  }
-  return keys.map((key) => {
-    const bundle = inputs[key] as TextureSetInput | undefined;
-    if (!bundle || typeof bundle !== 'object' || !('physicalSize' in bundle)) {
-      throw new Error(
-        `[terrain] Missing input "${key}": a { "textureSet": id } (the textureSets() feature) for each layer.`
-      );
-    }
-    return bundle;
-  });
 };
 
 /** A layer's anti-tiling uniforms, those of its mode only */
@@ -155,18 +138,8 @@ const createMacro = (
   inputs: Record<string, unknown>,
   define: ResolvedTerrainDefine
 ): Macro | null => {
-  const input = inputs[MACRO_INPUT_KEY];
-  if (!define.macro) {
-    if (input === undefined) return null;
-    throw new Error(
-      `[terrain] Input "${MACRO_INPUT_KEY}" has no macro: give staticDefines.terrain.macro (its scale) to use it.`
-    );
-  }
-  if (!(input as { isTextureNode?: boolean } | undefined)?.isTextureNode) {
-    throw new Error(
-      `[terrain] Missing input "${MACRO_INPUT_KEY}": the macro texture ({ "texture": id }, eg. macroNoise) of staticDefines.terrain.macro.`
-    );
-  }
+  const macroTexture = readMacroTexture(inputs, define);
+  if (!macroTexture || !define.macro) return null;
   const keep = (name: string, value: number) =>
     keepUniform(material, name, uniform(value)) as Node<'float'>;
   const nodes: MacroNodes = {
@@ -175,17 +148,25 @@ const createMacro = (
     hue: keep('macroHue', define.macro.hue),
     roughness: keep('macroRoughness', define.macro.roughness),
   };
-  return { nodes, sample: sampleMacroTexture(input as TextureNode, nodes.scale) };
+  return { nodes, sample: sampleMacroTexture(macroTexture, nodes.scale) };
 };
 
-/** Makes a layer's uniforms (`terrain_l<i>_<name>`) */
+/** Makes a layer's uniforms (`terrain_l<i>_<name>`), the height blend's with it only */
 const createLayerUniforms = (
   material: NodeMaterial,
-  layer: TerrainLayerDefine,
+  define: ResolvedTerrainDefine,
   index: number
 ): LayerUniforms => {
+  const layer = define.layers[index];
   const keep = (name: string, node: unknown) => keepUniform(material, `l${index}_${name}`, node);
+  const hasHeightBlend = define.blend.source !== 'SINGLE' && define.blend.heightBlend !== null;
   return {
+    height: hasHeightBlend
+      ? {
+          contrast: keep('heightContrast', uniform(layer.heightContrast)) as Node<'float'>,
+          offset: keep('heightOffset', uniform(layer.heightOffset)) as Node<'float'>,
+        }
+      : null,
     antiTiling: createAntiTilingNodes(layer.antiTiling, keep),
     tiling: keep('tiling', uniform(layer.tiling)) as Node<'float'>,
     rotation:
@@ -288,31 +269,120 @@ const getLayerSurface = (
   };
 };
 
+/** The layers' surfaces blended by their weights (which sum to 1): the normal renormalized */
+const blendSurfaces = (surfaces: LayerSurface[], weights: Node<'float'>[]): LayerSurface => {
+  const sum = <T extends Node<'float'> | Node<'vec3'>>(pick: (surface: LayerSurface) => T) =>
+    surfaces
+      .map((surface, i) => pick(surface).mul(weights[i]) as unknown as T)
+      .reduce((total, value) => total.add(value) as unknown as T);
+  const [first] = surfaces;
+  return {
+    albedo: sum((surface) => surface.albedo),
+    normal: sum((surface) => surface.normal).normalize() as Node<'vec3'>,
+    roughness: sum((surface) => surface.roughness),
+    // One packing: every layer has texture AO or none has
+    ao: first.ao ? sum((surface) => surface.ao as Node<'float'>) : null,
+  };
+};
+
+/** A layer as the graph built it: its bundle, uniforms, tiling and (anti-tiled) sample */
+type BuiltLayer = {
+  bundle: TextureSetInput;
+  uniforms: LayerUniforms;
+  uv: LayerUv;
+  sample: TextureSetSample;
+};
+
+/**
+ * The layers' weights of a painted source (`VERTEX_COLOR`, `SPLAT_MAP`), normalized linearly or by
+ * the layers' heights (the uniform `terrain_heightBlendDepth`), and the vertex colour's AO; null
+ * for `SINGLE`
+ */
+const getLayerWeights = (
+  material: NodeMaterial,
+  inputs: Record<string, unknown>,
+  define: ResolvedTerrainDefine,
+  layers: BuiltLayer[]
+): PaintedWeights | null => {
+  const { blend } = define;
+  // Read for every source: one without splat maps refuses a splat input
+  const splatMaps = readSplatMaps(inputs, define);
+  if (blend.source === 'SINGLE') return null;
+  const painted =
+    blend.source === 'VERTEX_COLOR'
+      ? getVertexColorWeights(layers.length, blend.layout)
+      : getSplatMapWeights(layers.length, splatMaps);
+  if (blend.heightBlend === null) {
+    return { ...painted, weights: normalizeWeights(painted.weights) };
+  }
+  const depth = keepUniform(material, 'heightBlendDepth', uniform(blend.heightBlend));
+  const heights = layers.map(({ bundle, uniforms, sample }) => {
+    const height = existsOrThrow(uniforms.height, 'A height-blended layer has height uniforms.');
+    const setContrast = bundle.heightContrast as unknown as Node<'float'>;
+    return getBlendHeight(sample.height, setContrast.mul(height.contrast), height.offset);
+  });
+  return {
+    ...painted,
+    weights: blendWeightsByHeight(painted.weights, heights, depth as Node<'float'>),
+  };
+};
+
+/**
+ * The material's `aoNode`: the blended texture AO (`FULL`) × the vertex AO (`ao.vertex`, the
+ * uniform `terrain_aoVertexInfluence`: 1 for `FULL`, `ao.bakedAlbedoInfluence` where the albedo has
+ * its AO baked in), or null without either
+ */
+const getAoNode = (
+  material: NodeMaterial,
+  define: ResolvedTerrainDefine,
+  textureAo: Node<'float'> | null,
+  painted: PaintedWeights | null,
+  isAoBaked: boolean
+) => {
+  const vertexAo = define.aoVertex ? painted?.vertexAo : null;
+  if (!vertexAo) return textureAo;
+  const influence = keepUniform(
+    material,
+    'aoVertexInfluence',
+    uniform(isAoBaked ? define.aoBakedAlbedoInfluence : 1)
+  ) as Node<'float'>;
+  const vertexTerm = mix(float(1), vertexAo, influence) as Node<'float'>;
+  return textureAo ? (textureAo.mul(vertexTerm) as Node<'float'>) : vertexTerm;
+};
+
 /**
  * The terrain material's graph (p305 D2), the TSL `setup` both routes run: reads the static
  * define `terrain` ({@link TerrainMaterialDefine}), samples each layer's texture set input
- * (`layer0`, `layer1`, …, a `{ textureSet }` bundle each, all in one packing) and sets the
- * material's sockets: the colour, the normal (each layer's in world space, into view space once),
- * the roughness, metalness 0, and the texture AO (`FULL`) to `aoNode`, which darkens indirect
- * light only (`LITE` and `MINIMAL` have theirs baked into the albedo). Each layer samples its set
- * with its anti-tiling (`NONE` one tap, `DUAL_SCALE` two, `HEX` three). With `macro`, one fetch of
- * the input `macro` at the world's XZ varies the surface (R the brightness, G the hue and the
- * roughness, B `DUAL_SCALE`'s patches); with `distance`, the normal fades to the geometry's over
- * its `fade` range. Only what the define enables is built. The tunables are uniforms in
- * `material.userData.uniforms`: per layer `terrain_l<i>_<name>` (`tiling`, `rotation` when given,
- * `tint`, `normalStrength`, `roughnessScale`; `farScale` and `antiTilingDistance` with
- * `DUAL_SCALE`, `hexContrast` and `hexRotation` with `HEX`), `terrain_aoTextureInfluence` when a
- * layer has texture AO, `terrain_macroScale`, `terrain_macroBrightness`, `terrain_macroHue` and
+ * (`layer0`, `layer1`, …, a `{ textureSet }` bundle each, all in one packing), weighs the layers by
+ * the blend source and sets the material's sockets: the colour, the normal (each layer's in world
+ * space, blended, into view space once), the roughness, metalness 0, and the AO to `aoNode`, which
+ * darkens indirect light only (the texture AO of `FULL`, whose `LITE` and `MINIMAL` have it baked
+ * into the albedo, and the vertex colour's). Each layer samples its set with its anti-tiling
+ * (`NONE` one tap, `DUAL_SCALE` two, `HEX` three). The blend source: `SINGLE` one layer;
+ * `VERTEX_COLOR` the mesh's colour attribute; `SPLAT_MAP` the splat maps `splat0` (layers 1-4) and
+ * `splat1` (5-8) at the mesh's UV; layer 0 takes what the channels leave; `blend.mode` `HEIGHT`
+ * (default) lets the layers' heights decide the borders, `LINEAR` the weights alone. With `macro`,
+ * one fetch of the input `macro` at the world's XZ varies the surface (R the brightness, G the hue
+ * and the roughness, B `DUAL_SCALE`'s patches); with `distance`, the normal fades to the
+ * geometry's over its `fade` range. Only what the define enables is built. The tunables are
+ * uniforms in `material.userData.uniforms`: per layer `terrain_l<i>_<name>` (`tiling`, `rotation`
+ * when given, `tint`, `normalStrength`, `roughnessScale`; `heightContrast` and `heightOffset` with
+ * the height blend; `farScale` and `antiTilingDistance` with `DUAL_SCALE`, `hexContrast` and
+ * `hexRotation` with `HEX`), `terrain_heightBlendDepth` with the height blend,
+ * `terrain_aoTextureInfluence` when a layer has texture AO, `terrain_aoVertexInfluence` with
+ * `ao.vertex`, `terrain_macroScale`, `terrain_macroBrightness`, `terrain_macroHue` and
  * `terrain_macroRoughness` with `macro`, and `terrain_distanceFade` with `distance`. A
  * `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug env, once
  * {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the view. The
  * define as given is kept at `material.userData.terrainDefine`.
- * @param inputs the material's inputs: `layer<i>` bundles (the `textureSets()` feature's resolver)
- * and, with `macro`, the macro texture `macro` (a texture node: `{ "texture": id }`)
+ * @param inputs the material's inputs: `layer<i>` bundles (the `textureSets()` feature's
+ * resolver), with `SPLAT_MAP` the splat maps `splat<i>` and with `macro` the macro texture `macro`
+ * (texture nodes: `{ "texture": id }`)
  * @param material the node material being built (a `STANDARDNODEMATERIAL`)
  * @param staticDefines the material's static defines, `terrain` among them
- * @throws for a missing or wrong define field, a field it doesn't know, a missing layer input, a
- * missing macro input (or one without `macro`), or layers in different packings
+ * @throws for a missing or wrong define field, a field it doesn't know, a layer count the blend
+ * source doesn't take, a missing layer, splat map or macro input (or one the define doesn't
+ * take), or layers in different packings
  * @example
  * ```ts
  * // A TSL file of a material JSON whose staticDefines.terrain is the define
@@ -344,9 +414,9 @@ export const setupTerrainMaterial = (
   // Shared by every layer, built before any of them: the view distance and the one macro fetch
   const viewDistance = positionView.length() as unknown as Node<'float'>;
   const macro = createMacro(material, inputs, define);
-  const layers = define.layers.map((layerDefine, i) => {
+  const layers: BuiltLayer[] = define.layers.map((_, i) => {
     const bundle = bundles[i];
-    const uniforms = createLayerUniforms(material, layerDefine, i);
+    const uniforms = createLayerUniforms(material, define, i);
     const uv = getLayerUv(define, bundle, uniforms);
     const sample = sampleAntiTiled(bundle, uv.tileUv, uniforms.antiTiling, {
       viewDistance,
@@ -360,8 +430,9 @@ export const setupTerrainMaterial = (
     getLayerSurface(define, bundle, uniforms, uv, sample, getAoInfluence)
   );
 
-  // SINGLE: the one layer is the surface, then the material-wide effects
-  const [surface] = surfaces;
+  // The layers blended by their weights (SINGLE: the one layer), then the material-wide effects
+  const painted = getLayerWeights(material, inputs, define, layers);
+  const surface = painted ? blendSurfaces(surfaces, painted.weights) : surfaces[0];
   const { albedo, roughness } = macro
     ? applyMacroVariation(surface, macro.sample, macro.nodes)
     : surface;
@@ -380,7 +451,8 @@ export const setupTerrainMaterial = (
   standard.normalNode = transformWorldNormalToView(normal);
   standard.roughnessNode = roughness;
   standard.metalnessNode = float(0);
-  if (surface.ao) standard.aoNode = surface.ao;
+  const ao = getAoNode(material, define, surface.ao, painted, layers[0].sample.isAoBaked);
+  if (ao) standard.aoNode = ao;
 
   if (IS_DEBUG_ENV && define.debugView) {
     const [{ bundle, uv }] = layers;
@@ -417,11 +489,11 @@ const applyDebugView = (
 const terrainMaterialFns = { setup: setupTerrainMaterial } satisfies TslMaterialFns;
 
 /**
- * The config's static define: no id, no packing, no layer sets and no macro texture (the inputs
- * carry them)
+ * The config's static define: no id, no packing, no layer sets, no splat maps and no macro texture
+ * (the inputs carry them)
  */
 const getTerrainDefine = (config: TerrainMaterialConfig): TerrainMaterialDefine => {
-  const { id: _id, packing: _packing, layers, macro, ...rest } = config;
+  const { id: _id, packing: _packing, splatMaps: _splatMaps, layers, macro, ...rest } = config;
   const define: TerrainMaterialDefine = {
     ...rest,
     layers: layers.map(({ set: _set, ...settings }) => settings),
@@ -433,26 +505,12 @@ const getTerrainDefine = (config: TerrainMaterialConfig): TerrainMaterialDefine 
   return define;
 };
 
-/** The config's inputs: each layer's set (`layer<i>`) and the macro texture (`macro`) */
-const getTerrainInputs = (config: TerrainMaterialConfig) => {
-  const inputs: Record<string, unknown> = Object.fromEntries(
-    config.layers.map((layer, i) => [
-      getLayerInputKey(i),
-      config.packing
-        ? { textureSet: layer.set, packing: config.packing }
-        : { textureSet: layer.set },
-    ])
-  );
-  if (config.macro) inputs[MACRO_INPUT_KEY] = { texture: config.macro.texture };
-  return inputs;
-};
-
 /**
  * The material props {@link createTerrainMaterial} creates from a config: a
  * `STANDARDNODEMATERIAL` of the registered `aek.terrain` functions, the config as the static
- * define `terrain` (without the id, the layers' sets and the macro texture), each layer's set as
- * its input `layer<i>` (`{ textureSet, packing? }`) and the macro texture as the input `macro`
- * (`{ texture }`). Pass them to `ensureMaterialDependencies` to load the textures before creating
+ * define `terrain` (without the id, the layers' sets, the splat maps and the macro texture), each
+ * layer's set as its input `layer<i>` (`{ textureSet, packing? }`), the splat maps as the inputs
+ * `splat<i>` and the macro texture as the input `macro` (`{ texture }`). Pass them to `ensureMaterialDependencies` to load the textures before creating
  * the material, or use them as a material JSON's fields.
  * @returns the props, for `createMaterial` or `ensureMaterialDependencies`
  * @example

@@ -62,11 +62,11 @@ vi.mock('aekasha', async (importOriginal) => ({
     const material = new MeshStandardNodeMaterial();
     material.userData.uniforms = {};
     const tsl = props as MatProps & { inputs: Record<string, unknown> };
-    // A layer's set as its bundle, the macro texture as a texture node
+    // A layer's set as its bundle, the macro texture and the splat maps as texture nodes
     const inputs = Object.fromEntries(
       Object.keys(tsl.inputs).map((key) => [
         key,
-        key === 'macro' ? texture(new Texture()) : makeBundle(),
+        key.startsWith('layer') ? makeBundle() : texture(new Texture()),
       ])
     );
     fns.setup?.(
@@ -121,6 +121,41 @@ const countMethod = (material: MeshStandardNodeMaterial, method: string) =>
 
 const getUniformKeys = (material: MeshStandardNodeMaterial) =>
   Object.keys(material.userData.uniforms as object).sort();
+
+const getUniforms = (material: MeshStandardNodeMaterial) =>
+  material.userData.uniforms as Record<string, { value: unknown }>;
+
+/** `count` layer bundles of the packing as the inputs `layer<i>`, plus the extra inputs */
+const layerInputs = (
+  count: number,
+  packing: Packing = 'LITE',
+  extra: Record<string, unknown> = {}
+) => ({
+  ...Object.fromEntries(
+    Array.from({ length: count }, (_, i) => [`layer${i}`, makeBundle(packing)])
+  ),
+  ...extra,
+});
+
+const layersOf = (count: number) => Array.from({ length: count }, () => ({}));
+
+/** The texture samples the sockets reach: texture nodes that aren't the inputs' own references */
+const countSamples = (material: MeshStandardNodeMaterial, inputs: Record<string, unknown>) => {
+  const references = new Set<unknown>();
+  for (const input of Object.values(inputs)) {
+    if ((input as { isTextureNode?: boolean }).isTextureNode) references.add(input);
+    else for (const value of Object.values(input as object)) references.add(value);
+  }
+  return collectNodes(material).filter(
+    (node) =>
+      (node as unknown as { isTextureNode?: boolean }).isTextureNode && !references.has(node)
+  ).length;
+};
+
+const reachesVertexColor = (root: unknown) =>
+  collectNodesFrom([root]).some(
+    (node) => (node as unknown as { isVertexColorNode?: boolean }).isVertexColorNode
+  );
 
 const LAYER_UNIFORMS = [
   'terrain_l0_normalStrength',
@@ -284,6 +319,100 @@ describe('setupTerrainMaterial', () => {
   });
 });
 
+describe('setupTerrainMaterial: blending', () => {
+  const vertexColor = (count: number, blend: Record<string, unknown> = {}) => ({
+    layers: layersOf(count),
+    blend: { source: 'VERTEX_COLOR', ...blend },
+  });
+
+  it('weighs the layers by the vertex colour, each slot sampled once, the height blend by default', () => {
+    const inputs = layerInputs(5);
+    const material = build(vertexColor(5, { vertexColor: { layout: 'RGBA' } }), inputs);
+    expect(countSamples(material, inputs)).toBe(5 * 2);
+    for (const socket of [material.colorNode, material.normalNode, material.roughnessNode]) {
+      expect(reachesVertexColor(socket)).toBe(true);
+    }
+    const keys = getUniformKeys(material);
+    expect(keys).toContain('terrain_heightBlendDepth');
+    for (let i = 0; i < 5; i++) {
+      expect(keys).toContain(`terrain_l${i}_heightContrast`);
+      expect(keys).toContain(`terrain_l${i}_heightOffset`);
+    }
+    expect(getUniforms(material).terrain_heightBlendDepth.value).toBe(0.2);
+    // RGBA has no vertex AO, LITE no texture AO
+    expect(material.aoNode).toBeNull();
+  });
+
+  it('starts the height uniforms at the define, and builds none with LINEAR', () => {
+    const define = {
+      layers: [{ heightContrast: 2, heightOffset: -0.25 }, {}],
+      blend: { source: 'SPLAT_MAP', heightBlendDepth: 0.05 },
+    };
+    const material = build(define, layerInputs(2, 'LITE', { splat0: texture(new Texture()) }));
+    const uniforms = getUniforms(material);
+    expect(uniforms.terrain_l0_heightContrast.value).toBe(2);
+    expect(uniforms.terrain_l0_heightOffset.value).toBe(-0.25);
+    expect(uniforms.terrain_heightBlendDepth.value).toBe(0.05);
+    const linear = build(
+      { ...define, blend: { source: 'SPLAT_MAP', mode: 'LINEAR' } },
+      layerInputs(2, 'LITE', { splat0: texture(new Texture()) })
+    );
+    expect(getUniformKeys(linear).some((key) => key.includes('height'))).toBe(false);
+    expect(reachesVertexColor(linear.colorNode)).toBe(false);
+  });
+
+  it('samples each splat map once at the mesh UV, as many as the layers take', () => {
+    const inputs = layerInputs(9, 'LITE', {
+      splat0: texture(new Texture()),
+      splat1: texture(new Texture()),
+    });
+    const material = build({ layers: layersOf(9), blend: { source: 'SPLAT_MAP' } }, inputs);
+    expect(countSamples(material, inputs)).toBe(9 * 2 + 2);
+    expect(() =>
+      build(
+        { layers: layersOf(9), blend: { source: 'SPLAT_MAP' } },
+        layerInputs(9, 'LITE', { splat0: texture(new Texture()) })
+      )
+    ).toThrow(/Missing input "splat1": a splat map's texture .* for layers 5-8/);
+    expect(() =>
+      build(
+        { layers: layersOf(5), blend: { source: 'SPLAT_MAP' } },
+        layerInputs(5, 'LITE', { splat0: texture(new Texture()), splat1: texture(new Texture()) })
+      )
+    ).toThrow(/Input "splat1" has no splat map: 5 layers take 1/);
+    expect(() =>
+      build(vertexColor(2), layerInputs(2, 'LITE', { splat0: texture(new Texture()) }))
+    ).toThrow(/Input "splat0" has no splat map/);
+    expect(() =>
+      build(
+        { layers: layersOf(2), blend: { source: 'SPLAT_MAP' } },
+        layerInputs(2, 'LITE', { splat0: makeBundle() })
+      )
+    ).toThrow(/Missing input "splat0"/);
+  });
+
+  it("puts the vertex AO in aoNode, lowered on LITE's baked albedo, whole on FULL's", () => {
+    const define = { ...vertexColor(2), ao: { vertex: true, bakedAlbedoInfluence: 0.3 } };
+    const lite = build(define, layerInputs(2, 'LITE'));
+    expect(reachesVertexColor(lite.aoNode)).toBe(true);
+    expect(getUniforms(lite).terrain_aoVertexInfluence.value).toBe(0.3);
+    expect(getUniformKeys(lite)).not.toContain('terrain_aoTextureInfluence');
+    const full = build(define, layerInputs(2, 'FULL'));
+    expect(getUniforms(full).terrain_aoVertexInfluence.value).toBe(1);
+    expect(getUniformKeys(full)).toContain('terrain_aoTextureInfluence');
+    // Without ao.vertex RGB_AO's A isn't AO: LITE has no aoNode
+    const off = build(vertexColor(2), layerInputs(2, 'LITE'));
+    expect(off.aoNode).toBeNull();
+    expect(getUniformKeys(off)).not.toContain('terrain_aoVertexInfluence');
+  });
+
+  it('refuses layers in different packings', () => {
+    expect(() =>
+      build(vertexColor(2), { layer0: makeBundle('LITE'), layer1: makeBundle('FULL') })
+    ).toThrow(/different packings \(layer0: LITE, layer1: FULL\)/);
+  });
+});
+
 describe('getTerrainMaterialProps', () => {
   it('puts the sets in the inputs and the rest in the define', () => {
     expect(
@@ -302,6 +431,22 @@ describe('getTerrainMaterialProps', () => {
     });
     expect(getTerrainMaterialProps({ id: 'a', layers: [{ set: 'sand01' }] }).inputs).toEqual({
       layer0: { textureSet: 'sand01' },
+    });
+  });
+
+  it('puts the splat maps in the inputs splat<i>, none in the define', () => {
+    const props = getTerrainMaterialProps({
+      id: 'valley',
+      layers: Array.from({ length: 6 }, () => ({ set: 'grass01' })),
+      blend: { source: 'SPLAT_MAP' },
+      splatMaps: ['valley.splat0', 'valley.splat1'],
+    });
+    expect(props.staticDefines).toEqual({
+      terrain: { layers: layersOf(6), blend: { source: 'SPLAT_MAP' } },
+    });
+    expect(props.inputs).toMatchObject({
+      splat0: { texture: 'valley.splat0' },
+      splat1: { texture: 'valley.splat1' },
     });
   });
 

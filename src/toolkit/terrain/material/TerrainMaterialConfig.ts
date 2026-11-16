@@ -12,8 +12,31 @@ import { z } from 'zod';
 export const TERRAIN_LAYER_SOURCES = ['TEXTURE'] as const;
 /** The tiling coordinates: `WORLD` (the world's `(x, −z)`, seen from above) or `MESH_UV`. */
 export const TERRAIN_UV_MODES = ['WORLD', 'MESH_UV'] as const;
-/** Where the layers' weights come from: `SINGLE`, one layer everywhere. */
-export const TERRAIN_BLEND_SOURCES = ['SINGLE'] as const;
+/**
+ * Where the layers' weights come from (p305 D4): `SINGLE` one layer everywhere, `VERTEX_COLOR` the
+ * mesh's colour attribute, `SPLAT_MAP` one or two RGBA textures at the mesh's UV.
+ */
+export const TERRAIN_BLEND_SOURCES = ['SINGLE', 'VERTEX_COLOR', 'SPLAT_MAP'] as const;
+/**
+ * How painted weights blend the layers: `HEIGHT` (default) by each layer's height (Mishkinis), so
+ * the higher surface (pebbles, a rock's top) shows through a border; `LINEAR` by the weights alone.
+ */
+export const TERRAIN_BLEND_MODES = ['HEIGHT', 'LINEAR'] as const;
+/**
+ * The vertex colour's channels (p301 §4.4): `RGB_AO` R, G and B weigh layers 1-3 and A is a baked
+ * AO; `RGBA` the four weigh layers 1-4. Layer 0 takes what the channels leave (1 − their sum).
+ */
+export const TERRAIN_VERTEX_COLOR_LAYOUTS = ['RGB_AO', 'RGBA'] as const;
+/**
+ * The layers each blend source takes, `[min, max]`: `SINGLE` one; a vertex colour the base and one
+ * per weight channel (`RGB_AO` 3, `RGBA` 4); splat maps the base and four per map (two maps at most).
+ */
+export const TERRAIN_BLEND_LAYER_COUNTS = {
+  SINGLE: [1, 1],
+  VERTEX_COLOR_RGB_AO: [2, 4],
+  VERTEX_COLOR_RGBA: [2, 5],
+  SPLAT_MAP: [2, 9],
+} as const;
 /** The texture set packings a terrain material samples (p303 D2). */
 export const TERRAIN_PACKINGS = ['FULL', 'LITE', 'MINIMAL'] as const;
 /** The quality tiers a terrain material's `quality` table overrides (p240's scale). */
@@ -172,6 +195,29 @@ export const TerrainLayerSettingsSchema = z
       .min(0)
       .optional()
       .describe("× the set's roughnessScale (default 1); the roughness is capped at 1."),
+    /**
+     * × the set's `heightContrast` (default 1): the height's contrast about its middle (0.5) for
+     * the height blend, over 1 sharper borders, under softer. Read with `blend.mode: 'HEIGHT'`.
+     */
+    heightContrast: z
+      .number()
+      .min(0)
+      .optional()
+      .describe(
+        "× the set's heightContrast (default 1): the height's contrast about 0.5 for the height blend. Read with blend.mode HEIGHT."
+      ),
+    /**
+     * Added to the height for the height blend, −1..1 (default 0): over 0 the layer rises through
+     * its neighbours' borders, under 0 it sinks. Read with `blend.mode: 'HEIGHT'`.
+     */
+    heightOffset: z
+      .number()
+      .min(-1)
+      .max(1)
+      .optional()
+      .describe(
+        "Added to the height for the height blend, -1..1 (default 0): over 0 the layer rises through its neighbours' borders. Read with blend.mode HEIGHT."
+      ),
     /** The layer's own anti-tiling, in place of the material's (its whole object). */
     antiTiling: TerrainAntiTilingSchema.optional(),
   })
@@ -192,16 +238,85 @@ export const TerrainLayerSchema = TerrainLayerSettingsSchema.extend({
 /** A terrain layer of {@link createTerrainMaterial}'s config: its texture set and its settings. */
 export type TerrainLayer = z.infer<typeof TerrainLayerSchema>;
 
-/** How the layers' weights are made. */
-const TerrainBlendSchema = z
-  .object({
-    /** Where the weights come from: `SINGLE` (default), one layer everywhere. */
-    source: z
-      .enum(TERRAIN_BLEND_SOURCES)
-      .describe('Where the weights come from: SINGLE (default), one layer everywhere.'),
-  })
-  .strict()
-  .describe("How the layers' weights are made.");
+/** The fields both painted sources take: how their weights blend the layers */
+const paintedBlendFields = {
+  /** `HEIGHT` (default) by the layers' heights, `LINEAR` by the weights alone. */
+  mode: z
+    .enum(TERRAIN_BLEND_MODES)
+    .optional()
+    .describe("HEIGHT (default) by the layers' heights, LINEAR by the weights alone."),
+  /**
+   * The height blend's transition, 0.02..0.5 of the heights' range (default 0.2): smaller is a
+   * sharper border. A uniform (`terrain_heightBlendDepth`); `HEIGHT` only.
+   */
+  heightBlendDepth: z
+    .number()
+    .min(0.02)
+    .max(0.5)
+    .optional()
+    .describe(
+      "The height blend's transition, 0.02..0.5 of the heights' range (default 0.2): smaller is a sharper border. HEIGHT only."
+    ),
+};
+
+/**
+ * How the layers' weights are made (p305 D4), by `source`: `SINGLE`, `VERTEX_COLOR` or
+ * `SPLAT_MAP`, each with its own fields. The layer count must suit the source
+ * ({@link TERRAIN_BLEND_LAYER_COUNTS}).
+ */
+export const TerrainBlendSchema = z
+  .discriminatedUnion('source', [
+    z
+      .object({
+        /** One layer everywhere (the default). */
+        source: z.literal('SINGLE').describe('One layer everywhere (the default).'),
+      })
+      .strict(),
+    z
+      .object({
+        /**
+         * The mesh's vertex colour (`COLOR_0`, linear) weighs the layers: layer 0 takes what the
+         * weight channels leave. No texture fetch; the borders follow the mesh's vertices.
+         */
+        source: z
+          .literal('VERTEX_COLOR')
+          .describe(
+            "The mesh's vertex colour weighs the layers; layer 0 takes what the weight channels leave."
+          ),
+        /** The colour's channels (default `{ layout: 'RGB_AO' }`). */
+        vertexColor: z
+          .object({
+            /** `RGB_AO`: R, G, B weigh layers 1-3, A a baked AO; `RGBA`: layers 1-4. */
+            layout: z
+              .enum(TERRAIN_VERTEX_COLOR_LAYOUTS)
+              .describe('RGB_AO: R, G, B weigh layers 1-3, A a baked AO; RGBA: layers 1-4.'),
+          })
+          .strict()
+          .optional()
+          .describe("The colour's channels (default RGB_AO)."),
+        ...paintedBlendFields,
+      })
+      .strict(),
+    z
+      .object({
+        /**
+         * One or two RGBA splat maps at the mesh's UV weigh the layers (the inputs `splat0`,
+         * layers 1-4, and `splat1`, layers 5-8, as many as the layers need): layer 0 takes what
+         * they leave.
+         */
+        source: z
+          .literal('SPLAT_MAP')
+          .describe(
+            "Splat maps at the mesh's UV weigh the layers (inputs splat0: layers 1-4, splat1: 5-8); layer 0 takes what they leave."
+          ),
+        ...paintedBlendFields,
+      })
+      .strict(),
+  ])
+  .describe("How the layers' weights are made: SINGLE, VERTEX_COLOR or SPLAT_MAP.");
+
+/** How a terrain material's layers are weighed (p305 D4): `SINGLE`, `VERTEX_COLOR` or `SPLAT_MAP`. */
+export type TerrainBlend = z.infer<typeof TerrainBlendSchema>;
 
 /** Where the ambient occlusion goes: `aoNode`, which darkens indirect light only. */
 const TerrainAoSchema = z
@@ -218,6 +333,29 @@ const TerrainAoSchema = z
       .optional()
       .describe(
         "The texture AO's influence, 0..1 (default 1), × each set's aoStrength: a FULL layer's map, to aoNode. LITE and MINIMAL have it baked into the albedo."
+      ),
+    /**
+     * The vertex colour's A as a baked AO, to `aoNode` (large-scale occlusion: hollows, a wall's
+     * foot). `blend.source: 'VERTEX_COLOR'` with the `RGB_AO` layout only.
+     */
+    vertex: z
+      .boolean()
+      .optional()
+      .describe(
+        "The vertex colour's A as a baked AO, to aoNode. blend.source VERTEX_COLOR with the RGB_AO layout only."
+      ),
+    /**
+     * The vertex AO's influence, 0..1 (default 0.5), where the layers' albedo has its own AO baked
+     * in (`LITE`, `MINIMAL`): that AO darkens all light already, so the vertex AO is lowered. A
+     * `FULL` material applies the vertex AO whole.
+     */
+    bakedAlbedoInfluence: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe(
+        "The vertex AO's influence, 0..1 (default 0.5), where the albedo has its own AO baked in (LITE, MINIMAL). FULL applies it whole."
       ),
   })
   .strict()
@@ -366,27 +504,81 @@ const variantFields = {
     ),
 };
 
-/** `SINGLE` blends one layer, in the material's fields and in each tier's: the refinement both
- * schemas share */
-const checkSingleLayer = (
-  value: {
+/** The layer counts a blend takes, `[min, max]`, and its name for an error */
+const getBlendLayerCounts = (blend: TerrainBlend | undefined) => {
+  if (blend?.source === 'VERTEX_COLOR') {
+    const layout = blend.vertexColor?.layout ?? 'RGB_AO';
+    return {
+      counts: TERRAIN_BLEND_LAYER_COUNTS[`VERTEX_COLOR_${layout}`],
+      name: `VERTEX_COLOR (${layout})`,
+    };
+  }
+  const source = blend?.source ?? 'SINGLE';
+  return { counts: TERRAIN_BLEND_LAYER_COUNTS[source], name: source };
+};
+
+/** The splat maps `count` layers take: one per four layers past the base */
+const getSplatMapCount = (layerCount: number) => Math.ceil((layerCount - 1) / 4);
+
+type BlendFields = { blend?: TerrainBlend; ao?: z.infer<typeof TerrainAoSchema> };
+
+/**
+ * The blend and the AO of the material's fields and of each tier's (a tier's over the material's):
+ * the layer count suits the source, a depth only with the height blend, the vertex AO only with
+ * `RGB_AO` vertex colours. The refinement both schemas share.
+ */
+const checkBlend = (
+  value: BlendFields & {
     layers: unknown[];
-    blend?: { source: string };
-    quality?: Partial<Record<string, { blend?: { source: string } }>>;
+    quality?: Partial<Record<string, BlendFields | undefined>>;
   },
   ctx: z.RefinementCtx
 ) => {
-  const tiers = Object.values(value.quality ?? {});
-  for (const blend of [value.blend, ...tiers.map((tier) => tier?.blend ?? value.blend)]) {
-    const source = blend?.source ?? 'SINGLE';
-    if (source === 'SINGLE' && value.layers.length !== 1) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['layers'],
-        message: `blend.source SINGLE takes one layer, not ${value.layers.length}.`,
-      });
-      return;
+  const tiers = Object.entries(value.quality ?? {}).map(([level, tier]) => ({
+    path: ['quality', level],
+    blend: tier?.blend ?? value.blend,
+    ao: tier?.ao ?? value.ao,
+  }));
+  for (const { path, blend, ao } of [{ path: [], blend: value.blend, ao: value.ao }, ...tiers]) {
+    const { counts, name } = getBlendLayerCounts(blend);
+    const count = value.layers.length;
+    const issue = (at: (string | number)[], message: string) => {
+      ctx.addIssue({ code: 'custom', path: at, message });
+    };
+    if (count < counts[0] || count > counts[1]) {
+      issue(['layers'], `blend.source ${name} takes ${counts.join(' to ')} layers, not ${count}.`);
     }
+    if (blend && blend.source !== 'SINGLE' && blend.mode === 'LINEAR' && blend.heightBlendDepth) {
+      issue([...path, 'blend', 'heightBlendDepth'], 'is for blend.mode HEIGHT, not LINEAR.');
+    }
+    const isRgbAo = blend?.source === 'VERTEX_COLOR' && blend.vertexColor?.layout !== 'RGBA';
+    if (ao?.vertex && !isRgbAo) {
+      issue([...path, 'ao', 'vertex'], 'needs blend.source VERTEX_COLOR with the RGB_AO layout.');
+    }
+  }
+};
+
+/**
+ * The code route's splat maps: one texture id per map the layers need, with `SPLAT_MAP` only
+ */
+const checkSplatMaps = (
+  value: { layers: unknown[]; blend?: TerrainBlend; splatMaps?: string[] },
+  ctx: z.RefinementCtx
+) => {
+  const isSplat = value.blend?.source === 'SPLAT_MAP';
+  const count = isSplat ? getSplatMapCount(value.layers.length) : 0;
+  if (!isSplat && value.splatMaps) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['splatMaps'],
+      message: 'is for blend.source SPLAT_MAP.',
+    });
+  } else if (isSplat && value.splatMaps?.length !== count) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['splatMaps'],
+      message: `${value.layers.length} layers take ${count} splat map${count === 1 ? '' : 's'}: give their texture ids.`,
+    });
   }
 };
 
@@ -410,7 +602,7 @@ export const TerrainMaterialDefineSchema = z
     ...variantFields,
   })
   .strict()
-  .superRefine(checkSingleLayer)
+  .superRefine(checkBlend)
   .describe("The terrain material's static define (staticDefines.terrain).");
 
 /**
@@ -442,11 +634,25 @@ export const TerrainMaterialConfigSchema = z
       ),
     /** The macro variation: one fetch of a macro texture that varies every layer. */
     macro: TerrainMacroSchema.optional(),
+    /**
+     * With `blend.source: 'SPLAT_MAP'`, the splat maps' texture ids (`data` slot textures, linear):
+     * the first weighs layers 1-4 (RGBA), the second 5-8, one per four layers past the base. They
+     * become the inputs `splat0` and `splat1`, which a block's variant swaps.
+     */
+    splatMaps: z
+      .array(z.string().min(1))
+      .min(1)
+      .max(2)
+      .optional()
+      .describe(
+        "With blend.source SPLAT_MAP, the splat maps' texture ids: the first weighs layers 1-4, the second 5-8 (inputs splat0, splat1)."
+      ),
     ...sharedFields,
     ...variantFields,
   })
   .strict()
-  .superRefine(checkSingleLayer)
+  .superRefine(checkBlend)
+  .superRefine(checkSplatMaps)
   .describe("The terrain material's config (createTerrainMaterial).");
 
 /**

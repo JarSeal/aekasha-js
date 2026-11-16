@@ -5,7 +5,16 @@
 // in step: the same keys, values and refusals.
 const LAYER_SOURCES = ['TEXTURE'] as const;
 const UV_MODES = ['WORLD', 'MESH_UV'] as const;
-const BLEND_SOURCES = ['SINGLE'] as const;
+const BLEND_SOURCES = ['SINGLE', 'VERTEX_COLOR', 'SPLAT_MAP'] as const;
+const BLEND_MODES = ['HEIGHT', 'LINEAR'] as const;
+const VERTEX_COLOR_LAYOUTS = ['RGB_AO', 'RGBA'] as const;
+/** The layers each blend source takes, `[min, max]` (the schema's `TERRAIN_BLEND_LAYER_COUNTS`) */
+const BLEND_LAYER_COUNTS = {
+  SINGLE: [1, 1],
+  VERTEX_COLOR_RGB_AO: [2, 4],
+  VERTEX_COLOR_RGBA: [2, 5],
+  SPLAT_MAP: [2, 9],
+} as const;
 const ANTI_TILING_MODES = ['NONE', 'DUAL_SCALE', 'HEX'] as const;
 const MAX_LAYERS = 16;
 const QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as const;
@@ -21,10 +30,17 @@ const LAYER_KEYS = [
   'tint',
   'normalStrength',
   'roughnessScale',
+  'heightContrast',
+  'heightOffset',
   'antiTiling',
 ];
-const BLEND_KEYS = ['source'];
-const AO_KEYS = ['textureInfluence'];
+const BLEND_KEYS: Record<(typeof BLEND_SOURCES)[number], string[]> = {
+  SINGLE: ['source'],
+  VERTEX_COLOR: ['source', 'vertexColor', 'mode', 'heightBlendDepth'],
+  SPLAT_MAP: ['source', 'mode', 'heightBlendDepth'],
+};
+const VERTEX_COLOR_KEYS = ['layout'];
+const AO_KEYS = ['textureInfluence', 'vertex', 'bakedAlbedoInfluence'];
 const ANTI_TILING_KEYS: Record<(typeof ANTI_TILING_MODES)[number], string[]> = {
   NONE: ['mode'],
   DUAL_SCALE: ['mode', 'farScale', 'distance'],
@@ -42,6 +58,9 @@ const HEX_ROTATION = 1;
 const MACRO_BRIGHTNESS = 0.2;
 const MACRO_HUE = 8;
 const MACRO_ROUGHNESS = 0.15;
+/** The height blend's and the vertex AO's defaults (p305 D4) */
+const HEIGHT_BLEND_DEPTH = 0.2;
+const BAKED_ALBEDO_INFLUENCE = 0.5;
 
 /** A layer's anti-tiling with its defaults filled in: the mode's fields only */
 export type TerrainAntiTilingDefine =
@@ -59,9 +78,26 @@ export type TerrainLayerDefine = {
   tint: string;
   normalStrength: number;
   roughnessScale: number;
+  /** × the set's, about the height's middle (the height blend's) */
+  heightContrast: number;
+  /** Added to the height (the height blend's) */
+  heightOffset: number;
   /** The layer's own, else the material's (after its tier's override) */
   antiTiling: TerrainAntiTilingDefine;
 };
+
+/**
+ * How the layers are weighed, with its defaults filled in: the painted sources' `heightBlend` is
+ * the height blend's depth, or null for `LINEAR`
+ */
+export type TerrainBlendDefine =
+  | { source: 'SINGLE' }
+  | {
+      source: 'VERTEX_COLOR';
+      layout: (typeof VERTEX_COLOR_LAYOUTS)[number];
+      heightBlend: number | null;
+    }
+  | { source: 'SPLAT_MAP'; heightBlend: number | null };
 
 /** The macro variation with its defaults filled in */
 export type TerrainMacroDefine = {
@@ -77,9 +113,13 @@ export type TerrainMacroDefine = {
 export type ResolvedTerrainDefine = {
   layers: TerrainLayerDefine[];
   uv: (typeof UV_MODES)[number];
-  blendSource: (typeof BLEND_SOURCES)[number];
+  blend: TerrainBlendDefine;
   /** The texture AO's influence, 0..1 */
   aoTextureInfluence: number;
+  /** Whether the vertex colour's A is a baked AO (`RGB_AO` only) */
+  aoVertex: boolean;
+  /** The vertex AO's influence where the albedo has its AO baked in (`LITE`, `MINIMAL`), 0..1 */
+  aoBakedAlbedoInfluence: number;
   /** The macro variation (its texture the input `macro`), or null for none */
   macro: TerrainMacroDefine | null;
   /** The detail normals' fade, view distances in metres, or null for none */
@@ -95,6 +135,7 @@ export const TERRAIN_DEFINE_VALUES = {
   defineKeys: DEFINE_KEYS,
   layerKeys: LAYER_KEYS,
   blendKeys: BLEND_KEYS,
+  vertexColorKeys: VERTEX_COLOR_KEYS,
   aoKeys: AO_KEYS,
   antiTilingKeys: ANTI_TILING_KEYS,
   macroKeys: MACRO_KEYS,
@@ -105,6 +146,9 @@ export const TERRAIN_DEFINE_VALUES = {
   layerSources: LAYER_SOURCES,
   uvModes: UV_MODES,
   blendSources: BLEND_SOURCES,
+  blendModes: BLEND_MODES,
+  vertexColorLayouts: VERTEX_COLOR_LAYOUTS,
+  blendLayerCounts: BLEND_LAYER_COUNTS,
   antiTilingModes: ANTI_TILING_MODES,
   maxLayers: MAX_LAYERS,
 };
@@ -236,6 +280,59 @@ const readAntiTiling = (value: unknown, path: string): TerrainAntiTilingDefine =
   return { mode };
 };
 
+/** The layer counts a blend takes, `[min, max]`, and its name for an error */
+const getBlendLayerCounts = (blend: TerrainBlendDefine) =>
+  blend.source === 'VERTEX_COLOR'
+    ? {
+        counts: BLEND_LAYER_COUNTS[`VERTEX_COLOR_${blend.layout}`],
+        name: `VERTEX_COLOR (${blend.layout})`,
+      }
+    : { counts: BLEND_LAYER_COUNTS[blend.source], name: blend.source };
+
+/**
+ * The splat maps a layer count takes: one per four layers past the base (`splat0` layers 1-4,
+ * `splat1` 5-8).
+ * @internal
+ */
+export const getSplatMapCount = (layerCount: number) => Math.ceil((layerCount - 1) / 4);
+
+/** The blend object (absent: `SINGLE`), its source's fields only, with their defaults */
+const readBlend = (value: unknown, path: string): TerrainBlendDefine => {
+  if (value === undefined) return { source: 'SINGLE' };
+  const obj = readObject(value, path);
+  if (obj.source === undefined)
+    fail(`${path}.source`, `is missing: use ${BLEND_SOURCES.join(', ')}.`);
+  const source = readEnum(obj, 'source', BLEND_SOURCES, path);
+  checkKeys(obj, BLEND_KEYS[source], path);
+  if (source === 'SINGLE') return { source };
+  const mode = readEnum(obj, 'mode', BLEND_MODES, path);
+  if (mode === 'LINEAR' && obj.heightBlendDepth !== undefined) {
+    fail(`${path}.heightBlendDepth`, 'is for blend.mode HEIGHT, not LINEAR.');
+  }
+  const depthBounds = { min: { value: 0.02 }, max: { value: 0.5 } };
+  const heightBlend =
+    mode === 'HEIGHT'
+      ? readNumber(obj, 'heightBlendDepth', HEIGHT_BLEND_DEPTH, depthBounds, path)
+      : null;
+  if (source === 'SPLAT_MAP') return { source, heightBlend };
+  const vertexColorPath = `${path}.vertexColor`;
+  const vertexColor = readOptionalObject(obj, 'vertexColor', path);
+  checkKeys(vertexColor, VERTEX_COLOR_KEYS, vertexColorPath);
+  if (obj.vertexColor !== undefined && vertexColor.layout === undefined) {
+    fail(`${vertexColorPath}.layout`, `is missing: use ${VERTEX_COLOR_LAYOUTS.join(', ')}.`);
+  }
+  const layout = readEnum(vertexColor, 'layout', VERTEX_COLOR_LAYOUTS, vertexColorPath);
+  return { source, layout, heightBlend };
+};
+
+/** An optional boolean field: false when it's absent */
+const readBoolean = (obj: Record<string, unknown>, key: string, path: string) => {
+  const value = obj[key] ?? false;
+  if (typeof value !== 'boolean')
+    fail(`${path}.${key}`, `is ${JSON.stringify(value)}, not true or false.`);
+  return value as boolean;
+};
+
 const readLayer = (
   value: unknown,
   index: number,
@@ -255,6 +352,14 @@ const readLayer = (
     tint: tint as string,
     normalStrength: readNumber(layer, 'normalStrength', 1, NON_NEGATIVE, path),
     roughnessScale: readNumber(layer, 'roughnessScale', 1, NON_NEGATIVE, path),
+    heightContrast: readNumber(layer, 'heightContrast', 1, NON_NEGATIVE, path),
+    heightOffset: readNumber(
+      layer,
+      'heightOffset',
+      0,
+      { min: { value: -1 }, max: { value: 1 } },
+      path
+    ),
     antiTiling:
       layer.antiTiling === undefined
         ? antiTiling
@@ -332,25 +437,38 @@ export const readTerrainDefine = (
       : readAntiTiling(fields.antiTiling, `${pathOf('antiTiling')}.antiTiling`);
   const layers = (rawLayers as unknown[]).map((layer, i) => readLayer(layer, i, antiTiling));
 
-  const blendPath = pathOf('blend');
-  const blend = readOptionalObject(fields, 'blend', blendPath);
-  checkKeys(blend, BLEND_KEYS, `${blendPath}.blend`);
-  const blendSource = readEnum(blend, 'source', BLEND_SOURCES, `${blendPath}.blend`);
-  if (blendSource === 'SINGLE' && layers.length !== 1) {
-    fail('.layers', `blend.source SINGLE takes one layer, not ${layers.length}.`);
+  const blend = readBlend(fields.blend, `${pathOf('blend')}.blend`);
+  const { counts, name } = getBlendLayerCounts(blend);
+  if (layers.length < counts[0] || layers.length > counts[1]) {
+    fail(
+      '.layers',
+      `blend.source ${name} takes ${counts.join(' to ')} layers, not ${layers.length}.`
+    );
   }
   const aoPath = `${pathOf('ao')}.ao`;
   const ao = readOptionalObject(fields, 'ao', pathOf('ao'));
   checkKeys(ao, AO_KEYS, aoPath);
   const aoTextureInfluence = readNumber(ao, 'textureInfluence', 1, UNIT, aoPath);
+  const aoVertex = readBoolean(ao, 'vertex', aoPath);
+  if (aoVertex && !(blend.source === 'VERTEX_COLOR' && blend.layout === 'RGB_AO')) {
+    fail(`${aoPath}.vertex`, 'needs blend.source VERTEX_COLOR with the RGB_AO layout.');
+  }
   const distancePath = `${pathOf('distance')}.distance`;
   const distance = fields.distance === undefined ? null : readObject(fields.distance, distancePath);
   if (distance) checkKeys(distance, DISTANCE_KEYS, distancePath);
   return {
     layers,
     uv: readEnum(fields, 'uv', UV_MODES, pathOf('uv')),
-    blendSource,
+    blend,
     aoTextureInfluence,
+    aoVertex,
+    aoBakedAlbedoInfluence: readNumber(
+      ao,
+      'bakedAlbedoInfluence',
+      BAKED_ALBEDO_INFLUENCE,
+      UNIT,
+      aoPath
+    ),
     macro: readMacro(define),
     distanceFade: distance ? readMetreRange(distance, 'fade', undefined, distancePath) : null,
     qualityLevel,

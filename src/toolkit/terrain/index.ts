@@ -75,6 +75,7 @@ export type { TerrainQualityLevel } from './material/TerrainMaterial';
 export { loadTerrainDebugViewsAsync } from './material/TerrainDebugViews';
 export {
   TerrainAntiTilingSchema,
+  TerrainBlendSchema,
   TerrainLayerSchema,
   TerrainLayerSettingsSchema,
   TerrainMacroSchema,
@@ -85,6 +86,7 @@ export {
 } from './material/TerrainMaterialConfig';
 export type {
   TerrainAntiTiling,
+  TerrainBlend,
   TerrainLayer,
   TerrainLayerSettings,
   TerrainMacro,

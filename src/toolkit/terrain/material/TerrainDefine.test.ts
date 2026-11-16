@@ -2,13 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { readTerrainDefine, TERRAIN_DEFINE_VALUES } from './TerrainDefine';
 import {
   TERRAIN_ANTI_TILING_MODES,
+  TERRAIN_BLEND_LAYER_COUNTS,
+  TERRAIN_BLEND_MODES,
   TERRAIN_BLEND_SOURCES,
   TERRAIN_DEBUG_VIEWS,
   TERRAIN_QUALITY_LEVELS,
   TERRAIN_LAYER_SOURCES,
   TERRAIN_MAX_LAYERS,
   TERRAIN_UV_MODES,
+  TERRAIN_VERTEX_COLOR_LAYOUTS,
   TerrainAntiTilingSchema,
+  TerrainBlendSchema,
   TerrainLayerSettingsSchema,
   TerrainMacroSettingsSchema,
   TerrainMaterialDefineSchema,
@@ -16,6 +20,9 @@ import {
 } from './TerrainMaterialConfig';
 
 const read = (terrain: unknown) => readTerrainDefine({ terrain });
+
+/** `count` layers of no settings */
+const layersOf = (count: number) => Array.from({ length: count }, () => ({}));
 
 /** Defines both must take, and ones both must refuse */
 const ACCEPTED: unknown[] = [
@@ -41,6 +48,30 @@ const ACCEPTED: unknown[] = [
   {
     layers: [{}],
     quality: { LOW: { antiTiling: { mode: 'NONE' }, distance: { fade: [10, 20] } } },
+    qualityLevel: 'LOW',
+  },
+  { layers: [{ heightContrast: 0, heightOffset: 0.5 }] },
+  { layers: [{}], ao: { vertex: false, bakedAlbedoInfluence: 1 } },
+  { layers: layersOf(2), blend: { source: 'VERTEX_COLOR' } },
+  { layers: layersOf(4), blend: { source: 'VERTEX_COLOR', vertexColor: { layout: 'RGB_AO' } } },
+  {
+    layers: layersOf(5),
+    blend: { source: 'VERTEX_COLOR', vertexColor: { layout: 'RGBA' }, mode: 'LINEAR' },
+  },
+  {
+    layers: layersOf(3),
+    blend: { source: 'VERTEX_COLOR' },
+    ao: { vertex: true, bakedAlbedoInfluence: 0 },
+  },
+  { layers: layersOf(9), blend: { source: 'SPLAT_MAP', heightBlendDepth: 0.02 } },
+  {
+    layers: [{ heightContrast: 2, heightOffset: -1 }, { heightOffset: 1 }],
+    blend: { source: 'SPLAT_MAP', mode: 'HEIGHT', heightBlendDepth: 0.5 },
+  },
+  {
+    layers: layersOf(2),
+    blend: { source: 'SPLAT_MAP' },
+    quality: { LOW: { blend: { source: 'SPLAT_MAP', mode: 'LINEAR' } } },
     qualityLevel: 'LOW',
   },
 ];
@@ -93,6 +124,39 @@ const REFUSED: unknown[] = [
   { layers: [{}], distance: {} },
   { layers: [{}], distance: { fade: [90, 30] } },
   { layers: [{}], distance: { fade: [30, 90], far: 'AVERAGE_COLOR' } },
+  { layers: [{ heightOffset: 2 }] },
+  { layers: [{ heightContrast: -1 }] },
+  { layers: [{}], blend: {} },
+  { layers: [{}], ao: { vertex: 'yes' } },
+  { layers: [{}], ao: { bakedAlbedoInfluence: 2 } },
+  { layers: layersOf(2), blend: { source: 'VERTEX_COLOR', vertexColor: {} } },
+  { layers: layersOf(2), blend: { source: 'VERTEX_COLOR', vertexColor: { layout: 'RGB' } } },
+  { layers: layersOf(5), blend: { source: 'VERTEX_COLOR' } },
+  { layers: layersOf(6), blend: { source: 'VERTEX_COLOR', vertexColor: { layout: 'RGBA' } } },
+  { layers: layersOf(10), blend: { source: 'SPLAT_MAP' } },
+  { layers: layersOf(2), blend: { source: 'SPLAT_MAP', vertexColor: { layout: 'RGBA' } } },
+  { layers: layersOf(2), blend: { source: 'SPLAT_MAP', mode: 'LINEAR', heightBlendDepth: 0.1 } },
+  { layers: layersOf(2), blend: { source: 'SPLAT_MAP', heightBlendDepth: 0.01 } },
+  { layers: layersOf(2), blend: { source: 'SPLAT_MAP', mode: 'SOFT' } },
+  { layers: layersOf(2), blend: { source: 'SPLAT_MAP' }, ao: { vertex: true } },
+  {
+    layers: layersOf(2),
+    blend: { source: 'VERTEX_COLOR', vertexColor: { layout: 'RGBA' } },
+    ao: { vertex: true },
+  },
+  {
+    layers: layersOf(2),
+    blend: { source: 'SPLAT_MAP' },
+    quality: { LOW: { blend: { source: 'SINGLE' } } },
+    qualityLevel: 'LOW',
+  },
+  {
+    layers: layersOf(2),
+    blend: { source: 'VERTEX_COLOR' },
+    ao: { vertex: true },
+    quality: { HIGH: { blend: { source: 'SPLAT_MAP' } } },
+    qualityLevel: 'HIGH',
+  },
 ];
 
 describe('readTerrainDefine', () => {
@@ -106,12 +170,16 @@ describe('readTerrainDefine', () => {
           tint: '#ffffff',
           normalStrength: 1,
           roughnessScale: 1,
+          heightContrast: 1,
+          heightOffset: 0,
           antiTiling: { mode: 'NONE' },
         },
       ],
       uv: 'WORLD',
-      blendSource: 'SINGLE',
+      blend: { source: 'SINGLE' },
       aoTextureInfluence: 1,
+      aoVertex: false,
+      aoBakedAlbedoInfluence: 0.5,
       macro: null,
       distanceFade: null,
       qualityLevel: null,
@@ -133,6 +201,14 @@ describe('readTerrainDefine', () => {
       roughness: 0.15,
     });
     expect(read({ layers: [{}], distance: { fade: [30, 90] } }).distanceFade).toEqual([30, 90]);
+    expect(read({ layers: layersOf(2), blend: { source: 'VERTEX_COLOR' } }).blend).toEqual({
+      source: 'VERTEX_COLOR',
+      layout: 'RGB_AO',
+      heightBlend: 0.2,
+    });
+    expect(
+      read({ layers: layersOf(2), blend: { source: 'SPLAT_MAP', mode: 'LINEAR' } }).blend
+    ).toEqual({ source: 'SPLAT_MAP', heightBlend: null });
   });
 
   it("gives a layer its own anti-tiling, else the material's (its tier's)", () => {
@@ -195,9 +271,20 @@ describe('readTerrainDefine', () => {
     const values = TERRAIN_DEFINE_VALUES;
     expect(values.defineKeys.sort()).toEqual(Object.keys(TerrainMaterialDefineSchema.shape).sort());
     expect(values.layerKeys.sort()).toEqual(Object.keys(TerrainLayerSettingsSchema.shape).sort());
-    const { ao, blend, distance } = TerrainMaterialDefineSchema.shape;
+    const { ao, distance } = TerrainMaterialDefineSchema.shape;
     expect(values.aoKeys.sort()).toEqual(Object.keys(ao.unwrap().shape).sort());
-    expect(values.blendKeys.sort()).toEqual(Object.keys(blend.unwrap().shape).sort());
+    for (const option of TerrainBlendSchema.options) {
+      const source = option.shape.source.value;
+      expect(values.blendKeys[source].sort(), source).toEqual(Object.keys(option.shape).sort());
+    }
+    expect(TerrainBlendSchema.options.map((option) => option.shape.source.value)).toEqual([
+      ...TERRAIN_BLEND_SOURCES,
+    ]);
+    const vertexColor = TerrainBlendSchema.options[1].shape.vertexColor.unwrap();
+    expect(values.vertexColorKeys.sort()).toEqual(Object.keys(vertexColor.shape).sort());
+    expect(values.blendModes).toEqual(TERRAIN_BLEND_MODES);
+    expect(values.vertexColorLayouts).toEqual(TERRAIN_VERTEX_COLOR_LAYOUTS);
+    expect(values.blendLayerCounts).toEqual(TERRAIN_BLEND_LAYER_COUNTS);
     expect(values.distanceKeys.sort()).toEqual(Object.keys(distance.unwrap().shape).sort());
     expect(values.macroKeys.sort()).toEqual(Object.keys(TerrainMacroSettingsSchema.shape).sort());
     for (const option of TerrainAntiTilingSchema.options) {
@@ -235,6 +322,20 @@ describe('readTerrainDefine', () => {
     );
     expect(() => read({ layers: [{}], antiTiling: { mode: 'NONE', farScale: 0.2 } })).toThrow(
       'staticDefines.terrain.antiTiling: has no field "farScale" (fields: mode).'
+    );
+    expect(() => read({ layers: layersOf(5), blend: { source: 'VERTEX_COLOR' } })).toThrow(
+      'staticDefines.terrain.layers: blend.source VERTEX_COLOR (RGB_AO) takes 2 to 4 layers, not 5.'
+    );
+    expect(() =>
+      read({
+        layers: layersOf(2),
+        blend: { source: 'SPLAT_MAP', mode: 'LINEAR', heightBlendDepth: 0.1 },
+      })
+    ).toThrow(
+      'staticDefines.terrain.blend.heightBlendDepth: is for blend.mode HEIGHT, not LINEAR.'
+    );
+    expect(() => read({ layers: [{}], ao: { vertex: true } })).toThrow(
+      'staticDefines.terrain.ao.vertex: needs blend.source VERTEX_COLOR with the RGB_AO layout.'
     );
     expect(() => read({ layers: [{}], macro: {} })).toThrow(
       'staticDefines.terrain.macro.scale: is missing'
