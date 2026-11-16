@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { color, texture, uniform } from 'three/tsl';
+import { color, normalWorldGeometry, texture, uniform } from 'three/tsl';
 import { MeshStandardNodeMaterial, Texture, Vector2, type Node } from 'three/webgpu';
 import type { MatProps, TslMaterialFns } from 'aekasha';
 import type { TextureSetInput } from 'aekasha/texturesets';
@@ -62,7 +62,13 @@ vi.mock('aekasha', async (importOriginal) => ({
     const material = new MeshStandardNodeMaterial();
     material.userData.uniforms = {};
     const tsl = props as MatProps & { inputs: Record<string, unknown> };
-    const inputs = Object.fromEntries(Object.keys(tsl.inputs).map((key) => [key, makeBundle()]));
+    // A layer's set as its bundle, the macro texture as a texture node
+    const inputs = Object.fromEntries(
+      Object.keys(tsl.inputs).map((key) => [
+        key,
+        key === 'macro' ? texture(new Texture()) : makeBundle(),
+      ])
+    );
     fns.setup?.(
       inputs,
       material,
@@ -81,19 +87,12 @@ const build = (terrain: unknown, inputs: Record<string, unknown> = { layer0: mak
 };
 
 /**
- * The nodes a material's sockets reach, each once (three's `traverse` walks a shared node once per
- * path to it, which a hex-tiled graph has exponentially many of)
+ * The nodes the roots reach, each once (three's `traverse` walks a shared node once per path to
+ * it, which a hex-tiled graph has exponentially many of)
  */
-const collectNodes = (material: MeshStandardNodeMaterial) => {
+const collectNodesFrom = (roots: unknown[]) => {
   const nodes = new Set<Node>();
-  const stack = [
-    material.colorNode,
-    material.normalNode,
-    material.roughnessNode,
-    material.metalnessNode,
-    material.aoNode,
-    material.emissiveNode,
-  ] as (Node | null)[];
+  const stack = [...roots] as (Node | null)[];
   while (stack.length) {
     const node = stack.pop();
     if (!node || nodes.has(node)) continue;
@@ -102,6 +101,17 @@ const collectNodes = (material: MeshStandardNodeMaterial) => {
   }
   return [...nodes];
 };
+
+/** The nodes a material's sockets reach, each once */
+const collectNodes = (material: MeshStandardNodeMaterial) =>
+  collectNodesFrom([
+    material.colorNode,
+    material.normalNode,
+    material.roughnessNode,
+    material.metalnessNode,
+    material.aoNode,
+    material.emissiveNode,
+  ]);
 
 /** How many of the sockets' math nodes run a method (`dFdx`, `cos`, …) */
 const countMethod = (material: MeshStandardNodeMaterial, method: string) =>
@@ -195,6 +205,64 @@ describe('setupTerrainMaterial', () => {
     // HEX's taps take the UV's gradients; planar world tiling has no derivatives otherwise
     expect(countMethod(hex, 'dFdx')).toBeGreaterThan(0);
     expect(countMethod(dual, 'dFdx')).toBe(0);
+  });
+
+  it('fetches the macro texture once, varying the colour and roughness and feeding the patches', () => {
+    const macroTexture = texture(new Texture());
+    const isSampleOfMacro = (node: Node) =>
+      (node as unknown as { isTextureNode?: boolean }).isTextureNode &&
+      (node as unknown as { value: unknown }).value === macroTexture.value &&
+      node !== (macroTexture as unknown as Node);
+    const withMacro = (antiTiling: unknown) =>
+      build(
+        { layers: [{}], macro: { scale: 120, brightness: 0.3 }, antiTiling },
+        { layer0: makeBundle(), macro: macroTexture }
+      );
+    const material = withMacro({ mode: 'NONE' });
+    expect(collectNodes(material).filter(isSampleOfMacro)).toHaveLength(1);
+    const uniforms = material.userData.uniforms as Record<string, { value: unknown }>;
+    expect(uniforms.terrain_macroScale.value).toBe(120);
+    expect(uniforms.terrain_macroBrightness.value).toBe(0.3);
+    expect(uniforms.terrain_macroHue.value).toBe(8);
+    expect(uniforms.terrain_macroRoughness.value).toBe(0.15);
+    // The colour and the roughness read it; the normal only through DUAL_SCALE's patches
+    const reaches = (root: unknown) => collectNodesFrom([root]).some(isSampleOfMacro);
+    expect(reaches(material.colorNode)).toBe(true);
+    expect(reaches(material.roughnessNode)).toBe(true);
+    expect(reaches(material.normalNode)).toBe(false);
+    const dual = withMacro({ mode: 'DUAL_SCALE' });
+    expect(reaches(dual.normalNode)).toBe(true);
+    expect(collectNodes(dual).filter(isSampleOfMacro)).toHaveLength(1);
+    // Without macro: no macro uniforms
+    expect(getUniformKeys(build({ layers: [{}] })).some((key) => key.includes('macro'))).toBe(
+      false
+    );
+  });
+
+  it('wants the macro input with macro, and refuses it without', () => {
+    expect(() => build({ layers: [{}], macro: { scale: 100 } })).toThrow(/Missing input "macro"/);
+    expect(() =>
+      build({ layers: [{}], macro: { scale: 100 } }, { layer0: makeBundle(), macro: makeBundle() })
+    ).toThrow(/Missing input "macro"/);
+    expect(() =>
+      build({ layers: [{}] }, { layer0: makeBundle(), macro: texture(new Texture()) })
+    ).toThrow(/Input "macro" has no macro/);
+  });
+
+  it('fades the normal only with distance, its range a uniform', () => {
+    const geometryNormals = (material: MeshStandardNodeMaterial) =>
+      collectNodesFrom([material.normalNode]).filter(
+        (node) => node === (normalWorldGeometry as unknown as Node)
+      ).length;
+    const faded = build({ layers: [{}], distance: { fade: [40, 120] } });
+    expect(
+      (faded.userData.uniforms as Record<string, { value: unknown }>).terrain_distanceFade.value
+    ).toEqual({ x: 40, y: 120 });
+    // The planar frame reads the geometry normal; the fade reads it once more
+    expect(geometryNormals(faded)).toBeGreaterThan(0);
+    expect(countMethod(faded, 'smoothstep')).toBe(1);
+    expect(countMethod(build({ layers: [{}] }), 'smoothstep')).toBe(0);
+    expect(getUniformKeys(build({ layers: [{}] }))).not.toContain('terrain_distanceFade');
   });
 
   it("starts the AO influence at the define's", () => {

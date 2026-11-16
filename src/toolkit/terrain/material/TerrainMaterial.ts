@@ -35,6 +35,8 @@ import {
 } from 'aekasha';
 import type { TextureSetInput } from 'aekasha/texturesets';
 import { sampleAntiTiled, type AntiTilingNodes } from '../nodes/AntiTiling';
+import { fadeDetailNormal } from '../nodes/Distance';
+import { applyMacroVariation, sampleMacroTexture, type MacroNodes } from '../nodes/Macro';
 import type { TextureSetSample } from '../nodes/SampleTextureSet';
 import {
   bumpNormalWorld,
@@ -139,6 +141,41 @@ const createAntiTilingNodes = (
     };
   }
   return { mode: 'NONE' };
+};
+
+/** The macro variation's uniforms (`terrain_macro<Name>`) and its one sample */
+type Macro = { nodes: MacroNodes; sample: Node<'vec4'> };
+
+/**
+ * The macro variation when the define has one: its texture (the input `macro`, which only a define
+ * with `macro` takes), its uniforms and its one sample; null without
+ */
+const createMacro = (
+  material: NodeMaterial,
+  inputs: Record<string, unknown>,
+  define: ResolvedTerrainDefine
+): Macro | null => {
+  const input = inputs[MACRO_INPUT_KEY];
+  if (!define.macro) {
+    if (input === undefined) return null;
+    throw new Error(
+      `[terrain] Input "${MACRO_INPUT_KEY}" has no macro: give staticDefines.terrain.macro (its scale) to use it.`
+    );
+  }
+  if (!(input as { isTextureNode?: boolean } | undefined)?.isTextureNode) {
+    throw new Error(
+      `[terrain] Missing input "${MACRO_INPUT_KEY}": the macro texture ({ "texture": id }, eg. macroNoise) of staticDefines.terrain.macro.`
+    );
+  }
+  const keep = (name: string, value: number) =>
+    keepUniform(material, name, uniform(value)) as Node<'float'>;
+  const nodes: MacroNodes = {
+    scale: keep('macroScale', define.macro.scale),
+    brightness: keep('macroBrightness', define.macro.brightness),
+    hue: keep('macroHue', define.macro.hue),
+    roughness: keep('macroRoughness', define.macro.roughness),
+  };
+  return { nodes, sample: sampleMacroTexture(input as TextureNode, nodes.scale) };
 };
 
 /** Makes a layer's uniforms (`terrain_l<i>_<name>`) */
@@ -258,19 +295,24 @@ const getLayerSurface = (
  * material's sockets: the colour, the normal (each layer's in world space, into view space once),
  * the roughness, metalness 0, and the texture AO (`FULL`) to `aoNode`, which darkens indirect
  * light only (`LITE` and `MINIMAL` have theirs baked into the albedo). Each layer samples its set
- * with its anti-tiling (`NONE` one tap, `DUAL_SCALE` two, `HEX` three). Only what the define
- * enables is built. The tunables are uniforms in `material.userData.uniforms`: per layer
- * `terrain_l<i>_<name>` (`tiling`, `rotation` when given, `tint`, `normalStrength`,
- * `roughnessScale`; `farScale` and `antiTilingDistance` with `DUAL_SCALE`, `hexContrast` and
- * `hexRotation` with `HEX`), and `terrain_aoTextureInfluence` when a layer has texture AO. A
+ * with its anti-tiling (`NONE` one tap, `DUAL_SCALE` two, `HEX` three). With `macro`, one fetch of
+ * the input `macro` at the world's XZ varies the surface (R the brightness, G the hue and the
+ * roughness, B `DUAL_SCALE`'s patches); with `distance`, the normal fades to the geometry's over
+ * its `fade` range. Only what the define enables is built. The tunables are uniforms in
+ * `material.userData.uniforms`: per layer `terrain_l<i>_<name>` (`tiling`, `rotation` when given,
+ * `tint`, `normalStrength`, `roughnessScale`; `farScale` and `antiTilingDistance` with
+ * `DUAL_SCALE`, `hexContrast` and `hexRotation` with `HEX`), `terrain_aoTextureInfluence` when a
+ * layer has texture AO, `terrain_macroScale`, `terrain_macroBrightness`, `terrain_macroHue` and
+ * `terrain_macroRoughness` with `macro`, and `terrain_distanceFade` with `distance`. A
  * `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug env, once
  * {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the view. The
  * define as given is kept at `material.userData.terrainDefine`.
  * @param inputs the material's inputs: `layer<i>` bundles (the `textureSets()` feature's resolver)
+ * and, with `macro`, the macro texture `macro` (a texture node: `{ "texture": id }`)
  * @param material the node material being built (a `STANDARDNODEMATERIAL`)
  * @param staticDefines the material's static defines, `terrain` among them
- * @throws for a missing or wrong define field, a field it doesn't know, a missing layer input, or
- * layers in different packings
+ * @throws for a missing or wrong define field, a field it doesn't know, a missing layer input, a
+ * missing macro input (or one without `macro`), or layers in different packings
  * @example
  * ```ts
  * // A TSL file of a material JSON whose staticDefines.terrain is the define
@@ -299,15 +341,16 @@ export const setupTerrainMaterial = (
       uniform(define.aoTextureInfluence)
     ) as Node<'float'>);
 
-  // Shared by every layer, built before any of them
+  // Shared by every layer, built before any of them: the view distance and the one macro fetch
   const viewDistance = positionView.length() as unknown as Node<'float'>;
+  const macro = createMacro(material, inputs, define);
   const layers = define.layers.map((layerDefine, i) => {
     const bundle = bundles[i];
     const uniforms = createLayerUniforms(material, layerDefine, i);
     const uv = getLayerUv(define, bundle, uniforms);
     const sample = sampleAntiTiled(bundle, uv.tileUv, uniforms.antiTiling, {
       viewDistance,
-      patches: null,
+      patches: macro ? (macro.sample.b as unknown as Node<'float'>) : null,
       seed: i,
     });
     return { bundle, uniforms, uv, sample };
@@ -317,11 +360,25 @@ export const setupTerrainMaterial = (
     getLayerSurface(define, bundle, uniforms, uv, sample, getAoInfluence)
   );
 
-  // SINGLE: the one layer is the surface
+  // SINGLE: the one layer is the surface, then the material-wide effects
   const [surface] = surfaces;
-  standard.colorNode = surface.albedo;
-  standard.normalNode = transformWorldNormalToView(surface.normal);
-  standard.roughnessNode = surface.roughness;
+  const { albedo, roughness } = macro
+    ? applyMacroVariation(surface, macro.sample, macro.nodes)
+    : surface;
+  const normal = define.distanceFade
+    ? fadeDetailNormal(
+        surface.normal,
+        viewDistance,
+        keepUniform(
+          material,
+          'distanceFade',
+          uniform(new Vector2(...define.distanceFade))
+        ) as Node<'vec2'>
+      )
+    : surface.normal;
+  standard.colorNode = albedo;
+  standard.normalNode = transformWorldNormalToView(normal);
+  standard.roughnessNode = roughness;
   standard.metalnessNode = float(0);
   if (surface.ao) standard.aoNode = surface.ao;
 
@@ -331,7 +388,7 @@ export const setupTerrainMaterial = (
       coords: uv.coords,
       tileSize: uv.tileSize,
       colorTexture: (bundle.albedoRough ?? bundle.albedoHeight) as unknown as TextureNode,
-      normal: surface.normal,
+      normal,
     });
   }
 };
