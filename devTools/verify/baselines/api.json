@@ -4811,6 +4811,9 @@
     "src/toolkit/materials/asteroid/asteroid.tsl.ts": {
       "colorNode": "Function"
     },
+    "src/toolkit/materials/terrain/terrain.tsl.ts": {
+      "setup": "Variable"
+    },
     "src/toolkit/materials/textureSetSurface/textureSetSurface.tsl.ts": {
       "setup": "Function"
     },
@@ -4829,6 +4832,43 @@
       "triplanarProjection": "Function",
       "TriplanarProjection": "TypeAlias",
       "TriplanarProjectionOptions": "Interface"
+    },
+    "src/toolkit/terrain/material/TerrainDebugViews.ts": {
+      "getLoadedTerrainDebugViews": "Function",
+      "loadTerrainDebugViewsAsync": "Function"
+    },
+    "src/toolkit/terrain/material/TerrainDefine.ts": {
+      "readTerrainDefine": "Function",
+      "ResolvedTerrainDefine": "TypeAlias",
+      "TERRAIN_DEFINE_VALUES": "Variable",
+      "TerrainLayerDefine": "TypeAlias"
+    },
+    "src/toolkit/terrain/material/TerrainMaterial.ts": {
+      "createTerrainMaterial": "Function",
+      "getTerrainMaterialProps": "Function",
+      "getTerrainMaterialVariant": "Function",
+      "setupTerrainMaterial": "Function",
+      "TERRAIN_TSL_MATERIAL_ID": "Variable",
+      "TerrainQualityLevel": "TypeAlias"
+    },
+    "src/toolkit/terrain/material/TerrainMaterialConfig.ts": {
+      "TERRAIN_BLEND_SOURCES": "Variable",
+      "TERRAIN_DEBUG_VIEWS": "Variable",
+      "TERRAIN_LAYER_SOURCES": "Variable",
+      "TERRAIN_MAX_LAYERS": "Variable",
+      "TERRAIN_PACKINGS": "Variable",
+      "TERRAIN_QUALITY_LEVELS": "Variable",
+      "TERRAIN_UV_MODES": "Variable",
+      "TerrainLayer": "TypeAlias",
+      "TerrainLayerSchema": "Variable",
+      "TerrainLayerSettings": "TypeAlias",
+      "TerrainLayerSettingsSchema": "Variable",
+      "TerrainMaterialConfig": "TypeAlias",
+      "TerrainMaterialConfigSchema": "Variable",
+      "TerrainMaterialDefine": "TypeAlias",
+      "TerrainMaterialDefineSchema": "Variable",
+      "TerrainQualityOverrides": "TypeAlias",
+      "TerrainQualityOverridesSchema": "Variable"
     },
     "src/toolkit/terrain/nodes/noise/Hash.ts": {
       "hash12": "Function",
@@ -4875,6 +4915,14 @@
       "SampleTextureSetOptions": "TypeAlias",
       "TextureSetSample": "TypeAlias",
       "transformTangentNormalToView": "Function"
+    },
+    "src/toolkit/terrain/nodes/TerrainNormals.ts": {
+      "bumpNormalWorld": "Function",
+      "getPlanarTangentFrame": "Function",
+      "getUvTangentFrame": "Function",
+      "transformTangentNormalToWorld": "Function",
+      "transformWorldNormalToView": "Function",
+      "WorldTangentFrame": "TypeAlias"
     },
     "src/toolkit/terrain/procedural/BakeSurface.ts": {
       "BakedSurface": "TypeAlias",
@@ -6006,6 +6054,18 @@
       "SurfaceParamSpecs",
       "SurfaceParamValues",
       "SurfaceToggleParam",
+      "TERRAIN_TSL_MATERIAL_ID",
+      "TerrainLayer",
+      "TerrainLayerSchema",
+      "TerrainLayerSettings",
+      "TerrainLayerSettingsSchema",
+      "TerrainMaterialConfig",
+      "TerrainMaterialConfigSchema",
+      "TerrainMaterialDefine",
+      "TerrainMaterialDefineSchema",
+      "TerrainQualityLevel",
+      "TerrainQualityOverrides",
+      "TerrainQualityOverridesSchema",
       "TextureSetSample",
       "WorleyOptions",
       "WorleySample",
@@ -6016,12 +6076,15 @@
       "cliffStrata",
       "concretePores",
       "createLiveSurface",
+      "createTerrainMaterial",
       "decodeRippleAtlas",
       "defineSurfaceGenerator",
       "doesPackingStoreNormal",
       "domainWarp",
       "fbm",
       "getSurfacePackingOutputs",
+      "getTerrainMaterialProps",
+      "getTerrainMaterialVariant",
       "gradientNoise",
       "grassGround",
       "hash12",
@@ -6029,6 +6092,7 @@
       "heightToCavity",
       "heightToNormal",
       "iceSheet",
+      "loadTerrainDebugViewsAsync",
       "mudCracked",
       "mudSmooth",
       "packSurfaceOutputs",
@@ -6036,6 +6100,7 @@
       "sampleTextureSet",
       "sandFlat",
       "sandRipples",
+      "setupTerrainMaterial",
       "snowDrift",
       "transformTangentNormalToView",
       "valueNoise",

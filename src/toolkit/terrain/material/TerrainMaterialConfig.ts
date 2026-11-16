@@ -16,6 +16,13 @@ export const TERRAIN_UV_MODES = ['WORLD', 'MESH_UV'] as const;
 export const TERRAIN_BLEND_SOURCES = ['SINGLE'] as const;
 /** The texture set packings a terrain material samples (p303 D2). */
 export const TERRAIN_PACKINGS = ['FULL', 'LITE', 'MINIMAL'] as const;
+/** The quality tiers a terrain material's `quality` table overrides (p240's scale). */
+export const TERRAIN_QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as const;
+/**
+ * The debug views (debug env only): `TEXEL_DENSITY` a 1 m checker in bands of texels per metre,
+ * `NORMALS` the shaded normal in world space.
+ */
+export const TERRAIN_DEBUG_VIEWS = ['TEXEL_DENSITY', 'NORMALS'] as const;
 /** The most layers a terrain material blends. */
 export const TERRAIN_MAX_LAYERS = 16;
 
@@ -135,18 +142,76 @@ const sharedFields = {
   ao: TerrainAoSchema.optional(),
 };
 
-/** `SINGLE` blends one layer: the refinement both schemas share */
+/**
+ * A quality tier's overrides: material-wide fields over the material's own (shallowly, a field's
+ * object replacing the material's whole), for the tier's variant (`getTerrainMaterialVariant`).
+ */
+export const TerrainQualityOverridesSchema = z
+  .object(sharedFields)
+  .strict()
+  .describe("A quality tier's material-wide fields over the material's own (shallowly).");
+
+/** A quality tier's material-wide fields over the material's own (shallowly). */
+export type TerrainQualityOverrides = z.infer<typeof TerrainQualityOverridesSchema>;
+
+/** The tier and debug fields the code route's config and the static define share */
+const variantFields = {
+  /** Each quality tier's overrides (`LOW`, `MEDIUM`, `HIGH`, `ULTRA`; any of them). */
+  quality: z
+    .object(
+      Object.fromEntries(
+        TERRAIN_QUALITY_LEVELS.map((level) => [level, TerrainQualityOverridesSchema.optional()])
+      ) as Record<
+        (typeof TERRAIN_QUALITY_LEVELS)[number],
+        z.ZodOptional<typeof TerrainQualityOverridesSchema>
+      >
+    )
+    .strict()
+    .optional()
+    .describe("Each quality tier's overrides (LOW, MEDIUM, HIGH, ULTRA; any of them)."),
+  /**
+   * The tier this material compiles: its `quality` overrides apply (none: the material's own
+   * fields). `getTerrainMaterialVariant` sets it.
+   */
+  qualityLevel: z
+    .enum(TERRAIN_QUALITY_LEVELS)
+    .optional()
+    .describe(
+      "The tier this material compiles: its quality overrides apply (none: the material's own fields)."
+    ),
+  /**
+   * A debug view in place of the surface (debug env only, ignored elsewhere; its code loads with
+   * `loadTerrainDebugViewsAsync`): `TEXEL_DENSITY` or `NORMALS`.
+   */
+  debugView: z
+    .enum(TERRAIN_DEBUG_VIEWS)
+    .optional()
+    .describe(
+      'A debug view in place of the surface (debug env only; its code loads with loadTerrainDebugViewsAsync): TEXEL_DENSITY or NORMALS.'
+    ),
+};
+
+/** `SINGLE` blends one layer, in the material's fields and in each tier's: the refinement both
+ * schemas share */
 const checkSingleLayer = (
-  value: { layers: unknown[]; blend?: { source: string } },
+  value: {
+    layers: unknown[];
+    blend?: { source: string };
+    quality?: Partial<Record<string, { blend?: { source: string } }>>;
+  },
   ctx: z.RefinementCtx
 ) => {
-  const source = value.blend?.source ?? 'SINGLE';
-  if (source === 'SINGLE' && value.layers.length !== 1) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['layers'],
-      message: `blend.source SINGLE takes one layer, not ${value.layers.length}.`,
-    });
+  const tiers = Object.values(value.quality ?? {});
+  for (const blend of [value.blend, ...tiers.map((tier) => tier?.blend ?? value.blend)]) {
+    const source = blend?.source ?? 'SINGLE';
+    if (source === 'SINGLE' && value.layers.length !== 1) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['layers'],
+        message: `blend.source SINGLE takes one layer, not ${value.layers.length}.`,
+      });
+      return;
+    }
   }
 };
 
@@ -165,6 +230,7 @@ export const TerrainMaterialDefineSchema = z
       .max(TERRAIN_MAX_LAYERS)
       .describe("The layers' settings, in the inputs' order (layer0, …): 1 to 16."),
     ...sharedFields,
+    ...variantFields,
   })
   .strict()
   .superRefine(checkSingleLayer)
@@ -198,6 +264,7 @@ export const TerrainMaterialConfigSchema = z
         "The packing every layer samples (each set must have it); default: each set's defaultPacking, which must then agree."
       ),
     ...sharedFields,
+    ...variantFields,
   })
   .strict()
   .superRefine(checkSingleLayer)

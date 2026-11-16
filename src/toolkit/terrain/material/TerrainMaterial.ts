@@ -5,8 +5,18 @@
 // the JSON route (`materials/terrain/terrain.tsl.ts`, whose `setup` it is).
 import { color, float, mix, positionWorld, uniform, uv as meshUv, vec2, vec3 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
-import type { MeshStandardNodeMaterial, Node, NodeMaterial } from 'three/webgpu';
-import { createMaterial, registerTslMaterial, type MatProps, type TslMaterialFns } from 'aekasha';
+import type { MeshStandardNodeMaterial, Node, NodeMaterial, TextureNode } from 'three/webgpu';
+import {
+  createMaterial,
+  existsOrThrow,
+  getMaterial,
+  getMaterialVariant,
+  IS_DEBUG_ENV,
+  lwarn,
+  registerTslMaterial,
+  type MatProps,
+  type TslMaterialFns,
+} from 'aekasha';
 import type { TextureSetInput } from 'aekasha/texturesets';
 import { sampleTextureSet, type TextureSetSample } from '../nodes/SampleTextureSet';
 import {
@@ -21,7 +31,13 @@ import {
   type ResolvedTerrainDefine,
   type TerrainLayerDefine,
 } from './TerrainDefine';
-import type { TerrainMaterialConfig, TerrainMaterialDefine } from './TerrainMaterialConfig';
+import type { TerrainDebugView, TerrainDebugViewContext } from '../debug/_dbg__DebugViews';
+import { getLoadedTerrainDebugViews, loadTerrainDebugViewsAsync } from './TerrainDebugViews';
+import type {
+  TERRAIN_QUALITY_LEVELS,
+  TerrainMaterialConfig,
+  TerrainMaterialDefine,
+} from './TerrainMaterialConfig';
 
 /** The id the code route registers the terrain material's functions under (`tslMaterialId`). */
 export const TERRAIN_TSL_MATERIAL_ID = 'aek.terrain';
@@ -96,6 +112,18 @@ const createLayerUniforms = (
   };
 };
 
+/** A layer's tiling: its coordinates in metres, its tile size, its UV and its turn */
+type LayerUv = {
+  /** The world's `(x, −z)` or the mesh's UV, metres */
+  coords: Node<'vec2'>;
+  /** The set's `physicalSize` × the layer's tiling, metres */
+  tileSize: Node<'vec2'>;
+  /** The UV sampled, in tiles */
+  tileUv: Node<'vec2'>;
+  /** The rotation in radians, or null for none */
+  angle: Node<'float'> | null;
+};
+
 /**
  * A layer's tiling UV: the world's `(x, −z)` (seen from above, the source's orientation) or the
  * mesh's UV, over the set's tile size × the layer's tiling, turned by its rotation when it has one
@@ -105,20 +133,20 @@ const getLayerUv = (
   define: ResolvedTerrainDefine,
   bundle: TextureSetInput,
   layer: LayerUniforms
-): { tileUv: Node<'vec2'>; angle: Node<'float'> | null } => {
+): LayerUv => {
   const coords =
     define.uv === 'MESH_UV'
       ? (meshUv() as unknown as Node<'vec2'>)
       : (vec2(positionWorld.x, positionWorld.z.negate()) as unknown as Node<'vec2'>);
   const tileSize = (bundle.physicalSize as unknown as Node<'vec2'>).mul(layer.tiling);
   const tileUv = coords.div(tileSize) as Node<'vec2'>;
-  if (!layer.rotation) return { tileUv, angle: null };
+  if (!layer.rotation) return { coords, tileSize, tileUv, angle: null };
   // The pattern turns counter-clockwise from above: sample at the UV turned back
   const angle = layer.rotation.mul(DEG_TO_RAD) as Node<'float'>;
   const c = angle.cos();
   const s = angle.sin();
   const turned = vec2(c.mul(tileUv.x).add(s.mul(tileUv.y)), c.mul(tileUv.y).sub(s.mul(tileUv.x)));
-  return { tileUv: turned as unknown as Node<'vec2'>, angle };
+  return { coords, tileSize, tileUv: turned as unknown as Node<'vec2'>, angle };
 };
 
 /** Every layer's sample in one packing, or a thrown error naming the layers' packings */
@@ -143,7 +171,7 @@ const getLayerSurface = (
   define: ResolvedTerrainDefine,
   bundle: TextureSetInput,
   layer: LayerUniforms,
-  uv: { tileUv: Node<'vec2'>; angle: Node<'float'> | null },
+  uv: LayerUv,
   sample: TextureSetSample,
   aoInfluence: () => Node<'float'>
 ): LayerSurface => {
@@ -185,7 +213,10 @@ const getLayerSurface = (
  * light only (`LITE` and `MINIMAL` have theirs baked into the albedo). Only what the define
  * enables is built. The tunables are uniforms in `material.userData.uniforms`: per layer
  * `terrain_l<i>_<name>` (`tiling`, `rotation` when given, `tint`, `normalStrength`,
- * `roughnessScale`), and `terrain_aoTextureInfluence` when a layer has texture AO.
+ * `roughnessScale`), and `terrain_aoTextureInfluence` when a layer has texture AO. A
+ * `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug env, once
+ * {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the view. The
+ * define as given is kept at `material.userData.terrainDefine`.
  * @param inputs the material's inputs: `layer<i>` bundles (the `textureSets()` feature's resolver)
  * @param material the node material being built (a `STANDARDNODEMATERIAL`)
  * @param staticDefines the material's static defines, `terrain` among them
@@ -207,6 +238,8 @@ export const setupTerrainMaterial = (
   const define = readTerrainDefine(staticDefines);
   const bundles = readLayerBundles(inputs, define);
   const standard = material as MeshStandardNodeMaterial;
+  // As given, for a tier's or a view's variant of this material (getTerrainMaterialVariant)
+  material.userData.terrainDefine = staticDefines.terrain;
 
   // Made on the first layer with texture AO: none without one
   let aoInfluence: Node<'float'> | null = null;
@@ -235,6 +268,36 @@ export const setupTerrainMaterial = (
   standard.roughnessNode = surface.roughness;
   standard.metalnessNode = float(0);
   if (surface.ao) standard.aoNode = surface.ao;
+
+  if (IS_DEBUG_ENV && define.debugView) {
+    const [{ bundle, uv }] = layers;
+    applyDebugView(standard, define.debugView, {
+      coords: uv.coords,
+      tileSize: uv.tileSize,
+      colorTexture: (bundle.albedoRough ?? bundle.albedoHeight) as unknown as TextureNode,
+      normal: surface.normal,
+    });
+  }
+};
+
+/**
+ * A debug view over the material's sockets, when the views are loaded; else the load starts and
+ * the material builds without it (warned): the graph can't wait for a module
+ */
+const applyDebugView = (
+  material: MeshStandardNodeMaterial,
+  view: TerrainDebugView,
+  ctx: TerrainDebugViewContext
+) => {
+  const views = getLoadedTerrainDebugViews();
+  if (views) {
+    views.applyTerrainDebugView(material, view, ctx);
+    return;
+  }
+  void loadTerrainDebugViewsAsync();
+  lwarn(
+    `[terrain] Material "${String(material.userData.id ?? material.name)}" asks for the debug view ${view}, but the views aren't loaded: await loadTerrainDebugViewsAsync() before creating it. It builds without the view.`
+  );
 };
 
 /** The terrain material's TSL functions, as the code route registers them */
@@ -312,4 +375,46 @@ export const getTerrainMaterialProps = (
 export const createTerrainMaterial = (config: TerrainMaterialConfig) => {
   registerTslMaterial(TERRAIN_TSL_MATERIAL_ID, terrainMaterialFns);
   return createMaterial(getTerrainMaterialProps(config)) as MeshStandardNodeMaterial;
+};
+
+/** A quality tier of a terrain material's `quality` table: `LOW`, `MEDIUM`, `HIGH` or `ULTRA`. */
+export type TerrainQualityLevel = (typeof TERRAIN_QUALITY_LEVELS)[number];
+
+/**
+ * A terrain material's variant at a quality tier (p305 D10): `getMaterialVariant` with the
+ * material's own define and the tier as its `qualityLevel`, so the tier's `quality` overrides
+ * apply over its fields and the tier is its own shader (one per tier used, shared by every caller).
+ * Pass the material whose define has the `quality` table (the base, or a block's variant of it):
+ * a variant from this call already has a tier, which another call replaces.
+ * @param id a terrain material's id (`createTerrainMaterial`'s, a JSON route's, or a variant's)
+ * @param level the tier whose `quality` overrides apply
+ * @returns the tier's material, cached per material and tier
+ * @throws for an id that isn't registered or isn't a terrain material
+ * @example
+ * ```ts
+ * import { createTerrainMaterial, getTerrainMaterialVariant } from 'aekasha/toolkit/terrain';
+ *
+ * createTerrainMaterial({
+ *   id: 'canyon',
+ *   layers: [{ set: 'cliffs01' }],
+ *   quality: { LOW: { ao: { textureInfluence: 0 } } },
+ * });
+ * // The low tier, its own shader
+ * const canyonLow = getTerrainMaterialVariant('canyon', 'LOW');
+ * ```
+ */
+export const getTerrainMaterialVariant = (id: string, level: TerrainQualityLevel) => {
+  const material = existsOrThrow(
+    getMaterial(id),
+    `[terrain] getTerrainMaterialVariant: no material "${id}".`
+  );
+  const define = material.userData.terrainDefine as Record<string, unknown> | undefined;
+  if (!define) {
+    throw new Error(
+      `[terrain] getTerrainMaterialVariant: material "${id}" isn't a terrain material (no terrain define).`
+    );
+  }
+  return getMaterialVariant(id, {
+    staticDefines: { terrain: { ...define, qualityLevel: level } },
+  }) as MeshStandardNodeMaterial;
 };

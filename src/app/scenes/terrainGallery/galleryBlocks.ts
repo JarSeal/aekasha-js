@@ -49,17 +49,22 @@ export const BASELINE_MATERIAL_ID = 'textureSetSurface';
  */
 export const NO_SHADOWS = { castShadow: false, receiveShadow: false } as const;
 
-/** A wall's terrain define: one layer at its UVs in metres */
-const WALL_TERRAIN_DEFINE = { layers: [{}], uv: 'MESH_UV' };
+/** A terrain debug view the tab shows (p305 D10), or none */
+export type GalleryDebugView = 'NONE' | 'TEXEL_DENSITY' | 'NORMALS';
 
 /**
  * A block's (or its wall's) variant of the gallery's terrain material (or with `isBaseline` of
  * `textureSetSurface`): its set, in a packing (none: the set's default, the variant the scene's
- * load made)
+ * load made), a wall at its UVs in metres, and a terrain debug view (the debug env's tab)
  */
 export const getSurfaceOverrides = (
   setId: string,
-  opts: { packing?: TextureSetPacking; isWall?: boolean; isBaseline?: boolean } = {}
+  opts: {
+    packing?: TextureSetPacking;
+    isWall?: boolean;
+    isBaseline?: boolean;
+    debugView?: GalleryDebugView;
+  } = {}
 ): MaterialVariantOverrides => {
   const set = opts.packing ? { textureSet: setId, packing: opts.packing } : { textureSet: setId };
   if (opts.isBaseline) {
@@ -68,10 +73,14 @@ export const getSurfaceOverrides = (
       ...(opts.isWall ? { staticDefines: { tiling: 'UV' } } : {}),
     };
   }
-  return {
-    inputs: { layer0: set },
-    ...(opts.isWall ? { staticDefines: { terrain: WALL_TERRAIN_DEFINE } } : {}),
+  const hasView = opts.debugView && opts.debugView !== 'NONE';
+  if (!opts.isWall && !hasView) return { inputs: { layer0: set } };
+  const terrain = {
+    layers: [{}],
+    ...(opts.isWall ? { uv: 'MESH_UV' } : {}),
+    ...(hasView ? { debugView: opts.debugView } : {}),
   };
+  return { inputs: { layer0: set }, staticDefines: { terrain } };
 };
 
 /**

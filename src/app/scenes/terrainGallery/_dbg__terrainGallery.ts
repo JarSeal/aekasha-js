@@ -17,7 +17,7 @@ import {
   type DebuggerTabSection,
 } from 'aekasha/debug';
 import { getTextureSet, loadTextureSetAsync, type TextureSetPacking } from 'aekasha/texturesets';
-import { createTerrainMaterial } from 'aekasha/toolkit/terrain';
+import { createTerrainMaterial, loadTerrainDebugViewsAsync } from 'aekasha/toolkit/terrain';
 import { flyToGalleryBlock, stopGalleryFlight } from './_dbg__terrainGalleryCamera';
 import {
   clearGeneratorSelection,
@@ -26,7 +26,12 @@ import {
   startProceduralTab,
   type ProceduralSectionsOpts,
 } from './_dbg__terrainGalleryProcedural';
-import { BASELINE_MATERIAL_ID, GALLERY_MATERIAL_ID, getSurfaceOverrides } from './galleryBlocks';
+import {
+  BASELINE_MATERIAL_ID,
+  GALLERY_MATERIAL_ID,
+  getSurfaceOverrides,
+  type GalleryDebugView,
+} from './galleryBlocks';
 import {
   getProceduralBakeSettings,
   PROCEDURAL_BLOCKS,
@@ -59,9 +64,25 @@ const MATERIALS: readonly { label: string; value: GalleryMaterial }[] = [
   { label: 'Baseline', value: 'BASELINE' },
 ];
 
+const DEBUG_VIEWS: readonly { label: string; value: GalleryDebugView }[] = [
+  { label: 'None', value: 'NONE' },
+  { label: 'Texel density', value: 'TEXEL_DENSITY' },
+  { label: 'Normals', value: 'NORMALS' },
+];
+
 /** The tab's saved settings */
-type GalleryTabState = { packing: TextureSetPacking; checker: boolean; material: GalleryMaterial };
-const DEFAULT_STATE: GalleryTabState = { packing: 'LITE', checker: false, material: 'TERRAIN' };
+type GalleryTabState = {
+  packing: TextureSetPacking;
+  checker: boolean;
+  material: GalleryMaterial;
+  debugView: GalleryDebugView;
+};
+const DEFAULT_STATE: GalleryTabState = {
+  packing: 'LITE',
+  checker: false,
+  material: 'TERRAIN',
+  debugView: 'NONE',
+};
 const state: GalleryTabState = { ...DEFAULT_STATE };
 
 /** This visit's: false once the scene is left, so an await that ends later does nothing */
@@ -104,12 +125,15 @@ const getBlockMaterial = (
 ) => {
   // The set's default packing is the variant the scene's load made (no packing key)
   const isDefault = !packing || getTextureSet(setId)?.defaultPacking === packing;
+  const debugView = state.debugView;
   if (material === 'TERRAIN_CODE') {
+    const view = debugView === 'NONE' ? '' : `_${debugView}`;
     return createTerrainMaterial({
-      id: `terrainGalleryCode_${setId}_${packing ?? 'default'}${isWall ? '_wall' : ''}`,
+      id: `terrainGalleryCode_${setId}_${packing ?? 'default'}${isWall ? '_wall' : ''}${view}`,
       layers: [{ set: setId }],
       ...(isDefault ? {} : { packing }),
       ...(isWall ? { uv: 'MESH_UV' as const } : {}),
+      ...(debugView === 'NONE' ? {} : { debugView }),
     });
   }
   const isBaseline = material === 'BASELINE';
@@ -117,6 +141,7 @@ const getBlockMaterial = (
     packing: isDefault ? undefined : packing,
     isWall,
     isBaseline,
+    debugView,
   });
   return getMaterialVariant(isBaseline ? BASELINE_MATERIAL_ID : GALLERY_MATERIAL_ID, overrides);
 };
@@ -126,6 +151,16 @@ const swapSurface = (appId: string, setId: string, isWall: boolean) => {
   const mesh = getMeshByAppId(appId);
   if (!mesh) return;
   setMeshMaterial(mesh, getBlockMaterial(setId, getBlockPacking(setId), isWall, state.material));
+};
+
+/**
+ * The debug view on the library's terrain blocks (not the baseline's): the views load first (once),
+ * then the blocks swap, unless the scene was left meanwhile
+ */
+const applyDebugViewAsync = async () => {
+  const startedOn = visit;
+  if (state.debugView !== 'NONE' && !(await loadTerrainDebugViewsAsync())) return;
+  if (startedOn.isCurrent) applyMaterial();
 };
 
 /** Every library block (and wall) in the material mode */
@@ -278,7 +313,7 @@ export const createTerrainGalleryTab = () => {
     sceneId: TERRAIN_GALLERY_SCENE_ID,
     state,
     lsKey: 'AEK_debugTerrainGallery',
-    persistKeys: ['packing', 'checker', 'material'],
+    persistKeys: ['packing', 'checker', 'material', 'debugView'],
     refreshIntervalMs: 500,
     onRefresh: refreshProceduralFigures,
     onClearLS: () => {
@@ -298,6 +333,14 @@ export const createTerrainGalleryTab = () => {
             options: MATERIALS.map((option) => ({ ...option })),
             hint: 'The library’s blocks: the terrain material (its JSON route, or createTerrainMaterial) or the baseline textureSetSurface, which should look the same',
             onChange: () => applyMaterial(),
+          },
+          {
+            key: 'debugView',
+            label: 'Debug view',
+            kind: 'select',
+            options: DEBUG_VIEWS.map((option) => ({ ...option })),
+            hint: 'The terrain material’s debug view on the library (not the baseline): texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048) or the shaded normal in world space',
+            onChange: () => void applyDebugViewAsync(),
           },
           {
             key: 'packing',
@@ -335,6 +378,7 @@ export const createTerrainGalleryTab = () => {
   });
 
   if (state.checker) setChecker(true);
-  if (state.material !== 'TERRAIN') applyMaterial();
+  if (state.debugView !== 'NONE') void applyDebugViewAsync();
+  else if (state.material !== 'TERRAIN') applyMaterial();
   if (state.packing !== 'LITE') void applyPackingAsync(state.packing);
 };

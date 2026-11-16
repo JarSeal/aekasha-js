@@ -3,9 +3,11 @@ import { color, texture, uniform } from 'three/tsl';
 import { MeshStandardNodeMaterial, Texture, Vector2, type Node } from 'three/webgpu';
 import type { MatProps, TslMaterialFns } from 'aekasha';
 import type { TextureSetInput } from 'aekasha/texturesets';
+import { loadTerrainDebugViewsAsync } from './TerrainDebugViews';
 import {
   createTerrainMaterial,
   getTerrainMaterialProps,
+  getTerrainMaterialVariant,
   setupTerrainMaterial,
   TERRAIN_TSL_MATERIAL_ID,
 } from './TerrainMaterial';
@@ -38,10 +40,20 @@ const makeBundle = (packing: Packing = 'LITE') =>
 const stubs = vi.hoisted(() => ({
   registered: new Map<string, unknown>(),
   created: [] as { props: unknown; material: unknown }[],
+  materials: new Map<string, MeshStandardNodeMaterial>(),
+  variants: [] as { id: string; overrides: unknown }[],
+  warnings: [] as string[],
 }));
 
 vi.mock('aekasha', async (importOriginal) => ({
   ...(await importOriginal<typeof import('aekasha')>()),
+  IS_DEBUG_ENV: true,
+  lwarn: (message: string) => stubs.warnings.push(message),
+  getMaterial: (id: string) => stubs.materials.get(id),
+  getMaterialVariant: (id: string, overrides: unknown) => {
+    stubs.variants.push({ id, overrides });
+    return new MeshStandardNodeMaterial();
+  },
   registerTslMaterial: (id: string, fns: unknown) => {
     if (!stubs.registered.has(id)) stubs.registered.set(id, fns);
   },
@@ -57,6 +69,7 @@ vi.mock('aekasha', async (importOriginal) => ({
       (tsl as { staticDefines: Record<string, unknown> }).staticDefines
     );
     stubs.created.push({ props, material });
+    if (props.id) stubs.materials.set(props.id, material);
     return material;
   },
 }));
@@ -76,6 +89,7 @@ const collectNodes = (material: MeshStandardNodeMaterial) => {
     material.roughnessNode,
     material.metalnessNode,
     material.aoNode,
+    material.emissiveNode,
   ]) {
     (root as Node | null)?.traverse((node) => nodes.add(node));
   }
@@ -211,5 +225,45 @@ describe('createTerrainMaterial', () => {
     expect(Object.keys(json.userData.uniforms as object)).toEqual(
       Object.keys(material.userData.uniforms as object)
     );
+  });
+});
+
+describe('debug views', () => {
+  it('builds without the view before the views load, warned, and with it after', async () => {
+    stubs.warnings.length = 0;
+    const early = build({ layers: [{}], debugView: 'NORMALS' });
+    expect(early.emissiveNode).toBeNull();
+    expect(stubs.warnings.join()).toMatch(/views aren't loaded/);
+    expect(await loadTerrainDebugViewsAsync()).toBe(true);
+    for (const debugView of ['TEXEL_DENSITY', 'NORMALS']) {
+      const material = build({ layers: [{}], debugView }, { layer0: makeBundle('FULL') });
+      expect(material.emissiveNode, debugView).toBeTruthy();
+      expect(material.aoNode).toBeNull();
+    }
+    expect(countMethod(build({ layers: [{}], debugView: 'TEXEL_DENSITY' }), 'log2')).toBe(1);
+    expect(build({ layers: [{}] }).emissiveNode).toBeNull();
+  });
+});
+
+describe('getTerrainMaterialVariant', () => {
+  it("asks for a variant with the material's own define at the tier", () => {
+    stubs.variants.length = 0;
+    const define = { layers: [{}], quality: { LOW: { ao: { textureInfluence: 0 } } } };
+    const material = build(define, { layer0: makeBundle('FULL') });
+    expect(material.userData.terrainDefine).toBe(define);
+    stubs.materials.set('canyon', material);
+    getTerrainMaterialVariant('canyon', 'LOW');
+    expect(stubs.variants).toEqual([
+      {
+        id: 'canyon',
+        overrides: { staticDefines: { terrain: { ...define, qualityLevel: 'LOW' } } },
+      },
+    ]);
+  });
+
+  it('refuses an unknown or non-terrain material', () => {
+    expect(() => getTerrainMaterialVariant('nothing', 'LOW')).toThrow(/no material "nothing"/);
+    stubs.materials.set('plain', new MeshStandardNodeMaterial());
+    expect(() => getTerrainMaterialVariant('plain', 'LOW')).toThrow(/isn't a terrain material/);
   });
 });

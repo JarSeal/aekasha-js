@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3759,
-      "total": 3759
+      "documented": 3795,
+      "total": 3795
     },
     "members": {
       "documented": 1107,
@@ -23,8 +23,8 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 174,
-        "total": 174
+        "documented": 210,
+        "total": 210
       },
       "members": {
         "documented": 154,
@@ -1013,6 +1013,20 @@
         "members": []
       }
     },
+    "toolkit/materials/terrain": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
     "toolkit/materials/textureSetSurface": {
       "exports": {
         "documented": 1,
@@ -1055,10 +1069,24 @@
         "members": []
       }
     },
+    "toolkit/terrain/material": {
+      "exports": {
+        "documented": 29,
+        "total": 29
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
     "toolkit/terrain/nodes": {
       "exports": {
-        "documented": 5,
-        "total": 5
+        "documented": 11,
+        "total": 11
       },
       "members": {
         "documented": 0,

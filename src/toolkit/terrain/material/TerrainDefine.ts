@@ -7,9 +7,12 @@ const LAYER_SOURCES = ['TEXTURE'] as const;
 const UV_MODES = ['WORLD', 'MESH_UV'] as const;
 const BLEND_SOURCES = ['SINGLE'] as const;
 const MAX_LAYERS = 16;
+const QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as const;
+const DEBUG_VIEWS = ['TEXEL_DENSITY', 'NORMALS'] as const;
 
 /** The keys each object of the define takes (the schema's) */
-const DEFINE_KEYS = ['layers', 'uv', 'blend', 'ao'];
+const OVERRIDE_KEYS = ['uv', 'blend', 'ao'];
+const DEFINE_KEYS = ['layers', ...OVERRIDE_KEYS, 'quality', 'qualityLevel', 'debugView'];
 const LAYER_KEYS = ['source', 'tiling', 'rotation', 'tint', 'normalStrength', 'roughnessScale'];
 const BLEND_KEYS = ['source'];
 const AO_KEYS = ['textureInfluence'];
@@ -33,6 +36,10 @@ export type ResolvedTerrainDefine = {
   blendSource: (typeof BLEND_SOURCES)[number];
   /** The texture AO's influence, 0..1 */
   aoTextureInfluence: number;
+  /** The tier whose overrides applied, or null for the material's own fields */
+  qualityLevel: (typeof QUALITY_LEVELS)[number] | null;
+  /** The debug view in place of the surface, or null */
+  debugView: (typeof DEBUG_VIEWS)[number] | null;
 };
 
 /** The values the hand reader takes, for the test that keeps them the schema's */
@@ -41,6 +48,9 @@ export const TERRAIN_DEFINE_VALUES = {
   layerKeys: LAYER_KEYS,
   blendKeys: BLEND_KEYS,
   aoKeys: AO_KEYS,
+  overrideKeys: OVERRIDE_KEYS,
+  qualityLevels: QUALITY_LEVELS,
+  debugViews: DEBUG_VIEWS,
   layerSources: LAYER_SOURCES,
   uvModes: UV_MODES,
   blendSources: BLEND_SOURCES,
@@ -77,6 +87,14 @@ const readEnum = <T extends string>(
   }
   return value as T;
 };
+
+/** An enum field without a default: null when it's absent */
+const readOptionalEnum = <T extends string>(
+  obj: Record<string, unknown>,
+  key: string,
+  values: readonly T[],
+  path: string
+): T | null => (obj[key] === undefined ? null : readEnum(obj, key, values, path));
 
 const readNumber = (
   obj: Record<string, unknown>,
@@ -116,9 +134,25 @@ const readLayer = (value: unknown, index: number): TerrainLayerDefine => {
   };
 };
 
+/** The `quality` table: each tier's overrides checked for their keys (read when applied) */
+const readQualityTable = (define: Record<string, unknown>) => {
+  const table = define.quality === undefined ? {} : readObject(define.quality, '.quality');
+  checkKeys(table, QUALITY_LEVELS, '.quality');
+  const tiers: Partial<Record<(typeof QUALITY_LEVELS)[number], Record<string, unknown>>> = {};
+  for (const level of QUALITY_LEVELS) {
+    if (table[level] === undefined) continue;
+    const tier = readObject(table[level], `.quality.${level}`);
+    checkKeys(tier, OVERRIDE_KEYS, `.quality.${level}`);
+    tiers[level] = tier;
+  }
+  return tiers;
+};
+
 /**
  * Reads a terrain material's static define (`staticDefines.terrain`), filling its defaults, and
- * throws naming the first field that's wrong or unknown (a later phase's field included).
+ * throws naming the first field that's wrong or unknown (a later phase's field included). With a
+ * `qualityLevel`, that tier's overrides replace the material's fields (shallowly) before they're
+ * read; a tier that isn't applied is checked for its keys only.
  * @internal
  */
 export const readTerrainDefine = (
@@ -137,21 +171,39 @@ export const readTerrainDefine = (
     fail('.layers', `is ${JSON.stringify(rawLayers)}: give 1 to ${MAX_LAYERS} layers.`);
   }
   const layers = (rawLayers as unknown[]).map(readLayer);
-  const blend = define.blend === undefined ? {} : readObject(define.blend, '.blend');
-  checkKeys(blend, BLEND_KEYS, '.blend');
-  const blendSource = readEnum(blend, 'source', BLEND_SOURCES, '.blend');
+  const quality = readQualityTable(define);
+  const qualityLevel = readOptionalEnum(define, 'qualityLevel', QUALITY_LEVELS, '');
+  // The tier's fields over the material's (shallowly), read as the material's own
+  const tier = qualityLevel ? quality[qualityLevel] : undefined;
+  const fields = tier ? { ...define, ...tier } : define;
+  const path = tier ? `.quality.${qualityLevel}` : '';
+  const pathOf = (key: string) => (tier && key in tier ? path : '');
+
+  const blend =
+    fields.blend === undefined ? {} : readObject(fields.blend, `${pathOf('blend')}.blend`);
+  checkKeys(blend, BLEND_KEYS, `${pathOf('blend')}.blend`);
+  const blendSource = readEnum(blend, 'source', BLEND_SOURCES, `${pathOf('blend')}.blend`);
   if (blendSource === 'SINGLE' && layers.length !== 1) {
     fail('.layers', `blend.source SINGLE takes one layer, not ${layers.length}.`);
   }
-  const ao = define.ao === undefined ? {} : readObject(define.ao, '.ao');
-  checkKeys(ao, AO_KEYS, '.ao');
+  const aoPath = `${pathOf('ao')}.ao`;
+  const ao = fields.ao === undefined ? {} : readObject(fields.ao, aoPath);
+  checkKeys(ao, AO_KEYS, aoPath);
   const aoTextureInfluence = readNumber(
     ao,
     'textureInfluence',
     1,
     { value: 0, isExclusive: false },
-    '.ao'
+    aoPath
   );
-  if (aoTextureInfluence > 1) fail('.ao.textureInfluence', `is ${aoTextureInfluence}: it's 0..1.`);
-  return { layers, uv: readEnum(define, 'uv', UV_MODES, ''), blendSource, aoTextureInfluence };
+  if (aoTextureInfluence > 1)
+    fail(`${aoPath}.textureInfluence`, `is ${aoTextureInfluence}: it's 0..1.`);
+  return {
+    layers,
+    uv: readEnum(fields, 'uv', UV_MODES, pathOf('uv')),
+    blendSource,
+    aoTextureInfluence,
+    qualityLevel,
+    debugView: readOptionalEnum(define, 'debugView', DEBUG_VIEWS, ''),
+  };
 };

@@ -67,18 +67,23 @@ export type { SampleTextureSetOptions, TextureSetSample } from './nodes/SampleTe
 export {
   createTerrainMaterial,
   getTerrainMaterialProps,
+  getTerrainMaterialVariant,
   setupTerrainMaterial,
   TERRAIN_TSL_MATERIAL_ID,
 } from './material/TerrainMaterial';
+export type { TerrainQualityLevel } from './material/TerrainMaterial';
+export { loadTerrainDebugViewsAsync } from './material/TerrainDebugViews';
 export {
   TerrainLayerSchema,
   TerrainLayerSettingsSchema,
   TerrainMaterialConfigSchema,
   TerrainMaterialDefineSchema,
+  TerrainQualityOverridesSchema,
 } from './material/TerrainMaterialConfig';
 export type {
   TerrainLayer,
   TerrainLayerSettings,
   TerrainMaterialConfig,
   TerrainMaterialDefine,
+  TerrainQualityOverrides,
 } from './material/TerrainMaterialConfig';
