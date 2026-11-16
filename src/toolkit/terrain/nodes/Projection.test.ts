@@ -4,6 +4,7 @@ import { Texture, Vector2, type Node } from 'three/webgpu';
 import type { TextureSetInput } from 'aekasha/texturesets';
 import type { AntiTilingNodes } from './AntiTiling';
 import { createProjectionContext, sampleProjected, type ProjectionNodes } from './Projection';
+import type { TextureSetSample } from './SampleTextureSet';
 
 type Packing = 'LITE' | 'FULL' | 'MINIMAL';
 type Projected = Exclude<ProjectionNodes, { mode: 'PLANAR' }>;
@@ -48,20 +49,29 @@ type Opts = {
   antiTiling?: AntiTilingNodes['mode'];
   projection?: Projected;
   turn?: { cos: Node<'float'>; sin: Node<'float'> } | null;
+  top?: TextureSetSample;
 };
 
-const project = ({ packing = 'LITE', antiTiling = 'NONE', projection, turn = null }: Opts) => {
+const project = (opts: Opts) => {
+  const { packing = 'LITE', antiTiling = 'NONE', projection, turn = null, top } = opts;
   const bundle = makeBundle(packing);
   const strength = uniform(1) as unknown as Node<'float'>;
   const used = projection ?? projectionOf('TRIPLANAR');
   const result = sampleProjected(
-    bundle,
-    used,
-    { tileSize: uniform(new Vector2(3, 3)) as unknown as Node<'vec2'>, turn },
-    strength,
-    ANTI_TILING[antiTiling],
-    { viewDistance: float(10) as unknown as Node<'float'>, patches: null, seed: 1 },
-    createProjectionContext()
+    {
+      bundle,
+      projection: used,
+      tiling: { tileSize: uniform(new Vector2(3, 3)) as unknown as Node<'vec2'>, turn },
+      strength,
+      antiTiling: ANTI_TILING[antiTiling],
+      antiTilingContext: {
+        viewDistance: float(10) as unknown as Node<'float'>,
+        patches: null,
+        seed: 1,
+      },
+    },
+    createProjectionContext(),
+    top
   );
   return { bundle, strength, projection: used, ...result };
 };
@@ -172,5 +182,29 @@ describe('sampleProjected', () => {
     expect(nodes.has(turn.sin as unknown as Node)).toBe(true);
     expect(countMethod(turned, 'cos') + countMethod(turned, 'sin')).toBe(0);
     expect(collectNodes(getRoots(project({}))).has(turn.cos as unknown as Node)).toBe(false);
+  });
+
+  it("takes TRIPLANAR's top plane as given (the planar tap), BIPLANAR's never", () => {
+    const top: TextureSetSample = {
+      packing: 'LITE',
+      albedo: uniform(new Vector2(1, 1)) as unknown as Node<'vec3'>,
+      normalTS: uniform(new Vector2(0, 1)) as unknown as Node<'vec3'>,
+      roughness: float(0.5) as unknown as Node<'float'>,
+      ao: null,
+      isAoBaked: true,
+      height: float(0.5) as unknown as Node<'float'>,
+    };
+    const triplanar = project({ top });
+    expect(getSamples(triplanar)).toHaveLength(2 * 2);
+    const nodes = collectNodes(getRoots(triplanar));
+    for (const value of [top.albedo, top.normalTS, top.roughness, top.height]) {
+      expect(nodes.has(value as unknown as Node)).toBe(true);
+    }
+    expect(getSamples(project({ top, projection: projectionOf('BIPLANAR') }))).toHaveLength(2 * 2);
+    expect(
+      collectNodes(getRoots(project({ top, projection: projectionOf('BIPLANAR') }))).has(
+        top.albedo as unknown as Node
+      )
+    ).toBe(false);
   });
 });

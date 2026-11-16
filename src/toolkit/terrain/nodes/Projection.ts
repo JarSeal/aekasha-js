@@ -9,8 +9,10 @@
 // with the world position's gradients on its plane (`.grad()`): a plane chosen per pixel has no
 // continuous UV, and the slope gate's branch can't take derivatives. The planes' normal maps meet
 // the geometry normal per Golus ("Normal Mapping for a Triplanar Shader": whiteout, UDN or RNM)
-// in the plane's frame, then go to world space and blend by the weights.
+// in the plane's frame, then go to world space and blend by the weights. A slope gate (planar on
+// gentle slopes, the projection in a branch on steep ones) is `SlopeGate.ts`'.
 import {
+  acos,
   clamp,
   dFdx,
   dFdy,
@@ -20,6 +22,7 @@ import {
   normalWorldGeometry,
   positionWorld,
   select,
+  step,
   vec2,
   vec3,
 } from 'three/tsl';
@@ -41,7 +44,22 @@ export type ProjectionNodes =
       /** `TRIPLANAR`: the exponent on the facing; `BIPLANAR`: Quilez's k */
       sharpness: Node<'float'>;
       normalBlend: NormalBlend;
+      /** The slopes in degrees over which the projection fades in over planar, or null */
+      slopeGate: Node<'vec2'> | null;
     };
+
+/** A projecting layer's nodes: what {@link sampleProjected} samples and how */
+export type ProjectedLayer = {
+  /** The layer's `{ textureSet }` bundle, or the `{ textureSetArray }` one with `antiTiling.layer` */
+  bundle: TextureSetInput | TextureSetArrayInput;
+  projection: Exclude<ProjectionNodes, { mode: 'PLANAR' }>;
+  tiling: ProjectionTiling;
+  /** The normal's strength (the set's × the layer's) */
+  strength: Node<'float'>;
+  /** The layer's anti-tiling and its context (the view distance, the patches, the seed, the layer) */
+  antiTiling: AntiTilingNodes;
+  antiTilingContext: AntiTilingContext;
+};
 
 /** What every projected layer reads of the surface, built once for all of them */
 export type ProjectionContext = {
@@ -51,6 +69,8 @@ export type ProjectionContext = {
   dpdy: Node<'vec3'>;
   /** The geometry's world normal: the facing, and the base the normal maps meet */
   normal: Node<'vec3'>;
+  /** The geometry's slope in degrees, 0 flat (the slope gate's) */
+  slope: Node<'float'>;
 };
 
 /** A layer's tiling as the planes take it: the tile size and the rotation's turn */
@@ -107,18 +127,25 @@ const PLANE_AXES: PlaneAxes[] = [
 const BIPLANAR_FLOOR = 0.5773;
 /** Quilez's k at which the remapped weights take no exponent */
 const BIPLANAR_UNIT_SHARPNESS = 8;
+const RAD_TO_DEG = 180 / Math.PI;
+/** The top plane's index (Y): its UV is planar world tiling's */
+const TOP_PLANE = 1;
 
 /**
  * What the projected layers read of the surface (the position, its derivatives, the geometry
- * normal), built once before them.
+ * normal and its slope), built once before them.
  * @internal
  */
-export const createProjectionContext = (): ProjectionContext => ({
-  position: positionWorld as unknown as Node<'vec3'>,
-  dpdx: dFdx(positionWorld) as unknown as Node<'vec3'>,
-  dpdy: dFdy(positionWorld) as unknown as Node<'vec3'>,
-  normal: normalWorldGeometry as unknown as Node<'vec3'>,
-});
+export const createProjectionContext = (): ProjectionContext => {
+  const normal = normalWorldGeometry as unknown as Node<'vec3'>;
+  return {
+    position: positionWorld as unknown as Node<'vec3'>,
+    dpdx: dFdx(positionWorld) as unknown as Node<'vec3'>,
+    dpdy: dFdy(positionWorld) as unknown as Node<'vec3'>,
+    normal,
+    slope: acos(clamp(normal.y, -1, 1)).mul(RAD_TO_DEG) as unknown as Node<'float'>,
+  };
+};
 
 /** A vector of plane metres into the layer's tiles: over the tile size, turned with the tiling */
 const toTiles = (v: Node<'vec2'>, tiling: ProjectionTiling) => {
@@ -164,7 +191,8 @@ const getPlaneNormal = (
   blend: NormalBlend
 ): Node<'vec3'> => {
   const t = vec3(normalTS.xy.mul(strength), normalTS.z) as unknown as Node<'vec3'>;
-  const side = select(plane.facing.lessThan(0), float(-1), float(1));
+  // −1 or 1 by arithmetic: a `select` builds an `if` per plane
+  const side = step(0, plane.facing).mul(2).sub(1);
   const w = plane.axis.mul(side) as Node<'vec3'>;
   const base = vec3(dot(normal, plane.u), dot(normal, plane.v), plane.facing.abs());
   let r: Node<'vec3'>;
@@ -277,6 +305,9 @@ const sumOf = <T extends Node<'float'> | Node<'vec3'>>(
     .reduce((total, value) => total.add(value) as unknown as T);
 };
 
+/** A layer's sample and its world normal (null without a normal map: the layer bumps the height) */
+export type ProjectedSample = { sample: TextureSetSample; normal: Node<'vec3'> | null };
+
 /**
  * A layer's texture set sampled with its projection (p305 D5): its anti-tiling's taps on each
  * plane (`TRIPLANAR` three, `BIPLANAR` the two chosen per pixel), every tap with the plane's
@@ -285,31 +316,29 @@ const sumOf = <T extends Node<'float'> | Node<'vec3'>>(
  * normal by the normal blend, in world space, unit length. `MINIMAL` (no normal map) returns no
  * normal: the layer bumps the blended height.
  * @internal
- * @param bundle the layer's `{ textureSet }` bundle, or the `{ textureSetArray }` bundle with
- * `antiTiling.layer`
- * @param projection the projecting mode and its uniforms
- * @param tiling the layer's tile size and turn
- * @param strength the normal's strength (the set's × the layer's)
- * @param nodes the layer's anti-tiling
- * @param antiTiling the anti-tiling's context (the view distance, the patches, the seed, the layer)
+ * @param layer the layer's bundle, projection, tiling, normal strength and anti-tiling
  * @param ctx the position, its derivatives and the geometry normal ({@link createProjectionContext})
+ * @param top `TRIPLANAR`'s top plane already sampled: the layer's planar tap, whose UV is the top
+ * plane's (its tangent normal in the layer's UV frame); undefined samples it
  */
 export const sampleProjected = (
-  bundle: TextureSetInput | TextureSetArrayInput,
-  projection: Exclude<ProjectionNodes, { mode: 'PLANAR' }>,
-  tiling: ProjectionTiling,
-  strength: Node<'float'>,
-  nodes: AntiTilingNodes,
-  antiTiling: AntiTilingContext,
-  ctx: ProjectionContext
-): { sample: TextureSetSample; normal: Node<'vec3'> | null } => {
-  const allPlanes = PLANE_AXES.map((axes) => getPlane(axes, tiling, ctx));
+  layer: ProjectedLayer,
+  ctx: ProjectionContext,
+  top?: TextureSetSample
+): ProjectedSample => {
+  const { projection, strength } = layer;
+  const allPlanes = PLANE_AXES.map((axes) => getPlane(axes, layer.tiling, ctx));
   const { planes, weights } =
     projection.mode === 'TRIPLANAR'
       ? { planes: allPlanes, weights: getTriplanarWeights(ctx.normal, projection.sharpness) }
       : getBiplanarPlanes(allPlanes, ctx.normal, projection.sharpness);
-  const samples = planes.map((plane) =>
-    sampleAntiTiled(bundle, plane.uv, nodes, { ...antiTiling, grad: plane.grad })
+  const samples = planes.map((plane, i) =>
+    top && projection.mode === 'TRIPLANAR' && i === TOP_PLANE
+      ? top
+      : sampleAntiTiled(layer.bundle, plane.uv, layer.antiTiling, {
+          ...layer.antiTilingContext,
+          grad: plane.grad,
+        })
   );
   const [first] = samples;
   // One packing: every plane's sample has a normal map or none has

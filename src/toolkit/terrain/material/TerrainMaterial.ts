@@ -40,9 +40,11 @@ import { applyMacroVariation, sampleMacroTexture, type MacroNodes } from '../nod
 import {
   createProjectionContext,
   sampleProjected,
+  type ProjectedLayer,
   type ProjectionContext,
   type ProjectionNodes,
 } from '../nodes/Projection';
+import { sampleSlopeGated } from '../nodes/SlopeGate';
 import { applyRules, createRuleContext, createRuleNodes } from '../nodes/Rules';
 import type { TextureSetSample } from '../nodes/SampleTextureSet';
 import {
@@ -97,7 +99,7 @@ type LayerUniforms = {
   /** The anti-tiling's mode and its uniforms (`farScale`, `antiTilingDistance`; `hexContrast`,
    * `hexRotation`) */
   antiTiling: AntiTilingNodes;
-  /** The projection's mode and its uniform (`projectionSharpness`) */
+  /** The projection's mode and its uniforms (`projectionSharpness`, `slopeGate`) */
   projection: ProjectionNodes;
 };
 
@@ -140,7 +142,7 @@ const createAntiTilingNodes = (
   return { mode: 'NONE' };
 };
 
-/** A layer's projection uniforms, a projecting mode's only */
+/** A layer's projection uniforms, a projecting mode's only, the gate's with a gate */
 const createProjectionNodes = (
   projection: TerrainProjectionDefine,
   keep: (name: string, node: unknown) => unknown
@@ -150,6 +152,9 @@ const createProjectionNodes = (
     mode: projection.mode,
     sharpness: keep('projectionSharpness', uniform(projection.sharpness)) as Node<'float'>,
     normalBlend: projection.normalBlend,
+    slopeGate: projection.slopeGate
+      ? (keep('slopeGate', uniform(new Vector2(...projection.slopeGate))) as Node<'vec2'>)
+      : null,
   };
 };
 
@@ -259,6 +264,22 @@ const getNormalStrength = (params: LayerParams, layer: LayerUniforms) =>
   params.normalStrength.mul(layer.normalStrength) as Node<'float'>;
 
 /**
+ * A layer's tangent normal (its slopes × the strength) through its tiling's frame, in world space:
+ * planar world tiling's analytic frame, or a mesh UV's from its derivatives
+ */
+const getFrameNormal = (
+  define: ResolvedTerrainDefine,
+  uv: LayerUv,
+  normalTS: Node<'vec3'>,
+  strength: Node<'float'>
+) => {
+  const scaled = vec3(normalTS.xy.mul(strength), normalTS.z) as unknown as Node<'vec3'>;
+  const frame =
+    define.uv === 'MESH_UV' ? getUvTangentFrame(uv.tileUv) : getPlanarTangentFrame(uv.angle);
+  return transformTangentNormalToWorld(scaled, frame);
+};
+
+/**
  * A layer's surface from its sample (p303 D2's packings): the albedo × the set's and the layer's
  * tint; the normal in world space, a projection's (made with the strength), else the map's
  * (`FULL`, `LITE`) through the tiling's frame (planar world tiling's analytic one, a mesh UV's
@@ -279,11 +300,7 @@ const getLayerSurface = (
   if (projected) {
     normal = projected;
   } else if (sample.normalTS) {
-    const n = sample.normalTS;
-    const scaled = vec3(n.xy.mul(strength), n.z) as unknown as Node<'vec3'>;
-    const frame =
-      define.uv === 'MESH_UV' ? getUvTangentFrame(uv.tileUv) : getPlanarTangentFrame(uv.angle);
-    normal = transformTangentNormalToWorld(scaled, frame);
+    normal = getFrameNormal(define, uv, sample.normalTS, strength);
   } else {
     normal = bumpNormalWorld(sample.height.mul(params.heightScale).mul(strength) as Node<'float'>);
   }
@@ -346,32 +363,35 @@ type BuiltLayer = {
 };
 
 /**
- * A layer's sample: with its anti-tiling at its tiling UV (`PLANAR`), or on its projection's planes
- * with their normals met with the geometry's
+ * A layer's sample: with its anti-tiling at its tiling UV (`PLANAR`), on its projection's planes
+ * with their normals met with the geometry's, or with a slope gate both: the planar tap (its
+ * normal through the planar frame) and the projection in a branch past the gate's first slope
  */
 const sampleLayer = (
-  source: LayerSource,
-  uniforms: LayerUniforms,
-  uv: LayerUv,
+  define: ResolvedTerrainDefine,
+  layer: Pick<BuiltLayer, 'source' | 'uniforms' | 'uv'>,
   antiTiling: AntiTilingContext,
   getProjectionContext: () => ProjectionContext
 ): Pick<BuiltLayer, 'sample' | 'normal'> => {
+  const { source, uniforms, uv } = layer;
   const { projection } = uniforms;
-  if (projection.mode === 'PLANAR') {
-    return {
-      sample: sampleAntiTiled(source.bundle, uv.tileUv, uniforms.antiTiling, antiTiling),
-      normal: null,
-    };
-  }
-  return sampleProjected(
-    source.bundle,
+  const sampleAtUv = () =>
+    sampleAntiTiled(source.bundle, uv.tileUv, uniforms.antiTiling, antiTiling);
+  if (projection.mode === 'PLANAR') return { sample: sampleAtUv(), normal: null };
+  const projected: ProjectedLayer = {
+    bundle: source.bundle,
     projection,
-    { tileSize: uv.tileSize, turn: uv.turn },
-    getNormalStrength(source.params, uniforms),
-    uniforms.antiTiling,
-    antiTiling,
-    getProjectionContext()
-  );
+    tiling: { tileSize: uv.tileSize, turn: uv.turn },
+    strength: getNormalStrength(source.params, uniforms),
+    antiTiling: uniforms.antiTiling,
+    antiTilingContext: antiTiling,
+  };
+  if (!projection.slopeGate) return sampleProjected(projected, getProjectionContext());
+  const sample = sampleAtUv();
+  const normal = sample.normalTS
+    ? getFrameNormal(define, uv, sample.normalTS, projected.strength)
+    : null;
+  return sampleSlopeGated(projected, { sample, normal }, getProjectionContext());
 };
 
 /**
@@ -474,7 +494,8 @@ const getAoNode = (
  * (`NONE` one tap, `DUAL_SCALE` two, `HEX` three) on its projection's planes (`PLANAR` the
  * tiling's coordinates alone; `BIPLANAR` the two world planes the surface faces most, chosen per
  * pixel; `TRIPLANAR` all three; the planes' normal maps met with the geometry's by `normalBlend`,
- * a projecting mode needing `uv` `WORLD`). The blend source: `SINGLE` one layer;
+ * a projecting mode needing `uv` `WORLD`; with `slopeGate`, planar under its first slope and the
+ * projection, in a dynamic branch, past it). The blend source: `SINGLE` one layer;
  * `VERTEX_COLOR` the mesh's colour attribute; `SPLAT_MAP` the splat maps `splat0` (layers 1-4) and
  * `splat1` (5-8) at the mesh's UV; layer 0 takes what the channels leave; `RULES` the base layer
  * under the rules, `VERTEX_COLOR_AND_RULES` and `SPLAT_MAP_AND_RULES` the paint under them (each
@@ -490,7 +511,7 @@ const getAoNode = (
  * uniforms in `material.userData.uniforms`: per layer `terrain_l<i>_<name>` (`tiling`, `rotation`
  * when given, `tint`, `normalStrength`, `roughnessScale`; `heightContrast` and `heightOffset` with
  * the height blend; `farScale` and `antiTilingDistance` with `DUAL_SCALE`, `hexContrast` and
- * `hexRotation` with `HEX`; `projectionSharpness` with `BIPLANAR` or `TRIPLANAR`), per rule `terrain_r<i>_<name>` (its tests' only: `slopeMin`,
+ * `hexRotation` with `HEX`; `projectionSharpness` with `BIPLANAR` or `TRIPLANAR`, `slopeGate` with a gate), per rule `terrain_r<i>_<name>` (its tests' only: `slopeMin`,
  * `slopeMax`, `slopeSoftness`, `heightMin`, `heightMax`, `heightSoftness`, a range's given ends
  * only; `aspectDirection`, `aspectRange`, `aspectSoftness`; `noiseScale`, `noiseAmount`; and
  * `strength`), `terrain_heightBlendDepth` with the height blend,
@@ -561,7 +582,7 @@ export const setupTerrainMaterial = (
       seed: i,
       layer: source.layer,
     };
-    const sampled = sampleLayer(source, uniforms, uv, antiTiling, getProjectionContext);
+    const sampled = sampleLayer(define, { source, uniforms, uv }, antiTiling, getProjectionContext);
     return { source, uniforms, uv, ...sampled };
   });
   checkOnePacking(layers.map((layer) => layer.sample));

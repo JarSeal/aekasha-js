@@ -373,6 +373,23 @@ describe('setupTerrainMaterial: projection', () => {
     expect(countSamples(build(biplanar, inputs), inputs)).toBe(2 + 2 * 2);
   });
 
+  it('keeps a slope gate as a uniform, sampling the planar tap outside its branch', () => {
+    const inputs = layerInputs(1);
+    const gated = build(
+      { layers: [{}], projection: { mode: 'TRIPLANAR', slopeGate: [35, 55] } },
+      inputs
+    );
+    expect(getUniformKeys(gated)).toEqual(
+      [...LAYER_UNIFORMS, 'terrain_l0_projectionSharpness', 'terrain_l0_slopeGate'].sort()
+    );
+    expect(getUniforms(gated).terrain_l0_slopeGate.value).toEqual(new Vector2(35, 55));
+    // The sockets read the gate's var: its branch builds with the shader (SlopeGate.test.ts)
+    expect(countSamples(gated, inputs)).toBe(0);
+    expect(getUniformKeys(build({ layers: [{}], projection: { mode: 'BIPLANAR' } }))).not.toContain(
+      'terrain_l0_slopeGate'
+    );
+  });
+
   it('builds the normal from the planes, a planar frame for none of them', () => {
     // Planar world tiling's frame takes no derivative; the projection takes the position's two
     expect(countMethod(build({ layers: [{}] }), 'dFdx')).toBe(0);
