@@ -14,13 +14,12 @@ import {
   faceDirection,
   float,
   max,
-  normalWorldGeometry,
-  positionWorld,
   vec3,
   vec4,
 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node } from 'three/webgpu';
+import { getSurfaceSpace, type SurfaceSpace } from './SurfaceSpace';
 
 /** A tangent frame in world space: the UV's U and V directions and the surface normal */
 export type WorldTangentFrame = {
@@ -28,9 +27,6 @@ export type WorldTangentFrame = {
   bitangent: Node<'vec3'>;
   normal: Node<'vec3'>;
 };
-
-/** The geometry's interpolated normal in world space, unit length */
-const getGeometryNormal = () => normalWorldGeometry as unknown as Node<'vec3'>;
 
 /**
  * The analytic tangent frame of planar world tiling, the UV `(x, −z)` over a tile size turned by
@@ -40,9 +36,13 @@ const getGeometryNormal = () => normalWorldGeometry as unknown as Node<'vec3'>;
  * geometry's there (planar tiling stretches it anyway; p305 D5 projects it).
  * @internal
  * @param rotation the tiling's angle in radians, or null for none
+ * @param space the material's space (default the world's): the frame is in it
  */
-export const getPlanarTangentFrame = (rotation: Node<'float'> | null): WorldTangentFrame => {
-  const normal = getGeometryNormal();
+export const getPlanarTangentFrame = (
+  rotation: Node<'float'> | null,
+  space: SurfaceSpace = getSurfaceSpace()
+): WorldTangentFrame => {
+  const { normal } = space;
   const axis = rotation
     ? (vec3(rotation.cos(), 0, rotation.sin().negate()) as unknown as Node<'vec3'>)
     : (vec3(1, 0, 0) as unknown as Node<'vec3'>);
@@ -82,17 +82,19 @@ export type FrameDerivatives = {
  * @param mapping the scale and turn from `uv` to the sampled UV, or none
  * @param derivatives the position's and `uv`'s derivatives built before (a branch's), or none: its
  * own
+ * @param space the material's space (default the world's): the frame is in it
  */
 export const getUvTangentFrame = (
   uv: Node<'vec2'>,
   mapping?: UvMapping,
-  derivatives?: FrameDerivatives
+  derivatives?: FrameDerivatives,
+  space: SurfaceSpace = getSurfaceSpace()
 ): WorldTangentFrame => {
-  const q0 = derivatives?.dpdx ?? dFdx(positionWorld);
-  const q1 = derivatives?.dpdy ?? dFdy(positionWorld);
+  const q0 = derivatives?.dpdx ?? dFdx(space.position);
+  const q1 = derivatives?.dpdy ?? dFdy(space.position);
   const st0 = derivatives?.duvdx ?? dFdx(uv);
   const st1 = derivatives?.duvdy ?? dFdy(uv);
-  const normal = getGeometryNormal();
+  const { normal } = space;
   const q1perp = cross(q1, normal);
   const q0perp = cross(normal, q0);
   let t = q1perp.mul(st0.x).add(q0perp.mul(st1.x)) as unknown as Node<'vec3'>;
@@ -134,11 +136,15 @@ export const transformTangentNormalToWorld = (
  * any distance) on world vectors. No extra fetch.
  * @internal
  * @param height the height in metres
+ * @param space the material's space (default the world's): the normal is in it
  */
-export const bumpNormalWorld = (height: Node<'float'>): Node<'vec3'> => {
-  const sigmaX = dFdx(positionWorld);
-  const sigmaY = dFdy(positionWorld);
-  const normal = getGeometryNormal();
+export const bumpNormalWorld = (
+  height: Node<'float'>,
+  space: SurfaceSpace = getSurfaceSpace()
+): Node<'vec3'> => {
+  const sigmaX = dFdx(space.position);
+  const sigmaY = dFdy(space.position);
+  const { normal } = space;
   const r1 = cross(sigmaY, normal);
   const r2 = cross(normal, sigmaX);
   const det = dot(sigmaX, r1).mul(faceDirection);

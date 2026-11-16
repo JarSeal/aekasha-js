@@ -1,5 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { color, int, normalWorldGeometry, texture, uniform, uniformArray } from 'three/tsl';
+import {
+  color,
+  int,
+  modelWorldMatrix,
+  normalWorldGeometry,
+  positionLocal,
+  positionWorld,
+  texture,
+  uniform,
+  uniformArray,
+} from 'three/tsl';
 import { MeshStandardNodeMaterial, Texture, Vector2, Vector4, type Node } from 'three/webgpu';
 import type { MatProps, TslMaterialFns } from 'aekasha';
 import type { TextureSetArrayInput, TextureSetInput } from 'aekasha/texturesets';
@@ -745,6 +755,46 @@ describe('setupTerrainMaterial: colour map', () => {
       { layers: makeArrayBundle(4), colorMap: map }
     );
     expect(colorMapSamples([material.colorNode], map)).toHaveLength(1);
+  });
+});
+
+describe('setupTerrainMaterial: space', () => {
+  const reaches = (root: unknown, node: unknown) => collectNodesFrom([root]).includes(node as Node);
+
+  it("samples in the mesh's own space with OBJECT, its normal into world space through the model", () => {
+    const define = {
+      layers: [{ projection: { mode: 'TRIPLANAR' } }],
+      space: 'OBJECT',
+      macro: { scale: 12 },
+      distance: { fade: [20, 60] },
+    };
+    const material = build(define, { layer0: makeBundle(), macro: texture(new Texture()) });
+    for (const socket of [material.colorNode, material.normalNode]) {
+      expect(reaches(socket, positionLocal)).toBe(true);
+      expect(reaches(socket, positionWorld)).toBe(false);
+    }
+    expect(reaches(material.normalNode, modelWorldMatrix)).toBe(true);
+    // The world's: no conversion
+    const world = build(
+      { ...define, space: undefined },
+      {
+        layer0: makeBundle(),
+        macro: texture(new Texture()),
+      }
+    );
+    expect(reaches(world.colorNode, positionWorld)).toBe(true);
+    expect(reaches(world.normalNode, modelWorldMatrix)).toBe(false);
+  });
+
+  it("measures the rules in the mesh's own space", () => {
+    const define = {
+      layers: layersOf(2),
+      space: 'OBJECT',
+      blend: { source: 'RULES', rules: [{ layer: 1, height: { min: 2 } }] },
+    };
+    const material = build(define, layerInputs(2));
+    expect(reaches(material.colorNode, positionLocal)).toBe(true);
+    expect(reaches(material.colorNode, positionWorld)).toBe(false);
   });
 });
 

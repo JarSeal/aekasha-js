@@ -74,6 +74,8 @@ export {
 export type { TerrainQualityLevel } from './material/TerrainMaterial';
 export { bakeTerrainColorMap } from './material/TerrainColorMapBake';
 export type { BakeTerrainColorMapOpts } from './material/TerrainColorMapBake';
+export { createStructureMaterial, getStructureMaterialConfig } from './material/StructureMaterial';
+export type { StructureMaterialOpts } from './material/StructureMaterial';
 export { getTerrainQualityPreset } from './material/TerrainQualityPreset';
 export type { TerrainQualityPresetOpts } from './material/TerrainQualityPreset';
 export { loadTerrainDebugViewsAsync } from './material/TerrainDebugViews';

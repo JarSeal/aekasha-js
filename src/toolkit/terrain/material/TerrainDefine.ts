@@ -8,6 +8,7 @@ import { TERRAIN_RULE_DEFAULTS, TERRAIN_RULE_NOISE_CHANNELS } from 'aekasha/tool
 
 const LAYER_SOURCES = ['TEXTURE'] as const;
 const UV_MODES = ['WORLD', 'MESH_UV'] as const;
+const SPACES = ['WORLD', 'OBJECT'] as const;
 const BLEND_SOURCES = [
   'SINGLE',
   'VERTEX_COLOR',
@@ -58,6 +59,7 @@ const DEFINE_KEYS = [
   'layers',
   'macro',
   'colorMap',
+  'space',
   'reservedTextures',
   ...OVERRIDE_KEYS,
   'quality',
@@ -255,6 +257,8 @@ export type TerrainColorMapDefine = {
 /** The static define with its defaults filled in: what the graph branches on */
 export type ResolvedTerrainDefine = {
   layers: TerrainLayerDefine[];
+  /** The space the material samples in: the world's, or the mesh's own (`OBJECT`) */
+  space: (typeof SPACES)[number];
   uv: (typeof UV_MODES)[number];
   blend: TerrainBlendDefine;
   /** The texture AO's influence, 0..1 */
@@ -314,6 +318,7 @@ export const TERRAIN_DEFINE_VALUES = {
   debugViews: DEBUG_VIEWS,
   layerSources: LAYER_SOURCES,
   uvModes: UV_MODES,
+  spaces: SPACES,
   blendSources: BLEND_SOURCES,
   blendModes: BLEND_MODES,
   vertexColorLayouts: VERTEX_COLOR_LAYOUTS,
@@ -1104,6 +1109,7 @@ export const readTerrainDefine = (
   const distance = readDistance(fields.distance, colorMap, `${pathOf('distance')}.distance`);
   return {
     layers,
+    space: readEnum(define, 'space', SPACES, ''),
     uv,
     blend,
     aoTextureInfluence,

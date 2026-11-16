@@ -10,17 +10,7 @@
 // non-uniform), the geometry normal. The normal isn't mixed: the far surface starts where the
 // detail normals have faded to the geometry's (the setup's `fadeDetailNormal`), and a `MINIMAL`
 // bump is the caller's, after the branch, of the height the branch leaves.
-import {
-  dFdx,
-  dFdy,
-  float,
-  Fn,
-  If,
-  mix,
-  normalWorldGeometry,
-  positionWorld,
-  struct,
-} from 'three/tsl';
+import { dFdx, dFdy, float, Fn, If, mix, struct } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node } from 'three/webgpu';
 import type { TextureSetPacking } from 'aekasha/texturesets';
@@ -28,6 +18,7 @@ import { declareBranchInput as declare, toVar } from '../nodes/BranchInputs';
 import { getFarShare, sumByWeights } from '../nodes/Distance';
 import { normalizeWeights } from '../nodes/HeightBlend';
 import { getSlope, type ProjectionContext } from '../nodes/Projection';
+import { getSurfaceSpace } from '../nodes/SurfaceSpace';
 import type { ResolvedTerrainDefine } from './TerrainDefine';
 import type { LayerParams } from './TerrainInputs';
 import {
@@ -121,11 +112,12 @@ export const createBranchCoords = (
   define: ResolvedTerrainDefine
 ): Pick<FarBranchInputs, 'shared' | 'projection'> => {
   const coords = getLayerCoords(define);
+  const space = getSurfaceSpace(define.space);
   const positionGrad = {
-    dx: dFdx(positionWorld) as unknown as Node<'vec3'>,
-    dy: dFdy(positionWorld) as unknown as Node<'vec3'>,
+    dx: dFdx(space.position) as unknown as Node<'vec3'>,
+    dy: dFdy(space.position) as unknown as Node<'vec3'>,
   };
-  const normal = normalWorldGeometry as unknown as Node<'vec3'>;
+  const { normal } = space;
   return {
     shared: {
       coords,
@@ -136,7 +128,7 @@ export const createBranchCoords = (
       positionGrad,
     },
     projection: {
-      position: positionWorld as unknown as Node<'vec3'>,
+      position: space.position,
       dpdx: positionGrad.dx,
       dpdy: positionGrad.dy,
       normal,

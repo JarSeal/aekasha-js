@@ -4,21 +4,10 @@
 // channel and × its strength, composited over the incoming weights in order
 // (`w = mix(w, onehot(layer), coverage)`). The weights stay raw: the height blend or the linear
 // normalization (`HeightBlend.ts`) comes after.
-import {
-  acos,
-  clamp,
-  dot,
-  float,
-  max,
-  mix,
-  normalWorldGeometry,
-  positionWorld,
-  smoothstep,
-  uniform,
-  vec2,
-} from 'three/tsl';
+import { acos, clamp, dot, float, max, mix, smoothstep, uniform, vec2 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import { Vector2, type Node, type TextureNode } from 'three/webgpu';
+import { getSurfaceSpace, type SurfaceSpace } from './SurfaceSpace';
 import type { TerrainRuleDefine } from '../material/TerrainDefine';
 
 const RAD_TO_DEG = 180 / Math.PI;
@@ -51,6 +40,8 @@ export type RuleNodes = {
 
 /** What the rules measure, built once for all of them */
 export type RuleContext = {
+  /** The surface's position in the material's space (the noise's point) */
+  position: Node<'vec3'>;
   /** The geometry's slope in degrees, 0 flat */
   slope: Node<'float'>;
   /** The world height in metres */
@@ -103,16 +94,22 @@ export const createRuleNodes = (
 
 /**
  * What the rules measure: the slope in degrees from the geometry's normal (`acos` of its Y), the
- * world height, the normal; built once before the rules.
+ * height, the normal, in the material's space (the world's, or the mesh's own); built once before
+ * the rules.
  * @internal
  * @param noiseTexture the macro texture the rules' noise reads, null without noise
+ * @param space the material's space (default the world's)
  */
-export const createRuleContext = (noiseTexture: TextureNode | null): RuleContext => {
-  const normal = normalWorldGeometry as unknown as Node<'vec3'>;
+export const createRuleContext = (
+  noiseTexture: TextureNode | null,
+  space: SurfaceSpace = getSurfaceSpace()
+): RuleContext => {
+  const { normal, position } = space;
   return {
     slope: acos(clamp(normal.y, -1, 1)).mul(RAD_TO_DEG) as unknown as Node<'float'>,
-    height: positionWorld.y as unknown as Node<'float'>,
+    height: position.y as unknown as Node<'float'>,
     normal,
+    position,
     noiseTexture,
   };
 };
@@ -159,7 +156,7 @@ export const getRuleCoverage = (rule: RuleNodes, ctx: RuleContext): Node<'float'
     : (float(1) as unknown as Node<'float'>);
   if (rule.noise) {
     if (!ctx.noiseTexture) throw new Error('[terrain] A rule with noise needs the noise texture.');
-    const point = vec2(positionWorld.x, positionWorld.z.negate()).div(rule.noise.scale);
+    const point = vec2(ctx.position.x, ctx.position.z.negate()).div(rule.noise.scale);
     const sample = ctx.noiseTexture.sample(point) as unknown as Node<'vec4'>;
     const channel = sample[CHANNELS[rule.noise.channel]] as Node<'float'>;
     const shift = channel.sub(0.5).mul(2).mul(rule.noise.amount);

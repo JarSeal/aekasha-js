@@ -12,23 +12,21 @@ import type { Node } from 'three/webgpu';
 const MIN_FAR_BLEND = 1e-4;
 
 /**
- * A world-space surface normal faded to the geometry's normal over the view distances `fade`
- * (`[from, to]`, metres): the detail whole before `from`, none past `to`, a smoothstep between
+ * A surface normal faded to the geometry's normal over the view distances `fade` (`[from, to]`,
+ * metres): the detail whole before `from`, none past `to`, a smoothstep between
  * @internal
- * @param normal the shaded normal in world space, unit length
+ * @param normal the shaded normal in the material's space, unit length
  * @param viewDistance the view distance in metres
  * @param fade the range as a uniform, `x` from and `y` to
+ * @param geometryNormal the geometry's normal in that space (default the world's)
  */
 export const fadeDetailNormal = (
   normal: Node<'vec3'>,
   viewDistance: Node<'float'>,
-  fade: Node<'vec2'>
+  fade: Node<'vec2'>,
+  geometryNormal: Node<'vec3'> = normalWorldGeometry as unknown as Node<'vec3'>
 ): Node<'vec3'> =>
-  mix(
-    normal,
-    normalWorldGeometry,
-    smoothstep(fade.x, fade.y, viewDistance)
-  ).normalize() as Node<'vec3'>;
+  mix(normal, geometryNormal, smoothstep(fade.x, fade.y, viewDistance)).normalize() as Node<'vec3'>;
 
 /**
  * The far surface's share of the surface: 0 before `from` (the detail normals' fade's end), 1

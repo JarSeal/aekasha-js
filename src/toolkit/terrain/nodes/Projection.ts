@@ -11,23 +11,10 @@
 // the geometry normal per Golus ("Normal Mapping for a Triplanar Shader": whiteout, UDN or RNM)
 // in the plane's frame, then go to world space and blend by the weights. A slope gate (planar on
 // gentle slopes, the projection in a branch on steep ones) is `SlopeGate.ts`'.
-import {
-  acos,
-  clamp,
-  dFdx,
-  dFdy,
-  dot,
-  float,
-  max,
-  normalWorldGeometry,
-  positionWorld,
-  select,
-  step,
-  vec2,
-  vec3,
-} from 'three/tsl';
+import { acos, clamp, dFdx, dFdy, dot, float, max, select, step, vec2, vec3 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node } from 'three/webgpu';
+import { getSurfaceSpace, type SurfaceSpace } from './SurfaceSpace';
 import type { TextureSetArrayInput, TextureSetInput } from 'aekasha/texturesets';
 import type { TerrainProjectionDefine } from '../material/TerrainDefine';
 import { sampleAntiTiled, type AntiTilingContext, type AntiTilingNodes } from './AntiTiling';
@@ -140,19 +127,19 @@ export const getSlope = (normal: Node<'vec3'>) =>
 
 /**
  * What the projected layers read of the surface (the position, its derivatives, the geometry
- * normal and its slope), built once before them.
+ * normal and its slope) in the material's space, built once before them.
  * @internal
+ * @param space the material's space (default the world's)
  */
-export const createProjectionContext = (): ProjectionContext => {
-  const normal = normalWorldGeometry as unknown as Node<'vec3'>;
-  return {
-    position: positionWorld as unknown as Node<'vec3'>,
-    dpdx: dFdx(positionWorld) as unknown as Node<'vec3'>,
-    dpdy: dFdy(positionWorld) as unknown as Node<'vec3'>,
-    normal,
-    slope: getSlope(normal),
-  };
-};
+export const createProjectionContext = (
+  space: SurfaceSpace = getSurfaceSpace()
+): ProjectionContext => ({
+  position: space.position,
+  dpdx: dFdx(space.position) as unknown as Node<'vec3'>,
+  dpdy: dFdy(space.position) as unknown as Node<'vec3'>,
+  normal: space.normal,
+  slope: getSlope(space.normal),
+});
 
 /** A vector of plane metres into the layer's tiles: over the tile size, turned with the tiling */
 const toTiles = (v: Node<'vec2'>, tiling: ProjectionTiling) => {

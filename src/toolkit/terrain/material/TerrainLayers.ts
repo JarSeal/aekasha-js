@@ -3,7 +3,7 @@
 // surfaces blended by weight. The dense path builds one per layer at its own index
 // (`TerrainMaterial.ts`), the slot path one per slot at the layer weighing most there
 // (`TerrainSlots.ts`, sparse sampling and `DOMINANT`): the same code over picked uniforms.
-import { color, float, mix, positionWorld, uniform, uv as meshUv, vec2, vec3 } from 'three/tsl';
+import { color, float, mix, uniform, uv as meshUv, vec2, vec3 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import { Vector2, type Node, type NodeMaterial } from 'three/webgpu';
 import { existsOrThrow } from 'aekasha';
@@ -19,6 +19,7 @@ import {
 import type { TextureSetPacking } from 'aekasha/texturesets';
 import type { TextureSetSample } from '../nodes/SampleTextureSet';
 import { sampleSlopeGated } from '../nodes/SlopeGate';
+import { getSurfaceSpace, type SurfaceSpace } from '../nodes/SurfaceSpace';
 import {
   bumpNormalWorld,
   getPlanarTangentFrame,
@@ -214,14 +215,15 @@ export type LayerUv = {
 };
 
 /**
- * The tiling's coordinates in metres: the world's `(x, −z)` (seen from above, the source's
- * orientation) or the mesh's UV.
+ * The tiling's coordinates in metres: the surface's `(x, −z)` in the material's space (the world's
+ * or the mesh's own; seen from above, the source's orientation) or the mesh's UV.
  * @internal
  */
-export const getLayerCoords = (define: ResolvedTerrainDefine) =>
-  define.uv === 'MESH_UV'
-    ? (meshUv() as unknown as Node<'vec2'>)
-    : (vec2(positionWorld.x, positionWorld.z.negate()) as unknown as Node<'vec2'>);
+export const getLayerCoords = (define: ResolvedTerrainDefine) => {
+  if (define.uv === 'MESH_UV') return meshUv() as unknown as Node<'vec2'>;
+  const { position } = getSurfaceSpace(define.space);
+  return vec2(position.x, position.z.negate()) as unknown as Node<'vec2'>;
+};
 
 /**
  * A layer's tiling UV: its coordinates over the set's tile size × the layer's tiling, turned by
@@ -257,7 +259,8 @@ export const getLayerUv = (
     turn,
     grad: shared ? { dx: toTiles(shared.grad.dx), dy: toTiles(shared.grad.dy) } : null,
     getUvFrame: () => {
-      if (!shared) return getUvTangentFrame(tileUv);
+      const space = getSurfaceSpace(define.space);
+      if (!shared) return getUvTangentFrame(tileUv, undefined, undefined, space);
       const { positionGrad: position, grad } = shared;
       const derivatives = position && {
         dpdx: position.dx,
@@ -265,7 +268,7 @@ export const getLayerUv = (
         duvdx: grad.dx,
         duvdy: grad.dy,
       };
-      return getUvTangentFrame(coords, { tileSize, turn }, derivatives);
+      return getUvTangentFrame(coords, { tileSize, turn }, derivatives, space);
     },
   };
 };
@@ -298,7 +301,10 @@ const getFrameNormal = (
   strength: Node<'float'>
 ) => {
   const scaled = vec3(normalTS.xy.mul(strength), normalTS.z) as unknown as Node<'vec3'>;
-  const frame = define.uv === 'MESH_UV' ? uv.getUvFrame() : getPlanarTangentFrame(uv.angle);
+  const frame =
+    define.uv === 'MESH_UV'
+      ? uv.getUvFrame()
+      : getPlanarTangentFrame(uv.angle, getSurfaceSpace(define.space));
   return transformTangentNormalToWorld(scaled, frame);
 };
 
@@ -345,7 +351,9 @@ export const getLayerSurface = (
     normal = getFrameNormal(define, uv, sample.normalTS, strength);
   } else {
     bumpHeight = sample.height.mul(params.heightScale).mul(strength) as Node<'float'>;
-    normal = deferBump ? (vec3(0, 0, 0) as unknown as Node<'vec3'>) : bumpNormalWorld(bumpHeight);
+    normal = deferBump
+      ? (vec3(0, 0, 0) as unknown as Node<'vec3'>)
+      : bumpNormalWorld(bumpHeight, getSurfaceSpace(define.space));
   }
   const roughness = (sample.roughness ?? float(MINIMAL_ROUGHNESS))
     .mul(params.roughnessScale)
@@ -372,13 +380,14 @@ export const getLayerSurface = (
 
 /**
  * The layers' surfaces blended by their weights (which sum to 1): the normal renormalized; with
- * `bumpBlended` (slots whose normals bump), the blended height bumped instead.
+ * `bumpBlended` (slots whose normals bump), the blended height bumped instead, in the space.
  * @internal
  */
 export const blendSurfaces = (
   surfaces: LayerSurface[],
   weights: Node<'float'>[],
-  bumpBlended = false
+  bumpBlended = false,
+  space: SurfaceSpace = getSurfaceSpace()
 ): LayerSurface => {
   const sum = <T extends Node<'float'> | Node<'vec3'>>(pick: (surface: LayerSurface) => T) =>
     surfaces
@@ -390,7 +399,7 @@ export const blendSurfaces = (
   return {
     albedo: sum((surface) => surface.albedo),
     normal: bumpHeight
-      ? bumpNormalWorld(bumpHeight)
+      ? bumpNormalWorld(bumpHeight, space)
       : (sum((surface) => surface.normal).normalize() as Node<'vec3'>),
     roughness: sum((surface) => surface.roughness),
     // One packing: every layer has texture AO or none has

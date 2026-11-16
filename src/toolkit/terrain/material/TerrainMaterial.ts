@@ -34,6 +34,7 @@ import { createProjectionContext, type ProjectionContext } from '../nodes/Projec
 import { applyRules, createRuleContext, createRuleNodes } from '../nodes/Rules';
 import { getBundlePacking } from '../nodes/SampleTextureSet';
 import { spreadSlotWeights } from '../nodes/Sparse';
+import { getSurfaceSpace } from '../nodes/SurfaceSpace';
 import { bumpNormalWorld, transformWorldNormalToView } from '../nodes/TerrainNormals';
 import { getSplatMapWeights, getVertexColorWeights, type PaintedWeights } from '../nodes/Weights';
 import {
@@ -93,7 +94,8 @@ const createMacro = (
     hue: keep('macroHue', define.macro.hue),
     roughness: keep('macroRoughness', define.macro.roughness),
   };
-  return { nodes, sample: sampleMacroTexture(macroTexture, nodes.scale) };
+  const { position } = getSurfaceSpace(define.space);
+  return { nodes, sample: sampleMacroTexture(macroTexture, nodes.scale, position) };
 };
 
 /**
@@ -174,7 +176,11 @@ const getRawWeights = (
   if (!rules.length) return incoming;
   return {
     ...incoming,
-    weights: applyRules(incoming.weights, rules, createRuleContext(macroTexture)),
+    weights: applyRules(
+      incoming.weights,
+      rules,
+      createRuleContext(macroTexture, getSurfaceSpace(define.space))
+    ),
   };
 };
 
@@ -202,38 +208,40 @@ const getAoNode = (
 };
 
 /**
- * The terrain material's graph (p305 D2), the TSL `setup` both routes run: reads the static
- * define `terrain` ({@link TerrainMaterialDefine}), samples each layer's texture set (`SEPARATE`:
- * the inputs `layer0`, `layer1`, …, a `{ textureSet }` bundle each; `ARRAY`: the input `layers`,
- * one `{ textureSetArray }` bundle whose layer `i` is layer `i`; one packing), weighs the layers by
- * the blend source and sets the material's sockets: the colour, the normal (each layer's in world
+ * The terrain material's graph (p305 D2), the TSL `setup` both routes run: reads the static define
+ * `terrain` ({@link TerrainMaterialDefine}), samples each layer's texture set (`SEPARATE`: the
+ * inputs `layer0`, `layer1`, …, a `{ textureSet }` bundle each; `ARRAY`: the input `layers`, one `{
+ * textureSetArray }` bundle whose layer `i` is layer `i`; one packing), weighs the layers by the
+ * blend source and sets the material's sockets: the colour, the normal (each layer's in world
  * space, blended, into view space once), the roughness, metalness 0, and the AO to `aoNode`, which
  * darkens indirect light only (the texture AO of `FULL`, whose `LITE` and `MINIMAL` have it baked
  * into the albedo, and the vertex colour's). Each layer samples its set with its anti-tiling
- * (`NONE` one tap, `DUAL_SCALE` two, `HEX` three) on its projection's planes (`PLANAR` the
- * tiling's coordinates alone; `BIPLANAR` the two world planes the surface faces most, chosen per
- * pixel; `TRIPLANAR` all three; the planes' normal maps met with the geometry's by `normalBlend`,
- * a projecting mode needing `uv` `WORLD`; with `slopeGate`, planar under its first slope and the
- * projection, in a dynamic branch, past it). The blend source: `SINGLE` one layer;
- * `VERTEX_COLOR` the mesh's colour attribute; `SPLAT_MAP` the splat maps `splat0` (layers 1-4) and
- * `splat1` (5-8) at the mesh's UV; layer 0 takes what the channels leave; `RULES` the base layer
- * under the rules, `VERTEX_COLOR_AND_RULES` and `SPLAT_MAP_AND_RULES` the paint under them (each
- * rule lays its layer over the weights so far where the geometry's slope, the world height and
- * the facing are in its ranges, its coverage moved by a channel of the input `macro`, one fetch a
- * rule with noise); `blend.mode` `HEIGHT` (default) lets the layers' heights decide the borders,
- * `LINEAR` the weights alone. With `sparse` (fewer layers kept than there are) or `HEX`'s
- * `apply: 'DOMINANT'`, the layers are sampled in slots: at each pixel the layers weighing most,
- * sorted (sparse's `maxLayers` of them, else all), each read from the `ARRAY` input at its layer,
- * their weights renormalized (the height blend among them); `DOMINANT` samples `HEX` in the first
- * slot and `DUAL_SCALE` in the others. With `macro`, one fetch of the input `macro` at the world's
- * XZ varies the surface (R the brightness, G the hue and the roughness, B `DUAL_SCALE`'s patches;
- * not a colour map's colour, whose variation is baked in); with a `DETAIL` `colorMap`, the input
- * `colorMap` at the mesh's UV gives the albedo and the layers their detail (each one's albedo over
- * its set's average colour, no tints), faded out over `detailDistance`; with `distance`, the normal
- * fades to the geometry's over its `fade` range, and with a `far` mode the layers aren't sampled
- * past it (a dynamic branch): the far surface is the sets' average colours by the weights
- * (`AVERAGE_COLOR`) or the colour map (`COLOR_MAP`), mixed in over `farBlend` metres, its normal
- * the geometry's (a `debugView` shows the near surface everywhere). Only what the define enables is
+ * (`NONE` one tap, `DUAL_SCALE` two, `HEX` three) on its projection's planes (`PLANAR` the tiling's
+ * coordinates alone; `BIPLANAR` the two world planes the surface faces most, chosen per pixel;
+ * `TRIPLANAR` all three; the planes' normal maps met with the geometry's by `normalBlend`, a
+ * projecting mode needing `uv` `WORLD`; with `slopeGate`, planar under its first slope and the
+ * projection, in a dynamic branch, past it). The blend source: `SINGLE` one layer; `VERTEX_COLOR`
+ * the mesh's colour attribute; `SPLAT_MAP` the splat maps `splat0` (layers 1-4) and `splat1` (5-8)
+ * at the mesh's UV; layer 0 takes what the channels leave; `RULES` the base layer under the rules,
+ * `VERTEX_COLOR_AND_RULES` and `SPLAT_MAP_AND_RULES` the paint under them (each rule lays its layer
+ * over the weights so far where the geometry's slope, the world height and the facing are in its
+ * ranges, its coverage moved by a channel of the input `macro`, one fetch a rule with noise);
+ * `blend.mode` `HEIGHT` (default) lets the layers' heights decide the borders, `LINEAR` the weights
+ * alone. With `sparse` (fewer layers kept than there are) or `HEX`'s `apply: 'DOMINANT'`, the
+ * layers are sampled in slots: at each pixel the layers weighing most, sorted (sparse's `maxLayers`
+ * of them, else all), each read from the `ARRAY` input at its layer, their weights renormalized
+ * (the height blend among them); `DOMINANT` samples `HEX` in the first slot and `DUAL_SCALE` in the
+ * others. With `macro`, one fetch of the input `macro` at the world's XZ varies the surface (R the
+ * brightness, G the hue and the roughness, B `DUAL_SCALE`'s patches; not a colour map's colour,
+ * whose variation is baked in); with a `DETAIL` `colorMap`, the input `colorMap` at the mesh's UV
+ * gives the albedo and the layers their detail (each one's albedo over its set's average colour, no
+ * tints), faded out over `detailDistance`; with `distance`, the normal fades to the geometry's over
+ * its `fade` range, and with a `far` mode the layers aren't sampled past it (a dynamic branch): the
+ * far surface is the sets' average colours by the weights (`AVERAGE_COLOR`) or the colour map
+ * (`COLOR_MAP`), mixed in over `farBlend` metres, its normal the geometry's (a `debugView` shows
+ * the near surface everywhere). With `space: 'OBJECT'` all of it is in the mesh's own space (its
+ * position × scale, its normal: coordinates, projections, rules, macro), the shaded normal turned
+ * into world space before the view; `WORLD` (default) the world's. Only what the define enables is
  * built. The textures it binds (the layers', the splat maps, the macro texture, the colour map)
  * must fit the budget: the renderer's sampled textures a stage (16) less `reservedTextures` (6).
  * The tunables are uniforms in `material.userData.uniforms`: per layer `terrain_l<i>_<name>`
@@ -322,6 +330,8 @@ export const buildTerrainGraph = (
   material.userData.terrainDefine = staticDefines.terrain;
   // From the bundles' slots, before anything samples: the far branch's members depend on it
   const packing = checkOnePacking(sources.layers.map(({ bundle }) => getBundlePacking(bundle)));
+  // The world's, or the mesh's own (`OBJECT`): the graph is in it, its normal into world space last
+  const space = getSurfaceSpace(define.space);
 
   // Made before the layers: every uniform (a far branch builds them late), the view distance, the
   // one macro fetch, the colour map's, the raw weights (the paint, the rules' noise)
@@ -389,7 +399,7 @@ export const buildTerrainGraph = (
   } else {
     // Made on the first projected layer: the projections' position, derivatives and normal
     let projection: ProjectionContext | null = null;
-    const getProjectionContext = () => (projection ??= createProjectionContext());
+    const getProjectionContext = () => (projection ??= createProjectionContext(space));
     near = buildNearSurface(
       {
         ...layerContext,
@@ -411,10 +421,16 @@ export const buildTerrainGraph = (
     : surface.roughness;
   const shaded =
     surface.normal ??
-    bumpNormalWorld(existsOrThrow(surface.bumpHeight, 'A surface without a normal has a bump.'));
-  const normal = distance.fade ? fadeDetailNormal(shaded, viewDistance, distance.fade) : shaded;
+    bumpNormalWorld(
+      existsOrThrow(surface.bumpHeight, 'A surface without a normal has a bump.'),
+      space
+    );
+  // In the material's space; into world space once, then view space
+  const normal = distance.fade
+    ? fadeDetailNormal(shaded, viewDistance, distance.fade, space.normal)
+    : shaded;
   standard.colorNode = albedo;
-  standard.normalNode = transformWorldNormalToView(normal);
+  standard.normalNode = transformWorldNormalToView(space.toWorld(normal));
   standard.roughnessNode = roughness;
   standard.metalnessNode = float(0);
   const ao = getAoNode(material, define, surface.ao, raw, packing !== 'FULL');

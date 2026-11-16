@@ -14,6 +14,7 @@ import { applyColorMapDetail } from '../nodes/ColorMap';
 import { blendWeightsByHeight, getBlendHeight, normalizeWeights } from '../nodes/HeightBlend';
 import type { ProjectionContext } from '../nodes/Projection';
 import { selectTopLayers, type KeptLayer } from '../nodes/Sparse';
+import { getSurfaceSpace } from '../nodes/SurfaceSpace';
 import type { ResolvedTerrainDefine } from './TerrainDefine';
 import type { LayerSources } from './TerrainInputs';
 import {
@@ -191,7 +192,8 @@ export const buildNearSurface = (
   const deferBump = nodes.deferBump || slots !== null;
   const surfaces = layers.map((layer) => getLayerSurface(define, layer, getAoInfluence, deferBump));
   const weights = rawWeights && blendWeights(define, rawWeights, layers, uniforms.heightBlendDepth);
-  const blended = weights ? blendSurfaces(surfaces, weights, deferBump) : surfaces[0];
+  const space = getSurfaceSpace(define.space);
+  const blended = weights ? blendSurfaces(surfaces, weights, deferBump, space) : surfaces[0];
   // DETAIL: the layers' albedo is their detail, which the colour map's colour multiplies
   const fade = uniforms.detailDistance && {
     range: uniforms.detailDistance,

@@ -3,9 +3,10 @@
 // layer's surface at once: R its brightness, G its hue and its roughness. B (the patches) goes to
 // `DUAL_SCALE`'s share (`AntiTiling.ts`). World coordinates, so the variation runs on across
 // blocks (p301 §7).
-import { float, hue, positionWorld, vec2 } from 'three/tsl';
+import { float, hue, vec2 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node, TextureNode } from 'three/webgpu';
+import { getSurfaceSpace } from './SurfaceSpace';
 
 /** The macro variation's uniforms */
 export type MacroNodes = {
@@ -28,16 +29,19 @@ export type MacroSurface = {
 const DEG_TO_RAD = Math.PI / 180;
 
 /**
- * The macro texture sampled once at the world's `(x, −z)` over its scale (seen from above, as the
- * layers' world tiling)
+ * The macro texture sampled once at the surface's `(x, −z)` over its scale (seen from above, as the
+ * layers' world tiling), in the material's space
  * @internal
  * @param macroTexture the material's `macro` input, a texture node
  * @param scale the metres a macro tile covers
+ * @param position the surface's position in the material's space (default the world's)
  */
-export const sampleMacroTexture = (macroTexture: TextureNode, scale: Node<'float'>) =>
-  macroTexture.sample(
-    vec2(positionWorld.x, positionWorld.z.negate()).div(scale)
-  ) as unknown as Node<'vec4'>;
+export const sampleMacroTexture = (
+  macroTexture: TextureNode,
+  scale: Node<'float'>,
+  position: Node<'vec3'> = getSurfaceSpace().position
+) =>
+  macroTexture.sample(vec2(position.x, position.z.negate()).div(scale)) as unknown as Node<'vec4'>;
 
 /** A channel around macroNoise's neutral 0.5 as −1..1 */
 const toSigned = (channel: Node<'float'>) => channel.sub(0.5).mul(2) as Node<'float'>;

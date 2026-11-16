@@ -13,6 +13,12 @@ import { TERRAIN_RULE_NOISE_CHANNELS } from 'aekasha/toolkit/geometry';
 
 /** The layer's sampled source: `TEXTURE`, a texture set's maps. */
 export const TERRAIN_LAYER_SOURCES = ['TEXTURE'] as const;
+/**
+ * The space the material samples in (p305 D8): `WORLD` (default) the world's position and normal,
+ * seamless across pieces; `OBJECT` the mesh's own (scaled back to metres), so the texture sticks to
+ * a piece that moves or turns (an `InstancedMesh`'s instances share its space).
+ */
+export const TERRAIN_SPACES = ['WORLD', 'OBJECT'] as const;
 /** The tiling coordinates: `WORLD` (the world's `(x, −z)`, seen from above) or `MESH_UV`. */
 export const TERRAIN_UV_MODES = ['WORLD', 'MESH_UV'] as const;
 /**
@@ -925,6 +931,21 @@ export const TerrainMacroSchema = TerrainMacroSettingsSchema.extend({
 /** {@link createTerrainMaterial}'s macro variation: its texture and its settings. */
 export type TerrainMacro = z.infer<typeof TerrainMacroSchema>;
 
+/** The space field the code route's config and the static define share (not a tier's) */
+const spaceFields = {
+  /**
+   * The space the material samples in (default `WORLD`): `OBJECT` the mesh's own (its position ×
+   * its scale, its normal), for structures that move or turn: the coordinates, projections, rules
+   * (height and facing: the mesh's) and macro all follow the mesh. Not a tier override.
+   */
+  space: z
+    .enum(TERRAIN_SPACES)
+    .optional()
+    .describe(
+      "The space the material samples in (default WORLD): OBJECT the mesh's own (scaled to metres), for structures that move or turn. Not a tier override."
+    ),
+};
+
 /** The material-wide fields the code route's config and the static define share. */
 const sharedFields = {
   /**
@@ -1484,6 +1505,7 @@ export const TerrainMaterialDefineSchema = z
     macro: TerrainMacroSettingsSchema.optional(),
     /** The colour map, its texture the input `colorMap` (`{ "texture": id }`, at the mesh's UV). */
     colorMap: TerrainColorMapSettingsSchema.optional(),
+    ...spaceFields,
     ...budgetFields,
     ...sharedFields,
     ...variantFields,
@@ -1572,6 +1594,7 @@ export const TerrainMaterialConfigSchema = z
       .describe(
         "How the layers' textures bind (default AUTO: SEPARATE while it fits the texture budget and nothing samples the layers in slots, else ARRAY, one array per packing slot). Sparse sampling and DOMINANT need ARRAY."
       ),
+    ...spaceFields,
     ...budgetFields,
     ...sharedFields,
     ...variantFields,

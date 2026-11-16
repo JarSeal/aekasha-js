@@ -17,6 +17,7 @@ import {
   TERRAIN_MAX_RULES,
   TERRAIN_NORMAL_BLENDS,
   TERRAIN_PROJECTION_MODES,
+  TERRAIN_SPACES,
   TERRAIN_SPARSE_MAX_LAYERS,
   TERRAIN_UV_MODES,
   TERRAIN_VERTEX_COLOR_LAYOUTS,
@@ -89,6 +90,8 @@ const ACCEPTED: unknown[] = [
   { layers: [{}], macro: { scale: 40, brightness: 0, hue: 180, roughness: 1 } },
   { layers: [{}], distance: { fade: [30, 90] } },
   { layers: [{}], distance: { fade: [30, 90], far: 'NONE' } },
+  { layers: [{}], space: 'OBJECT', projection: { mode: 'TRIPLANAR' } },
+  { layers: [{}], space: 'WORLD' },
   { layers: [{}], distance: { fade: [30, 90], far: 'AVERAGE_COLOR' } },
   { layers: [{}], distance: { fade: [30, 90], far: 'AVERAGE_COLOR', farBlend: 0 } },
   { layers: [{}], colorMap: { mode: 'DETAIL' } },
@@ -363,6 +366,8 @@ const REFUSED: unknown[] = [
   { layers: [{}], distance: {} },
   { layers: [{}], distance: { fade: [90, 30] } },
   { layers: [{}], distance: { fade: [30, 90], far: 'FOG' } },
+  { layers: [{}], space: 'LOCAL' },
+  { layers: [{}], quality: { LOW: { space: 'OBJECT' } } },
   { layers: [{}], distance: { fade: [30, 90], farBlend: 4 } },
   { layers: [{}], distance: { fade: [30, 90], far: 'NONE', farBlend: 4 } },
   { layers: [{}], distance: { fade: [30, 90], far: 'AVERAGE_COLOR', farBlend: -1 } },
@@ -559,6 +564,7 @@ const REFUSED: unknown[] = [
 describe('readTerrainDefine', () => {
   it('fills the defaults', () => {
     expect(read({ layers: [{}] })).toEqual({
+      space: 'WORLD',
       layers: [
         {
           source: 'TEXTURE',
@@ -866,6 +872,7 @@ describe('readTerrainDefine', () => {
     expect(values.debugViews).toEqual(TERRAIN_DEBUG_VIEWS);
     expect(values.layerSources).toEqual(TERRAIN_LAYER_SOURCES);
     expect(values.uvModes).toEqual(TERRAIN_UV_MODES);
+    expect(values.spaces).toEqual(TERRAIN_SPACES);
     expect(values.blendSources).toEqual(TERRAIN_BLEND_SOURCES);
     expect(values.maxLayers).toBe(TERRAIN_MAX_LAYERS);
     expect(values.maxRules).toBe(TERRAIN_MAX_RULES);
