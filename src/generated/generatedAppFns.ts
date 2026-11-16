@@ -318,6 +318,7 @@ export const tslMaterialFileObjects = {
   p303SetLiteMat: () => import('../app/scenes/textureSets/p303TextureSetMat.tsl.ts'),
   p303SetMinimalMat: () => import('../app/scenes/textureSets/p303TextureSetMat.tsl.ts'),
   asteroid: () => import('../toolkit/materials/asteroid/asteroid.tsl.ts'),
+  terrain: () => import('../toolkit/materials/terrain/terrain.tsl.ts'),
   textureSetSurface: () => import('../toolkit/materials/textureSetSurface/textureSetSurface.tsl.ts'),
   triplanarCheckerboard: () => import('../toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts'),
   triplanarGrid: () => import('../toolkit/materials/triplanarGrid/triplanarGrid.tsl.ts'),

@@ -37516,6 +37516,28 @@
       "type": "STANDARDNODEMATERIAL",
       "__sourcePath": "src/toolkit/materials/asteroid/asteroid.material.json"
     },
+    "terrain": {
+      "id": "terrain",
+      "debugData": {
+        "name": "Terrain",
+        "description": "The toolkit's terrain material generator (p305) through its JSON route: staticDefines.terrain is the config without its id and the layers' sets (layers' settings: tiling, rotation, tint, normalStrength, roughnessScale; uv WORLD or MESH_UV; blend), the inputs layer0, layer1, … the layers' texture sets ({ textureSet, packing? }, all in one packing). Give a mesh its sets with matOverrides.inputs."
+      },
+      "tslFile": "materials/terrain/terrain.tsl.ts",
+      "staticDefines": {
+        "terrain": {
+          "layers": [
+            {}
+          ]
+        }
+      },
+      "inputs": {
+        "layer0": {
+          "textureSet": "grass01"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/toolkit/materials/terrain/terrain.material.json"
+    },
     "textureSetSurface": {
       "id": "textureSetSurface",
       "debugData": {

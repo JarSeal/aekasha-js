@@ -64,3 +64,21 @@ export {
   transformTangentNormalToView,
 } from './nodes/SampleTextureSet';
 export type { SampleTextureSetOptions, TextureSetSample } from './nodes/SampleTextureSet';
+export {
+  createTerrainMaterial,
+  getTerrainMaterialProps,
+  setupTerrainMaterial,
+  TERRAIN_TSL_MATERIAL_ID,
+} from './material/TerrainMaterial';
+export {
+  TerrainLayerSchema,
+  TerrainLayerSettingsSchema,
+  TerrainMaterialConfigSchema,
+  TerrainMaterialDefineSchema,
+} from './material/TerrainMaterialConfig';
+export type {
+  TerrainLayer,
+  TerrainLayerSettings,
+  TerrainMaterialConfig,
+  TerrainMaterialDefine,
+} from './material/TerrainMaterialConfig';
