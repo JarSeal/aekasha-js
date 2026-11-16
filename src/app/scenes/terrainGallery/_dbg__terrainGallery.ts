@@ -88,6 +88,8 @@ const DEBUG_VIEWS: readonly { label: string; value: GalleryDebugView }[] = [
   { label: 'Texel density', value: 'TEXEL_DENSITY' },
   { label: 'Normals', value: 'NORMALS' },
   { label: 'Weights', value: 'WEIGHTS' },
+  { label: 'Projection', value: 'PROJECTION' },
+  { label: 'Taps', value: 'TAPS' },
 ];
 
 /** The tab's saved settings */
@@ -401,7 +403,7 @@ export const createTerrainGalleryTab = () => {
             label: 'Debug view',
             kind: 'select',
             options: DEBUG_VIEWS.map((option) => ({ ...option })),
-            hint: 'The terrain material’s debug view on the library (not the baseline), the Anti-tiling, Splatting and Rules rows: texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048), the shaded normal in world space, or the layers’ weights (layer 0 white, 1 red, 2 green, 3 blue, 4 yellow, …)',
+            hint: 'The terrain material’s debug view on the library (not the baseline), the Anti-tiling, Splatting and Rules rows: texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048), the shaded normal in world space, the layers’ weights (layer 0 white, 1 red, 2 green, 3 blue, 4 yellow, …), the projections’ planes (X red, Y green, Z blue; a slope gate’s band striped) or the material’s own texture fetches a pixel (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more magenta)',
             onChange: () => void applyDebugViewAsync(),
           },
           {

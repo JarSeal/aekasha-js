@@ -3,12 +3,32 @@
 // `loadTerrainDebugViewsAsync`' `import()` behind `IS_DEBUG_ENV` (`material/TerrainDebugViews.ts`),
 // so a production build has none of it. Each view is unlit: the material's albedo black, its
 // roughness 1, the view in `emissiveNode` (tone mapped like the scene).
-import { clamp, float, floor, int, log2, mix, mod, select, textureSize, vec3 } from 'three/tsl';
+import {
+  clamp,
+  float,
+  floor,
+  fract,
+  int,
+  log2,
+  mix,
+  mod,
+  normalWorldGeometry,
+  positionWorld,
+  select,
+  step,
+  textureSize,
+  vec3,
+} from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { MeshStandardNodeMaterial, Node, TextureNode } from 'three/webgpu';
+import type { TextureSetPacking } from 'aekasha/texturesets';
+import { getSplatMapCount, type ResolvedTerrainDefine } from '../material/TerrainDefine';
+import { TERRAIN_PACKING_SLOTS } from '../material/TerrainStorage';
+import { getProjectionWeights, getSlope, type ProjectionNodes } from '../nodes/Projection';
+import { getSlopeGateShare } from '../nodes/SlopeGate';
 
 /** The debug views this module builds */
-export type TerrainDebugView = 'TEXEL_DENSITY' | 'NORMALS' | 'WEIGHTS';
+export type TerrainDebugView = 'TEXEL_DENSITY' | 'NORMALS' | 'WEIGHTS' | 'PROJECTION' | 'TAPS';
 
 /** A layer as the texel density reads it */
 export type TerrainDebugViewLayer = {
@@ -16,6 +36,8 @@ export type TerrainDebugViewLayer = {
   tileSize: Node<'vec2'>;
   /** The layer's colour slot texture (a set array's for `ARRAY`), whose width the density reads */
   colorTexture: TextureNode;
+  /** The layer's projection: its mode and uniforms (the sharpness, the slope gate) */
+  projection: ProjectionNodes;
 };
 
 /** What a view reads of the surface */
@@ -28,6 +50,10 @@ export type TerrainDebugViewContext = {
   weights: Node<'float'>[] | null;
   /** The shaded normal in world space */
   normal: Node<'vec3'>;
+  /** The define as read (its tier's), for the fetches `TAPS` counts */
+  define: ResolvedTerrainDefine;
+  /** The packing the layers sample */
+  packing: TextureSetPacking;
 };
 
 /**
@@ -122,11 +148,142 @@ const buildWeights = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
 const buildNormals = (ctx: TerrainDebugViewContext): Node<'vec3'> =>
   ctx.normal.mul(0.5).add(0.5) as Node<'vec3'>;
 
+/** The planar layers' colour in `PROJECTION`: all the top plane (Y, green) */
+const PLANAR_COLOR = vec3(0, 1, 0) as unknown as Node<'vec3'>;
+/** The slope gate band's stripes: their width in metres, and how far they lighten */
+const BAND_STRIPE_METRES = 0.5;
+const BAND_LIGHTEN = 0.6;
+
+/** A layer's gate share, or null without a gate (the geometry's slope, the gate's uniform) */
+const getGateShare = (layer: TerrainDebugViewLayer) =>
+  layer.projection.mode !== 'PLANAR' && layer.projection.slopeGate
+    ? getSlopeGateShare(layer.projection.slopeGate, getSlope(normalWorldGeometry as never))
+    : null;
+
+/** 1 where a share is strictly between 0 and 1 (the gate's band), else 0 */
+const inBand = (share: Node<'float'>) =>
+  step(1e-4, share).mul(step(share, 1 - 1e-4)) as unknown as Node<'float'>;
+
+/**
+ * `PROJECTION`: each layer's planes' weights as colour (X red, Y green, Z blue; a planar layer
+ * green, a gated one mixed by its share), blended by the layers' weights, and the slope gates'
+ * bands striped lighter (diagonal world stripes)
+ */
+const buildProjection = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
+  const normal = normalWorldGeometry as unknown as Node<'vec3'>;
+  const shares = ctx.layers.map(getGateShare);
+  const colors = ctx.layers.map(({ projection }, i) => {
+    if (projection.mode === 'PLANAR') return PLANAR_COLOR;
+    const weights = getProjectionWeights(projection, normal);
+    const share = shares[i];
+    return share ? (mix(PLANAR_COLOR, weights, share) as unknown as Node<'vec3'>) : weights;
+  });
+  const color = weigh(colors, ctx.weights);
+  const zero = float(0) as unknown as Node<'float'>;
+  const band = weigh(
+    shares.map((share) => (share ? inBand(share) : zero)),
+    ctx.weights
+  );
+  const p = positionWorld as unknown as Node<'vec3'>;
+  const stripes = step(0.5, fract(p.x.add(p.y).add(p.z).div(BAND_STRIPE_METRES)));
+  return mix(color, vec3(1), band.mul(stripes).mul(BAND_LIGHTEN)) as unknown as Node<'vec3'>;
+};
+
+/** The anti-tiling modes' taps (p305 D3) */
+const ANTI_TILING_TAPS = { NONE: 1, DUAL_SCALE: 2, HEX: 3 } as const;
+
+/**
+ * A layer's texture fetches: always (its planar tap's, or every plane's) and in its slope gate's
+ * branch (the projection's planes but `TRIPLANAR`'s top, which is the planar tap: 2 either way)
+ */
+const getLayerFetches = (ctx: TerrainDebugViewContext, index: number) => {
+  const layer = ctx.define.layers[index];
+  const tap = TERRAIN_PACKING_SLOTS[ctx.packing].length * ANTI_TILING_TAPS[layer.antiTiling.mode];
+  const { projection } = layer;
+  if (projection.mode === 'PLANAR') return { always: tap, gated: 0 };
+  if (projection.slopeGate) return { always: tap, gated: tap * 2 };
+  return { always: tap * (projection.mode === 'TRIPLANAR' ? 3 : 2), gated: 0 };
+};
+
+/**
+ * The material's own texture fetches beside the layers': the splat maps, the macro variation's
+ * one, and each rule's noise (three's lighting, shadows and environment not counted)
+ */
+const getMaterialFetches = ({ define }: TerrainDebugViewContext) => {
+  const rules = define.blend.source === 'SINGLE' ? [] : define.blend.rules;
+  return (
+    getSplatMapCount(define.blend, define.layers.length) +
+    (define.macro ? 1 : 0) +
+    rules.filter((rule) => rule.noise).length
+  );
+};
+
+/**
+ * The material's own texture fetches at a pixel, as `TAPS` counts them: those every pixel makes
+ * (each layer's taps, its slots × its anti-tiling's taps × its planes; the splat maps, the macro,
+ * the rules' noise) and each slope gate's branch's, made where its share is over 0.
+ * @internal
+ */
+export const estimateTerrainFetches = (ctx: TerrainDebugViewContext) => {
+  let always = getMaterialFetches(ctx);
+  const gated: { share: Node<'float'>; fetches: number }[] = [];
+  ctx.layers.forEach((layer, i) => {
+    const fetches = getLayerFetches(ctx, i);
+    always += fetches.always;
+    const share = getGateShare(layer);
+    if (share && fetches.gated) gated.push({ share, fetches: fetches.gated });
+  });
+  return { always, gated };
+};
+
+/**
+ * The fetch count's bands, each the highest count it takes: up to 2, 4, 8, 12, 16, 24 and 32, then
+ * more (blue to red, then magenta)
+ */
+const TAP_BANDS = [2, 4, 8, 12, 16, 24, 32] as const;
+const TAP_COLORS = [
+  vec3(0.15, 0.2, 0.6),
+  vec3(0.15, 0.45, 0.9),
+  vec3(0.1, 0.75, 0.8),
+  vec3(0.2, 0.75, 0.3),
+  vec3(0.9, 0.85, 0.2),
+  vec3(0.95, 0.5, 0.1),
+  vec3(0.85, 0.15, 0.15),
+  vec3(0.85, 0.2, 0.85),
+] as unknown as Node<'vec3'>[];
+
+/**
+ * `TAPS`: the material's own texture fetches at the pixel (p301 §6's estimate made visible): every
+ * layer's taps (its slots × its anti-tiling's taps × its planes), its slope gate's branch's where
+ * the share is over 0, the splat maps, the macro and the rules' noise; in bands (up to 2 dark
+ * blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more magenta) over the faint 1 m
+ * checker. Every layer counts: all are sampled whatever their weight (Phase 6's sparse sampling
+ * changes that).
+ */
+const buildTaps = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
+  const { always, gated } = estimateTerrainFetches(ctx);
+  const total = gated.reduce(
+    (count, { share, fetches }) => count.add(step(1e-4, share).mul(fetches)) as Node<'float'>,
+    float(always) as unknown as Node<'float'>
+  );
+  let color = TAP_COLORS[TAP_COLORS.length - 1];
+  for (let i = TAP_BANDS.length - 1; i >= 0; i--) {
+    color = select(
+      total.lessThanEqual(TAP_BANDS[i]),
+      TAP_COLORS[i],
+      color
+    ) as unknown as Node<'vec3'>;
+  }
+  return color.mul(mix(0.8, 1, getChecker(ctx))) as Node<'vec3'>;
+};
+
 /** Each view's builder */
 const VIEW_BUILDERS: Record<TerrainDebugView, (ctx: TerrainDebugViewContext) => Node<'vec3'>> = {
   TEXEL_DENSITY: buildTexelDensity,
   NORMALS: buildNormals,
   WEIGHTS: buildWeights,
+  PROJECTION: buildProjection,
+  TAPS: buildTaps,
 };
 
 /**

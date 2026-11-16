@@ -132,6 +132,13 @@ const RAD_TO_DEG = 180 / Math.PI;
 const TOP_PLANE = 1;
 
 /**
+ * A normal's slope in degrees, 0 flat, 90 a vertical face.
+ * @internal
+ */
+export const getSlope = (normal: Node<'vec3'>) =>
+  acos(clamp(normal.y, -1, 1)).mul(RAD_TO_DEG) as unknown as Node<'float'>;
+
+/**
  * What the projected layers read of the surface (the position, its derivatives, the geometry
  * normal and its slope), built once before them.
  * @internal
@@ -143,7 +150,7 @@ export const createProjectionContext = (): ProjectionContext => {
     dpdx: dFdx(positionWorld) as unknown as Node<'vec3'>,
     dpdy: dFdy(positionWorld) as unknown as Node<'vec3'>,
     normal,
-    slope: acos(clamp(normal.y, -1, 1)).mul(RAD_TO_DEG) as unknown as Node<'float'>,
+    slope: getSlope(normal),
   };
 };
 
@@ -257,10 +264,11 @@ const pickPlane = (index: Node<'float'>, planes: Plane[]): Plane => ({
 });
 
 /**
- * `BIPLANAR`'s two planes (Quilez): the axis the surface faces most and the median one, chosen per
- * pixel, and their weights: the facing over 1/√3 remapped to 0..1, `^(k / 8)`, over their sum
+ * `BIPLANAR`'s two axes (Quilez): the one the surface faces most and the median one, by index (0
+ * X, 1 Y, 2 Z), chosen per pixel, and their weights: the facing over 1/√3 remapped to 0..1,
+ * `^(k / 8)`, over their sum
  */
-const getBiplanarPlanes = (planes: Plane[], normal: Node<'vec3'>, sharpness: Node<'float'>) => {
+const getBiplanarAxes = (normal: Node<'vec3'>, sharpness: Node<'float'>) => {
   const n = normal.abs() as Node<'vec3'>;
   const major = select(
     n.x.greaterThan(n.y).and(n.x.greaterThan(n.z)),
@@ -287,9 +295,42 @@ const getBiplanarPlanes = (planes: Plane[], normal: Node<'vec3'>, sharpness: Nod
   // Both 0 only where the facing is the diagonal's on every axis
   const sum = max(weights[0].add(weights[1]), 1e-5);
   return {
-    planes: [pickPlane(major, planes), pickPlane(median, planes)],
+    axes: [major, median],
     weights: weights.map((weight) => weight.div(sum) as Node<'float'>),
   };
+};
+
+/** `BIPLANAR`'s two planes, chosen per pixel, and their weights */
+const getBiplanarPlanes = (planes: Plane[], normal: Node<'vec3'>, sharpness: Node<'float'>) => {
+  const { axes, weights } = getBiplanarAxes(normal, sharpness);
+  return { planes: axes.map((axis) => pickPlane(axis, planes)), weights };
+};
+
+/**
+ * A projecting mode's weight on each axis's plane (X, Y, Z), summing to 1: `TRIPLANAR`'s three,
+ * `BIPLANAR`'s two on their axes. The debug views' (`PROJECTION`).
+ * @internal
+ * @param projection the projecting mode and its sharpness
+ * @param normal the geometry's world normal
+ */
+export const getProjectionWeights = (
+  projection: Exclude<ProjectionNodes, { mode: 'PLANAR' }>,
+  normal: Node<'vec3'>
+): Node<'vec3'> => {
+  if (projection.mode === 'TRIPLANAR') {
+    const [x, y, z] = getTriplanarWeights(normal, projection.sharpness);
+    return vec3(x, y, z) as unknown as Node<'vec3'>;
+  }
+  const { axes, weights } = getBiplanarAxes(normal, projection.sharpness);
+  // An axis's one-hot: 1 on the component its index names
+  const onAxis = (index: Node<'float'>) =>
+    step(
+      vec3(index)
+        .sub(vec3(0, 1, 2))
+        .abs(),
+      vec3(0.5)
+    ) as unknown as Node<'vec3'>;
+  return onAxis(axes[0]).mul(weights[0]).add(onAxis(axes[1]).mul(weights[1])) as Node<'vec3'>;
 };
 
 /** A value of every sample (or of none) by the weights, which sum to 1 */

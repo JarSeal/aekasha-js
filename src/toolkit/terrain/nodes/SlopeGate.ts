@@ -106,6 +106,16 @@ const declareInputs = (layer: ProjectedLayer, ctx: ProjectionContext) => {
 };
 
 /**
+ * A slope gate's share of the projection: 0 under its first slope, 1 past its second, smooth
+ * between.
+ * @internal
+ * @param gate the gate's slopes in degrees (`terrain_l<i>_slopeGate`)
+ * @param slope the geometry's slope in degrees
+ */
+export const getSlopeGateShare = (gate: Node<'vec2'>, slope: Node<'float'>) =>
+  smoothstep(gate.x, gate.y, slope) as unknown as Node<'float'>;
+
+/**
  * A projecting layer with a slope gate (p305 D5): its planar tap under the gate's first slope, its
  * projection past the second, mixed between, the projection's taps sampled only where the share is
  * over 0 (a dynamic branch). Returns the layer's sample and normal as members of one struct var.
@@ -129,7 +139,7 @@ export const sampleSlopeGated = (
   const { packing, isAoBaked } = planar.sample;
 
   const gatedCall = Fn(() => {
-    const share = toVar(smoothstep(gate.x, gate.y, ctx.slope)) as Node<'float'>;
+    const share = toVar(getSlopeGateShare(gate, ctx.slope));
     const inputs = declareInputs(layer, ctx);
     // Three's struct takes its members by name too (the typings list the positional forms only)
     const out = toVar(Gated(values as never)) as unknown as StructVar;

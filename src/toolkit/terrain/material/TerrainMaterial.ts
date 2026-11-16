@@ -617,12 +617,15 @@ export const setupTerrainMaterial = (
   if (IS_DEBUG_ENV && define.debugView) {
     applyDebugView(standard, define.debugView, {
       coords: layers[0].uv.coords,
-      layers: layers.map(({ source: { bundle }, uv }) => ({
+      layers: layers.map(({ source: { bundle }, uniforms, uv }) => ({
         tileSize: uv.tileSize,
         colorTexture: (bundle.albedoRough ?? bundle.albedoHeight) as unknown as TextureNode,
+        projection: uniforms.projection,
       })),
       weights: painted?.weights ?? null,
       normal,
+      define,
+      packing: layers[0].sample.packing,
     });
   }
 };

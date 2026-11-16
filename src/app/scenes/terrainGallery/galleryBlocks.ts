@@ -67,7 +67,13 @@ export const setMaterialUniform = (
 };
 
 /** A terrain debug view the tab shows (p305 D10), or none */
-export type GalleryDebugView = 'NONE' | 'TEXEL_DENSITY' | 'NORMALS' | 'WEIGHTS';
+export type GalleryDebugView =
+  | 'NONE'
+  | 'TEXEL_DENSITY'
+  | 'NORMALS'
+  | 'WEIGHTS'
+  | 'PROJECTION'
+  | 'TAPS';
 
 /**
  * A block's (or its wall's) variant of the gallery's terrain material (or with `isBaseline` of

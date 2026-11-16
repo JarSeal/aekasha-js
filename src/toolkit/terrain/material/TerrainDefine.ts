@@ -34,7 +34,7 @@ const NORMAL_BLENDS = ['WHITEOUT', 'UDN', 'RNM'] as const;
 const MAX_LAYERS = 16;
 const MAX_RULES = 16;
 const QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as const;
-const DEBUG_VIEWS = ['TEXEL_DENSITY', 'NORMALS', 'WEIGHTS'] as const;
+const DEBUG_VIEWS = ['TEXEL_DENSITY', 'NORMALS', 'WEIGHTS', 'PROJECTION', 'TAPS'] as const;
 
 /** The keys each object of the define takes (the schema's) */
 const OVERRIDE_KEYS = ['uv', 'blend', 'ao', 'antiTiling', 'projection', 'distance'];
