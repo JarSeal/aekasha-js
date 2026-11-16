@@ -142,6 +142,10 @@ describe('applyTerrainDebugView', () => {
       macro: { scale: 64 },
     };
     expect(estimateTerrainFetches(contextOf(blended, 'MINIMAL')).always).toBe(3 + 1 + 1 + 1);
+    const colorMapped = { ...blended, colorMap: { mode: 'DETAIL' } };
+    expect(estimateTerrainFetches(contextOf(colorMapped, 'MINIMAL')).always).toBe(
+      3 + 1 + 1 + 1 + 1
+    );
   });
 
   it("counts the slots' fetches, not the layers', a slot's gate its own", () => {

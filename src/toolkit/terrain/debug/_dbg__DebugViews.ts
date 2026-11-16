@@ -234,21 +234,23 @@ const getSampledFetches = (ctx: TerrainDebugViewContext, sampled: TerrainDebugVi
 
 /**
  * The material's own texture fetches beside the layers': the splat maps, the macro variation's
- * one, and each rule's noise (three's lighting, shadows and environment not counted)
+ * one, each rule's noise and a `DETAIL` colour map's one (three's lighting, shadows and
+ * environment not counted)
  */
 const getMaterialFetches = ({ define }: TerrainDebugViewContext) => {
   const rules = define.blend.source === 'SINGLE' ? [] : define.blend.rules;
   return (
     getSplatMapCount(define.blend, define.layers.length) +
     (define.macro ? 1 : 0) +
-    rules.filter((rule) => rule.noise).length
+    rules.filter((rule) => rule.noise).length +
+    (define.colorMap?.mode === 'DETAIL' ? 1 : 0)
   );
 };
 
 /**
  * The material's own texture fetches at a pixel, as `TAPS` counts them: those every pixel makes
  * (each sampled layer's or slot's taps, its packing slots × its anti-tiling's taps × its planes;
- * the splat maps, the macro, the rules' noise) and each slope gate's branch's, made where its
+ * the splat maps, the macro, the rules' noise, the colour map) and each slope gate's branch's, made where its
  * share is over 0 (a slot's: the kept layer's gate).
  * @internal
  */
@@ -283,9 +285,9 @@ const TAP_COLORS = [
 /**
  * `TAPS`: the material's own texture fetches at the pixel (p301 §6's estimate made visible): every
  * sampled layer's or slot's taps (its packing slots × its anti-tiling's taps × its planes), its
- * slope gate's branch's where the share is over 0, the splat maps, the macro and the rules' noise;
- * in bands (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more
- * magenta) over the faint 1 m checker. A layer at its own index is sampled whatever its weight;
+ * slope gate's branch's where the share is over 0, the splat maps, the macro, the rules' noise and
+ * a `DETAIL` colour map; in bands (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24
+ * orange, 32 red, more magenta) over the faint 1 m checker. A layer at its own index is sampled whatever its weight;
  * sparse sampling samples its slots alone.
  */
 const buildTaps = (ctx: TerrainDebugViewContext): Node<'vec3'> => {

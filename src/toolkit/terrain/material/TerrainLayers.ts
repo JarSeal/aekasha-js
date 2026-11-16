@@ -6,8 +6,10 @@
 import { color, float, mix, positionWorld, uniform, uv as meshUv, vec2, vec3 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import { Vector2, type Node, type NodeMaterial } from 'three/webgpu';
+import { existsOrThrow } from 'aekasha';
 import type { AntiTilingContext, AntiTilingNodes } from '../nodes/AntiTiling';
 import { sampleAntiTiled } from '../nodes/AntiTiling';
+import { getLayerDetail } from '../nodes/ColorMap';
 import {
   sampleProjected,
   type ProjectedLayer,
@@ -290,7 +292,8 @@ export type BuiltLayer = {
 
 /**
  * A layer's surface from its sample (p303 D2's packings): the albedo × the set's and the layer's
- * tint; the normal in world space, a projection's (made with the strength), else the map's
+ * tint (with a `DETAIL` colour map, its detail instead: the albedo over the set's average colour,
+ * no tints, the colour map carrying the colour); the normal in world space, a projection's (made with the strength), else the map's
  * (`FULL`, `LITE`) through the tiling's frame (planar world tiling's analytic one, a mesh UV's
  * from its derivatives) or `MINIMAL`'s bump of its height in metres, its slope × the set's and
  * the layer's `normalStrength`; the roughness (`MINIMAL`'s 0.8) × both `roughnessScale`s, capped
@@ -323,8 +326,15 @@ export const getLayerSurface = (
     .mul(uniforms.roughnessScale)
     .min(1) as Node<'float'>;
   const aoStrength = params.aoStrength;
+  const albedo =
+    define.colorMap?.mode === 'DETAIL'
+      ? getLayerDetail(
+          sample.albedo,
+          existsOrThrow(params.averageColor, "A DETAIL layer's set has an average colour.")
+        )
+      : (sample.albedo.mul(params.tint).mul(uniforms.tint) as Node<'vec3'>);
   return {
-    albedo: sample.albedo.mul(params.tint).mul(uniforms.tint) as Node<'vec3'>,
+    albedo,
     normal,
     roughness,
     ao: sample.ao

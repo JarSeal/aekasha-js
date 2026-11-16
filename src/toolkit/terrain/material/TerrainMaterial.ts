@@ -26,6 +26,7 @@ import {
   type TslMaterialFns,
 } from 'aekasha';
 import type { TextureSetArrayInput } from 'aekasha/texturesets';
+import { applyColorMapDetail, sampleColorMap } from '../nodes/ColorMap';
 import { fadeDetailNormal } from '../nodes/Distance';
 import { blendWeightsByHeight, getBlendHeight, normalizeWeights } from '../nodes/HeightBlend';
 import { applyMacroVariation, sampleMacroTexture, type MacroNodes } from '../nodes/Macro';
@@ -92,6 +93,31 @@ const createMacro = (
     roughness: keep('macroRoughness', define.macro.roughness),
   };
   return { nodes, sample: sampleMacroTexture(macroTexture, nodes.scale) };
+};
+
+/**
+ * A `DETAIL` colour map's albedo from the layers' blended detail: the colour map × the detail,
+ * faded to 1 over `detailDistance` (the uniform `terrain_detailDistance`) when it has one
+ */
+const applyDetail = (
+  material: NodeMaterial,
+  define: ResolvedTerrainDefine,
+  colorMap: Node<'vec3'>,
+  detail: Node<'vec3'>,
+  viewDistance: Node<'float'>
+) => {
+  const range = define.colorMap?.detailDistance;
+  const fade = range
+    ? {
+        range: keepUniform(
+          material,
+          'detailDistance',
+          uniform(new Vector2(...range))
+        ) as Node<'vec2'>,
+        viewDistance,
+      }
+    : null;
+  return applyColorMapDetail(colorMap, detail, fade);
 };
 
 /**
@@ -288,31 +314,36 @@ const buildBlendedLayers = (ctx: LayerBuildContext, raw: PaintedWeights | null) 
  * their weights renormalized (the height blend among them); `DOMINANT` samples `HEX` in the first
  * slot and `DUAL_SCALE` in the others. With `macro`, one fetch of the input `macro` at the world's
  * XZ varies the surface (R the brightness, G the hue and the roughness, B `DUAL_SCALE`'s patches);
- * with `distance`, the normal fades to the geometry's over its `fade` range. Only what the define
- * enables is built. The textures it binds (the layers', the splat maps, the macro texture) must
- * fit the budget: the renderer's sampled textures a stage (16) less `reservedTextures` (6). The
- * tunables are uniforms in `material.userData.uniforms`: per layer `terrain_l<i>_<name>`
- * (`tiling`, `rotation` when given, `tint`, `normalStrength`, `roughnessScale`; `heightContrast`
- * and `heightOffset` with the height blend; `farScale` and `antiTilingDistance` with `DUAL_SCALE`
- * or `DOMINANT` in slots, `hexContrast` and `hexRotation` with `HEX`; `projectionSharpness` with
- * `BIPLANAR` or `TRIPLANAR`, `slopeGate` with a gate), per rule `terrain_r<i>_<name>` (its
- * tests' only: `slopeMin`, `slopeMax`, `slopeSoftness`, `heightMin`, `heightMax`,
- * `heightSoftness`, a range's given ends only; `aspectDirection`, `aspectRange`,
- * `aspectSoftness`; `noiseScale`, `noiseAmount`; and `strength`), `terrain_heightBlendDepth` with
- * the height blend, `terrain_aoTextureInfluence` when a layer has texture AO,
- * `terrain_aoVertexInfluence` with `ao.vertex`, `terrain_macroScale`, `terrain_macroBrightness`,
- * `terrain_macroHue` and `terrain_macroRoughness` with `macro`, and `terrain_distanceFade` with
- * `distance`. A `qualityLevel` applies that tier's `quality` overrides first; a `debugView`
- * (debug env, once {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading
- * with the view. The define as given is kept at `material.userData.terrainDefine`.
+ * with a `DETAIL` `colorMap`, the input `colorMap` at the mesh's UV gives the albedo and the layers
+ * their detail (each one's albedo over its set's average colour, no tints), faded out over
+ * `detailDistance`; with `distance`, the normal fades to the geometry's over its `fade` range. Only
+ * what the define enables is built. The textures it binds (the layers', the splat maps, the macro
+ * texture, the colour map) must fit the budget: the renderer's sampled textures a stage (16) less
+ * `reservedTextures` (6). The tunables are uniforms in `material.userData.uniforms`: per layer
+ * `terrain_l<i>_<name>` (`tiling`, `rotation` when given, `tint`, `normalStrength`,
+ * `roughnessScale`; `heightContrast` and `heightOffset` with the height blend; `farScale` and
+ * `antiTilingDistance` with `DUAL_SCALE` or `DOMINANT` in slots, `hexContrast` and `hexRotation`
+ * with `HEX`; `projectionSharpness` with `BIPLANAR` or `TRIPLANAR`, `slopeGate` with a gate), per
+ * rule `terrain_r<i>_<name>` (its tests' only: `slopeMin`, `slopeMax`, `slopeSoftness`,
+ * `heightMin`, `heightMax`, `heightSoftness`, a range's given ends only; `aspectDirection`,
+ * `aspectRange`, `aspectSoftness`; `noiseScale`, `noiseAmount`; and `strength`),
+ * `terrain_heightBlendDepth` with the height blend, `terrain_aoTextureInfluence` when a layer has
+ * texture AO, `terrain_aoVertexInfluence` with `ao.vertex`, `terrain_macroScale`,
+ * `terrain_macroBrightness`, `terrain_macroHue` and `terrain_macroRoughness` with `macro`,
+ * `terrain_detailDistance` with a colour map's `detailDistance`, and `terrain_distanceFade` with
+ * `distance`. A `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug
+ * env, once {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the
+ * view. The define as given is kept at `material.userData.terrainDefine`.
  * @param inputs the material's inputs: `layer<i>` bundles or the `layers` set array bundle (the
  * `textureSets()` feature's resolvers), with the splat map sources the splat maps `splat<i>` and
- * with `macro` or a rule's noise the macro texture `macro` (texture nodes: `{ "texture": id }`)
+ * with `macro` or a rule's noise the macro texture `macro`, with `colorMap` the colour map
+ * `colorMap` (texture nodes: `{ "texture": id }`)
  * @param material the node material being built (a `STANDARDNODEMATERIAL`)
  * @param staticDefines the material's static defines, `terrain` among them
  * @throws for a missing or wrong define field, a field it doesn't know, a layer count the blend
  * source doesn't take, a missing layer, splat map or macro input (or one the define doesn't
- * take), `layer<i>` and `layers` both, a set array of another layer count, layers in different
+ * take), a layer's set without an average colour that a `DETAIL` colour map reads,
+ * `layer<i>` and `layers` both, a set array of another layer count, layers in different
  * packings, slots (sparse, `DOMINANT`) without the `layers` set array, or textures over the
  * budget (naming what it binds)
  * @example
@@ -353,10 +384,13 @@ export const setupTerrainMaterial = (
       uniform(define.aoTextureInfluence)
     ) as Node<'float'>);
 
-  // Shared by every layer, built before any of them: the view distance, the one macro fetch and
-  // (made on the first projected layer) the projections' position, derivatives and normal
+  // Shared by every layer, built before any of them: the view distance, the one macro fetch, the
+  // colour map's and (made on the first projected layer) the projections' position, derivatives
+  // and normal
   const viewDistance = positionView.length() as unknown as Node<'float'>;
   const macro = createMacro(material, macroTexture, define);
+  const colorMap =
+    colorMapTexture && define.colorMap?.mode === 'DETAIL' ? sampleColorMap(colorMapTexture) : null;
   let projection: ProjectionContext | null = null;
   const getProjectionContext = () => (projection ??= createProjectionContext());
   const uniforms = define.layers.map((_, i) => createLayerUniforms(material, define, i));
@@ -371,7 +405,11 @@ export const setupTerrainMaterial = (
 
   // The layers blended by their weights (SINGLE: the one layer), then the material-wide effects
   const weights = rawWeights && blendWeights(material, define, rawWeights, layers);
-  const surface = weights ? blendSurfaces(surfaces, weights, slots !== null) : surfaces[0];
+  const blended = weights ? blendSurfaces(surfaces, weights, slots !== null) : surfaces[0];
+  // DETAIL: the layers' albedo is their detail, which the colour map's colour multiplies
+  const surface = colorMap
+    ? { ...blended, albedo: applyDetail(material, define, colorMap, blended.albedo, viewDistance) }
+    : blended;
   const { albedo, roughness } = macro
     ? applyMacroVariation(surface, macro.sample, macro.nodes)
     : surface;

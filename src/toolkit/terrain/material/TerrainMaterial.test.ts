@@ -20,9 +20,13 @@ const PACKING_SLOTS: Record<Packing, string[]> = {
   MINIMAL: ['albedoHeight'],
 };
 
-/** A `{ textureSet }` bundle of the packing's slots and the set's uniforms */
-const makeBundle = (packing: Packing = 'LITE') =>
+/**
+ * A `{ textureSet }` bundle of the packing's slots and the set's uniforms (with `averageColor`, its
+ * average colour's)
+ */
+const makeBundle = (packing: Packing = 'LITE', { averageColor = false } = {}) =>
   ({
+    ...(averageColor ? { averageColor: uniform(color(0.4, 0.3, 0.2)) } : {}),
     ...Object.fromEntries(PACKING_SLOTS[packing].map((slot) => [slot, texture(new Texture())])),
     physicalSize: uniform(new Vector2(3, 3)),
     heightScale: uniform(0.05),
@@ -311,15 +315,16 @@ describe('setupTerrainMaterial', () => {
 
   it('wants the colour map input with a colour map, and refuses it without', () => {
     const colorMap = { mode: 'DETAIL' };
-    expect(() => build({ layers: [{}], colorMap })).toThrow(/Missing input "colorMap"/);
-    expect(() =>
-      build({ layers: [{}], colorMap }, { layer0: makeBundle(), colorMap: makeBundle() })
-    ).toThrow(/Missing input "colorMap"/);
+    const layer0 = makeBundle('LITE', { averageColor: true });
+    expect(() => build({ layers: [{}], colorMap }, { layer0 })).toThrow(/Missing input "colorMap"/);
+    expect(() => build({ layers: [{}], colorMap }, { layer0, colorMap: makeBundle() })).toThrow(
+      /Missing input "colorMap"/
+    );
     expect(() =>
       build({ layers: [{}] }, { layer0: makeBundle(), colorMap: texture(new Texture()) })
     ).toThrow(/Input "colorMap" has no use/);
     expect(() =>
-      build({ layers: [{}], colorMap }, { layer0: makeBundle(), colorMap: texture(new Texture()) })
+      build({ layers: [{}], colorMap }, { layer0, colorMap: texture(new Texture()) })
     ).not.toThrow();
   });
 
@@ -656,6 +661,89 @@ describe('setupTerrainMaterial: rules', () => {
         layerInputs(3, 'FULL', { macro: texture(new Texture()) })
       )
     ).toThrow(/macro/);
+  });
+});
+
+describe('setupTerrainMaterial: colour map', () => {
+  /** The colour map's samples among the nodes the roots reach */
+  const colorMapSamples = (roots: unknown[], map: unknown) =>
+    collectNodesFrom(roots).filter(
+      (node) =>
+        (node as unknown as { isTextureNode?: boolean }).isTextureNode &&
+        node !== map &&
+        (node as unknown as { value: unknown }).value === (map as { value: unknown }).value
+    );
+
+  it("gives the albedo the colour map × the layers' detail over their average colours", () => {
+    const map = texture(new Texture());
+    const bundles = [0, 1].map(() => makeBundle('LITE', { averageColor: true }));
+    const material = build(
+      {
+        layers: layersOf(2),
+        blend: { source: 'VERTEX_COLOR' },
+        colorMap: { mode: 'DETAIL' },
+        macro: { scale: 100 },
+      },
+      { layer0: bundles[0], layer1: bundles[1], colorMap: map, macro: texture(new Texture()) }
+    );
+    expect(colorMapSamples([material.colorNode], map)).toHaveLength(1);
+    expect(colorMapSamples([material.normalNode, material.roughnessNode], map)).toHaveLength(0);
+    const colorNodes = collectNodesFrom([material.colorNode]);
+    for (const bundle of bundles) {
+      expect(colorNodes).toContain(bundle.averageColor);
+      // The colour map carries the colour: no tint, the set's or the layer's
+      expect(colorNodes).not.toContain(bundle.tint);
+    }
+    const uniforms = getUniforms(material);
+    expect(colorNodes).not.toContain(uniforms.terrain_l0_tint);
+    // The macro variation over it
+    expect(colorNodes).toContain(uniforms.terrain_macroBrightness);
+    expect(getUniformKeys(material)).not.toContain('terrain_detailDistance');
+  });
+
+  it('fades the detail out over detailDistance, a uniform', () => {
+    const material = build(
+      { layers: [{}], colorMap: { mode: 'DETAIL', detailDistance: [20, 60] } },
+      { layer0: makeBundle('LITE', { averageColor: true }), colorMap: texture(new Texture()) }
+    );
+    const range = getUniforms(material).terrain_detailDistance;
+    expect(range.value).toEqual(new Vector2(20, 60));
+    expect(collectNodesFrom([material.colorNode])).toContain(range);
+  });
+
+  it("reads a set array layer's average colour, and refuses a set without one", () => {
+    const define = {
+      layers: layersOf(2),
+      blend: { source: 'VERTEX_COLOR' },
+      colorMap: { mode: 'DETAIL' },
+    };
+    const map = texture(new Texture());
+    expect(() => build(define, { layers: makeArrayBundle(2), colorMap: map })).not.toThrow();
+    expect(() =>
+      build(define, {
+        layer0: makeBundle('LITE', { averageColor: true }),
+        layer1: makeBundle(),
+        colorMap: map,
+      })
+    ).toThrow(
+      /Input "layer1": its texture set has no averageColor, which the DETAIL colour map's detail reads/
+    );
+    // Without the detail, a set needs none
+    expect(() => build({ ...define, colorMap: undefined }, layerInputs(2))).not.toThrow();
+  });
+
+  it("samples the colour map in slots too, each slot its layer's average colour", () => {
+    const map = texture(new Texture());
+    const material = build(
+      {
+        layers: layersOf(4),
+        blend: { source: 'VERTEX_COLOR', vertexColor: { layout: 'RGBA' } },
+        sparse: { maxLayers: 2 },
+        colorMap: { mode: 'DETAIL' },
+      },
+      { layers: makeArrayBundle(4), colorMap: map }
+    );
+    expect(colorMapSamples([material.colorNode], map)).toHaveLength(1);
   });
 });
 

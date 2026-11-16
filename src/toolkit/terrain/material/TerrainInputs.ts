@@ -53,6 +53,11 @@ export type LayerParams = {
   normalStrength: Node<'float'>;
   roughnessScale: Node<'float'>;
   aoStrength: Node<'float'>;
+  /**
+   * The set's average colour, linear: a set array's layer always has one (mid-grey for a set
+   * without), a `{ textureSet }` bundle only when its set has one
+   */
+  averageColor?: Node<'vec3'>;
 };
 
 /** A layer's set: the bundle it samples, its layer there (`ARRAY`), its params */
@@ -96,6 +101,13 @@ const isArrayBundle = (value: unknown): value is TextureSetArrayInput =>
 
 /** A `{ textureSet }` bundle's own uniforms as a layer's params */
 const getSetParams = (bundle: TextureSetInput) => bundle as unknown as LayerParams;
+
+/**
+ * Whether the define reads the layers' average colours: a `DETAIL` colour map's detail, or the
+ * `AVERAGE_COLOR` far surface
+ */
+const readsAverageColor = (define: ResolvedTerrainDefine) =>
+  define.colorMap?.mode === 'DETAIL' || define.far?.mode === 'AVERAGE_COLOR';
 
 /** The `ARRAY` storage's layers: each a layer of the one set array bundle `layers` */
 const readArraySources = (
@@ -157,6 +169,11 @@ export const readLayerSources = (
     if (!bundle || typeof bundle !== 'object' || !('physicalSize' in bundle)) {
       throw new Error(
         `[terrain] Missing input "${key}": a { "textureSet": id } (the textureSets() feature) for each layer, or a { "textureSetArray": [ids], "packing" } "${ARRAY_INPUT_KEY}" for all.`
+      );
+    }
+    if (readsAverageColor(define) && !bundle.averageColor) {
+      throw new Error(
+        `[terrain] Input "${key}": its texture set has no averageColor, which ${define.colorMap?.mode === 'DETAIL' ? "the DETAIL colour map's detail" : 'the AVERAGE_COLOR far surface'} reads (a procedural set has none): give the set's JSON one, or encode its albedo (yarn assets).`
       );
     }
     return bundle;
