@@ -12,6 +12,8 @@ import {
   TERRAIN_LAYER_SOURCES,
   TERRAIN_MAX_LAYERS,
   TERRAIN_MAX_RULES,
+  TERRAIN_NORMAL_BLENDS,
+  TERRAIN_PROJECTION_MODES,
   TERRAIN_UV_MODES,
   TERRAIN_VERTEX_COLOR_LAYOUTS,
   TerrainAntiTilingSchema,
@@ -19,6 +21,7 @@ import {
   TerrainLayerSettingsSchema,
   TerrainMacroSettingsSchema,
   TerrainMaterialDefineSchema,
+  TerrainProjectionSchema,
   TerrainQualityOverridesSchema,
   TerrainRuleSchema,
 } from './TerrainMaterialConfig';
@@ -53,6 +56,19 @@ const ACCEPTED: unknown[] = [
   { layers: [{}], antiTiling: { mode: 'DUAL_SCALE', farScale: 0.31, distance: [0, 25] } },
   { layers: [{}], antiTiling: { mode: 'HEX', hexContrast: 0.05, hexRotation: 0 } },
   { layers: [{ antiTiling: { mode: 'HEX', hexContrast: 0.95 } }], antiTiling: { mode: 'NONE' } },
+  { layers: [{}], projection: { mode: 'PLANAR' } },
+  { layers: [{}], projection: { mode: 'TRIPLANAR' } },
+  { layers: [{}], projection: { mode: 'BIPLANAR', sharpness: 1, slopeGate: [0, 90] } },
+  { layers: [{}], projection: { mode: 'TRIPLANAR', sharpness: 32, normalBlend: 'RNM' } },
+  { layers: [{ projection: { mode: 'TRIPLANAR', slopeGate: [30, 50], normalBlend: 'UDN' } }] },
+  { layers: [{}], uv: 'MESH_UV', projection: { mode: 'PLANAR' } },
+  {
+    layers: [{}, { projection: { mode: 'PLANAR' } }],
+    blend: { source: 'VERTEX_COLOR' },
+    projection: { mode: 'TRIPLANAR' },
+    quality: { LOW: { projection: { mode: 'PLANAR' }, uv: 'MESH_UV' } },
+    qualityLevel: 'LOW',
+  },
   { layers: [{}], macro: { scale: 120 } },
   { layers: [{}], macro: { scale: 40, brightness: 0, hue: 180, roughness: 1 } },
   { layers: [{}], distance: { fade: [30, 90] } },
@@ -181,7 +197,25 @@ const REFUSED: unknown[] = [
   { layers: [{ source: 'PROCEDURAL_LIVE' }] },
   { layers: [{ set: 'grass01' }] },
   { layers: [{}], uv: 'XZ' },
-  { layers: [{}], projection: { mode: 'TRIPLANAR' } },
+  { layers: [{}], projection: {} },
+  { layers: [{}], projection: { mode: 'CUBIC' } },
+  { layers: [{}], projection: { mode: 'PLANAR', sharpness: 4 } },
+  { layers: [{}], projection: { mode: 'PLANAR', slopeGate: [30, 50] } },
+  { layers: [{}], projection: { mode: 'TRIPLANAR', sharpness: 0.5 } },
+  { layers: [{}], projection: { mode: 'TRIPLANAR', sharpness: 33 } },
+  { layers: [{}], projection: { mode: 'TRIPLANAR', slopeGate: [50, 30] } },
+  { layers: [{}], projection: { mode: 'TRIPLANAR', slopeGate: [30, 30] } },
+  { layers: [{}], projection: { mode: 'TRIPLANAR', slopeGate: [30, 91] } },
+  { layers: [{}], projection: { mode: 'TRIPLANAR', slopeGate: [30] } },
+  { layers: [{}], projection: { mode: 'BIPLANAR', normalBlend: 'PARTIAL_DERIVATIVE' } },
+  { layers: [{}], uv: 'MESH_UV', projection: { mode: 'TRIPLANAR' } },
+  { layers: [{ projection: { mode: 'BIPLANAR' } }], uv: 'MESH_UV' },
+  {
+    layers: [{}],
+    projection: { mode: 'TRIPLANAR' },
+    quality: { MEDIUM: { uv: 'MESH_UV' } },
+    qualityLevel: 'MEDIUM',
+  },
   { layers: [{}], blend: { source: 'SPLAT_MAP' } },
   { layers: [{}], blend: { source: 'SINGLE', mode: 'HEIGHT' } },
   [{}],
@@ -399,6 +433,7 @@ describe('readTerrainDefine', () => {
           heightContrast: 1,
           heightOffset: 0,
           antiTiling: { mode: 'NONE' },
+          projection: { mode: 'PLANAR' },
         },
       ],
       uv: 'WORLD',
@@ -421,6 +456,19 @@ describe('readTerrainDefine', () => {
       mode: 'HEX',
       hexContrast: 0.5,
       hexRotation: 1,
+    });
+    expect(read({ layers: [{}], projection: { mode: 'TRIPLANAR' } }).layers[0].projection).toEqual({
+      mode: 'TRIPLANAR',
+      sharpness: 4,
+      slopeGate: null,
+      normalBlend: 'WHITEOUT',
+    });
+    const biplanar = { mode: 'BIPLANAR', slopeGate: [35, 55] };
+    expect(read({ layers: [{ projection: biplanar }] }).layers[0].projection).toEqual({
+      mode: 'BIPLANAR',
+      sharpness: 8,
+      slopeGate: [35, 55],
+      normalBlend: 'WHITEOUT',
     });
     expect(read({ layers: [{}], macro: { scale: 120 } }).macro).toEqual({
       scale: 120,
@@ -504,6 +552,25 @@ describe('readTerrainDefine', () => {
     });
   });
 
+  it("gives a layer its own projection, else the material's (its tier's)", () => {
+    const define = {
+      layers: [{ projection: { mode: 'TRIPLANAR' } }, {}],
+      blend: { source: 'VERTEX_COLOR' },
+      quality: { HIGH: { projection: { mode: 'BIPLANAR', sharpness: 2 } } },
+    };
+    expect(read(define).layers.map((layer) => layer.projection.mode)).toEqual([
+      'TRIPLANAR',
+      'PLANAR',
+    ]);
+    expect(read({ ...define, qualityLevel: 'HIGH' }).layers[1].projection).toEqual({
+      mode: 'BIPLANAR',
+      sharpness: 2,
+      slopeGate: null,
+      normalBlend: 'WHITEOUT',
+    });
+    expect(read({ ...define, qualityLevel: 'HIGH' }).layers[0].projection.mode).toBe('TRIPLANAR');
+  });
+
   it('takes and refuses what the schema does', () => {
     for (const define of ACCEPTED) {
       expect(TerrainMaterialDefineSchema.safeParse(define).success, JSON.stringify(define)).toBe(
@@ -568,6 +635,15 @@ describe('readTerrainDefine', () => {
       expect(values.antiTilingKeys[mode].sort(), mode).toEqual(Object.keys(option.shape).sort());
     }
     expect(values.antiTilingModes).toEqual(TERRAIN_ANTI_TILING_MODES);
+    for (const option of TerrainProjectionSchema.options) {
+      const mode = option.shape.mode.value;
+      expect(values.projectionKeys[mode].sort(), mode).toEqual(Object.keys(option.shape).sort());
+    }
+    expect(values.projectionModes).toEqual(TERRAIN_PROJECTION_MODES);
+    expect(TerrainProjectionSchema.options.map((option) => option.shape.mode.value)).toEqual([
+      ...TERRAIN_PROJECTION_MODES,
+    ]);
+    expect(values.normalBlends).toEqual(TERRAIN_NORMAL_BLENDS);
     expect(TerrainAntiTilingSchema.options.map((option) => option.shape.mode.value)).toEqual([
       ...TERRAIN_ANTI_TILING_MODES,
     ]);
@@ -603,8 +679,27 @@ describe('readTerrainDefine', () => {
       'staticDefines.terrain.layers[0].tiling: is -1'
     );
     expect(() => read({ layers: [{}], projection: {} })).toThrow(
-      'staticDefines.terrain: has no field "projection"'
+      'staticDefines.terrain.projection.mode: is missing: use PLANAR, BIPLANAR, TRIPLANAR.'
     );
+    expect(() => read({ layers: [{}], projection: { mode: 'PLANAR', sharpness: 4 } })).toThrow(
+      'staticDefines.terrain.projection: has no field "sharpness" (fields: mode).'
+    );
+    expect(() =>
+      read({ layers: [{ projection: { mode: 'TRIPLANAR', slopeGate: [50, 30] } }] })
+    ).toThrow(
+      'staticDefines.terrain.layers[0].projection.slopeGate: is [50, 30]: the first value is under the second.'
+    );
+    expect(() => read({ layers: [{ projection: { mode: 'BIPLANAR' } }], uv: 'MESH_UV' })).toThrow(
+      'staticDefines.terrain.layers[0].projection.mode: is BIPLANAR: it projects the world, which needs uv WORLD (not MESH_UV).'
+    );
+    expect(() =>
+      read({
+        layers: [{}],
+        uv: 'MESH_UV',
+        quality: { HIGH: { projection: { mode: 'TRIPLANAR' } } },
+        qualityLevel: 'HIGH',
+      })
+    ).toThrow('staticDefines.terrain.quality.HIGH.projection.mode: is TRIPLANAR');
     expect(() => read({ layers: [{}], uv: 'XZ' })).toThrow(
       'staticDefines.terrain.uv: is "XZ": use WORLD, MESH_UV.'
     );

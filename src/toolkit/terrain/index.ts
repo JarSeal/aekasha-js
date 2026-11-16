@@ -82,6 +82,7 @@ export {
   TerrainMacroSettingsSchema,
   TerrainMaterialConfigSchema,
   TerrainMaterialDefineSchema,
+  TerrainProjectionSchema,
   TerrainQualityOverridesSchema,
 } from './material/TerrainMaterialConfig';
 export type {
@@ -93,5 +94,6 @@ export type {
   TerrainMacroSettings,
   TerrainMaterialConfig,
   TerrainMaterialDefine,
+  TerrainProjection,
   TerrainQualityOverrides,
 } from './material/TerrainMaterialConfig';

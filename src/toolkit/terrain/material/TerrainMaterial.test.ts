@@ -339,7 +339,7 @@ describe('setupTerrainMaterial', () => {
     expect(() => build({ layers: [{}] }, { layer0: makeBundle(), layer1: makeBundle() })).toThrow(
       /Input "layer1" has no layer/
     );
-    expect(() => build({ layers: [{}], projection: {} })).toThrow(/has no field "projection"/);
+    expect(() => build({ layers: [{}], colorMap: {} })).toThrow(/has no field "colorMap"/);
     expect(() => build(undefined)).toThrow(/Missing static define "terrain"/);
   });
 });

@@ -2,7 +2,8 @@
 // as it's read and filled with its defaults, for the graph to branch on. Not the Zod schema
 // (`TerrainMaterialConfig.ts`): a build carrying the generator would carry zod with it (the texture
 // sets' trap, `src/_engine/features/texturesets/CLAUDE.md`). `TerrainDefine.test.ts` keeps the two
-// in step: the same keys, values and refusals.
+// in step: the same keys, values and refusals. Over 800 lines: one reader mirrors the whole
+// schema field by field, so a field and its refusals sit next to its neighbours'.
 import { TERRAIN_RULE_DEFAULTS, TERRAIN_RULE_NOISE_CHANNELS } from 'aekasha/toolkit/geometry';
 
 const LAYER_SOURCES = ['TEXTURE'] as const;
@@ -28,13 +29,15 @@ const BLEND_LAYER_COUNTS = {
   SPLAT_MAP_AND_RULES: [2, 16],
 } as const;
 const ANTI_TILING_MODES = ['NONE', 'DUAL_SCALE', 'HEX'] as const;
+const PROJECTION_MODES = ['PLANAR', 'BIPLANAR', 'TRIPLANAR'] as const;
+const NORMAL_BLENDS = ['WHITEOUT', 'UDN', 'RNM'] as const;
 const MAX_LAYERS = 16;
 const MAX_RULES = 16;
 const QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as const;
 const DEBUG_VIEWS = ['TEXEL_DENSITY', 'NORMALS', 'WEIGHTS'] as const;
 
 /** The keys each object of the define takes (the schema's) */
-const OVERRIDE_KEYS = ['uv', 'blend', 'ao', 'antiTiling', 'distance'];
+const OVERRIDE_KEYS = ['uv', 'blend', 'ao', 'antiTiling', 'projection', 'distance'];
 const DEFINE_KEYS = [
   'layers',
   'macro',
@@ -54,6 +57,7 @@ const LAYER_KEYS = [
   'heightContrast',
   'heightOffset',
   'antiTiling',
+  'projection',
 ];
 const BLEND_KEYS: Record<(typeof BLEND_SOURCES)[number], string[]> = {
   SINGLE: ['source'],
@@ -81,6 +85,12 @@ const ANTI_TILING_KEYS: Record<(typeof ANTI_TILING_MODES)[number], string[]> = {
   DUAL_SCALE: ['mode', 'farScale', 'distance'],
   HEX: ['mode', 'hexContrast', 'hexRotation'],
 };
+const PROJECTED_KEYS = ['mode', 'sharpness', 'slopeGate', 'normalBlend'];
+const PROJECTION_KEYS: Record<(typeof PROJECTION_MODES)[number], string[]> = {
+  PLANAR: ['mode'],
+  BIPLANAR: PROJECTED_KEYS,
+  TRIPLANAR: PROJECTED_KEYS,
+};
 const MACRO_KEYS = ['scale', 'brightness', 'hue', 'roughness'];
 const DISTANCE_KEYS = ['fade'];
 
@@ -89,6 +99,8 @@ const DUAL_SCALE_FAR_SCALE = 0.23;
 const DUAL_SCALE_DISTANCE: [number, number] = [6, 40];
 const HEX_CONTRAST = 0.5;
 const HEX_ROTATION = 1;
+/** The projections' sharpness defaults (p305 D5): Quilez's k, and the exponent on the facing */
+const PROJECTION_SHARPNESS = { BIPLANAR: 8, TRIPLANAR: 4 } as const;
 /** The macro variation's defaults (p305 D7) */
 const MACRO_BRIGHTNESS = 0.2;
 const MACRO_HUE = 8;
@@ -108,6 +120,19 @@ export type TerrainAntiTilingDefine =
   | { mode: 'DUAL_SCALE'; farScale: number; distance: [number, number] }
   | { mode: 'HEX'; hexContrast: number; hexRotation: number };
 
+/**
+ * A layer's projection with its defaults filled in: the projecting modes' sharpness, slope gate
+ * (degrees, null for none) and normal blend
+ */
+export type TerrainProjectionDefine =
+  | { mode: 'PLANAR' }
+  | {
+      mode: 'BIPLANAR' | 'TRIPLANAR';
+      sharpness: number;
+      slopeGate: [number, number] | null;
+      normalBlend: (typeof NORMAL_BLENDS)[number];
+    };
+
 /** A layer's settings with their defaults filled in */
 export type TerrainLayerDefine = {
   source: (typeof LAYER_SOURCES)[number];
@@ -124,6 +149,8 @@ export type TerrainLayerDefine = {
   heightOffset: number;
   /** The layer's own, else the material's (after its tier's override) */
   antiTiling: TerrainAntiTilingDefine;
+  /** The layer's own, else the material's (after its tier's override) */
+  projection: TerrainProjectionDefine;
 };
 
 /**
@@ -218,6 +245,7 @@ export const TERRAIN_DEFINE_VALUES = {
   vertexColorKeys: VERTEX_COLOR_KEYS,
   aoKeys: AO_KEYS,
   antiTilingKeys: ANTI_TILING_KEYS,
+  projectionKeys: PROJECTION_KEYS,
   macroKeys: MACRO_KEYS,
   distanceKeys: DISTANCE_KEYS,
   overrideKeys: OVERRIDE_KEYS,
@@ -230,6 +258,8 @@ export const TERRAIN_DEFINE_VALUES = {
   vertexColorLayouts: VERTEX_COLOR_LAYOUTS,
   blendLayerCounts: BLEND_LAYER_COUNTS,
   antiTilingModes: ANTI_TILING_MODES,
+  projectionModes: PROJECTION_MODES,
+  normalBlends: NORMAL_BLENDS,
   maxLayers: MAX_LAYERS,
 };
 
@@ -358,6 +388,42 @@ const readAntiTiling = (value: unknown, path: string): TerrainAntiTilingDefine =
     };
   }
   return { mode };
+};
+
+/** A `[from, to]` field of slopes in degrees, 0..90, `from` under `to`; null when it's absent */
+const readSlopeRange = (obj: Record<string, unknown>, key: string, path: string) => {
+  const value = obj[key];
+  if (value === undefined) return null;
+  const isPair =
+    Array.isArray(value) &&
+    value.length === 2 &&
+    value.every((n) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 90);
+  if (!isPair) {
+    fail(`${path}.${key}`, `is ${JSON.stringify(value)}: give [from, to], degrees 0 to 90.`);
+  }
+  const [from, to] = value as [number, number];
+  if (from >= to) {
+    fail(`${path}.${key}`, `is [${from}, ${to}]: the first value is under the second.`);
+  }
+  return [from, to] as [number, number];
+};
+
+/** A projection object, its mode's fields only, with their defaults */
+const readProjection = (value: unknown, path: string): TerrainProjectionDefine => {
+  const obj = readObject(value, path);
+  if (obj.mode === undefined) {
+    fail(`${path}.mode`, `is missing: use ${PROJECTION_MODES.join(', ')}.`);
+  }
+  const mode = readEnum(obj, 'mode', PROJECTION_MODES, path);
+  checkKeys(obj, PROJECTION_KEYS[mode], path);
+  if (mode === 'PLANAR') return { mode };
+  const sharpnessBounds = { min: { value: 1 }, max: { value: 32 } };
+  return {
+    mode,
+    sharpness: readNumber(obj, 'sharpness', PROJECTION_SHARPNESS[mode], sharpnessBounds, path),
+    slopeGate: readSlopeRange(obj, 'slopeGate', path),
+    normalBlend: readEnum(obj, 'normalBlend', NORMAL_BLENDS, path),
+  };
 };
 
 /** The layer counts a blend takes, `[min, max]`, and its name for an error */
@@ -594,10 +660,16 @@ const readBoolean = (obj: Record<string, unknown>, key: string, path: string) =>
   return value as boolean;
 };
 
+/** The material-wide settings a layer's own replace */
+type LayerFallbacks = {
+  antiTiling: TerrainAntiTilingDefine;
+  projection: TerrainProjectionDefine;
+};
+
 const readLayer = (
   value: unknown,
   index: number,
-  antiTiling: TerrainAntiTilingDefine
+  fallbacks: LayerFallbacks
 ): TerrainLayerDefine => {
   const path = `.layers[${index}]`;
   const layer = readObject(value, path);
@@ -623,9 +695,35 @@ const readLayer = (
     ),
     antiTiling:
       layer.antiTiling === undefined
-        ? antiTiling
+        ? fallbacks.antiTiling
         : readAntiTiling(layer.antiTiling, `${path}.antiTiling`),
+    projection:
+      layer.projection === undefined
+        ? fallbacks.projection
+        : readProjection(layer.projection, `${path}.projection`),
   };
+};
+
+/**
+ * The layers' projections against the tiling's coordinates: `BIPLANAR` and `TRIPLANAR` project the
+ * world, so they need `uv: 'WORLD'`
+ * @param materialPath where the material's projection is (the tier's, when it gave one)
+ */
+const checkProjectionUv = (
+  rawLayers: unknown[],
+  layers: TerrainLayerDefine[],
+  uv: (typeof UV_MODES)[number],
+  materialPath: string
+) => {
+  if (uv !== 'MESH_UV') return;
+  layers.forEach(({ projection }, i) => {
+    if (projection.mode === 'PLANAR') return;
+    const isOwn = (rawLayers[i] as Record<string, unknown>).projection !== undefined;
+    fail(
+      `${isOwn ? `.layers[${i}]` : materialPath}.projection.mode`,
+      `is ${projection.mode}: it projects the world, which needs uv WORLD (not MESH_UV).`
+    );
+  });
 };
 
 /** The macro variation, or null without one */
@@ -673,8 +771,8 @@ const readQualityTable = (define: Record<string, unknown>) => {
  * Reads a terrain material's static define (`staticDefines.terrain`), filling its defaults, and
  * throws naming the first field that's wrong or unknown (a later phase's field included). With a
  * `qualityLevel`, that tier's overrides replace the material's fields (shallowly) before they're
- * read; a tier that isn't applied is checked for its keys only. A layer's own `antiTiling`
- * replaces the material's (the tier's, when it gives one).
+ * read; a tier that isn't applied is checked for its keys only. A layer's own `antiTiling` and
+ * `projection` replace the material's (the tier's, when it gives one).
  * @internal
  */
 export const readTerrainDefine = (
@@ -704,7 +802,15 @@ export const readTerrainDefine = (
     fields.antiTiling === undefined
       ? { mode: 'NONE' }
       : readAntiTiling(fields.antiTiling, `${pathOf('antiTiling')}.antiTiling`);
-  const layers = (rawLayers as unknown[]).map((layer, i) => readLayer(layer, i, antiTiling));
+  const projection: TerrainProjectionDefine =
+    fields.projection === undefined
+      ? { mode: 'PLANAR' }
+      : readProjection(fields.projection, `${pathOf('projection')}.projection`);
+  const layers = (rawLayers as unknown[]).map((layer, i) =>
+    readLayer(layer, i, { antiTiling, projection })
+  );
+  const uv = readEnum(fields, 'uv', UV_MODES, pathOf('uv'));
+  checkProjectionUv(rawLayers as unknown[], layers, uv, pathOf('projection'));
 
   const blend = readBlend(fields.blend, `${pathOf('blend')}.blend`);
   const { counts, name } = getBlendLayerCounts(blend);
@@ -734,7 +840,7 @@ export const readTerrainDefine = (
   if (distance) checkKeys(distance, DISTANCE_KEYS, distancePath);
   return {
     layers,
-    uv: readEnum(fields, 'uv', UV_MODES, pathOf('uv')),
+    uv,
     blend,
     aoTextureInfluence,
     aoVertex,

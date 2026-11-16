@@ -5,7 +5,9 @@
 // texture closure reads and a variant swaps per block without another shader. The graph
 // (`TerrainMaterial.ts`) imports only types from here, so a build that uses the generator carries
 // no zod: it checks the define's values by hand as it reads them (the tests keep both in step).
-// Each phase of p305 adds its fields: a key the schema doesn't know is refused.
+// Each phase of p305 adds its fields: a key the schema doesn't know is refused. Over 800 lines:
+// every field is documented twice (its JSDoc for the API docs, its `.describe()` for the JSON
+// schema), and both schemas' refinements are here.
 import { z } from 'zod';
 import { TERRAIN_RULE_NOISE_CHANNELS } from 'aekasha/toolkit/geometry';
 
@@ -78,6 +80,18 @@ export const TERRAIN_MAX_RULES = 16;
  * tiling (3).
  */
 export const TERRAIN_ANTI_TILING_MODES = ['NONE', 'DUAL_SCALE', 'HEX'] as const;
+/**
+ * How a layer's texture meets the surface (p305 D5): `PLANAR` the tiling's coordinates alone (the
+ * world's `(x, −z)` or the mesh's UV; 1 tap per slot), `BIPLANAR` the world projected along the two
+ * axes the surface faces most (Quilez; 2), `TRIPLANAR` along all three (3).
+ */
+export const TERRAIN_PROJECTION_MODES = ['PLANAR', 'BIPLANAR', 'TRIPLANAR'] as const;
+/**
+ * How a projected plane's normal map meets the geometry's normal (Golus, "Normal Mapping for a
+ * Triplanar Shader"): `WHITEOUT` (default) the slopes added and the Z's multiplied, `UDN` the
+ * slopes added (cheaper, flatter), `RNM` reoriented (the most faithful, the most ALU).
+ */
+export const TERRAIN_NORMAL_BLENDS = ['WHITEOUT', 'UDN', 'RNM'] as const;
 
 const srgbColor = (description: string) =>
   z
@@ -177,6 +191,83 @@ export const TerrainAntiTilingSchema = z
 /** How a layer breaks its tiling's repetition (p305 D3): `NONE`, `DUAL_SCALE` or `HEX`. */
 export type TerrainAntiTiling = z.infer<typeof TerrainAntiTilingSchema>;
 
+/** The fields both projecting modes take, their sharpness's default the mode's */
+const projectedFields = (
+  mode: 'BIPLANAR' | 'TRIPLANAR',
+  description: string,
+  sharpness: string
+) => ({
+  mode: z.literal(mode).describe(description),
+  /** The facing weights' sharpness, 1..32: higher narrows the bands where planes blend. */
+  sharpness: z
+    .number()
+    .min(1)
+    .max(32)
+    .optional()
+    .describe(`The facing weights' sharpness, 1..32 (${sharpness}): higher narrows the blends.`),
+  /**
+   * The slopes in degrees (`[from, to]`, 0..90) over which the projection fades in over `PLANAR`:
+   * under `from` the layer is planar (1 tap), past `to` projected, between both mixed. A dynamic
+   * branch, so only the pixels past `from` pay for the projection's taps.
+   */
+  slopeGate: z
+    .tuple([z.number().min(0).max(90), z.number().min(0).max(90)])
+    .refine(([from, to]) => from < to, 'the first value under the second')
+    .optional()
+    .describe(
+      'The slopes in degrees ([from, to], 0..90) over which the projection fades in over PLANAR: under from planar (1 tap), past to projected.'
+    ),
+  /** How each plane's normal map meets the geometry's normal (default `WHITEOUT`). */
+  normalBlend: z
+    .enum(TERRAIN_NORMAL_BLENDS)
+    .optional()
+    .describe(
+      "How each plane's normal map meets the geometry's normal: WHITEOUT (default), UDN or RNM."
+    ),
+});
+
+/**
+ * How a layer's texture meets the surface (p305 D5), by `mode`: `PLANAR`, `BIPLANAR` or
+ * `TRIPLANAR`, the projecting modes with their sharpness, slope gate and normal blend. The numbers
+ * are uniforms (`terrain_l<i>_<name>`), the mode, the gate's presence and the normal blend
+ * build-time branches. The projecting modes need `uv: 'WORLD'`.
+ */
+export const TerrainProjectionSchema = z
+  .discriminatedUnion('mode', [
+    z
+      .object({
+        /** The tiling's coordinates alone (the world's `(x, −z)` or the mesh's UV): 1 tap. */
+        mode: z
+          .literal('PLANAR')
+          .describe(
+            "The tiling's coordinates alone (the world's (x, -z) or the mesh's UV): 1 tap."
+          ),
+      })
+      .strict(),
+    z
+      .object(
+        projectedFields(
+          'BIPLANAR',
+          'The world projected along the two axes the surface faces most (Quilez): 2 taps, with gradients.',
+          "default 8, Quilez's k"
+        )
+      )
+      .strict(),
+    z
+      .object(
+        projectedFields(
+          'TRIPLANAR',
+          'The world projected along all three axes, weighted by the facing: 3 taps.',
+          'default 4, the exponent on the facing'
+        )
+      )
+      .strict(),
+  ])
+  .describe("How a layer's texture meets the surface: PLANAR, BIPLANAR or TRIPLANAR.");
+
+/** How a layer's texture meets the surface (p305 D5): `PLANAR`, `BIPLANAR` or `TRIPLANAR`. */
+export type TerrainProjection = z.infer<typeof TerrainProjectionSchema>;
+
 /**
  * A layer's settings, without its set: the static define's layer. Each tunable becomes a uniform
  * (`terrain_l<i>_<name>` in the material's `userData.uniforms`), so the material editor and code
@@ -244,6 +335,8 @@ export const TerrainLayerSettingsSchema = z
       ),
     /** The layer's own anti-tiling, in place of the material's (its whole object). */
     antiTiling: TerrainAntiTilingSchema.optional(),
+    /** The layer's own projection, in place of the material's (its whole object): eg. cliffs. */
+    projection: TerrainProjectionSchema.optional(),
   })
   .strict()
   .describe("A terrain layer's settings, without its set (the static define's layer).");
@@ -687,6 +780,8 @@ const sharedFields = {
   ao: TerrainAoSchema.optional(),
   /** Every layer's anti-tiling (default `NONE`); a layer's own replaces it. */
   antiTiling: TerrainAntiTilingSchema.optional(),
+  /** Every layer's projection (default `PLANAR`); a layer's own replaces it. */
+  projection: TerrainProjectionSchema.optional(),
   /** The view distance's effects: the detail normals' fade. */
   distance: TerrainDistanceSchema.optional(),
 };
@@ -892,6 +987,42 @@ const checkBlend = (
   }
 };
 
+type ProjectionFields = { uv?: (typeof TERRAIN_UV_MODES)[number]; projection?: TerrainProjection };
+
+/**
+ * The projections against the tiling's coordinates, the material's and each tier's (a tier's `uv`
+ * and `projection` over the material's): `BIPLANAR` and `TRIPLANAR` project the world, so a layer
+ * that has one (its own, else the material's) needs `uv: 'WORLD'`. The refinement both schemas
+ * share.
+ */
+const checkProjection = (
+  value: ProjectionFields & {
+    layers: { projection?: TerrainProjection }[];
+    quality?: Partial<Record<string, ProjectionFields | undefined>>;
+  },
+  ctx: z.RefinementCtx
+) => {
+  const tiers = Object.entries(value.quality ?? {}).map(([level, tier]) => ({
+    path: ['quality', level],
+    uv: tier?.uv ?? value.uv,
+    projection: tier?.projection ?? value.projection,
+  }));
+  const refuse = (path: (string | number)[], projection: TerrainProjection | undefined) => {
+    if (!projection || projection.mode === 'PLANAR') return;
+    ctx.addIssue({
+      code: 'custom',
+      path: [...path, 'projection', 'mode'],
+      message: `is ${projection.mode}: it projects the world, which needs uv WORLD (not MESH_UV).`,
+    });
+  };
+  const material = { path: [], uv: value.uv, projection: value.projection };
+  for (const { path, uv, projection } of [material, ...tiers]) {
+    if (uv !== 'MESH_UV') continue;
+    refuse(path, projection);
+    value.layers.forEach((layer, i) => refuse(['layers', i], layer.projection));
+  }
+};
+
 /**
  * The code route's texture ids: the splat maps, one per map the painted layers need, with the
  * splat map sources only; the noise texture only for rules with noise and no `macro`
@@ -953,6 +1084,7 @@ export const TerrainMaterialDefineSchema = z
   })
   .strict()
   .superRefine(checkBlend)
+  .superRefine(checkProjection)
   .describe("The terrain material's static define (staticDefines.terrain).");
 
 /**
@@ -1030,6 +1162,7 @@ export const TerrainMaterialConfigSchema = z
   })
   .strict()
   .superRefine(checkBlend)
+  .superRefine(checkProjection)
   .superRefine(checkTextureIds)
   .describe("The terrain material's config (createTerrainMaterial).");
 
