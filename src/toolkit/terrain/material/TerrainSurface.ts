@@ -28,6 +28,7 @@ import {
   type LayerUniforms,
   type SharedCoords,
 } from './TerrainLayers';
+import { createLiveSampler, type LiveLayer } from './TerrainLive';
 import { buildSlots } from './TerrainSlots';
 
 /**
@@ -76,6 +77,15 @@ export type LayerBuildContext = {
   define: ResolvedTerrainDefine;
   sources: LayerSources;
   uniforms: LayerUniforms[];
+  /** The layers' one packing */
+  packing: TextureSetPacking;
+  /** Each layer's live generator (`PROCEDURAL_LIVE`), prepared at setup, or null for a sampled one */
+  live: (LiveLayer | null)[];
+  /**
+   * Built in a branch (the far surface's), where no derivative is taken: a live layer's bump comes
+   * from taps at the coordinates' gradients
+   */
+  isInBranch: boolean;
   viewDistance: Node<'float'>;
   /** The macro texture's patches (its B), `DUAL_SCALE`'s, or null without a macro */
   patches: Node<'float'> | null;
@@ -87,11 +97,23 @@ export type LayerBuildContext = {
   shared?: SharedCoords;
 };
 
-/** Every layer at its own index: its tiling, anti-tiling and projection, its own seed */
+/**
+ * Every layer at its own index: its tiling, anti-tiling and projection, its own seed; a live
+ * layer through its generator's sampler
+ */
 const buildLayers = (ctx: LayerBuildContext): BuiltLayer[] =>
   ctx.sources.layers.map((source, i) => {
     const uniforms = ctx.uniforms[i];
     const uv = getLayerUv(ctx.define, source.params, uniforms, ctx.shared);
+    const live = ctx.live[i];
+    const sampler = live
+      ? createLiveSampler(live, {
+          packing: ctx.packing,
+          tileSize: uv.tileSize,
+          heightScale: source.params.heightScale,
+          isInBranch: ctx.isInBranch,
+        })
+      : undefined;
     const antiTiling = {
       viewDistance: ctx.viewDistance,
       patches: ctx.patches,
@@ -101,7 +123,7 @@ const buildLayers = (ctx: LayerBuildContext): BuiltLayer[] =>
     };
     const sampled = sampleLayer(
       ctx.define,
-      { source, uniforms, uv },
+      { source, uniforms, uv, sampler },
       antiTiling,
       ctx.getProjectionContext
     );
@@ -117,6 +139,12 @@ const buildBlendedLayers = (ctx: LayerBuildContext, raw: Node<'float'>[] | null)
   const { define, sources } = ctx;
   if (define.slotCount === null || !raw) {
     return { layers: buildLayers(ctx), weights: raw, slots: null };
+  }
+  // TODO(p305 Phase 8 section 4): the live layers sampled beside the slots
+  if (ctx.live.some(Boolean)) {
+    throw new Error(
+      "[terrain] Sparse sampling and DOMINANT beside a live layer (source PROCEDURAL_LIVE) aren't built yet."
+    );
   }
   if (!sources.isArray) {
     throw new Error(

@@ -58,6 +58,7 @@ import {
   keepUniform,
   type LayerUniforms,
 } from './TerrainLayers';
+import { createLiveLayer } from './TerrainLive';
 import { checkTextureBudget, type TerrainBinding } from './TerrainStorage';
 import { buildNearSurface, createSurfaceUniforms, type NearSurface } from './TerrainSurface';
 import {
@@ -241,8 +242,11 @@ const getAoNode = (
  * (`COLOR_MAP`), mixed in over `farBlend` metres, its normal the geometry's (a `debugView` shows
  * the near surface everywhere). With `space: 'OBJECT'` all of it is in the mesh's own space (its
  * position × scale, its normal: coordinates, projections, rules, macro), the shaded normal turned
- * into world space before the view; `WORLD` (default) the world's. Only what the define enables is
- * built. The textures it binds (the layers', the splat maps, the macro texture, the colour map)
+ * into world space before the view; `WORLD` (default) the world's. A live layer (`source:
+ * 'PROCEDURAL_LIVE'`) runs its procedural set's generator in place of sampling (its whole graph at
+ * each point: its tiling's, each projected plane's), its normal its bump of its height, or
+ * `live.normal: 'TAPS'` a bake's, and binds no texture; it takes no anti-tiling. Only what the
+ * define enables is built. The textures it binds (the layers', the splat maps, the macro texture, the colour map)
  * must fit the budget: the renderer's sampled textures a stage (16) less `reservedTextures` (6).
  * The tunables are uniforms in `material.userData.uniforms`: per layer `terrain_l<i>_<name>`
  * (`tiling`, `rotation` when given, `tint`, `normalStrength`, `roughnessScale`; `heightContrast`
@@ -254,7 +258,9 @@ const getAoNode = (
  * `noiseAmount`; and `strength`), `terrain_heightBlendDepth` with the height blend,
  * `terrain_aoTextureInfluence` when a layer has texture AO, `terrain_aoVertexInfluence` with
  * `ao.vertex`, `terrain_macroScale`, `terrain_macroBrightness`, `terrain_macroHue` and
- * `terrain_macroRoughness` with `macro`, `terrain_detailDistance` with a colour map's
+ * `terrain_macroRoughness` with `macro`, a live layer's generator's numbers and colours
+ * `terrain_l<i>_live_<param>` and its seed `terrain_l<i>_live_seed` (the set's values to start),
+ * `terrain_detailDistance` with a colour map's
  * `detailDistance`, `terrain_distanceFade` with `distance`, and `terrain_farBlend` with a far mode.
  * A `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug env, once
  * {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the view. The
@@ -269,8 +275,9 @@ const getAoNode = (
  * source doesn't take, a missing layer, splat map or macro input (or one the define doesn't
  * take), a layer's set without an average colour that a `DETAIL` colour map or the `AVERAGE_COLOR`
  * far surface reads, `layer<i>` and `layers` both, a set array of another layer count, layers in
- * different packings, slots (sparse, `DOMINANT`) without the `layers` set array, or textures over
- * the budget (naming what it binds)
+ * different packings, slots (sparse, `DOMINANT`) without the `layers` set array, a live layer
+ * whose set isn't procedural or whose generator isn't loaded, or textures over the budget (naming
+ * what it binds)
  * @example
  * ```ts
  * // A TSL file of a material JSON whose staticDefines.terrain is the define
@@ -351,8 +358,13 @@ export const buildTerrainGraph = (
   const vary = (albedo: Node<'vec3'>, sample: Node<'vec4'> | null, isColorMap: boolean) =>
     macro && sample && !isColorMap ? varyAlbedo(albedo, sample, macro.nodes) : albedo;
   const uniforms = define.layers.map((_, i) => createLayerUniforms(material, define, i));
+  // A live layer's generator over its params' and seed's uniforms (`terrain_l<i>_live_<name>`)
+  const live = sources.layers.map((source, i) => {
+    const settings = define.layers[i].live;
+    return source.live && settings ? createLiveLayer(material, i, source.live, settings) : null;
+  });
   const raw = getRawWeights(material, define, splatMaps, macroTexture);
-  const layerContext = { define, sources, uniforms };
+  const layerContext = { define, sources, uniforms, packing, live };
 
   // A far mode skips the layers past its band (a dynamic branch); a debug view shows the near
   // surface everywhere (its views read the layers)
@@ -380,6 +392,7 @@ export const buildTerrainGraph = (
         const nearSurface = buildNearSurface(
           {
             ...layerContext,
+            isInBranch: true,
             viewDistance: inputs.viewDistance,
             patches: getPatches(inputs.macro),
             getProjectionContext: () => inputs.projection,
@@ -403,6 +416,7 @@ export const buildTerrainGraph = (
     near = buildNearSurface(
       {
         ...layerContext,
+        isInBranch: false,
         viewDistance,
         patches: getPatches(macro?.sample ?? null),
         getProjectionContext,
@@ -449,9 +463,10 @@ export const buildTerrainGraph = (
         projection: uniforms[i].projection,
       })),
       weights: layerWeights,
-      sampled: layers.map(({ uniforms: { antiTiling, projection } }) => ({
+      sampled: layers.map(({ uniforms: { antiTiling, projection } }, i) => ({
         antiTiling: antiTiling.mode,
         projection,
+        isLive: !slots && live[i] !== null,
       })),
       slots:
         slots && raw ? { count: slots.length, layerWeights: normalizeWeights(raw.weights) } : null,
@@ -544,7 +559,10 @@ export const getTerrainMaterialProps = (
  * slots: `sparse`, `HEX`'s `apply: 'DOMINANT'`, the material's or a tier's) its set array must be
  * built:
  * await `buildTextureSetArray({ sets, packing })` first, or list it in the scene's
- * `textureSetArrays` (an array that isn't built samples white, warned). Variants
+ * `textureSetArrays` (an array that isn't built samples white, warned). A live layer's set
+ * (`source: 'PROCEDURAL_LIVE'`) must be procedural and its generator loaded: a scene that lists the
+ * set bakes it, which loads it; else await `loadTextureSetAsync(set)` or
+ * `loadTextureSetGeneratorAsync(generator)` (`aekasha/texturesets`) first. Variants
  * (`getMaterialVariant`) swap a layer's set through `inputs.layer<i>` without another shader.
  * Needs the `textureSets()` feature.
  * @param config the layers' texture sets and settings, and the techniques to compile

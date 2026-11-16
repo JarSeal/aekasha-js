@@ -58,6 +58,22 @@ export type AntiTilingContext = {
 /** A UV's screen-space gradients */
 type TapGradients = { dx: Node<'vec2'>; dy: Node<'vec2'> };
 
+/**
+ * A layer whose samples are computed, not fetched (a live terrain layer's generator, p305 Phase 8):
+ * sampled at a UV like a bundle, with the UV's gradients when every tap takes them (a branch)
+ */
+export type LayerSampler = {
+  readonly isLayerSampler: true;
+  sample: (uv: Node<'vec2'>, grad?: TapGradients) => TextureSetSample;
+};
+
+/** What a layer samples: a `{ textureSet }` or `{ textureSetArray }` bundle, or a sampler */
+export type LayerBundle = TextureSetInput | TextureSetArrayInput | LayerSampler;
+
+/** Whether a layer's bundle is a sampler (a live layer's) */
+export const isLayerSampler = (bundle: LayerBundle): bundle is LayerSampler =>
+  'isLayerSampler' in bundle;
+
 /** The second tap's turn (D3: 37°, so its texels never line up with the first's) and offset */
 const FAR_ANGLE = (37 * Math.PI) / 180;
 const FAR_COS = Math.cos(FAR_ANGLE);
@@ -279,21 +295,28 @@ const sampleHex = (
  * A texture set sampled at a layer's tiling UV with the layer's anti-tiling (p305 D3): `NONE` one
  * tap, `DUAL_SCALE` two, `HEX` three (each tap samples every slot of the packing). The taps blend
  * into one sample whose tangent-space normal is in the UV's frame, so the layer turns it into the
- * world as a plain sample's.
+ * world as a plain sample's. A sampler (a live layer's) takes no anti-tiling: its one sample at the
+ * UV.
  * @internal
- * @param bundle the layer's `{ textureSet }` bundle, or the `{ textureSetArray }` bundle with
- * `ctx.layer`
+ * @param bundle the layer's `{ textureSet }` bundle, the `{ textureSetArray }` bundle with
+ * `ctx.layer`, or a sampler (`NONE` only)
  * @param uv the layer's tiling UV, in tiles (continuous: `HEX` takes its gradients)
  * @param nodes the mode and its uniforms
  * @param ctx the view distance, the macro patches, the layer's seed, its array layer and the UV's
  * gradients when given
  */
 export const sampleAntiTiled = (
-  bundle: TextureSetInput | TextureSetArrayInput,
+  bundle: LayerBundle,
   uv: Node<'vec2'>,
   nodes: AntiTilingNodes,
   ctx: AntiTilingContext
 ): TextureSetSample => {
+  if (isLayerSampler(bundle)) {
+    if (nodes.mode !== 'NONE') {
+      throw new Error(`[terrain] A live layer takes no anti-tiling, not ${nodes.mode}.`);
+    }
+    return bundle.sample(uv, ctx.grad);
+  }
   if (nodes.mode === 'DUAL_SCALE') return sampleDualScale(bundle, uv, nodes, ctx);
   if (nodes.mode === 'HEX') return sampleHex(bundle, uv, nodes, ctx);
   return sampleTextureSet(bundle, uv, { layer: ctx.layer, grad: ctx.grad });

@@ -13,6 +13,7 @@ import {
 import { MeshStandardNodeMaterial, Texture, Vector2, Vector4, type Node } from 'three/webgpu';
 import type { MatProps, TslMaterialFns } from 'aekasha';
 import type { TextureSetArrayInput, TextureSetInput } from 'aekasha/texturesets';
+import { defineSurfaceGenerator } from '../procedural/SurfaceGenerator';
 import { loadTerrainDebugViewsAsync } from './TerrainDebugViews';
 import {
   createTerrainMaterial,
@@ -70,11 +71,16 @@ const stubs = vi.hoisted(() => ({
   warnings: [] as string[],
   renderer: null as unknown,
   sets: {} as Record<string, { defaultPacking: string }>,
+  // A live layer's bundle's set, and the loaded generators (p305 Phase 8)
+  setsOfInputs: new Map<object, unknown>(),
+  generators: new Map<string, unknown>(),
 }));
 
 vi.mock('aekasha/texturesets', async (importOriginal) => ({
   ...(await importOriginal<typeof import('aekasha/texturesets')>()),
   getTextureSet: (id: string) => stubs.sets[id],
+  getTextureSetOfInput: (bundle: object) => stubs.setsOfInputs.get(bundle),
+  getTextureSetGenerator: (id: string) => stubs.generators.get(id),
 }));
 
 vi.mock('aekasha', async (importOriginal) => ({
@@ -1246,5 +1252,111 @@ describe('getTerrainMaterialVariant', () => {
     expect(() => getTerrainMaterialVariant('nothing', 'LOW')).toThrow(/no material "nothing"/);
     stubs.materials.set('plain', new MeshStandardNodeMaterial());
     expect(() => getTerrainMaterialVariant('plain', 'LOW')).toThrow(/isn't a terrain material/);
+  });
+});
+
+describe('live layers (p305 Phase 8)', () => {
+  /** The points the live generator was built at */
+  const builds: unknown[] = [];
+  const ripples = defineSurfaceGenerator({
+    id: 'testMaterialRipples',
+    category: 'SAND',
+    physicalSize: [2, 2],
+    heightScale: 0.04,
+    params: { depth: { default: 0.5, min: 0, max: 1 } },
+    build: (ctx, params) => {
+      builds.push(ctx.uv);
+      return {
+        albedo: color(0.8, 0.7, 0.5) as unknown as Node<'vec3'>,
+        height: ctx.uv.x.fract().mul(params.depth) as Node<'float'>,
+        roughness: uniform(0.9) as unknown as Node<'float'>,
+      };
+    },
+  });
+
+  /** A `{ textureSet }` bundle of a procedural set of the ripples */
+  const makeLiveBundle = (packing: Packing = 'LITE') => {
+    const bundle = makeBundle(packing);
+    stubs.setsOfInputs.set(bundle, {
+      id: 'liveRipples',
+      physicalSize: [3, 3],
+      heightScale: 0.05,
+      procedural: { generator: ripples.id, params: {}, seed: 4, size: 256, packing },
+    });
+    return bundle;
+  };
+
+  const painted = { blend: { source: 'VERTEX_COLOR' } };
+  const live = { source: 'PROCEDURAL_LIVE' };
+
+  beforeEach(() => {
+    stubs.renderer = null;
+    stubs.generators.set(ripples.id, ripples);
+    builds.length = 0;
+  });
+
+  it("runs the generator: its uniforms, none of its set's textures sampled or bound", () => {
+    const inputs = { layer0: makeBundle(), layer1: makeLiveBundle() };
+    const material = build({ layers: [{}, live], ...painted }, inputs);
+    expect(getUniformKeys(material)).toEqual(
+      expect.arrayContaining(['terrain_l1_live_depth', 'terrain_l1_live_seed'])
+    );
+    expect(getUniforms(material).terrain_l1_live_seed.value).toBe(4);
+    // Layer 0's two LITE slots; the generator built once (its normal the layer's bump)
+    expect(countSamples(material, inputs)).toBe(2);
+    expect(builds).toHaveLength(1);
+    // Its bundle binds nothing: layer 0's two textures fit a budget of 3, both layers' wouldn't
+    const tight = { layers: [{}, live], ...painted, reservedTextures: 13 };
+    expect(() => build(tight, { layer0: makeBundle(), layer1: makeLiveBundle() })).not.toThrow();
+    expect(() =>
+      build({ ...tight, layers: [{}, {}] }, { layer0: makeBundle(), layer1: makeBundle() })
+    ).toThrow(/binds 4 textures, over its budget of 3/);
+  });
+
+  it("builds the graph per projected plane, a gate's planar tap before its branch", () => {
+    build(
+      { layers: [{ ...live, projection: { mode: 'TRIPLANAR' } }] },
+      {
+        layer0: makeLiveBundle(),
+      }
+    );
+    expect(builds).toHaveLength(3);
+    builds.length = 0;
+    const gated = { mode: 'TRIPLANAR', slopeGate: [30, 50] };
+    build({ layers: [{ ...live, projection: gated }] }, { layer0: makeLiveBundle() });
+    // The planar tap; the branch's two planes are built with the shader (its Fn's body)
+    expect(builds).toHaveLength(1);
+  });
+
+  it('gives FULL its AO and bumps a MINIMAL live layer with the others', () => {
+    const full = build(
+      { layers: [{}, live], ...painted },
+      {
+        layer0: makeBundle('FULL'),
+        layer1: makeLiveBundle('FULL'),
+      }
+    );
+    expect(full.aoNode).toBeTruthy();
+    builds.length = 0;
+    const minimal = build(
+      { layers: [{}, { ...live, live: { normal: 'TAPS' } }], ...painted },
+      {
+        layer0: makeBundle('MINIMAL'),
+        layer1: makeLiveBundle('MINIMAL'),
+      }
+    );
+    // MINIMAL has no normal maps: the layer bumps its height, no taps
+    expect(builds).toHaveLength(1);
+    expect(countMethod(minimal, 'dFdx')).toBeGreaterThan(0);
+  });
+
+  it("refuses a live layer on a set array's layer, and a set whose generator isn't loaded", () => {
+    expect(() => build({ layers: [{}, live], ...painted }, { layers: makeArrayBundle(2) })).toThrow(
+      /Layer 1 is live \(source PROCEDURAL_LIVE\): it takes its own input "layer1"/
+    );
+    stubs.generators.clear();
+    expect(() =>
+      build({ layers: [{}, live], ...painted }, { layer0: makeBundle(), layer1: makeLiveBundle() })
+    ).toThrow(/the generator "testMaterialRipples" of the texture set "liveRipples" isn't loaded/);
   });
 });

@@ -7,7 +7,7 @@ import { color, float, mix, uniform, uv as meshUv, vec2, vec3 } from 'three/tsl'
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import { Vector2, type Node, type NodeMaterial } from 'three/webgpu';
 import { existsOrThrow } from 'aekasha';
-import type { AntiTilingContext, AntiTilingNodes } from '../nodes/AntiTiling';
+import type { AntiTilingContext, AntiTilingNodes, LayerSampler } from '../nodes/AntiTiling';
 import { sampleAntiTiled } from '../nodes/AntiTiling';
 import { getLayerDetail } from '../nodes/ColorMap';
 import {
@@ -412,21 +412,22 @@ export const blendSurfaces = (
  * A layer's sample: with its anti-tiling at its tiling UV (`PLANAR`), on its projection's planes
  * with their normals met with the geometry's, or with a slope gate both: the planar tap (its
  * normal through the planar frame) and the projection in a branch past the gate's first slope.
+ * A live layer's `sampler` samples in place of its bundle (its generator at each UV).
  * @internal
  */
 export const sampleLayer = (
   define: ResolvedTerrainDefine,
-  layer: Pick<BuiltLayer, 'source' | 'uniforms' | 'uv'>,
+  layer: Pick<BuiltLayer, 'source' | 'uniforms' | 'uv'> & { sampler?: LayerSampler },
   antiTiling: AntiTilingContext,
   getProjectionContext: () => ProjectionContext
 ): Pick<BuiltLayer, 'sample' | 'normal'> => {
   const { source, uniforms, uv } = layer;
+  const bundle = layer.sampler ?? source.bundle;
   const { projection } = uniforms;
-  const sampleAtUv = () =>
-    sampleAntiTiled(source.bundle, uv.tileUv, uniforms.antiTiling, antiTiling);
+  const sampleAtUv = () => sampleAntiTiled(bundle, uv.tileUv, uniforms.antiTiling, antiTiling);
   if (projection.mode === 'PLANAR') return { sample: sampleAtUv(), normal: null };
   const projected: ProjectedLayer = {
-    bundle: source.bundle,
+    bundle,
     projection,
     tiling: { tileSize: uv.tileSize, turn: uv.turn },
     strength: getNormalStrength(source.params, uniforms),

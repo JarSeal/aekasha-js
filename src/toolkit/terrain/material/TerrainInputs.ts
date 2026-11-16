@@ -26,6 +26,7 @@ import type {
   TerrainMaterialConfig,
   TerrainMaterialDefine,
 } from './TerrainMaterialConfig';
+import { readLiveSource, type LiveLayerSource } from './TerrainLive';
 import { chooseTerrainStorage, TERRAIN_PACKING_SLOTS, type TerrainBinding } from './TerrainStorage';
 
 /** A layer's input key: `layer0`, `layer1`, … */
@@ -69,6 +70,8 @@ export type LayerSource = {
    */
   layer: number | Node<'int'> | undefined;
   params: LayerParams;
+  /** A live layer's set and generator (`PROCEDURAL_LIVE`), which it runs instead of sampling */
+  live?: LiveLayerSource;
 };
 
 /** The layers' sets as read, and the textures they bind */
@@ -155,6 +158,13 @@ export const readLayerSources = (
 ): LayerSources => {
   const separateKey = Object.keys(inputs).find((key) => /^layer\d+$/.test(key));
   if (inputs[ARRAY_INPUT_KEY] !== undefined) {
+    // TODO(p305 Phase 8 section 4): a live layer's own input beside the set array
+    const liveIndex = define.layers.findIndex((layer) => layer.live);
+    if (liveIndex >= 0) {
+      throw new Error(
+        `[terrain] Layer ${liveIndex} is live (source PROCEDURAL_LIVE): it takes its own input "${getLayerInputKey(liveIndex)}", not a set array's layer.`
+      );
+    }
     return readArraySources(inputs[ARRAY_INPUT_KEY], define, separateKey);
   }
   const keys = define.layers.map((_, i) => getLayerInputKey(i));
@@ -180,13 +190,26 @@ export const readLayerSources = (
   });
   const slots = getBundleSlots(bundles[0]);
   const last = keys.length - 1;
+  // A live layer runs its generator: its input's textures (its set's bake) aren't bound
+  const live = bundles.map((bundle, i) =>
+    define.layers[i].live ? readLiveSource(bundle, keys[i]) : undefined
+  );
+  const liveCount = live.filter(Boolean).length;
   return {
     isArray: false,
-    layers: bundles.map((bundle) => ({ bundle, layer: undefined, params: getSetParams(bundle) })),
+    layers: bundles.map((bundle, i) => ({
+      bundle,
+      layer: undefined,
+      params: getSetParams(bundle),
+      ...(live[i] ? { live: live[i] } : {}),
+    })),
     bindings: [
       {
-        name: `${last ? `layer0-layer${last}` : 'layer0'} (${slots.join(', ')} each)`,
-        count: bundles.reduce((total, bundle) => total + getBundleSlots(bundle).length, 0),
+        name: `${last ? `layer0-layer${last}` : 'layer0'} (${slots.join(', ')} each${liveCount ? `, ${liveCount} live none` : ''})`,
+        count: bundles.reduce(
+          (total, bundle, i) => total + (live[i] ? 0 : getBundleSlots(bundle).length),
+          0
+        ),
       },
     ],
   };

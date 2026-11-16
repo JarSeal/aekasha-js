@@ -15,9 +15,13 @@ import { acos, clamp, dFdx, dFdy, dot, float, max, select, step, vec2, vec3 } fr
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node } from 'three/webgpu';
 import { getSurfaceSpace, type SurfaceSpace } from './SurfaceSpace';
-import type { TextureSetArrayInput, TextureSetInput } from 'aekasha/texturesets';
 import type { TerrainProjectionDefine } from '../material/TerrainDefine';
-import { sampleAntiTiled, type AntiTilingContext, type AntiTilingNodes } from './AntiTiling';
+import {
+  sampleAntiTiled,
+  type AntiTilingContext,
+  type AntiTilingNodes,
+  type LayerBundle,
+} from './AntiTiling';
 import type { TextureSetSample } from './SampleTextureSet';
 
 /** A projecting mode's normal blend */
@@ -37,8 +41,11 @@ export type ProjectionNodes =
 
 /** A projecting layer's nodes: what {@link sampleProjected} samples and how */
 export type ProjectedLayer = {
-  /** The layer's `{ textureSet }` bundle, or the `{ textureSetArray }` one with `antiTiling.layer` */
-  bundle: TextureSetInput | TextureSetArrayInput;
+  /**
+   * The layer's `{ textureSet }` bundle, the `{ textureSetArray }` one with `antiTiling.layer`, or a
+   * live layer's sampler (each plane a sample at its UV)
+   */
+  bundle: LayerBundle;
   projection: Exclude<ProjectionNodes, { mode: 'PLANAR' }>;
   tiling: ProjectionTiling;
   /** The normal's strength (the set's × the layer's) */

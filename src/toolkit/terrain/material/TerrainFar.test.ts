@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as TSL from 'three/tsl';
 import { color, int, texture, uniform, uniformArray } from 'three/tsl';
 import {
@@ -10,7 +10,28 @@ import {
   type Node,
 } from 'three/webgpu';
 import type { TextureSetArrayInput, TextureSetInput } from 'aekasha/texturesets';
+import { defineSurfaceGenerator } from '../procedural/SurfaceGenerator';
 import { setupTerrainMaterial } from './TerrainMaterial';
+
+// A live layer's bundle's set and its generator (p305 Phase 8)
+const live = vi.hoisted(() => ({ sets: new Map<object, unknown>(), generator: null as unknown }));
+vi.mock('aekasha/texturesets', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('aekasha/texturesets')>()),
+  getTextureSetOfInput: (bundle: object) => live.sets.get(bundle),
+  getTextureSetGenerator: () => live.generator,
+}));
+live.generator = defineSurfaceGenerator({
+  id: 'testFarRipples',
+  category: 'SAND',
+  physicalSize: [2, 2],
+  heightScale: 0.04,
+  params: {},
+  build: (ctx) => ({
+    albedo: color(0.8, 0.7, 0.5) as unknown as Node<'vec3'>,
+    height: ctx.uv.x.fract() as unknown as Node<'float'>,
+    roughness: uniform(0.9) as unknown as Node<'float'>,
+  }),
+});
 
 type Packing = 'LITE' | 'FULL' | 'MINIMAL';
 
@@ -51,6 +72,18 @@ const makeArrayBundle = (count: number) =>
   }) as unknown as TextureSetArrayInput;
 
 const layersOf = (count: number) => Array.from({ length: count }, () => ({}));
+
+/** A `{ textureSet }` bundle of a procedural set of the live generator */
+const makeLiveBundle = (packing: Packing) => {
+  const bundle = makeBundle(packing);
+  live.sets.set(bundle, {
+    id: 'farRipples',
+    physicalSize: [3, 3],
+    heightScale: 0.05,
+    procedural: { generator: 'testFarRipples', params: {}, seed: 0, size: 256, packing },
+  });
+  return bundle;
+};
 
 const FAR = { fade: [30, 90], far: 'AVERAGE_COLOR' };
 
@@ -250,6 +283,18 @@ const CASES: [string, object, () => Record<string, unknown>][] = [
     () => ({ layers: makeArrayBundle(4) }),
   ],
   [
+    'a live layer, gated TRIPLANAR',
+    {
+      layers: [
+        {},
+        { source: 'PROCEDURAL_LIVE', projection: { mode: 'TRIPLANAR', slopeGate: [30, 50] } },
+      ],
+      blend: { source: 'VERTEX_COLOR' },
+      distance: FAR,
+    },
+    () => ({ layer0: makeBundle('LITE'), layer1: makeLiveBundle('LITE') }),
+  ],
+  [
     'COLOR_MAP far, DETAIL',
     {
       layers: [{}],
@@ -261,6 +306,27 @@ const CASES: [string, object, () => Record<string, unknown>][] = [
 ];
 
 describe('the far branch', () => {
+  it("bumps a live layer by two taps at the coordinates' gradients inside the branch", () => {
+    const isHeightTap = (node: Inspect) =>
+      Boolean(
+        (node.shaderNode as { layout?: { name?: string } } | undefined)?.layout?.name?.startsWith(
+          'aekSurfaceHeight_'
+        )
+      );
+    const inputs = { layer0: makeBundle('LITE'), layer1: makeLiveBundle('LITE') };
+    const terrain = {
+      layers: [{}, { source: 'PROCEDURAL_LIVE' }],
+      blend: { source: 'VERTEX_COLOR' },
+      distance: FAR,
+    };
+    const { before, inBranch } = getBranch(build(terrain, inputs));
+    expect(inBranch.filter(isHeightTap)).toHaveLength(2);
+    expect(collectNodes(before).filter(isHeightTap)).toHaveLength(0);
+    // The same layer outside a branch bumps its height: no taps
+    const near = build({ ...terrain, distance: { fade: [30, 90] } }, inputs);
+    expect(collectNodes([near.normalNode]).filter(isHeightTap)).toHaveLength(0);
+  });
+
   it('takes no derivative and samples only with gradients inside the branch', () => {
     for (const [name, terrain, makeInputs] of CASES) {
       const inputs = makeInputs();

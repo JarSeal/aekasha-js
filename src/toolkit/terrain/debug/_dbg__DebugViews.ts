@@ -55,6 +55,8 @@ export type TerrainDebugViewLayer = {
 export type TerrainDebugViewSampled = {
   antiTiling: AntiTilingNodes['mode'];
   projection: ProjectionNodes;
+  /** A live layer (`PROCEDURAL_LIVE`): its generator runs, no texture is fetched */
+  isLive?: boolean;
 };
 
 /** What a view reads of the surface */
@@ -230,6 +232,7 @@ const ANTI_TILING_TAPS = { NONE: 1, DUAL_SCALE: 2, HEX: 3 } as const;
  * tap: 2 either way)
  */
 const getSampledFetches = (ctx: TerrainDebugViewContext, sampled: TerrainDebugViewSampled) => {
+  if (sampled.isLive) return { always: 0, gated: 0 };
   const tap = TERRAIN_PACKING_SLOTS[ctx.packing].length * ANTI_TILING_TAPS[sampled.antiTiling];
   const { projection } = sampled;
   if (projection.mode === 'PLANAR') return { always: tap, gated: 0 };
