@@ -60,8 +60,15 @@ const BLEND_KEYS: Record<(typeof BLEND_SOURCES)[number], string[]> = {
   VERTEX_COLOR: ['source', 'vertexColor', 'mode', 'heightBlendDepth'],
   SPLAT_MAP: ['source', 'mode', 'heightBlendDepth'],
   RULES: ['source', 'rules', 'mode', 'heightBlendDepth'],
-  VERTEX_COLOR_AND_RULES: ['source', 'vertexColor', 'rules', 'mode', 'heightBlendDepth'],
-  SPLAT_MAP_AND_RULES: ['source', 'rules', 'mode', 'heightBlendDepth'],
+  VERTEX_COLOR_AND_RULES: [
+    'source',
+    'vertexColor',
+    'paintedLayers',
+    'rules',
+    'mode',
+    'heightBlendDepth',
+  ],
+  SPLAT_MAP_AND_RULES: ['source', 'paintedLayers', 'rules', 'mode', 'heightBlendDepth'],
 };
 const RULE_KEYS = ['layer', 'slope', 'height', 'aspect', 'noise', 'strength'];
 const RULE_RANGE_KEYS = ['min', 'max', 'softness'];
@@ -121,7 +128,8 @@ export type TerrainLayerDefine = {
 
 /**
  * How the layers are weighed, with its defaults filled in: past `SINGLE`, `heightBlend` is the
- * height blend's depth (null for `LINEAR`) and `rules` the rules (none for a painted source alone)
+ * height blend's depth (null for `LINEAR`), `rules` the rules (none for a painted source alone)
+ * and `paintedLayers` a combo's given count (null: as many as the source paints)
  */
 export type TerrainBlendDefine =
   | { source: 'SINGLE' }
@@ -130,11 +138,13 @@ export type TerrainBlendDefine =
       layout: (typeof VERTEX_COLOR_LAYOUTS)[number];
       heightBlend: number | null;
       rules: TerrainRuleDefine[];
+      paintedLayers: number | null;
     }
   | {
       source: 'SPLAT_MAP' | 'SPLAT_MAP_AND_RULES' | 'RULES';
       heightBlend: number | null;
       rules: TerrainRuleDefine[];
+      paintedLayers: number | null;
     };
 
 /** A rule's range with its defaults filled in: an end not given is null (open) */
@@ -372,20 +382,23 @@ export const getPaintedSource = (blend: TerrainBlendDefine) => {
   return null;
 };
 
+/** The most layers a blend's paint weighs: its source's (a layout's), 1 (the base) without paint */
+const getMaxPaintedLayers = (blend: TerrainBlendDefine) => {
+  if (blend.source === 'VERTEX_COLOR' || blend.source === 'VERTEX_COLOR_AND_RULES') {
+    return BLEND_LAYER_COUNTS[`VERTEX_COLOR_${blend.layout}`][1];
+  }
+  return getPaintedSource(blend) === 'SPLAT_MAP' ? BLEND_LAYER_COUNTS.SPLAT_MAP[1] : 1;
+};
+
 /**
- * The layers the blend's paint weighs, from layer 0 (its base): the painted source's most, fewer
- * with fewer layers; 1 without paint (the base, which the rules cover).
+ * The layers the blend's paint weighs, from layer 0 (its base): a combo's `paintedLayers`, else the
+ * painted source's most, fewer with fewer layers; 1 without paint (the base, which the rules
+ * cover).
  * @internal
  */
-export const getPaintedLayerCount = (blend: TerrainBlendDefine, layerCount: number) => {
-  if (blend.source === 'VERTEX_COLOR' || blend.source === 'VERTEX_COLOR_AND_RULES') {
-    return Math.min(layerCount, BLEND_LAYER_COUNTS[`VERTEX_COLOR_${blend.layout}`][1]);
-  }
-  if (getPaintedSource(blend) === 'SPLAT_MAP') {
-    return Math.min(layerCount, BLEND_LAYER_COUNTS.SPLAT_MAP[1]);
-  }
-  return 1;
-};
+export const getPaintedLayerCount = (blend: TerrainBlendDefine, layerCount: number) =>
+  (blend.source !== 'SINGLE' && blend.paintedLayers) ||
+  Math.min(layerCount, getMaxPaintedLayers(blend));
 
 /**
  * The splat maps a blend takes: one per four painted layers past the base (`splat0` layers 1-4,
@@ -520,8 +533,17 @@ const readBlend = (value: unknown, path: string): TerrainBlendDefine => {
       ? readNumber(obj, 'heightBlendDepth', HEIGHT_BLEND_DEPTH, depthBounds, path)
       : null;
   const rules = BLEND_KEYS[source].includes('rules') ? readRules(obj, path) : [];
+  const paintedLayers = readOptionalNumber(
+    obj,
+    'paintedLayers',
+    { min: { value: 2 }, max: { value: BLEND_LAYER_COUNTS.SPLAT_MAP[1] } },
+    path
+  );
+  if (paintedLayers !== null && !Number.isInteger(paintedLayers)) {
+    fail(`${path}.paintedLayers`, `is ${paintedLayers}, not a whole number.`);
+  }
   if (source !== 'VERTEX_COLOR' && source !== 'VERTEX_COLOR_AND_RULES') {
-    return { source, heightBlend, rules };
+    return { source, heightBlend, rules, paintedLayers };
   }
   const vertexColorPath = `${path}.vertexColor`;
   const vertexColor = readOptionalObject(obj, 'vertexColor', path);
@@ -530,7 +552,7 @@ const readBlend = (value: unknown, path: string): TerrainBlendDefine => {
     fail(`${vertexColorPath}.layout`, `is missing: use ${VERTEX_COLOR_LAYOUTS.join(', ')}.`);
   }
   const layout = readEnum(vertexColor, 'layout', VERTEX_COLOR_LAYOUTS, vertexColorPath);
-  return { source, layout, heightBlend, rules };
+  return { source, layout, heightBlend, rules, paintedLayers };
 };
 
 /**
@@ -539,6 +561,13 @@ const readBlend = (value: unknown, path: string): TerrainBlendDefine => {
  */
 const checkRuleLayers = (blend: TerrainBlendDefine, layerCount: number, path: string) => {
   if (blend.source === 'SINGLE' || !blend.rules.length) return;
+  const most = Math.min(layerCount, getMaxPaintedLayers(blend));
+  if (blend.paintedLayers !== null && blend.paintedLayers > most) {
+    fail(
+      `${path}.paintedLayers`,
+      `is ${blend.paintedLayers}: the paint weighs ${most} layers at most here.`
+    );
+  }
   blend.rules.forEach((rule, i) => {
     if (rule.layer >= layerCount) {
       fail(`${path}.rules[${i}].layer`, `is ${rule.layer}: there are ${layerCount} layers.`);

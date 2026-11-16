@@ -420,6 +420,24 @@ const rulesField = {
     .describe('The rules, 1 to 16, in order: each composites its layer over the weights so far.'),
 };
 
+/** A combo's painted layers: the paint weighs layers 0 to this − 1, the rules the rest */
+const paintedLayersField = {
+  /**
+   * The layers the paint weighs, from layer 0 (2 or more; default and most: the painted
+   * source's, 4 for `RGB_AO`, 5 for `RGBA`, 9 for splat maps, or the layer count): a layer past
+   * them is a rule's. Fewer painted layers read fewer channels (or splat maps).
+   */
+  paintedLayers: z
+    .number()
+    .int()
+    .min(2)
+    .max(TERRAIN_BLEND_LAYER_COUNTS.SPLAT_MAP[1])
+    .optional()
+    .describe(
+      "The layers the paint weighs, from layer 0 (2 or more; default and most: the painted source's, 4 RGB_AO, 5 RGBA, 9 splat maps): a layer past them is a rule's."
+    ),
+};
+
 /** The vertex colour's channels field of the vertex colour sources */
 const vertexColorField = {
   /** The colour's channels (default `{ layout: 'RGB_AO' }`). */
@@ -497,13 +515,14 @@ export const TerrainBlendSchema = z
       .object({
         /**
          * The vertex colour's weights (as `VERTEX_COLOR`) under the rules: paint where it matters,
-         * rules everywhere. The colour weighs as many layers as its layout does, from layer 0; a
-         * layer past those is a rule's.
+         * rules everywhere. The colour weighs `paintedLayers` from layer 0 (default: as many as
+         * its layout does); a layer past those is a rule's.
          */
         source: z
           .literal('VERTEX_COLOR_AND_RULES')
           .describe("The vertex colour's weights (as VERTEX_COLOR) under the rules."),
         ...vertexColorField,
+        ...paintedLayersField,
         ...rulesField,
         ...paintedBlendFields,
       })
@@ -511,12 +530,14 @@ export const TerrainBlendSchema = z
     z
       .object({
         /**
-         * The splat maps' weights (as `SPLAT_MAP`) under the rules. The maps weigh up to 9 layers
-         * from layer 0 (one map per four past the base); a layer past those is a rule's.
+         * The splat maps' weights (as `SPLAT_MAP`) under the rules. The maps weigh `paintedLayers`
+         * from layer 0 (default: up to 9; one map per four past the base); a layer past those is a
+         * rule's.
          */
         source: z
           .literal('SPLAT_MAP_AND_RULES')
           .describe("The splat maps' weights (as SPLAT_MAP) under the rules."),
+        ...paintedLayersField,
         ...rulesField,
         ...paintedBlendFields,
       })
@@ -750,22 +771,26 @@ const getBlendLayerCounts = (blend: TerrainBlend | undefined) => {
   return { counts: TERRAIN_BLEND_LAYER_COUNTS[source], name: source };
 };
 
-/**
- * The layers a blend's painted weights reach, from layer 0: a combo's painted source's most,
- * fewer when there are fewer layers; 1 (the base) for `RULES` and `SINGLE`
- */
-const getPaintedLayerCount = (blend: TerrainBlend | undefined, layerCount: number) => {
+/** The most layers a blend's paint weighs: its source's (a layout's), 1 (the base) without paint */
+const getMaxPaintedLayers = (blend: TerrainBlend | undefined) => {
   const source = blend?.source ?? 'SINGLE';
   if (source === 'VERTEX_COLOR' || source === 'VERTEX_COLOR_AND_RULES') {
     const layout = (blend as { vertexColor?: { layout: string } }).vertexColor?.layout;
-    const counts =
-      TERRAIN_BLEND_LAYER_COUNTS[`VERTEX_COLOR_${layout === 'RGBA' ? 'RGBA' : 'RGB_AO'}`];
-    return Math.min(layerCount, counts[1]);
+    return TERRAIN_BLEND_LAYER_COUNTS[`VERTEX_COLOR_${layout === 'RGBA' ? 'RGBA' : 'RGB_AO'}`][1];
   }
   if (source === 'SPLAT_MAP' || source === 'SPLAT_MAP_AND_RULES') {
-    return Math.min(layerCount, TERRAIN_BLEND_LAYER_COUNTS.SPLAT_MAP[1]);
+    return TERRAIN_BLEND_LAYER_COUNTS.SPLAT_MAP[1];
   }
   return 1;
+};
+
+/**
+ * The layers a blend's painted weights reach, from layer 0: a combo's `paintedLayers`, else its
+ * painted source's most, fewer when there are fewer layers; 1 (the base) for `RULES` and `SINGLE`
+ */
+const getPaintedLayerCount = (blend: TerrainBlend | undefined, layerCount: number) => {
+  const given = blend && 'paintedLayers' in blend ? blend.paintedLayers : undefined;
+  return given ?? Math.min(layerCount, getMaxPaintedLayers(blend));
 };
 
 /** The splat maps a blend takes: one per four painted layers past the base, with splat maps only */
@@ -801,6 +826,14 @@ const checkRuleLayers = (
 ) => {
   const rules = getRules(blend);
   if (!rules.length) return;
+  const painted = blend && 'paintedLayers' in blend ? blend.paintedLayers : undefined;
+  const most = Math.min(layerCount, getMaxPaintedLayers(blend));
+  if (painted !== undefined && painted > most) {
+    issue(
+      [...path, 'blend', 'paintedLayers'],
+      `is ${painted}: the paint weighs ${most} layers at most here.`
+    );
+  }
   rules.forEach((rule, i) => {
     if (rule.layer >= layerCount) {
       issue(

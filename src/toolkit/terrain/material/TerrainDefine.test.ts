@@ -141,6 +141,26 @@ const ACCEPTED: unknown[] = [
     blend: { source: 'SPLAT_MAP_AND_RULES', rules: [{ layer: 9, slope: { min: 50 } }] },
   },
   {
+    layers: layersOf(6),
+    blend: {
+      source: 'SPLAT_MAP_AND_RULES',
+      paintedLayers: 3,
+      rules: [
+        { layer: 3, slope: { min: 20 } },
+        { layer: 4, height: { min: 9 } },
+        { layer: 5, slope: { min: 50 } },
+      ],
+    },
+  },
+  {
+    layers: layersOf(3),
+    blend: {
+      source: 'VERTEX_COLOR_AND_RULES',
+      paintedLayers: 2,
+      rules: [{ layer: 2, slope: { min: 50 } }],
+    },
+  },
+  {
     layers: layersOf(2),
     blend: { source: 'SPLAT_MAP' },
     quality: {
@@ -310,6 +330,54 @@ const REFUSED: unknown[] = [
   },
   { layers: layersOf(17), blend: { source: 'RULES', rules: [{ layer: 1, slope: { min: 1 } }] } },
   {
+    layers: layersOf(3),
+    blend: {
+      source: 'SPLAT_MAP_AND_RULES',
+      paintedLayers: 2,
+      rules: [{ layer: 1, slope: { min: 9 } }],
+    },
+  },
+  {
+    layers: layersOf(3),
+    blend: {
+      source: 'SPLAT_MAP_AND_RULES',
+      paintedLayers: 4,
+      rules: [{ layer: 2, slope: { min: 9 } }],
+    },
+  },
+  {
+    layers: layersOf(6),
+    blend: {
+      source: 'VERTEX_COLOR_AND_RULES',
+      paintedLayers: 5,
+      rules: [{ layer: 5, slope: { min: 9 } }],
+    },
+  },
+  {
+    layers: layersOf(3),
+    blend: {
+      source: 'SPLAT_MAP_AND_RULES',
+      paintedLayers: 1,
+      rules: [
+        { layer: 1, slope: { min: 9 } },
+        { layer: 2, slope: { min: 19 } },
+      ],
+    },
+  },
+  {
+    layers: layersOf(3),
+    blend: {
+      source: 'SPLAT_MAP_AND_RULES',
+      paintedLayers: 2.5,
+      rules: [{ layer: 2, slope: { min: 9 } }],
+    },
+  },
+  {
+    layers: layersOf(3),
+    blend: { source: 'RULES', paintedLayers: 2, rules: [{ layer: 2, slope: { min: 9 } }] },
+  },
+  { layers: layersOf(3), blend: { source: 'SPLAT_MAP', paintedLayers: 2 } },
+  {
     layers: layersOf(2),
     blend: { source: 'SPLAT_MAP' },
     quality: { HIGH: { blend: { source: 'RULES', rules: [{ layer: 2, slope: { min: 9 } }] } } },
@@ -366,10 +434,11 @@ describe('readTerrainDefine', () => {
       layout: 'RGB_AO',
       heightBlend: 0.2,
       rules: [],
+      paintedLayers: null,
     });
     expect(
       read({ layers: layersOf(2), blend: { source: 'SPLAT_MAP', mode: 'LINEAR' } }).blend
-    ).toEqual({ source: 'SPLAT_MAP', heightBlend: null, rules: [] });
+    ).toEqual({ source: 'SPLAT_MAP', heightBlend: null, rules: [], paintedLayers: null });
   });
 
   it("fills a rule's defaults, its tests not given null", () => {
@@ -377,6 +446,7 @@ describe('readTerrainDefine', () => {
     expect(read(rulesOf(2, rule)).blend).toEqual({
       source: 'RULES',
       heightBlend: 0.2,
+      paintedLayers: null,
       rules: [
         {
           layer: 1,

@@ -514,6 +514,17 @@ describe('setupTerrainMaterial: rules', () => {
       splat1: texture(new Texture()),
     };
     expect(countSamples(build(splat, splatInputs), splatInputs)).toBe(10 * 2 + 2);
+    // Three painted layers: one map, the other three layers the rules'
+    const fewer = {
+      layers: layersOf(6),
+      blend: {
+        source: 'SPLAT_MAP_AND_RULES',
+        paintedLayers: 3,
+        rules: [3, 4, 5].map((layer) => ({ layer, slope: { min: layer * 10 } })),
+      },
+    };
+    const fewerInputs = { layers: makeArrayBundle(6), splat0: texture(new Texture()) };
+    expect(countSamples(build(fewer, fewerInputs), fewerInputs)).toBe(6 * 2 + 1);
   });
 
   it("samples the macro input once per rule with noise, besides the macro's own fetch", () => {

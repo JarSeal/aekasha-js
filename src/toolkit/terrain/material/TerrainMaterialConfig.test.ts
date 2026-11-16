@@ -33,6 +33,17 @@ describe('TerrainMaterialConfigSchema', () => {
     expect(
       issuesOf(configOf(2, { blend: { source: 'RULES', rules: [cliffs] }, splatMaps: ['a'] }))
     ).toContain('splatMaps');
+    // Three painted layers: one map, the rule-only layers past them
+    const painted = {
+      source: 'SPLAT_MAP_AND_RULES',
+      paintedLayers: 3,
+      rules: [
+        { layer: 3, slope: { min: 20 } },
+        { layer: 4, slope: { min: 50 } },
+      ],
+    };
+    expect(issuesOf(configOf(5, { blend: painted, splatMaps: ['a'] }))).toEqual([]);
+    expect(issuesOf(configOf(5, { blend: painted, splatMaps: ['a', 'b'] }))).toEqual(['splatMaps']);
   });
 
   it('takes a noiseTexture only for rule noise without a macro', () => {
