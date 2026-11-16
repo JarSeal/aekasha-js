@@ -25,7 +25,8 @@ facts. The toolkit's `sand01`:
 - **`category`** (`SAND`, `MUD`, `ROCKS`, `CLIFF`, `SNOW`, `ICE`, `GRASS`, `CONCRETE`, `OTHER`)
   is for the terrain tools' defaults and grouping.
 - **`averageColor`** is measured by the [asset pipeline](hub:features/asset-optimization) from the
-  default packing's albedo; give one in the JSON to override it.
+  default packing's albedo; give one in the JSON to override it. A material gets it as a uniform
+  (linear), for a colour map's detail and a far surface's colour. A procedural set has none.
 
 ### The packings
 
@@ -114,7 +115,8 @@ array texture per slot, so `LITE` binds 2 textures for up to 16 layers:
 - **In a material:** `{ "textureSetArray": ["sand01", "grass01", "rocks01"], "packing": "LITE" }`
   is built with the scene's load; a scene's `textureSetArrays` lists one by `id` (with
   `swappable`), which an input names as `{ "textureSetArray": "<id>" }`. The material gets the
-  arrays by slot, `layerCount`, and every layer's fields as one uniform array
+  arrays by slot, `layerCount`, and every layer's fields (its `averageColor` too, mid-grey for a
+  set without one) as one uniform array
   ([`TextureSetArrayInput`](api:TextureSetArrayInput); read a layer's with
   [`getTextureSetLayerParams`](api:getTextureSetLayerParams)).
 - **From code:** [`buildTextureSetArray`](api:buildTextureSetArray) builds one (two builds of the

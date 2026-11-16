@@ -48,8 +48,8 @@ export type TextureSetTextures<P extends TextureSetPacking = TextureSetPacking> 
 /**
  * What a TSL function gets for a `{ "textureSet": id }` input: the packing's texture nodes by slot
  * (only the sampled packing's slots are there), and uniforms of the set's `physicalSize`,
- * `heightScale` and each `surface` field (`tint` a colour, linear; the rest floats), which the
- * material may change (`material.userData.uniforms`).
+ * `heightScale`, each `surface` field (`tint` a colour, linear; the rest floats) and its
+ * `averageColor` when it has one, which the material may change (`material.userData.uniforms`).
  */
 export type TextureSetInput = {
   /** `FULL` and `MINIMAL`: RGB albedo (sRGB), A height. */
@@ -66,6 +66,12 @@ export type TextureSetInput = {
   physicalSize: THREE.UniformNode<'vec2'>;
   /** The metres of relief a height of 1 stands for. */
   heightScale: THREE.UniformNode<'float'>;
+  /**
+   * The albedo's average colour (linear, from the set's sRGB `averageColor`): what a colour map's
+   * detail divides by and a far surface shows. Absent when the set has none (a procedural set, or
+   * one whose albedo the asset pipeline didn't encode).
+   */
+  averageColor?: THREE.UniformNode<'color'>;
 } & {
   [K in keyof TextureSetSurface]: K extends 'tint'
     ? THREE.UniformNode<'color'>
@@ -214,9 +220,9 @@ const describeInput = (value: TextureSetInputRef, key: string, group: string, id
 
 /**
  * `{ "textureSet": id, "packing"? }` (p303 D1, decision 2): a bundle of the packing's texture
- * nodes by slot, and uniforms of the set's `physicalSize`, `heightScale` and `surface` fields
- * (`TextureSetInput`). A texture that isn't registered samples the white texel, warned, as a bare
- * id does.
+ * nodes by slot, and uniforms of the set's `physicalSize`, `heightScale`, `surface` fields and
+ * `averageColor` when it has one (`TextureSetInput`). A texture that isn't registered samples the
+ * white texel, warned, as a bare id does.
  */
 const TEXTURE_SET_RESOLVER: MaterialInputResolver<TextureSetInputRef> = {
   kind: 'textureSet',
@@ -247,6 +253,9 @@ const TEXTURE_SET_RESOLVER: MaterialInputResolver<TextureSetInputRef> = {
         typeof fieldValue === 'number'
           ? uniform(fieldValue)
           : uniform(new THREE.Color(toThreeColor(fieldValue)));
+    }
+    if (set.averageColor !== undefined) {
+      bundle.averageColor = uniform(new THREE.Color(toThreeColor(set.averageColor)));
     }
     return bundle;
   },

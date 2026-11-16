@@ -73,9 +73,9 @@ export type TextureSetArray<P extends TextureSetPacking = TextureSetPacking> = {
   readonly arrays: TextureSetSlotMap<P, TextureArray>;
   /** The number of layers. */
   readonly layerCount: number;
-  /** Each layer's `physicalSize`, `heightScale` and `surface` fields, four vec4s per layer: read
-   * them with {@link getTextureSetLayerParams}. Shared by every material sampling the array, and
-   * updated by a layer swap. */
+  /** Each layer's `physicalSize`, `heightScale`, `surface` fields and `averageColor`, four vec4s
+   * per layer: read them with {@link getTextureSetLayerParams}. Shared by every material sampling
+   * the array, and updated by a layer swap. */
   readonly layerParams: TextureSetLayerParamsNode;
   /** Whether {@link setTextureSetArrayLayer} can replace its layers (the arrays keep their CPU
    * copy). */
@@ -155,10 +155,28 @@ const getMember = (caller: string, setId: string, slot: string, textureId: strin
   return declaration;
 };
 
-/** Writes a set's facts into its layer of the params' values */
+/**
+ * A layer's average colour where its set has none (a procedural set, or an albedo the asset
+ * pipeline didn't encode): sRGB mid-grey
+ */
+const FALLBACK_AVERAGE_COLOR = '#808080';
+/** The sets warned for their missing `averageColor`: once each per page load, not per build */
+const setsWithoutAverageColor = new Set<string>();
+
+/**
+ * Writes a set's facts into its layer of the params' values; a set without an `averageColor` gets
+ * mid-grey, warned once
+ */
 const writeLayerParams = (values: THREE.Vector4[], layer: number, set: TextureSetDef) => {
   const { surface } = set;
   const tint = new THREE.Color(toThreeColor(surface.tint));
+  if (set.averageColor === undefined && !setsWithoutAverageColor.has(set.id)) {
+    setsWithoutAverageColor.add(set.id);
+    lwarn(
+      `The texture set "${set.id}" has no averageColor: its set array layer reads mid-grey (${FALLBACK_AVERAGE_COLOR}). Give the set's JSON one, or encode its albedo (yarn assets).`
+    );
+  }
+  const average = new THREE.Color(toThreeColor(set.averageColor ?? FALLBACK_AVERAGE_COLOR));
   const base = layer * PARAMS_PER_LAYER;
   values[base].set(
     set.physicalSize[0],
@@ -173,7 +191,7 @@ const writeLayerParams = (values: THREE.Vector4[], layer: number, set: TextureSe
     surface.porosity,
     surface.wetDarkening
   );
-  values[base + 3].set(surface.wetRoughness, 0, 0, 0);
+  values[base + 3].set(surface.wetRoughness, average.r, average.g, average.b);
 };
 
 const createLayerParams = (sets: TextureSetDef[]) => {
@@ -232,7 +250,8 @@ export type TextureSetArrayInput = {
   albedoRough?: THREE.TextureNode;
   /** `LITE`: RG the normal's X and Y (Z reconstructed), B height, per layer. */
   normalHeight?: THREE.TextureNode;
-  /** Each layer's `physicalSize`, `heightScale` and `surface` fields (the set array's, shared). */
+  /** Each layer's `physicalSize`, `heightScale`, `surface` fields and `averageColor` (the set
+   * array's, shared). */
   layerParams: TextureSetLayerParamsNode;
   /** The number of layers (an int). */
   layerCount: THREE.Node<'int'>;
@@ -537,8 +556,9 @@ export const setTextureSetArrayLayer = (id: string, layer: number, setId: string
 
 /**
  * One layer's params of a texture set array as TSL nodes, by name: the set's `physicalSize`
- * (vec2, metres per tile), `heightScale` (metres of relief), `tint` (vec3, linear) and each other
- * `surface` field (floats), read from the array's `layerParams`.
+ * (vec2, metres per tile), `heightScale` (metres of relief), `tint` (vec3, linear), each other
+ * `surface` field (floats) and `averageColor` (vec3, linear; mid-grey for a set without one), read
+ * from the array's `layerParams`.
  * @param layerParams the set array's `layerParams` (the input bundle's, or
  * {@link TextureSetArray}'s)
  * @param layer the layer index, or an int node (eg. a splat map's dominant layer)
@@ -566,7 +586,7 @@ export const getTextureSetLayerParams = (
   const sizeHeight = at(0);
   const tintNormal = at(1);
   const roughAoWet = at(2);
-  const wet = at(3);
+  const wetAverage = at(3);
   return {
     physicalSize: vec2(sizeHeight.x, sizeHeight.y),
     heightScale: sizeHeight.z,
@@ -577,7 +597,8 @@ export const getTextureSetLayerParams = (
     aoStrength: roughAoWet.y,
     porosity: roughAoWet.z,
     wetDarkening: roughAoWet.w,
-    wetRoughness: wet.x,
+    wetRoughness: wetAverage.x,
+    averageColor: vec3(wetAverage.y, wetAverage.z, wetAverage.w),
   };
 };
 

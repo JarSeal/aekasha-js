@@ -286,6 +286,18 @@ describe('the { textureSet } resolver', () => {
     expect(bundle.tint.value).toEqual(new THREE.Color('#ff0000'));
   });
 
+  test('the set’s average colour, linear, when it has one', () => {
+    fns.json = {
+      scenes: { a: { id: 'a', textureSets: [makeSet('sand01', { averageColor: '#336699' })] } },
+    };
+    const bundle = getResolver().resolve(
+      { textureSet: 'sand01' },
+      inputContext()
+    ) as unknown as Record<string, { value: unknown }>;
+    expect(Object.keys(bundle).at(-1)).toBe('averageColor');
+    expect(bundle.averageColor.value).toEqual(new THREE.Color('#336699'));
+  });
+
   test('a { r, g, b } tint is sRGB 0-255', () => {
     fns.json = {
       scenes: {

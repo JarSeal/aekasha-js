@@ -268,7 +268,7 @@ Its static defines: `tiling` `"WORLD_XZ"` (the default: the world's `(x, −z)` 
 | `surface.aoStrength`                               | How much of `FULL`'s AO applies; the scaffold's multiply strength for a baked AO                                           | 1                                   |
 | `surface.heightContrast`                           | Sharpens (> 1) or softens (< 1) the height for height blending (p305)                                                      | 1                                   |
 | `surface.porosity`, `wetDarkening`, `wetRoughness` | The wet response (p307)                                                                                                    | 0.5, 0.5, 0.3                       |
-| `averageColor`                                     | The albedo's average (sRGB), for p305's far mode                                                                           | Measured by the asset pipeline      |
+| `averageColor`                                     | The albedo's average (sRGB), for p305's colour map detail and far mode                                                     | Measured by the asset pipeline      |
 
 The `surface` fields are defaults: a terrain material copies them into uniforms, and each of its layers can override any of them.
 
@@ -304,7 +304,7 @@ The height map's relief must agree with the normal map's, or height blending and
 
 ### Set arrays
 
-Several sets of one packing as one array texture per slot: a terrain material binds 2 textures (`LITE`) for up to 16 layers instead of 2 per layer. A material input `{ "textureSetArray": ["sand01", "grass01", "rocks01", "cliffs01"], "packing": "LITE" }` makes one with the scene's load; in code, `buildTextureSetArray({ sets, packing })` (`aekasha/texturesets`). Every set needs the packing, and every slot the same size, mip count and codec (so `concrete01`, 1024 × 512, can't join the others). Each layer's `physicalSize`, `heightScale` and `surface` fields come along as one uniform array (`getTextureSetLayerParams`). A `swappable: true` array can change a layer at runtime (`setTextureSetArrayLayer`), at the cost of a CPU copy as large as its VRAM. p305's terrain material samples them.
+Several sets of one packing as one array texture per slot: a terrain material binds 2 textures (`LITE`) for up to 16 layers instead of 2 per layer. A material input `{ "textureSetArray": ["sand01", "grass01", "rocks01", "cliffs01"], "packing": "LITE" }` makes one with the scene's load; in code, `buildTextureSetArray({ sets, packing })` (`aekasha/texturesets`). Every set needs the packing, and every slot the same size, mip count and codec (so `concrete01`, 1024 × 512, can't join the others). Each layer's `physicalSize`, `heightScale`, `surface` fields and `averageColor` (mid-grey for a set without one, warned) come along as one uniform array (`getTextureSetLayerParams`). A `swappable: true` array can change a layer at runtime (`setTextureSetArrayLayer`), at the cost of a CPU copy as large as its VRAM. p305's terrain material samples them.
 
 ## Where to get sets
 
