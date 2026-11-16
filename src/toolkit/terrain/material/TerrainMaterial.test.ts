@@ -696,8 +696,9 @@ describe('setupTerrainMaterial: colour map', () => {
     }
     const uniforms = getUniforms(material);
     expect(colorNodes).not.toContain(uniforms.terrain_l0_tint);
-    // The macro variation over it
-    expect(colorNodes).toContain(uniforms.terrain_macroBrightness);
+    // The macro varies the roughness, not the colour map's colour (its variation is baked in)
+    expect(colorNodes).not.toContain(uniforms.terrain_macroBrightness);
+    expect(collectNodesFrom([material.roughnessNode])).toContain(uniforms.terrain_macroRoughness);
     expect(getUniformKeys(material)).not.toContain('terrain_detailDistance');
   });
 

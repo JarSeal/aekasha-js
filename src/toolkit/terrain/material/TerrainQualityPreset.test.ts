@@ -30,6 +30,26 @@ describe('getTerrainQualityPreset', () => {
     expect(() => getTerrainQualityPreset({ cliffLayers: [1.5] })).toThrow(/isn't a layer index/);
   });
 
+  it('gives the tiers their far surface when asked, ULTRA none', () => {
+    const preset = getTerrainQualityPreset({ far: 'AVERAGE_COLOR' });
+    expect(preset.LOW.distance).toEqual({ fade: [30, 60], far: 'AVERAGE_COLOR' });
+    expect(preset.MEDIUM.distance).toEqual({ fade: [60, 120], far: 'AVERAGE_COLOR' });
+    expect(preset.HIGH.distance).toEqual({ fade: [100, 200], far: 'AVERAGE_COLOR' });
+    expect(preset.ULTRA.distance).toEqual({ fade: [100, 200] });
+    expect(getTerrainQualityPreset().LOW.distance).toBeUndefined();
+    const define = { ...defineOf(4, preset), layers: [{}, {}, {}, {}] };
+    expect(TerrainMaterialDefineSchema.safeParse(define).success).toBe(true);
+    expect(readTerrainDefine({ terrain: { ...define, qualityLevel: 'LOW' } }).far).toEqual({
+      mode: 'AVERAGE_COLOR',
+      blend: 4,
+    });
+    // COLOR_MAP needs the material's colour map
+    const colorMapped = { ...define, quality: getTerrainQualityPreset({ far: 'COLOR_MAP' }) };
+    expect(TerrainMaterialDefineSchema.safeParse(colorMapped).success).toBe(false);
+    const withMap = { ...colorMapped, colorMap: { mode: 'FAR_ONLY' } };
+    expect(TerrainMaterialDefineSchema.safeParse(withMap).success).toBe(true);
+  });
+
   it('makes a define both readers take, each tier sampling in slots past its layers', () => {
     const quality = getTerrainQualityPreset({ cliffLayers: [3] });
     for (const count of [4, 5]) {

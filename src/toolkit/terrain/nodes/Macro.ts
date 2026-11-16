@@ -43,9 +43,37 @@ export const sampleMacroTexture = (macroTexture: TextureNode, scale: Node<'float
 const toSigned = (channel: Node<'float'>) => channel.sub(0.5).mul(2) as Node<'float'>;
 
 /**
- * The surface varied by a macro sample: the albedo × `1 + R′ · brightness` (R′ the channel as
- * −1..1), turned about the grey axis by `G′ · hue` degrees (three's `hue`), and the roughness ×
- * `1 + G′ · roughness`, capped at 1
+ * An albedo varied by a macro sample: × `1 + R′ · brightness` (R′ the channel as −1..1), turned
+ * about the grey axis by `G′ · hue` degrees (three's `hue`). Not over a colour map's colour, which
+ * has its large-scale variation baked in.
+ * @internal
+ * @param albedo the blended albedo
+ * @param macro the macro texture's sample ({@link sampleMacroTexture})
+ * @param nodes the variation's uniforms
+ */
+export const varyAlbedo = (albedo: Node<'vec3'>, macro: Node<'vec4'>, nodes: MacroNodes) => {
+  const r = toSigned(macro.r as Node<'float'>);
+  const g = toSigned(macro.g as Node<'float'>);
+  const brightened = albedo.mul(float(1).add(r.mul(nodes.brightness))) as Node<'vec3'>;
+  return hue(brightened, g.mul(nodes.hue).mul(DEG_TO_RAD)) as unknown as Node<'vec3'>;
+};
+
+/**
+ * A roughness varied by a macro sample: × `1 + G′ · roughness` (G′ the channel as −1..1), capped
+ * at 1
+ * @internal
+ * @param roughness the blended roughness
+ * @param macro the macro texture's sample ({@link sampleMacroTexture})
+ * @param nodes the variation's uniforms
+ */
+export const varyRoughness = (roughness: Node<'float'>, macro: Node<'vec4'>, nodes: MacroNodes) =>
+  roughness
+    .mul(float(1).add(toSigned(macro.g as Node<'float'>).mul(nodes.roughness)))
+    .min(1) as Node<'float'>;
+
+/**
+ * The surface varied by a macro sample: its albedo ({@link varyAlbedo}) and its roughness
+ * ({@link varyRoughness})
  * @internal
  * @param surface the blended albedo and roughness
  * @param macro the macro texture's sample ({@link sampleMacroTexture})
@@ -55,13 +83,7 @@ export const applyMacroVariation = (
   surface: MacroSurface,
   macro: Node<'vec4'>,
   nodes: MacroNodes
-): MacroSurface => {
-  const r = toSigned(macro.r as Node<'float'>);
-  const g = toSigned(macro.g as Node<'float'>);
-  const brightened = surface.albedo.mul(float(1).add(r.mul(nodes.brightness))) as Node<'vec3'>;
-  const turned = hue(brightened, g.mul(nodes.hue).mul(DEG_TO_RAD)) as unknown as Node<'vec3'>;
-  return {
-    albedo: turned,
-    roughness: surface.roughness.mul(float(1).add(g.mul(nodes.roughness))).min(1) as Node<'float'>,
-  };
-};
+): MacroSurface => ({
+  albedo: varyAlbedo(surface.albedo, macro, nodes),
+  roughness: varyRoughness(surface.roughness, macro, nodes),
+});

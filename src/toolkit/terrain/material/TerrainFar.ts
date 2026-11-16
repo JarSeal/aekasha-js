@@ -58,8 +58,8 @@ export type FarBranchInputs = {
   /** The raw weights (null for `SINGLE`) */
   weights: Node<'float'>[] | null;
   viewDistance: Node<'float'>;
-  /** The macro texture's patches (`DUAL_SCALE`'s), or null without a macro */
-  patches: Node<'float'> | null;
+  /** The macro texture's sample (its variation, `DUAL_SCALE`'s patches), or null without a macro */
+  macro: Node<'vec4'> | null;
   /** The colour map's sample (`DETAIL`, far `COLOR_MAP`), or null without */
   colorMap: Node<'vec3'> | null;
   /** The tiling's coordinates, their gradients and the world position's */
@@ -156,7 +156,7 @@ const declareInputs = (inputs: FarBranchInputs): FarBranchInputs => {
   return {
     weights: inputs.weights && inputs.weights.map((weight) => declare(weight, 'float')),
     viewDistance: declare(inputs.viewDistance, 'float'),
-    patches: inputs.patches && declare(inputs.patches, 'float'),
+    macro: inputs.macro && declare(inputs.macro, 'vec4'),
     colorMap: inputs.colorMap && declare(inputs.colorMap, 'vec3'),
     shared: {
       coords: declare(shared.coords, 'vec2'),

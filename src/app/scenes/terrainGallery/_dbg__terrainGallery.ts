@@ -40,6 +40,11 @@ import {
   startCliffsTab,
 } from './_dbg__terrainGalleryCliffs';
 import {
+  clearColorMapSelection,
+  getColorMapSections,
+  startColorMapTab,
+} from './_dbg__terrainGalleryColorMap';
+import {
   clearGeneratorSelection,
   getProceduralSections,
   refreshProceduralFigures,
@@ -63,6 +68,7 @@ import {
 } from './splattingRow';
 import { getRulesAppId, getRulesTerrain, RULES_BLOCKS, setRulesView } from './rulesRow';
 import { CLIFFS_BLOCK_Y, CLIFFS_BLOCKS, getCliffsAppId, setCliffsDebugView } from './cliffsRow';
+import { COLOR_MAP_BLOCKS, getColorMapAppId, setColorMapView } from './colorMapRow';
 import {
   getProceduralBakeSettings,
   PROCEDURAL_BLOCKS,
@@ -174,6 +180,16 @@ const CHECKER_BLOCKS: CheckerBlock[] = [
     z,
     geometryId,
   })),
+  ...COLOR_MAP_BLOCKS.map(({ key, x, z, geometryId }) => ({
+    key: `colorMap_${key}`,
+    x,
+    // The Rules row's lift, read when the checker is made
+    get y() {
+      return getRulesTerrain().y;
+    },
+    z,
+    geometryId,
+  })),
   ...PROCEDURAL_BLOCKS.map(({ generator, x, z, geometryId }) => ({
     key: `proc_${generator.id}`,
     x,
@@ -244,8 +260,9 @@ const applyDebugViewAsync = async () => {
 };
 
 /**
- * Every library block (and wall) in the material mode, and the Anti-tiling, Splatting, Rules and
- * Cliffs rows in the view; the library, the Splatting and the Rules rows at the quality tier
+ * Every library block (and wall) in the material mode, and the Anti-tiling, Splatting, Rules,
+ * Cliffs and Colour map rows in the view; the library, the Splatting, the Rules and the Colour map
+ * rows at the quality tier
  */
 const applyMaterial = () => {
   for (const block of GALLERY_BLOCKS) {
@@ -256,6 +273,7 @@ const applyMaterial = () => {
   setSplattingView(state.debugView, state.quality);
   setRulesView(state.debugView, state.quality);
   setCliffsDebugView(state.debugView);
+  setColorMapView(state.debugView, state.quality);
 };
 
 /**
@@ -343,17 +361,34 @@ const getOtherAppIds = () => [
   ...SPLATTING_BLOCKS.map(({ key }) => getSplattingAppId(key)),
   ...RULES_BLOCKS.map(({ key }) => getRulesAppId(key)),
   ...CLIFFS_BLOCKS.map(({ key }) => getCliffsAppId(key)),
+  ...COLOR_MAP_BLOCKS.map(({ key }) => getColorMapAppId(key)),
   ...CHECKER_BLOCKS.map(({ key }) => getCheckerAppId(key)),
 ];
+
+/** Each list's selection clearer, by the row it lists */
+const SELECTION_CLEARERS = {
+  library: () => {
+    selectedSetId = null;
+  },
+  procedural: clearGeneratorSelection,
+  antiTiling: clearAntiTilingSelection,
+  splatting: clearSplattingSelection,
+  rules: clearRulesSelection,
+  cliffs: clearCliffsSelection,
+  colorMap: clearColorMapSelection,
+};
+
+/** Drops every list's selection but the row's (its block was picked) */
+const clearSelectionsBut = (row: keyof typeof SELECTION_CLEARERS) => {
+  for (const [key, clear] of Object.entries(SELECTION_CLEARERS)) {
+    if (key !== row) clear();
+  }
+};
 
 /** Flies the scene's camera to a library block and selects it in its list */
 const flyToBlock = (block: GalleryBlock) => {
   selectedSetId = block.setId;
-  clearGeneratorSelection();
-  clearAntiTilingSelection();
-  clearSplattingSelection();
-  clearRulesSelection();
-  clearCliffsSelection();
+  clearSelectionsBut('library');
   flyToGalleryBlock(block);
 };
 
@@ -375,13 +410,7 @@ const getBlockRow = (block: GalleryBlock) => {
 /** What the Procedural row's sections need of this tab */
 const proceduralOpts: ProceduralSectionsOpts = {
   tabId: TAB_ID,
-  onSelect: () => {
-    selectedSetId = null;
-    clearAntiTilingSelection();
-    clearSplattingSelection();
-    clearRulesSelection();
-    clearCliffsSelection();
-  },
+  onSelect: () => clearSelectionsBut('procedural'),
   getOtherAppIds,
 };
 
@@ -402,6 +431,7 @@ export const createTerrainGalleryTab = () => {
   startSplattingTab();
   startRulesTab();
   startCliffsTab();
+  startColorMapTab();
   const endProceduralTab = startProceduralTab(proceduralOpts);
   addGalleryExitCleanup(() => {
     thisVisit.isCurrent = false;
@@ -442,7 +472,7 @@ export const createTerrainGalleryTab = () => {
             label: 'Debug view',
             kind: 'select',
             options: DEBUG_VIEWS.map((option) => ({ ...option })),
-            hint: 'The terrain material’s debug view on the library (not the baseline), the Anti-tiling, Splatting, Rules and Cliffs rows: texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048), the shaded normal in world space, the layers’ weights (layer 0 white, 1 red, 2 green, 3 blue, 4 yellow, …), the projections’ planes (X red, Y green, Z blue; a slope gate’s band striped), the material’s own texture fetches a pixel (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more magenta) or the layers weighing in a pixel (1 dark blue, 2 green, 3 yellow, 4 orange, 5+ red; striped where sparse sampling drops one)',
+            hint: 'The terrain material’s debug view on the library (not the baseline), the Anti-tiling, Splatting, Rules, Cliffs and Colour map rows (a far mode shows the near surface everywhere): texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048), the shaded normal in world space, the layers’ weights (layer 0 white, 1 red, 2 green, 3 blue, 4 yellow, …), the projections’ planes (X red, Y green, Z blue; a slope gate’s band striped), the material’s own texture fetches a pixel (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more magenta) or the layers weighing in a pixel (1 dark blue, 2 green, 3 yellow, 4 orange, 5+ red; striped where sparse sampling drops one)',
             onChange: () => void applyDebugViewAsync(),
           },
           {
@@ -450,7 +480,7 @@ export const createTerrainGalleryTab = () => {
             label: 'Quality',
             kind: 'segmented',
             options: QUALITIES.map((option) => ({ ...option })),
-            hint: 'The quality tier (getTerrainQualityPreset, p305 D10) on the library, the Splatting and the Rules rows: low (no anti-tiling, 2 layers a pixel, cliffs biplanar slope-gated), medium (dual scale, 3, triplanar gated), high (hex on the dominant layer, 3, triplanar gated), ultra (hex on all, 4, triplanar); own: the materials’ own fields. The Anti-tiling and Cliffs rows compare one technique each and keep theirs',
+            hint: 'The quality tier (getTerrainQualityPreset, p305 D10) on the library, the Splatting, the Rules and the Colour map rows (its far blocks with the preset’s far surface: from 60 m on low, 120 on medium, 200 on high, none on ultra): low (no anti-tiling, 2 layers a pixel, cliffs biplanar slope-gated), medium (dual scale, 3, triplanar gated), high (hex on the dominant layer, 3, triplanar gated), ultra (hex on all, 4, triplanar); own: the materials’ own fields. The Anti-tiling and Cliffs rows compare one technique each and keep theirs',
             onChange: () => applyMaterial(),
           },
           {
@@ -484,37 +514,21 @@ export const createTerrainGalleryTab = () => {
         data: () => GALLERY_BLOCKS.map(getBlockRow),
       }),
       // Their fields bind their own targets, none of this tab's state keys
-      ...(getAntiTilingSections(TAB_ID, () => {
-        selectedSetId = null;
-        clearGeneratorSelection();
-        clearSplattingSelection();
-        clearRulesSelection();
-        clearCliffsSelection();
-      }) as DebuggerTabSection<GalleryTabState>[]),
-      // Its fields bind their own targets, none of this tab's state keys
-      ...(getSplattingSections(TAB_ID, () => {
-        selectedSetId = null;
-        clearGeneratorSelection();
-        clearAntiTilingSelection();
-        clearRulesSelection();
-        clearCliffsSelection();
-      }) as DebuggerTabSection<GalleryTabState>[]),
-      // Its fields bind their own targets, none of this tab's state keys
-      ...(getRulesSections(TAB_ID, () => {
-        selectedSetId = null;
-        clearGeneratorSelection();
-        clearAntiTilingSelection();
-        clearSplattingSelection();
-        clearCliffsSelection();
-      }) as DebuggerTabSection<GalleryTabState>[]),
-      // Its fields bind their own targets, none of this tab's state keys
-      ...(getCliffsSections(TAB_ID, () => {
-        selectedSetId = null;
-        clearGeneratorSelection();
-        clearAntiTilingSelection();
-        clearSplattingSelection();
-        clearRulesSelection();
-      }) as DebuggerTabSection<GalleryTabState>[]),
+      ...(getAntiTilingSections(TAB_ID, () =>
+        clearSelectionsBut('antiTiling')
+      ) as DebuggerTabSection<GalleryTabState>[]),
+      ...(getSplattingSections(TAB_ID, () =>
+        clearSelectionsBut('splatting')
+      ) as DebuggerTabSection<GalleryTabState>[]),
+      ...(getRulesSections(TAB_ID, () =>
+        clearSelectionsBut('rules')
+      ) as DebuggerTabSection<GalleryTabState>[]),
+      ...(getCliffsSections(TAB_ID, () =>
+        clearSelectionsBut('cliffs')
+      ) as DebuggerTabSection<GalleryTabState>[]),
+      ...(getColorMapSections(TAB_ID, () =>
+        clearSelectionsBut('colorMap')
+      ) as DebuggerTabSection<GalleryTabState>[]),
       // Its fields bind their own targets, none of this tab's state keys
       ...(getProceduralSections(proceduralOpts) as DebuggerTabSection<GalleryTabState>[]),
     ],

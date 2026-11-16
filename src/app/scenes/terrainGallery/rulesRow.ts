@@ -247,6 +247,13 @@ const getBlockConfig = (block: RulesBlock): TerrainMaterialConfig => {
   };
 };
 
+/**
+ * The 8-layer block's code route config at the load's values (the Colour map row's source): its
+ * sets and rules, the splat map, the macro, the quality preset
+ */
+export const getEightLayersConfig = () =>
+  getBlockConfig(RULES_BLOCKS.find(({ key }) => key === 'EIGHT_LAYERS') as RulesBlock);
+
 /** The storage `AUTO` chose for a block: `ARRAY` binds its sets as one `layers` set array */
 export const getRulesStorage = (block: RulesBlock) =>
   'layers' in (getTerrainMaterialProps(getBlockConfig(block)).inputs ?? {}) ? 'ARRAY' : 'SEPARATE';

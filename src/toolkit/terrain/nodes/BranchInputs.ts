@@ -4,7 +4,7 @@
 // box trap, `src/_engine/features/skybox/CLAUDE.md`), and a derivative or an implicit-gradient
 // sample there is in non-uniform control flow (WGSL's uniformity rule): so each input is a zero var
 // with an explicit assignment, which keeps its place in the statements.
-import { float, int, vec2, vec3 } from 'three/tsl';
+import { float, int, vec2, vec3, vec4 } from 'three/tsl';
 
 /**
  * A node as a var declared where this is called: in a `Fn`, before what follows.
@@ -18,6 +18,7 @@ const ZEROS = {
   int: () => int(0),
   vec2: () => vec2(0),
   vec3: () => vec3(0),
+  vec4: () => vec4(0),
 };
 
 /** The types a branch input takes */

@@ -36,15 +36,19 @@ describe('sampleColorMap', () => {
 });
 
 describe('getLayerDetail', () => {
-  it("divides the albedo by the set's average colour, floored", () => {
+  it("divides the albedo's luminance by the set's average colour's, floored: a grey detail", () => {
     const albedo = vec3(0.2, 0.3, 0.4) as unknown as Node<'vec3'>;
     const average = uniform(vec3(0.5)) as unknown as Node<'vec3'>;
     const detail = getLayerDetail(albedo, average);
-    expect((detail as unknown as { op?: string }).op).toBe('/');
     const nodes = collectNodes([detail]);
     expect(nodes.has(albedo)).toBe(true);
     expect(nodes.has(average)).toBe(true);
+    expect([...nodes].some((node) => (node as { op?: string }).op === '/')).toBe(true);
     expect([...nodes].some((node) => (node as { method?: string }).method === 'max')).toBe(true);
+    // Luminance: a dot with the channels' weights each, then one ratio for all three
+    expect(
+      [...nodes].filter((node) => (node as { method?: string }).method === 'dot')
+    ).toHaveLength(2);
   });
 });
 

@@ -314,6 +314,35 @@ describe('the far branch', () => {
     expect(mapSamples).toHaveLength(1);
   });
 
+  it("varies the layers' and the average colours' albedo by the macro, not the colour map's", () => {
+    const macroOf = (far: string, colorMap?: object) => {
+      const inputs: Record<string, unknown> = {
+        layer0: makeBundle('LITE'),
+        macro: texture(new Texture()),
+        ...(colorMap ? { colorMap: texture(new Texture()) } : {}),
+      };
+      const material = build(
+        {
+          layers: [{}],
+          macro: { scale: 64 },
+          ...(colorMap ? { colorMap } : {}),
+          distance: { fade: [30, 90], far },
+        },
+        inputs
+      );
+      const brightness = (material.userData.uniforms as Record<string, Inspect>)
+        .terrain_macroBrightness;
+      const { before, inBranch } = getBranch(material);
+      return {
+        far: collectNodes(before).includes(brightness),
+        near: inBranch.includes(brightness),
+      };
+    };
+    expect(macroOf('AVERAGE_COLOR')).toEqual({ far: true, near: true });
+    expect(macroOf('COLOR_MAP', { mode: 'FAR_ONLY' })).toEqual({ far: false, near: true });
+    expect(macroOf('COLOR_MAP', { mode: 'DETAIL' })).toEqual({ far: false, near: false });
+  });
+
   it("returns the packing's members to the sockets, a MINIMAL bump after the branch", () => {
     const membersOf = (packing: Packing) => {
       const material = build({ layers: [{}], distance: FAR }, { layer0: makeBundle(packing) });

@@ -29,7 +29,7 @@ import {
 import { sampleColorMap } from '../nodes/ColorMap';
 import { fadeDetailNormal, getFarShare } from '../nodes/Distance';
 import { normalizeWeights } from '../nodes/HeightBlend';
-import { applyMacroVariation, sampleMacroTexture, type MacroNodes } from '../nodes/Macro';
+import { sampleMacroTexture, varyAlbedo, varyRoughness, type MacroNodes } from '../nodes/Macro';
 import { createProjectionContext, type ProjectionContext } from '../nodes/Projection';
 import { applyRules, createRuleContext, createRuleNodes } from '../nodes/Rules';
 import { getBundlePacking } from '../nodes/SampleTextureSet';
@@ -226,31 +226,31 @@ const getAoNode = (
  * sorted (sparse's `maxLayers` of them, else all), each read from the `ARRAY` input at its layer,
  * their weights renormalized (the height blend among them); `DOMINANT` samples `HEX` in the first
  * slot and `DUAL_SCALE` in the others. With `macro`, one fetch of the input `macro` at the world's
- * XZ varies the surface (R the brightness, G the hue and the roughness, B `DUAL_SCALE`'s patches);
- * with a `DETAIL` `colorMap`, the input `colorMap` at the mesh's UV gives the albedo and the layers
- * their detail (each one's albedo over its set's average colour, no tints), faded out over
- * `detailDistance`; with `distance`, the normal fades to the geometry's over its `fade` range, and
- * with a `far` mode the layers aren't sampled past it (a dynamic branch): the far surface is the
- * sets' average colours by the weights (`AVERAGE_COLOR`) or the colour map (`COLOR_MAP`), mixed in
- * over `farBlend` metres, its normal the geometry's (a `debugView` shows the near surface
- * everywhere). Only what the define enables is built. The textures it binds (the layers', the splat
- * maps, the macro texture, the colour map) must fit the budget: the renderer's sampled textures a
- * stage (16) less `reservedTextures` (6). The tunables are uniforms in
- * `material.userData.uniforms`: per layer `terrain_l<i>_<name>` (`tiling`, `rotation` when given,
- * `tint`, `normalStrength`, `roughnessScale`; `heightContrast` and `heightOffset` with the height
- * blend; `farScale` and `antiTilingDistance` with `DUAL_SCALE` or `DOMINANT` in slots,
- * `hexContrast` and `hexRotation` with `HEX`; `projectionSharpness` with `BIPLANAR` or `TRIPLANAR`,
- * `slopeGate` with a gate), per rule `terrain_r<i>_<name>` (its tests' only: `slopeMin`,
- * `slopeMax`, `slopeSoftness`, `heightMin`, `heightMax`, `heightSoftness`, a range's given ends
- * only; `aspectDirection`, `aspectRange`, `aspectSoftness`; `noiseScale`, `noiseAmount`; and
- * `strength`), `terrain_heightBlendDepth` with the height blend, `terrain_aoTextureInfluence` when
- * a layer has texture AO, `terrain_aoVertexInfluence` with `ao.vertex`, `terrain_macroScale`,
- * `terrain_macroBrightness`, `terrain_macroHue` and `terrain_macroRoughness` with `macro`,
- * `terrain_detailDistance` with a colour map's `detailDistance`, `terrain_distanceFade` with
- * `distance`, and `terrain_farBlend` with a far mode. A `qualityLevel` applies that tier's
- * `quality` overrides first; a `debugView` (debug env, once {@link loadTerrainDebugViewsAsync} has
- * loaded the views) replaces the shading with the view. The define as given is kept at
- * `material.userData.terrainDefine`.
+ * XZ varies the surface (R the brightness, G the hue and the roughness, B `DUAL_SCALE`'s patches;
+ * not a colour map's colour, whose variation is baked in); with a `DETAIL` `colorMap`, the input
+ * `colorMap` at the mesh's UV gives the albedo and the layers their detail (each one's albedo over
+ * its set's average colour, no tints), faded out over `detailDistance`; with `distance`, the normal
+ * fades to the geometry's over its `fade` range, and with a `far` mode the layers aren't sampled
+ * past it (a dynamic branch): the far surface is the sets' average colours by the weights
+ * (`AVERAGE_COLOR`) or the colour map (`COLOR_MAP`), mixed in over `farBlend` metres, its normal
+ * the geometry's (a `debugView` shows the near surface everywhere). Only what the define enables is
+ * built. The textures it binds (the layers', the splat maps, the macro texture, the colour map)
+ * must fit the budget: the renderer's sampled textures a stage (16) less `reservedTextures` (6).
+ * The tunables are uniforms in `material.userData.uniforms`: per layer `terrain_l<i>_<name>`
+ * (`tiling`, `rotation` when given, `tint`, `normalStrength`, `roughnessScale`; `heightContrast`
+ * and `heightOffset` with the height blend; `farScale` and `antiTilingDistance` with `DUAL_SCALE`
+ * or `DOMINANT` in slots, `hexContrast` and `hexRotation` with `HEX`; `projectionSharpness` with
+ * `BIPLANAR` or `TRIPLANAR`, `slopeGate` with a gate), per rule `terrain_r<i>_<name>` (its tests'
+ * only: `slopeMin`, `slopeMax`, `slopeSoftness`, `heightMin`, `heightMax`, `heightSoftness`, a
+ * range's given ends only; `aspectDirection`, `aspectRange`, `aspectSoftness`; `noiseScale`,
+ * `noiseAmount`; and `strength`), `terrain_heightBlendDepth` with the height blend,
+ * `terrain_aoTextureInfluence` when a layer has texture AO, `terrain_aoVertexInfluence` with
+ * `ao.vertex`, `terrain_macroScale`, `terrain_macroBrightness`, `terrain_macroHue` and
+ * `terrain_macroRoughness` with `macro`, `terrain_detailDistance` with a colour map's
+ * `detailDistance`, `terrain_distanceFade` with `distance`, and `terrain_farBlend` with a far mode.
+ * A `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug env, once
+ * {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the view. The
+ * define as given is kept at `material.userData.terrainDefine`.
  * @param inputs the material's inputs: `layer<i>` bundles or the `layers` set array bundle (the
  * `textureSets()` feature's resolvers), with the splat map sources the splat maps `splat<i>` and
  * with `macro` or a rule's noise the macro texture `macro`, with `colorMap` the colour map
@@ -329,12 +329,17 @@ export const buildTerrainGraph = (
   const distance = createDistanceUniforms(material, define);
   const viewDistance = opts.viewDistance ?? (positionView.length() as unknown as Node<'float'>);
   const macro = createMacro(material, macroTexture, define);
-  const patches = macro ? (macro.sample.b as unknown as Node<'float'>) : null;
+  const getPatches = (sample: Node<'vec4'> | null) =>
+    sample ? (sample.b as unknown as Node<'float'>) : null;
   const colorMap =
     colorMapTexture && (define.colorMap?.mode === 'DETAIL' || define.far?.mode === 'COLOR_MAP')
       ? sampleColorMap(colorMapTexture)
       : null;
   const detailColorMap = define.colorMap?.mode === 'DETAIL' ? colorMap : null;
+  // The macro varies the albedo of the layers and of the average colours, never a colour map's
+  // (its large-scale variation is baked in: DETAIL's, the far COLOR_MAP's)
+  const vary = (albedo: Node<'vec3'>, sample: Node<'vec4'> | null, isColorMap: boolean) =>
+    macro && sample && !isColorMap ? varyAlbedo(albedo, sample, macro.nodes) : albedo;
   const uniforms = define.layers.map((_, i) => createLayerUniforms(material, define, i));
   const raw = getRawWeights(material, define, splatMaps, macroTexture);
   const layerContext = { define, sources, uniforms };
@@ -352,17 +357,21 @@ export const buildTerrainGraph = (
       inputs: {
         weights: raw?.weights ?? null,
         viewDistance,
-        patches,
+        macro: macro?.sample ?? null,
         colorMap,
         ...createBranchCoords(define),
       },
-      getFar: (inputs) => getFarSurface(define, layers, inputs),
-      buildNear: (inputs) =>
-        buildNearSurface(
+      getFar: (inputs) => {
+        const far = getFarSurface(define, layers, inputs);
+        const isColorMap = define.far?.mode === 'COLOR_MAP';
+        return { ...far, albedo: vary(far.albedo, inputs.macro, isColorMap) };
+      },
+      buildNear: (inputs) => {
+        const nearSurface = buildNearSurface(
           {
             ...layerContext,
             viewDistance: inputs.viewDistance,
-            patches: inputs.patches,
+            patches: getPatches(inputs.macro),
             getProjectionContext: () => inputs.projection,
             shared: inputs.shared,
           },
@@ -372,24 +381,34 @@ export const buildTerrainGraph = (
             colorMap: detailColorMap && inputs.colorMap,
             deferBump: true,
           }
-        ).surface,
+        ).surface;
+        const albedo = vary(nearSurface.albedo, inputs.macro, Boolean(detailColorMap));
+        return { ...nearSurface, albedo };
+      },
     });
   } else {
     // Made on the first projected layer: the projections' position, derivatives and normal
     let projection: ProjectionContext | null = null;
     const getProjectionContext = () => (projection ??= createProjectionContext());
     near = buildNearSurface(
-      { ...layerContext, viewDistance, patches, getProjectionContext },
+      {
+        ...layerContext,
+        viewDistance,
+        patches: getPatches(macro?.sample ?? null),
+        getProjectionContext,
+      },
       raw?.weights ?? null,
       { uniforms: surfaceUniforms, colorMap: detailColorMap, deferBump: false }
     );
-    surface = near.surface;
+    const albedo = vary(near.surface.albedo, macro?.sample ?? null, Boolean(detailColorMap));
+    surface = { ...near.surface, albedo };
   }
 
   // The material-wide effects over the blended surface, the normal into view space once
-  const { albedo, roughness } = macro
-    ? applyMacroVariation(surface, macro.sample, macro.nodes)
-    : surface;
+  const { albedo } = surface;
+  const roughness = macro
+    ? varyRoughness(surface.roughness, macro.sample, macro.nodes)
+    : surface.roughness;
   const shaded =
     surface.normal ??
     bumpNormalWorld(existsOrThrow(surface.bumpHeight, 'A surface without a normal has a bump.'));
