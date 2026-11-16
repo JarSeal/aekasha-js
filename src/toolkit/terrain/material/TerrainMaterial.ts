@@ -37,6 +37,7 @@ import { sampleAntiTiled, type AntiTilingNodes } from '../nodes/AntiTiling';
 import { fadeDetailNormal } from '../nodes/Distance';
 import { blendWeightsByHeight, getBlendHeight, normalizeWeights } from '../nodes/HeightBlend';
 import { applyMacroVariation, sampleMacroTexture, type MacroNodes } from '../nodes/Macro';
+import { applyRules, createRuleContext, createRuleNodes } from '../nodes/Rules';
 import type { TextureSetSample } from '../nodes/SampleTextureSet';
 import {
   bumpNormalWorld,
@@ -56,6 +57,8 @@ import {
 } from './TerrainInputs';
 import { checkTextureBudget, type TerrainBinding } from './TerrainStorage';
 import {
+  getPaintedLayerCount,
+  getPaintedSource,
   readTerrainDefine,
   type ResolvedTerrainDefine,
   type TerrainAntiTilingDefine,
@@ -132,15 +135,14 @@ const createAntiTilingNodes = (
 type Macro = { nodes: MacroNodes; sample: Node<'vec4'> };
 
 /**
- * The macro variation when the define has one: its texture (the input `macro`, which only a define
- * with `macro` takes), its uniforms and its one sample; null without
+ * The macro variation when the define has one: its uniforms and its one sample of the macro
+ * texture (the input `macro`); null without
  */
 const createMacro = (
   material: NodeMaterial,
-  inputs: Record<string, unknown>,
+  macroTexture: TextureNode | null,
   define: ResolvedTerrainDefine
 ): Macro | null => {
-  const macroTexture = readMacroTexture(inputs, define);
   if (!macroTexture || !define.macro) return null;
   const keep = (name: string, value: number) =>
     keepUniform(material, name, uniform(value)) as Node<'float'>;
@@ -284,7 +286,10 @@ const blendSurfaces = (surfaces: LayerSurface[], weights: Node<'float'>[]): Laye
   };
 };
 
-/** What the material binds: the layers' textures, the splat maps and the macro texture */
+/**
+ * What the material binds: the layers' textures, the splat maps and the macro texture (the macro
+ * variation's and the rules' noise's)
+ */
 const getBindings = (
   layerBindings: TerrainBinding[],
   splatMaps: TextureNode[],
@@ -304,26 +309,55 @@ type BuiltLayer = {
 };
 
 /**
- * The layers' weights of a painted source (`VERTEX_COLOR`, `SPLAT_MAP`), normalized linearly or by
- * the layers' heights (the uniform `terrain_heightBlendDepth`), and the vertex colour's AO; null
- * for `SINGLE`
+ * The incoming weights before the rules: the paint's for its layers (the vertex colour or the
+ * splat maps, from layer 0) and 0 for the rest, or the base layer alone (`RULES`); and the vertex
+ * colour's AO
+ */
+const getIncomingWeights = (
+  define: ResolvedTerrainDefine,
+  splatMaps: TextureNode[]
+): PaintedWeights => {
+  const { blend } = define;
+  const count = define.layers.length;
+  const zero = float(0) as unknown as Node<'float'>;
+  const paintedCount = getPaintedLayerCount(blend, count);
+  let painted: PaintedWeights;
+  if (blend.source !== 'SINGLE' && 'layout' in blend) {
+    painted = getVertexColorWeights(paintedCount, blend.layout);
+  } else if (getPaintedSource(blend) === 'SPLAT_MAP') {
+    painted = getSplatMapWeights(paintedCount, splatMaps);
+  } else {
+    painted = { weights: [float(1) as unknown as Node<'float'>], vertexAo: null };
+  }
+  const rest = Array.from({ length: count - painted.weights.length }, () => zero);
+  return { ...painted, weights: [...painted.weights, ...rest] };
+};
+
+/**
+ * The layers' weights of a blend past `SINGLE`: the paint's or the base layer's, the rules (the
+ * uniforms `terrain_r<i>_<name>`) composited over them in order, normalized linearly or by the
+ * layers' heights (the uniform `terrain_heightBlendDepth`); and the vertex colour's AO. Null for
+ * `SINGLE`
  */
 const getLayerWeights = (
   material: NodeMaterial,
   define: ResolvedTerrainDefine,
   layers: BuiltLayer[],
-  splatMaps: TextureNode[]
+  splatMaps: TextureNode[],
+  macroTexture: TextureNode | null
 ): PaintedWeights | null => {
   const { blend } = define;
   if (blend.source === 'SINGLE') return null;
-  // TODO(p305 Phase 4, section 2): the rules' masks over the weights
-  if (blend.rules.length) {
-    throw new Error(`[terrain] blend.source ${blend.source}: the rules aren't built yet.`);
-  }
-  const painted =
-    blend.source === 'VERTEX_COLOR'
-      ? getVertexColorWeights(layers.length, blend.layout)
-      : getSplatMapWeights(layers.length, splatMaps);
+  const incoming = getIncomingWeights(define, splatMaps);
+  const rules = blend.rules.map((rule, i) =>
+    createRuleNodes(rule, (name, node) => keepUniform(material, `r${i}_${name}`, node))
+  );
+  const painted = rules.length
+    ? {
+        ...incoming,
+        weights: applyRules(incoming.weights, rules, createRuleContext(macroTexture)),
+      }
+    : incoming;
   if (blend.heightBlend === null) {
     return { ...painted, weights: normalizeWeights(painted.weights) };
   }
@@ -373,17 +407,24 @@ const getAoNode = (
  * into the albedo, and the vertex colour's). Each layer samples its set with its anti-tiling
  * (`NONE` one tap, `DUAL_SCALE` two, `HEX` three). The blend source: `SINGLE` one layer;
  * `VERTEX_COLOR` the mesh's colour attribute; `SPLAT_MAP` the splat maps `splat0` (layers 1-4) and
- * `splat1` (5-8) at the mesh's UV; layer 0 takes what the channels leave; `blend.mode` `HEIGHT`
- * (default) lets the layers' heights decide the borders, `LINEAR` the weights alone. With `macro`,
- * one fetch of the input `macro` at the world's XZ varies the surface (R the brightness, G the hue
- * and the roughness, B `DUAL_SCALE`'s patches); with `distance`, the normal fades to the
+ * `splat1` (5-8) at the mesh's UV; layer 0 takes what the channels leave; `RULES` the base layer
+ * under the rules, `VERTEX_COLOR_AND_RULES` and `SPLAT_MAP_AND_RULES` the paint under them (each
+ * rule lays its layer over the weights so far where the geometry's slope, the world height and
+ * the facing are in its ranges, its coverage moved by a channel of the input `macro`, one fetch a
+ * rule with noise); `blend.mode` `HEIGHT` (default) lets the layers' heights decide the borders,
+ * `LINEAR` the weights alone. With `macro`, one fetch of the input `macro` at the world's XZ
+ * varies the surface (R the brightness, G the hue and the roughness, B `DUAL_SCALE`'s patches);
+ * with `distance`, the normal fades to the
  * geometry's over its `fade` range. Only what the define enables is built. The textures it binds
  * (the layers', the splat maps, the macro texture) must fit the budget: the renderer's sampled
  * textures a stage (16) less `reservedTextures` (6). The tunables are
  * uniforms in `material.userData.uniforms`: per layer `terrain_l<i>_<name>` (`tiling`, `rotation`
  * when given, `tint`, `normalStrength`, `roughnessScale`; `heightContrast` and `heightOffset` with
  * the height blend; `farScale` and `antiTilingDistance` with `DUAL_SCALE`, `hexContrast` and
- * `hexRotation` with `HEX`), `terrain_heightBlendDepth` with the height blend,
+ * `hexRotation` with `HEX`), per rule `terrain_r<i>_<name>` (its tests' only: `slopeMin`,
+ * `slopeMax`, `slopeSoftness`, `heightMin`, `heightMax`, `heightSoftness`, a range's given ends
+ * only; `aspectDirection`, `aspectRange`, `aspectSoftness`; `noiseScale`, `noiseAmount`; and
+ * `strength`), `terrain_heightBlendDepth` with the height blend,
  * `terrain_aoTextureInfluence` when a layer has texture AO, `terrain_aoVertexInfluence` with
  * `ao.vertex`, `terrain_macroScale`, `terrain_macroBrightness`, `terrain_macroHue` and
  * `terrain_macroRoughness` with `macro`, and `terrain_distanceFade` with `distance`. A
@@ -391,8 +432,8 @@ const getAoNode = (
  * {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the view. The
  * define as given is kept at `material.userData.terrainDefine`.
  * @param inputs the material's inputs: `layer<i>` bundles or the `layers` set array bundle (the
- * `textureSets()` feature's resolvers), with `SPLAT_MAP` the splat maps `splat<i>` and with `macro` the macro texture `macro`
- * (texture nodes: `{ "texture": id }`)
+ * `textureSets()` feature's resolvers), with the splat map sources the splat maps `splat<i>` and
+ * with `macro` or a rule's noise the macro texture `macro` (texture nodes: `{ "texture": id }`)
  * @param material the node material being built (a `STANDARDNODEMATERIAL`)
  * @param staticDefines the material's static defines, `terrain` among them
  * @throws for a missing or wrong define field, a field it doesn't know, a layer count the blend
@@ -414,10 +455,12 @@ export const setupTerrainMaterial = (
 ) => {
   const define = readTerrainDefine(staticDefines);
   const sources = readLayerSources(inputs, define);
-  // Read for every source: one without splat maps refuses a splat input
+  // Read for every source: one without splat maps refuses a splat input, and a define that takes
+  // no macro texture the macro input
   const splatMaps = readSplatMaps(inputs, define);
+  const macroTexture = readMacroTexture(inputs, define);
   checkTextureBudget(
-    getBindings(sources.bindings, splatMaps, define.macro !== null),
+    getBindings(sources.bindings, splatMaps, macroTexture !== null),
     define.reservedTextures,
     sources.isArray
   );
@@ -436,7 +479,7 @@ export const setupTerrainMaterial = (
 
   // Shared by every layer, built before any of them: the view distance and the one macro fetch
   const viewDistance = positionView.length() as unknown as Node<'float'>;
-  const macro = createMacro(material, inputs, define);
+  const macro = createMacro(material, macroTexture, define);
   const layers: BuiltLayer[] = sources.layers.map((source, i) => {
     const uniforms = createLayerUniforms(material, define, i);
     const uv = getLayerUv(define, source.params, uniforms);
@@ -454,7 +497,7 @@ export const setupTerrainMaterial = (
   );
 
   // The layers blended by their weights (SINGLE: the one layer), then the material-wide effects
-  const painted = getLayerWeights(material, define, layers, splatMaps);
+  const painted = getLayerWeights(material, define, layers, splatMaps, macroTexture);
   const surface = painted ? blendSurfaces(surfaces, painted.weights) : surfaces[0];
   const { albedo, roughness } = macro
     ? applyMacroVariation(surface, macro.sample, macro.nodes)
@@ -544,7 +587,9 @@ const getTerrainDefine = (config: TerrainMaterialConfig): TerrainMaterialDefine 
  * `STANDARDNODEMATERIAL` of the registered `aek.terrain` functions, the config as the static
  * define `terrain` (without the id, the layers' sets, the splat maps and the macro texture), each
  * layer's set as its input `layer<i>` (`{ textureSet, packing? }`), the splat maps as the inputs
- * `splat<i>` and the macro texture as the input `macro` (`{ texture }`). Pass them to `ensureMaterialDependencies` to load the textures before creating
+ * `splat<i>` and the macro texture as the input `macro` (`{ texture }`: `macro.texture`, else for
+ * rule noise `noiseTexture` or `macroNoise`). Pass them to `ensureMaterialDependencies` to load the
+ * textures before creating
  * the material, or use them as a material JSON's fields.
  * @returns the props, for `createMaterial` or `ensureMaterialDependencies`
  * @example

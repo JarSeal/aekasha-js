@@ -439,6 +439,141 @@ describe('setupTerrainMaterial: blending', () => {
   });
 });
 
+describe('setupTerrainMaterial: rules', () => {
+  const rocks = { layer: 1, slope: { min: 35 } };
+  const snow = { layer: 2, height: { min: 40 }, aspect: { direction: [0, -1], range: 60 } };
+  const isSampleOf = (map: unknown) => (node: Node) =>
+    (node as unknown as { isTextureNode?: boolean }).isTextureNode &&
+    (node as unknown as { value: unknown }).value === (map as { value: unknown }).value &&
+    node !== map;
+
+  it('lays the rules over the base layer, their uniforms per rule, nothing painted read', () => {
+    const inputs = layerInputs(3);
+    const material = build(
+      {
+        layers: layersOf(3),
+        blend: { source: 'RULES', rules: [rocks, { ...snow, strength: 0.8 }] },
+      },
+      inputs
+    );
+    expect(countSamples(material, inputs)).toBe(3 * 2);
+    expect(reachesVertexColor(material.colorNode)).toBe(false);
+    const keys = getUniformKeys(material).filter((key) => key.startsWith('terrain_r'));
+    expect(keys).toEqual([
+      'terrain_r0_slopeMin',
+      'terrain_r0_slopeSoftness',
+      'terrain_r0_strength',
+      'terrain_r1_aspectDirection',
+      'terrain_r1_aspectRange',
+      'terrain_r1_aspectSoftness',
+      'terrain_r1_heightMin',
+      'terrain_r1_heightSoftness',
+      'terrain_r1_strength',
+    ]);
+    const uniforms = getUniforms(material);
+    expect(uniforms.terrain_r0_slopeMin.value).toBe(35);
+    expect(uniforms.terrain_r0_slopeSoftness.value).toBe(5);
+    expect(uniforms.terrain_r1_strength.value).toBe(0.8);
+    // The height blend by default
+    expect(getUniformKeys(material)).toContain('terrain_heightBlendDepth');
+    // The colour, normal and roughness all follow the rules' weights
+    for (const socket of [material.colorNode, material.normalNode, material.roughnessNode]) {
+      expect(collectNodesFrom([socket]).includes(uniforms.terrain_r0_slopeMin as never)).toBe(true);
+    }
+  });
+
+  it("reads the paint's channels for its layers only, a rule's layer past them", () => {
+    const define = {
+      layers: layersOf(6),
+      blend: {
+        source: 'VERTEX_COLOR_AND_RULES',
+        vertexColor: { layout: 'RGBA' },
+        rules: [{ layer: 5, slope: { min: 50 } }],
+      },
+    };
+    const material = build(define, { layers: makeArrayBundle(6) });
+    expect(reachesVertexColor(material.colorNode)).toBe(true);
+    const swizzles = collectNodes(material)
+      .filter((node) =>
+        node
+          .getChildren()
+          .some((child) => (child as unknown as { isVertexColorNode?: boolean }).isVertexColorNode)
+      )
+      .map((node) => (node as unknown as { components?: string }).components)
+      .filter(Boolean)
+      .sort();
+    // RGBA weighs layers 1-4; layer 5 is the rule's
+    expect(swizzles).toEqual(['w', 'x', 'y', 'z']);
+    const splat = {
+      layers: layersOf(10),
+      blend: { source: 'SPLAT_MAP_AND_RULES', rules: [{ layer: 9, slope: { min: 50 } }] },
+    };
+    const splatInputs = {
+      layers: makeArrayBundle(10),
+      splat0: texture(new Texture()),
+      splat1: texture(new Texture()),
+    };
+    expect(countSamples(build(splat, splatInputs), splatInputs)).toBe(10 * 2 + 2);
+  });
+
+  it("samples the macro input once per rule with noise, besides the macro's own fetch", () => {
+    const macroTexture = texture(new Texture());
+    const noisy = { ...rocks, noise: { scale: 30, amount: 0.4, channel: 'A' } };
+    const rules = {
+      source: 'RULES',
+      rules: [noisy, { ...snow, noise: { scale: 90, amount: 0.2 } }],
+    };
+    const material = build(
+      { layers: layersOf(3), blend: rules },
+      layerInputs(3, 'LITE', { macro: macroTexture })
+    );
+    expect(collectNodes(material).filter(isSampleOf(macroTexture))).toHaveLength(2);
+    expect(getUniforms(material).terrain_r0_noiseScale.value).toBe(30);
+    const withMacro = build(
+      { layers: layersOf(3), blend: rules, macro: { scale: 120 } },
+      layerInputs(3, 'LITE', { macro: macroTexture })
+    );
+    expect(collectNodes(withMacro).filter(isSampleOf(macroTexture))).toHaveLength(3);
+    expect(() => build({ layers: layersOf(3), blend: rules }, layerInputs(3))).toThrow(
+      /Missing input "macro"/
+    );
+  });
+
+  it("takes a tier's rules, and keeps the macro input a tier's noise needs", () => {
+    const macroTexture = texture(new Texture());
+    const noisy = { ...rocks, noise: { scale: 30, amount: 0.4 } };
+    const define = {
+      layers: layersOf(2),
+      blend: { source: 'RULES', rules: [rocks] },
+      quality: { ULTRA: { blend: { source: 'RULES', rules: [noisy] } } },
+    };
+    const inputs = layerInputs(2, 'LITE', { macro: macroTexture });
+    const base = build(define, inputs);
+    expect(collectNodes(base).filter(isSampleOf(macroTexture))).toHaveLength(0);
+    const ultra = build({ ...define, qualityLevel: 'ULTRA' }, inputs);
+    expect(collectNodes(ultra).filter(isSampleOf(macroTexture))).toHaveLength(1);
+  });
+
+  it('counts the noise texture in the budget', () => {
+    stubs.renderer = null;
+    const rules = { source: 'RULES', rules: [{ ...rocks, noise: { scale: 30, amount: 0.4 } }] };
+    // FULL: 3 slots a layer, 3 layers = 9 + the noise texture = 10, the budget 16 - 6
+    const define = {
+      layers: layersOf(3),
+      blend: { ...rules, rules: [...rules.rules, { layer: 2, slope: { max: 5 } }] },
+    };
+    expect(() =>
+      build(define, layerInputs(3, 'FULL', { macro: texture(new Texture()) }))
+    ).not.toThrow();
+    expect(() =>
+      build(
+        { ...define, reservedTextures: 7 },
+        layerInputs(3, 'FULL', { macro: texture(new Texture()) })
+      )
+    ).toThrow(/macro/);
+  });
+});
+
 describe('setupTerrainMaterial: storage', () => {
   beforeEach(() => {
     stubs.renderer = null;
