@@ -33,10 +33,16 @@ import {
   type MatProps,
   type TslMaterialFns,
 } from 'aekasha';
-import { sampleAntiTiled, type AntiTilingNodes } from '../nodes/AntiTiling';
+import { sampleAntiTiled, type AntiTilingContext, type AntiTilingNodes } from '../nodes/AntiTiling';
 import { fadeDetailNormal } from '../nodes/Distance';
 import { blendWeightsByHeight, getBlendHeight, normalizeWeights } from '../nodes/HeightBlend';
 import { applyMacroVariation, sampleMacroTexture, type MacroNodes } from '../nodes/Macro';
+import {
+  createProjectionContext,
+  sampleProjected,
+  type ProjectionContext,
+  type ProjectionNodes,
+} from '../nodes/Projection';
 import { applyRules, createRuleContext, createRuleNodes } from '../nodes/Rules';
 import type { TextureSetSample } from '../nodes/SampleTextureSet';
 import {
@@ -62,6 +68,7 @@ import {
   readTerrainDefine,
   type ResolvedTerrainDefine,
   type TerrainAntiTilingDefine,
+  type TerrainProjectionDefine,
 } from './TerrainDefine';
 import type { TerrainDebugView, TerrainDebugViewContext } from '../debug/_dbg__DebugViews';
 import { getLoadedTerrainDebugViews, loadTerrainDebugViewsAsync } from './TerrainDebugViews';
@@ -90,6 +97,8 @@ type LayerUniforms = {
   /** The anti-tiling's mode and its uniforms (`farScale`, `antiTilingDistance`; `hexContrast`,
    * `hexRotation`) */
   antiTiling: AntiTilingNodes;
+  /** The projection's mode and its uniform (`projectionSharpness`) */
+  projection: ProjectionNodes;
 };
 
 /** A layer's surface, its normal in world space: what the layers blend (one, for SINGLE) */
@@ -129,6 +138,19 @@ const createAntiTilingNodes = (
     };
   }
   return { mode: 'NONE' };
+};
+
+/** A layer's projection uniforms, a projecting mode's only */
+const createProjectionNodes = (
+  projection: TerrainProjectionDefine,
+  keep: (name: string, node: unknown) => unknown
+): ProjectionNodes => {
+  if (projection.mode === 'PLANAR') return { mode: 'PLANAR' };
+  return {
+    mode: projection.mode,
+    sharpness: keep('projectionSharpness', uniform(projection.sharpness)) as Node<'float'>,
+    normalBlend: projection.normalBlend,
+  };
 };
 
 /** The macro variation's uniforms (`terrain_macro<Name>`) and its one sample */
@@ -172,6 +194,7 @@ const createLayerUniforms = (
         }
       : null,
     antiTiling: createAntiTilingNodes(layer.antiTiling, keep),
+    projection: createProjectionNodes(layer.projection, keep),
     tiling: keep('tiling', uniform(layer.tiling)) as Node<'float'>,
     rotation:
       layer.rotation === null ? null : (keep('rotation', uniform(layer.rotation)) as Node<'float'>),
@@ -191,6 +214,8 @@ type LayerUv = {
   tileUv: Node<'vec2'>;
   /** The rotation in radians, or null for none */
   angle: Node<'float'> | null;
+  /** The rotation's cosine and sine, or null for none */
+  turn: { cos: Node<'float'>; sin: Node<'float'> } | null;
 };
 
 /**
@@ -209,13 +234,14 @@ const getLayerUv = (
       : (vec2(positionWorld.x, positionWorld.z.negate()) as unknown as Node<'vec2'>);
   const tileSize = params.physicalSize.mul(layer.tiling) as Node<'vec2'>;
   const tileUv = coords.div(tileSize) as Node<'vec2'>;
-  if (!layer.rotation) return { coords, tileSize, tileUv, angle: null };
+  if (!layer.rotation) return { coords, tileSize, tileUv, angle: null, turn: null };
   // The pattern turns counter-clockwise from above: sample at the UV turned back
   const angle = layer.rotation.mul(DEG_TO_RAD) as Node<'float'>;
-  const c = angle.cos();
-  const s = angle.sin();
+  const c = angle.cos() as Node<'float'>;
+  const s = angle.sin() as Node<'float'>;
   const turned = vec2(c.mul(tileUv.x).add(s.mul(tileUv.y)), c.mul(tileUv.y).sub(s.mul(tileUv.x)));
-  return { coords, tileSize, tileUv: turned as unknown as Node<'vec2'>, angle };
+  const turn = { cos: c, sin: s };
+  return { coords, tileSize, tileUv: turned as unknown as Node<'vec2'>, angle, turn };
 };
 
 /** Every layer's sample in one packing, or a thrown error naming the layers' packings */
@@ -228,11 +254,16 @@ const checkOnePacking = (samples: TextureSetSample[]) => {
   }
 };
 
+/** The normal's strength of a layer: the set's × the layer's `normalStrength` */
+const getNormalStrength = (params: LayerParams, layer: LayerUniforms) =>
+  params.normalStrength.mul(layer.normalStrength) as Node<'float'>;
+
 /**
  * A layer's surface from its sample (p303 D2's packings): the albedo × the set's and the layer's
- * tint; the normal in world space, the map's (`FULL`, `LITE`) through the tiling's frame (planar
- * world tiling's analytic one, a mesh UV's from its derivatives) or `MINIMAL`'s bump of its height
- * in metres, its slope × the set's and the layer's `normalStrength`; the roughness (`MINIMAL`'s
+ * tint; the normal in world space, a projection's (made with the strength), else the map's
+ * (`FULL`, `LITE`) through the tiling's frame (planar world tiling's analytic one, a mesh UV's
+ * from its derivatives) or `MINIMAL`'s bump of its height in metres, its slope × the set's and
+ * the layer's `normalStrength`; the roughness (`MINIMAL`'s
  * 0.8) × both `roughnessScale`s, capped at 1; `FULL`'s AO with the set's `aoStrength` × the
  * material's influence
  */
@@ -240,13 +271,14 @@ const getLayerSurface = (
   define: ResolvedTerrainDefine,
   params: LayerParams,
   layer: LayerUniforms,
-  uv: LayerUv,
-  sample: TextureSetSample,
+  { uv, sample, normal: projected }: Pick<BuiltLayer, 'uv' | 'sample' | 'normal'>,
   aoInfluence: () => Node<'float'>
 ): LayerSurface => {
-  const strength = params.normalStrength.mul(layer.normalStrength);
+  const strength = getNormalStrength(params, layer);
   let normal: Node<'vec3'>;
-  if (sample.normalTS) {
+  if (projected) {
+    normal = projected;
+  } else if (sample.normalTS) {
     const n = sample.normalTS;
     const scaled = vec3(n.xy.mul(strength), n.z) as unknown as Node<'vec3'>;
     const frame =
@@ -300,12 +332,46 @@ const getBindings = (
   ...(hasMacro ? [{ name: 'macro', count: 1 }] : []),
 ];
 
-/** A layer as the graph built it: its set, uniforms, tiling and (anti-tiled) sample */
+/**
+ * A layer as the graph built it: its set, uniforms, tiling and (anti-tiled, projected) sample, and
+ * a projection's world normal
+ */
 type BuiltLayer = {
   source: LayerSource;
   uniforms: LayerUniforms;
   uv: LayerUv;
   sample: TextureSetSample;
+  /** The projection's normal in world space, or null (`PLANAR`, or no normal map) */
+  normal: Node<'vec3'> | null;
+};
+
+/**
+ * A layer's sample: with its anti-tiling at its tiling UV (`PLANAR`), or on its projection's planes
+ * with their normals met with the geometry's
+ */
+const sampleLayer = (
+  source: LayerSource,
+  uniforms: LayerUniforms,
+  uv: LayerUv,
+  antiTiling: AntiTilingContext,
+  getProjectionContext: () => ProjectionContext
+): Pick<BuiltLayer, 'sample' | 'normal'> => {
+  const { projection } = uniforms;
+  if (projection.mode === 'PLANAR') {
+    return {
+      sample: sampleAntiTiled(source.bundle, uv.tileUv, uniforms.antiTiling, antiTiling),
+      normal: null,
+    };
+  }
+  return sampleProjected(
+    source.bundle,
+    projection,
+    { tileSize: uv.tileSize, turn: uv.turn },
+    getNormalStrength(source.params, uniforms),
+    uniforms.antiTiling,
+    antiTiling,
+    getProjectionContext()
+  );
 };
 
 /**
@@ -405,7 +471,10 @@ const getAoNode = (
  * space, blended, into view space once), the roughness, metalness 0, and the AO to `aoNode`, which
  * darkens indirect light only (the texture AO of `FULL`, whose `LITE` and `MINIMAL` have it baked
  * into the albedo, and the vertex colour's). Each layer samples its set with its anti-tiling
- * (`NONE` one tap, `DUAL_SCALE` two, `HEX` three). The blend source: `SINGLE` one layer;
+ * (`NONE` one tap, `DUAL_SCALE` two, `HEX` three) on its projection's planes (`PLANAR` the
+ * tiling's coordinates alone; `BIPLANAR` the two world planes the surface faces most, chosen per
+ * pixel; `TRIPLANAR` all three; the planes' normal maps met with the geometry's by `normalBlend`,
+ * a projecting mode needing `uv` `WORLD`). The blend source: `SINGLE` one layer;
  * `VERTEX_COLOR` the mesh's colour attribute; `SPLAT_MAP` the splat maps `splat0` (layers 1-4) and
  * `splat1` (5-8) at the mesh's UV; layer 0 takes what the channels leave; `RULES` the base layer
  * under the rules, `VERTEX_COLOR_AND_RULES` and `SPLAT_MAP_AND_RULES` the paint under them (each
@@ -421,7 +490,7 @@ const getAoNode = (
  * uniforms in `material.userData.uniforms`: per layer `terrain_l<i>_<name>` (`tiling`, `rotation`
  * when given, `tint`, `normalStrength`, `roughnessScale`; `heightContrast` and `heightOffset` with
  * the height blend; `farScale` and `antiTilingDistance` with `DUAL_SCALE`, `hexContrast` and
- * `hexRotation` with `HEX`), per rule `terrain_r<i>_<name>` (its tests' only: `slopeMin`,
+ * `hexRotation` with `HEX`; `projectionSharpness` with `BIPLANAR` or `TRIPLANAR`), per rule `terrain_r<i>_<name>` (its tests' only: `slopeMin`,
  * `slopeMax`, `slopeSoftness`, `heightMin`, `heightMax`, `heightSoftness`, a range's given ends
  * only; `aspectDirection`, `aspectRange`, `aspectSoftness`; `noiseScale`, `noiseAmount`; and
  * `strength`), `terrain_heightBlendDepth` with the height blend,
@@ -477,23 +546,27 @@ export const setupTerrainMaterial = (
       uniform(define.aoTextureInfluence)
     ) as Node<'float'>);
 
-  // Shared by every layer, built before any of them: the view distance and the one macro fetch
+  // Shared by every layer, built before any of them: the view distance, the one macro fetch and
+  // (made on the first projected layer) the projections' position, derivatives and normal
   const viewDistance = positionView.length() as unknown as Node<'float'>;
   const macro = createMacro(material, macroTexture, define);
+  let projection: ProjectionContext | null = null;
+  const getProjectionContext = () => (projection ??= createProjectionContext());
   const layers: BuiltLayer[] = sources.layers.map((source, i) => {
     const uniforms = createLayerUniforms(material, define, i);
     const uv = getLayerUv(define, source.params, uniforms);
-    const sample = sampleAntiTiled(source.bundle, uv.tileUv, uniforms.antiTiling, {
+    const antiTiling: AntiTilingContext = {
       viewDistance,
       patches: macro ? (macro.sample.b as unknown as Node<'float'>) : null,
       seed: i,
       layer: source.layer,
-    });
-    return { source, uniforms, uv, sample };
+    };
+    const sampled = sampleLayer(source, uniforms, uv, antiTiling, getProjectionContext);
+    return { source, uniforms, uv, ...sampled };
   });
   checkOnePacking(layers.map((layer) => layer.sample));
-  const surfaces = layers.map(({ source, uniforms, uv, sample }) =>
-    getLayerSurface(define, source.params, uniforms, uv, sample, getAoInfluence)
+  const surfaces = layers.map((layer) =>
+    getLayerSurface(define, layer.source.params, layer.uniforms, layer, getAoInfluence)
   );
 
   // The layers blended by their weights (SINGLE: the one layer), then the material-wide effects

@@ -101,6 +101,36 @@ describe('sampleAntiTiled', () => {
     }
   });
 
+  it('samples every tap with the given gradients, taking no derivative', () => {
+    const grad = {
+      dx: vec2(0.01, 0) as unknown as Node<'vec2'>,
+      dy: vec2(0, 0.01) as unknown as Node<'vec2'>,
+    };
+    for (const mode of ['NONE', 'DUAL_SCALE', 'HEX'] as const) {
+      const bundle = makeBundle('LITE');
+      const result = sampleAntiTiled(bundle, vec2(1, 2) as unknown as Node<'vec2'>, MODES[mode], {
+        viewDistance: float(10) as unknown as Node<'float'>,
+        patches: null,
+        seed: 3,
+        grad,
+      });
+      const taps = getSamples(bundle, result);
+      expect(
+        taps.every((tap) => tap.gradNode),
+        mode
+      ).toBe(true);
+      const nodes = collectNodes([result.albedo, result.normalTS, result.height]);
+      const derivatives = [...nodes].filter((node) =>
+        ['dFdx', 'dFdy'].includes((node as unknown as { method?: string }).method ?? '')
+      );
+      expect(derivatives, mode).toHaveLength(0);
+      // NONE's one tap takes them as they are
+      if (mode === 'NONE') {
+        expect(collectNodes(taps[0].gradNode as unknown[]).has(grad.dx as never)).toBe(true);
+      }
+    }
+  });
+
   it("reads the macro patches only in DUAL_SCALE's share", () => {
     const patches = float(0.5) as unknown as Node<'float'>;
     const reaches = (mode: AntiTilingNodes['mode']) => {

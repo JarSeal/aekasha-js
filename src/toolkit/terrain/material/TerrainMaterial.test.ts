@@ -344,6 +344,49 @@ describe('setupTerrainMaterial', () => {
   });
 });
 
+describe('setupTerrainMaterial: projection', () => {
+  it("keeps a projected layer's sharpness, a planar one's none", () => {
+    expect(getUniformKeys(build({ layers: [{}], projection: { mode: 'PLANAR' } }))).toEqual(
+      LAYER_UNIFORMS
+    );
+    for (const [mode, sharpness] of [
+      ['BIPLANAR', 8],
+      ['TRIPLANAR', 4],
+    ] as const) {
+      const material = build({ layers: [{}], projection: { mode } });
+      expect(getUniformKeys(material)).toEqual(
+        [...LAYER_UNIFORMS, 'terrain_l0_projectionSharpness'].sort()
+      );
+      expect(getUniforms(material).terrain_l0_projectionSharpness.value).toBe(sharpness);
+    }
+  });
+
+  it("samples each plane's slots, a layer's own projection over the material's", () => {
+    const inputs = layerInputs(2);
+    const define = { layers: layersOf(2), blend: { source: 'VERTEX_COLOR' } };
+    expect(countSamples(build(define, inputs), inputs)).toBe(2 * 2);
+    const triplanar = { ...define, projection: { mode: 'TRIPLANAR' } };
+    expect(countSamples(build(triplanar, inputs), inputs)).toBe(2 * 2 * 3);
+    const cliffsOnly = { ...triplanar, layers: [{ projection: { mode: 'PLANAR' } }, {}] };
+    expect(countSamples(build(cliffsOnly, inputs), inputs)).toBe(2 + 2 * 3);
+    const biplanar = { ...define, layers: [{}, { projection: { mode: 'BIPLANAR' } }] };
+    expect(countSamples(build(biplanar, inputs), inputs)).toBe(2 + 2 * 2);
+  });
+
+  it('builds the normal from the planes, a planar frame for none of them', () => {
+    // Planar world tiling's frame takes no derivative; the projection takes the position's two
+    expect(countMethod(build({ layers: [{}] }), 'dFdx')).toBe(0);
+    const material = build({ layers: [{}], projection: { mode: 'TRIPLANAR' } });
+    expect(countMethod(material, 'dFdx')).toBe(1);
+    expect(countMethod(material, 'dFdy')).toBe(1);
+    // MINIMAL bumps the planes' blended height: its own two derivatives besides
+    const inputs = { layer0: makeBundle('MINIMAL') };
+    const minimal = build({ layers: [{}], projection: { mode: 'TRIPLANAR' } }, inputs);
+    expect(countSamples(minimal, inputs)).toBe(3);
+    expect(countMethod(minimal, 'dFdx')).toBe(3);
+  });
+});
+
 describe('setupTerrainMaterial: blending', () => {
   const vertexColor = (count: number, blend: Record<string, unknown> = {}) => ({
     layers: layersOf(count),
@@ -621,6 +664,20 @@ describe('setupTerrainMaterial: storage', () => {
     const samples = getArraySamples(material, bundle);
     expect(samples).toHaveLength(2 * 2 * 3);
     expect(samples.every((sample) => sample.depthNode)).toBe(true);
+  });
+
+  it("takes a projection's planes from the array at the layer", () => {
+    const bundle = makeArrayBundle(2);
+    const material = build(
+      {
+        layers: [{}, { projection: { mode: 'TRIPLANAR' } }],
+        blend: { source: 'VERTEX_COLOR' },
+      },
+      { layers: bundle }
+    );
+    const samples = getArraySamples(material, bundle);
+    expect(samples).toHaveLength(2 + 2 * 3);
+    expect(samples.filter((sample) => sample.depthNode?.value === 1)).toHaveLength(2 * 3);
   });
 
   it('refuses both storages at once, a non-array layers input and another layer count', () => {

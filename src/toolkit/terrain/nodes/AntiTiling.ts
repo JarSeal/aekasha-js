@@ -41,7 +41,16 @@ export type AntiTilingContext = {
   seed: number;
   /** The layer of a `{ textureSetArray }` bundle, or undefined for a `{ textureSet }` one */
   layer?: number;
+  /**
+   * The UV's screen-space gradients, for a UV that isn't continuous (a projection's plane chosen
+   * per pixel) or one sampled in a branch: every tap samples with them (turned and scaled as its
+   * UV is), never its own derivatives. Undefined: the taps' own (`HEX`: the UV's)
+   */
+  grad?: TapGradients;
 };
+
+/** A UV's screen-space gradients */
+type TapGradients = { dx: Node<'vec2'>; dy: Node<'vec2'> };
 
 /** The second tap's turn (D3: 37°, so its texels never line up with the first's) and offset */
 const FAR_ANGLE = (37 * Math.PI) / 180;
@@ -138,14 +147,19 @@ const sampleDualScale = (
     ? (smoothstep(PATCH_EDGES[0], PATCH_EDGES[1], ctx.patches).mul(0.5) as Node<'float'>)
     : float(0);
   const share = mix(patch, patch.add(0.5), byDistance) as Node<'float'>;
+  const { grad } = ctx;
+  const farGrad = grad && {
+    dx: turn2(grad.dx.mul(nodes.farScale) as Node<'vec2'>, FAR_COS, FAR_SIN),
+    dy: turn2(grad.dy.mul(nodes.farScale) as Node<'vec2'>, FAR_COS, FAR_SIN),
+  };
   return blendTaps([
     {
-      sample: sampleTextureSet(bundle, uv, { layer: ctx.layer }),
+      sample: sampleTextureSet(bundle, uv, { layer: ctx.layer, grad }),
       weight: float(1).sub(share) as Node<'float'>,
       turn: null,
     },
     {
-      sample: sampleTextureSet(bundle, farUv, { layer: ctx.layer }),
+      sample: sampleTextureSet(bundle, farUv, { layer: ctx.layer, grad: farGrad }),
       weight: share,
       turn: { cos: FAR_COS, sin: FAR_SIN },
     },
@@ -218,9 +232,10 @@ const sampleHex = (
   nodes: Extract<AntiTilingNodes, { mode: 'HEX' }>,
   ctx: AntiTilingContext
 ) => {
-  // The UV's own gradients, before anything turns it: continuous across the hexes
-  const dx = dFdx(uv) as unknown as Node<'vec2'>;
-  const dy = dFdy(uv) as unknown as Node<'vec2'>;
+  // The UV's own gradients (or the given ones), before anything turns it: continuous across the
+  // hexes
+  const dx = ctx.grad?.dx ?? (dFdx(uv) as unknown as Node<'vec2'>);
+  const dy = ctx.grad?.dy ?? (dFdy(uv) as unknown as Node<'vec2'>);
   const offsetSeed = toSeedNode(ctx.seed * 2);
   const angleSeed = toSeedNode(ctx.seed * 2 + 1);
   const taps = getHexTriangle(uv).map(({ vertex, weight }) => {
@@ -260,7 +275,8 @@ const sampleHex = (
  * `ctx.layer`
  * @param uv the layer's tiling UV, in tiles (continuous: `HEX` takes its gradients)
  * @param nodes the mode and its uniforms
- * @param ctx the view distance, the macro patches, the layer's seed and its array layer
+ * @param ctx the view distance, the macro patches, the layer's seed, its array layer and the UV's
+ * gradients when given
  */
 export const sampleAntiTiled = (
   bundle: TextureSetInput | TextureSetArrayInput,
@@ -270,5 +286,5 @@ export const sampleAntiTiled = (
 ): TextureSetSample => {
   if (nodes.mode === 'DUAL_SCALE') return sampleDualScale(bundle, uv, nodes, ctx);
   if (nodes.mode === 'HEX') return sampleHex(bundle, uv, nodes, ctx);
-  return sampleTextureSet(bundle, uv, { layer: ctx.layer });
+  return sampleTextureSet(bundle, uv, { layer: ctx.layer, grad: ctx.grad });
 };
