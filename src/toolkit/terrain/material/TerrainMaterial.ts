@@ -48,6 +48,8 @@ const MINIMAL_ROUGHNESS = 0.8;
 
 /** A layer's input key: `layer0`, `layer1`, … */
 const getLayerInputKey = (index: number) => `layer${index}`;
+/** The macro texture's input key */
+const MACRO_INPUT_KEY = 'macro';
 
 /** A layer's uniforms, kept at `userData.uniforms.terrain_l<i>_<name>` */
 type LayerUniforms = {
@@ -303,18 +305,44 @@ const applyDebugView = (
 /** The terrain material's TSL functions, as the code route registers them */
 const terrainMaterialFns = { setup: setupTerrainMaterial } satisfies TslMaterialFns;
 
-/** The config's static define: no id, no packing, no layer sets (the inputs carry them) */
+/**
+ * The config's static define: no id, no packing, no layer sets and no macro texture (the inputs
+ * carry them)
+ */
 const getTerrainDefine = (config: TerrainMaterialConfig): TerrainMaterialDefine => {
-  const { id: _id, packing: _packing, layers, ...rest } = config;
-  return { ...rest, layers: layers.map(({ set: _set, ...settings }) => settings) };
+  const { id: _id, packing: _packing, layers, macro, ...rest } = config;
+  const define: TerrainMaterialDefine = {
+    ...rest,
+    layers: layers.map(({ set: _set, ...settings }) => settings),
+  };
+  if (macro) {
+    const { texture: _texture, ...settings } = macro;
+    define.macro = settings;
+  }
+  return define;
+};
+
+/** The config's inputs: each layer's set (`layer<i>`) and the macro texture (`macro`) */
+const getTerrainInputs = (config: TerrainMaterialConfig) => {
+  const inputs: Record<string, unknown> = Object.fromEntries(
+    config.layers.map((layer, i) => [
+      getLayerInputKey(i),
+      config.packing
+        ? { textureSet: layer.set, packing: config.packing }
+        : { textureSet: layer.set },
+    ])
+  );
+  if (config.macro) inputs[MACRO_INPUT_KEY] = { texture: config.macro.texture };
+  return inputs;
 };
 
 /**
  * The material props {@link createTerrainMaterial} creates from a config: a
  * `STANDARDNODEMATERIAL` of the registered `aek.terrain` functions, the config as the static
- * define `terrain` (without the id and the layers' sets) and each layer's set as its input
- * `layer<i>` (`{ textureSet, packing? }`). Pass them to `ensureMaterialDependencies` to load the
- * sets' textures before creating the material, or use them as a material JSON's fields.
+ * define `terrain` (without the id, the layers' sets and the macro texture), each layer's set as
+ * its input `layer<i>` (`{ textureSet, packing? }`) and the macro texture as the input `macro`
+ * (`{ texture }`). Pass them to `ensureMaterialDependencies` to load the textures before creating
+ * the material, or use them as a material JSON's fields.
  * @returns the props, for `createMaterial` or `ensureMaterialDependencies`
  * @example
  * ```ts
@@ -338,14 +366,7 @@ export const getTerrainMaterialProps = (
   type: 'STANDARDNODEMATERIAL',
   tslMaterialId: TERRAIN_TSL_MATERIAL_ID,
   staticDefines: { terrain: getTerrainDefine(config) },
-  inputs: Object.fromEntries(
-    config.layers.map((layer, i) => [
-      getLayerInputKey(i),
-      config.packing
-        ? { textureSet: layer.set, packing: config.packing }
-        : { textureSet: layer.set },
-    ])
-  ),
+  inputs: getTerrainInputs(config),
 });
 
 /**

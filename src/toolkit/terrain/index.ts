@@ -74,15 +74,21 @@ export {
 export type { TerrainQualityLevel } from './material/TerrainMaterial';
 export { loadTerrainDebugViewsAsync } from './material/TerrainDebugViews';
 export {
+  TerrainAntiTilingSchema,
   TerrainLayerSchema,
   TerrainLayerSettingsSchema,
+  TerrainMacroSchema,
+  TerrainMacroSettingsSchema,
   TerrainMaterialConfigSchema,
   TerrainMaterialDefineSchema,
   TerrainQualityOverridesSchema,
 } from './material/TerrainMaterialConfig';
 export type {
+  TerrainAntiTiling,
   TerrainLayer,
   TerrainLayerSettings,
+  TerrainMacro,
+  TerrainMacroSettings,
   TerrainMaterialConfig,
   TerrainMaterialDefine,
   TerrainQualityOverrides,

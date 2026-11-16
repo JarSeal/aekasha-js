@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { readTerrainDefine, TERRAIN_DEFINE_VALUES } from './TerrainDefine';
 import {
+  TERRAIN_ANTI_TILING_MODES,
   TERRAIN_BLEND_SOURCES,
   TERRAIN_DEBUG_VIEWS,
   TERRAIN_QUALITY_LEVELS,
   TERRAIN_LAYER_SOURCES,
   TERRAIN_MAX_LAYERS,
   TERRAIN_UV_MODES,
+  TerrainAntiTilingSchema,
   TerrainLayerSettingsSchema,
+  TerrainMacroSettingsSchema,
   TerrainMaterialDefineSchema,
   TerrainQualityOverridesSchema,
 } from './TerrainMaterialConfig';
@@ -27,6 +30,19 @@ const ACCEPTED: unknown[] = [
   { layers: [{}], qualityLevel: 'MEDIUM' },
   { layers: [{}], debugView: 'TEXEL_DENSITY' },
   { layers: [{}], debugView: 'NORMALS' },
+  { layers: [{}], antiTiling: { mode: 'NONE' } },
+  { layers: [{}], antiTiling: { mode: 'DUAL_SCALE' } },
+  { layers: [{}], antiTiling: { mode: 'DUAL_SCALE', farScale: 0.31, distance: [0, 25] } },
+  { layers: [{}], antiTiling: { mode: 'HEX', hexContrast: 0.05, hexRotation: 0 } },
+  { layers: [{ antiTiling: { mode: 'HEX', hexContrast: 0.95 } }], antiTiling: { mode: 'NONE' } },
+  { layers: [{}], macro: { scale: 120 } },
+  { layers: [{}], macro: { scale: 40, brightness: 0, hue: 180, roughness: 1 } },
+  { layers: [{}], distance: { fade: [30, 90] } },
+  {
+    layers: [{}],
+    quality: { LOW: { antiTiling: { mode: 'NONE' }, distance: { fade: [10, 20] } } },
+    qualityLevel: 'LOW',
+  },
 ];
 const REFUSED: unknown[] = [
   {},
@@ -40,7 +56,7 @@ const REFUSED: unknown[] = [
   { layers: [{ source: 'PROCEDURAL_LIVE' }] },
   { layers: [{ set: 'grass01' }] },
   { layers: [{}], uv: 'XZ' },
-  { layers: [{}], antiTiling: { mode: 'HEX' } },
+  { layers: [{}], projection: { mode: 'TRIPLANAR' } },
   { layers: [{}], blend: { source: 'SPLAT_MAP' } },
   { layers: [{}], blend: { source: 'SINGLE', mode: 'HEIGHT' } },
   [{}],
@@ -52,6 +68,31 @@ const REFUSED: unknown[] = [
   { layers: [{}], quality: { LOW: { uv: 'XZ' } }, qualityLevel: 'LOW' },
   { layers: [{}], quality: { LOW: { blend: { source: 'SINGLE' } } }, qualityLevel: 'low' },
   { layers: [{}], debugView: 'WEIGHTS' },
+  { layers: [{}], antiTiling: {} },
+  { layers: [{}], antiTiling: { mode: 'STOCHASTIC' } },
+  { layers: [{}], antiTiling: { mode: 'NONE', farScale: 0.2 } },
+  { layers: [{}], antiTiling: { mode: 'HEX', farScale: 0.2 } },
+  { layers: [{}], antiTiling: { mode: 'DUAL_SCALE', hexContrast: 0.5 } },
+  { layers: [{}], antiTiling: { mode: 'DUAL_SCALE', farScale: 1 } },
+  { layers: [{}], antiTiling: { mode: 'DUAL_SCALE', farScale: 0 } },
+  { layers: [{}], antiTiling: { mode: 'DUAL_SCALE', distance: [40, 6] } },
+  { layers: [{}], antiTiling: { mode: 'DUAL_SCALE', distance: [6, 6] } },
+  { layers: [{}], antiTiling: { mode: 'DUAL_SCALE', distance: [-1, 6] } },
+  { layers: [{}], antiTiling: { mode: 'DUAL_SCALE', distance: [6] } },
+  { layers: [{}], antiTiling: { mode: 'HEX', hexContrast: 1 } },
+  { layers: [{}], antiTiling: { mode: 'HEX', hexContrast: 0 } },
+  { layers: [{}], antiTiling: { mode: 'HEX', hexRotation: 1.5 } },
+  { layers: [{}], antiTiling: { mode: 'HEX', apply: 'DOMINANT' } },
+  { layers: [{ antiTiling: { mode: 'HEX', hexRotation: -1 } }] },
+  { layers: [{}], macro: {} },
+  { layers: [{}], macro: { scale: 0 } },
+  { layers: [{}], macro: { scale: 120, texture: 'macroNoise' } },
+  { layers: [{}], macro: { scale: 120, brightness: 2 } },
+  { layers: [{}], macro: { scale: 120, hue: 200 } },
+  { layers: [{}], quality: { LOW: { macro: { scale: 50 } } } },
+  { layers: [{}], distance: {} },
+  { layers: [{}], distance: { fade: [90, 30] } },
+  { layers: [{}], distance: { fade: [30, 90], far: 'AVERAGE_COLOR' } },
 ];
 
 describe('readTerrainDefine', () => {
@@ -65,15 +106,50 @@ describe('readTerrainDefine', () => {
           tint: '#ffffff',
           normalStrength: 1,
           roughnessScale: 1,
+          antiTiling: { mode: 'NONE' },
         },
       ],
       uv: 'WORLD',
       blendSource: 'SINGLE',
       aoTextureInfluence: 1,
+      macro: null,
+      distanceFade: null,
       qualityLevel: null,
       debugView: null,
     });
     expect(read({ layers: [{ rotation: 0 }] }).layers[0].rotation).toBe(0);
+    expect(read({ layers: [{}], antiTiling: { mode: 'DUAL_SCALE' } }).layers[0].antiTiling).toEqual(
+      { mode: 'DUAL_SCALE', farScale: 0.23, distance: [6, 40] }
+    );
+    expect(read({ layers: [{}], antiTiling: { mode: 'HEX' } }).layers[0].antiTiling).toEqual({
+      mode: 'HEX',
+      hexContrast: 0.5,
+      hexRotation: 1,
+    });
+    expect(read({ layers: [{}], macro: { scale: 120 } }).macro).toEqual({
+      scale: 120,
+      brightness: 0.2,
+      hue: 8,
+      roughness: 0.15,
+    });
+    expect(read({ layers: [{}], distance: { fade: [30, 90] } }).distanceFade).toEqual([30, 90]);
+  });
+
+  it("gives a layer its own anti-tiling, else the material's (its tier's)", () => {
+    const define = {
+      layers: [{ antiTiling: { mode: 'NONE' } }],
+      antiTiling: { mode: 'HEX' },
+      quality: { LOW: { antiTiling: { mode: 'DUAL_SCALE', farScale: 0.5 } } },
+    };
+    expect(read(define).layers[0].antiTiling).toEqual({ mode: 'NONE' });
+    const { antiTiling: _own, ...shared } = define.layers[0];
+    const withShared = { ...define, layers: [shared] };
+    expect(read(withShared).layers[0].antiTiling.mode).toBe('HEX');
+    expect(read({ ...withShared, qualityLevel: 'LOW' }).layers[0].antiTiling).toEqual({
+      mode: 'DUAL_SCALE',
+      farScale: 0.5,
+      distance: [6, 40],
+    });
   });
 
   it('takes and refuses what the schema does', () => {
@@ -119,9 +195,19 @@ describe('readTerrainDefine', () => {
     const values = TERRAIN_DEFINE_VALUES;
     expect(values.defineKeys.sort()).toEqual(Object.keys(TerrainMaterialDefineSchema.shape).sort());
     expect(values.layerKeys.sort()).toEqual(Object.keys(TerrainLayerSettingsSchema.shape).sort());
-    const { ao, blend } = TerrainMaterialDefineSchema.shape;
+    const { ao, blend, distance } = TerrainMaterialDefineSchema.shape;
     expect(values.aoKeys.sort()).toEqual(Object.keys(ao.unwrap().shape).sort());
     expect(values.blendKeys.sort()).toEqual(Object.keys(blend.unwrap().shape).sort());
+    expect(values.distanceKeys.sort()).toEqual(Object.keys(distance.unwrap().shape).sort());
+    expect(values.macroKeys.sort()).toEqual(Object.keys(TerrainMacroSettingsSchema.shape).sort());
+    for (const option of TerrainAntiTilingSchema.options) {
+      const mode = option.shape.mode.value;
+      expect(values.antiTilingKeys[mode].sort(), mode).toEqual(Object.keys(option.shape).sort());
+    }
+    expect(values.antiTilingModes).toEqual(TERRAIN_ANTI_TILING_MODES);
+    expect(TerrainAntiTilingSchema.options.map((option) => option.shape.mode.value)).toEqual([
+      ...TERRAIN_ANTI_TILING_MODES,
+    ]);
     expect(values.overrideKeys.sort()).toEqual(
       Object.keys(TerrainQualityOverridesSchema.shape).sort()
     );
@@ -144,5 +230,21 @@ describe('readTerrainDefine', () => {
     expect(() => read({ layers: [{}], uv: 'XZ' })).toThrow(
       'staticDefines.terrain.uv: is "XZ": use WORLD, MESH_UV.'
     );
+    expect(() => read({ layers: [{ antiTiling: { mode: 'HEX', hexContrast: 1 } }] })).toThrow(
+      "staticDefines.terrain.layers[0].antiTiling.hexContrast: is 1: it's at least 0.05 and at most 0.95."
+    );
+    expect(() => read({ layers: [{}], antiTiling: { mode: 'NONE', farScale: 0.2 } })).toThrow(
+      'staticDefines.terrain.antiTiling: has no field "farScale" (fields: mode).'
+    );
+    expect(() => read({ layers: [{}], macro: {} })).toThrow(
+      'staticDefines.terrain.macro.scale: is missing'
+    );
+    expect(() =>
+      read({
+        layers: [{}],
+        quality: { HIGH: { distance: { fade: [5, 1] } } },
+        qualityLevel: 'HIGH',
+      })
+    ).toThrow('staticDefines.terrain.quality.HIGH.distance.fade: is [5, 1]');
   });
 });

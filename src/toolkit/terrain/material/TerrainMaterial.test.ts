@@ -181,7 +181,7 @@ describe('setupTerrainMaterial', () => {
     expect(() => build({ layers: [{}] }, { layer0: makeBundle(), layer1: makeBundle() })).toThrow(
       /Input "layer1" has no layer/
     );
-    expect(() => build({ layers: [{}], antiTiling: {} })).toThrow(/has no field "antiTiling"/);
+    expect(() => build({ layers: [{}], projection: {} })).toThrow(/has no field "projection"/);
     expect(() => build(undefined)).toThrow(/Missing static define "terrain"/);
   });
 });
@@ -204,6 +204,28 @@ describe('getTerrainMaterialProps', () => {
     });
     expect(getTerrainMaterialProps({ id: 'a', layers: [{ set: 'sand01' }] }).inputs).toEqual({
       layer0: { textureSet: 'sand01' },
+    });
+  });
+
+  it('puts the macro texture in the input macro and its settings in the define', () => {
+    const props = getTerrainMaterialProps({
+      id: 'meadow',
+      layers: [{ set: 'grass01', antiTiling: { mode: 'HEX' } }],
+      macro: { texture: 'macroNoise', scale: 120, hue: 4 },
+      antiTiling: { mode: 'DUAL_SCALE' },
+      distance: { fade: [40, 120] },
+    });
+    expect(props.staticDefines).toEqual({
+      terrain: {
+        layers: [{ antiTiling: { mode: 'HEX' } }],
+        macro: { scale: 120, hue: 4 },
+        antiTiling: { mode: 'DUAL_SCALE' },
+        distance: { fade: [40, 120] },
+      },
+    });
+    expect(props.inputs).toEqual({
+      layer0: { textureSet: 'grass01' },
+      macro: { texture: 'macroNoise' },
     });
   });
 });

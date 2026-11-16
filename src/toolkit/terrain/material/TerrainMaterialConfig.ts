@@ -25,12 +25,110 @@ export const TERRAIN_QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as cons
 export const TERRAIN_DEBUG_VIEWS = ['TEXEL_DENSITY', 'NORMALS'] as const;
 /** The most layers a terrain material blends. */
 export const TERRAIN_MAX_LAYERS = 16;
+/**
+ * The anti-tiling modes (p305 D3): `NONE` plain tiling (1 tap), `DUAL_SCALE` a second, larger and
+ * turned tap mixed in by distance and the macro texture's patches (2), `HEX` Mikkelsen's hex
+ * tiling (3).
+ */
+export const TERRAIN_ANTI_TILING_MODES = ['NONE', 'DUAL_SCALE', 'HEX'] as const;
 
 const srgbColor = (description: string) =>
   z
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, 'an sRGB colour, "#rrggbb"')
     .describe(description);
+
+/** A `[from, to]` range of metres, `from` under `to` */
+const metreRange = (description: string) =>
+  z
+    .tuple([z.number().min(0), z.number().min(0)])
+    .refine(([from, to]) => from < to, 'the first value under the second')
+    .describe(description);
+
+/**
+ * How a layer breaks its tiling's repetition (p305 D3), by `mode`: `NONE`, `DUAL_SCALE` or `HEX`,
+ * each with its own fields. The numbers are uniforms (`terrain_l<i>_<name>`), the mode a build-time
+ * branch.
+ */
+export const TerrainAntiTilingSchema = z
+  .discriminatedUnion('mode', [
+    z
+      .object({
+        /** Plain tiling: one tap. */
+        mode: z.literal('NONE').describe('Plain tiling: one tap.'),
+      })
+      .strict(),
+    z
+      .object({
+        /**
+         * A second tap at the UV × `farScale`, turned 37°, mixed in with the distance and (with a
+         * `macro` texture) its patches: 2 taps.
+         */
+        mode: z
+          .literal('DUAL_SCALE')
+          .describe(
+            "A second tap at the UV × farScale, turned 37°, mixed in with the distance and the macro texture's patches: 2 taps."
+          ),
+        /** The second tap's scale of the UV, under 1 (default 0.23: tiles 4.3 × as large). */
+        farScale: z
+          .number()
+          .gt(0)
+          .lt(1)
+          .optional()
+          .describe(
+            "The second tap's scale of the UV, under 1 (default 0.23: tiles 4.3 × as large)."
+          ),
+        /**
+         * The view distances in metres over which the second tap's share grows from the near
+         * share to the far one (default `[6, 40]`).
+         */
+        distance: metreRange(
+          "The view distances in metres over which the second tap's share grows (default [6, 40])."
+        ).optional(),
+      })
+      .strict(),
+    z
+      .object({
+        /**
+         * Mikkelsen's practical hex tiling: 3 taps on a hex lattice, each offset and turned at
+         * random, sampled with the UV's own gradients (no mip seams), weighted by height.
+         */
+        mode: z
+          .literal('HEX')
+          .describe(
+            "Mikkelsen's practical hex tiling: 3 taps on a hex lattice, each offset and turned at random, weighted by height."
+          ),
+        /**
+         * The taps' blend contrast, 0.05..0.95 (Mikkelsen's gain, default 0.5): over 0.5 sharper
+         * borders between the hexes, under softer.
+         */
+        hexContrast: z
+          .number()
+          .min(0.05)
+          .max(0.95)
+          .optional()
+          .describe(
+            "The taps' blend contrast, 0.05..0.95 (default 0.5): over 0.5 sharper borders between the hexes, under softer."
+          ),
+        /**
+         * How far a tap may turn, 0..1 of a full turn either way (default 1): lower for a
+         * directional texture (ripples, strata), 0 for none.
+         */
+        hexRotation: z
+          .number()
+          .min(0)
+          .max(1)
+          .optional()
+          .describe(
+            'How far a tap may turn, 0..1 of a full turn either way (default 1): lower for a directional texture, 0 for none.'
+          ),
+      })
+      .strict(),
+  ])
+  .describe("How a layer breaks its tiling's repetition: NONE, DUAL_SCALE or HEX.");
+
+/** How a layer breaks its tiling's repetition (p305 D3): `NONE`, `DUAL_SCALE` or `HEX`. */
+export type TerrainAntiTiling = z.infer<typeof TerrainAntiTilingSchema>;
 
 /**
  * A layer's settings, without its set: the static define's layer. Each tunable becomes a uniform
@@ -74,6 +172,8 @@ export const TerrainLayerSettingsSchema = z
       .min(0)
       .optional()
       .describe("× the set's roughnessScale (default 1); the roughness is capped at 1."),
+    /** The layer's own anti-tiling, in place of the material's (its whole object). */
+    antiTiling: TerrainAntiTilingSchema.optional(),
   })
   .strict()
   .describe("A terrain layer's settings, without its set (the static define's layer).");
@@ -123,6 +223,77 @@ const TerrainAoSchema = z
   .strict()
   .describe('Where the ambient occlusion goes: aoNode, which darkens indirect light only.');
 
+/** The view distance's effects on the surface. */
+const TerrainDistanceSchema = z
+  .object({
+    /**
+     * The view distances in metres over which the layers' detail normals fade to the geometry's
+     * (`[from, to]`): past `to` the surface's relief is the mesh's alone.
+     */
+    fade: metreRange(
+      "The view distances in metres over which the layers' detail normals fade to the geometry's."
+    ),
+  })
+  .strict()
+  .describe("The view distance's effects on the surface.");
+
+/**
+ * The macro variation's settings, without its texture (the static define's `macro`): one fetch of
+ * a macro noise texture (the toolkit's `macroNoise`: R brightness, G hue and roughness, B patches)
+ * at the world's XZ, which varies every layer. Each number is a uniform (`terrain_macro<Name>`).
+ */
+export const TerrainMacroSettingsSchema = z
+  .object({
+    /** The metres one tile of the macro texture covers (40 to 300 suit `macroNoise`). */
+    scale: z
+      .number()
+      .positive()
+      .describe('The metres one tile of the macro texture covers (40 to 300 suit macroNoise).'),
+    /** How far R lightens and darkens the albedo, 0..1 (default 0.2: ±20 %). */
+    brightness: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe('How far R lightens and darkens the albedo, 0..1 (default 0.2: ±20 %).'),
+    /** How far G turns the albedo's hue, 0..180 degrees either way (default 8). */
+    hue: z
+      .number()
+      .min(0)
+      .max(180)
+      .optional()
+      .describe("How far G turns the albedo's hue, 0..180 degrees either way (default 8)."),
+    /** How far G scales the roughness, 0..1 (default 0.15: ±15 %). */
+    roughness: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe('How far G scales the roughness, 0..1 (default 0.15: ±15 %).'),
+  })
+  .strict()
+  .describe("The macro variation's settings, without its texture (the input macro gives it).");
+
+/** The macro variation's settings without its texture: the static define's `macro`. */
+export type TerrainMacroSettings = z.infer<typeof TerrainMacroSettingsSchema>;
+
+/** The code route's macro variation: its texture and its settings. */
+export const TerrainMacroSchema = TerrainMacroSettingsSchema.extend({
+  /**
+   * The macro texture's id: `macroNoise` (the toolkit's KTX2 copy) or a bake's (`macroNoise.data`,
+   * `bakeMacroNoise`).
+   */
+  texture: z
+    .string()
+    .min(1)
+    .describe("The macro texture's id: macroNoise, or a bake's (macroNoise.data)."),
+})
+  .strict()
+  .describe('The macro variation: its texture and its settings.');
+
+/** {@link createTerrainMaterial}'s macro variation: its texture and its settings. */
+export type TerrainMacro = z.infer<typeof TerrainMacroSchema>;
+
 /** The material-wide fields the code route's config and the static define share. */
 const sharedFields = {
   /**
@@ -140,6 +311,10 @@ const sharedFields = {
   blend: TerrainBlendSchema.optional(),
   /** Where the ambient occlusion goes (the material's `aoNode`: indirect light only). */
   ao: TerrainAoSchema.optional(),
+  /** Every layer's anti-tiling (default `NONE`); a layer's own replaces it. */
+  antiTiling: TerrainAntiTilingSchema.optional(),
+  /** The view distance's effects: the detail normals' fade. */
+  distance: TerrainDistanceSchema.optional(),
 };
 
 /**
@@ -229,6 +404,8 @@ export const TerrainMaterialDefineSchema = z
       .min(1)
       .max(TERRAIN_MAX_LAYERS)
       .describe("The layers' settings, in the inputs' order (layer0, …): 1 to 16."),
+    /** The macro variation, its texture the input `macro` (`{ "texture": id }`). */
+    macro: TerrainMacroSettingsSchema.optional(),
     ...sharedFields,
     ...variantFields,
   })
@@ -263,6 +440,8 @@ export const TerrainMaterialConfigSchema = z
       .describe(
         "The packing every layer samples (each set must have it); default: each set's defaultPacking, which must then agree."
       ),
+    /** The macro variation: one fetch of a macro texture that varies every layer. */
+    macro: TerrainMacroSchema.optional(),
     ...sharedFields,
     ...variantFields,
   })
