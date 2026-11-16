@@ -45,6 +45,11 @@ import {
   startColorMapTab,
 } from './_dbg__terrainGalleryColorMap';
 import {
+  clearStructuresSelection,
+  getStructuresSections,
+  startStructuresTab,
+} from './_dbg__terrainGalleryStructures';
+import {
   clearGeneratorSelection,
   getProceduralSections,
   refreshProceduralFigures,
@@ -69,6 +74,7 @@ import {
 import { getRulesAppId, getRulesTerrain, RULES_BLOCKS, setRulesView } from './rulesRow';
 import { CLIFFS_BLOCK_Y, CLIFFS_BLOCKS, getCliffsAppId, setCliffsDebugView } from './cliffsRow';
 import { COLOR_MAP_BLOCKS, getColorMapAppId, setColorMapView } from './colorMapRow';
+import { getStructuresAppIds, setStructuresDebugView, STRUCTURES_PIECES } from './structuresRow';
 import {
   getProceduralBakeSettings,
   PROCEDURAL_BLOCKS,
@@ -261,7 +267,7 @@ const applyDebugViewAsync = async () => {
 
 /**
  * Every library block (and wall) in the material mode, and the Anti-tiling, Splatting, Rules,
- * Cliffs and Colour map rows in the view; the library, the Splatting, the Rules and the Colour map
+ * Cliffs, Colour map and Structures rows in the view; the library, the Splatting, the Rules and the Colour map
  * rows at the quality tier
  */
 const applyMaterial = () => {
@@ -274,6 +280,7 @@ const applyMaterial = () => {
   setRulesView(state.debugView, state.quality);
   setCliffsDebugView(state.debugView);
   setColorMapView(state.debugView, state.quality);
+  setStructuresDebugView(state.debugView);
 };
 
 /**
@@ -362,6 +369,7 @@ const getOtherAppIds = () => [
   ...RULES_BLOCKS.map(({ key }) => getRulesAppId(key)),
   ...CLIFFS_BLOCKS.map(({ key }) => getCliffsAppId(key)),
   ...COLOR_MAP_BLOCKS.map(({ key }) => getColorMapAppId(key)),
+  ...STRUCTURES_PIECES.flatMap(({ key }) => getStructuresAppIds(key)),
   ...CHECKER_BLOCKS.map(({ key }) => getCheckerAppId(key)),
 ];
 
@@ -376,6 +384,7 @@ const SELECTION_CLEARERS = {
   rules: clearRulesSelection,
   cliffs: clearCliffsSelection,
   colorMap: clearColorMapSelection,
+  structures: clearStructuresSelection,
 };
 
 /** Drops every list's selection but the row's (its block was picked) */
@@ -432,6 +441,7 @@ export const createTerrainGalleryTab = () => {
   startRulesTab();
   startCliffsTab();
   startColorMapTab();
+  startStructuresTab();
   const endProceduralTab = startProceduralTab(proceduralOpts);
   addGalleryExitCleanup(() => {
     thisVisit.isCurrent = false;
@@ -472,7 +482,7 @@ export const createTerrainGalleryTab = () => {
             label: 'Debug view',
             kind: 'select',
             options: DEBUG_VIEWS.map((option) => ({ ...option })),
-            hint: 'The terrain material’s debug view on the library (not the baseline), the Anti-tiling, Splatting, Rules, Cliffs and Colour map rows (a far mode shows the near surface everywhere): texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048), the shaded normal in world space, the layers’ weights (layer 0 white, 1 red, 2 green, 3 blue, 4 yellow, …), the projections’ planes (X red, Y green, Z blue; a slope gate’s band striped), the material’s own texture fetches a pixel (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more magenta) or the layers weighing in a pixel (1 dark blue, 2 green, 3 yellow, 4 orange, 5+ red; striped where sparse sampling drops one)',
+            hint: 'The terrain material’s debug view on the library (not the baseline), the Anti-tiling, Splatting, Rules, Cliffs, Colour map and Structures rows (a far mode shows the near surface everywhere): texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048), the shaded normal in world space, the layers’ weights (layer 0 white, 1 red, 2 green, 3 blue, 4 yellow, …), the projections’ planes (X red, Y green, Z blue; a slope gate’s band striped), the material’s own texture fetches a pixel (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more magenta) or the layers weighing in a pixel (1 dark blue, 2 green, 3 yellow, 4 orange, 5+ red; striped where sparse sampling drops one)',
             onChange: () => void applyDebugViewAsync(),
           },
           {
@@ -480,7 +490,7 @@ export const createTerrainGalleryTab = () => {
             label: 'Quality',
             kind: 'segmented',
             options: QUALITIES.map((option) => ({ ...option })),
-            hint: 'The quality tier (getTerrainQualityPreset, p305 D10) on the library, the Splatting, the Rules and the Colour map rows (its far blocks with the preset’s far surface: from 60 m on low, 120 on medium, 200 on high, none on ultra): low (no anti-tiling, 2 layers a pixel, cliffs biplanar slope-gated), medium (dual scale, 3, triplanar gated), high (hex on the dominant layer, 3, triplanar gated), ultra (hex on all, 4, triplanar); own: the materials’ own fields. The Anti-tiling and Cliffs rows compare one technique each and keep theirs',
+            hint: 'The quality tier (getTerrainQualityPreset, p305 D10) on the library, the Splatting, the Rules and the Colour map rows (its far blocks with the preset’s far surface: from 60 m on low, 120 on medium, 200 on high, none on ultra): low (no anti-tiling, 2 layers a pixel, cliffs biplanar slope-gated), medium (dual scale, 3, triplanar gated), high (hex on the dominant layer, 3, triplanar gated), ultra (hex on all, 4, triplanar); own: the materials’ own fields. The Anti-tiling, Cliffs and Structures rows compare one technique each and keep theirs',
             onChange: () => applyMaterial(),
           },
           {
@@ -528,6 +538,9 @@ export const createTerrainGalleryTab = () => {
       ) as DebuggerTabSection<GalleryTabState>[]),
       ...(getColorMapSections(TAB_ID, () =>
         clearSelectionsBut('colorMap')
+      ) as DebuggerTabSection<GalleryTabState>[]),
+      ...(getStructuresSections(TAB_ID, () =>
+        clearSelectionsBut('structures')
       ) as DebuggerTabSection<GalleryTabState>[]),
       // Its fields bind their own targets, none of this tab's state keys
       ...(getProceduralSections(proceduralOpts) as DebuggerTabSection<GalleryTabState>[]),

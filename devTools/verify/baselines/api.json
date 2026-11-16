@@ -3148,6 +3148,7 @@
       "BakeBuildContext": "TypeAlias",
       "BakedTexture": "TypeAlias",
       "BakedTextureExport": "TypeAlias",
+      "BakeMesh": "TypeAlias",
       "BakeOutput": "TypeAlias",
       "bakeTexture": "Function",
       "BakeTextureOpts": "TypeAlias",
@@ -4841,6 +4842,15 @@
       "TriplanarProjection": "TypeAlias",
       "TriplanarProjectionOptions": "Interface"
     },
+    "src/toolkit/terrain/material/StructureMaterial.ts": {
+      "createStructureMaterial": "Function",
+      "getStructureMaterialConfig": "Function",
+      "StructureMaterialOpts": "TypeAlias"
+    },
+    "src/toolkit/terrain/material/TerrainColorMapBake.ts": {
+      "bakeTerrainColorMap": "Function",
+      "BakeTerrainColorMapOpts": "TypeAlias"
+    },
     "src/toolkit/terrain/material/TerrainDebugViews.ts": {
       "getLoadedTerrainDebugViews": "Function",
       "loadTerrainDebugViewsAsync": "Function"
@@ -4855,12 +4865,22 @@
       "TERRAIN_DEFINE_VALUES": "Variable",
       "TerrainAntiTilingDefine": "TypeAlias",
       "TerrainBlendDefine": "TypeAlias",
+      "TerrainColorMapDefine": "TypeAlias",
       "TerrainDualScaleDefine": "TypeAlias",
+      "TerrainFarDefine": "TypeAlias",
       "TerrainLayerDefine": "TypeAlias",
       "TerrainMacroDefine": "TypeAlias",
       "TerrainProjectionDefine": "TypeAlias",
       "TerrainRuleDefine": "TypeAlias",
       "TerrainRuleRangeDefine": "TypeAlias"
+    },
+    "src/toolkit/terrain/material/TerrainFar.ts": {
+      "BranchSurface": "TypeAlias",
+      "buildFarBranch": "Function",
+      "createBranchCoords": "Function",
+      "FarBranchInputs": "TypeAlias",
+      "FarBranchProps": "TypeAlias",
+      "getFarSurface": "Function"
     },
     "src/toolkit/terrain/material/TerrainInputs.ts": {
       "getTerrainDefine": "Function",
@@ -4868,6 +4888,7 @@
       "LayerParams": "TypeAlias",
       "LayerSource": "TypeAlias",
       "LayerSources": "TypeAlias",
+      "readColorMapTexture": "Function",
       "readLayerSources": "Function",
       "readMacroTexture": "Function",
       "readSplatMaps": "Function"
@@ -4884,10 +4905,14 @@
       "LayerSurface": "TypeAlias",
       "LayerUniforms": "TypeAlias",
       "LayerUv": "TypeAlias",
-      "sampleLayer": "Function"
+      "MINIMAL_ROUGHNESS": "Variable",
+      "sampleLayer": "Function",
+      "SharedCoords": "TypeAlias"
     },
     "src/toolkit/terrain/material/TerrainMaterial.ts": {
+      "buildTerrainGraph": "Function",
       "createTerrainMaterial": "Function",
+      "getTerrainMaterialInputs": "Function",
       "getTerrainMaterialProps": "Function",
       "getTerrainMaterialVariant": "Function",
       "setupTerrainMaterial": "Function",
@@ -4900,7 +4925,9 @@
       "TERRAIN_BLEND_LAYER_COUNTS": "Variable",
       "TERRAIN_BLEND_MODES": "Variable",
       "TERRAIN_BLEND_SOURCES": "Variable",
+      "TERRAIN_COLOR_MAP_MODES": "Variable",
       "TERRAIN_DEBUG_VIEWS": "Variable",
+      "TERRAIN_FAR_MODES": "Variable",
       "TERRAIN_LAYER_SOURCES": "Variable",
       "TERRAIN_MAX_LAYERS": "Variable",
       "TERRAIN_MAX_RULES": "Variable",
@@ -4908,6 +4935,7 @@
       "TERRAIN_PACKINGS": "Variable",
       "TERRAIN_PROJECTION_MODES": "Variable",
       "TERRAIN_QUALITY_LEVELS": "Variable",
+      "TERRAIN_SPACES": "Variable",
       "TERRAIN_SPARSE_MAX_LAYERS": "Variable",
       "TERRAIN_STORAGES": "Variable",
       "TERRAIN_UV_MODES": "Variable",
@@ -4916,6 +4944,10 @@
       "TerrainAntiTilingSchema": "Variable",
       "TerrainBlend": "TypeAlias",
       "TerrainBlendSchema": "Variable",
+      "TerrainColorMap": "TypeAlias",
+      "TerrainColorMapSchema": "Variable",
+      "TerrainColorMapSettings": "TypeAlias",
+      "TerrainColorMapSettingsSchema": "Variable",
       "TerrainLayer": "TypeAlias",
       "TerrainLayerSchema": "Variable",
       "TerrainLayerSettings": "TypeAlias",
@@ -4950,13 +4982,32 @@
       "TERRAIN_PACKING_SLOTS": "Variable",
       "TerrainBinding": "TypeAlias"
     },
+    "src/toolkit/terrain/material/TerrainSurface.ts": {
+      "buildNearSurface": "Function",
+      "createSurfaceUniforms": "Function",
+      "LayerBuildContext": "TypeAlias",
+      "NearSurface": "TypeAlias",
+      "SurfaceUniforms": "TypeAlias"
+    },
     "src/toolkit/terrain/nodes/AntiTiling.ts": {
       "AntiTilingContext": "TypeAlias",
       "AntiTilingNodes": "TypeAlias",
       "sampleAntiTiled": "Function"
     },
+    "src/toolkit/terrain/nodes/BranchInputs.ts": {
+      "BranchInputType": "TypeAlias",
+      "declareBranchInput": "Function",
+      "toVar": "Function"
+    },
+    "src/toolkit/terrain/nodes/ColorMap.ts": {
+      "applyColorMapDetail": "Function",
+      "getLayerDetail": "Function",
+      "sampleColorMap": "Function"
+    },
     "src/toolkit/terrain/nodes/Distance.ts": {
-      "fadeDetailNormal": "Function"
+      "fadeDetailNormal": "Function",
+      "getFarShare": "Function",
+      "sumByWeights": "Function"
     },
     "src/toolkit/terrain/nodes/HeightBlend.ts": {
       "blendWeightsByHeight": "Function",
@@ -4967,7 +5018,9 @@
       "applyMacroVariation": "Function",
       "MacroNodes": "TypeAlias",
       "MacroSurface": "TypeAlias",
-      "sampleMacroTexture": "Function"
+      "sampleMacroTexture": "Function",
+      "varyAlbedo": "Function",
+      "varyRoughness": "Function"
     },
     "src/toolkit/terrain/nodes/noise/Hash.ts": {
       "hash12": "Function",
@@ -5029,6 +5082,7 @@
     },
     "src/toolkit/terrain/nodes/SampleTextureSet.ts": {
       "bumpNormalView": "Function",
+      "getBundlePacking": "Function",
       "sampleTextureSet": "Function",
       "SampleTextureSetOptions": "TypeAlias",
       "TextureSetSample": "TypeAlias",
@@ -5046,8 +5100,14 @@
       "spreadSlotWeights": "Function",
       "TopLayerOps": "TypeAlias"
     },
+    "src/toolkit/terrain/nodes/SurfaceSpace.ts": {
+      "getSurfaceSpace": "Function",
+      "SurfaceSpace": "TypeAlias",
+      "SurfaceSpaceName": "TypeAlias"
+    },
     "src/toolkit/terrain/nodes/TerrainNormals.ts": {
       "bumpNormalWorld": "Function",
+      "FrameDerivatives": "TypeAlias",
       "getPlanarTangentFrame": "Function",
       "getUvTangentFrame": "Function",
       "transformTangentNormalToWorld": "Function",
@@ -5184,6 +5244,7 @@
       "AtlasCellInputRef",
       "AtlasCellRect",
       "BakeBuildContext",
+      "BakeMesh",
       "BakeOutput",
       "BakeOutputType",
       "BakeTextureOpts",
@@ -6167,6 +6228,7 @@
       "BakeMacroNoiseOpts",
       "BakeRippleAtlasOpts",
       "BakeSurfaceGeneratorOpts",
+      "BakeTerrainColorMapOpts",
       "BakedSurface",
       "DecodeRippleAtlasOpts",
       "DomainWarpOptions",
@@ -6183,6 +6245,7 @@
       "PackableSurface",
       "RippleRings",
       "SampleTextureSetOptions",
+      "StructureMaterialOpts",
       "SurfaceBuildContext",
       "SurfaceCellCount",
       "SurfaceCells",
@@ -6202,6 +6265,10 @@
       "TerrainAntiTilingSchema",
       "TerrainBlend",
       "TerrainBlendSchema",
+      "TerrainColorMap",
+      "TerrainColorMapSchema",
+      "TerrainColorMapSettings",
+      "TerrainColorMapSettingsSchema",
       "TerrainLayer",
       "TerrainLayerSchema",
       "TerrainLayerSettings",
@@ -6226,16 +6293,19 @@
       "bakeMacroNoise",
       "bakeRippleAtlas",
       "bakeSurfaceGenerator",
+      "bakeTerrainColorMap",
       "bumpNormalView",
       "cliffStrata",
       "concretePores",
       "createLiveSurface",
+      "createStructureMaterial",
       "createTerrainMaterial",
       "decodeRippleAtlas",
       "defineSurfaceGenerator",
       "doesPackingStoreNormal",
       "domainWarp",
       "fbm",
+      "getStructureMaterialConfig",
       "getSurfacePackingOutputs",
       "getTerrainMaterialProps",
       "getTerrainMaterialVariant",

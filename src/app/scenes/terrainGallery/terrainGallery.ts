@@ -21,6 +21,7 @@ import { createSplattingRow, SPLATTING_ROW_BOUNDS } from './splattingRow';
 import { createRulesRow, RULES_ROW_BOUNDS } from './rulesRow';
 import { CLIFFS_ROW_BOUNDS, createCliffsRow } from './cliffsRow';
 import { COLOR_MAP_ROW_BOUNDS, createColorMapRowAsync } from './colorMapRow';
+import { createStructuresRow, STRUCTURES_ROW_BOUNDS } from './structuresRow';
 import {
   createProceduralRowAsync,
   PROCEDURAL_ROW_DEPTH,
@@ -69,6 +70,11 @@ import {
  *   map, with the far `COLOR_MAP` surface and with the far `AVERAGE_COLOR` one; the two colour maps
  *   are baked during the load from the source material on each block's mesh
  *   (`bakeTerrainColorMap`); the tab tunes the fades and the band and bakes them again.
+ * - **The Structures row** (`structuresRow.ts`, p305 Phase 7): structure materials
+ *   (`createStructureMaterial`) in front of the Colour map row on pieces made in code: a wall of
+ *   two segments in world space and a bunker's passage piece in object space, both worn by their
+ *   vertex colour (clean, stained, grime, damage), and two pillars turning and rising in object
+ *   space beside world space; the tab pauses them.
  * - **The Procedural row** (`proceduralRow.ts`): five rows of two blocks 8 m right of the library,
  *   a generator each (`PROCEDURAL_BLOCKS`: sand, mud, rocks and strata, snow and ice, grass and
  *   concrete from the back), baked during the load (`bakeSurfaceGenerator`, 1024² `LITE`: the
@@ -183,27 +189,31 @@ export const scene = async () => {
   });
   // The ground under the library (centred on x = 0), the Procedural row right of it, the
   // Splatting row left of it, the Anti-tiling row behind it, the Rules row in front, the Cliffs
-  // row in front of that and the Colour map row in front of that
+  // row in front of that, the Colour map row in front of that and the Structures row in front of
+  // that
   const left = Math.min(
     -(ROWS[0].length * BLOCK_PITCH) / 2 - BLOCK_GAP / 2,
     ANTI_TILING_ROW_BOUNDS.minX - BLOCK_GAP,
     SPLATTING_ROW_BOUNDS.minX - BLOCK_GAP,
     CLIFFS_ROW_BOUNDS.minX - BLOCK_GAP,
-    COLOR_MAP_ROW_BOUNDS.minX - BLOCK_GAP
+    COLOR_MAP_ROW_BOUNDS.minX - BLOCK_GAP,
+    STRUCTURES_ROW_BOUNDS.minX - BLOCK_GAP
   );
   const right =
     Math.max(
       PROCEDURAL_ROW_EDGE_X,
       ANTI_TILING_ROW_BOUNDS.maxX,
       CLIFFS_ROW_BOUNDS.maxX,
-      COLOR_MAP_ROW_BOUNDS.maxX
+      COLOR_MAP_ROW_BOUNDS.maxX,
+      STRUCTURES_ROW_BOUNDS.maxX
     ) + BLOCK_GAP;
   const front = Math.max(
     (Math.max(ROWS.length * BLOCK_PITCH, PROCEDURAL_ROW_DEPTH + BLOCK_GAP) + BLOCK_GAP) / 2,
     SPLATTING_ROW_BOUNDS.maxZ + BLOCK_GAP,
     RULES_ROW_BOUNDS.maxZ + BLOCK_GAP,
     CLIFFS_ROW_BOUNDS.maxZ + BLOCK_GAP,
-    COLOR_MAP_ROW_BOUNDS.maxZ + BLOCK_GAP
+    COLOR_MAP_ROW_BOUNDS.maxZ + BLOCK_GAP,
+    STRUCTURES_ROW_BOUNDS.maxZ + BLOCK_GAP
   );
   const back = ANTI_TILING_ROW_BOUNDS.minZ - BLOCK_GAP;
   createMeshEntity(
@@ -229,6 +239,7 @@ export const scene = async () => {
   createRulesRow();
   createCliffsRow();
   await createColorMapRowAsync();
+  createStructuresRow(TERRAIN_GALLERY_SCENE_ID);
   await createProceduralRowAsync(addGalleryExitCleanup);
 
   // Debug env only: a dynamic import, so the tab's code isn't in a production build. It applies
