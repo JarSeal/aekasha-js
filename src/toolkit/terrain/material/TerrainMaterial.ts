@@ -474,12 +474,13 @@ export const setupTerrainMaterial = (
   if (ao) standard.aoNode = ao;
 
   if (IS_DEBUG_ENV && define.debugView) {
-    const [{ source, uv }] = layers;
-    const { bundle } = source;
     applyDebugView(standard, define.debugView, {
-      coords: uv.coords,
-      tileSize: uv.tileSize,
-      colorTexture: (bundle.albedoRough ?? bundle.albedoHeight) as unknown as TextureNode,
+      coords: layers[0].uv.coords,
+      layers: layers.map(({ source: { bundle }, uv }) => ({
+        tileSize: uv.tileSize,
+        colorTexture: (bundle.albedoRough ?? bundle.albedoHeight) as unknown as TextureNode,
+      })),
+      weights: painted?.weights ?? null,
       normal,
     });
   }

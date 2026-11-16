@@ -50,7 +50,7 @@ export const BASELINE_MATERIAL_ID = 'textureSetSurface';
 export const NO_SHADOWS = { castShadow: false, receiveShadow: false } as const;
 
 /** A terrain debug view the tab shows (p305 D10), or none */
-export type GalleryDebugView = 'NONE' | 'TEXEL_DENSITY' | 'NORMALS';
+export type GalleryDebugView = 'NONE' | 'TEXEL_DENSITY' | 'NORMALS' | 'WEIGHTS';
 
 /**
  * A block's (or its wall's) variant of the gallery's terrain material (or with `isBaseline` of

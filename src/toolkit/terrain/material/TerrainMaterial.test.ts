@@ -661,12 +661,23 @@ describe('debug views', () => {
     expect(early.emissiveNode).toBeNull();
     expect(stubs.warnings.join()).toMatch(/views aren't loaded/);
     expect(await loadTerrainDebugViewsAsync()).toBe(true);
-    for (const debugView of ['TEXEL_DENSITY', 'NORMALS']) {
+    for (const debugView of ['TEXEL_DENSITY', 'NORMALS', 'WEIGHTS']) {
       const material = build({ layers: [{}], debugView }, { layer0: makeBundle('FULL') });
       expect(material.emissiveNode, debugView).toBeTruthy();
       expect(material.aoNode).toBeNull();
     }
     expect(countMethod(build({ layers: [{}], debugView: 'TEXEL_DENSITY' }), 'log2')).toBe(1);
+    // Blended: each layer's density, and the final weights' false colours
+    const blended = { layers: layersOf(3), blend: { source: 'VERTEX_COLOR' } };
+    const density = build({ ...blended, debugView: 'TEXEL_DENSITY' }, layerInputs(3));
+    expect(countMethod(density, 'log2')).toBe(3);
+    const weights = build({ ...blended, debugView: 'WEIGHTS' }, layerInputs(3));
+    expect(reachesVertexColor(weights.emissiveNode)).toBe(true);
+    const arrayWeights = build(
+      { ...blended, debugView: 'WEIGHTS' },
+      { layers: makeArrayBundle(3) }
+    );
+    expect(arrayWeights.emissiveNode).toBeTruthy();
     expect(build({ layers: [{}] }).emissiveNode).toBeNull();
   });
 });

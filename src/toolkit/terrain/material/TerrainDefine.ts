@@ -18,7 +18,7 @@ const BLEND_LAYER_COUNTS = {
 const ANTI_TILING_MODES = ['NONE', 'DUAL_SCALE', 'HEX'] as const;
 const MAX_LAYERS = 16;
 const QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as const;
-const DEBUG_VIEWS = ['TEXEL_DENSITY', 'NORMALS'] as const;
+const DEBUG_VIEWS = ['TEXEL_DENSITY', 'NORMALS', 'WEIGHTS'] as const;
 
 /** The keys each object of the define takes (the schema's) */
 const OVERRIDE_KEYS = ['uv', 'blend', 'ao', 'antiTiling', 'distance'];

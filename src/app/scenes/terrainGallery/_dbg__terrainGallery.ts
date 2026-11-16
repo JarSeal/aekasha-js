@@ -74,6 +74,7 @@ const DEBUG_VIEWS: readonly { label: string; value: GalleryDebugView }[] = [
   { label: 'None', value: 'NONE' },
   { label: 'Texel density', value: 'TEXEL_DENSITY' },
   { label: 'Normals', value: 'NORMALS' },
+  { label: 'Weights', value: 'WEIGHTS' },
 ];
 
 /** The tab's saved settings */
@@ -356,7 +357,7 @@ export const createTerrainGalleryTab = () => {
             label: 'Debug view',
             kind: 'select',
             options: DEBUG_VIEWS.map((option) => ({ ...option })),
-            hint: 'The terrain material’s debug view on the library (not the baseline) and the Anti-tiling row: texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048) or the shaded normal in world space',
+            hint: 'The terrain material’s debug view on the library (not the baseline) and the Anti-tiling row: texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048), the shaded normal in world space, or the layers’ weights (layer 0 white, 1 red, 2 green, 3 blue, 4 yellow, …)',
             onChange: () => void applyDebugViewAsync(),
           },
           {
