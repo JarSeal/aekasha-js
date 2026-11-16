@@ -749,8 +749,9 @@ const TerrainDistanceSchema = z
     ),
     /**
      * The far surface past `fade`'s end (default `NONE`): `AVERAGE_COLOR` the layers' sets'
-     * average colours by weight, `COLOR_MAP` the colour map (needs `colorMap`). The layers aren't
-     * sampled there (a dynamic branch), so far ground costs its weights and 0 or 1 fetch.
+     * average colours by weight (not with a `DETAIL` colour map), `COLOR_MAP` the colour map
+     * (needs `colorMap`). The layers aren't sampled there (a dynamic branch), so far ground costs
+     * its weights and 0 or 1 fetch.
      */
     far: z
       .enum(TERRAIN_FAR_MODES)
@@ -1366,7 +1367,8 @@ type FarValue = {
 
 /**
  * The far modes and the colour map, the material's and each tier's (a tier's `distance` over the
- * material's): `farBlend` only with a far mode, `far: 'COLOR_MAP'` only with a `colorMap`, and a
+ * material's): `farBlend` only with a far mode, `far: 'COLOR_MAP'` only with a `colorMap`,
+ * `AVERAGE_COLOR` not with a `DETAIL` colour map (whose far colour is the colour map's), and a
  * `FAR_ONLY` colour map only where some context's far mode is `COLOR_MAP` (else nothing reads
  * it). The refinement both schemas share.
  */
@@ -1387,6 +1389,12 @@ const checkFar = (value: FarValue, ctx: z.RefinementCtx) => {
     }
     if (far === 'COLOR_MAP' && !value.colorMap) {
       issue([...path, 'far'], 'is COLOR_MAP: give a colorMap (its texture the input colorMap).');
+    }
+    if (far === 'AVERAGE_COLOR' && value.colorMap?.mode === 'DETAIL') {
+      issue(
+        [...path, 'far'],
+        "is AVERAGE_COLOR with a DETAIL colour map, whose colour the layers' averages would drop far away: use COLOR_MAP."
+      );
     }
   }
   const contextsFar = contexts.map(({ distance }) => distance?.far);

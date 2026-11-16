@@ -7,10 +7,11 @@
 // plane is the planar tap itself (its UV is planar world tiling's), so the branch samples two
 // planes. Every tap in the branch samples with explicit gradients (the projection's): WGSL refuses
 // implicit derivatives in non-uniform control flow.
-import { float, Fn, If, int, mix, smoothstep, struct, vec2, vec3 } from 'three/tsl';
+import { Fn, If, mix, smoothstep, struct } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node } from 'three/webgpu';
 import type { AntiTilingContext } from './AntiTiling';
+import { declareBranchInput as declare, toVar } from './BranchInputs';
 import {
   sampleProjected,
   type ProjectedLayer,
@@ -34,30 +35,6 @@ const MIXED: readonly Member[] = ['albedo', 'height', 'roughness', 'ao'];
 
 /** A member's node in the struct var */
 type StructVar = { get: (name: string) => Node<'float'> & { assign: (value: unknown) => void } };
-
-/** A node as a var declared where this is called: in a `Fn`, before what follows */
-const toVar = <T>(node: T): T => (node as unknown as { toVar: () => T }).toVar();
-
-/** The zero a declared input of each type starts from */
-const ZEROS = {
-  float: () => float(0),
-  int: () => int(0),
-  vec2: () => vec2(0),
-  vec3: () => vec3(0),
-};
-
-/**
- * A node as a var assigned where this is called (in a `Fn`, before what follows): three declares
- * a var that is only read where it's first used, which for the branch's inputs is in the branch,
- * so each is a zero var with an explicit assignment, which keeps its place in the statements
- */
-const declare = <T>(node: T, type: keyof typeof ZEROS): T => {
-  const variable = (ZEROS[type]() as unknown as { toVar: () => unknown }).toVar() as {
-    assign: (value: unknown) => void;
-  };
-  variable.assign(node);
-  return variable as unknown as T;
-};
 
 /**
  * The planar values the struct starts from: the planar tap's (the packing's only), its world

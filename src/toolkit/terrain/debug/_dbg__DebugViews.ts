@@ -72,6 +72,11 @@ export type TerrainDebugViewContext = {
    * before the cut (normalized linearly), which `LAYER_COUNT` counts
    */
   slots: { count: number; layerWeights: Node<'float'>[] } | null;
+  /**
+   * With a far mode, the far surface's share (1 past its band, where the material samples no
+   * layer: `TAPS` counts the far surface's fetches there), else null
+   */
+  far: { share: Node<'float'> } | null;
   /** The shaded normal in world space */
   normal: Node<'vec3'>;
   /** The define as read (its tier's), for the fetches `TAPS` counts */
@@ -234,8 +239,8 @@ const getSampledFetches = (ctx: TerrainDebugViewContext, sampled: TerrainDebugVi
 
 /**
  * The material's own texture fetches beside the layers': the splat maps, the macro variation's
- * one, each rule's noise and a `DETAIL` colour map's one (three's lighting, shadows and
- * environment not counted)
+ * one, each rule's noise and the colour map's one (`DETAIL`, or the far `COLOR_MAP`: sampled
+ * outside the far branch); three's lighting, shadows and environment not counted
  */
 const getMaterialFetches = ({ define }: TerrainDebugViewContext) => {
   const rules = define.blend.source === 'SINGLE' ? [] : define.blend.rules;
@@ -243,19 +248,20 @@ const getMaterialFetches = ({ define }: TerrainDebugViewContext) => {
     getSplatMapCount(define.blend, define.layers.length) +
     (define.macro ? 1 : 0) +
     rules.filter((rule) => rule.noise).length +
-    (define.colorMap?.mode === 'DETAIL' ? 1 : 0)
+    (define.colorMap?.mode === 'DETAIL' || define.far?.mode === 'COLOR_MAP' ? 1 : 0)
   );
 };
 
 /**
  * The material's own texture fetches at a pixel, as `TAPS` counts them: those every pixel makes
  * (each sampled layer's or slot's taps, its packing slots × its anti-tiling's taps × its planes;
- * the splat maps, the macro, the rules' noise, the colour map) and each slope gate's branch's, made where its
+ * the splat maps, the macro, the rules' noise, the colour map), each slope gate's branch's, made where its
  * share is over 0 (a slot's: the kept layer's gate).
  * @internal
  */
 export const estimateTerrainFetches = (ctx: TerrainDebugViewContext) => {
-  let always = getMaterialFetches(ctx);
+  const material = getMaterialFetches(ctx);
+  let always = material;
   const gated: { share: Node<'float'>; fetches: number }[] = [];
   for (const sampled of ctx.sampled) {
     const fetches = getSampledFetches(ctx, sampled);
@@ -263,7 +269,7 @@ export const estimateTerrainFetches = (ctx: TerrainDebugViewContext) => {
     const share = getGateShare(sampled);
     if (share && fetches.gated) gated.push({ share, fetches: fetches.gated });
   }
-  return { always, gated };
+  return { always, gated, material };
 };
 
 /**
@@ -286,16 +292,20 @@ const TAP_COLORS = [
  * `TAPS`: the material's own texture fetches at the pixel (p301 §6's estimate made visible): every
  * sampled layer's or slot's taps (its packing slots × its anti-tiling's taps × its planes), its
  * slope gate's branch's where the share is over 0, the splat maps, the macro, the rules' noise and
- * a `DETAIL` colour map; in bands (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24
- * orange, 32 red, more magenta) over the faint 1 m checker. A layer at its own index is sampled whatever its weight;
- * sparse sampling samples its slots alone.
+ * the colour map; past a far mode's band, those last alone (the far surface samples no layer). In
+ * bands (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more magenta)
+ * over the faint 1 m checker. A layer at its own index is sampled whatever its weight; sparse
+ * sampling samples its slots alone.
  */
 const buildTaps = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
-  const { always, gated } = estimateTerrainFetches(ctx);
-  const total = gated.reduce(
+  const { always, gated, material } = estimateTerrainFetches(ctx);
+  const near = gated.reduce(
     (count, { share, fetches }) => count.add(step(1e-4, share).mul(fetches)) as Node<'float'>,
     float(always) as unknown as Node<'float'>
   );
+  const total = ctx.far
+    ? (select(ctx.far.share.greaterThanEqual(1), float(material), near) as unknown as Node<'float'>)
+    : near;
   let color = TAP_COLORS[TAP_COLORS.length - 1];
   for (let i = TAP_BANDS.length - 1; i >= 0; i--) {
     color = select(

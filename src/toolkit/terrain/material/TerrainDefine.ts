@@ -945,7 +945,8 @@ const readColorMap = (define: Record<string, unknown>): TerrainColorMapDefine | 
 
 /**
  * The distance's fade and far surface (`distance`, the tier's when it gives one): the far mode
- * with its band (`farBlend` refused without one), `COLOR_MAP` only with a colour map
+ * with its band (`farBlend` refused without one), `COLOR_MAP` only with a colour map,
+ * `AVERAGE_COLOR` not with a `DETAIL` one
  */
 const readDistance = (
   value: unknown,
@@ -965,6 +966,12 @@ const readDistance = (
   }
   if (mode === 'COLOR_MAP' && !colorMap) {
     fail(`${path}.far`, 'is COLOR_MAP: give a colorMap (its texture the input colorMap).');
+  }
+  if (mode === 'AVERAGE_COLOR' && colorMap?.mode === 'DETAIL') {
+    fail(
+      `${path}.far`,
+      "is AVERAGE_COLOR with a DETAIL colour map, whose colour the layers' averages would drop far away: use COLOR_MAP."
+    );
   }
   return {
     fade,

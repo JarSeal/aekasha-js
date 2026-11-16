@@ -2,9 +2,10 @@
 // declarative config, every technique a build-time branch on its static define (D2's outline:
 // coordinates → weights → per-layer samples → surface → sockets). Two routes reach the same
 // `setupTerrainMaterial`: the code route (`createTerrainMaterial`, registered as `aek.terrain`) and
-// the JSON route (`materials/terrain/terrain.tsl.ts`, whose `setup` it is). The layers are built
-// by `TerrainLayers.ts`, each at its own index (dense) or a few slots at the layers weighing most
-// at the pixel (`TerrainSlots.ts`: sparse sampling, `DOMINANT`).
+// the JSON route (`materials/terrain/terrain.tsl.ts`, whose `setup` it is). The near surface is
+// `TerrainSurface.ts`' (its layers `TerrainLayers.ts`', each at its own index, or a few slots at the
+// layers weighing most at the pixel, `TerrainSlots.ts`: sparse sampling, `DOMINANT`); with a far
+// mode it's built in a branch the far surface skips (`TerrainFar.ts`).
 import { float, mix, positionView, uniform } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import {
@@ -25,15 +26,15 @@ import {
   type MatProps,
   type TslMaterialFns,
 } from 'aekasha';
-import type { TextureSetArrayInput } from 'aekasha/texturesets';
-import { applyColorMapDetail, sampleColorMap } from '../nodes/ColorMap';
-import { fadeDetailNormal } from '../nodes/Distance';
-import { blendWeightsByHeight, getBlendHeight, normalizeWeights } from '../nodes/HeightBlend';
+import { sampleColorMap } from '../nodes/ColorMap';
+import { fadeDetailNormal, getFarShare } from '../nodes/Distance';
+import { normalizeWeights } from '../nodes/HeightBlend';
 import { applyMacroVariation, sampleMacroTexture, type MacroNodes } from '../nodes/Macro';
 import { createProjectionContext, type ProjectionContext } from '../nodes/Projection';
 import { applyRules, createRuleContext, createRuleNodes } from '../nodes/Rules';
-import { selectTopLayers, spreadSlotWeights } from '../nodes/Sparse';
-import { transformWorldNormalToView } from '../nodes/TerrainNormals';
+import { getBundlePacking } from '../nodes/SampleTextureSet';
+import { spreadSlotWeights } from '../nodes/Sparse';
+import { bumpNormalWorld, transformWorldNormalToView } from '../nodes/TerrainNormals';
 import { getSplatMapWeights, getVertexColorWeights, type PaintedWeights } from '../nodes/Weights';
 import {
   getTerrainDefine,
@@ -43,21 +44,21 @@ import {
   readMacroTexture,
   readSplatMaps,
   type LayerParams,
-  type LayerSources,
 } from './TerrainInputs';
 import {
-  blendSurfaces,
+  buildFarBranch,
+  createBranchCoords,
+  getFarSurface,
+  type BranchSurface,
+} from './TerrainFar';
+import {
   checkOnePacking,
   createLayerUniforms,
-  getLayerSurface,
-  getLayerUv,
   keepUniform,
-  sampleLayer,
-  type BuiltLayer,
   type LayerUniforms,
 } from './TerrainLayers';
-import { buildSlots } from './TerrainSlots';
 import { checkTextureBudget, type TerrainBinding } from './TerrainStorage';
+import { buildNearSurface, createSurfaceUniforms, type NearSurface } from './TerrainSurface';
 import {
   getPaintedLayerCount,
   getPaintedSource,
@@ -96,29 +97,21 @@ const createMacro = (
 };
 
 /**
- * A `DETAIL` colour map's albedo from the layers' blended detail: the colour map × the detail,
- * faded to 1 over `detailDistance` (the uniform `terrain_detailDistance`) when it has one
+ * The distance's uniforms: the detail normals' fade (`terrain_distanceFade`, the far surface's
+ * start its end) and the far surface's band (`terrain_farBlend`, with a far mode), null without
  */
-const applyDetail = (
-  material: NodeMaterial,
-  define: ResolvedTerrainDefine,
-  colorMap: Node<'vec3'>,
-  detail: Node<'vec3'>,
-  viewDistance: Node<'float'>
-) => {
-  const range = define.colorMap?.detailDistance;
-  const fade = range
-    ? {
-        range: keepUniform(
-          material,
-          'detailDistance',
-          uniform(new Vector2(...range))
-        ) as Node<'vec2'>,
-        viewDistance,
-      }
-    : null;
-  return applyColorMapDetail(colorMap, detail, fade);
-};
+const createDistanceUniforms = (material: NodeMaterial, define: ResolvedTerrainDefine) => ({
+  fade: define.distanceFade
+    ? (keepUniform(
+        material,
+        'distanceFade',
+        uniform(new Vector2(...define.distanceFade))
+      ) as Node<'vec2'>)
+    : null,
+  farBlend: define.far
+    ? (keepUniform(material, 'farBlend', uniform(define.far.blend)) as Node<'float'>)
+    : null,
+});
 
 /**
  * What the material binds: the layers' textures, the splat maps, the macro texture (the macro
@@ -186,27 +179,6 @@ const getRawWeights = (
 };
 
 /**
- * The built layers' (or slots') final weights from their raw ones: normalized linearly, or by
- * their heights (the uniform `terrain_heightBlendDepth`), which sum to 1
- */
-const blendWeights = (
-  material: NodeMaterial,
-  define: ResolvedTerrainDefine,
-  weights: Node<'float'>[],
-  layers: BuiltLayer[]
-) => {
-  const { blend } = define;
-  if (blend.source === 'SINGLE' || blend.heightBlend === null) return normalizeWeights(weights);
-  const depth = keepUniform(material, 'heightBlendDepth', uniform(blend.heightBlend));
-  const heights = layers.map(({ source, uniforms, sample }) => {
-    const height = existsOrThrow(uniforms.height, 'A height-blended layer has height uniforms.');
-    const contrast = source.params.heightContrast.mul(height.contrast) as Node<'float'>;
-    return getBlendHeight(sample.height, contrast, height.offset);
-  });
-  return blendWeightsByHeight(weights, heights, depth as Node<'float'>);
-};
-
-/**
  * The material's `aoNode`: the blended texture AO (`FULL`) × the vertex AO (`ao.vertex`, the
  * uniform `terrain_aoVertexInfluence`: 1 for `FULL`, `ao.bakedAlbedoInfluence` where the albedo has
  * its AO baked in), or null without either
@@ -227,65 +199,6 @@ const getAoNode = (
   ) as Node<'float'>;
   const vertexTerm = mix(float(1), vertexAo, influence) as Node<'float'>;
   return textureAo ? (textureAo.mul(vertexTerm) as Node<'float'>) : vertexTerm;
-};
-
-/** What the layers or slots read besides their own: the shared nodes, built before any of them */
-type LayerBuildContext = {
-  define: ResolvedTerrainDefine;
-  sources: LayerSources;
-  uniforms: LayerUniforms[];
-  viewDistance: Node<'float'>;
-  macro: Macro | null;
-  getProjectionContext: () => ProjectionContext;
-};
-
-/** Every layer at its own index: its tiling, anti-tiling and projection, its own seed */
-const buildLayers = (ctx: LayerBuildContext): BuiltLayer[] =>
-  ctx.sources.layers.map((source, i) => {
-    const uniforms = ctx.uniforms[i];
-    const uv = getLayerUv(ctx.define, source.params, uniforms);
-    const antiTiling = {
-      viewDistance: ctx.viewDistance,
-      patches: ctx.macro ? (ctx.macro.sample.b as unknown as Node<'float'>) : null,
-      seed: i,
-      layer: source.layer,
-    };
-    const sampled = sampleLayer(
-      ctx.define,
-      { source, uniforms, uv },
-      antiTiling,
-      ctx.getProjectionContext
-    );
-    return { source, uniforms, uv, ...sampled };
-  });
-
-/**
- * The layers the graph blends and their raw weights: every layer at its own index, or (sparse,
- * `DOMINANT`) the slots the top-K selection keeps of the raw weights, each at its layer, and the
- * slots' layers; null weights for `SINGLE`
- */
-const buildBlendedLayers = (ctx: LayerBuildContext, raw: PaintedWeights | null) => {
-  const { define, sources } = ctx;
-  if (define.slotCount === null || !raw) {
-    return { layers: buildLayers(ctx), weights: raw?.weights ?? null, slots: null };
-  }
-  if (!sources.isArray) {
-    throw new Error(
-      '[terrain] Sparse sampling and HEX\'s apply DOMINANT read each layer at a per-pixel index, which needs ARRAY storage: give a { "textureSetArray": [ids], "packing" } input "layers" (createTerrainMaterial\'s storage AUTO or ARRAY).'
-    );
-  }
-  const slots = selectTopLayers(raw.weights, define.slotCount);
-  const layers = buildSlots(slots, {
-    define,
-    bundle: sources.layers[0].bundle as TextureSetArrayInput,
-    layers: ctx.uniforms,
-    antiTiling: {
-      viewDistance: ctx.viewDistance,
-      patches: ctx.macro ? (ctx.macro.sample.b as unknown as Node<'float'>) : null,
-    },
-    getProjectionContext: ctx.getProjectionContext,
-  });
-  return { layers, weights: slots.map((slot) => slot.weight), slots };
 };
 
 /**
@@ -316,24 +229,28 @@ const buildBlendedLayers = (ctx: LayerBuildContext, raw: PaintedWeights | null) 
  * XZ varies the surface (R the brightness, G the hue and the roughness, B `DUAL_SCALE`'s patches);
  * with a `DETAIL` `colorMap`, the input `colorMap` at the mesh's UV gives the albedo and the layers
  * their detail (each one's albedo over its set's average colour, no tints), faded out over
- * `detailDistance`; with `distance`, the normal fades to the geometry's over its `fade` range. Only
- * what the define enables is built. The textures it binds (the layers', the splat maps, the macro
- * texture, the colour map) must fit the budget: the renderer's sampled textures a stage (16) less
- * `reservedTextures` (6). The tunables are uniforms in `material.userData.uniforms`: per layer
- * `terrain_l<i>_<name>` (`tiling`, `rotation` when given, `tint`, `normalStrength`,
- * `roughnessScale`; `heightContrast` and `heightOffset` with the height blend; `farScale` and
- * `antiTilingDistance` with `DUAL_SCALE` or `DOMINANT` in slots, `hexContrast` and `hexRotation`
- * with `HEX`; `projectionSharpness` with `BIPLANAR` or `TRIPLANAR`, `slopeGate` with a gate), per
- * rule `terrain_r<i>_<name>` (its tests' only: `slopeMin`, `slopeMax`, `slopeSoftness`,
- * `heightMin`, `heightMax`, `heightSoftness`, a range's given ends only; `aspectDirection`,
- * `aspectRange`, `aspectSoftness`; `noiseScale`, `noiseAmount`; and `strength`),
- * `terrain_heightBlendDepth` with the height blend, `terrain_aoTextureInfluence` when a layer has
- * texture AO, `terrain_aoVertexInfluence` with `ao.vertex`, `terrain_macroScale`,
+ * `detailDistance`; with `distance`, the normal fades to the geometry's over its `fade` range, and
+ * with a `far` mode the layers aren't sampled past it (a dynamic branch): the far surface is the
+ * sets' average colours by the weights (`AVERAGE_COLOR`) or the colour map (`COLOR_MAP`), mixed in
+ * over `farBlend` metres, its normal the geometry's (a `debugView` shows the near surface
+ * everywhere). Only what the define enables is built. The textures it binds (the layers', the splat
+ * maps, the macro texture, the colour map) must fit the budget: the renderer's sampled textures a
+ * stage (16) less `reservedTextures` (6). The tunables are uniforms in
+ * `material.userData.uniforms`: per layer `terrain_l<i>_<name>` (`tiling`, `rotation` when given,
+ * `tint`, `normalStrength`, `roughnessScale`; `heightContrast` and `heightOffset` with the height
+ * blend; `farScale` and `antiTilingDistance` with `DUAL_SCALE` or `DOMINANT` in slots,
+ * `hexContrast` and `hexRotation` with `HEX`; `projectionSharpness` with `BIPLANAR` or `TRIPLANAR`,
+ * `slopeGate` with a gate), per rule `terrain_r<i>_<name>` (its tests' only: `slopeMin`,
+ * `slopeMax`, `slopeSoftness`, `heightMin`, `heightMax`, `heightSoftness`, a range's given ends
+ * only; `aspectDirection`, `aspectRange`, `aspectSoftness`; `noiseScale`, `noiseAmount`; and
+ * `strength`), `terrain_heightBlendDepth` with the height blend, `terrain_aoTextureInfluence` when
+ * a layer has texture AO, `terrain_aoVertexInfluence` with `ao.vertex`, `terrain_macroScale`,
  * `terrain_macroBrightness`, `terrain_macroHue` and `terrain_macroRoughness` with `macro`,
- * `terrain_detailDistance` with a colour map's `detailDistance`, and `terrain_distanceFade` with
- * `distance`. A `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug
- * env, once {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the
- * view. The define as given is kept at `material.userData.terrainDefine`.
+ * `terrain_detailDistance` with a colour map's `detailDistance`, `terrain_distanceFade` with
+ * `distance`, and `terrain_farBlend` with a far mode. A `qualityLevel` applies that tier's
+ * `quality` overrides first; a `debugView` (debug env, once {@link loadTerrainDebugViewsAsync} has
+ * loaded the views) replaces the shading with the view. The define as given is kept at
+ * `material.userData.terrainDefine`.
  * @param inputs the material's inputs: `layer<i>` bundles or the `layers` set array bundle (the
  * `textureSets()` feature's resolvers), with the splat map sources the splat maps `splat<i>` and
  * with `macro` or a rule's noise the macro texture `macro`, with `colorMap` the colour map
@@ -342,10 +259,10 @@ const buildBlendedLayers = (ctx: LayerBuildContext, raw: PaintedWeights | null) 
  * @param staticDefines the material's static defines, `terrain` among them
  * @throws for a missing or wrong define field, a field it doesn't know, a layer count the blend
  * source doesn't take, a missing layer, splat map or macro input (or one the define doesn't
- * take), a layer's set without an average colour that a `DETAIL` colour map reads,
- * `layer<i>` and `layers` both, a set array of another layer count, layers in different
- * packings, slots (sparse, `DOMINANT`) without the `layers` set array, or textures over the
- * budget (naming what it binds)
+ * take), a layer's set without an average colour that a `DETAIL` colour map or the `AVERAGE_COLOR`
+ * far surface reads, `layer<i>` and `layers` both, a set array of another layer count, layers in
+ * different packings, slots (sparse, `DOMINANT`) without the `layers` set array, or textures over
+ * the budget (naming what it binds)
  * @example
  * ```ts
  * // A TSL file of a material JSON whose staticDefines.terrain is the define
@@ -374,64 +291,89 @@ export const setupTerrainMaterial = (
   const standard = material as MeshStandardNodeMaterial;
   // As given, for a tier's or a view's variant of this material (getTerrainMaterialVariant)
   material.userData.terrainDefine = staticDefines.terrain;
+  // From the bundles' slots, before anything samples: the far branch's members depend on it
+  const packing = checkOnePacking(sources.layers.map(({ bundle }) => getBundlePacking(bundle)));
 
-  // Made on the first layer with texture AO: none without one
-  let aoInfluence: Node<'float'> | null = null;
-  const getAoInfluence = () =>
-    (aoInfluence ??= keepUniform(
-      material,
-      'aoTextureInfluence',
-      uniform(define.aoTextureInfluence)
-    ) as Node<'float'>);
-
-  // Shared by every layer, built before any of them: the view distance, the one macro fetch, the
-  // colour map's and (made on the first projected layer) the projections' position, derivatives
-  // and normal
+  // Made before the layers: every uniform (a far branch builds them late), the view distance, the
+  // one macro fetch, the colour map's, the raw weights (the paint, the rules' noise)
+  const surfaceUniforms = createSurfaceUniforms(material, define, packing);
+  const distance = createDistanceUniforms(material, define);
   const viewDistance = positionView.length() as unknown as Node<'float'>;
   const macro = createMacro(material, macroTexture, define);
+  const patches = macro ? (macro.sample.b as unknown as Node<'float'>) : null;
   const colorMap =
-    colorMapTexture && define.colorMap?.mode === 'DETAIL' ? sampleColorMap(colorMapTexture) : null;
-  let projection: ProjectionContext | null = null;
-  const getProjectionContext = () => (projection ??= createProjectionContext());
+    colorMapTexture && (define.colorMap?.mode === 'DETAIL' || define.far?.mode === 'COLOR_MAP')
+      ? sampleColorMap(colorMapTexture)
+      : null;
+  const detailColorMap = define.colorMap?.mode === 'DETAIL' ? colorMap : null;
   const uniforms = define.layers.map((_, i) => createLayerUniforms(material, define, i));
   const raw = getRawWeights(material, define, splatMaps, macroTexture);
-  const ctx = { define, sources, uniforms, viewDistance, macro, getProjectionContext };
-  const { layers, weights: rawWeights, slots } = buildBlendedLayers(ctx, raw);
-  checkOnePacking(layers.map((layer) => layer.sample));
-  // A slot's bump is the blend's: its own height jumps where its layer changes
-  const surfaces = layers.map((layer) =>
-    getLayerSurface(define, layer, getAoInfluence, slots !== null)
-  );
+  const layerContext = { define, sources, uniforms };
 
-  // The layers blended by their weights (SINGLE: the one layer), then the material-wide effects
-  const weights = rawWeights && blendWeights(material, define, rawWeights, layers);
-  const blended = weights ? blendSurfaces(surfaces, weights, slots !== null) : surfaces[0];
-  // DETAIL: the layers' albedo is their detail, which the colour map's colour multiplies
-  const surface = colorMap
-    ? { ...blended, albedo: applyDetail(material, define, colorMap, blended.albedo, viewDistance) }
-    : blended;
+  // A far mode skips the layers past its band (a dynamic branch); a debug view shows the near
+  // surface everywhere (its views read the layers)
+  let near: NearSurface | null = null;
+  let surface: BranchSurface;
+  if (distance.fade && distance.farBlend && !(IS_DEBUG_ENV && define.debugView)) {
+    const layers = sources.layers.map(({ params }, i) => ({ params, uniforms: uniforms[i] }));
+    surface = buildFarBranch({
+      packing,
+      from: distance.fade.y,
+      blend: distance.farBlend,
+      inputs: {
+        weights: raw?.weights ?? null,
+        viewDistance,
+        patches,
+        colorMap,
+        ...createBranchCoords(define),
+      },
+      getFar: (inputs) => getFarSurface(define, layers, inputs),
+      buildNear: (inputs) =>
+        buildNearSurface(
+          {
+            ...layerContext,
+            viewDistance: inputs.viewDistance,
+            patches: inputs.patches,
+            getProjectionContext: () => inputs.projection,
+            shared: inputs.shared,
+          },
+          inputs.weights,
+          {
+            uniforms: surfaceUniforms,
+            colorMap: detailColorMap && inputs.colorMap,
+            deferBump: true,
+          }
+        ).surface,
+    });
+  } else {
+    // Made on the first projected layer: the projections' position, derivatives and normal
+    let projection: ProjectionContext | null = null;
+    const getProjectionContext = () => (projection ??= createProjectionContext());
+    near = buildNearSurface(
+      { ...layerContext, viewDistance, patches, getProjectionContext },
+      raw?.weights ?? null,
+      { uniforms: surfaceUniforms, colorMap: detailColorMap, deferBump: false }
+    );
+    surface = near.surface;
+  }
+
+  // The material-wide effects over the blended surface, the normal into view space once
   const { albedo, roughness } = macro
     ? applyMacroVariation(surface, macro.sample, macro.nodes)
     : surface;
-  const normal = define.distanceFade
-    ? fadeDetailNormal(
-        surface.normal,
-        viewDistance,
-        keepUniform(
-          material,
-          'distanceFade',
-          uniform(new Vector2(...define.distanceFade))
-        ) as Node<'vec2'>
-      )
-    : surface.normal;
+  const shaded =
+    surface.normal ??
+    bumpNormalWorld(existsOrThrow(surface.bumpHeight, 'A surface without a normal has a bump.'));
+  const normal = distance.fade ? fadeDetailNormal(shaded, viewDistance, distance.fade) : shaded;
   standard.colorNode = albedo;
   standard.normalNode = transformWorldNormalToView(normal);
   standard.roughnessNode = roughness;
   standard.metalnessNode = float(0);
-  const ao = getAoNode(material, define, surface.ao, raw, layers[0].sample.isAoBaked);
+  const ao = getAoNode(material, define, surface.ao, raw, packing !== 'FULL');
   if (ao) standard.aoNode = ao;
 
-  if (IS_DEBUG_ENV && define.debugView) {
+  if (IS_DEBUG_ENV && define.debugView && near) {
+    const { layers, weights, slots } = near;
     // Per layer: a slot's weight goes to the layer kept there
     const layerWeights =
       weights && slots ? spreadSlotWeights(slots, weights, define.layers.length) : weights;
@@ -449,9 +391,13 @@ export const setupTerrainMaterial = (
       })),
       slots:
         slots && raw ? { count: slots.length, layerWeights: normalizeWeights(raw.weights) } : null,
+      far:
+        distance.fade && distance.farBlend
+          ? { share: getFarShare(viewDistance, distance.fade.y, distance.farBlend) }
+          : null,
       normal,
       define,
-      packing: layers[0].sample.packing,
+      packing,
     });
   }
 };
@@ -488,13 +434,13 @@ const terrainMaterialFns = { setup: setupTerrainMaterial } satisfies TslMaterial
 
 /**
  * The material props {@link createTerrainMaterial} creates from a config: a
- * `STANDARDNODEMATERIAL` of the registered `aek.terrain` functions, the config as the static
- * define `terrain` (without the id, the layers' sets, the splat maps and the macro texture), each
- * layer's set as its input `layer<i>` (`{ textureSet, packing? }`), the splat maps as the inputs
- * `splat<i>` and the macro texture as the input `macro` (`{ texture }`: `macro.texture`, else for
- * rule noise `noiseTexture` or `macroNoise`). Pass them to `ensureMaterialDependencies` to load the
- * textures before creating
- * the material, or use them as a material JSON's fields.
+ * `STANDARDNODEMATERIAL` of the registered `aek.terrain` functions, the config as the static define
+ * `terrain` (without the id, the layers' sets, the splat maps, the macro texture and the colour
+ * map), each layer's set as its input `layer<i>` (`{ textureSet, packing? }`), the splat maps as
+ * the inputs `splat<i>`, the macro texture as the input `macro` (`{ texture }`: `macro.texture`,
+ * else for rule noise `noiseTexture` or `macroNoise`) and the colour map as the input `colorMap`.
+ * Pass them to `ensureMaterialDependencies` to load the textures before creating the material, or
+ * use them as a material JSON's fields.
  * @returns the props, for `createMaterial` or `ensureMaterialDependencies`
  * @example
  * ```ts

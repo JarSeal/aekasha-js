@@ -29,6 +29,7 @@ const ctx: TerrainDebugViewContext = {
   weights: null,
   sampled: [{ antiTiling: 'NONE', projection: { mode: 'PLANAR' } }],
   slots: null,
+  far: null,
   normal: vec3(0, 1, 0) as unknown as Node<'vec3'>,
   define: readTerrainDefine({ terrain: { layers: [{}] } }),
   packing: 'LITE',
@@ -112,6 +113,7 @@ describe('applyTerrainDebugView', () => {
     expect(estimateTerrainFetches(contextOf({ layers: [{}] }, 'LITE'))).toEqual({
       always: 2,
       gated: [],
+      material: 0,
     });
     const hexTriplanar = {
       layers: [{}],
@@ -143,9 +145,32 @@ describe('applyTerrainDebugView', () => {
     };
     expect(estimateTerrainFetches(contextOf(blended, 'MINIMAL')).always).toBe(3 + 1 + 1 + 1);
     const colorMapped = { ...blended, colorMap: { mode: 'DETAIL' } };
+    const farColorMap = {
+      ...blended,
+      colorMap: { mode: 'FAR_ONLY' },
+      distance: { fade: [30, 90], far: 'COLOR_MAP' },
+    };
+    // The far colour map is sampled outside the branch: every pixel's
+    expect(estimateTerrainFetches(contextOf(farColorMap, 'MINIMAL')).material).toBe(1 + 1 + 1 + 1);
     expect(estimateTerrainFetches(contextOf(colorMapped, 'MINIMAL')).always).toBe(
       3 + 1 + 1 + 1 + 1
     );
+  });
+
+  it("counts only the far surface's fetches past a far mode's band", () => {
+    const define = { layers: [{}], distance: { fade: [30, 90], far: 'AVERAGE_COLOR' } };
+    const share = uniform(0) as unknown as Node<'float'>;
+    const material = new MeshStandardNodeMaterial();
+    applyTerrainDebugView(material, 'TAPS', { ...contextOf(define, 'LITE'), far: { share } });
+    const nodes = new Set<Node>();
+    const stack = [material.emissiveNode] as (Node | null)[];
+    while (stack.length) {
+      const node = stack.pop();
+      if (!node || nodes.has(node)) continue;
+      nodes.add(node);
+      for (const child of node.getChildren()) stack.push(child as Node);
+    }
+    expect(nodes.has(share)).toBe(true);
   });
 
   it("counts the slots' fetches, not the layers', a slot's gate its own", () => {
@@ -161,7 +186,11 @@ describe('applyTerrainDebugView', () => {
         { antiTiling: 'DUAL_SCALE' as const, projection: { mode: 'PLANAR' as const } },
       ],
     };
-    expect(estimateTerrainFetches(dominant)).toEqual({ always: 2 * 3 + 2 * 2, gated: [] });
+    expect(estimateTerrainFetches(dominant)).toEqual({
+      always: 2 * 3 + 2 * 2,
+      gated: [],
+      material: 0,
+    });
     // A gated slot: its planar tap always, its branch where its picked gate opens
     const gate = gatedNodes('TRIPLANAR');
     const gated = {

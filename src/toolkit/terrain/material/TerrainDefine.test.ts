@@ -384,6 +384,11 @@ const REFUSED: unknown[] = [
     distance: { fade: [30, 90], far: 'AVERAGE_COLOR' },
   },
   { layers: [{}], quality: { LOW: { colorMap: { mode: 'DETAIL' } } } },
+  {
+    layers: [{}],
+    colorMap: { mode: 'DETAIL' },
+    distance: { fade: [30, 90], far: 'AVERAGE_COLOR' },
+  },
   { layers: [{ heightOffset: 2 }] },
   { layers: [{}], reservedTextures: 16 },
   { layers: [{}], reservedTextures: -1 },

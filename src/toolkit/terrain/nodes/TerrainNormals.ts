@@ -61,6 +61,17 @@ export type UvMapping = {
 };
 
 /**
+ * The screen-space derivatives a UV's frame is made of, built before a branch that reads them: the
+ * world position's and the UV's (WGSL refuses a derivative in non-uniform control flow)
+ */
+export type FrameDerivatives = {
+  dpdx: Node<'vec3'>;
+  dpdy: Node<'vec3'>;
+  duvdx: Node<'vec2'>;
+  duvdy: Node<'vec2'>;
+};
+
+/**
  * The tangent frame of any UV from its screen-space derivatives (Schüler, "Normal Mapping Without
  * Precomputed Tangents"), in world space: `transformTangentNormalToView`'s construction on world
  * vectors, for a mesh's UV (`MESH_UV`), which has no `tangent` attribute. With a mapping, the
@@ -69,12 +80,18 @@ export type UvMapping = {
  * @internal
  * @param uv the UV the normal map is sampled at, or the coordinates `mapping` tiles
  * @param mapping the scale and turn from `uv` to the sampled UV, or none
+ * @param derivatives the position's and `uv`'s derivatives built before (a branch's), or none: its
+ * own
  */
-export const getUvTangentFrame = (uv: Node<'vec2'>, mapping?: UvMapping): WorldTangentFrame => {
-  const q0 = dFdx(positionWorld);
-  const q1 = dFdy(positionWorld);
-  const st0 = dFdx(uv);
-  const st1 = dFdy(uv);
+export const getUvTangentFrame = (
+  uv: Node<'vec2'>,
+  mapping?: UvMapping,
+  derivatives?: FrameDerivatives
+): WorldTangentFrame => {
+  const q0 = derivatives?.dpdx ?? dFdx(positionWorld);
+  const q1 = derivatives?.dpdy ?? dFdy(positionWorld);
+  const st0 = derivatives?.duvdx ?? dFdx(uv);
+  const st1 = derivatives?.duvdy ?? dFdy(uv);
   const normal = getGeometryNormal();
   const q1perp = cross(q1, normal);
   const q0perp = cross(normal, q0);

@@ -16,6 +16,7 @@ import {
   type ProjectionContext,
   type ProjectionNodes,
 } from '../nodes/Projection';
+import type { TextureSetPacking } from 'aekasha/texturesets';
 import type { TextureSetSample } from '../nodes/SampleTextureSet';
 import { sampleSlopeGated } from '../nodes/SlopeGate';
 import {
@@ -33,8 +34,12 @@ import type {
 import type { LayerParams, LayerSource } from './TerrainInputs';
 
 const DEG_TO_RAD = Math.PI / 180;
-/** `MINIMAL`'s roughness before the scales: the packing has no roughness map (the baseline's) */
-const MINIMAL_ROUGHNESS = 0.8;
+/**
+ * `MINIMAL`'s roughness before the scales: the packing has no roughness map (the baseline's); the
+ * far surface's too, where no layer is sampled.
+ * @internal
+ */
+export const MINIMAL_ROUGHNESS = 0.8;
 
 /** `DUAL_SCALE`'s uniforms */
 type DualScaleNodes = Extract<AntiTilingNodes, { mode: 'DUAL_SCALE' }>;
@@ -173,6 +178,18 @@ export const createLayerUniforms = (
 type UvGradients = { dx: Node<'vec2'>; dy: Node<'vec2'> };
 
 /**
+ * The tiling's coordinates every layer or slot shares and their gradients, built once before them
+ * (a slot's UV jumps where its layer changes; a far branch can't take derivatives): with the world
+ * position's gradients, which a mesh UV's frame reads, when they're built before a branch
+ * @internal
+ */
+export type SharedCoords = {
+  coords: Node<'vec2'>;
+  grad: UvGradients;
+  positionGrad?: { dx: Node<'vec3'>; dy: Node<'vec3'> };
+};
+
+/**
  * A layer's tiling: its coordinates in metres, its tile size, its UV and its turn
  * @internal
  */
@@ -216,7 +233,7 @@ export const getLayerUv = (
   define: ResolvedTerrainDefine,
   params: LayerParams,
   layer: LayerUniforms,
-  shared?: { coords: Node<'vec2'>; grad: UvGradients }
+  shared?: SharedCoords
 ): LayerUv => {
   const coords = shared?.coords ?? getLayerCoords(define);
   const tileSize = params.physicalSize.mul(layer.tiling) as Node<'vec2'>;
@@ -239,22 +256,31 @@ export const getLayerUv = (
     angle,
     turn,
     grad: shared ? { dx: toTiles(shared.grad.dx), dy: toTiles(shared.grad.dy) } : null,
-    getUvFrame: () =>
-      shared ? getUvTangentFrame(coords, { tileSize, turn }) : getUvTangentFrame(tileUv),
+    getUvFrame: () => {
+      if (!shared) return getUvTangentFrame(tileUv);
+      const { positionGrad: position, grad } = shared;
+      const derivatives = position && {
+        dpdx: position.dx,
+        dpdy: position.dy,
+        duvdx: grad.dx,
+        duvdy: grad.dy,
+      };
+      return getUvTangentFrame(coords, { tileSize, turn }, derivatives);
+    },
   };
 };
 
 /**
- * Every layer's sample in one packing, or a thrown error naming the layers' packings.
+ * The layers' one packing (their bundles'), or a thrown error naming each layer's.
  * @internal
  */
-export const checkOnePacking = (samples: TextureSetSample[]) => {
-  const packings = samples.map((sample) => sample.packing);
+export const checkOnePacking = (packings: TextureSetPacking[]) => {
   if (packings.some((packing) => packing !== packings[0])) {
     throw new Error(
       `[terrain] The layers sample different packings (${packings.map((p, i) => `layer${i}: ${p}`).join(', ')}): give the inputs one "packing" (createTerrainMaterial's packing).`
     );
   }
+  return packings[0];
 };
 
 /** The normal's strength of a layer: the set's × the layer's `normalStrength` */

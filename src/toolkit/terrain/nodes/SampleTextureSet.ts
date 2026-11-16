@@ -68,8 +68,9 @@ const isArrayBundle = (bundle: AnyBundle): bundle is TextureSetArrayInput =>
 /**
  * The packing of a bundle by its slots: a `{ textureSet }` or `{ textureSetArray }` bundle holds
  * the slots of the packing its input names, no other.
+ * @internal
  */
-const getBundlePacking = (bundle: AnyBundle): TextureSetPacking => {
+export const getBundlePacking = (bundle: AnyBundle): TextureSetPacking => {
   if (bundle.albedoRough && bundle.normalHeight) return 'LITE';
   if (bundle.albedoHeight && bundle.normal && bundle.orm) return 'FULL';
   if (bundle.albedoHeight) return 'MINIMAL';

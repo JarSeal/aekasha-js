@@ -24,6 +24,7 @@ import {
   sampleLayer,
   type BuiltLayer,
   type LayerUniforms,
+  type SharedCoords,
 } from './TerrainLayers';
 
 /**
@@ -141,6 +142,20 @@ export type SlotContext = {
   /** The anti-tiling's view distance and macro patches, shared */
   antiTiling: Pick<AntiTilingContext, 'viewDistance' | 'patches'>;
   getProjectionContext: () => ProjectionContext;
+  /** The coordinates and their gradients when built before (a far branch's), else the slots' own */
+  shared?: SharedCoords;
+};
+
+/** The tiling's coordinates and their gradients, made here when no one built them before */
+const getSharedCoords = (define: ResolvedTerrainDefine): SharedCoords => {
+  const coords = getLayerCoords(define);
+  return {
+    coords,
+    grad: {
+      dx: dFdx(coords) as unknown as Node<'vec2'>,
+      dy: dFdy(coords) as unknown as Node<'vec2'>,
+    },
+  };
 };
 
 /**
@@ -155,16 +170,12 @@ export type SlotContext = {
 export const buildSlots = (slots: KeptLayer[], ctx: SlotContext): BuiltLayer[] => {
   const { define, bundle } = ctx;
   // Continuous across the slots' layer changes, unlike a slot's UV: every tap's gradients
-  const coords = getLayerCoords(define);
-  const grad = {
-    dx: dFdx(coords) as unknown as Node<'vec2'>,
-    dy: dFdy(coords) as unknown as Node<'vec2'>,
-  };
+  const shared = ctx.shared ?? getSharedCoords(define);
   return slots.map(({ layer }, slot) => {
     const uniforms = pickLayerUniforms(layer, slot, ctx.layers);
     const params = getTextureSetLayerParams(bundle.layerParams, layer) as unknown as LayerParams;
     const source = { bundle, layer, params };
-    const uv = getLayerUv(define, params, uniforms, { coords, grad });
+    const uv = getLayerUv(define, params, uniforms, shared);
     const antiTiling: AntiTilingContext = {
       ...ctx.antiTiling,
       seed: layer,
