@@ -16,6 +16,7 @@ import {
   getWallPosition,
   NO_SHADOWS,
 } from './galleryBlocks';
+import { ANTI_TILING_ROW_BOUNDS, createAntiTilingRow } from './antiTilingRow';
 import {
   createProceduralRowAsync,
   PROCEDURAL_ROW_DEPTH,
@@ -38,6 +39,10 @@ import {
  *   set's `physicalSize`.
  * - **The cliffs' walls:** a 6 m wall on the left of each `cliffs*` block, tiled at its UVs in
  *   metres (`uv: "MESH_UV"`).
+ * - **The Anti-tiling row** (`antiTilingRow.ts`, p305 Phase 2): three flat 48 × 48 m blocks of
+ *   `grass01` 8 m behind the library and the Procedural row, `NONE`, `DUAL_SCALE` and `HEX` from the left, the macro
+ *   variation (`macroNoise`, which the scene lists) on; the tab switches the macro and tunes the
+ *   modes' and the macro's uniforms.
  * - **The Procedural row** (`proceduralRow.ts`): five rows of two blocks 8 m right of the library,
  *   a generator each (`PROCEDURAL_BLOCKS`: sand, mud, rocks and strata, snow and ice, grass and
  *   concrete from the back), baked during the load (`bakeSurfaceGenerator`, 1024² `LITE`: the
@@ -149,28 +154,35 @@ export const scene = async () => {
   registerOnSceneExit(TERRAIN_GALLERY_SCENE_ID, () => {
     for (const cleanup of exitCleanups.splice(0)) cleanup();
   });
-  // The ground under the library (centred on x = 0) and the Procedural row right of it
-  const left = -(ROWS[0].length * BLOCK_PITCH) / 2 - BLOCK_GAP / 2;
-  const right = PROCEDURAL_ROW_EDGE_X + BLOCK_GAP;
-  const depth = Math.max(ROWS.length * BLOCK_PITCH, PROCEDURAL_ROW_DEPTH + BLOCK_GAP) + BLOCK_GAP;
+  // The ground under the library (centred on x = 0), the Procedural row right of it and the
+  // Anti-tiling row behind it
+  const left = Math.min(
+    -(ROWS[0].length * BLOCK_PITCH) / 2 - BLOCK_GAP / 2,
+    ANTI_TILING_ROW_BOUNDS.minX - BLOCK_GAP
+  );
+  const right = Math.max(PROCEDURAL_ROW_EDGE_X, ANTI_TILING_ROW_BOUNDS.maxX) + BLOCK_GAP;
+  const front =
+    (Math.max(ROWS.length * BLOCK_PITCH, PROCEDURAL_ROW_DEPTH + BLOCK_GAP) + BLOCK_GAP) / 2;
+  const back = ANTI_TILING_ROW_BOUNDS.minZ - BLOCK_GAP;
   createMeshEntity(
     {
       geo: {
         id: 'terrainGalleryGround',
         type: 'BOX',
-        params: { width: right - left, height: 0.2, depth },
+        params: { width: right - left, height: 0.2, depth: front - back },
       },
       mat: {
         id: 'terrainGalleryGround',
         type: 'STANDARD',
         params: { color: '#2e2f31', roughness: 0.95 },
       },
-      position: { x: (left + right) / 2, y: GROUND_Y - 0.1 },
+      position: { x: (left + right) / 2, y: GROUND_Y - 0.1, z: (front + back) / 2 },
       ...NO_SHADOWS,
     },
     { appId: 'terrainGallery_ground', debugData: { name: 'Gallery ground' } }
   );
   GALLERY_BLOCKS.forEach((block, i) => createBlock(block, SEED_BASE + i));
+  createAntiTilingRow();
   await createProceduralRowAsync(addGalleryExitCleanup);
 
   // Debug env only: a dynamic import, so the tab's code isn't in a production build. It applies

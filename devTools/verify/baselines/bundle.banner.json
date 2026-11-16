@@ -31,15 +31,15 @@
     },
     "assets/banner.embed.js": {
       "bytes": 974834,
-      "gzip": 272667
+      "gzip": 272663
     },
     "assets/banner.js": {
       "bytes": 483,
-      "gzip": 338
+      "gzip": 340
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
-      "gzip": 284
+      "gzip": 285
     },
     "assets/basis_transcoder.js": {
       "bytes": 57529,
@@ -75,15 +75,15 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7637,
-      "gzip": 3099
+      "gzip": 3098
     },
     "assets/GeometryMerge.js": {
       "bytes": 8248,
-      "gzip": 3427
+      "gzip": 3426
     },
     "assets/GeometryTransfer.js": {
       "bytes": 1933,
-      "gzip": 869
+      "gzip": 871
     },
     "assets/GeometryTransfer.js@AssetsWorker": {
       "bytes": 1939,
@@ -91,19 +91,19 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 47088,
-      "gzip": 14026
+      "gzip": 14025
     },
     "assets/HDRLoader.js": {
       "bytes": 3407,
-      "gzip": 1635
+      "gzip": 1634
     },
     "assets/ImportRegistry.js": {
       "bytes": 15737,
-      "gzip": 6379
+      "gzip": 6377
     },
     "assets/KTX2Loader.js": {
       "bytes": 60312,
-      "gzip": 24497
+      "gzip": 24498
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2210,
@@ -123,7 +123,7 @@
     },
     "assets/TextureInputResolvers.js": {
       "bytes": 3306,
-      "gzip": 1366
+      "gzip": 1367
     },
     "assets/three.core.js": {
       "bytes": 199218,
@@ -131,7 +131,7 @@
     },
     "assets/three.module.js": {
       "bytes": 220,
-      "gzip": 183
+      "gzip": 184
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -139,14 +139,14 @@
     },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 210
+      "gzip": 212
     }
   },
   "main": {
     "chunk": "assets/banner.embed.js",
     "modules": 68,
     "minified": 999049,
-    "gzip": 278937
+    "gzip": 278938
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -162,7 +162,7 @@
     "_engine/kernel/config": {
       "modules": 1,
       "minified": 2428,
-      "gzip": 1077
+      "gzip": 1078
     },
     "_engine/kernel/ecs": {
       "modules": 6,

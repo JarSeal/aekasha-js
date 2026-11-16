@@ -4841,7 +4841,9 @@
       "readTerrainDefine": "Function",
       "ResolvedTerrainDefine": "TypeAlias",
       "TERRAIN_DEFINE_VALUES": "Variable",
-      "TerrainLayerDefine": "TypeAlias"
+      "TerrainAntiTilingDefine": "TypeAlias",
+      "TerrainLayerDefine": "TypeAlias",
+      "TerrainMacroDefine": "TypeAlias"
     },
     "src/toolkit/terrain/material/TerrainMaterial.ts": {
       "createTerrainMaterial": "Function",
@@ -4852,6 +4854,7 @@
       "TerrainQualityLevel": "TypeAlias"
     },
     "src/toolkit/terrain/material/TerrainMaterialConfig.ts": {
+      "TERRAIN_ANTI_TILING_MODES": "Variable",
       "TERRAIN_BLEND_SOURCES": "Variable",
       "TERRAIN_DEBUG_VIEWS": "Variable",
       "TERRAIN_LAYER_SOURCES": "Variable",
@@ -4859,16 +4862,36 @@
       "TERRAIN_PACKINGS": "Variable",
       "TERRAIN_QUALITY_LEVELS": "Variable",
       "TERRAIN_UV_MODES": "Variable",
+      "TerrainAntiTiling": "TypeAlias",
+      "TerrainAntiTilingSchema": "Variable",
       "TerrainLayer": "TypeAlias",
       "TerrainLayerSchema": "Variable",
       "TerrainLayerSettings": "TypeAlias",
       "TerrainLayerSettingsSchema": "Variable",
+      "TerrainMacro": "TypeAlias",
+      "TerrainMacroSchema": "Variable",
+      "TerrainMacroSettings": "TypeAlias",
+      "TerrainMacroSettingsSchema": "Variable",
       "TerrainMaterialConfig": "TypeAlias",
       "TerrainMaterialConfigSchema": "Variable",
       "TerrainMaterialDefine": "TypeAlias",
       "TerrainMaterialDefineSchema": "Variable",
       "TerrainQualityOverrides": "TypeAlias",
       "TerrainQualityOverridesSchema": "Variable"
+    },
+    "src/toolkit/terrain/nodes/AntiTiling.ts": {
+      "AntiTilingContext": "TypeAlias",
+      "AntiTilingNodes": "TypeAlias",
+      "sampleAntiTiled": "Function"
+    },
+    "src/toolkit/terrain/nodes/Distance.ts": {
+      "fadeDetailNormal": "Function"
+    },
+    "src/toolkit/terrain/nodes/Macro.ts": {
+      "applyMacroVariation": "Function",
+      "MacroNodes": "TypeAlias",
+      "MacroSurface": "TypeAlias",
+      "sampleMacroTexture": "Function"
     },
     "src/toolkit/terrain/nodes/noise/Hash.ts": {
       "hash12": "Function",
@@ -6055,10 +6078,16 @@
       "SurfaceParamValues",
       "SurfaceToggleParam",
       "TERRAIN_TSL_MATERIAL_ID",
+      "TerrainAntiTiling",
+      "TerrainAntiTilingSchema",
       "TerrainLayer",
       "TerrainLayerSchema",
       "TerrainLayerSettings",
       "TerrainLayerSettingsSchema",
+      "TerrainMacro",
+      "TerrainMacroSchema",
+      "TerrainMacroSettings",
+      "TerrainMacroSettingsSchema",
       "TerrainMaterialConfig",
       "TerrainMaterialConfigSchema",
       "TerrainMaterialDefine",

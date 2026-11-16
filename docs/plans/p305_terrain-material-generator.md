@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Materials, Terrain, Toolkit
 Blocks: p306_terrain-blocks-and-procedural-terrain-meshes.md, p307_wet-and-dry-surface-states.md, p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -301,18 +301,40 @@ Each phase adds a gallery row (or extends one) so it can be checked and measured
 - **The gallery:** the library blocks are variants of the JSON route's `terrain` (`inputs.layer0`; the walls `uv: 'MESH_UV'`), the Procedural row's imported mode too. The tab's Material control switches the library between the JSON route, the code route (`createTerrainMaterial`, a material per set, packing, wall and view) and the baseline, and its Debug view select shows a view on the terrain modes (it preloads the views); both saved.
 - **The exit, measured (2026-11-16, WebGPU, Chrome headless, the gallery's overview and close-ups of sand01, cliffs01 and grass01):** JSON and code routes byte-identical in every packing and both views; the baseline as above. WGSL of a block (three's lighting adds 3 samples and 1 `dpdx`): LITE planar 2 own samples and no derivatives, FULL 3, MINIMAL 1 and the bump's 2 `dpdx`, a wall's `MESH_UV` 2 `dpdx`; no `cos` without a rotation; `TEXEL_DENSITY` adds `textureDimensions` and `log2`, and drops the colour sample with the view.
 
-### Phase 2 — Anti-tiling, macro, distance (D3, D7 minus colour map)
+### Phase 2 — Anti-tiling, macro, distance (D3, D7 minus colour map) — done
 
 **Gallery row "Anti-tiling":** three 48 × 48 m flat blocks of `grass01` with NONE / DUAL_SCALE / HEX, plus macro on/off.
 
 **Exit:** HEX shows no mip seams at grazing angles, and DUAL_SCALE hides repetition from a 30 m camera height.
 
+**As built:**
+
+- **Distance is the detail normals' fade only** (decided 2026-11-16): `distance: { fade: [from, to] }`, the shaded world normal mixed to `normalWorldGeometry` by a smoothstep of the view distance (`nodes/Distance.ts`, uniform `terrain_distanceFade`), before the one conversion to view space (the `NORMALS` view shows it). `distance.far` and `farBlend` are refused until **Phase 7**, which adds `AVERAGE_COLOR` with `COLOR_MAP`: it needs the `textureSets()` feature's `{ textureSet }` bundle to carry the set's `averageColor` as a uniform (an engine change on `aekasha/texturesets`: the graph sees bundles, never set ids; the colour is only in `TextureSetDef`).
+- **The config** (`TerrainMaterialConfig.ts`, the hand reader in step): `antiTiling` is a discriminated union by `mode`, each mode's own fields only (another mode's field is refused): `NONE`; `DUAL_SCALE` `farScale` (0..1 exclusive, default 0.23) and `distance` (`[from, to]` m, default `[6, 40]`); `HEX` `hexContrast` (0.05..0.95, default 0.5) and **`hexRotation`** (0..1 of a full turn either way, default 1; not in D1: a directional set, ripples or strata, wants less). Material-wide and per layer, a layer's own replacing the material's whole object; a tier's `antiTiling` replaces the material's, **not a layer's own** (Phase 6 decides whether a tier reaches the layers). **`apply: 'DOMINANT'` isn't built**: it needs several layers' weights (Phase 3), so the schema refuses it until Phase 3 or 6 adds it. `macro: { scale, brightness?, hue?, roughness? }` (defaults 0.2, 8°, 0.15), its texture the input `macro` (`{ texture }`, made by `getTerrainMaterialProps` from the code route's `macro.texture`), like the layers' sets: the gather's closure loads it. `macro` isn't a tier override (its texture is an input). The quality overrides take `antiTiling` and `distance` besides Phase 1's.
+- **Anti-tiling** (`nodes/AntiTiling.ts`, `sampleAntiTiled`, internal): one `TextureSetSample` back, its tangent normal in the layer's UV frame (each tap's turned back by its angle, `R(−a)`), so the layer's frame and surface code are unchanged. Uniforms per layer, the mode's only: `terrain_l<i>_farScale`, `terrain_l<i>_antiTilingDistance` (vec2); `terrain_l<i>_hexContrast`, `terrain_l<i>_hexRotation`.
+  - `DUAL_SCALE`: the second tap at `uv × farScale` turned 37° and offset `(0.37, 0.61)`; its share `mix(p, p + 0.5, smoothstep(distance))` with `p` the macro's B patches (`smoothstep(0.3, 0.7, B) × 0.5`), 0 without a macro. Its normal is the blend, not rescaled for the larger tap.
+  - `HEX`: Heitz–Neyret's triangle grid at `2√3` a tile (a hex about half a tile), per vertex an offset (`hashCell22`) and an angle (`hashCell12`, another seed; the layer's index seeds both), the tap's UV turned about its hex's centre, sampled with `dFdx`/`dFdy` of the layer's UV turned alike (`grad`); weights `w⁷ × mix(1, h, 0.6)` (the tap's height, not Mikkelsen's luminance: every packing has it), normalized, through Mikkelsen's `Gain3` (`k = −log2(1 − hexContrast)`), normalized again. **The weight is clamped to 0..1 before the gain**: one normalized to a hair over 1 gave `pow` a negative base, a NaN, a black pixel (a few hundred a frame before the clamp).
+- **Macro** (`nodes/Macro.ts`): one fetch at the world's `(x, −z) / scale`, built before the layers; albedo × `1 + R′·brightness`, then **three's TSL `hue`** (a turn about the grey axis, in place of D7's YIQ: the same job, no code of ours) by `G′·hue` degrees; roughness × `1 + G′·roughness`, capped at 1 (`R′`, `G′`: the channel − 0.5, × 2). B goes to `DUAL_SCALE`'s share, so with `DUAL_SCALE` the normal reads the macro fetch too. Uniforms `terrain_macroScale`, `terrain_macroBrightness`, `terrain_macroHue`, `terrain_macroRoughness`. The setup throws for `macro` without the input, an input that isn't a texture node, or the input without `macro`.
+- **Tests:** node structure only (taps × slots per mode and packing, gradients on HEX's taps only, the patches' reach, one macro fetch, the uniforms). Three's `Node.traverse` walks a shared node once per path, exponential on a hex graph: the tests walk each node once (`getChildren` and a set).
+- **The gallery's Anti-tiling row** (`antiTilingRow.ts`, the tab's section `_dbg__terrainGalleryAntiTiling.ts`): three flat 48 m planes of `grass01`, x −56 / 0 / 56, behind the library **and the Procedural row** (which reaches to z −38; the row's centre z −70), each a variant of the JSON route's `terrain` (mode, macro on/off, debug view in its define; macro scale 64 m, a block's worth); the scene lists `macroNoise`. The tab: the macro switch, live sliders for the modes' and the macro's uniforms (written into whichever variant a block shows), and the blocks' list flying the camera 30 m up, grazing (eye height along the ground) or close (`flyGalleryCamera`, the camera module's pose flight, which the 12 m blocks' flight now uses). The Debug view select and the 1 m checker cover the row; the Procedural measurement hides it.
+- **The exit, measured** (2026-11-16, Chrome headless, 1280 × 800 canvas at DPR 1, the row's blocks 30 m up and grazing; the repetition figure is a screenshot crop's high-passed luminance autocorrelation, its highest value at a shift of 8 px or more):
+
+  | grass01, 30 m up | repetition | frame GPU ms (WebGPU), macro off / on |
+  | ---------------- | ---------- | ------------------------------------- |
+  | empty frame      | –          | 1.36 / 1.42                           |
+  | `NONE`           | 0.27 (32 px: one 1.4 m tile) | 1.59 / 1.86          |
+  | `DUAL_SCALE`     | 0.03       | 1.69 / 2.03                           |
+  | `HEX`            | 0.02       | 2.59 / 2.75                           |
+
+  `DUAL_SCALE` and `HEX` take the repetition out (the macro doesn't change the figure: the high-pass drops its broad variation). `HEX` grazing shows no seam or line at the hexes' borders, its far band like `NONE`'s; its `NORMALS` view shades the pebbles alike in every hex (rocks01, close). WebGL2 (ANGLE on the same GPU) renders all three within 0.04 / 255 of WebGPU on average, nothing over 16, the same repetition figures. Cost, one 48 m block filling most of the frame: `HEX` about 1 ms over `NONE`, `DUAL_SCALE` 0.1-0.2 ms; Phase 6 measures the tiers properly.
+
 ### Phase 3 — Blending (D4 minus rules, D9)
 
 1. `VERTEX_COLOR` (both layouts), `SPLAT_MAP` (1–2), LINEAR/HEIGHT blend.
 2. SEPARATE and ARRAY storage, AUTO with budget errors.
-3. `WEIGHTS` debug view.
-4. Test meshes get procedural vertex colours and splat `DataTexture`s generated in code. Blender versions come in p306.
+3. `antiTiling.apply: 'DOMINANT'` (D3: HEX on the highest-weight layer, DUAL_SCALE on the rest), refused by Phase 2's schema until the weights exist; or leave it to Phase 6 with the tiers.
+4. `WEIGHTS` debug view.
+5. Test meshes get procedural vertex colours and splat `DataTexture`s generated in code. Blender versions come in p306.
 
 **Gallery row "Splatting":**
 
@@ -339,7 +361,7 @@ Each phase adds a gallery row (or extends one) so it can be checked and measured
 
 ### Phase 7 — Colour map + detail, far modes, structures (D7, D8)
 
-1. `colorMap` DETAIL / FAR_ONLY, `distance.far` (using p303's `averageColor`), `bakeTerrainColorMap`.
+1. `colorMap` DETAIL / FAR_ONLY, `distance.far` (`AVERAGE_COLOR`, `COLOR_MAP`, `NONE`) with D7's `farBlend` band (Phase 2 built only `distance.fade`, the normals' fade), `bakeTerrainColorMap`. `AVERAGE_COLOR` needs the set's `averageColor` (p303) in the `{ textureSet }` bundle as a uniform: an engine change on `aekasha/texturesets` (its nested `CLAUDE.md`, the Hub; an engine minor).
 2. Structure mode, `createStructureMaterial`, `concrete01` / `concrete02` on a wall and bunker piece.
 
 **Gallery rows "Colour map" and "Structures".**

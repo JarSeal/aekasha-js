@@ -18,6 +18,11 @@ import {
 } from 'aekasha/debug';
 import { getTextureSet, loadTextureSetAsync, type TextureSetPacking } from 'aekasha/texturesets';
 import { createTerrainMaterial, loadTerrainDebugViewsAsync } from 'aekasha/toolkit/terrain';
+import {
+  clearAntiTilingSelection,
+  getAntiTilingSections,
+  startAntiTilingTab,
+} from './_dbg__terrainGalleryAntiTiling';
 import { flyToGalleryBlock, stopGalleryFlight } from './_dbg__terrainGalleryCamera';
 import {
   clearGeneratorSelection,
@@ -32,6 +37,7 @@ import {
   getSurfaceOverrides,
   type GalleryDebugView,
 } from './galleryBlocks';
+import { ANTI_TILING_BLOCKS, getAntiTilingAppId, setAntiTilingRowState } from './antiTilingRow';
 import {
   getProceduralBakeSettings,
   PROCEDURAL_BLOCKS,
@@ -94,10 +100,16 @@ let selectedSetId: string | null = null;
 /** The latest packing apply: an older one that finishes later is dropped */
 let packingRequest = 0;
 
-/** Every block the checker covers: the library's and the Procedural row's (its key names its
- * checker's mesh) */
+/** Every block the checker covers: the library's, the Anti-tiling row's and the Procedural row's
+ * (its key names its checker's mesh) */
 const CHECKER_BLOCKS = [
   ...GALLERY_BLOCKS.map(({ setId, x, z, geometryId }) => ({ key: setId, x, z, geometryId })),
+  ...ANTI_TILING_BLOCKS.map(({ mode, x, z, geometryId }) => ({
+    key: `antiTiling_${mode}`,
+    x,
+    z,
+    geometryId,
+  })),
   ...PROCEDURAL_BLOCKS.map(({ generator, x, z, geometryId }) => ({
     key: `proc_${generator.id}`,
     x,
@@ -163,12 +175,13 @@ const applyDebugViewAsync = async () => {
   if (startedOn.isCurrent) applyMaterial();
 };
 
-/** Every library block (and wall) in the material mode */
+/** Every library block (and wall) in the material mode, and the Anti-tiling row in the view */
 const applyMaterial = () => {
   for (const block of GALLERY_BLOCKS) {
     swapSurface(getBlockAppId(block.setId), block.setId, false);
     if (block.hasWall) swapSurface(getWallAppId(block.setId), block.setId, true);
   }
+  setAntiTilingRowState({ debugView: state.debugView });
 };
 
 /**
@@ -252,6 +265,7 @@ const setChecker = (isShown: boolean) => {
 const getOtherAppIds = () => [
   'terrainGallery_ground',
   ...GALLERY_BLOCKS.flatMap(({ setId }) => [getBlockAppId(setId), getWallAppId(setId)]),
+  ...ANTI_TILING_BLOCKS.map(({ mode }) => getAntiTilingAppId(mode)),
   ...CHECKER_BLOCKS.map(({ key }) => getCheckerAppId(key)),
 ];
 
@@ -259,6 +273,7 @@ const getOtherAppIds = () => [
 const flyToBlock = (block: GalleryBlock) => {
   selectedSetId = block.setId;
   clearGeneratorSelection();
+  clearAntiTilingSelection();
   flyToGalleryBlock(block);
 };
 
@@ -282,6 +297,7 @@ const proceduralOpts: ProceduralSectionsOpts = {
   tabId: TAB_ID,
   onSelect: () => {
     selectedSetId = null;
+    clearAntiTilingSelection();
   },
   getOtherAppIds,
 };
@@ -299,6 +315,7 @@ export const createTerrainGalleryTab = () => {
   shownPacking = 'LITE';
   selectedSetId = null;
   stopGalleryFlight(true);
+  startAntiTilingTab();
   const endProceduralTab = startProceduralTab(proceduralOpts);
   addGalleryExitCleanup(() => {
     thisVisit.isCurrent = false;
@@ -339,7 +356,7 @@ export const createTerrainGalleryTab = () => {
             label: 'Debug view',
             kind: 'select',
             options: DEBUG_VIEWS.map((option) => ({ ...option })),
-            hint: 'The terrain material’s debug view on the library (not the baseline): texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048) or the shaded normal in world space',
+            hint: 'The terrain material’s debug view on the library (not the baseline) and the Anti-tiling row: texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048) or the shaded normal in world space',
             onChange: () => void applyDebugViewAsync(),
           },
           {
@@ -372,6 +389,11 @@ export const createTerrainGalleryTab = () => {
         selectedItemId: () => selectedSetId,
         data: () => GALLERY_BLOCKS.map(getBlockRow),
       }),
+      // Their fields bind their own targets, none of this tab's state keys
+      ...(getAntiTilingSections(TAB_ID, () => {
+        selectedSetId = null;
+        clearGeneratorSelection();
+      }) as DebuggerTabSection<GalleryTabState>[]),
       // Its fields bind their own targets, none of this tab's state keys
       ...(getProceduralSections(proceduralOpts) as DebuggerTabSection<GalleryTabState>[]),
     ],

@@ -20031,7 +20031,7 @@
     "terrainGallery": {
       "isDebugScene": true,
       "name": "Terrain gallery (p303, p304, p305)",
-      "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the toolkit's terrain material (p305, its JSON route; one layer, world tiling) in the set's default packing, which the debug tab switches to the code route or to the baseline textureSetSurface (they look the same). Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). Right of the library, the Procedural row (p304): the toolkit's ten surface generators on a block each (five rows of two), baked at the load (1024² LITE), which the debug tab switches between the bake, the generator live in the material and an imported set of its category, with each generator's params, its export and a GPU measurement. The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
+      "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the toolkit's terrain material (p305, its JSON route; one layer, world tiling) in the set's default packing, which the debug tab switches to the code route or to the baseline textureSetSurface (they look the same). Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). Behind the library, the Anti-tiling row (p305): three flat 48 × 48 m grass01 blocks with the terrain material's anti-tiling NONE, DUAL_SCALE and HEX, the macro variation (macroNoise) on, which the debug tab switches and tunes. Right of the library, the Procedural row (p304): the toolkit's ten surface generators on a block each (five rows of two), baked at the load (1024² LITE), which the debug tab switches between the bake, the generator live in the material and an imported set of its category, with each generator's params, its export and a GPU measurement. The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
       "cameras": [
         {
           "camProps": {
@@ -20061,615 +20061,31 @@
           }
         }
       ],
-      "materials": [
-        {
-          "id": "terrain",
-          "debugData": {
-            "name": "Terrain",
-            "description": "The toolkit's terrain material generator (p305) through its JSON route: staticDefines.terrain is the config without its id and the layers' sets (layers' settings: tiling, rotation, tint, normalStrength, roughnessScale; uv WORLD or MESH_UV; blend), the inputs layer0, layer1, … the layers' texture sets ({ textureSet, packing? }, all in one packing). Give a mesh its sets with matOverrides.inputs."
-          },
-          "tslFile": "materials/terrain/terrain.tsl.ts",
-          "staticDefines": {
-            "terrain": {
-              "layers": [
-                {}
-              ]
-            }
-          },
-          "inputs": {
-            "layer0": {
-              "textureSet": "grass01"
-            }
-          },
-          "type": "STANDARDNODEMATERIAL"
-        },
-        {
-          "id": "textureSetSurface",
-          "debugData": {
-            "name": "Texture set surface",
-            "description": "One texture set on a surface, any packing (p303 D7): the baseline of the terrain techniques, no anti-tiling or splat. Give a mesh its set with matOverrides.inputs.surface ({ textureSet, packing? }). Static defines: tiling (WORLD_XZ: the world's (x, -z) over physicalSize, for terrain; UV: the mesh's UV in metres, for walls and structures), minimalNormal (BUMP or FLAT)."
-          },
-          "tslFile": "materials/textureSetSurface/textureSetSurface.tsl.ts",
-          "staticDefines": {
-            "tiling": "WORLD_XZ",
-            "minimalNormal": "BUMP"
-          },
-          "inputs": {
-            "surface": {
-              "textureSet": "sand01"
-            }
-          },
-          "type": "STANDARDNODEMATERIAL"
-        }
-      ],
-      "skyboxes": [
-        {
-          "base": {
-            "type": "COLOR",
-            "color": "#000000"
-          },
-          "atmosphere": {
-            "nightSkyColor": "#0a1020"
-          },
-          "suns": [
-            {
-              "glowIntensity": 0.4,
-              "light": {}
-            }
-          ],
-          "moons": [
-            {
-              "phase": 0.4,
-              "phaseMode": "CYCLE",
-              "light": {
-                "intensity": 0.5
-              }
-            }
-          ],
-          "stars": {
-            "milkyWay": {}
-          },
-          "clouds": {
-            "coverage": 0.35
-          },
-          "ground": {},
-          "dayNight": {
-            "timeOfDay": 10,
-            "playing": false,
-            "dayOfYear": 100
-          },
-          "id": "terrainGallerySky",
-          "debugData": {
-            "name": "Terrain gallery sky",
-            "description": "The DAY_NIGHT preset (as the shared dayNight sky box) standing still at 10:00, so the gallery's blocks are lit the same on every visit: a mid-morning sun high enough to light the ramps, low enough for the relief to show."
-          }
-        }
-      ],
-      "textureSets": [
-        {
-          "id": "sand01",
-          "category": "SAND",
-          "physicalSize": [
-            3,
-            3
-          ],
-          "heightScale": 0.057,
-          "packings": {
-            "FULL": {
-              "albedoHeight": "sand01_albedoHeight",
-              "normal": "sand01_normal",
-              "orm": "sand01_orm"
-            },
-            "LITE": {
-              "albedoRough": "sand01_albedoRough",
-              "normalHeight": "sand01_normalHeight"
-            },
-            "MINIMAL": {
-              "albedoHeight": "sand01_albedoHeightAO"
-            }
-          },
-          "debugData": {
-            "name": "Sand 01 (dry dunes)",
-            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#ffffff",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.85,
-            "wetDarkening": 0.55,
-            "wetRoughness": 0.4
-          },
-          "averageColor": "#ab966b"
-        },
-        {
-          "id": "sand02",
-          "category": "SAND",
-          "physicalSize": [
-            3,
-            3
-          ],
-          "heightScale": 0.033,
-          "packings": {
-            "LITE": {
-              "albedoRough": "sand02_albedoRough",
-              "normalHeight": "sand02_normalHeight"
-            }
-          },
-          "debugData": {
-            "name": "Sand 02 (coastal ripples)",
-            "description": "ambientCG Ground093C, CC0: coastal sand with accumulation ripples; the wet-response showcase."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#ffffff",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
-          },
-          "averageColor": "#cab792"
-        },
-        {
-          "id": "mud01",
-          "category": "MUD",
-          "physicalSize": [
-            1.3,
-            1.3
-          ],
-          "heightScale": 0.04,
-          "packings": {
-            "LITE": {
-              "albedoRough": "mud01_albedoRough",
-              "normalHeight": "mud01_normalHeight"
-            }
-          },
-          "debugData": {
-            "name": "Mud 01 (soil)",
-            "description": "Poly Haven brown_mud_02, CC0: brown soil mud."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#ffffff",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
-          },
-          "averageColor": "#484034"
-        },
-        {
-          "id": "mud02",
-          "category": "MUD",
-          "physicalSize": [
-            1.75,
-            1.75
-          ],
-          "heightScale": 0.009,
-          "packings": {
-            "LITE": {
-              "albedoRough": "mud02_albedoRough",
-              "normalHeight": "mud02_normalHeight"
-            }
-          },
-          "debugData": {
-            "name": "Mud 02 (forest mud)",
-            "description": "ambientCG Ground071, CC0: forest mud with sticks; the puddle showcase."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#ffffff",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
-          },
-          "averageColor": "#7e6448"
-        },
-        {
-          "id": "rocks01",
-          "category": "ROCKS",
-          "physicalSize": [
-            2,
-            2
-          ],
-          "heightScale": 0.018,
-          "packings": {
-            "LITE": {
-              "albedoRough": "rocks01_albedoRough",
-              "normalHeight": "rocks01_normalHeight"
-            }
-          },
-          "debugData": {
-            "name": "Rocks 01 (gravel)",
-            "description": "ambientCG Ground079S, CC0: gravel / rocky ground."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#ffffff",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
-          },
-          "averageColor": "#ad926e"
-        },
-        {
-          "id": "rocks02",
-          "category": "ROCKS",
-          "physicalSize": [
-            1.3,
-            1.3
-          ],
-          "heightScale": 0.037,
-          "packings": {
-            "LITE": {
-              "albedoRough": "rocks02_albedoRough",
-              "normalHeight": "rocks02_normalHeight"
-            }
-          },
-          "debugData": {
-            "name": "Rocks 02 (stony mud)",
-            "description": "Poly Haven brown_mud_rocks_01, CC0: stony brown ground."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#ffffff",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
-          },
-          "averageColor": "#574d3d"
-        },
-        {
-          "id": "cliffs01",
-          "category": "CLIFF",
-          "physicalSize": [
-            6,
-            6
-          ],
-          "heightScale": 0.16,
-          "packings": {
-            "FULL": {
-              "albedoHeight": "cliffs01_albedoHeight",
-              "normal": "cliffs01_normal",
-              "orm": "cliffs01_orm"
-            },
-            "LITE": {
-              "albedoRough": "cliffs01_albedoRough",
-              "normalHeight": "cliffs01_normalHeight"
-            },
-            "MINIMAL": {
-              "albedoHeight": "cliffs01_albedoHeightAO"
-            }
-          },
-          "debugData": {
-            "name": "Cliffs 01 (grey mountain)",
-            "description": "ambientCG Rock051, CC0: grey mountain cliff; the triplanar showcase. All three packings (the gallery's packing comparison, p303 D6)."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#ffffff",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
-          },
-          "averageColor": "#737063"
-        },
-        {
-          "id": "cliffs02",
-          "category": "CLIFF",
-          "physicalSize": [
-            6,
-            6
-          ],
-          "heightScale": 0.25,
-          "packings": {
-            "LITE": {
-              "albedoRough": "cliffs02_albedoRough",
-              "normalHeight": "cliffs02_normalHeight"
-            }
-          },
-          "debugData": {
-            "name": "Cliffs 02 (dark veined)",
-            "description": "ambientCG Rock058, CC0: dark blue-grey veined cliff."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#ffffff",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
-          },
-          "averageColor": "#4c5258"
-        },
-        {
-          "id": "snow01",
-          "category": "SNOW",
-          "physicalSize": [
-            3,
-            3
-          ],
-          "heightScale": 0.048,
-          "packings": {
-            "LITE": {
-              "albedoRough": "snow01_albedoRough",
-              "normalHeight": "snow01_normalHeight"
-            }
-          },
-          "debugData": {
-            "name": "Snow 01 (clean)",
-            "description": "ambientCG Snow010A, CC0: clean snow."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#fff2e9",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
-          },
-          "averageColor": "#dbebf8"
-        },
-        {
-          "id": "snow02",
-          "category": "SNOW",
-          "physicalSize": [
-            4,
-            4
-          ],
-          "heightScale": 0.058,
-          "packings": {
-            "LITE": {
-              "albedoRough": "snow02_albedoRough",
-              "normalHeight": "snow02_normalHeight"
-            }
-          },
-          "debugData": {
-            "name": "Snow 02 (wind-shaped)",
-            "description": "ambientCG Snow008A, CC0: wind-shaped snow."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#fff2e9",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
-          },
-          "averageColor": "#dae9f7"
-        },
-        {
-          "id": "ice01",
-          "category": "ICE",
-          "physicalSize": [
-            4,
-            4
-          ],
-          "heightScale": 0.006,
-          "packings": {
-            "LITE": {
-              "albedoRough": "ice01_albedoRough",
-              "normalHeight": "ice01_normalHeight"
-            }
-          },
-          "debugData": {
-            "name": "Ice 01 (lake)",
-            "description": "ambientCG Ice002, CC0: lake ice; AO derived from the height (no AO map)."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#ffffff",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
-          },
-          "averageColor": "#667d73"
-        },
-        {
-          "id": "ice02",
-          "category": "ICE",
-          "physicalSize": [
-            4,
-            4
-          ],
-          "heightScale": 0.004,
-          "packings": {
-            "LITE": {
-              "albedoRough": "ice02_albedoRough",
-              "normalHeight": "ice02_normalHeight"
-            }
-          },
-          "debugData": {
-            "name": "Ice 02 (dark lake)",
-            "description": "ambientCG Ice003, CC0: dark lake ice; AO derived from the height (no AO map)."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#ffffff",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
-          },
-          "averageColor": "#4d5b5c"
-        },
-        {
-          "id": "grass01",
-          "category": "GRASS",
-          "physicalSize": [
-            1.4,
-            1.4
-          ],
-          "heightScale": 0.002,
-          "packings": {
-            "FULL": {
-              "albedoHeight": "grass01_albedoHeight",
-              "normal": "grass01_normal",
-              "orm": "grass01_orm"
-            },
-            "LITE": {
-              "albedoRough": "grass01_albedoRough",
-              "normalHeight": "grass01_normalHeight"
-            },
-            "MINIMAL": {
-              "albedoHeight": "grass01_albedoHeightAO"
-            }
-          },
-          "debugData": {
-            "name": "Grass 01 (lawn ground)",
-            "description": "ambientCG Grass004, CC0: lawn-grass ground seen from the top, no blades. All three packings (the gallery's packing comparison, p303 D6)."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#ffffff",
-            "normalStrength": 1,
-            "roughnessScale": 2.5,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
-          },
-          "averageColor": "#5c6730"
-        },
-        {
-          "id": "grass02",
-          "category": "GRASS",
-          "physicalSize": [
-            2.1,
-            2.1
-          ],
-          "heightScale": 0.027,
-          "packings": {
-            "LITE": {
-              "albedoRough": "grass02_albedoRough",
-              "normalHeight": "grass02_normalHeight"
-            }
-          },
-          "debugData": {
-            "name": "Grass 02 (forest floor)",
-            "description": "ambientCG Ground037, CC0: forest floor with grass."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#ffffff",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
-          },
-          "averageColor": "#9c975f"
-        },
-        {
-          "id": "concrete01",
-          "category": "CONCRETE",
-          "physicalSize": [
-            1.1,
-            0.55
-          ],
-          "heightScale": 0.012,
-          "packings": {
-            "LITE": {
-              "albedoRough": "concrete01_albedoRough",
-              "normalHeight": "concrete01_normalHeight"
-            }
-          },
-          "debugData": {
-            "name": "Concrete 01 (smooth)",
-            "description": "ambientCG Concrete034, CC0: smooth concrete; non-square, so structures only, never in a set array; AO derived from the height (no AO map)."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#eaeaea",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
-          },
-          "averageColor": "#b7b7b7"
-        },
-        {
-          "id": "concrete02",
-          "category": "CONCRETE",
-          "physicalSize": [
-            2,
-            2
-          ],
-          "heightScale": 0.013,
-          "packings": {
-            "LITE": {
-              "albedoRough": "concrete02_albedoRough",
-              "normalHeight": "concrete02_normalHeight"
-            }
-          },
-          "debugData": {
-            "name": "Concrete 02 (damaged)",
-            "description": "ambientCG Concrete044D, CC0: damaged concrete, for structures."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#ffffff",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
-          },
-          "averageColor": "#635e58"
-        }
-      ],
-      "id": "terrainGallery",
-      "sceneFile": "./scenes/terrainGallery/terrainGallery.ts",
       "textures": [
+        {
+          "id": "macroNoise",
+          "fileName": "./source/macroNoise.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "debugData": {
+            "name": "Macro noise (shared, tileable)",
+            "description": "Four tileable noises for a terrain material's large-scale variation: R a broad fbm (brightness), G a second fbm (hue or roughness), B soft-edged patches (masks), A a blue-ish noise (dithering). Linear data, UASTC without RDO. The toolkit's bakeMacroNoise() with its defaults (512², seed 0), exported on WebGPU from the noiseLibrary scene's tab (exportBakedTexture, p304 D4-D5): the same texture without a bake at load."
+          },
+          "__fileSize": 621957,
+          "__sourceUrl": "/toolkit/textures/macroNoise/source/macroNoise.png",
+          "__url": "/aek-assets/toolkit/textures/macroNoise/source/macroNoise.ff98c92d.ktx2",
+          "__bytes": {
+            "in": 621957,
+            "out": 317838
+          },
+          "__vramBytes": {
+            "in": 1398100,
+            "out": 349552
+          },
+          "__codec": "uastc"
+        },
         {
           "id": "sand01_albedoRough",
           "texOpts": {
@@ -21471,6 +20887,614 @@
           "__codec": "uastc"
         }
       ],
+      "materials": [
+        {
+          "id": "terrain",
+          "debugData": {
+            "name": "Terrain",
+            "description": "The toolkit's terrain material generator (p305) through its JSON route: staticDefines.terrain is the config without its id and the layers' sets (layers' settings: tiling, rotation, tint, normalStrength, roughnessScale; uv WORLD or MESH_UV; blend), the inputs layer0, layer1, … the layers' texture sets ({ textureSet, packing? }, all in one packing). Give a mesh its sets with matOverrides.inputs."
+          },
+          "tslFile": "materials/terrain/terrain.tsl.ts",
+          "staticDefines": {
+            "terrain": {
+              "layers": [
+                {}
+              ]
+            }
+          },
+          "inputs": {
+            "layer0": {
+              "textureSet": "grass01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "textureSetSurface",
+          "debugData": {
+            "name": "Texture set surface",
+            "description": "One texture set on a surface, any packing (p303 D7): the baseline of the terrain techniques, no anti-tiling or splat. Give a mesh its set with matOverrides.inputs.surface ({ textureSet, packing? }). Static defines: tiling (WORLD_XZ: the world's (x, -z) over physicalSize, for terrain; UV: the mesh's UV in metres, for walls and structures), minimalNormal (BUMP or FLAT)."
+          },
+          "tslFile": "materials/textureSetSurface/textureSetSurface.tsl.ts",
+          "staticDefines": {
+            "tiling": "WORLD_XZ",
+            "minimalNormal": "BUMP"
+          },
+          "inputs": {
+            "surface": {
+              "textureSet": "sand01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        }
+      ],
+      "skyboxes": [
+        {
+          "base": {
+            "type": "COLOR",
+            "color": "#000000"
+          },
+          "atmosphere": {
+            "nightSkyColor": "#0a1020"
+          },
+          "suns": [
+            {
+              "glowIntensity": 0.4,
+              "light": {}
+            }
+          ],
+          "moons": [
+            {
+              "phase": 0.4,
+              "phaseMode": "CYCLE",
+              "light": {
+                "intensity": 0.5
+              }
+            }
+          ],
+          "stars": {
+            "milkyWay": {}
+          },
+          "clouds": {
+            "coverage": 0.35
+          },
+          "ground": {},
+          "dayNight": {
+            "timeOfDay": 10,
+            "playing": false,
+            "dayOfYear": 100
+          },
+          "id": "terrainGallerySky",
+          "debugData": {
+            "name": "Terrain gallery sky",
+            "description": "The DAY_NIGHT preset (as the shared dayNight sky box) standing still at 10:00, so the gallery's blocks are lit the same on every visit: a mid-morning sun high enough to light the ramps, low enough for the relief to show."
+          }
+        }
+      ],
+      "textureSets": [
+        {
+          "id": "sand01",
+          "category": "SAND",
+          "physicalSize": [
+            3,
+            3
+          ],
+          "heightScale": 0.057,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "sand01_albedoHeight",
+              "normal": "sand01_normal",
+              "orm": "sand01_orm"
+            },
+            "LITE": {
+              "albedoRough": "sand01_albedoRough",
+              "normalHeight": "sand01_normalHeight"
+            },
+            "MINIMAL": {
+              "albedoHeight": "sand01_albedoHeightAO"
+            }
+          },
+          "debugData": {
+            "name": "Sand 01 (dry dunes)",
+            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.85,
+            "wetDarkening": 0.55,
+            "wetRoughness": 0.4
+          },
+          "averageColor": "#ab966b"
+        },
+        {
+          "id": "sand02",
+          "category": "SAND",
+          "physicalSize": [
+            3,
+            3
+          ],
+          "heightScale": 0.033,
+          "packings": {
+            "LITE": {
+              "albedoRough": "sand02_albedoRough",
+              "normalHeight": "sand02_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Sand 02 (coastal ripples)",
+            "description": "ambientCG Ground093C, CC0: coastal sand with accumulation ripples; the wet-response showcase."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#cab792"
+        },
+        {
+          "id": "mud01",
+          "category": "MUD",
+          "physicalSize": [
+            1.3,
+            1.3
+          ],
+          "heightScale": 0.04,
+          "packings": {
+            "LITE": {
+              "albedoRough": "mud01_albedoRough",
+              "normalHeight": "mud01_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Mud 01 (soil)",
+            "description": "Poly Haven brown_mud_02, CC0: brown soil mud."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#484034"
+        },
+        {
+          "id": "mud02",
+          "category": "MUD",
+          "physicalSize": [
+            1.75,
+            1.75
+          ],
+          "heightScale": 0.009,
+          "packings": {
+            "LITE": {
+              "albedoRough": "mud02_albedoRough",
+              "normalHeight": "mud02_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Mud 02 (forest mud)",
+            "description": "ambientCG Ground071, CC0: forest mud with sticks; the puddle showcase."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#7e6448"
+        },
+        {
+          "id": "rocks01",
+          "category": "ROCKS",
+          "physicalSize": [
+            2,
+            2
+          ],
+          "heightScale": 0.018,
+          "packings": {
+            "LITE": {
+              "albedoRough": "rocks01_albedoRough",
+              "normalHeight": "rocks01_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Rocks 01 (gravel)",
+            "description": "ambientCG Ground079S, CC0: gravel / rocky ground."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#ad926e"
+        },
+        {
+          "id": "rocks02",
+          "category": "ROCKS",
+          "physicalSize": [
+            1.3,
+            1.3
+          ],
+          "heightScale": 0.037,
+          "packings": {
+            "LITE": {
+              "albedoRough": "rocks02_albedoRough",
+              "normalHeight": "rocks02_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Rocks 02 (stony mud)",
+            "description": "Poly Haven brown_mud_rocks_01, CC0: stony brown ground."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#574d3d"
+        },
+        {
+          "id": "cliffs01",
+          "category": "CLIFF",
+          "physicalSize": [
+            6,
+            6
+          ],
+          "heightScale": 0.16,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "cliffs01_albedoHeight",
+              "normal": "cliffs01_normal",
+              "orm": "cliffs01_orm"
+            },
+            "LITE": {
+              "albedoRough": "cliffs01_albedoRough",
+              "normalHeight": "cliffs01_normalHeight"
+            },
+            "MINIMAL": {
+              "albedoHeight": "cliffs01_albedoHeightAO"
+            }
+          },
+          "debugData": {
+            "name": "Cliffs 01 (grey mountain)",
+            "description": "ambientCG Rock051, CC0: grey mountain cliff; the triplanar showcase. All three packings (the gallery's packing comparison, p303 D6)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#737063"
+        },
+        {
+          "id": "cliffs02",
+          "category": "CLIFF",
+          "physicalSize": [
+            6,
+            6
+          ],
+          "heightScale": 0.25,
+          "packings": {
+            "LITE": {
+              "albedoRough": "cliffs02_albedoRough",
+              "normalHeight": "cliffs02_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Cliffs 02 (dark veined)",
+            "description": "ambientCG Rock058, CC0: dark blue-grey veined cliff."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#4c5258"
+        },
+        {
+          "id": "snow01",
+          "category": "SNOW",
+          "physicalSize": [
+            3,
+            3
+          ],
+          "heightScale": 0.048,
+          "packings": {
+            "LITE": {
+              "albedoRough": "snow01_albedoRough",
+              "normalHeight": "snow01_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Snow 01 (clean)",
+            "description": "ambientCG Snow010A, CC0: clean snow."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#fff2e9",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#dbebf8"
+        },
+        {
+          "id": "snow02",
+          "category": "SNOW",
+          "physicalSize": [
+            4,
+            4
+          ],
+          "heightScale": 0.058,
+          "packings": {
+            "LITE": {
+              "albedoRough": "snow02_albedoRough",
+              "normalHeight": "snow02_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Snow 02 (wind-shaped)",
+            "description": "ambientCG Snow008A, CC0: wind-shaped snow."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#fff2e9",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#dae9f7"
+        },
+        {
+          "id": "ice01",
+          "category": "ICE",
+          "physicalSize": [
+            4,
+            4
+          ],
+          "heightScale": 0.006,
+          "packings": {
+            "LITE": {
+              "albedoRough": "ice01_albedoRough",
+              "normalHeight": "ice01_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Ice 01 (lake)",
+            "description": "ambientCG Ice002, CC0: lake ice; AO derived from the height (no AO map)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#667d73"
+        },
+        {
+          "id": "ice02",
+          "category": "ICE",
+          "physicalSize": [
+            4,
+            4
+          ],
+          "heightScale": 0.004,
+          "packings": {
+            "LITE": {
+              "albedoRough": "ice02_albedoRough",
+              "normalHeight": "ice02_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Ice 02 (dark lake)",
+            "description": "ambientCG Ice003, CC0: dark lake ice; AO derived from the height (no AO map)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#4d5b5c"
+        },
+        {
+          "id": "grass01",
+          "category": "GRASS",
+          "physicalSize": [
+            1.4,
+            1.4
+          ],
+          "heightScale": 0.002,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "grass01_albedoHeight",
+              "normal": "grass01_normal",
+              "orm": "grass01_orm"
+            },
+            "LITE": {
+              "albedoRough": "grass01_albedoRough",
+              "normalHeight": "grass01_normalHeight"
+            },
+            "MINIMAL": {
+              "albedoHeight": "grass01_albedoHeightAO"
+            }
+          },
+          "debugData": {
+            "name": "Grass 01 (lawn ground)",
+            "description": "ambientCG Grass004, CC0: lawn-grass ground seen from the top, no blades. All three packings (the gallery's packing comparison, p303 D6)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 2.5,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#5c6730"
+        },
+        {
+          "id": "grass02",
+          "category": "GRASS",
+          "physicalSize": [
+            2.1,
+            2.1
+          ],
+          "heightScale": 0.027,
+          "packings": {
+            "LITE": {
+              "albedoRough": "grass02_albedoRough",
+              "normalHeight": "grass02_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Grass 02 (forest floor)",
+            "description": "ambientCG Ground037, CC0: forest floor with grass."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#9c975f"
+        },
+        {
+          "id": "concrete01",
+          "category": "CONCRETE",
+          "physicalSize": [
+            1.1,
+            0.55
+          ],
+          "heightScale": 0.012,
+          "packings": {
+            "LITE": {
+              "albedoRough": "concrete01_albedoRough",
+              "normalHeight": "concrete01_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Concrete 01 (smooth)",
+            "description": "ambientCG Concrete034, CC0: smooth concrete; non-square, so structures only, never in a set array; AO derived from the height (no AO map)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#eaeaea",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#b7b7b7"
+        },
+        {
+          "id": "concrete02",
+          "category": "CONCRETE",
+          "physicalSize": [
+            2,
+            2
+          ],
+          "heightScale": 0.013,
+          "packings": {
+            "LITE": {
+              "albedoRough": "concrete02_albedoRough",
+              "normalHeight": "concrete02_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Concrete 02 (damaged)",
+            "description": "ambientCG Concrete044D, CC0: damaged concrete, for structures."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#635e58"
+        }
+      ],
+      "id": "terrainGallery",
+      "sceneFile": "./scenes/terrainGallery/terrainGallery.ts",
       "__features": [
         "skybox",
         "texturesets"
