@@ -17,6 +17,8 @@ const ACCEPTED: unknown[] = [
   { layers: [{ tiling: 2, rotation: -30, tint: '#a0B0c0' }], uv: 'MESH_UV' },
   { layers: [{ source: 'TEXTURE', normalStrength: 0, roughnessScale: 1.5 }], uv: 'WORLD' },
   { layers: [{}], blend: { source: 'SINGLE' } },
+  { layers: [{}], ao: { textureInfluence: 0 } },
+  { layers: [{}], ao: {} },
 ];
 const REFUSED: unknown[] = [
   {},
@@ -34,6 +36,8 @@ const REFUSED: unknown[] = [
   { layers: [{}], blend: { source: 'SPLAT_MAP' } },
   { layers: [{}], blend: { source: 'SINGLE', mode: 'HEIGHT' } },
   [{}],
+  { layers: [{}], ao: { textureInfluence: 1.5 } },
+  { layers: [{}], ao: { vertex: true } },
 ];
 
 describe('readTerrainDefine', () => {
@@ -51,6 +55,7 @@ describe('readTerrainDefine', () => {
       ],
       uv: 'WORLD',
       blendSource: 'SINGLE',
+      aoTextureInfluence: 1,
     });
     expect(read({ layers: [{ rotation: 0 }] }).layers[0].rotation).toBe(0);
   });
@@ -74,6 +79,9 @@ describe('readTerrainDefine', () => {
     const values = TERRAIN_DEFINE_VALUES;
     expect(values.defineKeys.sort()).toEqual(Object.keys(TerrainMaterialDefineSchema.shape).sort());
     expect(values.layerKeys.sort()).toEqual(Object.keys(TerrainLayerSettingsSchema.shape).sort());
+    const { ao, blend } = TerrainMaterialDefineSchema.shape;
+    expect(values.aoKeys.sort()).toEqual(Object.keys(ao.unwrap().shape).sort());
+    expect(values.blendKeys.sort()).toEqual(Object.keys(blend.unwrap().shape).sort());
     expect(values.layerSources).toEqual(TERRAIN_LAYER_SOURCES);
     expect(values.uvModes).toEqual(TERRAIN_UV_MODES);
     expect(values.blendSources).toEqual(TERRAIN_BLEND_SOURCES);

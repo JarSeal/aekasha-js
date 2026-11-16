@@ -34,8 +34,13 @@ const WALL = { width: 1, height: 6, depth: 8 };
 const WALL_SINK = 0.5;
 const WALL_GEOMETRY_ID = 'terrainGalleryWall';
 
-/** The blocks' material for a texture set (the toolkit's baseline), its variants per block */
-export const GALLERY_MATERIAL_ID = 'textureSetSurface';
+/**
+ * The blocks' material for a texture set: the toolkit's terrain material (p305) through its JSON
+ * route, its variants per block
+ */
+export const GALLERY_MATERIAL_ID = 'terrain';
+/** The baseline the terrain material is compared against (p303 D7), its variants per block */
+export const BASELINE_MATERIAL_ID = 'textureSetSurface';
 
 /**
  * No mesh casts or receives shadows: the engine's VSM shadows draw stripes down a sloped receiver
@@ -44,19 +49,30 @@ export const GALLERY_MATERIAL_ID = 'textureSetSurface';
  */
 export const NO_SHADOWS = { castShadow: false, receiveShadow: false } as const;
 
+/** A wall's terrain define: one layer at its UVs in metres */
+const WALL_TERRAIN_DEFINE = { layers: [{}], uv: 'MESH_UV' };
+
 /**
- * A block's (or its wall's) variant of `textureSetSurface`: its set, in a packing (none: the set's
- * default, the variant the scene's load made)
+ * A block's (or its wall's) variant of the gallery's terrain material (or with `isBaseline` of
+ * `textureSetSurface`): its set, in a packing (none: the set's default, the variant the scene's
+ * load made)
  */
 export const getSurfaceOverrides = (
   setId: string,
-  opts: { packing?: TextureSetPacking; isWall?: boolean } = {}
-): MaterialVariantOverrides => ({
-  inputs: {
-    surface: opts.packing ? { textureSet: setId, packing: opts.packing } : { textureSet: setId },
-  },
-  ...(opts.isWall ? { staticDefines: { tiling: 'UV' } } : {}),
-});
+  opts: { packing?: TextureSetPacking; isWall?: boolean; isBaseline?: boolean } = {}
+): MaterialVariantOverrides => {
+  const set = opts.packing ? { textureSet: setId, packing: opts.packing } : { textureSet: setId };
+  if (opts.isBaseline) {
+    return {
+      inputs: { surface: set },
+      ...(opts.isWall ? { staticDefines: { tiling: 'UV' } } : {}),
+    };
+  }
+  return {
+    inputs: { layer0: set },
+    ...(opts.isWall ? { staticDefines: { terrain: WALL_TERRAIN_DEFINE } } : {}),
+  };
+};
 
 /**
  * A registered geometry by id, built only when it isn't registered yet (a revisit before the
@@ -93,7 +109,7 @@ export const getBlockGeometry = (seed: number) =>
 
 /**
  * The wall's box with each face's UVs in metres (three's box maps every face to 0..1), so a
- * material tiling at the mesh's UV (`textureSetSurface`'s `tiling: "UV"`) tiles it at a tile's
+ * material tiling at the mesh's UV (the terrain material's `uv: "MESH_UV"`) tiles it at a tile's
  * physical size
  */
 const buildWallGeometry = () => {

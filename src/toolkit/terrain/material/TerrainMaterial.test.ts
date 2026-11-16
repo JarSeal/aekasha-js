@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { color, texture, uniform } from 'three/tsl';
-import { MeshStandardNodeMaterial, Texture, Vector2 } from 'three/webgpu';
+import { MeshStandardNodeMaterial, Texture, Vector2, type Node } from 'three/webgpu';
 import type { MatProps, TslMaterialFns } from 'aekasha';
 import type { TextureSetInput } from 'aekasha/texturesets';
 import {
@@ -67,28 +67,99 @@ const build = (terrain: unknown, inputs: Record<string, unknown> = { layer0: mak
   return material;
 };
 
+/** The nodes a material's sockets reach */
+const collectNodes = (material: MeshStandardNodeMaterial) => {
+  const nodes = new Set<Node>();
+  for (const root of [
+    material.colorNode,
+    material.normalNode,
+    material.roughnessNode,
+    material.metalnessNode,
+    material.aoNode,
+  ]) {
+    (root as Node | null)?.traverse((node) => nodes.add(node));
+  }
+  return [...nodes];
+};
+
+/** How many of the sockets' math nodes run a method (`dFdx`, `cos`, …) */
+const countMethod = (material: MeshStandardNodeMaterial, method: string) =>
+  collectNodes(material).filter(
+    (node) => (node as unknown as { method?: string }).method === method
+  ).length;
+
+const getUniformKeys = (material: MeshStandardNodeMaterial) =>
+  Object.keys(material.userData.uniforms as object).sort();
+
+const LAYER_UNIFORMS = [
+  'terrain_l0_normalStrength',
+  'terrain_l0_roughnessScale',
+  'terrain_l0_tiling',
+  'terrain_l0_tint',
+];
+
 describe('setupTerrainMaterial', () => {
-  it('sets the colour and metalness of one layer in each packing', () => {
+  it('sets every socket of one layer in each packing, the AO for FULL only', () => {
     for (const packing of ['LITE', 'FULL', 'MINIMAL'] as const) {
       const material = build({ layers: [{}] }, { layer0: makeBundle(packing) });
       expect(material.colorNode).toBeTruthy();
+      expect(material.normalNode).toBeTruthy();
+      expect(material.roughnessNode).toBeTruthy();
       expect(material.metalnessNode).toBeTruthy();
+      expect(Boolean(material.aoNode)).toBe(packing === 'FULL');
+      expect(getUniformKeys(material)).toEqual(
+        packing === 'FULL' ? ['terrain_aoTextureInfluence', ...LAYER_UNIFORMS] : LAYER_UNIFORMS
+      );
     }
   });
 
+  it('samples each slot once for all the sockets', () => {
+    for (const packing of ['LITE', 'FULL', 'MINIMAL'] as const) {
+      const bundle = makeBundle(packing);
+      const slotNodes = new Set(
+        PACKING_SLOTS[packing].map((slot) => bundle[slot as 'albedoHeight'])
+      );
+      const material = build({ layers: [{}] }, { layer0: bundle });
+      // The bundle's slot nodes are each sample's reference, not samples
+      const samples = collectNodes(material).filter(
+        (node) =>
+          (node as unknown as { isTextureNode?: boolean }).isTextureNode &&
+          !slotNodes.has(node as never)
+      );
+      expect(samples, packing).toHaveLength(PACKING_SLOTS[packing].length);
+    }
+  });
+
+  it("builds planar world tiling's frame without derivatives, a mesh UV's and a bump with them", () => {
+    expect(countMethod(build({ layers: [{}] }), 'dFdx')).toBe(0);
+    expect(countMethod(build({ layers: [{}] }, { layer0: makeBundle('FULL') }), 'dFdx')).toBe(0);
+    expect(countMethod(build({ layers: [{}], uv: 'MESH_UV' }), 'dFdx')).toBeGreaterThan(0);
+    expect(
+      countMethod(build({ layers: [{}] }, { layer0: makeBundle('MINIMAL') }), 'dFdx')
+    ).toBeGreaterThan(0);
+  });
+
   it("keeps a layer's uniforms, the rotation only when given", () => {
-    const plain = build({ layers: [{ tiling: 2, tint: '#ff0000' }] });
+    const plain = build({ layers: [{ tiling: 2, tint: '#ff0000', roughnessScale: 0.5 }] });
     const uniforms = plain.userData.uniforms as Record<string, { value: unknown }>;
-    expect(Object.keys(uniforms).sort()).toEqual(['terrain_l0_tiling', 'terrain_l0_tint']);
+    expect(getUniformKeys(plain)).toEqual(LAYER_UNIFORMS);
     expect(uniforms.terrain_l0_tiling.value).toBe(2);
+    expect(uniforms.terrain_l0_roughnessScale.value).toBe(0.5);
+    expect(countMethod(plain, 'cos')).toBe(0);
     const turned = build({ layers: [{ rotation: 30 }] });
     expect(
       (turned.userData.uniforms as Record<string, { value: unknown }>).terrain_l0_rotation.value
     ).toBe(30);
+    expect(countMethod(turned, 'cos')).toBeGreaterThan(0);
   });
 
-  it('tiles at the mesh UV with MESH_UV', () => {
-    expect(build({ layers: [{}], uv: 'MESH_UV' }).colorNode).toBeTruthy();
+  it("starts the AO influence at the define's", () => {
+    const material = build(
+      { layers: [{}], ao: { textureInfluence: 0.25 } },
+      { layer0: makeBundle('FULL') }
+    );
+    const uniforms = material.userData.uniforms as Record<string, { value: unknown }>;
+    expect(uniforms.terrain_aoTextureInfluence.value).toBe(0.25);
   });
 
   it('names a missing or extra layer input and a wrong define', () => {

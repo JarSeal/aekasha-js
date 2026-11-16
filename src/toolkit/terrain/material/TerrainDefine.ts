@@ -9,9 +9,10 @@ const BLEND_SOURCES = ['SINGLE'] as const;
 const MAX_LAYERS = 16;
 
 /** The keys each object of the define takes (the schema's) */
-const DEFINE_KEYS = ['layers', 'uv', 'blend'];
+const DEFINE_KEYS = ['layers', 'uv', 'blend', 'ao'];
 const LAYER_KEYS = ['source', 'tiling', 'rotation', 'tint', 'normalStrength', 'roughnessScale'];
 const BLEND_KEYS = ['source'];
+const AO_KEYS = ['textureInfluence'];
 
 /** A layer's settings with their defaults filled in */
 export type TerrainLayerDefine = {
@@ -30,6 +31,8 @@ export type ResolvedTerrainDefine = {
   layers: TerrainLayerDefine[];
   uv: (typeof UV_MODES)[number];
   blendSource: (typeof BLEND_SOURCES)[number];
+  /** The texture AO's influence, 0..1 */
+  aoTextureInfluence: number;
 };
 
 /** The values the hand reader takes, for the test that keeps them the schema's */
@@ -37,6 +40,7 @@ export const TERRAIN_DEFINE_VALUES = {
   defineKeys: DEFINE_KEYS,
   layerKeys: LAYER_KEYS,
   blendKeys: BLEND_KEYS,
+  aoKeys: AO_KEYS,
   layerSources: LAYER_SOURCES,
   uvModes: UV_MODES,
   blendSources: BLEND_SOURCES,
@@ -139,5 +143,15 @@ export const readTerrainDefine = (
   if (blendSource === 'SINGLE' && layers.length !== 1) {
     fail('.layers', `blend.source SINGLE takes one layer, not ${layers.length}.`);
   }
-  return { layers, uv: readEnum(define, 'uv', UV_MODES, ''), blendSource };
+  const ao = define.ao === undefined ? {} : readObject(define.ao, '.ao');
+  checkKeys(ao, AO_KEYS, '.ao');
+  const aoTextureInfluence = readNumber(
+    ao,
+    'textureInfluence',
+    1,
+    { value: 0, isExclusive: false },
+    '.ao'
+  );
+  if (aoTextureInfluence > 1) fail('.ao.textureInfluence', `is ${aoTextureInfluence}: it's 0..1.`);
+  return { layers, uv: readEnum(define, 'uv', UV_MODES, ''), blendSource, aoTextureInfluence };
 };

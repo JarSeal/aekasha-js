@@ -3,12 +3,19 @@
 // coordinates → weights → per-layer samples → surface → sockets). Two routes reach the same
 // `setupTerrainMaterial`: the code route (`createTerrainMaterial`, registered as `aek.terrain`) and
 // the JSON route (`materials/terrain/terrain.tsl.ts`, whose `setup` it is).
-import { float, positionWorld, uniform, uv as meshUv, vec2, color } from 'three/tsl';
+import { color, float, mix, positionWorld, uniform, uv as meshUv, vec2, vec3 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { MeshStandardNodeMaterial, Node, NodeMaterial } from 'three/webgpu';
 import { createMaterial, registerTslMaterial, type MatProps, type TslMaterialFns } from 'aekasha';
 import type { TextureSetInput } from 'aekasha/texturesets';
 import { sampleTextureSet, type TextureSetSample } from '../nodes/SampleTextureSet';
+import {
+  bumpNormalWorld,
+  getPlanarTangentFrame,
+  getUvTangentFrame,
+  transformTangentNormalToWorld,
+  transformWorldNormalToView,
+} from '../nodes/TerrainNormals';
 import {
   readTerrainDefine,
   type ResolvedTerrainDefine,
@@ -20,6 +27,8 @@ import type { TerrainMaterialConfig, TerrainMaterialDefine } from './TerrainMate
 export const TERRAIN_TSL_MATERIAL_ID = 'aek.terrain';
 
 const DEG_TO_RAD = Math.PI / 180;
+/** `MINIMAL`'s roughness before the scales: the packing has no roughness map (the baseline's) */
+const MINIMAL_ROUGHNESS = 0.8;
 
 /** A layer's input key: `layer0`, `layer1`, … */
 const getLayerInputKey = (index: number) => `layer${index}`;
@@ -29,6 +38,24 @@ type LayerUniforms = {
   tiling: Node<'float'>;
   rotation: Node<'float'> | null;
   tint: Node<'color'>;
+  normalStrength: Node<'float'>;
+  roughnessScale: Node<'float'>;
+};
+
+/** A layer's surface, its normal in world space: what the layers blend (one, for SINGLE) */
+type LayerSurface = {
+  albedo: Node<'vec3'>;
+  normal: Node<'vec3'>;
+  roughness: Node<'float'>;
+  /** The texture AO with its influence, or null where the albedo has it baked */
+  ao: Node<'float'> | null;
+};
+
+/** A material uniform kept at `userData.uniforms.terrain_<name>`, where the material editor finds it */
+const keepUniform = <T>(material: NodeMaterial, name: string, node: T) => {
+  const uniforms = (material.userData.uniforms ??= {}) as Record<string, unknown>;
+  uniforms[`terrain_${name}`] = node;
+  return node;
 };
 
 /** A layer's input bundles in the define's order, all present, the input keys none but theirs */
@@ -52,51 +79,46 @@ const readLayerBundles = (inputs: Record<string, unknown>, define: ResolvedTerra
   });
 };
 
-/** Makes a layer's uniforms and keeps them where the material editor finds them */
+/** Makes a layer's uniforms (`terrain_l<i>_<name>`) */
 const createLayerUniforms = (
   material: NodeMaterial,
   layer: TerrainLayerDefine,
   index: number
 ): LayerUniforms => {
-  const uniforms = (material.userData.uniforms ??= {}) as Record<string, unknown>;
-  const keep = <T>(name: string, node: T) => {
-    uniforms[`terrain_l${index}_${name}`] = node;
-    return node;
-  };
+  const keep = (name: string, node: unknown) => keepUniform(material, `l${index}_${name}`, node);
   return {
-    tiling: keep('tiling', uniform(layer.tiling)) as unknown as Node<'float'>,
+    tiling: keep('tiling', uniform(layer.tiling)) as Node<'float'>,
     rotation:
-      layer.rotation === null
-        ? null
-        : (keep('rotation', uniform(layer.rotation)) as unknown as Node<'float'>),
-    tint: keep('tint', uniform(color(layer.tint))) as unknown as Node<'color'>,
+      layer.rotation === null ? null : (keep('rotation', uniform(layer.rotation)) as Node<'float'>),
+    tint: keep('tint', uniform(color(layer.tint))) as Node<'color'>,
+    normalStrength: keep('normalStrength', uniform(layer.normalStrength)) as Node<'float'>,
+    roughnessScale: keep('roughnessScale', uniform(layer.roughnessScale)) as Node<'float'>,
   };
 };
 
 /**
  * A layer's tiling UV: the world's `(x, −z)` (seen from above, the source's orientation) or the
  * mesh's UV, over the set's tile size × the layer's tiling, turned by its rotation when it has one
+ * (its angle in radians, which the planar frame turns by too)
  */
 const getLayerUv = (
   define: ResolvedTerrainDefine,
   bundle: TextureSetInput,
   layer: LayerUniforms
-): Node<'vec2'> => {
+): { tileUv: Node<'vec2'>; angle: Node<'float'> | null } => {
   const coords =
     define.uv === 'MESH_UV'
       ? (meshUv() as unknown as Node<'vec2'>)
       : (vec2(positionWorld.x, positionWorld.z.negate()) as unknown as Node<'vec2'>);
   const tileSize = (bundle.physicalSize as unknown as Node<'vec2'>).mul(layer.tiling);
   const tileUv = coords.div(tileSize) as Node<'vec2'>;
-  if (!layer.rotation) return tileUv;
+  if (!layer.rotation) return { tileUv, angle: null };
   // The pattern turns counter-clockwise from above: sample at the UV turned back
-  const angle = layer.rotation.mul(DEG_TO_RAD);
+  const angle = layer.rotation.mul(DEG_TO_RAD) as Node<'float'>;
   const c = angle.cos();
   const s = angle.sin();
-  return vec2(
-    c.mul(tileUv.x).add(s.mul(tileUv.y)),
-    c.mul(tileUv.y).sub(s.mul(tileUv.x))
-  ) as unknown as Node<'vec2'>;
+  const turned = vec2(c.mul(tileUv.x).add(s.mul(tileUv.y)), c.mul(tileUv.y).sub(s.mul(tileUv.x)));
+  return { tileUv: turned as unknown as Node<'vec2'>, angle };
 };
 
 /** Every layer's sample in one packing, or a thrown error naming the layers' packings */
@@ -110,11 +132,60 @@ const checkOnePacking = (samples: TextureSetSample[]) => {
 };
 
 /**
+ * A layer's surface from its sample (p303 D2's packings): the albedo × the set's and the layer's
+ * tint; the normal in world space, the map's (`FULL`, `LITE`) through the tiling's frame (planar
+ * world tiling's analytic one, a mesh UV's from its derivatives) or `MINIMAL`'s bump of its height
+ * in metres, its slope × the set's and the layer's `normalStrength`; the roughness (`MINIMAL`'s
+ * 0.8) × both `roughnessScale`s, capped at 1; `FULL`'s AO with the set's `aoStrength` × the
+ * material's influence
+ */
+const getLayerSurface = (
+  define: ResolvedTerrainDefine,
+  bundle: TextureSetInput,
+  layer: LayerUniforms,
+  uv: { tileUv: Node<'vec2'>; angle: Node<'float'> | null },
+  sample: TextureSetSample,
+  aoInfluence: () => Node<'float'>
+): LayerSurface => {
+  const strength = (bundle.normalStrength as unknown as Node<'float'>).mul(layer.normalStrength);
+  let normal: Node<'vec3'>;
+  if (sample.normalTS) {
+    const n = sample.normalTS;
+    const scaled = vec3(n.xy.mul(strength), n.z) as unknown as Node<'vec3'>;
+    const frame =
+      define.uv === 'MESH_UV' ? getUvTangentFrame(uv.tileUv) : getPlanarTangentFrame(uv.angle);
+    normal = transformTangentNormalToWorld(scaled, frame);
+  } else {
+    const heightScale = bundle.heightScale as unknown as Node<'float'>;
+    normal = bumpNormalWorld(sample.height.mul(heightScale).mul(strength) as Node<'float'>);
+  }
+  const roughness = (sample.roughness ?? float(MINIMAL_ROUGHNESS))
+    .mul(bundle.roughnessScale as unknown as Node<'float'>)
+    .mul(layer.roughnessScale)
+    .min(1) as Node<'float'>;
+  const aoStrength = bundle.aoStrength as unknown as Node<'float'>;
+  return {
+    albedo: sample.albedo
+      .mul(bundle.tint as unknown as Node<'vec3'>)
+      .mul(layer.tint) as Node<'vec3'>,
+    normal,
+    roughness,
+    ao: sample.ao
+      ? (mix(float(1), sample.ao, aoStrength.mul(aoInfluence())) as Node<'float'>)
+      : null,
+  };
+};
+
+/**
  * The terrain material's graph (p305 D2), the TSL `setup` both routes run: reads the static
  * define `terrain` ({@link TerrainMaterialDefine}), samples each layer's texture set input
  * (`layer0`, `layer1`, …, a `{ textureSet }` bundle each, all in one packing) and sets the
- * material's sockets. Only what the define enables is built. A layer's tunables are uniforms at
- * `material.userData.uniforms.terrain_l<i>_<name>` (`tiling`, `rotation` when given, `tint`).
+ * material's sockets: the colour, the normal (each layer's in world space, into view space once),
+ * the roughness, metalness 0, and the texture AO (`FULL`) to `aoNode`, which darkens indirect
+ * light only (`LITE` and `MINIMAL` have theirs baked into the albedo). Only what the define
+ * enables is built. The tunables are uniforms in `material.userData.uniforms`: per layer
+ * `terrain_l<i>_<name>` (`tiling`, `rotation` when given, `tint`, `normalStrength`,
+ * `roughnessScale`), and `terrain_aoTextureInfluence` when a layer has texture AO.
  * @param inputs the material's inputs: `layer<i>` bundles (the `textureSets()` feature's resolver)
  * @param material the node material being built (a `STANDARDNODEMATERIAL`)
  * @param staticDefines the material's static defines, `terrain` among them
@@ -137,20 +208,33 @@ export const setupTerrainMaterial = (
   const bundles = readLayerBundles(inputs, define);
   const standard = material as MeshStandardNodeMaterial;
 
+  // Made on the first layer with texture AO: none without one
+  let aoInfluence: Node<'float'> | null = null;
+  const getAoInfluence = () =>
+    (aoInfluence ??= keepUniform(
+      material,
+      'aoTextureInfluence',
+      uniform(define.aoTextureInfluence)
+    ) as Node<'float'>);
+
   const layers = define.layers.map((layerDefine, i) => {
     const bundle = bundles[i];
     const uniforms = createLayerUniforms(material, layerDefine, i);
-    const tileUv = getLayerUv(define, bundle, uniforms);
-    return { bundle, uniforms, tileUv, sample: sampleTextureSet(bundle, tileUv) };
+    const uv = getLayerUv(define, bundle, uniforms);
+    return { bundle, uniforms, uv, sample: sampleTextureSet(bundle, uv.tileUv) };
   });
   checkOnePacking(layers.map((layer) => layer.sample));
+  const surfaces = layers.map(({ bundle, uniforms, uv, sample }) =>
+    getLayerSurface(define, bundle, uniforms, uv, sample, getAoInfluence)
+  );
 
   // SINGLE: the one layer is the surface
-  const [layer] = layers;
+  const [surface] = surfaces;
+  standard.colorNode = surface.albedo;
+  standard.normalNode = transformWorldNormalToView(surface.normal);
+  standard.roughnessNode = surface.roughness;
   standard.metalnessNode = float(0);
-  standard.colorNode = layer.sample.albedo
-    .mul(layer.bundle.tint as unknown as Node<'vec3'>)
-    .mul(layer.uniforms.tint);
+  if (surface.ao) standard.aoNode = surface.ao;
 };
 
 /** The terrain material's TSL functions, as the code route registers them */

@@ -17,6 +17,7 @@ import {
   type DebuggerTabSection,
 } from 'aekasha/debug';
 import { getTextureSet, loadTextureSetAsync, type TextureSetPacking } from 'aekasha/texturesets';
+import { createTerrainMaterial } from 'aekasha/toolkit/terrain';
 import { flyToGalleryBlock, stopGalleryFlight } from './_dbg__terrainGalleryCamera';
 import {
   clearGeneratorSelection,
@@ -25,7 +26,7 @@ import {
   startProceduralTab,
   type ProceduralSectionsOpts,
 } from './_dbg__terrainGalleryProcedural';
-import { GALLERY_MATERIAL_ID, getSurfaceOverrides } from './galleryBlocks';
+import { BASELINE_MATERIAL_ID, GALLERY_MATERIAL_ID, getSurfaceOverrides } from './galleryBlocks';
 import {
   getProceduralBakeSettings,
   PROCEDURAL_BLOCKS,
@@ -46,9 +47,21 @@ const PACKINGS: readonly TextureSetPacking[] = ['LITE', 'FULL', 'MINIMAL'];
 const CHECKER_MATERIAL_ID = 'terrainGalleryChecker';
 const CHECKER_OPACITY = 0.25;
 
+/**
+ * The library's material: the terrain material through its JSON route (the scene's `terrain`
+ * variants), through its code route (`createTerrainMaterial`, a material per block) or the
+ * baseline `textureSetSurface` it's compared against (p305 Phase 1's exit: the three look the same)
+ */
+type GalleryMaterial = 'TERRAIN' | 'TERRAIN_CODE' | 'BASELINE';
+const MATERIALS: readonly { label: string; value: GalleryMaterial }[] = [
+  { label: 'Terrain', value: 'TERRAIN' },
+  { label: 'Terrain (code)', value: 'TERRAIN_CODE' },
+  { label: 'Baseline', value: 'BASELINE' },
+];
+
 /** The tab's saved settings */
-type GalleryTabState = { packing: TextureSetPacking; checker: boolean };
-const DEFAULT_STATE: GalleryTabState = { packing: 'LITE', checker: false };
+type GalleryTabState = { packing: TextureSetPacking; checker: boolean; material: GalleryMaterial };
+const DEFAULT_STATE: GalleryTabState = { packing: 'LITE', checker: false, material: 'TERRAIN' };
 const state: GalleryTabState = { ...DEFAULT_STATE };
 
 /** This visit's: false once the scene is left, so an await that ends later does nothing */
@@ -74,17 +87,53 @@ const CHECKER_BLOCKS = [
 
 const getBlock = (setId: string) => GALLERY_BLOCKS.find((block) => block.setId === setId);
 
-/** A mesh entity's material swapped to its set's variant, when the mesh exists */
-const swapSurface = (appId: string, setId: string, packing: TextureSetPacking, isWall: boolean) => {
-  const mesh = getMeshByAppId(appId);
-  if (!mesh) return;
+/** The packing a library block shows: the tab's for the sets that ship every packing */
+const getBlockPacking = (setId: string): TextureSetPacking | undefined =>
+  ALL_PACKING_SETS.includes(setId) ? shownPacking : getTextureSet(setId)?.defaultPacking;
+
+/**
+ * A block's material in the material mode: a variant of the scene's `terrain` or
+ * `textureSetSurface`, or the code route's own (`createTerrainMaterial`, made once per set, packing
+ * and wall, the scene's)
+ */
+const getBlockMaterial = (
+  setId: string,
+  packing: TextureSetPacking | undefined,
+  isWall: boolean,
+  material: GalleryMaterial
+) => {
   // The set's default packing is the variant the scene's load made (no packing key)
-  const isDefault = getTextureSet(setId)?.defaultPacking === packing;
+  const isDefault = !packing || getTextureSet(setId)?.defaultPacking === packing;
+  if (material === 'TERRAIN_CODE') {
+    return createTerrainMaterial({
+      id: `terrainGalleryCode_${setId}_${packing ?? 'default'}${isWall ? '_wall' : ''}`,
+      layers: [{ set: setId }],
+      ...(isDefault ? {} : { packing }),
+      ...(isWall ? { uv: 'MESH_UV' as const } : {}),
+    });
+  }
+  const isBaseline = material === 'BASELINE';
   const overrides = getSurfaceOverrides(setId, {
     packing: isDefault ? undefined : packing,
     isWall,
+    isBaseline,
   });
-  setMeshMaterial(mesh, getMaterialVariant(GALLERY_MATERIAL_ID, overrides));
+  return getMaterialVariant(isBaseline ? BASELINE_MATERIAL_ID : GALLERY_MATERIAL_ID, overrides);
+};
+
+/** A mesh entity's material swapped to its set's, when the mesh exists */
+const swapSurface = (appId: string, setId: string, isWall: boolean) => {
+  const mesh = getMeshByAppId(appId);
+  if (!mesh) return;
+  setMeshMaterial(mesh, getBlockMaterial(setId, getBlockPacking(setId), isWall, state.material));
+};
+
+/** Every library block (and wall) in the material mode */
+const applyMaterial = () => {
+  for (const block of GALLERY_BLOCKS) {
+    swapSurface(getBlockAppId(block.setId), block.setId, false);
+    if (block.hasWall) swapSurface(getWallAppId(block.setId), block.setId, true);
+  }
 };
 
 /**
@@ -104,11 +153,11 @@ const applyPackingAsync = async (packing: TextureSetPacking) => {
     return;
   }
   if (!startedOn.isCurrent || request !== packingRequest) return;
-  for (const setId of ALL_PACKING_SETS) {
-    swapSurface(getBlockAppId(setId), setId, packing, false);
-    if (getBlock(setId)?.hasWall) swapSurface(getWallAppId(setId), setId, packing, true);
-  }
   shownPacking = packing;
+  for (const setId of ALL_PACKING_SETS) {
+    swapSurface(getBlockAppId(setId), setId, false);
+    if (getBlock(setId)?.hasWall) swapSurface(getWallAppId(setId), setId, true);
+  }
   updateDebuggerTab(TAB_ID);
 };
 
@@ -229,18 +278,27 @@ export const createTerrainGalleryTab = () => {
     sceneId: TERRAIN_GALLERY_SCENE_ID,
     state,
     lsKey: 'AEK_debugTerrainGallery',
-    persistKeys: ['packing', 'checker'],
+    persistKeys: ['packing', 'checker', 'material'],
     refreshIntervalMs: 500,
     onRefresh: refreshProceduralFigures,
     onClearLS: () => {
       Object.assign(state, DEFAULT_STATE);
       setChecker(false);
+      applyMaterial();
       void applyPackingAsync(state.packing);
     },
     content: () => [
       {
         pane: true,
         content: [
+          {
+            key: 'material',
+            label: 'Material',
+            kind: 'segmented',
+            options: MATERIALS.map((option) => ({ ...option })),
+            hint: 'The library’s blocks: the terrain material (its JSON route, or createTerrainMaterial) or the baseline textureSetSurface, which should look the same',
+            onChange: () => applyMaterial(),
+          },
           {
             key: 'packing',
             label: 'Packing',
@@ -277,5 +335,6 @@ export const createTerrainGalleryTab = () => {
   });
 
   if (state.checker) setChecker(true);
+  if (state.material !== 'TERRAIN') applyMaterial();
   if (state.packing !== 'LITE') void applyPackingAsync(state.packing);
 };

@@ -24,20 +24,20 @@ import {
 
 /**
  * The terrain gallery (p303 D8): the toolkit's 16 texture sets, one isolated generated block each,
- * drawn by the toolkit's baseline material `textureSetSurface` in the set's default packing, and
- * right of them the Procedural row (p304 Phase 6), the toolkit's ten surface generators. The place
- * p305 compares its techniques against, p307 adds the wet controls to and p310 its camera presets
- * and measurements.
+ * drawn by the toolkit's terrain material (p305, its JSON route `terrain`) in the set's default
+ * packing, and right of them the Procedural row (p304 Phase 6), the toolkit's ten surface
+ * generators. Where p305 adds a row per technique, p307 the wet controls and p310 its camera
+ * presets and measurements.
  *
  * - **The library:** 4 × 4 blocks of 12 × 12 m with 4 m gaps over a dark ground, a row per pair of
  *   categories from the back (−z): sand and mud, rocks and cliffs, snow and ice, grass and
  *   concrete (`GALLERY_BLOCKS`, the debug tab's list).
  * - **A block** (`galleryBlocks.ts`): `generateTerrain` at 48 segments, gentle 0.4 m noise, a seed
  *   of its own, and its back edge (−z) raised into a 35° ramp, so the normals' orientation and the
- *   sun on a slope can be judged; `textureSetSurface` tiles it at the world's `(x, −z)` over the
+ *   sun on a slope can be judged; the terrain material tiles it at the world's `(x, −z)` over the
  *   set's `physicalSize`.
  * - **The cliffs' walls:** a 6 m wall on the left of each `cliffs*` block, tiled at its UVs in
- *   metres (`tiling: "UV"`).
+ *   metres (`uv: "MESH_UV"`).
  * - **The Procedural row** (`proceduralRow.ts`): five rows of two blocks 8 m right of the library,
  *   a generator each (`PROCEDURAL_BLOCKS`: sand, mud, rocks and strata, snow and ice, grass and
  *   concrete from the back), baked during the load (`bakeSurfaceGenerator`, 1024² `LITE`: the
@@ -47,11 +47,12 @@ import {
  *   sun and sky are the only lights. No shadows for now (`NO_SHADOWS`).
  *
  * The scene lists the 16 sets (`textureSets`), so their default packing's textures load with it;
- * each block's mesh is a variant of `textureSetSurface` naming its set (`matOverrides.inputs`). The
- * debug env adds the scene's tab (`_dbg__terrainGallery.ts`): the set list flying the camera, the
- * packing of the sets that ship every packing, a 1 m checker over the blocks, and the Procedural
- * row's controls (its mode, bake size, each generator's params, its export and the GPU
- * measurement).
+ * each block's mesh is a variant of `terrain` naming its set (`matOverrides.inputs.layer0`). The
+ * debug env adds the scene's tab (`_dbg__terrainGallery.ts`): the library's material (the terrain
+ * material's JSON or code route, or the baseline `textureSetSurface`, which look the same), the set
+ * list flying the camera, the packing of the sets that ship every packing, a 1 m checker over the
+ * blocks, and the Procedural row's controls (its mode, bake size, each generator's params, its
+ * export and the GPU measurement).
  */
 
 export const TERRAIN_GALLERY_SCENE_ID = 'terrainGallery';

@@ -96,6 +96,26 @@ const TerrainBlendSchema = z
   .strict()
   .describe("How the layers' weights are made.");
 
+/** Where the ambient occlusion goes: `aoNode`, which darkens indirect light only. */
+const TerrainAoSchema = z
+  .object({
+    /**
+     * The texture AO's influence, 0..1 (default 1), × each set's `aoStrength`: a `FULL` layer's
+     * map, to `aoNode`. `LITE` and `MINIMAL` have their AO baked into the albedo, which lights it
+     * all; this doesn't reach it.
+     */
+    textureInfluence: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe(
+        "The texture AO's influence, 0..1 (default 1), × each set's aoStrength: a FULL layer's map, to aoNode. LITE and MINIMAL have it baked into the albedo."
+      ),
+  })
+  .strict()
+  .describe('Where the ambient occlusion goes: aoNode, which darkens indirect light only.');
+
 /** The material-wide fields the code route's config and the static define share. */
 const sharedFields = {
   /**
@@ -111,6 +131,8 @@ const sharedFields = {
     ),
   /** How the layers' weights are made (default `{ source: 'SINGLE' }`). */
   blend: TerrainBlendSchema.optional(),
+  /** Where the ambient occlusion goes (the material's `aoNode`: indirect light only). */
+  ao: TerrainAoSchema.optional(),
 };
 
 /** `SINGLE` blends one layer: the refinement both schemas share */
