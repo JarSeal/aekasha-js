@@ -29,8 +29,15 @@ const makeBundle = (packing: Packing) =>
     tint: color(1, 1, 1),
   }) as unknown as TextureSetInput;
 
-const gate = (mode: 'BIPLANAR' | 'TRIPLANAR', packing: Packing = 'LITE') => {
-  const bundle = makeBundle(packing);
+/**
+ * A gated layer and its result; `slot` makes it a sparse slot's: a set array bundle read at a
+ * layer var (the selection's), `HEX` seeded by it
+ */
+const gate = (mode: 'BIPLANAR' | 'TRIPLANAR', packing: Packing = 'LITE', slot = false) => {
+  const bundle = slot
+    ? ({ ...makeBundle(packing), layerParams: {} } as unknown as TextureSetInput)
+    : makeBundle(packing);
+  const slotLayer = slot ? (TSL.int(2).toVar() as unknown as Node<'int'>) : undefined;
   const ctx = createProjectionContext();
   const slopeGate = uniform(new Vector2(30, 50)) as unknown as Node<'vec2'>;
   const layer: ProjectedLayer = {
@@ -43,11 +50,18 @@ const gate = (mode: 'BIPLANAR' | 'TRIPLANAR', packing: Packing = 'LITE') => {
     },
     tiling: { tileSize: uniform(new Vector2(3, 3)) as unknown as Node<'vec2'>, turn: null },
     strength: uniform(1) as unknown as Node<'float'>,
-    antiTiling: { mode: 'NONE' },
+    antiTiling: slot
+      ? {
+          mode: 'HEX',
+          contrast: uniform(0.5) as unknown as Node<'float'>,
+          rotation: uniform(1) as unknown as Node<'float'>,
+        }
+      : { mode: 'NONE' },
     antiTilingContext: {
       viewDistance: float(10) as unknown as Node<'float'>,
       patches: null,
-      seed: 0,
+      seed: slotLayer ?? 0,
+      layer: slotLayer,
     },
   };
   const planarSample = sampleAntiTiled(
@@ -59,7 +73,7 @@ const gate = (mode: 'BIPLANAR' | 'TRIPLANAR', packing: Packing = 'LITE') => {
   // The graph's is the tap's normal through the planar frame: here the tap's own stands in
   const planarNormal = planarSample.normalTS;
   const result = sampleSlopeGated(layer, { sample: planarSample, normal: planarNormal }, ctx);
-  return { bundle, ctx, layer, slopeGate, result };
+  return { bundle, ctx, layer, slopeGate, result, slotLayer };
 };
 
 /** Runs a TSL function's body on a stack of its own: the statements it adds, and its return */
@@ -165,6 +179,21 @@ describe('sampleSlopeGated', () => {
     // The share and the struct are vars of their own value; every other is assigned
     expect(read.length - inputs.length).toBe(2);
     expect(inputs.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it("reads a slot's layer and seed through a var assigned before the branch", () => {
+    const { bundle, result, slotLayer } = gate('TRIPLANAR', 'LITE', true);
+    const { before, branch } = getStatements(result);
+    const reached = collectNodes(branch, { throughVars: false });
+    // Not the selection's var itself: a copy assigned before the branch
+    expect(reached.some((node) => node.id === (slotLayer as unknown as Node).id)).toBe(false);
+    const assigned = new Set(
+      before.map((node) => (node as unknown as { targetNode?: { id: number } }).targetNode?.id)
+    );
+    const taps = getSamples(reached, bundle) as unknown as { depthNode: Node | null }[];
+    // HEX on 2 planes, LITE's 2 slots
+    expect(taps).toHaveLength(3 * 2 * 2);
+    expect(taps.every((tap) => tap.depthNode && assigned.has(tap.depthNode.id))).toBe(true);
   });
 
   it("branches on the gate's share of the slope, and returns the layer's values as one var's", () => {

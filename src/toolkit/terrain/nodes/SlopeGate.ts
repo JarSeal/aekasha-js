@@ -7,7 +7,7 @@
 // plane is the planar tap itself (its UV is planar world tiling's), so the branch samples two
 // planes. Every tap in the branch samples with explicit gradients (the projection's): WGSL refuses
 // implicit derivatives in non-uniform control flow.
-import { float, Fn, If, mix, smoothstep, struct, vec2, vec3 } from 'three/tsl';
+import { float, Fn, If, int, mix, smoothstep, struct, vec2, vec3 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node } from 'three/webgpu';
 import type { AntiTilingContext } from './AntiTiling';
@@ -39,7 +39,12 @@ type StructVar = { get: (name: string) => Node<'float'> & { assign: (value: unkn
 const toVar = <T>(node: T): T => (node as unknown as { toVar: () => T }).toVar();
 
 /** The zero a declared input of each type starts from */
-const ZEROS = { float: () => float(0), vec2: () => vec2(0), vec3: () => vec3(0) };
+const ZEROS = {
+  float: () => float(0),
+  int: () => int(0),
+  vec2: () => vec2(0),
+  vec3: () => vec3(0),
+};
 
 /**
  * A node as a var assigned where this is called (in a `Fn`, before what follows): three declares
@@ -71,11 +76,15 @@ const getPlanarValues = (layer: ProjectedLayer, planar: ProjectedSample) => {
   return values;
 };
 
+/** A slot's layer or seed (an int node) as a declared var; an index stays a number */
+const declareIndex = <T extends number | Node<'int'> | undefined>(index: T): T =>
+  typeof index === 'object' ? declare(index, 'int') : index;
+
 /**
  * What the branch reads from outside it, each a var assigned before it: a node the rest of the
- * graph shares (the position, the tile size, the macro patches) first built in a TSL `If` would be
- * declared inside the branch (the sky box trap, its `CLAUDE.md`), and the position's derivatives
- * there are non-uniform (WGSL's uniformity rule)
+ * graph shares (the position, the tile size, the macro patches, a slot's layer) first built in a
+ * TSL `If` would be declared inside the branch (the sky box trap, its `CLAUDE.md`), and the
+ * position's derivatives there are non-uniform (WGSL's uniformity rule)
  */
 const declareInputs = (layer: ProjectedLayer, ctx: ProjectionContext) => {
   const { tiling, antiTilingContext } = layer;
@@ -83,6 +92,8 @@ const declareInputs = (layer: ProjectedLayer, ctx: ProjectionContext) => {
     ...antiTilingContext,
     viewDistance: declare(antiTilingContext.viewDistance, 'float'),
     patches: antiTilingContext.patches && declare(antiTilingContext.patches, 'float'),
+    seed: declareIndex(antiTilingContext.seed),
+    layer: declareIndex(antiTilingContext.layer),
   };
   const { turn } = tiling;
   return {

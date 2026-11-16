@@ -37,10 +37,16 @@ export type AntiTilingContext = {
   viewDistance: Node<'float'>;
   /** The macro texture's patches (its B), 0..1, or null without a macro texture (`DUAL_SCALE`) */
   patches: Node<'float'> | null;
-  /** The layer's own seed, so two layers of one set don't share their hexes (`HEX`) */
-  seed: number;
-  /** The layer of a `{ textureSetArray }` bundle, or undefined for a `{ textureSet }` one */
-  layer?: number;
+  /**
+   * The layer's own seed, so two layers of one set don't share their hexes (`HEX`): its index, an
+   * int node for a slot's layer
+   */
+  seed: number | Node<'int'>;
+  /**
+   * The layer of a `{ textureSetArray }` bundle (an int node for a slot's layer), or undefined for
+   * a `{ textureSet }` one
+   */
+  layer?: number | Node<'int'>;
   /**
    * The UV's screen-space gradients, for a UV that isn't continuous (a projection's plane chosen
    * per pixel) or one sampled in a branch: every tap samples with them (turned and scaled as its
@@ -193,6 +199,10 @@ const getHexTriangle = (uv: Node<'vec2'>) => {
   ] as { vertex: Node<'vec2'>; weight: Node<'float'> }[];
 };
 
+/** A hex hash's seed of a layer's: its offsets' (0) or its angles' (1) */
+const getHexSeed = (seed: number | Node<'int'>, which: 0 | 1) =>
+  toSeedNode(typeof seed === 'number' ? seed * 2 + which : (seed.mul(2).add(which) as Node<'int'>));
+
 /** `w⁷` without `pow`: Mikkelsen's exponent, which narrows each tap to its hex's middle */
 const pow7 = (w: Node<'float'>) => {
   const w2 = w.mul(w);
@@ -236,8 +246,8 @@ const sampleHex = (
   // hexes
   const dx = ctx.grad?.dx ?? (dFdx(uv) as unknown as Node<'vec2'>);
   const dy = ctx.grad?.dy ?? (dFdy(uv) as unknown as Node<'vec2'>);
-  const offsetSeed = toSeedNode(ctx.seed * 2);
-  const angleSeed = toSeedNode(ctx.seed * 2 + 1);
+  const offsetSeed = getHexSeed(ctx.seed, 0);
+  const angleSeed = getHexSeed(ctx.seed, 1);
   const taps = getHexTriangle(uv).map(({ vertex, weight }) => {
     const angle = hashCell12(vertex, angleSeed)
       .sub(0.5)

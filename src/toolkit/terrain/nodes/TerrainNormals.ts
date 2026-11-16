@@ -52,14 +52,25 @@ export const getPlanarTangentFrame = (rotation: Node<'float'> | null): WorldTang
   return { tangent, bitangent: cross(normal, tangent) as Node<'vec3'>, normal };
 };
 
+/** A UV's scale and turn from coordinates (a slot's tiling of continuous coordinates) */
+export type UvMapping = {
+  /** The coordinates' units a tile (a layer's tile size) */
+  tileSize: Node<'vec2'>;
+  /** The turn the UV takes after the scale (its cosine and sine), or null for none */
+  turn: { cos: Node<'float'>; sin: Node<'float'> } | null;
+};
+
 /**
  * The tangent frame of any UV from its screen-space derivatives (Schüler, "Normal Mapping Without
  * Precomputed Tangents"), in world space: `transformTangentNormalToView`'s construction on world
- * vectors, for a mesh's UV (`MESH_UV`), which has no `tangent` attribute.
+ * vectors, for a mesh's UV (`MESH_UV`), which has no `tangent` attribute. With a mapping, the
+ * frame is of the UV `turn(uv / tileSize)` (`(c·x + s·y, c·y − s·x)`), its directions mapped from
+ * `uv`'s: a sparse slot's UV jumps where its layer changes, the coordinates don't.
  * @internal
- * @param uv the UV the normal map is sampled at
+ * @param uv the UV the normal map is sampled at, or the coordinates `mapping` tiles
+ * @param mapping the scale and turn from `uv` to the sampled UV, or none
  */
-export const getUvTangentFrame = (uv: Node<'vec2'>): WorldTangentFrame => {
+export const getUvTangentFrame = (uv: Node<'vec2'>, mapping?: UvMapping): WorldTangentFrame => {
   const q0 = dFdx(positionWorld);
   const q1 = dFdy(positionWorld);
   const st0 = dFdx(uv);
@@ -67,8 +78,16 @@ export const getUvTangentFrame = (uv: Node<'vec2'>): WorldTangentFrame => {
   const normal = getGeometryNormal();
   const q1perp = cross(q1, normal);
   const q0perp = cross(normal, q0);
-  const t = q1perp.mul(st0.x).add(q0perp.mul(st1.x));
-  const b = q1perp.mul(st0.y).add(q0perp.mul(st1.y));
+  let t = q1perp.mul(st0.x).add(q0perp.mul(st1.x)) as unknown as Node<'vec3'>;
+  let b = q1perp.mul(st0.y).add(q0perp.mul(st1.y)) as unknown as Node<'vec3'>;
+  if (mapping) {
+    // The directions are the UV's gradients: linear in the map
+    const tScaled = t.div(mapping.tileSize.x) as Node<'vec3'>;
+    const bScaled = b.div(mapping.tileSize.y) as Node<'vec3'>;
+    const { turn } = mapping;
+    t = turn ? (tScaled.mul(turn.cos).add(bScaled.mul(turn.sin)) as Node<'vec3'>) : tScaled;
+    b = turn ? (bScaled.mul(turn.cos).sub(tScaled.mul(turn.sin)) as Node<'vec3'>) : bScaled;
+  }
   // One scale for both keeps the frame's handedness and the UV's aspect (three's construction)
   const scale = max(dot(t, t), dot(b, b)).inverseSqrt();
   return {

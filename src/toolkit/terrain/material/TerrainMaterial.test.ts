@@ -740,6 +740,89 @@ describe('setupTerrainMaterial: storage', () => {
   });
 });
 
+describe('setupTerrainMaterial: slots', () => {
+  beforeEach(() => {
+    stubs.renderer = null;
+  });
+
+  /** The sockets' samples of an array's slots, with their layer and gradients */
+  const getSlotSamples = (material: MeshStandardNodeMaterial, bundle: TextureSetArrayInput) => {
+    const arrays = new Set(Object.values(bundle));
+    return collectNodes(material).filter(
+      (node) =>
+        (node as unknown as { isTextureNode?: boolean }).isTextureNode && !arrays.has(node as never)
+    ) as unknown as { depthNode: { isVarNode?: boolean } | null; gradNode: unknown }[];
+  };
+
+  const painted = (count: number, fields: object = {}) => ({
+    layers: layersOf(count),
+    blend: { source: 'VERTEX_COLOR', vertexColor: { layout: 'RGBA' } },
+    ...fields,
+  });
+
+  it("samples the kept slots only, each at its slot's layer with the coordinates' gradients", () => {
+    const bundle = makeArrayBundle(4);
+    const define = painted(4, { sparse: { maxLayers: 2 } });
+    const material = build(define, { layers: bundle });
+    const samples = getSlotSamples(material, bundle);
+    expect(samples).toHaveLength(2 * 2);
+    expect(samples.every((sample) => sample.depthNode?.isVarNode && sample.gradNode)).toBe(true);
+    // Every layer's uniforms, which the slots pick from
+    expect(getUniformKeys(material)).toEqual(
+      getUniformKeys(build(painted(4), { layers: makeArrayBundle(4) }))
+    );
+  });
+
+  it('refuses slots without the set array', () => {
+    expect(() => build(painted(3, { sparse: { maxLayers: 2 } }), layerInputs(3))).toThrow(
+      /needs ARRAY storage/
+    );
+  });
+
+  it('samples HEX in the first slot and DUAL_SCALE in the others with DOMINANT', () => {
+    const bundle = makeArrayBundle(3);
+    const dominant = { mode: 'HEX', apply: 'DOMINANT' };
+    const material = build(painted(3, { antiTiling: dominant }), { layers: bundle });
+    // LITE: 3 HEX taps of 2 slots, then 2 DUAL_SCALE taps in each of 2 slots
+    expect(getSlotSamples(material, bundle)).toHaveLength(3 * 2 + 2 * 2 * 2);
+    expect(getUniformKeys(material)).toEqual(
+      expect.arrayContaining(['terrain_l2_hexContrast', 'terrain_l2_farScale'])
+    );
+    const sparse = build(painted(3, { antiTiling: dominant, sparse: { maxLayers: 2 } }), {
+      layers: bundle,
+    });
+    expect(getSlotSamples(sparse, bundle)).toHaveLength(3 * 2 + 2 * 2);
+  });
+
+  it("projects every slot as the projected layers do, a planar layer's gate closed", () => {
+    const bundle = makeArrayBundle(3);
+    const triplanar = { projection: { mode: 'TRIPLANAR' } };
+    const projected = build(painted(3, { ...triplanar, sparse: { maxLayers: 2 } }), {
+      layers: bundle,
+    });
+    expect(getSlotSamples(projected, bundle)).toHaveLength(2 * 3 * 2);
+    // A planar layer among projected ones: every slot gated (its branch builds with the shader)
+    const mixed = build(
+      painted(3, {
+        sparse: { maxLayers: 2 },
+        layers: [{}, triplanar, { projection: { mode: 'TRIPLANAR', slopeGate: [30, 50] } }],
+      }),
+      { layers: bundle }
+    );
+    expect(getSlotSamples(mixed, bundle)).toHaveLength(0);
+    expect(getUniformKeys(mixed)).toEqual(
+      expect.arrayContaining(['terrain_l1_projectionSharpness', 'terrain_l2_slopeGate'])
+    );
+  });
+
+  it("bumps MINIMAL's blended height once, not each slot's", () => {
+    const bundle = makeArrayBundle(3, 'MINIMAL');
+    const material = build(painted(3, { sparse: { maxLayers: 2 } }), { layers: bundle });
+    // The coordinates' gradients, then the bump's position and height
+    expect(countMethod(material, 'dFdx')).toBe(3);
+  });
+});
+
 describe('getTerrainMaterialProps', () => {
   it('puts the sets in the inputs and the rest in the define', () => {
     expect(

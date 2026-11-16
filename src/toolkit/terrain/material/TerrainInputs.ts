@@ -56,8 +56,11 @@ export type LayerParams = {
 /** A layer's set: the bundle it samples, its layer there (`ARRAY`), its params */
 export type LayerSource = {
   bundle: TextureSetInput | TextureSetArrayInput;
-  /** The set array's layer, or undefined for a set's own bundle */
-  layer: number | undefined;
+  /**
+   * The set array's layer (an int node for a slot's: the layer kept there), or undefined for a
+   * set's own bundle
+   */
+  layer: number | Node<'int'> | undefined;
   params: LayerParams;
 };
 

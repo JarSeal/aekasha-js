@@ -2,18 +2,10 @@
 // declarative config, every technique a build-time branch on its static define (D2's outline:
 // coordinates → weights → per-layer samples → surface → sockets). Two routes reach the same
 // `setupTerrainMaterial`: the code route (`createTerrainMaterial`, registered as `aek.terrain`) and
-// the JSON route (`materials/terrain/terrain.tsl.ts`, whose `setup` it is).
-import {
-  color,
-  float,
-  mix,
-  positionView,
-  positionWorld,
-  uniform,
-  uv as meshUv,
-  vec2,
-  vec3,
-} from 'three/tsl';
+// the JSON route (`materials/terrain/terrain.tsl.ts`, whose `setup` it is). The layers are built
+// by `TerrainLayers.ts`, each at its own index (dense) or a few slots at the layers weighing most
+// at the pixel (`TerrainSlots.ts`: sparse sampling, `DOMINANT`).
+import { float, mix, positionView, uniform } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import {
   Vector2,
@@ -33,27 +25,14 @@ import {
   type MatProps,
   type TslMaterialFns,
 } from 'aekasha';
-import { sampleAntiTiled, type AntiTilingContext, type AntiTilingNodes } from '../nodes/AntiTiling';
+import type { TextureSetArrayInput } from 'aekasha/texturesets';
 import { fadeDetailNormal } from '../nodes/Distance';
 import { blendWeightsByHeight, getBlendHeight, normalizeWeights } from '../nodes/HeightBlend';
 import { applyMacroVariation, sampleMacroTexture, type MacroNodes } from '../nodes/Macro';
-import {
-  createProjectionContext,
-  sampleProjected,
-  type ProjectedLayer,
-  type ProjectionContext,
-  type ProjectionNodes,
-} from '../nodes/Projection';
-import { sampleSlopeGated } from '../nodes/SlopeGate';
+import { createProjectionContext, type ProjectionContext } from '../nodes/Projection';
 import { applyRules, createRuleContext, createRuleNodes } from '../nodes/Rules';
-import type { TextureSetSample } from '../nodes/SampleTextureSet';
-import {
-  bumpNormalWorld,
-  getPlanarTangentFrame,
-  getUvTangentFrame,
-  transformTangentNormalToWorld,
-  transformWorldNormalToView,
-} from '../nodes/TerrainNormals';
+import { selectTopLayers, spreadSlotWeights } from '../nodes/Sparse';
+import { transformWorldNormalToView } from '../nodes/TerrainNormals';
 import { getSplatMapWeights, getVertexColorWeights, type PaintedWeights } from '../nodes/Weights';
 import {
   getTerrainDefine,
@@ -62,16 +41,26 @@ import {
   readMacroTexture,
   readSplatMaps,
   type LayerParams,
-  type LayerSource,
+  type LayerSources,
 } from './TerrainInputs';
+import {
+  blendSurfaces,
+  checkOnePacking,
+  createLayerUniforms,
+  getLayerSurface,
+  getLayerUv,
+  keepUniform,
+  sampleLayer,
+  type BuiltLayer,
+  type LayerUniforms,
+} from './TerrainLayers';
+import { buildSlots } from './TerrainSlots';
 import { checkTextureBudget, type TerrainBinding } from './TerrainStorage';
 import {
   getPaintedLayerCount,
   getPaintedSource,
   readTerrainDefine,
   type ResolvedTerrainDefine,
-  type TerrainAntiTilingDefine,
-  type TerrainProjectionDefine,
 } from './TerrainDefine';
 import type { TerrainDebugView, TerrainDebugViewContext } from '../debug/_dbg__DebugViews';
 import { getLoadedTerrainDebugViews, loadTerrainDebugViewsAsync } from './TerrainDebugViews';
@@ -79,81 +68,6 @@ import type { TERRAIN_QUALITY_LEVELS, TerrainMaterialConfig } from './TerrainMat
 
 /** The id the code route registers the terrain material's functions under (`tslMaterialId`). */
 export const TERRAIN_TSL_MATERIAL_ID = 'aek.terrain';
-
-const DEG_TO_RAD = Math.PI / 180;
-/** `MINIMAL`'s roughness before the scales: the packing has no roughness map (the baseline's) */
-const MINIMAL_ROUGHNESS = 0.8;
-
-/** A layer's uniforms, kept at `userData.uniforms.terrain_l<i>_<name>` */
-type LayerUniforms = {
-  tiling: Node<'float'>;
-  rotation: Node<'float'> | null;
-  tint: Node<'color'>;
-  normalStrength: Node<'float'>;
-  roughnessScale: Node<'float'>;
-  /** The height blend's `heightContrast` and `heightOffset`, or null without the height blend */
-  height: { contrast: Node<'float'>; offset: Node<'float'> } | null;
-  /** The anti-tiling's mode and its uniforms (`farScale`, `antiTilingDistance`; `hexContrast`,
-   * `hexRotation`) */
-  antiTiling: AntiTilingNodes;
-  /** The projection's mode and its uniforms (`projectionSharpness`, `slopeGate`) */
-  projection: ProjectionNodes;
-};
-
-/** A layer's surface, its normal in world space: what the layers blend (one, for SINGLE) */
-type LayerSurface = {
-  albedo: Node<'vec3'>;
-  normal: Node<'vec3'>;
-  roughness: Node<'float'>;
-  /** The texture AO with its influence, or null where the albedo has it baked */
-  ao: Node<'float'> | null;
-};
-
-/** A material uniform kept at `userData.uniforms.terrain_<name>`, where the material editor finds it */
-const keepUniform = <T>(material: NodeMaterial, name: string, node: T) => {
-  const uniforms = (material.userData.uniforms ??= {}) as Record<string, unknown>;
-  uniforms[`terrain_${name}`] = node;
-  return node;
-};
-
-/** A layer's anti-tiling uniforms, those of its mode only */
-const createAntiTilingNodes = (
-  antiTiling: TerrainAntiTilingDefine,
-  keep: (name: string, node: unknown) => unknown
-): AntiTilingNodes => {
-  if (antiTiling.mode === 'DUAL_SCALE') {
-    const [from, to] = antiTiling.distance;
-    return {
-      mode: 'DUAL_SCALE',
-      farScale: keep('farScale', uniform(antiTiling.farScale)) as Node<'float'>,
-      distance: keep('antiTilingDistance', uniform(new Vector2(from, to))) as Node<'vec2'>,
-    };
-  }
-  if (antiTiling.mode === 'HEX') {
-    return {
-      mode: 'HEX',
-      contrast: keep('hexContrast', uniform(antiTiling.hexContrast)) as Node<'float'>,
-      rotation: keep('hexRotation', uniform(antiTiling.hexRotation)) as Node<'float'>,
-    };
-  }
-  return { mode: 'NONE' };
-};
-
-/** A layer's projection uniforms, a projecting mode's only, the gate's with a gate */
-const createProjectionNodes = (
-  projection: TerrainProjectionDefine,
-  keep: (name: string, node: unknown) => unknown
-): ProjectionNodes => {
-  if (projection.mode === 'PLANAR') return { mode: 'PLANAR' };
-  return {
-    mode: projection.mode,
-    sharpness: keep('projectionSharpness', uniform(projection.sharpness)) as Node<'float'>,
-    normalBlend: projection.normalBlend,
-    slopeGate: projection.slopeGate
-      ? (keep('slopeGate', uniform(new Vector2(...projection.slopeGate))) as Node<'vec2'>)
-      : null,
-  };
-};
 
 /** The macro variation's uniforms (`terrain_macro<Name>`) and its one sample */
 type Macro = { nodes: MacroNodes; sample: Node<'vec4'> };
@@ -179,159 +93,6 @@ const createMacro = (
   return { nodes, sample: sampleMacroTexture(macroTexture, nodes.scale) };
 };
 
-/** Makes a layer's uniforms (`terrain_l<i>_<name>`), the height blend's with it only */
-const createLayerUniforms = (
-  material: NodeMaterial,
-  define: ResolvedTerrainDefine,
-  index: number
-): LayerUniforms => {
-  const layer = define.layers[index];
-  const keep = (name: string, node: unknown) => keepUniform(material, `l${index}_${name}`, node);
-  const hasHeightBlend = define.blend.source !== 'SINGLE' && define.blend.heightBlend !== null;
-  return {
-    height: hasHeightBlend
-      ? {
-          contrast: keep('heightContrast', uniform(layer.heightContrast)) as Node<'float'>,
-          offset: keep('heightOffset', uniform(layer.heightOffset)) as Node<'float'>,
-        }
-      : null,
-    antiTiling: createAntiTilingNodes(layer.antiTiling, keep),
-    projection: createProjectionNodes(layer.projection, keep),
-    tiling: keep('tiling', uniform(layer.tiling)) as Node<'float'>,
-    rotation:
-      layer.rotation === null ? null : (keep('rotation', uniform(layer.rotation)) as Node<'float'>),
-    tint: keep('tint', uniform(color(layer.tint))) as Node<'color'>,
-    normalStrength: keep('normalStrength', uniform(layer.normalStrength)) as Node<'float'>,
-    roughnessScale: keep('roughnessScale', uniform(layer.roughnessScale)) as Node<'float'>,
-  };
-};
-
-/** A layer's tiling: its coordinates in metres, its tile size, its UV and its turn */
-type LayerUv = {
-  /** The world's `(x, −z)` or the mesh's UV, metres */
-  coords: Node<'vec2'>;
-  /** The set's `physicalSize` × the layer's tiling, metres */
-  tileSize: Node<'vec2'>;
-  /** The UV sampled, in tiles */
-  tileUv: Node<'vec2'>;
-  /** The rotation in radians, or null for none */
-  angle: Node<'float'> | null;
-  /** The rotation's cosine and sine, or null for none */
-  turn: { cos: Node<'float'>; sin: Node<'float'> } | null;
-};
-
-/**
- * A layer's tiling UV: the world's `(x, −z)` (seen from above, the source's orientation) or the
- * mesh's UV, over the set's tile size × the layer's tiling, turned by its rotation when it has one
- * (its angle in radians, which the planar frame turns by too)
- */
-const getLayerUv = (
-  define: ResolvedTerrainDefine,
-  params: LayerParams,
-  layer: LayerUniforms
-): LayerUv => {
-  const coords =
-    define.uv === 'MESH_UV'
-      ? (meshUv() as unknown as Node<'vec2'>)
-      : (vec2(positionWorld.x, positionWorld.z.negate()) as unknown as Node<'vec2'>);
-  const tileSize = params.physicalSize.mul(layer.tiling) as Node<'vec2'>;
-  const tileUv = coords.div(tileSize) as Node<'vec2'>;
-  if (!layer.rotation) return { coords, tileSize, tileUv, angle: null, turn: null };
-  // The pattern turns counter-clockwise from above: sample at the UV turned back
-  const angle = layer.rotation.mul(DEG_TO_RAD) as Node<'float'>;
-  const c = angle.cos() as Node<'float'>;
-  const s = angle.sin() as Node<'float'>;
-  const turned = vec2(c.mul(tileUv.x).add(s.mul(tileUv.y)), c.mul(tileUv.y).sub(s.mul(tileUv.x)));
-  const turn = { cos: c, sin: s };
-  return { coords, tileSize, tileUv: turned as unknown as Node<'vec2'>, angle, turn };
-};
-
-/** Every layer's sample in one packing, or a thrown error naming the layers' packings */
-const checkOnePacking = (samples: TextureSetSample[]) => {
-  const packings = samples.map((sample) => sample.packing);
-  if (packings.some((packing) => packing !== packings[0])) {
-    throw new Error(
-      `[terrain] The layers sample different packings (${packings.map((p, i) => `layer${i}: ${p}`).join(', ')}): give the inputs one "packing" (createTerrainMaterial's packing).`
-    );
-  }
-};
-
-/** The normal's strength of a layer: the set's × the layer's `normalStrength` */
-const getNormalStrength = (params: LayerParams, layer: LayerUniforms) =>
-  params.normalStrength.mul(layer.normalStrength) as Node<'float'>;
-
-/**
- * A layer's tangent normal (its slopes × the strength) through its tiling's frame, in world space:
- * planar world tiling's analytic frame, or a mesh UV's from its derivatives
- */
-const getFrameNormal = (
-  define: ResolvedTerrainDefine,
-  uv: LayerUv,
-  normalTS: Node<'vec3'>,
-  strength: Node<'float'>
-) => {
-  const scaled = vec3(normalTS.xy.mul(strength), normalTS.z) as unknown as Node<'vec3'>;
-  const frame =
-    define.uv === 'MESH_UV' ? getUvTangentFrame(uv.tileUv) : getPlanarTangentFrame(uv.angle);
-  return transformTangentNormalToWorld(scaled, frame);
-};
-
-/**
- * A layer's surface from its sample (p303 D2's packings): the albedo × the set's and the layer's
- * tint; the normal in world space, a projection's (made with the strength), else the map's
- * (`FULL`, `LITE`) through the tiling's frame (planar world tiling's analytic one, a mesh UV's
- * from its derivatives) or `MINIMAL`'s bump of its height in metres, its slope × the set's and
- * the layer's `normalStrength`; the roughness (`MINIMAL`'s
- * 0.8) × both `roughnessScale`s, capped at 1; `FULL`'s AO with the set's `aoStrength` × the
- * material's influence
- */
-const getLayerSurface = (
-  define: ResolvedTerrainDefine,
-  params: LayerParams,
-  layer: LayerUniforms,
-  { uv, sample, normal: projected }: Pick<BuiltLayer, 'uv' | 'sample' | 'normal'>,
-  aoInfluence: () => Node<'float'>
-): LayerSurface => {
-  const strength = getNormalStrength(params, layer);
-  let normal: Node<'vec3'>;
-  if (projected) {
-    normal = projected;
-  } else if (sample.normalTS) {
-    normal = getFrameNormal(define, uv, sample.normalTS, strength);
-  } else {
-    normal = bumpNormalWorld(sample.height.mul(params.heightScale).mul(strength) as Node<'float'>);
-  }
-  const roughness = (sample.roughness ?? float(MINIMAL_ROUGHNESS))
-    .mul(params.roughnessScale)
-    .mul(layer.roughnessScale)
-    .min(1) as Node<'float'>;
-  const aoStrength = params.aoStrength;
-  return {
-    albedo: sample.albedo.mul(params.tint).mul(layer.tint) as Node<'vec3'>,
-    normal,
-    roughness,
-    ao: sample.ao
-      ? (mix(float(1), sample.ao, aoStrength.mul(aoInfluence())) as Node<'float'>)
-      : null,
-  };
-};
-
-/** The layers' surfaces blended by their weights (which sum to 1): the normal renormalized */
-const blendSurfaces = (surfaces: LayerSurface[], weights: Node<'float'>[]): LayerSurface => {
-  const sum = <T extends Node<'float'> | Node<'vec3'>>(pick: (surface: LayerSurface) => T) =>
-    surfaces
-      .map((surface, i) => pick(surface).mul(weights[i]) as unknown as T)
-      .reduce((total, value) => total.add(value) as unknown as T);
-  const [first] = surfaces;
-  return {
-    albedo: sum((surface) => surface.albedo),
-    normal: sum((surface) => surface.normal).normalize() as Node<'vec3'>,
-    roughness: sum((surface) => surface.roughness),
-    // One packing: every layer has texture AO or none has
-    ao: first.ao ? sum((surface) => surface.ao as Node<'float'>) : null,
-  };
-};
-
 /**
  * What the material binds: the layers' textures, the splat maps and the macro texture (the macro
  * variation's and the rules' noise's)
@@ -345,51 +106,6 @@ const getBindings = (
   ...(splatMaps.length ? [{ name: 'splat maps', count: splatMaps.length }] : []),
   ...(hasMacro ? [{ name: 'macro', count: 1 }] : []),
 ];
-
-/**
- * A layer as the graph built it: its set, uniforms, tiling and (anti-tiled, projected) sample, and
- * a projection's world normal
- */
-type BuiltLayer = {
-  source: LayerSource;
-  uniforms: LayerUniforms;
-  uv: LayerUv;
-  sample: TextureSetSample;
-  /** The projection's normal in world space, or null (`PLANAR`, or no normal map) */
-  normal: Node<'vec3'> | null;
-};
-
-/**
- * A layer's sample: with its anti-tiling at its tiling UV (`PLANAR`), on its projection's planes
- * with their normals met with the geometry's, or with a slope gate both: the planar tap (its
- * normal through the planar frame) and the projection in a branch past the gate's first slope
- */
-const sampleLayer = (
-  define: ResolvedTerrainDefine,
-  layer: Pick<BuiltLayer, 'source' | 'uniforms' | 'uv'>,
-  antiTiling: AntiTilingContext,
-  getProjectionContext: () => ProjectionContext
-): Pick<BuiltLayer, 'sample' | 'normal'> => {
-  const { source, uniforms, uv } = layer;
-  const { projection } = uniforms;
-  const sampleAtUv = () =>
-    sampleAntiTiled(source.bundle, uv.tileUv, uniforms.antiTiling, antiTiling);
-  if (projection.mode === 'PLANAR') return { sample: sampleAtUv(), normal: null };
-  const projected: ProjectedLayer = {
-    bundle: source.bundle,
-    projection,
-    tiling: { tileSize: uv.tileSize, turn: uv.turn },
-    strength: getNormalStrength(source.params, uniforms),
-    antiTiling: uniforms.antiTiling,
-    antiTilingContext: antiTiling,
-  };
-  if (!projection.slopeGate) return sampleProjected(projected, getProjectionContext());
-  const sample = sampleAtUv();
-  const normal = sample.normalTS
-    ? getFrameNormal(define, uv, sample.normalTS, projected.strength)
-    : null;
-  return sampleSlopeGated(projected, { sample, normal }, getProjectionContext());
-};
 
 /**
  * The incoming weights before the rules: the paint's for its layers (the vertex colour or the
@@ -417,15 +133,13 @@ const getIncomingWeights = (
 };
 
 /**
- * The layers' weights of a blend past `SINGLE`: the paint's or the base layer's, the rules (the
- * uniforms `terrain_r<i>_<name>`) composited over them in order, normalized linearly or by the
- * layers' heights (the uniform `terrain_heightBlendDepth`); and the vertex colour's AO. Null for
- * `SINGLE`
+ * The layers' raw weights of a blend past `SINGLE`: the paint's or the base layer's, the rules (the
+ * uniforms `terrain_r<i>_<name>`) composited over them in order, not yet normalized; and the
+ * vertex colour's AO. Null for `SINGLE`
  */
-const getLayerWeights = (
+const getRawWeights = (
   material: NodeMaterial,
   define: ResolvedTerrainDefine,
-  layers: BuiltLayer[],
   splatMaps: TextureNode[],
   macroTexture: TextureNode | null
 ): PaintedWeights | null => {
@@ -435,25 +149,32 @@ const getLayerWeights = (
   const rules = blend.rules.map((rule, i) =>
     createRuleNodes(rule, (name, node) => keepUniform(material, `r${i}_${name}`, node))
   );
-  const painted = rules.length
-    ? {
-        ...incoming,
-        weights: applyRules(incoming.weights, rules, createRuleContext(macroTexture)),
-      }
-    : incoming;
-  if (blend.heightBlend === null) {
-    return { ...painted, weights: normalizeWeights(painted.weights) };
-  }
+  if (!rules.length) return incoming;
+  return {
+    ...incoming,
+    weights: applyRules(incoming.weights, rules, createRuleContext(macroTexture)),
+  };
+};
+
+/**
+ * The built layers' (or slots') final weights from their raw ones: normalized linearly, or by
+ * their heights (the uniform `terrain_heightBlendDepth`), which sum to 1
+ */
+const blendWeights = (
+  material: NodeMaterial,
+  define: ResolvedTerrainDefine,
+  weights: Node<'float'>[],
+  layers: BuiltLayer[]
+) => {
+  const { blend } = define;
+  if (blend.source === 'SINGLE' || blend.heightBlend === null) return normalizeWeights(weights);
   const depth = keepUniform(material, 'heightBlendDepth', uniform(blend.heightBlend));
   const heights = layers.map(({ source, uniforms, sample }) => {
     const height = existsOrThrow(uniforms.height, 'A height-blended layer has height uniforms.');
     const contrast = source.params.heightContrast.mul(height.contrast) as Node<'float'>;
     return getBlendHeight(sample.height, contrast, height.offset);
   });
-  return {
-    ...painted,
-    weights: blendWeightsByHeight(painted.weights, heights, depth as Node<'float'>),
-  };
+  return blendWeightsByHeight(weights, heights, depth as Node<'float'>);
 };
 
 /**
@@ -479,6 +200,65 @@ const getAoNode = (
   return textureAo ? (textureAo.mul(vertexTerm) as Node<'float'>) : vertexTerm;
 };
 
+/** What the layers or slots read besides their own: the shared nodes, built before any of them */
+type LayerBuildContext = {
+  define: ResolvedTerrainDefine;
+  sources: LayerSources;
+  uniforms: LayerUniforms[];
+  viewDistance: Node<'float'>;
+  macro: Macro | null;
+  getProjectionContext: () => ProjectionContext;
+};
+
+/** Every layer at its own index: its tiling, anti-tiling and projection, its own seed */
+const buildLayers = (ctx: LayerBuildContext): BuiltLayer[] =>
+  ctx.sources.layers.map((source, i) => {
+    const uniforms = ctx.uniforms[i];
+    const uv = getLayerUv(ctx.define, source.params, uniforms);
+    const antiTiling = {
+      viewDistance: ctx.viewDistance,
+      patches: ctx.macro ? (ctx.macro.sample.b as unknown as Node<'float'>) : null,
+      seed: i,
+      layer: source.layer,
+    };
+    const sampled = sampleLayer(
+      ctx.define,
+      { source, uniforms, uv },
+      antiTiling,
+      ctx.getProjectionContext
+    );
+    return { source, uniforms, uv, ...sampled };
+  });
+
+/**
+ * The layers the graph blends and their raw weights: every layer at its own index, or (sparse,
+ * `DOMINANT`) the slots the top-K selection keeps of the raw weights, each at its layer, and the
+ * slots' layers; null weights for `SINGLE`
+ */
+const buildBlendedLayers = (ctx: LayerBuildContext, raw: PaintedWeights | null) => {
+  const { define, sources } = ctx;
+  if (define.slotCount === null || !raw) {
+    return { layers: buildLayers(ctx), weights: raw?.weights ?? null, slots: null };
+  }
+  if (!sources.isArray) {
+    throw new Error(
+      '[terrain] Sparse sampling and HEX\'s apply DOMINANT read each layer at a per-pixel index, which needs ARRAY storage: give a { "textureSetArray": [ids], "packing" } input "layers" (createTerrainMaterial\'s storage AUTO or ARRAY).'
+    );
+  }
+  const slots = selectTopLayers(raw.weights, define.slotCount);
+  const layers = buildSlots(slots, {
+    define,
+    bundle: sources.layers[0].bundle as TextureSetArrayInput,
+    layers: ctx.uniforms,
+    antiTiling: {
+      viewDistance: ctx.viewDistance,
+      patches: ctx.macro ? (ctx.macro.sample.b as unknown as Node<'float'>) : null,
+    },
+    getProjectionContext: ctx.getProjectionContext,
+  });
+  return { layers, weights: slots.map((slot) => slot.weight), slots };
+};
+
 /**
  * The terrain material's graph (p305 D2), the TSL `setup` both routes run: reads the static
  * define `terrain` ({@link TerrainMaterialDefine}), samples each layer's texture set (`SEPARATE`:
@@ -499,25 +279,29 @@ const getAoNode = (
  * rule lays its layer over the weights so far where the geometry's slope, the world height and
  * the facing are in its ranges, its coverage moved by a channel of the input `macro`, one fetch a
  * rule with noise); `blend.mode` `HEIGHT` (default) lets the layers' heights decide the borders,
- * `LINEAR` the weights alone. With `macro`, one fetch of the input `macro` at the world's XZ
- * varies the surface (R the brightness, G the hue and the roughness, B `DUAL_SCALE`'s patches);
- * with `distance`, the normal fades to the
- * geometry's over its `fade` range. Only what the define enables is built. The textures it binds
- * (the layers', the splat maps, the macro texture) must fit the budget: the renderer's sampled
- * textures a stage (16) less `reservedTextures` (6). The tunables are
- * uniforms in `material.userData.uniforms`: per layer `terrain_l<i>_<name>` (`tiling`, `rotation`
- * when given, `tint`, `normalStrength`, `roughnessScale`; `heightContrast` and `heightOffset` with
- * the height blend; `farScale` and `antiTilingDistance` with `DUAL_SCALE`, `hexContrast` and
- * `hexRotation` with `HEX`; `projectionSharpness` with `BIPLANAR` or `TRIPLANAR`, `slopeGate` with a gate), per rule `terrain_r<i>_<name>` (its tests' only: `slopeMin`,
- * `slopeMax`, `slopeSoftness`, `heightMin`, `heightMax`, `heightSoftness`, a range's given ends
- * only; `aspectDirection`, `aspectRange`, `aspectSoftness`; `noiseScale`, `noiseAmount`; and
- * `strength`), `terrain_heightBlendDepth` with the height blend,
- * `terrain_aoTextureInfluence` when a layer has texture AO, `terrain_aoVertexInfluence` with
- * `ao.vertex`, `terrain_macroScale`, `terrain_macroBrightness`, `terrain_macroHue` and
- * `terrain_macroRoughness` with `macro`, and `terrain_distanceFade` with `distance`. A
- * `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug env, once
- * {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the view. The
- * define as given is kept at `material.userData.terrainDefine`.
+ * `LINEAR` the weights alone. With `sparse` (fewer layers kept than there are) or `HEX`'s
+ * `apply: 'DOMINANT'`, the layers are sampled in slots: at each pixel the layers weighing most,
+ * sorted (sparse's `maxLayers` of them, else all), each read from the `ARRAY` input at its layer,
+ * their weights renormalized (the height blend among them); `DOMINANT` samples `HEX` in the first
+ * slot and `DUAL_SCALE` in the others. With `macro`, one fetch of the input `macro` at the world's
+ * XZ varies the surface (R the brightness, G the hue and the roughness, B `DUAL_SCALE`'s patches);
+ * with `distance`, the normal fades to the geometry's over its `fade` range. Only what the define
+ * enables is built. The textures it binds (the layers', the splat maps, the macro texture) must
+ * fit the budget: the renderer's sampled textures a stage (16) less `reservedTextures` (6). The
+ * tunables are uniforms in `material.userData.uniforms`: per layer `terrain_l<i>_<name>`
+ * (`tiling`, `rotation` when given, `tint`, `normalStrength`, `roughnessScale`; `heightContrast`
+ * and `heightOffset` with the height blend; `farScale` and `antiTilingDistance` with `DUAL_SCALE`
+ * or `DOMINANT` in slots, `hexContrast` and `hexRotation` with `HEX`; `projectionSharpness` with
+ * `BIPLANAR` or `TRIPLANAR`, `slopeGate` with a gate), per rule `terrain_r<i>_<name>` (its
+ * tests' only: `slopeMin`, `slopeMax`, `slopeSoftness`, `heightMin`, `heightMax`,
+ * `heightSoftness`, a range's given ends only; `aspectDirection`, `aspectRange`,
+ * `aspectSoftness`; `noiseScale`, `noiseAmount`; and `strength`), `terrain_heightBlendDepth` with
+ * the height blend, `terrain_aoTextureInfluence` when a layer has texture AO,
+ * `terrain_aoVertexInfluence` with `ao.vertex`, `terrain_macroScale`, `terrain_macroBrightness`,
+ * `terrain_macroHue` and `terrain_macroRoughness` with `macro`, and `terrain_distanceFade` with
+ * `distance`. A `qualityLevel` applies that tier's `quality` overrides first; a `debugView`
+ * (debug env, once {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading
+ * with the view. The define as given is kept at `material.userData.terrainDefine`.
  * @param inputs the material's inputs: `layer<i>` bundles or the `layers` set array bundle (the
  * `textureSets()` feature's resolvers), with the splat map sources the splat maps `splat<i>` and
  * with `macro` or a rule's noise the macro texture `macro` (texture nodes: `{ "texture": id }`)
@@ -526,7 +310,8 @@ const getAoNode = (
  * @throws for a missing or wrong define field, a field it doesn't know, a layer count the blend
  * source doesn't take, a missing layer, splat map or macro input (or one the define doesn't
  * take), `layer<i>` and `layers` both, a set array of another layer count, layers in different
- * packings, or textures over the budget (naming what it binds)
+ * packings, slots (sparse, `DOMINANT`) without the `layers` set array, or textures over the
+ * budget (naming what it binds)
  * @example
  * ```ts
  * // A TSL file of a material JSON whose staticDefines.terrain is the define
@@ -570,26 +355,19 @@ export const setupTerrainMaterial = (
   const macro = createMacro(material, macroTexture, define);
   let projection: ProjectionContext | null = null;
   const getProjectionContext = () => (projection ??= createProjectionContext());
-  const layers: BuiltLayer[] = sources.layers.map((source, i) => {
-    const uniforms = createLayerUniforms(material, define, i);
-    const uv = getLayerUv(define, source.params, uniforms);
-    const antiTiling: AntiTilingContext = {
-      viewDistance,
-      patches: macro ? (macro.sample.b as unknown as Node<'float'>) : null,
-      seed: i,
-      layer: source.layer,
-    };
-    const sampled = sampleLayer(define, { source, uniforms, uv }, antiTiling, getProjectionContext);
-    return { source, uniforms, uv, ...sampled };
-  });
+  const uniforms = define.layers.map((_, i) => createLayerUniforms(material, define, i));
+  const raw = getRawWeights(material, define, splatMaps, macroTexture);
+  const ctx = { define, sources, uniforms, viewDistance, macro, getProjectionContext };
+  const { layers, weights: rawWeights, slots } = buildBlendedLayers(ctx, raw);
   checkOnePacking(layers.map((layer) => layer.sample));
+  // A slot's bump is the blend's: its own height jumps where its layer changes
   const surfaces = layers.map((layer) =>
-    getLayerSurface(define, layer.source.params, layer.uniforms, layer, getAoInfluence)
+    getLayerSurface(define, layer, getAoInfluence, slots !== null)
   );
 
   // The layers blended by their weights (SINGLE: the one layer), then the material-wide effects
-  const painted = getLayerWeights(material, define, layers, splatMaps, macroTexture);
-  const surface = painted ? blendSurfaces(surfaces, painted.weights) : surfaces[0];
+  const weights = rawWeights && blendWeights(material, define, rawWeights, layers);
+  const surface = weights ? blendSurfaces(surfaces, weights, slots !== null) : surfaces[0];
   const { albedo, roughness } = macro
     ? applyMacroVariation(surface, macro.sample, macro.nodes)
     : surface;
@@ -608,24 +386,34 @@ export const setupTerrainMaterial = (
   standard.normalNode = transformWorldNormalToView(normal);
   standard.roughnessNode = roughness;
   standard.metalnessNode = float(0);
-  const ao = getAoNode(material, define, surface.ao, painted, layers[0].sample.isAoBaked);
+  const ao = getAoNode(material, define, surface.ao, raw, layers[0].sample.isAoBaked);
   if (ao) standard.aoNode = ao;
 
   if (IS_DEBUG_ENV && define.debugView) {
+    // Per layer: a slot's weight goes to the layer kept there
+    const layerWeights =
+      weights && slots ? spreadSlotWeights(slots, weights, define.layers.length) : weights;
     applyDebugView(standard, define.debugView, {
       coords: layers[0].uv.coords,
-      layers: layers.map(({ source: { bundle }, uniforms, uv }) => ({
-        tileSize: uv.tileSize,
+      layers: sources.layers.map(({ bundle, params }, i) => ({
+        tileSize: slots ? getDebugTileSize(params, uniforms[i]) : layers[i].uv.tileSize,
         colorTexture: (bundle.albedoRough ?? bundle.albedoHeight) as unknown as TextureNode,
-        projection: uniforms.projection,
+        projection: uniforms[i].projection,
       })),
-      weights: painted?.weights ?? null,
+      weights: layerWeights,
       normal,
       define,
       packing: layers[0].sample.packing,
     });
   }
 };
+
+/**
+ * A layer's tile size in metres for the debug views, which read it per layer: the set's
+ * `physicalSize` × its tiling (a slot's is the kept layer's)
+ */
+const getDebugTileSize = (params: LayerParams, uniforms: LayerUniforms) =>
+  params.physicalSize.mul(uniforms.tiling) as Node<'vec2'>;
 
 /**
  * A debug view over the material's sockets, when the views are loaded; else the load starts and
@@ -694,7 +482,9 @@ export const getTerrainMaterialProps = (
  * returns that material, as `createMaterial` does). Its layers' texture sets must be loaded: a
  * scene that lists them (`textureSets`) has them, else await `ensureMaterialDependencies` with
  * {@link getTerrainMaterialProps}' props first (a missing texture samples white, warned). With
- * `ARRAY` storage (`storage`, or `AUTO` over the texture budget) its set array must be built:
+ * `ARRAY` storage (`storage`, or `AUTO` over the texture budget or where the layers sample in
+ * slots: `sparse`, `HEX`'s `apply: 'DOMINANT'`, the material's or a tier's) its set array must be
+ * built:
  * await `buildTextureSetArray({ sets, packing })` first, or list it in the scene's
  * `textureSetArrays` (an array that isn't built samples white, warned). Variants
  * (`getMaterialVariant`) swap a layer's set through `inputs.layer<i>` without another shader.
