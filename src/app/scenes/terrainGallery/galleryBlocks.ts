@@ -49,6 +49,23 @@ export const BASELINE_MATERIAL_ID = 'textureSetSurface';
  */
 export const NO_SHADOWS = { castShadow: false, receiveShadow: false } as const;
 
+/**
+ * A uniform of a material's `userData.uniforms` (the terrain material's `terrain_<name>`), set
+ * when the material has it: a variant without that technique has none
+ */
+export const setMaterialUniform = (
+  material: THREE.Material,
+  key: string,
+  value: number | THREE.Vector2
+) => {
+  const uniform = (material.userData.uniforms as Record<string, { value: unknown }> | undefined)?.[
+    key
+  ];
+  if (!uniform) return;
+  if (value instanceof THREE.Vector2) (uniform.value as THREE.Vector2).copy(value);
+  else uniform.value = value;
+};
+
 /** A terrain debug view the tab shows (p305 D10), or none */
 export type GalleryDebugView = 'NONE' | 'TEXEL_DENSITY' | 'NORMALS' | 'WEIGHTS';
 

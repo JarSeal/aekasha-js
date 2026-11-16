@@ -4838,12 +4838,24 @@
       "loadTerrainDebugViewsAsync": "Function"
     },
     "src/toolkit/terrain/material/TerrainDefine.ts": {
+      "DEFAULT_RESERVED_TEXTURES": "Variable",
+      "getSplatMapCount": "Function",
       "readTerrainDefine": "Function",
       "ResolvedTerrainDefine": "TypeAlias",
       "TERRAIN_DEFINE_VALUES": "Variable",
       "TerrainAntiTilingDefine": "TypeAlias",
+      "TerrainBlendDefine": "TypeAlias",
       "TerrainLayerDefine": "TypeAlias",
       "TerrainMacroDefine": "TypeAlias"
+    },
+    "src/toolkit/terrain/material/TerrainInputs.ts": {
+      "getTerrainInputs": "Function",
+      "LayerParams": "TypeAlias",
+      "LayerSource": "TypeAlias",
+      "LayerSources": "TypeAlias",
+      "readLayerSources": "Function",
+      "readMacroTexture": "Function",
+      "readSplatMaps": "Function"
     },
     "src/toolkit/terrain/material/TerrainMaterial.ts": {
       "createTerrainMaterial": "Function",
@@ -4855,15 +4867,21 @@
     },
     "src/toolkit/terrain/material/TerrainMaterialConfig.ts": {
       "TERRAIN_ANTI_TILING_MODES": "Variable",
+      "TERRAIN_BLEND_LAYER_COUNTS": "Variable",
+      "TERRAIN_BLEND_MODES": "Variable",
       "TERRAIN_BLEND_SOURCES": "Variable",
       "TERRAIN_DEBUG_VIEWS": "Variable",
       "TERRAIN_LAYER_SOURCES": "Variable",
       "TERRAIN_MAX_LAYERS": "Variable",
       "TERRAIN_PACKINGS": "Variable",
       "TERRAIN_QUALITY_LEVELS": "Variable",
+      "TERRAIN_STORAGES": "Variable",
       "TERRAIN_UV_MODES": "Variable",
+      "TERRAIN_VERTEX_COLOR_LAYOUTS": "Variable",
       "TerrainAntiTiling": "TypeAlias",
       "TerrainAntiTilingSchema": "Variable",
+      "TerrainBlend": "TypeAlias",
+      "TerrainBlendSchema": "Variable",
       "TerrainLayer": "TypeAlias",
       "TerrainLayerSchema": "Variable",
       "TerrainLayerSettings": "TypeAlias",
@@ -4879,6 +4897,14 @@
       "TerrainQualityOverrides": "TypeAlias",
       "TerrainQualityOverridesSchema": "Variable"
     },
+    "src/toolkit/terrain/material/TerrainStorage.ts": {
+      "checkTextureBudget": "Function",
+      "chooseTerrainStorage": "Function",
+      "countBindings": "Function",
+      "getTextureBindingLimit": "Function",
+      "TERRAIN_PACKING_SLOTS": "Variable",
+      "TerrainBinding": "TypeAlias"
+    },
     "src/toolkit/terrain/nodes/AntiTiling.ts": {
       "AntiTilingContext": "TypeAlias",
       "AntiTilingNodes": "TypeAlias",
@@ -4886,6 +4912,11 @@
     },
     "src/toolkit/terrain/nodes/Distance.ts": {
       "fadeDetailNormal": "Function"
+    },
+    "src/toolkit/terrain/nodes/HeightBlend.ts": {
+      "blendWeightsByHeight": "Function",
+      "getBlendHeight": "Function",
+      "normalizeWeights": "Function"
     },
     "src/toolkit/terrain/nodes/Macro.ts": {
       "applyMacroVariation": "Function",
@@ -4946,6 +4977,12 @@
       "transformTangentNormalToWorld": "Function",
       "transformWorldNormalToView": "Function",
       "WorldTangentFrame": "TypeAlias"
+    },
+    "src/toolkit/terrain/nodes/Weights.ts": {
+      "getSplatMapWeights": "Function",
+      "getVertexColorWeights": "Function",
+      "PaintedWeights": "TypeAlias",
+      "VertexColorLayout": "TypeAlias"
     },
     "src/toolkit/terrain/procedural/BakeSurface.ts": {
       "BakedSurface": "TypeAlias",
@@ -6080,6 +6117,8 @@
       "TERRAIN_TSL_MATERIAL_ID",
       "TerrainAntiTiling",
       "TerrainAntiTilingSchema",
+      "TerrainBlend",
+      "TerrainBlendSchema",
       "TerrainLayer",
       "TerrainLayerSchema",
       "TerrainLayerSettings",

@@ -17,6 +17,7 @@ import {
   NO_SHADOWS,
 } from './galleryBlocks';
 import { ANTI_TILING_ROW_BOUNDS, createAntiTilingRow } from './antiTilingRow';
+import { createSplattingRow, SPLATTING_ROW_BOUNDS } from './splattingRow';
 import {
   createProceduralRowAsync,
   PROCEDURAL_ROW_DEPTH,
@@ -43,6 +44,12 @@ import {
  *   `grass01` 8 m behind the library and the Procedural row, `NONE`, `DUAL_SCALE` and `HEX` from the left, the macro
  *   variation (`macroNoise`, which the scene lists) on; the tab switches the macro and tunes the
  *   modes' and the macro's uniforms.
+ * - **The Splatting row** (`splattingRow.ts`, p305 Phase 3): six 24 × 24 m generated blocks left of
+ *   the library, several sets each blended by weights painted in code: the vertex colour and the
+ *   splat map, each `LINEAR` beside `HEIGHT`, `RGB_AO` with the vertex AO, and 9 layers with two
+ *   splat maps; code route materials with storage `AUTO`, which makes the splat blocks `ARRAY` (the
+ *   scene's `textureSetArrays` lists their two set arrays); the tab tunes the height blend and the
+ *   vertex AO.
  * - **The Procedural row** (`proceduralRow.ts`): five rows of two blocks 8 m right of the library,
  *   a generator each (`PROCEDURAL_BLOCKS`: sand, mud, rocks and strata, snow and ice, grass and
  *   concrete from the back), baked during the load (`bakeSurfaceGenerator`, 1024² `LITE`: the
@@ -154,15 +161,18 @@ export const scene = async () => {
   registerOnSceneExit(TERRAIN_GALLERY_SCENE_ID, () => {
     for (const cleanup of exitCleanups.splice(0)) cleanup();
   });
-  // The ground under the library (centred on x = 0), the Procedural row right of it and the
-  // Anti-tiling row behind it
+  // The ground under the library (centred on x = 0), the Procedural row right of it, the
+  // Splatting row left of it and the Anti-tiling row behind it
   const left = Math.min(
     -(ROWS[0].length * BLOCK_PITCH) / 2 - BLOCK_GAP / 2,
-    ANTI_TILING_ROW_BOUNDS.minX - BLOCK_GAP
+    ANTI_TILING_ROW_BOUNDS.minX - BLOCK_GAP,
+    SPLATTING_ROW_BOUNDS.minX - BLOCK_GAP
   );
   const right = Math.max(PROCEDURAL_ROW_EDGE_X, ANTI_TILING_ROW_BOUNDS.maxX) + BLOCK_GAP;
-  const front =
-    (Math.max(ROWS.length * BLOCK_PITCH, PROCEDURAL_ROW_DEPTH + BLOCK_GAP) + BLOCK_GAP) / 2;
+  const front = Math.max(
+    (Math.max(ROWS.length * BLOCK_PITCH, PROCEDURAL_ROW_DEPTH + BLOCK_GAP) + BLOCK_GAP) / 2,
+    SPLATTING_ROW_BOUNDS.maxZ + BLOCK_GAP
+  );
   const back = ANTI_TILING_ROW_BOUNDS.minZ - BLOCK_GAP;
   createMeshEntity(
     {
@@ -183,6 +193,7 @@ export const scene = async () => {
   );
   GALLERY_BLOCKS.forEach((block, i) => createBlock(block, SEED_BASE + i));
   createAntiTilingRow();
+  createSplattingRow();
   await createProceduralRowAsync(addGalleryExitCleanup);
 
   // Debug env only: a dynamic import, so the tab's code isn't in a production build. It applies

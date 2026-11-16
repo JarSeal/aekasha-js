@@ -25,6 +25,11 @@ import {
 } from './_dbg__terrainGalleryAntiTiling';
 import { flyToGalleryBlock, stopGalleryFlight } from './_dbg__terrainGalleryCamera';
 import {
+  clearSplattingSelection,
+  getSplattingSections,
+  startSplattingTab,
+} from './_dbg__terrainGallerySplatting';
+import {
   clearGeneratorSelection,
   getProceduralSections,
   refreshProceduralFigures,
@@ -38,6 +43,12 @@ import {
   type GalleryDebugView,
 } from './galleryBlocks';
 import { ANTI_TILING_BLOCKS, getAntiTilingAppId, setAntiTilingRowState } from './antiTilingRow';
+import {
+  getSplattingAppId,
+  setSplattingDebugView,
+  SPLATTING_BLOCK_Y,
+  SPLATTING_BLOCKS,
+} from './splattingRow';
 import {
   getProceduralBakeSettings,
   PROCEDURAL_BLOCKS,
@@ -101,13 +112,23 @@ let selectedSetId: string | null = null;
 /** The latest packing apply: an older one that finishes later is dropped */
 let packingRequest = 0;
 
-/** Every block the checker covers: the library's, the Anti-tiling row's and the Procedural row's
- * (its key names its checker's mesh) */
-const CHECKER_BLOCKS = [
+/** Every block the checker covers: the library's, the Anti-tiling row's, the Splatting row's and
+ * the Procedural row's (its key names its checker's mesh) */
+/** A block the checker covers: its key, where it stands (`y` only when lifted) and its geometry */
+type CheckerBlock = { key: string; x: number; y?: number; z: number; geometryId: string };
+
+const CHECKER_BLOCKS: CheckerBlock[] = [
   ...GALLERY_BLOCKS.map(({ setId, x, z, geometryId }) => ({ key: setId, x, z, geometryId })),
   ...ANTI_TILING_BLOCKS.map(({ mode, x, z, geometryId }) => ({
     key: `antiTiling_${mode}`,
     x,
+    z,
+    geometryId,
+  })),
+  ...SPLATTING_BLOCKS.map(({ key, x, z, geometryId }) => ({
+    key: `splatting_${key}`,
+    x,
+    y: SPLATTING_BLOCK_Y,
     z,
     geometryId,
   })),
@@ -176,13 +197,15 @@ const applyDebugViewAsync = async () => {
   if (startedOn.isCurrent) applyMaterial();
 };
 
-/** Every library block (and wall) in the material mode, and the Anti-tiling row in the view */
+/** Every library block (and wall) in the material mode, and the Anti-tiling and Splatting rows in
+ * the view */
 const applyMaterial = () => {
   for (const block of GALLERY_BLOCKS) {
     swapSurface(getBlockAppId(block.setId), block.setId, false);
     if (block.hasWall) swapSurface(getWallAppId(block.setId), block.setId, true);
   }
   setAntiTilingRowState({ debugView: state.debugView });
+  setSplattingDebugView(state.debugView);
 };
 
 /**
@@ -250,7 +273,7 @@ const setChecker = (isShown: boolean) => {
       {
         geo,
         mat: getCheckerMaterial(),
-        position: { x: block.x, z: block.z },
+        position: { x: block.x, y: block.y ?? 0, z: block.z },
         castShadow: false,
         receiveShadow: false,
       },
@@ -267,6 +290,7 @@ const getOtherAppIds = () => [
   'terrainGallery_ground',
   ...GALLERY_BLOCKS.flatMap(({ setId }) => [getBlockAppId(setId), getWallAppId(setId)]),
   ...ANTI_TILING_BLOCKS.map(({ mode }) => getAntiTilingAppId(mode)),
+  ...SPLATTING_BLOCKS.map(({ key }) => getSplattingAppId(key)),
   ...CHECKER_BLOCKS.map(({ key }) => getCheckerAppId(key)),
 ];
 
@@ -275,6 +299,7 @@ const flyToBlock = (block: GalleryBlock) => {
   selectedSetId = block.setId;
   clearGeneratorSelection();
   clearAntiTilingSelection();
+  clearSplattingSelection();
   flyToGalleryBlock(block);
 };
 
@@ -299,6 +324,7 @@ const proceduralOpts: ProceduralSectionsOpts = {
   onSelect: () => {
     selectedSetId = null;
     clearAntiTilingSelection();
+    clearSplattingSelection();
   },
   getOtherAppIds,
 };
@@ -317,6 +343,7 @@ export const createTerrainGalleryTab = () => {
   selectedSetId = null;
   stopGalleryFlight(true);
   startAntiTilingTab();
+  startSplattingTab();
   const endProceduralTab = startProceduralTab(proceduralOpts);
   addGalleryExitCleanup(() => {
     thisVisit.isCurrent = false;
@@ -357,7 +384,7 @@ export const createTerrainGalleryTab = () => {
             label: 'Debug view',
             kind: 'select',
             options: DEBUG_VIEWS.map((option) => ({ ...option })),
-            hint: 'The terrain material’s debug view on the library (not the baseline) and the Anti-tiling row: texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048), the shaded normal in world space, or the layers’ weights (layer 0 white, 1 red, 2 green, 3 blue, 4 yellow, …)',
+            hint: 'The terrain material’s debug view on the library (not the baseline), the Anti-tiling and the Splatting rows: texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048), the shaded normal in world space, or the layers’ weights (layer 0 white, 1 red, 2 green, 3 blue, 4 yellow, …)',
             onChange: () => void applyDebugViewAsync(),
           },
           {
@@ -394,6 +421,13 @@ export const createTerrainGalleryTab = () => {
       ...(getAntiTilingSections(TAB_ID, () => {
         selectedSetId = null;
         clearGeneratorSelection();
+        clearSplattingSelection();
+      }) as DebuggerTabSection<GalleryTabState>[]),
+      // Its fields bind their own targets, none of this tab's state keys
+      ...(getSplattingSections(TAB_ID, () => {
+        selectedSetId = null;
+        clearGeneratorSelection();
+        clearAntiTilingSelection();
       }) as DebuggerTabSection<GalleryTabState>[]),
       // Its fields bind their own targets, none of this tab's state keys
       ...(getProceduralSections(proceduralOpts) as DebuggerTabSection<GalleryTabState>[]),

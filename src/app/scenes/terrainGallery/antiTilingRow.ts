@@ -22,6 +22,7 @@ import {
   BLOCK_SIZE,
   GALLERY_MATERIAL_ID,
   NO_SHADOWS,
+  setMaterialUniform,
   type GalleryDebugView,
 } from './galleryBlocks';
 import { PROCEDURAL_ROW_DEPTH } from './proceduralRow';
@@ -130,32 +131,22 @@ const getOverrides = (mode: AntiTilingMode, state: RowState): MaterialVariantOve
   },
 });
 
-/** A uniform of a material's `userData.uniforms`, set when the material has it */
-const setUniform = (material: THREE.Material, key: string, value: number | THREE.Vector2) => {
-  const uniform = (material.userData.uniforms as Record<string, { value: unknown }> | undefined)?.[
-    key
-  ];
-  if (!uniform) return;
-  if (value instanceof THREE.Vector2) (uniform.value as THREE.Vector2).copy(value);
-  else uniform.value = value;
-};
-
 const distance = new THREE.Vector2();
 
 /** The live values on a block's material: the uniforms its mode and macro have */
 const writeValues = (material: THREE.Material) => {
-  setUniform(material, 'terrain_l0_farScale', values.farScale);
-  setUniform(
+  setMaterialUniform(material, 'terrain_l0_farScale', values.farScale);
+  setMaterialUniform(
     material,
     'terrain_l0_antiTilingDistance',
     distance.set(values.distanceFrom, values.distanceTo)
   );
-  setUniform(material, 'terrain_l0_hexContrast', values.hexContrast);
-  setUniform(material, 'terrain_l0_hexRotation', values.hexRotation);
-  setUniform(material, 'terrain_macroScale', values.macroScale);
-  setUniform(material, 'terrain_macroBrightness', values.macroBrightness);
-  setUniform(material, 'terrain_macroHue', values.macroHue);
-  setUniform(material, 'terrain_macroRoughness', values.macroRoughness);
+  setMaterialUniform(material, 'terrain_l0_hexContrast', values.hexContrast);
+  setMaterialUniform(material, 'terrain_l0_hexRotation', values.hexRotation);
+  setMaterialUniform(material, 'terrain_macroScale', values.macroScale);
+  setMaterialUniform(material, 'terrain_macroBrightness', values.macroBrightness);
+  setMaterialUniform(material, 'terrain_macroHue', values.macroHue);
+  setMaterialUniform(material, 'terrain_macroRoughness', values.macroRoughness);
 };
 
 const getBlockMaterial = (mode: AntiTilingMode) =>
