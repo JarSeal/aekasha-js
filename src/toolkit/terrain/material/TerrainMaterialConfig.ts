@@ -69,7 +69,8 @@ export const TERRAIN_QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as cons
  * The debug views (debug env only): `TEXEL_DENSITY` a 1 m checker in bands of texels per metre,
  * `NORMALS` the shaded normal in world space, `WEIGHTS` each layer's false colour by its weight,
  * `PROJECTION` the planes' weights (X red, Y green, Z blue) with the slope gates' bands striped,
- * `TAPS` the material's own texture fetches at the pixel in bands.
+ * `TAPS` the material's own texture fetches at the pixel in bands, `LAYER_COUNT` how many layers
+ * weigh in at the pixel, striped where sparse sampling drops one.
  */
 export const TERRAIN_DEBUG_VIEWS = [
   'TEXEL_DENSITY',
@@ -77,6 +78,7 @@ export const TERRAIN_DEBUG_VIEWS = [
   'WEIGHTS',
   'PROJECTION',
   'TAPS',
+  'LAYER_COUNT',
 ] as const;
 /** The most layers a terrain material blends. */
 export const TERRAIN_MAX_LAYERS = 16;
@@ -931,14 +933,14 @@ const variantFields = {
     ),
   /**
    * A debug view in place of the surface (debug env only, ignored elsewhere; its code loads with
-   * `loadTerrainDebugViewsAsync`): `TEXEL_DENSITY`, `NORMALS`, `WEIGHTS`, `PROJECTION` or
-   * `TAPS`.
+   * `loadTerrainDebugViewsAsync`): `TEXEL_DENSITY`, `NORMALS`, `WEIGHTS`, `PROJECTION`, `TAPS`
+   * or `LAYER_COUNT`.
    */
   debugView: z
     .enum(TERRAIN_DEBUG_VIEWS)
     .optional()
     .describe(
-      'A debug view in place of the surface (debug env only; its code loads with loadTerrainDebugViewsAsync): TEXEL_DENSITY, NORMALS, WEIGHTS, PROJECTION or TAPS.'
+      'A debug view in place of the surface (debug env only; its code loads with loadTerrainDebugViewsAsync): TEXEL_DENSITY, NORMALS, WEIGHTS, PROJECTION, TAPS or LAYER_COUNT.'
     ),
 };
 

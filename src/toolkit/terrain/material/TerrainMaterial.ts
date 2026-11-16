@@ -401,6 +401,12 @@ export const setupTerrainMaterial = (
         projection: uniforms[i].projection,
       })),
       weights: layerWeights,
+      sampled: layers.map(({ uniforms: { antiTiling, projection } }) => ({
+        antiTiling: antiTiling.mode,
+        projection,
+      })),
+      slots:
+        slots && raw ? { count: slots.length, layerWeights: normalizeWeights(raw.weights) } : null,
       normal,
       define,
       packing: layers[0].sample.packing,

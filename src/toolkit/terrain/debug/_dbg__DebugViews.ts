@@ -24,11 +24,18 @@ import type { MeshStandardNodeMaterial, Node, TextureNode } from 'three/webgpu';
 import type { TextureSetPacking } from 'aekasha/texturesets';
 import { getSplatMapCount, type ResolvedTerrainDefine } from '../material/TerrainDefine';
 import { TERRAIN_PACKING_SLOTS } from '../material/TerrainStorage';
+import type { AntiTilingNodes } from '../nodes/AntiTiling';
 import { getProjectionWeights, getSlope, type ProjectionNodes } from '../nodes/Projection';
 import { getSlopeGateShare } from '../nodes/SlopeGate';
 
 /** The debug views this module builds */
-export type TerrainDebugView = 'TEXEL_DENSITY' | 'NORMALS' | 'WEIGHTS' | 'PROJECTION' | 'TAPS';
+export type TerrainDebugView =
+  | 'TEXEL_DENSITY'
+  | 'NORMALS'
+  | 'WEIGHTS'
+  | 'PROJECTION'
+  | 'TAPS'
+  | 'LAYER_COUNT';
 
 /** A layer as the texel density reads it */
 export type TerrainDebugViewLayer = {
@@ -40,6 +47,16 @@ export type TerrainDebugViewLayer = {
   projection: ProjectionNodes;
 };
 
+/**
+ * What the graph samples, in order: each layer at its own index, or each slot (sparse sampling,
+ * `DOMINANT`) at the layer kept there, with its anti-tiling's mode and its projection (a slot's
+ * picked: its slope gate the kept layer's)
+ */
+export type TerrainDebugViewSampled = {
+  antiTiling: AntiTilingNodes['mode'];
+  projection: ProjectionNodes;
+};
+
 /** What a view reads of the surface */
 export type TerrainDebugViewContext = {
   /** The tiling's coordinates in metres, before the tile size: the world's `(x, −z)` or the UV */
@@ -48,6 +65,13 @@ export type TerrainDebugViewContext = {
   layers: TerrainDebugViewLayer[];
   /** The layers' blend weights (summing to 1), or null for `SINGLE`'s one layer */
   weights: Node<'float'>[] | null;
+  /** What the graph samples: the layers, or the slots (`TAPS` counts their fetches) */
+  sampled: TerrainDebugViewSampled[];
+  /**
+   * The slots, or null for every layer at its own index: their count, and each layer's weight
+   * before the cut (normalized linearly), which `LAYER_COUNT` counts
+   */
+  slots: { count: number; layerWeights: Node<'float'>[] } | null;
   /** The shaded normal in world space */
   normal: Node<'vec3'>;
   /** The define as read (its tier's), for the fetches `TAPS` counts */
@@ -154,10 +178,13 @@ const PLANAR_COLOR = vec3(0, 1, 0) as unknown as Node<'vec3'>;
 const BAND_STRIPE_METRES = 0.5;
 const BAND_LIGHTEN = 0.6;
 
-/** A layer's gate share, or null without a gate (the geometry's slope, the gate's uniform) */
-const getGateShare = (layer: TerrainDebugViewLayer) =>
-  layer.projection.mode !== 'PLANAR' && layer.projection.slopeGate
-    ? getSlopeGateShare(layer.projection.slopeGate, getSlope(normalWorldGeometry as never))
+/**
+ * A projection's gate share, or null without a gate (the geometry's slope, the gate's uniform; a
+ * slot's picked gate)
+ */
+const getGateShare = ({ projection }: { projection: ProjectionNodes }) =>
+  projection.mode !== 'PLANAR' && projection.slopeGate
+    ? getSlopeGateShare(projection.slopeGate, getSlope(normalWorldGeometry as never))
     : null;
 
 /** 1 where a share is strictly between 0 and 1 (the gate's band), else 0 */
@@ -193,13 +220,13 @@ const buildProjection = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
 const ANTI_TILING_TAPS = { NONE: 1, DUAL_SCALE: 2, HEX: 3 } as const;
 
 /**
- * A layer's texture fetches: always (its planar tap's, or every plane's) and in its slope gate's
- * branch (the projection's planes but `TRIPLANAR`'s top, which is the planar tap: 2 either way)
+ * A sampled layer's or slot's texture fetches: always (its planar tap's, or every plane's) and in
+ * its slope gate's branch (the projection's planes but `TRIPLANAR`'s top, which is the planar
+ * tap: 2 either way)
  */
-const getLayerFetches = (ctx: TerrainDebugViewContext, index: number) => {
-  const layer = ctx.define.layers[index];
-  const tap = TERRAIN_PACKING_SLOTS[ctx.packing].length * ANTI_TILING_TAPS[layer.antiTiling.mode];
-  const { projection } = layer;
+const getSampledFetches = (ctx: TerrainDebugViewContext, sampled: TerrainDebugViewSampled) => {
+  const tap = TERRAIN_PACKING_SLOTS[ctx.packing].length * ANTI_TILING_TAPS[sampled.antiTiling];
+  const { projection } = sampled;
   if (projection.mode === 'PLANAR') return { always: tap, gated: 0 };
   if (projection.slopeGate) return { always: tap, gated: tap * 2 };
   return { always: tap * (projection.mode === 'TRIPLANAR' ? 3 : 2), gated: 0 };
@@ -220,19 +247,20 @@ const getMaterialFetches = ({ define }: TerrainDebugViewContext) => {
 
 /**
  * The material's own texture fetches at a pixel, as `TAPS` counts them: those every pixel makes
- * (each layer's taps, its slots × its anti-tiling's taps × its planes; the splat maps, the macro,
- * the rules' noise) and each slope gate's branch's, made where its share is over 0.
+ * (each sampled layer's or slot's taps, its packing slots × its anti-tiling's taps × its planes;
+ * the splat maps, the macro, the rules' noise) and each slope gate's branch's, made where its
+ * share is over 0 (a slot's: the kept layer's gate).
  * @internal
  */
 export const estimateTerrainFetches = (ctx: TerrainDebugViewContext) => {
   let always = getMaterialFetches(ctx);
   const gated: { share: Node<'float'>; fetches: number }[] = [];
-  ctx.layers.forEach((layer, i) => {
-    const fetches = getLayerFetches(ctx, i);
+  for (const sampled of ctx.sampled) {
+    const fetches = getSampledFetches(ctx, sampled);
     always += fetches.always;
-    const share = getGateShare(layer);
+    const share = getGateShare(sampled);
     if (share && fetches.gated) gated.push({ share, fetches: fetches.gated });
-  });
+  }
   return { always, gated };
 };
 
@@ -254,11 +282,11 @@ const TAP_COLORS = [
 
 /**
  * `TAPS`: the material's own texture fetches at the pixel (p301 §6's estimate made visible): every
- * layer's taps (its slots × its anti-tiling's taps × its planes), its slope gate's branch's where
- * the share is over 0, the splat maps, the macro and the rules' noise; in bands (up to 2 dark
- * blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more magenta) over the faint 1 m
- * checker. Every layer counts: all are sampled whatever their weight (Phase 6's sparse sampling
- * changes that).
+ * sampled layer's or slot's taps (its packing slots × its anti-tiling's taps × its planes), its
+ * slope gate's branch's where the share is over 0, the splat maps, the macro and the rules' noise;
+ * in bands (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more
+ * magenta) over the faint 1 m checker. A layer at its own index is sampled whatever its weight;
+ * sparse sampling samples its slots alone.
  */
 const buildTaps = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
   const { always, gated } = estimateTerrainFetches(ctx);
@@ -277,6 +305,51 @@ const buildTaps = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
   return color.mul(mix(0.8, 1, getChecker(ctx))) as Node<'vec3'>;
 };
 
+/** The weight over which `LAYER_COUNT` counts a layer: one step of an 8-bit weight */
+const LAYER_WEIGHT_FLOOR = 1 / 255;
+/** `LAYER_COUNT`'s colours: 1 layer, 2, 3, 4, then 5 or more */
+const LAYER_COUNT_COLORS = [
+  vec3(0.15, 0.2, 0.6),
+  vec3(0.2, 0.7, 0.3),
+  vec3(0.9, 0.85, 0.2),
+  vec3(0.95, 0.5, 0.1),
+  vec3(0.85, 0.15, 0.15),
+] as unknown as Node<'vec3'>[];
+/** The stripes where the slots drop a layer: their width in metres, and how far they lighten */
+const DROP_STRIPE_METRES = 0.5;
+const DROP_LIGHTEN = 0.6;
+
+/**
+ * `LAYER_COUNT`: how many layers weigh over 1/255 at the pixel (the final weights; in slots the
+ * weights before the cut, normalized linearly), 1 dark blue, 2 green, 3 yellow, 4 orange, 5 or
+ * more red, over the faint 1 m checker; in slots, lighter diagonal stripes where more layers weigh
+ * in than the slots keep (the cut drops their weight: where sparse sampling can pop)
+ */
+const buildLayerCount = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
+  const weights = ctx.slots?.layerWeights ?? ctx.weights;
+  const one = float(1) as unknown as Node<'float'>;
+  const count = weights
+    ? weights.reduce(
+        (sum, weight) => sum.add(step(LAYER_WEIGHT_FLOOR, weight)) as unknown as Node<'float'>,
+        float(0) as unknown as Node<'float'>
+      )
+    : one;
+  let color = LAYER_COUNT_COLORS[LAYER_COUNT_COLORS.length - 1];
+  for (let i = LAYER_COUNT_COLORS.length - 2; i >= 0; i--) {
+    color = select(
+      count.lessThan(i + 1.5),
+      LAYER_COUNT_COLORS[i],
+      color
+    ) as unknown as Node<'vec3'>;
+  }
+  const shaded = color.mul(mix(0.8, 1, getChecker(ctx))) as Node<'vec3'>;
+  if (!ctx.slots) return shaded;
+  const dropped = step(ctx.slots.count + 0.5, count);
+  const p = positionWorld as unknown as Node<'vec3'>;
+  const stripes = step(0.5, fract(p.x.sub(p.z).div(DROP_STRIPE_METRES)));
+  return mix(shaded, vec3(1), dropped.mul(stripes).mul(DROP_LIGHTEN)) as unknown as Node<'vec3'>;
+};
+
 /** Each view's builder */
 const VIEW_BUILDERS: Record<TerrainDebugView, (ctx: TerrainDebugViewContext) => Node<'vec3'>> = {
   TEXEL_DENSITY: buildTexelDensity,
@@ -284,6 +357,7 @@ const VIEW_BUILDERS: Record<TerrainDebugView, (ctx: TerrainDebugViewContext) => 
   WEIGHTS: buildWeights,
   PROJECTION: buildProjection,
   TAPS: buildTaps,
+  LAYER_COUNT: buildLayerCount,
 };
 
 /**
