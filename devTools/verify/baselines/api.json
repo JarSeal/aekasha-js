@@ -2172,6 +2172,8 @@
     "src/_engine/features/texturesets/TextureSetBakes.ts": {
       "bakeProceduralTextureSetAsync": "Function",
       "bakeSceneProceduralTextureSetsAsync": "Function",
+      "getLoadedGenerator": "Function",
+      "loadGeneratorAsync": "Function",
       "loadProceduralTextureSetAsync": "Function"
     },
     "src/_engine/features/texturesets/TextureSetGenerator.ts": {
@@ -2191,9 +2193,12 @@
     },
     "src/_engine/features/texturesets/TextureSets.ts": {
       "getTextureSet": "Function",
+      "getTextureSetGenerator": "Function",
+      "getTextureSetOfInput": "Function",
       "getTextureSetPackingTextures": "Function",
       "installTextureSets": "Function",
       "loadTextureSetAsync": "Function",
+      "loadTextureSetGeneratorAsync": "Function",
       "registerTextureSetsDebug": "Function",
       "TextureSetInput": "TypeAlias",
       "TextureSetTextures": "TypeAlias"
@@ -4869,6 +4874,7 @@
       "TerrainDualScaleDefine": "TypeAlias",
       "TerrainFarDefine": "TypeAlias",
       "TerrainLayerDefine": "TypeAlias",
+      "TerrainLiveDefine": "TypeAlias",
       "TerrainMacroDefine": "TypeAlias",
       "TerrainProjectionDefine": "TypeAlias",
       "TerrainRuleDefine": "TypeAlias",
@@ -4909,6 +4915,14 @@
       "sampleLayer": "Function",
       "SharedCoords": "TypeAlias"
     },
+    "src/toolkit/terrain/material/TerrainLive.ts": {
+      "createLiveLayer": "Function",
+      "createLiveSampler": "Function",
+      "LiveLayer": "TypeAlias",
+      "LiveLayerSource": "TypeAlias",
+      "LiveSamplerOpts": "TypeAlias",
+      "readLiveSource": "Function"
+    },
     "src/toolkit/terrain/material/TerrainMaterial.ts": {
       "buildTerrainGraph": "Function",
       "createTerrainMaterial": "Function",
@@ -4929,6 +4943,8 @@
       "TERRAIN_DEBUG_VIEWS": "Variable",
       "TERRAIN_FAR_MODES": "Variable",
       "TERRAIN_LAYER_SOURCES": "Variable",
+      "TERRAIN_LIVE_AOS": "Variable",
+      "TERRAIN_LIVE_NORMALS": "Variable",
       "TERRAIN_MAX_LAYERS": "Variable",
       "TERRAIN_MAX_RULES": "Variable",
       "TERRAIN_NORMAL_BLENDS": "Variable",
@@ -4952,6 +4968,8 @@
       "TerrainLayerSchema": "Variable",
       "TerrainLayerSettings": "TypeAlias",
       "TerrainLayerSettingsSchema": "Variable",
+      "TerrainLive": "TypeAlias",
+      "TerrainLiveSchema": "Variable",
       "TerrainMacro": "TypeAlias",
       "TerrainMacroSchema": "Variable",
       "TerrainMacroSettings": "TypeAlias",
@@ -4985,6 +5003,7 @@
     "src/toolkit/terrain/material/TerrainSurface.ts": {
       "buildNearSurface": "Function",
       "createSurfaceUniforms": "Function",
+      "getLayerWeights": "Function",
       "LayerBuildContext": "TypeAlias",
       "NearSurface": "TypeAlias",
       "SurfaceUniforms": "TypeAlias"
@@ -4992,6 +5011,9 @@
     "src/toolkit/terrain/nodes/AntiTiling.ts": {
       "AntiTilingContext": "TypeAlias",
       "AntiTilingNodes": "TypeAlias",
+      "isLayerSampler": "Function",
+      "LayerBundle": "TypeAlias",
+      "LayerSampler": "TypeAlias",
       "sampleAntiTiled": "Function"
     },
     "src/toolkit/terrain/nodes/BranchInputs.ts": {
@@ -5172,6 +5194,8 @@
       "buildSurfacePacking": "Function",
       "createSurfaceContext": "Function",
       "defineSurfaceGenerator": "Function",
+      "PreparedSurfaceGraph": "TypeAlias",
+      "prepareSurfaceGraph": "Function",
       "SurfaceBuildContext": "TypeAlias",
       "SurfaceCellCount": "TypeAlias",
       "SurfaceCells": "TypeAlias",
@@ -6145,9 +6169,12 @@
       "buildTextureSetArray",
       "getTextureSet",
       "getTextureSetArray",
+      "getTextureSetGenerator",
       "getTextureSetLayerParams",
+      "getTextureSetOfInput",
       "getTextureSetPackingTextures",
       "loadTextureSetAsync",
+      "loadTextureSetGeneratorAsync",
       "setTextureSetArrayLayer",
       "textureSets"
     ],
@@ -6273,6 +6300,8 @@
       "TerrainLayerSchema",
       "TerrainLayerSettings",
       "TerrainLayerSettingsSchema",
+      "TerrainLive",
+      "TerrainLiveSchema",
       "TerrainMacro",
       "TerrainMacroSchema",
       "TerrainMacroSettings",

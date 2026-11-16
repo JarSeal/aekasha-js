@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-7 implemented
+Status: in progress | Phases 1-8 implemented
 Category: Materials, Terrain, Toolkit
 Blocks: p306_terrain-blocks-and-procedural-terrain-meshes.md, p307_wet-and-dry-surface-states.md, p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -247,7 +247,7 @@ outputs     → colorNode, normalNode (world → view once), roughnessNode, meta
   - `reserved` defaults to 6: shadow maps, environment, PostFX-irrelevant extras. Configurable.
   - WebGL2 uses its texture unit limit (also 16).
 - Over budget even with arrays: a clear error listing what is bound.
-- **Mixed sources:** procedural (baked, uncompressed) and imported (compressed) sets can't share an array (p304 D3), so AUTO splits them into two arrays and says so in a dev log.
+- **Mixed sources:** procedural (baked, uncompressed) and imported (compressed) sets can't share an array (p304 D3), so AUTO splits them into two arrays and says so in a dev log. *As built (Phase 8): not two arrays: the imported sets in the set array, each procedural set's layer (baked or live) on its own `layer<i>` input beside it, sampled beside the slots; see Phase 8's Decided.*
 
 ### D10 — Quality variants and debug views
 
@@ -493,7 +493,7 @@ Each phase adds a gallery row (or extends one) so it can be checked and measured
 - **Checked on the GPU** (2026-11-16, Windows Chrome 157, AMD RDNA 3, WebGPU and WebGL2): a vertical plane baked in its UV space (`bakeTerrainColorMap`) with the pillars' materials at two poses (moved, turned 40° about y, tilted 15° about x, the same scale): `OBJECT` the same texel for texel (max 0 / 255), at twice the scale different (max 38: the texture is in metres), `WORLD` moved different (max 56). The `NORMALS` view shows the turned bunker's world normals (the front at 25°, the roof up). No console or shader error.
 - **Measured** (WebGPU 1280 × 800, the median of three 90-frame medians of the frame's GPU time, the camera 13 m in front of the bunker, 5 m up): empty 1.09 ms, the bunker in `OBJECT` 1.72, the same material in `WORLD` 1.64: the piece costs 0.63 ms in object space, 0.55 in world space (the space's position, normal and matrix per pixel). `TAPS` shows over 32 fetches a pixel on the worn pieces (4 layers × 3 planes × 2 scales × 2 textures and the macro): a structure with four wear layers wants the tier preset (sparse sampling, a gated projection) like a terrain does; Phase 9's structures page says so.
 
-### Phase 8 — Live procedural layers
+### Phase 8 — Live procedural layers — done
 
 1. `source: 'PROCEDURAL_LIVE'` using p304's live mode.
 2. D9's mixed sources (moved from Phase 3): procedural (baked) and imported sets can't share a set array, so `AUTO` splits them into two arrays (a dev log saying so), the graph reading each layer from its array.
@@ -573,12 +573,13 @@ Each phase adds a gallery row (or extends one) so it can be checked and measured
      - Bake in engine or in Blender.
      - Variation: AO and large-scale lighting baked into the colour map. Why: one fetch for all large-scale shading. Cost: static lighting assumptions; don't bake direct sunlight if day-night runs.
      - Best for: top-down/RTS/isometric, flight/racing (fast, far views), far LOD.
+   - **Live procedural layers** (Phase 8; on the terrain feature page, and the procedural textures handbook's live section, `docs/techniques/procedural-textures.md`): a layer's `source: 'PROCEDURAL_LIVE'` (its set procedural, its input the set's `{ textureSet }`, the scene's bake its tiers' fallback, its generator loaded by the bake or `loadTextureSetGeneratorAsync`), `live.normal` / `live.ao`, no anti-tiling, every projection (a graph per plane), sampled beside the slots, the preset's `liveLayers` (baked on `LOW` and `MEDIUM`); mixed storage (a set array takes imported sets: a procedural set's layer keeps its own input); Phase 8's cost table and why the weight branch was dropped; the shimmer at a distance (no mips). Best for: unique non-repeating large surfaces seen from a mid distance on capable GPUs; poor fit for low tiers and close-ups on low-end hardware.
    - **Structures:** world vs object space (an `InstancedMesh`'s instances share one object space), triplanar defaults, wear via vertex colours (four wear layers cost over 32 fetches a pixel with the defaults: the tier preset's sparse sampling and gated projection, as for terrain; Phase 7's measurement), decals; concrete examples; best for brutalist/industrial levels and large architecture.
 3. **Hub** (`hub/CLAUDE.md`): the terrain feature page (`hub/pages/features/terrain/`, p303 creates it): what the generator does, the config, the JSON route, the budget and the tiers, `api:` links to `aekasha/toolkit/terrain`, a `::: scene terrainGallery` panel, links to the handbook pages; the toolkit feature page (`features/toolkit/guide.md`) lists the new category. Then `yarn hub:build`.
 4. **Repo docs:**
    - `readme.md` Features (toolkit: terrain material generator) and a short example.
    - A nested `src/toolkit/terrain/CLAUDE.md` (created by the first plan that needs it, if p303 hasn't; a line in the root's Architecture map) gets a `## Terrain materials` section: config, JSON route, budget, tiers, debug views. The feature page's `aek:covers` names it. The root's toolkit catalogue (Three-folder split) names the `terrain/` category.
-5. **Versions:** engine minor (Phase 7: the `{ textureSet }` bundle's `averageColor` and a set array's layer params' on `aekasha/texturesets`, `bakeTexture`'s `mesh` and `BakeMesh` on `aekasha`); toolkit minor; app minor (gallery rows); `CHANGELOG.md`.
+5. **Versions:** engine minor (Phase 7: the `{ textureSet }` bundle's `averageColor` and a set array's layer params' on `aekasha/texturesets`, `bakeTexture`'s `mesh` and `BakeMesh` on `aekasha`; Phase 8: `getTextureSetOfInput`, `loadTextureSetGeneratorAsync` and `getTextureSetGenerator` on `aekasha/texturesets`); toolkit minor; app minor (gallery rows, the Live block); `CHANGELOG.md`.
 
 ---
 
