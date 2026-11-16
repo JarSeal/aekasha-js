@@ -269,8 +269,8 @@ const getSplatMap = (terrain: BlockTerrain, id: string, first: number, count: nu
 
 /** A block's code route config: its sets, splat maps and define, storage `AUTO` */
 const getBlockConfig = (block: SplattingBlock): TerrainMaterialConfig => {
-  // The row's defines have no macro (the code route's takes its texture id)
-  const { layers, macro: _macro, ...settings } = block.define;
+  // The row's defines have no macro or colour map (the code route's take their texture ids)
+  const { layers, macro: _macro, colorMap: _colorMap, ...settings } = block.define;
   const isSplat = settings.blend?.source === 'SPLAT_MAP';
   return {
     id: `terrainGallerySplatting_${block.key}`,

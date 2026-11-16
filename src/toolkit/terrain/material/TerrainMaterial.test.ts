@@ -309,6 +309,20 @@ describe('setupTerrainMaterial', () => {
     ).toThrow(/Input "macro" has no use/);
   });
 
+  it('wants the colour map input with a colour map, and refuses it without', () => {
+    const colorMap = { mode: 'DETAIL' };
+    expect(() => build({ layers: [{}], colorMap })).toThrow(/Missing input "colorMap"/);
+    expect(() =>
+      build({ layers: [{}], colorMap }, { layer0: makeBundle(), colorMap: makeBundle() })
+    ).toThrow(/Missing input "colorMap"/);
+    expect(() =>
+      build({ layers: [{}] }, { layer0: makeBundle(), colorMap: texture(new Texture()) })
+    ).toThrow(/Input "colorMap" has no use/);
+    expect(() =>
+      build({ layers: [{}], colorMap }, { layer0: makeBundle(), colorMap: texture(new Texture()) })
+    ).not.toThrow();
+  });
+
   it('fades the normal only with distance, its range a uniform', () => {
     const geometryNormals = (material: MeshStandardNodeMaterial) =>
       collectNodesFrom([material.normalNode]).filter(
@@ -339,7 +353,7 @@ describe('setupTerrainMaterial', () => {
     expect(() => build({ layers: [{}] }, { layer0: makeBundle(), layer1: makeBundle() })).toThrow(
       /Input "layer1" has no layer/
     );
-    expect(() => build({ layers: [{}], colorMap: {} })).toThrow(/has no field "colorMap"/);
+    expect(() => build({ layers: [{}], wet: {} })).toThrow(/has no field "wet"/);
     expect(() => build(undefined)).toThrow(/Missing static define "terrain"/);
   });
 });
@@ -737,6 +751,11 @@ describe('setupTerrainMaterial: storage', () => {
       'binds 6 textures, over its budget of 5 (16 a stage less 11 reserved): layers (arrays albedoHeight, normal, orm): 3; splat maps: 2; macro: 1. Try fewer splat maps'
     );
     expect(() => build({ ...splat, reservedTextures: 10 }, inputs)).not.toThrow();
+    // The colour map counts too
+    const colorMapped = { ...splat, colorMap: { mode: 'DETAIL' }, reservedTextures: 10 };
+    expect(() => build(colorMapped, { ...inputs, colorMap: texture(new Texture()) })).toThrow(
+      'macro: 1; colour map: 1. Try fewer splat maps, no macro texture or no colour map'
+    );
   });
 });
 
@@ -918,6 +937,38 @@ describe('getTerrainMaterialProps', () => {
     );
     const dominant = { antiTiling: { mode: 'HEX' as const, apply: 'DOMINANT' as const } };
     expect(getTerrainMaterialProps(config(dominant)).inputs).toHaveProperty('layers');
+  });
+
+  it('puts the colour map in the input colorMap, its settings in the define', () => {
+    stubs.renderer = null;
+    stubs.sets = { grass01: { defaultPacking: 'LITE' } };
+    const props = getTerrainMaterialProps({
+      id: 'block',
+      layers: [{ set: 'grass01' }],
+      colorMap: { mode: 'DETAIL', texture: 'block.colorMap', detailDistance: [20, 60] },
+      distance: { fade: [30, 90], far: 'COLOR_MAP' },
+    });
+    expect(props.staticDefines).toEqual({
+      terrain: {
+        layers: [{}],
+        colorMap: { mode: 'DETAIL', detailDistance: [20, 60] },
+        distance: { fade: [30, 90], far: 'COLOR_MAP' },
+      },
+    });
+    expect(props.inputs).toEqual({
+      layer0: { textureSet: 'grass01' },
+      colorMap: { texture: 'block.colorMap' },
+    });
+    // AUTO counts it: 5 LITE layers (10) are SEPARATE, with a colour map (11) ARRAY
+    const layers = Array.from({ length: 5 }, () => ({ set: 'grass01' }));
+    const painted = { id: 'p', layers, blend: { source: 'VERTEX_COLOR' as const } };
+    const rgba = {
+      ...painted,
+      blend: { ...painted.blend, vertexColor: { layout: 'RGBA' as const } },
+    };
+    expect(getTerrainMaterialProps(rgba).inputs).toHaveProperty('layer4');
+    const colorMap = { mode: 'DETAIL' as const, texture: 'p.colorMap' };
+    expect(getTerrainMaterialProps({ ...rgba, colorMap }).inputs).toHaveProperty('layers');
   });
 
   it('puts the splat maps in the inputs splat<i>, none in the define', () => {

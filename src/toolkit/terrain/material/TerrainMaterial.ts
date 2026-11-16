@@ -38,6 +38,7 @@ import {
   getTerrainDefine,
   getTerrainInputs,
   readLayerSources,
+  readColorMapTexture,
   readMacroTexture,
   readSplatMaps,
   type LayerParams,
@@ -94,17 +95,19 @@ const createMacro = (
 };
 
 /**
- * What the material binds: the layers' textures, the splat maps and the macro texture (the macro
- * variation's and the rules' noise's)
+ * What the material binds: the layers' textures, the splat maps, the macro texture (the macro
+ * variation's and the rules' noise's) and the colour map
  */
 const getBindings = (
   layerBindings: TerrainBinding[],
   splatMaps: TextureNode[],
-  hasMacro: boolean
+  hasMacro: boolean,
+  hasColorMap: boolean
 ): TerrainBinding[] => [
   ...layerBindings,
   ...(splatMaps.length ? [{ name: 'splat maps', count: splatMaps.length }] : []),
   ...(hasMacro ? [{ name: 'macro', count: 1 }] : []),
+  ...(hasColorMap ? [{ name: 'colour map', count: 1 }] : []),
 ];
 
 /**
@@ -331,8 +334,9 @@ export const setupTerrainMaterial = (
   // no macro texture the macro input
   const splatMaps = readSplatMaps(inputs, define);
   const macroTexture = readMacroTexture(inputs, define);
+  const colorMapTexture = readColorMapTexture(inputs, define);
   checkTextureBudget(
-    getBindings(sources.bindings, splatMaps, macroTexture !== null),
+    getBindings(sources.bindings, splatMaps, macroTexture !== null, colorMapTexture !== null),
     define.reservedTextures,
     sources.isArray
   );

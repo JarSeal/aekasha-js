@@ -1,7 +1,7 @@
 // The terrain material's inputs (p305 D1, D9): what the setup reads of them, each checked against
 // the define (the layers' sets: a `{ textureSet }` bundle each, `layer<i>`, or one
 // `{ textureSetArray }` bundle, `layers`; the splat maps `splat<i>`; the macro texture `macro`, of
-// the macro variation and the rules' noise),
+// the macro variation and the rules' noise; the colour map `colorMap`),
 // and what the code route makes of its config. Inputs, not defines: the gather's texture closure
 // loads them (and builds the set arrays they name), and a block's variant swaps them without
 // another shader.
@@ -34,6 +34,8 @@ const getLayerInputKey = (index: number) => `layer${index}`;
 const getSplatInputKey = (index: number) => `splat${index}`;
 /** The macro texture's input key */
 const MACRO_INPUT_KEY = 'macro';
+/** The colour map's input key */
+const COLOR_MAP_INPUT_KEY = 'colorMap';
 /** The texture the code route's rule noise reads without a `macro` or a `noiseTexture` */
 const DEFAULT_NOISE_TEXTURE = 'macroNoise';
 /** The layers' set array's input key (`ARRAY` storage) */
@@ -231,6 +233,32 @@ export const readMacroTexture = (
   return input;
 };
 
+/**
+ * The colour map's texture node when the define has a colour map, else null; the input is refused
+ * without one.
+ * @internal
+ */
+export const readColorMapTexture = (
+  inputs: Record<string, unknown>,
+  define: ResolvedTerrainDefine
+): TextureNode | null => {
+  const input = inputs[COLOR_MAP_INPUT_KEY];
+  if (!define.colorMap) {
+    if (input !== undefined) {
+      throw new Error(
+        `[terrain] Input "${COLOR_MAP_INPUT_KEY}" has no use: give staticDefines.terrain.colorMap (its mode) to use it.`
+      );
+    }
+    return null;
+  }
+  if (!isTextureNode(input)) {
+    throw new Error(
+      `[terrain] Missing input "${COLOR_MAP_INPUT_KEY}": the colour map's texture ({ "texture": id }, at the mesh's UV) that staticDefines.terrain.colorMap reads.`
+    );
+  }
+  return input;
+};
+
 /** A code-route layer's packing: the config's, else its set's default; undefined for no data */
 const getLayerPacking = (config: TerrainMaterialConfig, setId: string) =>
   config.packing ?? getTextureSet(setId)?.defaultPacking;
@@ -271,7 +299,7 @@ const getMacroTextureId = (config: TerrainMaterialConfig) => {
 
 /**
  * The config's static define: no id, no packing, no layer sets, no storage, no splat maps and no
- * macro or noise texture (the inputs carry them)
+ * macro, noise or colour map texture (the inputs carry them)
  * @internal
  */
 export const getTerrainDefine = (config: TerrainMaterialConfig): TerrainMaterialDefine => {
@@ -283,6 +311,7 @@ export const getTerrainDefine = (config: TerrainMaterialConfig): TerrainMaterial
     storage: _storage,
     layers,
     macro,
+    colorMap,
     ...rest
   } = config;
   const define: TerrainMaterialDefine = {
@@ -292,6 +321,10 @@ export const getTerrainDefine = (config: TerrainMaterialConfig): TerrainMaterial
   if (macro) {
     const { texture: _texture, ...settings } = macro;
     define.macro = settings;
+  }
+  if (colorMap) {
+    const { texture: _texture, ...settings } = colorMap;
+    define.colorMap = settings;
   }
   return define;
 };
@@ -308,8 +341,8 @@ const takesSlots = (define: TerrainMaterialDefine) =>
 
 /**
  * The code route's storage: `AUTO` (the default) is `ARRAY` where the layers sample in slots (the
- * material's fields or a tier's), else `SEPARATE` while each layer's packing slots, the splat maps
- * and the macro texture fit the budget (a set no data has counts as fitting: its input throws
+ * material's fields or a tier's), else `SEPARATE` while each layer's packing slots, the splat maps,
+ * the macro texture and the colour map fit the budget (a set no data has counts as fitting: its input throws
  * then)
  */
 const getStorage = (config: TerrainMaterialConfig, define: TerrainMaterialDefine) => {
@@ -320,7 +353,10 @@ const getStorage = (config: TerrainMaterialConfig, define: TerrainMaterialDefine
     const packing = getLayerPacking(config, layer.set);
     return packing ? TERRAIN_PACKING_SLOTS[packing].length : 0;
   });
-  const extra = (config.splatMaps?.length ?? 0) + (getMacroTextureId(config) ? 1 : 0);
+  const extra =
+    (config.splatMaps?.length ?? 0) +
+    (getMacroTextureId(config) ? 1 : 0) +
+    (config.colorMap ? 1 : 0);
   return chooseTerrainStorage(
     layerSlots,
     extra,
@@ -331,8 +367,8 @@ const getStorage = (config: TerrainMaterialConfig, define: TerrainMaterialDefine
 /**
  * The code route's inputs: the layers' sets (`SEPARATE`: `layer<i>`, `{ textureSet, packing? }`
  * each; `ARRAY`: `layers`, `{ textureSetArray, packing }`, `AUTO` choosing), the splat maps
- * (`splat<i>`) and the macro texture (`macro`: the macro variation's, or the rules' noise
- * texture)
+ * (`splat<i>`), the macro texture (`macro`: the macro variation's, or the rules' noise
+ * texture) and the colour map (`colorMap`)
  * @internal
  * @param define the config's static define (`getTerrainDefine`'s): `AUTO` reads its slots
  */
@@ -358,5 +394,6 @@ export const getTerrainInputs = (config: TerrainMaterialConfig, define: TerrainM
   });
   const macroTexture = getMacroTextureId(config);
   if (macroTexture) inputs[MACRO_INPUT_KEY] = { texture: macroTexture };
+  if (config.colorMap) inputs[COLOR_MAP_INPUT_KEY] = { texture: config.colorMap.texture };
   return inputs;
 };

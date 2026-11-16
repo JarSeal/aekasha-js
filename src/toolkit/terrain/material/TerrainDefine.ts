@@ -34,6 +34,8 @@ const ANTI_TILING_APPLIES = ['ALL', 'DOMINANT'] as const;
 const SPARSE_MAX_LAYERS = [2, 4] as const;
 const PROJECTION_MODES = ['PLANAR', 'BIPLANAR', 'TRIPLANAR'] as const;
 const NORMAL_BLENDS = ['WHITEOUT', 'UDN', 'RNM'] as const;
+const FAR_MODES = ['NONE', 'AVERAGE_COLOR', 'COLOR_MAP'] as const;
+const COLOR_MAP_MODES = ['DETAIL', 'FAR_ONLY'] as const;
 const MAX_LAYERS = 16;
 const MAX_RULES = 16;
 const QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as const;
@@ -55,6 +57,7 @@ const SPARSE_KEYS = ['maxLayers'];
 const DEFINE_KEYS = [
   'layers',
   'macro',
+  'colorMap',
   'reservedTextures',
   ...OVERRIDE_KEYS,
   'quality',
@@ -106,7 +109,11 @@ const PROJECTION_KEYS: Record<(typeof PROJECTION_MODES)[number], string[]> = {
   TRIPLANAR: PROJECTED_KEYS,
 };
 const MACRO_KEYS = ['scale', 'brightness', 'hue', 'roughness'];
-const DISTANCE_KEYS = ['fade'];
+const DISTANCE_KEYS = ['fade', 'far', 'farBlend'];
+const COLOR_MAP_KEYS: Record<(typeof COLOR_MAP_MODES)[number], string[]> = {
+  DETAIL: ['mode', 'detailDistance'],
+  FAR_ONLY: ['mode'],
+};
 
 /** The anti-tiling defaults (p305 D3) */
 const DUAL_SCALE_FAR_SCALE = 0.23;
@@ -122,6 +129,8 @@ const MACRO_ROUGHNESS = 0.15;
 /** The height blend's and the vertex AO's defaults (p305 D4) */
 const HEIGHT_BLEND_DEPTH = 0.2;
 const BAKED_ALBEDO_INFLUENCE = 0.5;
+/** The far surface's band past the fade's end, metres (p305 D7) */
+const FAR_BLEND = 4;
 /**
  * The texture budget's default reserve (p305 D9: shadow maps, the environment).
  * @internal
@@ -229,6 +238,20 @@ export type TerrainMacroDefine = {
   roughness: number;
 };
 
+/** The far surface past the detail normals' fade, with its defaults filled in */
+export type TerrainFarDefine = {
+  mode: Exclude<(typeof FAR_MODES)[number], 'NONE'>;
+  /** The band past the fade's end where the near surface gives way to the far one, metres */
+  blend: number;
+};
+
+/** The colour map's settings with their defaults filled in */
+export type TerrainColorMapDefine = {
+  mode: (typeof COLOR_MAP_MODES)[number];
+  /** `DETAIL`'s fade of the detail, view distances in metres, or null for none */
+  detailDistance: [number, number] | null;
+};
+
 /** The static define with its defaults filled in: what the graph branches on */
 export type ResolvedTerrainDefine = {
   layers: TerrainLayerDefine[];
@@ -251,6 +274,10 @@ export type ResolvedTerrainDefine = {
   takesMacroTexture: boolean;
   /** The detail normals' fade, view distances in metres, or null for none */
   distanceFade: [number, number] | null;
+  /** The far surface past the fade's end (`distance.far`), or null for none (`NONE`) */
+  far: TerrainFarDefine | null;
+  /** The colour map (its texture the input `colorMap`), or null for none */
+  colorMap: TerrainColorMapDefine | null;
   /**
    * The layers sampled at a pixel in slots sorted by weight there (p305 D6: sparse sampling's kept
    * layers, or every layer for `HEX`'s `DOMINANT`; `ARRAY` storage, each read at a per-pixel
@@ -279,6 +306,9 @@ export const TERRAIN_DEFINE_VALUES = {
   projectionKeys: PROJECTION_KEYS,
   macroKeys: MACRO_KEYS,
   distanceKeys: DISTANCE_KEYS,
+  colorMapKeys: COLOR_MAP_KEYS,
+  farModes: FAR_MODES,
+  colorMapModes: COLOR_MAP_MODES,
   overrideKeys: OVERRIDE_KEYS,
   qualityLevels: QUALITY_LEVELS,
   debugViews: DEBUG_VIEWS,
@@ -896,6 +926,70 @@ const readMacro = (define: Record<string, unknown>): TerrainMacroDefine | null =
   };
 };
 
+/** The colour map, its mode's fields only, or null without one */
+const readColorMap = (define: Record<string, unknown>): TerrainColorMapDefine | null => {
+  if (define.colorMap === undefined) return null;
+  const path = '.colorMap';
+  const colorMap = readObject(define.colorMap, path);
+  if (colorMap.mode === undefined) {
+    fail(`${path}.mode`, `is missing: use ${COLOR_MAP_MODES.join(', ')}.`);
+  }
+  const mode = readEnum(colorMap, 'mode', COLOR_MAP_MODES, path);
+  checkKeys(colorMap, COLOR_MAP_KEYS[mode], path);
+  const detailDistance =
+    colorMap.detailDistance === undefined
+      ? null
+      : readMetreRange(colorMap, 'detailDistance', undefined, path);
+  return { mode, detailDistance };
+};
+
+/**
+ * The distance's fade and far surface (`distance`, the tier's when it gives one): the far mode
+ * with its band (`farBlend` refused without one), `COLOR_MAP` only with a colour map
+ */
+const readDistance = (
+  value: unknown,
+  colorMap: TerrainColorMapDefine | null,
+  path: string
+): { fade: [number, number]; far: TerrainFarDefine | null } | null => {
+  if (value === undefined) return null;
+  const distance = readObject(value, path);
+  checkKeys(distance, DISTANCE_KEYS, path);
+  const fade = readMetreRange(distance, 'fade', undefined, path);
+  const mode = readEnum(distance, 'far', FAR_MODES, path);
+  if (mode === 'NONE') {
+    if (distance.farBlend !== undefined) {
+      fail(`${path}.farBlend`, 'is for a far mode (distance.far AVERAGE_COLOR or COLOR_MAP).');
+    }
+    return { fade, far: null };
+  }
+  if (mode === 'COLOR_MAP' && !colorMap) {
+    fail(`${path}.far`, 'is COLOR_MAP: give a colorMap (its texture the input colorMap).');
+  }
+  return {
+    fade,
+    far: { mode, blend: readNumber(distance, 'farBlend', FAR_BLEND, NON_NEGATIVE, path) },
+  };
+};
+
+/**
+ * A `FAR_ONLY` colour map against the far modes: the material's distance or a tier's must be
+ * `COLOR_MAP` (a tier's variant shares the material's inputs), else nothing reads it
+ */
+const checkFarOnly = (
+  colorMap: TerrainColorMapDefine | null,
+  define: Record<string, unknown>,
+  tiers: Record<string, unknown>[]
+) => {
+  if (colorMap?.mode !== 'FAR_ONLY') return;
+  const isFarColorMap = (distance: unknown) => isRecord(distance) && distance.far === 'COLOR_MAP';
+  if ([define, ...tiers].some((fields) => isFarColorMap(fields.distance))) return;
+  fail(
+    '.colorMap.mode',
+    "is FAR_ONLY: give distance.far COLOR_MAP (the material's or a tier's), else nothing reads it."
+  );
+};
+
 /** The texture budget's reserve: a whole number 0..15 */
 const readReservedTextures = (define: Record<string, unknown>) => {
   const bounds = { min: { value: 0 }, max: { value: 15 } };
@@ -998,9 +1092,9 @@ export const readTerrainDefine = (
       'needs blend.source VERTEX_COLOR or VERTEX_COLOR_AND_RULES with the RGB_AO layout.'
     );
   }
-  const distancePath = `${pathOf('distance')}.distance`;
-  const distance = fields.distance === undefined ? null : readObject(fields.distance, distancePath);
-  if (distance) checkKeys(distance, DISTANCE_KEYS, distancePath);
+  const colorMap = readColorMap(define);
+  checkFarOnly(colorMap, define, Object.values(quality));
+  const distance = readDistance(fields.distance, colorMap, `${pathOf('distance')}.distance`);
   return {
     layers,
     uv,
@@ -1019,7 +1113,9 @@ export const readTerrainDefine = (
       define.macro !== undefined ||
       [define.blend, ...Object.values(quality).map((tier) => tier.blend)].some(hasRawRuleNoise),
     reservedTextures: readReservedTextures(define),
-    distanceFade: distance ? readMetreRange(distance, 'fade', undefined, distancePath) : null,
+    distanceFade: distance?.fade ?? null,
+    far: distance?.far ?? null,
+    colorMap,
     slotCount,
     qualityLevel,
     debugView: readOptionalEnum(define, 'debugView', DEBUG_VIEWS, ''),

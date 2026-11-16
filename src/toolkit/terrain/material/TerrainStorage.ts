@@ -69,7 +69,7 @@ export const checkTextureBudget = (
   const count = countBindings(bindings);
   if (count <= budget) return;
   const help = isArray
-    ? 'fewer splat maps or no macro texture, or a lower reservedTextures if the scene has fewer shadow maps'
+    ? 'fewer splat maps, no macro texture or no colour map, or a lower reservedTextures if the scene has fewer shadow maps'
     : 'ARRAY storage (one array per slot: a { "textureSetArray": [ids], "packing" } input "layers"), fewer layers or a smaller packing, or a lower reservedTextures';
   throw new Error(
     `[terrain] The material binds ${count} textures, over its budget of ${budget} (${limit} a stage less ${reserved} reserved): ${describeBindings(bindings)}. Try ${help}.`
@@ -80,7 +80,7 @@ export const checkTextureBudget = (
  * The code route's storage for `AUTO`: `SEPARATE` while its bindings fit the budget, else `ARRAY`
  * @internal
  * @param layerSlots each layer's packing slot count
- * @param extra the other textures (splat maps, the macro texture)
+ * @param extra the other textures (splat maps, the macro texture, the colour map)
  * @param reserved the textures kept for the rest of the shader
  */
 export const chooseTerrainStorage = (layerSlots: number[], extra: number, reserved: number) => {

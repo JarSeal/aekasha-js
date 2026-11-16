@@ -80,6 +80,18 @@ export const TERRAIN_DEBUG_VIEWS = [
   'TAPS',
   'LAYER_COUNT',
 ] as const;
+/**
+ * What a far surface shows past `distance.fade`'s end, where the layers aren't sampled (p305 D7):
+ * `NONE` (default) the layers at every distance, `AVERAGE_COLOR` each layer's set's average colour
+ * by its weight (no layer fetch), `COLOR_MAP` the colour map (one fetch).
+ */
+export const TERRAIN_FAR_MODES = ['NONE', 'AVERAGE_COLOR', 'COLOR_MAP'] as const;
+/**
+ * How a colour map (a texture at the mesh's UV) colours the surface (p305 D7): `DETAIL` it gives
+ * the albedo and the layers their detail (each one's albedo over its set's average colour);
+ * `FAR_ONLY` it's only the far surface's colour (`distance.far: 'COLOR_MAP'`).
+ */
+export const TERRAIN_COLOR_MAP_MODES = ['DETAIL', 'FAR_ONLY'] as const;
 /** The most layers a terrain material blends. */
 export const TERRAIN_MAX_LAYERS = 16;
 /** The most rules a terrain material's blend takes. */
@@ -735,9 +747,99 @@ const TerrainDistanceSchema = z
     fade: metreRange(
       "The view distances in metres over which the layers' detail normals fade to the geometry's."
     ),
+    /**
+     * The far surface past `fade`'s end (default `NONE`): `AVERAGE_COLOR` the layers' sets'
+     * average colours by weight, `COLOR_MAP` the colour map (needs `colorMap`). The layers aren't
+     * sampled there (a dynamic branch), so far ground costs its weights and 0 or 1 fetch.
+     */
+    far: z
+      .enum(TERRAIN_FAR_MODES)
+      .optional()
+      .describe(
+        "The far surface past fade's end (default NONE): AVERAGE_COLOR the sets' average colours by weight, COLOR_MAP the colour map. The layers aren't sampled there."
+      ),
+    /**
+     * The metres past `fade`'s end over which the near surface gives way to the far one, ≥ 0
+     * (default 4; 0 a hard switch): the band samples both, so the switch has no edge that moves
+     * with the camera. With a `far` mode only.
+     */
+    farBlend: z
+      .number()
+      .min(0)
+      .optional()
+      .describe(
+        "The metres past fade's end over which the near surface gives way to the far one (default 4; 0 a hard switch). With a far mode only."
+      ),
   })
   .strict()
   .describe("The view distance's effects on the surface.");
+
+/** The colour map's settings of each mode, with its texture's id for the code route */
+const colorMapOptions = <T extends z.ZodRawShape>(texture: T) =>
+  [
+    z
+      .object({
+        /**
+         * The colour map gives the albedo, the layers their detail: each layer's albedo over its
+         * set's average colour (about 1 on average), its normal and roughness.
+         */
+        mode: z
+          .literal('DETAIL')
+          .describe(
+            "The colour map gives the albedo, the layers their detail (each one's albedo over its set's average colour), normal and roughness."
+          ),
+        /**
+         * The view distances in metres over which the detail fades out (`[from, to]`): past `to`
+         * the colour map alone. None: the detail at every distance.
+         */
+        detailDistance: metreRange(
+          'The view distances in metres over which the detail fades out: past the second, the colour map alone.'
+        ).optional(),
+        ...texture,
+      })
+      .strict(),
+    z
+      .object({
+        /** The colour map is only the far surface's colour (`distance.far: 'COLOR_MAP'`). */
+        mode: z
+          .literal('FAR_ONLY')
+          .describe("The colour map is only the far surface's colour (distance.far COLOR_MAP)."),
+        ...texture,
+      })
+      .strict(),
+  ] as const;
+
+/**
+ * A colour map's settings, without its texture (the static define's `colorMap`; p305 D7): a
+ * texture at the mesh's UV (a block's own, unique colour), by `mode`: `DETAIL` or `FAR_ONLY`. Its
+ * texture is the input `colorMap` (`{ "texture": id }`).
+ */
+export const TerrainColorMapSettingsSchema = z
+  .discriminatedUnion('mode', colorMapOptions({}))
+  .describe("A colour map at the mesh's UV, without its texture (the input colorMap gives it).");
+
+/** A colour map's settings without its texture: the static define's `colorMap`. */
+export type TerrainColorMapSettings = z.infer<typeof TerrainColorMapSettingsSchema>;
+
+/** The code route's colour map: its texture and its settings. */
+export const TerrainColorMapSchema = z
+  .discriminatedUnion(
+    'mode',
+    colorMapOptions({
+      /**
+       * The colour map's texture id: a block's own colour at its UV (an sRGB `color` slot
+       * texture, mipmapped), eg. a `bakeTerrainColorMap`'s exported and encoded.
+       */
+      texture: z
+        .string()
+        .min(1)
+        .describe("The colour map's texture id: a block's own colour at its UV (sRGB)."),
+    })
+  )
+  .describe("A colour map at the mesh's UV: its texture and its settings.");
+
+/** {@link createTerrainMaterial}'s colour map: its texture and its settings. */
+export type TerrainColorMap = z.infer<typeof TerrainColorMapSchema>;
 
 /**
  * Sparse sampling (p305 D6): at each pixel only the layers weighing most are sampled, sorted by
@@ -843,7 +945,7 @@ const sharedFields = {
   antiTiling: TerrainAntiTilingSchema.optional(),
   /** Every layer's projection (default `PLANAR`); a layer's own replaces it. */
   projection: TerrainProjectionSchema.optional(),
-  /** The view distance's effects: the detail normals' fade. */
+  /** The view distance's effects: the detail normals' fade, and the far surface past it. */
   distance: TerrainDistanceSchema.optional(),
   /** Sparse sampling: only the layers weighing most at each pixel (default: every layer). */
   sparse: TerrainSparseSchema.optional(),
@@ -1255,6 +1357,47 @@ const checkSlots = (value: SampledValue, ctx: z.RefinementCtx) => {
   }
 };
 
+type DistanceValue = { far?: string; farBlend?: number };
+type FarValue = {
+  colorMap?: { mode: string };
+  distance?: DistanceValue;
+  quality?: Partial<Record<string, { distance?: DistanceValue } | undefined>>;
+};
+
+/**
+ * The far modes and the colour map, the material's and each tier's (a tier's `distance` over the
+ * material's): `farBlend` only with a far mode, `far: 'COLOR_MAP'` only with a `colorMap`, and a
+ * `FAR_ONLY` colour map only where some context's far mode is `COLOR_MAP` (else nothing reads
+ * it). The refinement both schemas share.
+ */
+const checkFar = (value: FarValue, ctx: z.RefinementCtx) => {
+  const issue = createIssueReporter(ctx);
+  const contexts = [
+    { path: ['distance'], distance: value.distance },
+    ...Object.entries(value.quality ?? {}).map(([level, tier]) =>
+      tier?.distance
+        ? { path: ['quality', level, 'distance'], distance: tier.distance }
+        : { path: ['distance'], distance: value.distance }
+    ),
+  ];
+  for (const { path, distance } of contexts) {
+    const far = distance?.far ?? 'NONE';
+    if (distance?.farBlend !== undefined && far === 'NONE') {
+      issue([...path, 'farBlend'], 'is for a far mode (distance.far AVERAGE_COLOR or COLOR_MAP).');
+    }
+    if (far === 'COLOR_MAP' && !value.colorMap) {
+      issue([...path, 'far'], 'is COLOR_MAP: give a colorMap (its texture the input colorMap).');
+    }
+  }
+  const contextsFar = contexts.map(({ distance }) => distance?.far);
+  if (value.colorMap?.mode === 'FAR_ONLY' && !contextsFar.includes('COLOR_MAP')) {
+    issue(
+      ['colorMap', 'mode'],
+      "is FAR_ONLY: give distance.far COLOR_MAP (the material's or a tier's), else nothing reads it."
+    );
+  }
+};
+
 /**
  * Whether the config (its own fields or a tier's) samples the layers in slots, which read the
  * layers at a per-pixel index: `ARRAY` storage
@@ -1331,6 +1474,8 @@ export const TerrainMaterialDefineSchema = z
       .describe("The layers' settings, in the inputs' order (layer0, …): 1 to 16."),
     /** The macro variation, its texture the input `macro` (`{ "texture": id }`). */
     macro: TerrainMacroSettingsSchema.optional(),
+    /** The colour map, its texture the input `colorMap` (`{ "texture": id }`, at the mesh's UV). */
+    colorMap: TerrainColorMapSettingsSchema.optional(),
     ...budgetFields,
     ...sharedFields,
     ...variantFields,
@@ -1339,6 +1484,7 @@ export const TerrainMaterialDefineSchema = z
   .superRefine(checkBlend)
   .superRefine(checkProjection)
   .superRefine(checkSlots)
+  .superRefine(checkFar)
   .describe("The terrain material's static define (staticDefines.terrain).");
 
 /**
@@ -1373,6 +1519,12 @@ export const TerrainMaterialConfigSchema = z
      * reads its texture too.
      */
     macro: TerrainMacroSchema.optional(),
+    /**
+     * A colour map at the mesh's UV (a block's own colour): `DETAIL` it gives the albedo and the
+     * layers their detail, `FAR_ONLY` it's the far surface (`distance.far: 'COLOR_MAP'`). Its
+     * texture becomes the input `colorMap`, which a block's variant swaps.
+     */
+    colorMap: TerrainColorMapSchema.optional(),
     /**
      * With `blend.source` `SPLAT_MAP` or `SPLAT_MAP_AND_RULES`, the splat maps' texture ids (`data`
      * slot textures, linear): the first weighs layers 1-4 (RGBA), the second 5-8, one per four
@@ -1420,6 +1572,7 @@ export const TerrainMaterialConfigSchema = z
   .superRefine(checkBlend)
   .superRefine(checkProjection)
   .superRefine(checkSlots)
+  .superRefine(checkFar)
   .superRefine(checkTextureIds)
   .superRefine(checkStorage)
   .describe("The terrain material's config (createTerrainMaterial).");

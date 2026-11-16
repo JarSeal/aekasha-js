@@ -108,4 +108,23 @@ describe('TerrainMaterialConfigSchema', () => {
       'quality.LOW.blend.rules.0.layer'
     );
   });
+
+  it('wants a colour map for far COLOR_MAP and a COLOR_MAP far mode for FAR_ONLY', () => {
+    const colorMap = { mode: 'DETAIL', texture: 'valley.colorMap' };
+    const far = { fade: [30, 90], far: 'COLOR_MAP' };
+    expect(issuesOf(configOf(1, { colorMap, distance: far }))).toEqual([]);
+    expect(issuesOf(configOf(1, { distance: far }))).toEqual(['distance.far']);
+    expect(issuesOf(configOf(1, { quality: { LOW: { distance: far } } }))).toEqual([
+      'quality.LOW.distance.far',
+    ]);
+    const farOnly = { mode: 'FAR_ONLY', texture: 'valley.colorMap' };
+    expect(issuesOf(configOf(1, { colorMap: farOnly }))).toEqual(['colorMap.mode']);
+    expect(
+      issuesOf(configOf(1, { colorMap: farOnly, quality: { LOW: { distance: far } } }))
+    ).toEqual([]);
+    expect(issuesOf(configOf(1, { colorMap: { mode: 'DETAIL' } }))).toEqual(['colorMap.texture']);
+    expect(issuesOf(configOf(1, { distance: { fade: [30, 90], farBlend: 2 } }))).toEqual([
+      'distance.farBlend',
+    ]);
+  });
 });

@@ -78,6 +78,8 @@ export { loadTerrainDebugViewsAsync } from './material/TerrainDebugViews';
 export {
   TerrainAntiTilingSchema,
   TerrainBlendSchema,
+  TerrainColorMapSchema,
+  TerrainColorMapSettingsSchema,
   TerrainLayerSchema,
   TerrainLayerSettingsSchema,
   TerrainMacroSchema,
@@ -90,6 +92,8 @@ export {
 export type {
   TerrainAntiTiling,
   TerrainBlend,
+  TerrainColorMap,
+  TerrainColorMapSettings,
   TerrainLayer,
   TerrainLayerSettings,
   TerrainMacro,

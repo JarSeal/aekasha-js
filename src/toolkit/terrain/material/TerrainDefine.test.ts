@@ -8,7 +8,9 @@ import {
   TERRAIN_BLEND_LAYER_COUNTS,
   TERRAIN_BLEND_MODES,
   TERRAIN_BLEND_SOURCES,
+  TERRAIN_COLOR_MAP_MODES,
   TERRAIN_DEBUG_VIEWS,
+  TERRAIN_FAR_MODES,
   TERRAIN_QUALITY_LEVELS,
   TERRAIN_LAYER_SOURCES,
   TERRAIN_MAX_LAYERS,
@@ -20,6 +22,7 @@ import {
   TERRAIN_VERTEX_COLOR_LAYOUTS,
   TerrainAntiTilingSchema,
   TerrainBlendSchema,
+  TerrainColorMapSettingsSchema,
   TerrainLayerSettingsSchema,
   TerrainMacroSettingsSchema,
   TerrainMaterialDefineSchema,
@@ -85,6 +88,27 @@ const ACCEPTED: unknown[] = [
   { layers: [{}], macro: { scale: 120 } },
   { layers: [{}], macro: { scale: 40, brightness: 0, hue: 180, roughness: 1 } },
   { layers: [{}], distance: { fade: [30, 90] } },
+  { layers: [{}], distance: { fade: [30, 90], far: 'NONE' } },
+  { layers: [{}], distance: { fade: [30, 90], far: 'AVERAGE_COLOR' } },
+  { layers: [{}], distance: { fade: [30, 90], far: 'AVERAGE_COLOR', farBlend: 0 } },
+  { layers: [{}], colorMap: { mode: 'DETAIL' } },
+  { layers: [{}], colorMap: { mode: 'DETAIL', detailDistance: [20, 60] } },
+  {
+    layers: [{}],
+    colorMap: { mode: 'DETAIL' },
+    distance: { fade: [30, 90], far: 'COLOR_MAP', farBlend: 8 },
+  },
+  { layers: [{}], colorMap: { mode: 'FAR_ONLY' }, distance: { fade: [30, 90], far: 'COLOR_MAP' } },
+  // A tier's far mode reads the FAR_ONLY colour map; another tier has none
+  {
+    layers: [{}],
+    colorMap: { mode: 'FAR_ONLY' },
+    quality: {
+      LOW: { distance: { fade: [20, 60], far: 'COLOR_MAP' } },
+      ULTRA: { distance: { fade: [20, 60] } },
+    },
+    qualityLevel: 'ULTRA',
+  },
   {
     layers: [{}],
     quality: { LOW: { antiTiling: { mode: 'NONE' }, distance: { fade: [10, 20] } } },
@@ -338,7 +362,28 @@ const REFUSED: unknown[] = [
   { layers: [{}], quality: { LOW: { macro: { scale: 50 } } } },
   { layers: [{}], distance: {} },
   { layers: [{}], distance: { fade: [90, 30] } },
-  { layers: [{}], distance: { fade: [30, 90], far: 'AVERAGE_COLOR' } },
+  { layers: [{}], distance: { fade: [30, 90], far: 'FOG' } },
+  { layers: [{}], distance: { fade: [30, 90], farBlend: 4 } },
+  { layers: [{}], distance: { fade: [30, 90], far: 'NONE', farBlend: 4 } },
+  { layers: [{}], distance: { fade: [30, 90], far: 'AVERAGE_COLOR', farBlend: -1 } },
+  { layers: [{}], distance: { fade: [30, 90], far: 'COLOR_MAP' } },
+  {
+    layers: [{}],
+    quality: { LOW: { distance: { fade: [30, 90], far: 'COLOR_MAP' } } },
+    qualityLevel: 'LOW',
+  },
+  { layers: [{}], colorMap: {} },
+  { layers: [{}], colorMap: { mode: 'UNIQUE' } },
+  { layers: [{}], colorMap: { mode: 'DETAIL', texture: 'block.colorMap' } },
+  { layers: [{}], colorMap: { mode: 'DETAIL', detailDistance: [60, 20] } },
+  { layers: [{}], colorMap: { mode: 'FAR_ONLY', detailDistance: [20, 60] } },
+  { layers: [{}], colorMap: { mode: 'FAR_ONLY' } },
+  {
+    layers: [{}],
+    colorMap: { mode: 'FAR_ONLY' },
+    distance: { fade: [30, 90], far: 'AVERAGE_COLOR' },
+  },
+  { layers: [{}], quality: { LOW: { colorMap: { mode: 'DETAIL' } } } },
   { layers: [{ heightOffset: 2 }] },
   { layers: [{}], reservedTextures: 16 },
   { layers: [{}], reservedTextures: -1 },
@@ -532,6 +577,8 @@ describe('readTerrainDefine', () => {
       macro: null,
       takesMacroTexture: false,
       distanceFade: null,
+      far: null,
+      colorMap: null,
       slotCount: null,
       qualityLevel: null,
       debugView: null,
@@ -572,6 +619,14 @@ describe('readTerrainDefine', () => {
       roughness: 0.15,
     });
     expect(read({ layers: [{}], distance: { fade: [30, 90] } }).distanceFade).toEqual([30, 90]);
+    expect(read({ layers: [{}], distance: { fade: [30, 90] } }).far).toBeNull();
+    expect(
+      read({ layers: [{}], distance: { fade: [30, 90], far: 'AVERAGE_COLOR' } })
+    ).toMatchObject({ distanceFade: [30, 90], far: { mode: 'AVERAGE_COLOR', blend: 4 } });
+    expect(read({ layers: [{}], colorMap: { mode: 'DETAIL' } }).colorMap).toEqual({
+      mode: 'DETAIL',
+      detailDistance: null,
+    });
     expect(read({ layers: layersOf(2), blend: { source: 'VERTEX_COLOR' } }).blend).toEqual({
       source: 'VERTEX_COLOR',
       layout: 'RGB_AO',
@@ -761,6 +816,16 @@ describe('readTerrainDefine', () => {
     expect(values.blendLayerCounts).toEqual(TERRAIN_BLEND_LAYER_COUNTS);
     expect(values.distanceKeys.sort()).toEqual(Object.keys(distance.unwrap().shape).sort());
     expect(values.macroKeys.sort()).toEqual(Object.keys(TerrainMacroSettingsSchema.shape).sort());
+    for (const option of TerrainColorMapSettingsSchema.options) {
+      const mode = option.shape.mode.value;
+      expect(values.colorMapKeys[mode].sort(), mode).toEqual(Object.keys(option.shape).sort());
+    }
+    expect(TerrainColorMapSettingsSchema.options.map((option) => option.shape.mode.value)).toEqual([
+      ...TERRAIN_COLOR_MAP_MODES,
+    ]);
+    expect(values.colorMapModes).toEqual(TERRAIN_COLOR_MAP_MODES);
+    expect(values.farModes).toEqual(TERRAIN_FAR_MODES);
+    expect(distance.unwrap().shape.far.unwrap().options).toEqual([...TERRAIN_FAR_MODES]);
     for (const option of TerrainAntiTilingSchema.options) {
       const mode = option.shape.mode.value;
       expect(values.antiTilingKeys[mode].sort(), mode).toEqual(Object.keys(option.shape).sort());
