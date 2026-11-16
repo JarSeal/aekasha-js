@@ -22,6 +22,7 @@ import { createRulesRow, RULES_ROW_BOUNDS } from './rulesRow';
 import { CLIFFS_ROW_BOUNDS, createCliffsRow } from './cliffsRow';
 import { COLOR_MAP_ROW_BOUNDS, createColorMapRowAsync } from './colorMapRow';
 import { createStructuresRow, STRUCTURES_ROW_BOUNDS } from './structuresRow';
+import { createLiveBlock, LIVE_BLOCK_BOUNDS } from './liveBlock';
 import {
   createProceduralRowAsync,
   PROCEDURAL_ROW_DEPTH,
@@ -80,6 +81,12 @@ import {
  *   concrete from the back), baked during the load (`bakeSurfaceGenerator`, 1024² `LITE`: the
  *   loader counts the ten bakes). The tab switches the row between an imported set of each
  *   category, the bake and the generator live in the material.
+ * - **The Live block** (`liveBlock.ts`, p305 Phase 8): a 48 × 48 m generated terrain right of the
+ *   Procedural row, grass, rocks by slope and snow on the tops laid by rules and sand ripples in
+ *   the hollows from the gallery's procedural set `terrainGalleryLiveDunes` (which the scene lists,
+ *   so its load bakes it), run live in the terrain material or sampled baked; the quality preset's
+ *   tiers put the imported sets in a set array and the procedural set beside it. The tab switches
+ *   live and baked, tunes the generator's values and measures both.
  * - **The light:** the scene's own DAY_NIGHT sky box standing at 10:00 (`terrainGallerySky`); its
  *   sun and sky are the only lights. No shadows for now (`NO_SHADOWS`).
  *
@@ -202,6 +209,7 @@ export const scene = async () => {
   const right =
     Math.max(
       PROCEDURAL_ROW_EDGE_X,
+      LIVE_BLOCK_BOUNDS.maxX,
       ANTI_TILING_ROW_BOUNDS.maxX,
       CLIFFS_ROW_BOUNDS.maxX,
       COLOR_MAP_ROW_BOUNDS.maxX,
@@ -241,6 +249,7 @@ export const scene = async () => {
   await createColorMapRowAsync();
   createStructuresRow(TERRAIN_GALLERY_SCENE_ID);
   await createProceduralRowAsync(addGalleryExitCleanup);
+  createLiveBlock();
 
   // Debug env only: a dynamic import, so the tab's code isn't in a production build. It applies
   // its saved packing and checker once the blocks exist.

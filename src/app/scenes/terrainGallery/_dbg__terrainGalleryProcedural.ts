@@ -125,8 +125,8 @@ export const refreshProceduralFigures = () => {
 };
 
 /** The mean GPU ms of `SAMPLE_FRAMES` frames after `WARM_UP_FRAMES`, or null when no frame time
- * comes (no timer queries, a paused loop) */
-const sampleFrameGpuMsAsync = () =>
+ * comes (no timer queries, a paused loop): the gallery's measurements' figure */
+export const sampleFrameGpuMsAsync = () =>
   new Promise<number | null>((resolve) => {
     let seen = 0;
     let sum = 0;
@@ -147,7 +147,7 @@ const sampleFrameGpuMsAsync = () =>
   });
 
 /** Hides the meshes of the app ids and returns the function that shows those it hid again */
-const hideMeshes = (appIds: string[]) => {
+export const hideMeshes = (appIds: string[]) => {
   const hidden = appIds.flatMap((appId) => {
     const mesh = getMeshByAppId(appId);
     if (!mesh?.visible) return [];

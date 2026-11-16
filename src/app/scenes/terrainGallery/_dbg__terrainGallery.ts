@@ -49,6 +49,7 @@ import {
   getStructuresSections,
   startStructuresTab,
 } from './_dbg__terrainGalleryStructures';
+import { getLiveSections, startLiveTab, type LiveSectionOpts } from './_dbg__terrainGalleryLive';
 import {
   clearGeneratorSelection,
   getProceduralSections,
@@ -76,10 +77,13 @@ import { CLIFFS_BLOCK_Y, CLIFFS_BLOCKS, getCliffsAppId, setCliffsDebugView } fro
 import { COLOR_MAP_BLOCKS, getColorMapAppId, setColorMapView } from './colorMapRow';
 import { getStructuresAppIds, setStructuresDebugView, STRUCTURES_PIECES } from './structuresRow';
 import {
+  getProceduralAppId,
   getProceduralBakeSettings,
   PROCEDURAL_BLOCKS,
+  PROCEDURAL_MODES,
   setProceduralBakeAsync,
 } from './proceduralRow';
+import { LIVE_APP_ID, setLiveView } from './liveBlock';
 import {
   addGalleryExitCleanup,
   ALL_PACKING_SETS,
@@ -281,6 +285,7 @@ const applyMaterial = () => {
   setCliffsDebugView(state.debugView);
   setColorMapView(state.debugView, state.quality);
   setStructuresDebugView(state.debugView);
+  setLiveView(state.debugView, state.quality);
 };
 
 /**
@@ -371,6 +376,18 @@ const getOtherAppIds = () => [
   ...COLOR_MAP_BLOCKS.map(({ key }) => getColorMapAppId(key)),
   ...STRUCTURES_PIECES.flatMap(({ key }) => getStructuresAppIds(key)),
   ...CHECKER_BLOCKS.map(({ key }) => getCheckerAppId(key)),
+  LIVE_APP_ID,
+];
+
+/** What the Live block's measurement hides: everything else, the Procedural row's blocks too */
+const getAllButLiveAppIds = () => [
+  ...getOtherAppIds().filter((appId) => appId !== LIVE_APP_ID),
+  ...PROCEDURAL_BLOCKS.flatMap(({ generator }) =>
+    PROCEDURAL_MODES.flatMap((mode) => [
+      getProceduralAppId(generator.id, mode),
+      getProceduralAppId(generator.id, mode, true),
+    ])
+  ),
 ];
 
 /** Each list's selection clearer, by the row it lists */
@@ -423,6 +440,9 @@ const proceduralOpts: ProceduralSectionsOpts = {
   getOtherAppIds,
 };
 
+/** What the Live block's section needs of this tab */
+const liveOpts: LiveSectionOpts = { tabId: TAB_ID, getOtherAppIds: getAllButLiveAppIds };
+
 /**
  * The gallery's scene tab (p303 D8): the sets, a click flying the scene's camera to the block; the
  * packing of the three sets that ship every packing (and of the Procedural row's bakes); the 1 m
@@ -443,10 +463,12 @@ export const createTerrainGalleryTab = () => {
   startColorMapTab();
   startStructuresTab();
   const endProceduralTab = startProceduralTab(proceduralOpts);
+  const endLiveTab = startLiveTab(liveOpts);
   addGalleryExitCleanup(() => {
     thisVisit.isCurrent = false;
     stopGalleryFlight(true);
     endProceduralTab();
+    endLiveTab();
   });
 
   createDebuggerTab({
@@ -544,6 +566,7 @@ export const createTerrainGalleryTab = () => {
       ) as DebuggerTabSection<GalleryTabState>[]),
       // Its fields bind their own targets, none of this tab's state keys
       ...(getProceduralSections(proceduralOpts) as DebuggerTabSection<GalleryTabState>[]),
+      ...(getLiveSections(liveOpts) as DebuggerTabSection<GalleryTabState>[]),
     ],
   });
 

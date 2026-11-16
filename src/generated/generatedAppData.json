@@ -20031,7 +20031,7 @@
     "terrainGallery": {
       "isDebugScene": true,
       "name": "Terrain gallery (p303, p304, p305)",
-      "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the toolkit's terrain material (p305, its JSON route; one layer, world tiling) in the set's default packing, which the debug tab switches to the code route or to the baseline textureSetSurface (they look the same). Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). Behind the library, the Anti-tiling row (p305): three flat 48 × 48 m grass01 blocks with the terrain material's anti-tiling NONE, DUAL_SCALE and HEX, the macro variation (macroNoise) on, which the debug tab switches and tunes. Left of the library, the Splatting row (p305): six 24 × 24 m generated blocks blending several sets by weights painted in code, the vertex colour (RGBA, 5 layers) and a splat map (5 layers) each LINEAR beside HEIGHT, RGB_AO with the vertex AO (4 layers), and 9 layers with two splat maps (code route materials, storage AUTO: the splat blocks bind one texture too many for SEPARATE, so each takes a set array the scene lists), which the debug tab tunes. In front of the library, the Rules row (p305): two 64 × 64 m blocks on one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces, macroNoise breaking the borders), the rules alone beside a splat map's sandy path and mud under the same rules (its six sets a set array the scene lists), which the debug tab tunes. In front of the Cliffs row, the Colour map row (p305): the Rules row's 8-layer material on four 64 × 64 m blocks of its terrain, then with a DETAIL colour map (baked at the load from the source on the block's own mesh), with the far COLOR_MAP surface and with the far AVERAGE_COLOR one, which the debug tab tunes and bakes again. In front of that, the Structures row (p305): structure materials (createStructureMaterial: triplanar, dual-scale anti-tiling, a 12 m macro) on pieces made in code, a wall of two segments in world space and a bunker's passage piece in object space worn by their vertex colour (RGBA: clean and stained concrete, grime, damage), and two pillars turning and rising, concrete02 in object space beside world space, which the debug tab pauses. Right of the library, the Procedural row (p304): the toolkit's ten surface generators on a block each (five rows of two), baked at the load (1024² LITE), which the debug tab switches between the bake, the generator live in the material and an imported set of its category, with each generator's params, its export and a GPU measurement. The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
+      "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the toolkit's terrain material (p305, its JSON route; one layer, world tiling) in the set's default packing, which the debug tab switches to the code route or to the baseline textureSetSurface (they look the same). Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). Behind the library, the Anti-tiling row (p305): three flat 48 × 48 m grass01 blocks with the terrain material's anti-tiling NONE, DUAL_SCALE and HEX, the macro variation (macroNoise) on, which the debug tab switches and tunes. Left of the library, the Splatting row (p305): six 24 × 24 m generated blocks blending several sets by weights painted in code, the vertex colour (RGBA, 5 layers) and a splat map (5 layers) each LINEAR beside HEIGHT, RGB_AO with the vertex AO (4 layers), and 9 layers with two splat maps (code route materials, storage AUTO: the splat blocks bind one texture too many for SEPARATE, so each takes a set array the scene lists), which the debug tab tunes. In front of the library, the Rules row (p305): two 64 × 64 m blocks on one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces, macroNoise breaking the borders), the rules alone beside a splat map's sandy path and mud under the same rules (its six sets a set array the scene lists), which the debug tab tunes. In front of the Cliffs row, the Colour map row (p305): the Rules row's 8-layer material on four 64 × 64 m blocks of its terrain, then with a DETAIL colour map (baked at the load from the source on the block's own mesh), with the far COLOR_MAP surface and with the far AVERAGE_COLOR one, which the debug tab tunes and bakes again. In front of that, the Structures row (p305): structure materials (createStructureMaterial: triplanar, dual-scale anti-tiling, a 12 m macro) on pieces made in code, a wall of two segments in world space and a bunker's passage piece in object space worn by their vertex colour (RGBA: clean and stained concrete, grime, damage), and two pillars turning and rising, concrete02 in object space beside world space, which the debug tab pauses. Right of the library, the Procedural row (p304): the toolkit's ten surface generators on a block each (five rows of two), baked at the load (1024² LITE), which the debug tab switches between the bake, the generator live in the material and an imported set of its category, with each generator's params, its export and a GPU measurement. Right of that, the Live block (p305): a 48 × 48 m generated terrain, grass, rocks by slope and snow on the tops by rules, sand ripples in the hollows from the gallery's procedural set terrainGalleryLiveDunes (sandRipples, baked at the load) run live in the terrain material or sampled baked (the imported sets in a set array, the procedural set beside it), which the debug tab switches, tunes and measures. The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
       "cameras": [
         {
           "camProps": {
@@ -21491,6 +21491,46 @@
             "wetRoughness": 0.3
           },
           "averageColor": "#635e58"
+        },
+        {
+          "id": "terrainGalleryLiveDunes",
+          "category": "SAND",
+          "physicalSize": [
+            2,
+            2
+          ],
+          "heightScale": 0.03,
+          "packings": {
+            "LITE": {
+              "albedoRough": "terrainGalleryLiveDunes.albedoRough",
+              "normalHeight": "terrainGalleryLiveDunes.normalHeight"
+            }
+          },
+          "procedural": {
+            "generator": "sandRipples",
+            "params": {
+              "wavelength": 0.14,
+              "warp": 0.5
+            },
+            "seed": 7,
+            "size": 1024,
+            "packing": "LITE"
+          },
+          "debugData": {
+            "name": "Terrain gallery live dunes",
+            "description": "p305 Phase 8: sandRipples as a procedural set (LITE, 1024²) for the gallery's Live block, whose terrain material runs it live (source PROCEDURAL_LIVE) or samples its bake; the bake is also what a tier falls back to."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          }
         }
       ],
       "textureSetArrays": [
@@ -21557,6 +21597,14 @@
             "cliffs01",
             "grass02",
             "ice01"
+          ],
+          "packing": "LITE"
+        },
+        {
+          "sets": [
+            "grass01",
+            "rocks02",
+            "snow01"
           ],
           "packing": "LITE"
         }
@@ -36547,6 +36595,47 @@
         "wetRoughness": 0.3
       },
       "__sourcePath": "src/app/scenes/proceduralSurfaces/p304ProcRipples.textureSet.json"
+    },
+    "terrainGalleryLiveDunes": {
+      "id": "terrainGalleryLiveDunes",
+      "category": "SAND",
+      "physicalSize": [
+        2,
+        2
+      ],
+      "heightScale": 0.03,
+      "packings": {
+        "LITE": {
+          "albedoRough": "terrainGalleryLiveDunes.albedoRough",
+          "normalHeight": "terrainGalleryLiveDunes.normalHeight"
+        }
+      },
+      "procedural": {
+        "generator": "sandRipples",
+        "params": {
+          "wavelength": 0.14,
+          "warp": 0.5
+        },
+        "seed": 7,
+        "size": 1024,
+        "packing": "LITE"
+      },
+      "debugData": {
+        "name": "Terrain gallery live dunes",
+        "description": "p305 Phase 8: sandRipples as a procedural set (LITE, 1024²) for the gallery's Live block, whose terrain material runs it live (source PROCEDURAL_LIVE) or samples its bake; the bake is also what a tier falls back to."
+      },
+      "defaultPacking": "LITE",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.5,
+        "wetDarkening": 0.5,
+        "wetRoughness": 0.3
+      },
+      "__sourcePath": "src/app/scenes/terrainGallery/terrainGalleryLiveDunes.textureSet.json"
     },
     "p303TestSet": {
       "id": "p303TestSet",

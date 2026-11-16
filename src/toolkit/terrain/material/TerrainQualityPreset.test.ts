@@ -66,4 +66,38 @@ describe('getTerrainQualityPreset', () => {
       readTerrainDefine({ terrain: { ...single, qualityLevel: 'HIGH' } }).slotCount
     ).toBeNull();
   });
+
+  it("samples the live layers' bake on LOW and MEDIUM, runs them live on HIGH and ULTRA", () => {
+    const preset = getTerrainQualityPreset({ cliffLayers: [1], liveLayers: [3] });
+    const sources = (['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as const).map(
+      (level) => preset[level].layers?.[3]
+    );
+    expect(sources).toEqual([
+      { source: 'TEXTURE' },
+      { source: 'TEXTURE' },
+      { source: 'PROCEDURAL_LIVE' },
+      { source: 'PROCEDURAL_LIVE' },
+    ]);
+    expect(preset.LOW.layers?.[1]).toEqual({
+      projection: { mode: 'BIPLANAR', slopeGate: [35, 50] },
+    });
+    // Both readers take it over a live layer: its bake gets the tier's anti-tiling
+    const define = {
+      layers: [{}, {}, {}, { source: 'PROCEDURAL_LIVE' }],
+      blend: { source: 'VERTEX_COLOR', vertexColor: { layout: 'RGBA' } },
+      quality: getTerrainQualityPreset({ liveLayers: [3] }),
+    };
+    expect(TerrainMaterialDefineSchema.safeParse(define).success).toBe(true);
+    const medium = readTerrainDefine({ terrain: { ...define, qualityLevel: 'MEDIUM' } });
+    expect(medium.layers[3]).toMatchObject({ source: 'TEXTURE', live: null });
+    expect(medium.layers[3].antiTiling.mode).toBe('DUAL_SCALE');
+    const high = readTerrainDefine({ terrain: { ...define, qualityLevel: 'HIGH' } });
+    expect(high.layers[3]).toMatchObject({
+      source: 'PROCEDURAL_LIVE',
+      antiTiling: { mode: 'NONE' },
+    });
+    expect(() => getTerrainQualityPreset({ liveLayers: [-1] })).toThrow(
+      /live layer -1 isn't a layer index/
+    );
+  });
 });
