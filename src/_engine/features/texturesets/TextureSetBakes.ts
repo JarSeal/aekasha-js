@@ -29,8 +29,17 @@ const getBakedSlotIds = (set: TextureSetDef) => {
   return Object.entries(set.packings[packing] ?? {});
 };
 
-/** The generator's module loaded and checked; throws naming the generator */
-const loadGeneratorAsync = async (id: string): Promise<TextureSetGenerator> => {
+/**
+ * A generator loaded by a bake or `loadTextureSetGeneratorAsync`, or undefined.
+ * @internal
+ */
+export const getLoadedGenerator = (id: string) => generators.get(id);
+
+/**
+ * The generator's module loaded and checked (once: kept for the page); throws naming the generator.
+ * @internal
+ */
+export const loadGeneratorAsync = async (id: string): Promise<TextureSetGenerator> => {
   const cached = generators.get(id);
   if (cached) return cached;
   const load = getAppData().textureSetGeneratorFiles?.[id];

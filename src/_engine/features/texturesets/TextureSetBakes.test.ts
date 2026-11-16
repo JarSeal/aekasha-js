@@ -4,6 +4,8 @@ import type { SceneData } from '../../kernel/scene/Scene';
 import {
   bakeProceduralTextureSetAsync,
   bakeSceneProceduralTextureSetsAsync,
+  getLoadedGenerator,
+  loadGeneratorAsync,
   loadProceduralTextureSetAsync,
 } from './TextureSetBakes';
 
@@ -161,6 +163,20 @@ describe('bakeProceduralTextureSetAsync (p304 D3)', () => {
     fns.bakes[1].release();
     await second;
     expect(fns.loads).toEqual(['mudCracked']);
+    expect(getLoadedGenerator('mudCracked')?.id).toBe('mudCracked');
+  });
+
+  test('loadGeneratorAsync loads a generator without a bake, once (p305 Phase 8)', async () => {
+    expect(getLoadedGenerator('sandFlat')).toBeUndefined();
+    fns.generatorFiles.sandFlat = generatorModule('sandFlat');
+    const generator = await loadGeneratorAsync('sandFlat');
+    expect(await loadGeneratorAsync('sandFlat')).toBe(generator);
+    expect(getLoadedGenerator('sandFlat')).toBe(generator);
+    expect(fns.loads).toEqual(['sandFlat']);
+    expect(fns.bakes).toHaveLength(0);
+    await expect(loadGeneratorAsync('wrongId')).rejects.toThrow(
+      'the module of the generator "wrongId" doesn’t export it'.replace('’', "'")
+    );
   });
 
   test('re-tags a baked set’s textures and shares a running bake', async () => {

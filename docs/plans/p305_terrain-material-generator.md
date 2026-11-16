@@ -500,6 +500,20 @@ Each phase adds a gallery row (or extends one) so it can be checked and measured
 
 **Gallery:** the "Procedural" row gains a live toggle inside a blended terrain.
 
+**Sections:**
+
+1. Engine: generators on `aekasha/texturesets`. 2. Config and define (`source: 'PROCEDURAL_LIVE'`, `live`, a tier's `layers[i].source`). 3. The live layer on the dense path. 4. Mixed sources (D9) and live layers beside the slots. 5. The live branch, the gallery's blended block, the measurement (and whether the preset bakes live layers on the low tiers). 6. The baselines, the repo docs, marking the phase done.
+
+**Decided (2026-11-16):**
+
+- **Mixed storage isn't two arrays:** `ARRAY` storage holds the imported sets; each procedural layer (baked or live) keeps its own `layer<i>` input, the other layers mapping onto the array in order; the slots keep the top K of the array's layers and the layers on their own inputs are sampled beside them. A procedural array would be a layered bake of p305's own, and slots over two arrays would sample both at every slot (or branch).
+- **A live layer's set is baked too:** its input is the procedural set's `{ textureSet }`, so the scene bakes the set as for any material naming it (a 1024² `LITE` set about 11 MB); the bake is what a tier falls back to. Skipping it for a set only ever run live needs a marker on the input that the gather and the engine read: a p990 follow-up if it matters.
+
+**As built (section 1):**
+
+- **The set of a bundle:** a bundle is nodes only (the kernel's `MaterialInputResolvers.ts` treats an object of anything else as no bundle), so the `{ textureSet }` resolver maps each bundle it makes to its set in a `WeakMap`, read with `getTextureSetOfInput(bundle)` (the TSL function gets the object the resolver returned). A live layer reads its set's `procedural` field (generator, params, seed) there; no kernel change.
+- **The generator:** `loadTextureSetGeneratorAsync(id)` (the bakes' loader and cache, through the lazy chunk; rejects naming the call) and `getTextureSetGenerator(id)` (synchronous, undefined until a bake or that load has it), on `aekasha/texturesets`. The scene's bake of a live layer's set loads its generator before the materials.
+
 ### Phase 9 — Handbook pages and versioning
 
 1. **Pages:** write `terrain-single-layer.md`, `terrain-vertex-color-splat.md`, `terrain-splat-map.md`, `terrain-procedural-rules.md`, `terrain-triplanar-cliffs.md`, `terrain-colormap-detail.md` and `structure-materials.md`, following the page template (p301 §5), with measured numbers from Phase 6.

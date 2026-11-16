@@ -1,4 +1,11 @@
-export { getTextureSet, getTextureSetPackingTextures, loadTextureSetAsync } from './TextureSets';
+export {
+  getTextureSet,
+  getTextureSetGenerator,
+  getTextureSetOfInput,
+  getTextureSetPackingTextures,
+  loadTextureSetAsync,
+  loadTextureSetGeneratorAsync,
+} from './TextureSets';
 export type { TextureSetInput, TextureSetTextures } from './TextureSets';
 export {
   buildTextureSetArray,
