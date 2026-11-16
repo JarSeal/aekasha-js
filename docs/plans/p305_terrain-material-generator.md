@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-5 implemented
+Status: in progress | Phases 1-6 implemented
 Category: Materials, Terrain, Toolkit
 Blocks: p306_terrain-blocks-and-procedural-terrain-meshes.md, p307_wet-and-dry-surface-states.md, p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -406,7 +406,7 @@ Each phase adds a gallery row (or extends one) so it can be checked and measured
   From above (mostly flat ground) the gate costs about what `PLANAR` does and `TRIPLANAR` the most; at the face the gate is between `BIPLANAR` and `TRIPLANAR` (its planar tap plus two planes). The faces stretch into vertical streaks under `PLANAR` and show their strata under every projection, no seam where `BIPLANAR` switches planes; `PROJECTION` shows the gate's band at the mesa's foot and rim. WebGL2 (the same Chrome, `navigator.gpu` hidden) renders every shot within 0.1-2.3 / 255 of WebGPU on average (0.02-2.7 % of the pixels over 16: the faces' filtering and the clouds), no console or shader error on either. The WGSL: a gated `TRIPLANAR` `LITE` layer has 2 plain samples before its branch and 4 `textureSampleGrad` in it, a `TRIPLANAR` one 6, a `BIPLANAR` one 4; `BIPLANAR`'s per-pixel plane picks compile to about 37 small `if`s (ALU only, no sample in them; the measurement doesn't single them out). The Rules row's figures are over Phase 4's (0.15 / 0.19 then, at an empty frame of 0.08): its cliff layer's taps, and a larger gallery.
 - **Found on the way:** a `MINIMAL` projected layer builds the bump's own `dFdx(positionWorld)` beside the projection's (the compilers merge identical derivatives; not shared by hand). A script driving the page with `tsx` can't pass a function to `addInitScript` (tsx wraps it in a `__name` helper the page lacks): pass a string.
 
-### Phase 6 — Sparse sampling and the performance pass (D6, D10 tiers)
+### Phase 6 — Sparse sampling and the performance pass (D6, D10 tiers) — done
 
 1. Sparse top-K; `LAYER_COUNT` view. `TAPS` (Phase 5) counts every layer: count only the kept slots then.
    - Whether a tier's `antiTiling` and `projection` reach a layer's own (Phases 2 and 5 left both to here): D10's table sets them per layer ("cliffs BIPLANAR slope-gated").
@@ -416,11 +416,11 @@ Each phase adds a gallery row (or extends one) so it can be checked and measured
 
 **Exit:** an 8-layer HIGH-tier terrain stays under the agreed budget (proposal: ≤ 3 ms GPU at 1080p on the reference machine; record the machine).
 
-**Sections** (sections 1-4 built; the plan is section 5's handoff):
+**Sections:**
 
-1. Config (`sparse`, `DOMINANT`, the tiers' layer overrides, storage). 2. The slot path (`nodes/Sparse.ts`, `material/TerrainSlots.ts`, `DOMINANT`). 3. The debug views (`LAYER_COUNT`, `TAPS` in slots). 4. The tier preset, the gallery's tiers and 8-layer block, the measurement. 5. **To do:** the default tier table (decided: as drafted, below), the API baseline, the repo docs, marking the phase done.
+1. Config (`sparse`, `DOMINANT`, the tiers' layer overrides, storage). 2. The slot path (`nodes/Sparse.ts`, `material/TerrainSlots.ts`, `DOMINANT`). 3. The debug views (`LAYER_COUNT`, `TAPS` in slots). 4. The tier preset, the gallery's tiers and 8-layer block, the measurement. 5. The default tier table (as drafted), the API baseline, the repo docs, marking the phase done.
 
-**As built (sections 1-4):**
+**As built:**
 
 - **`sparse: { maxLayers: 2..4 }` is top-level, not D1's `blend.sparse`** (decided 2026-11-16): a tier's `blend` replaces the material's whole object, so a tier would restate its source and rules to add top-2. A shared field (the material's and a tier's); no effect where it keeps every layer (one tier table fits any material).
 - **The slot path:** built where `sparse` keeps fewer layers than there are, or a layer's `HEX` has **`apply: 'DOMINANT'`** (`ALL` default) over 2 layers or more; the resolved define's `slotCount` (null: dense), `min(maxLayers, layers)` or every layer for `DOMINANT` alone. `DOMINANT`'s `HEX` object takes `farScale` and `distance` for the other slots' `DUAL_SCALE` (refused with `ALL`); Phase 2's refusal of `DOMINANT` is gone. In slots every layer's anti-tiling is alike (its mode and `apply`; its numbers may differ) and the projected layers' projection alike (mode and normal blend; planar layers mix in); both readers refuse otherwise, naming where the setting was given. It needs `ARRAY` storage: the setup throws for slots on `SEPARATE` inputs, the schema refuses the code route's `storage: 'SEPARATE'` with slots (the material's or a tier's), and **`AUTO` takes `ARRAY` where the material or any tier samples in slots** (a tier's variant shares the base's inputs; `getStorage` reads the define per tier with the hand reader). `getTerrainDefine` moved to `TerrainInputs.ts` for it.
@@ -448,7 +448,7 @@ Each phase adds a gallery row (or extends one) so it can be checked and measured
   WebGL2 (the same Chrome, `navigator.gpu` hidden) tracks it within about 0.1 ms at 1280 × 800 (its HEX-heavy `ULTRA` lower: 0.83-1.62), at 1080p the 8 layers 1.08 / 1.35 ms at `HIGH`, 2.22 / 2.54 at `ULTRA`; no console error on either. **The exit holds: the 8-layer `HIGH` terrain at 1080p costs 1.68 ms of GPU** (the whole frame, the third person), under 3 ms. Sparse sampling pays for the anti-tiling (`MEDIUM` costs what the dense 8 layers without anti-tiling do, `LOW` half); `HIGH` adds 0.15-0.2 ms over `MEDIUM`; `ULTRA` is 1.7-2.6 × `HIGH` (`HEX` on every slot; on a 4-layer material top-4 keeps every layer, so it's dense with `HEX` on all and ungated cliffs) and reaches 2.9 ms at 1080p.
 - **The table is decided as drafted** (2026-11-16): `LOW`, `MEDIUM` and `HIGH` as above, and `ULTRA` stays the everything-on tier (`HEX` on all, top-4, ungated `TRIPLANAR` cliffs), which fits the budget here.
 
-**Section 5 (to do):** the preset's values are final (no change); write the measured costs into its JSDoc briefly (the tiers' relative cost, the exit's figure) only if it helps a reader choose; record the API baseline (`yarn verify:baselines --update`: `getTerrainQualityPreset` and `TerrainQualityPresetOpts` are new exports on `aekasha/toolkit/terrain`; check the bundle diff is the gallery's and the toolkit's own); the root `.claude/CLAUDE.md`'s toolkit catalogue (`terrain/material/` gains `TerrainLayers.ts`, `TerrainSlots.ts`, `TerrainQualityPreset.ts`, `nodes/` `Sparse.ts`); then mark Phase 6 done (heading, status line `Phases 1-6 implemented`). The Hub and the handbook stay Phase 9's (its pages carry the table above).
+- **Section 5:** the preset's values unchanged; its JSDoc gives the tiers' relative cost on the 8-layer terrain at 1080p (`LOW` about half of `MEDIUM`, `HIGH` about a fifth over it at 1.7 ms, `ULTRA` 1.7-2.6 × `HIGH`). **The baselines** (`yarn verify:baselines --update`, last recorded in Phase 3): `api.json` gains Phases 4-6's exports (the entries: `aekasha/toolkit/geometry`'s `TerrainRule` types and constants, `aekasha/toolkit/terrain`'s `TerrainProjection`, `TerrainProjectionSchema`, `getTerrainQualityPreset`, `TerrainQualityPresetOpts`; the rest internal module exports), `docs.json` the folders' counts (all documented); the bundles are unchanged: `terrainGallery` is a debug scene, so no shipped scene carries the terrain material. The root `.claude/CLAUDE.md`'s toolkit catalogue names `TerrainLayers.ts`, `TerrainSlots.ts`, `TerrainQualityPreset.ts` and `nodes/Sparse.ts`. The Hub and the handbook stay Phase 9's (its pages carry the table above).
 
 ### Phase 7 — Colour map + detail, far modes, structures (D7, D8)
 

@@ -4800,6 +4800,14 @@
       "TerrainNoiseOctave": "Interface",
       "TerrainOptions": "Interface"
     },
+    "src/toolkit/geometry/generate/TerrainRules.ts": {
+      "TERRAIN_RULE_DEFAULTS": "Variable",
+      "TERRAIN_RULE_NOISE_CHANNELS": "Variable",
+      "TerrainRule": "TypeAlias",
+      "TerrainRuleAspect": "TypeAlias",
+      "TerrainRuleNoise": "TypeAlias",
+      "TerrainRuleRange": "TypeAlias"
+    },
     "src/toolkit/geometry/scatter/ScatterOnSurface.ts": {
       "bakeScatterToInstancedMesh": "Function",
       "scatterOnSurface": "Function",
@@ -4839,16 +4847,23 @@
     },
     "src/toolkit/terrain/material/TerrainDefine.ts": {
       "DEFAULT_RESERVED_TEXTURES": "Variable",
+      "getPaintedLayerCount": "Function",
+      "getPaintedSource": "Function",
       "getSplatMapCount": "Function",
       "readTerrainDefine": "Function",
       "ResolvedTerrainDefine": "TypeAlias",
       "TERRAIN_DEFINE_VALUES": "Variable",
       "TerrainAntiTilingDefine": "TypeAlias",
       "TerrainBlendDefine": "TypeAlias",
+      "TerrainDualScaleDefine": "TypeAlias",
       "TerrainLayerDefine": "TypeAlias",
-      "TerrainMacroDefine": "TypeAlias"
+      "TerrainMacroDefine": "TypeAlias",
+      "TerrainProjectionDefine": "TypeAlias",
+      "TerrainRuleDefine": "TypeAlias",
+      "TerrainRuleRangeDefine": "TypeAlias"
     },
     "src/toolkit/terrain/material/TerrainInputs.ts": {
+      "getTerrainDefine": "Function",
       "getTerrainInputs": "Function",
       "LayerParams": "TypeAlias",
       "LayerSource": "TypeAlias",
@@ -4856,6 +4871,20 @@
       "readLayerSources": "Function",
       "readMacroTexture": "Function",
       "readSplatMaps": "Function"
+    },
+    "src/toolkit/terrain/material/TerrainLayers.ts": {
+      "blendSurfaces": "Function",
+      "BuiltLayer": "TypeAlias",
+      "checkOnePacking": "Function",
+      "createLayerUniforms": "Function",
+      "getLayerCoords": "Function",
+      "getLayerSurface": "Function",
+      "getLayerUv": "Function",
+      "keepUniform": "Function",
+      "LayerSurface": "TypeAlias",
+      "LayerUniforms": "TypeAlias",
+      "LayerUv": "TypeAlias",
+      "sampleLayer": "Function"
     },
     "src/toolkit/terrain/material/TerrainMaterial.ts": {
       "createTerrainMaterial": "Function",
@@ -4866,6 +4895,7 @@
       "TerrainQualityLevel": "TypeAlias"
     },
     "src/toolkit/terrain/material/TerrainMaterialConfig.ts": {
+      "TERRAIN_ANTI_TILING_APPLIES": "Variable",
       "TERRAIN_ANTI_TILING_MODES": "Variable",
       "TERRAIN_BLEND_LAYER_COUNTS": "Variable",
       "TERRAIN_BLEND_MODES": "Variable",
@@ -4873,8 +4903,12 @@
       "TERRAIN_DEBUG_VIEWS": "Variable",
       "TERRAIN_LAYER_SOURCES": "Variable",
       "TERRAIN_MAX_LAYERS": "Variable",
+      "TERRAIN_MAX_RULES": "Variable",
+      "TERRAIN_NORMAL_BLENDS": "Variable",
       "TERRAIN_PACKINGS": "Variable",
+      "TERRAIN_PROJECTION_MODES": "Variable",
       "TERRAIN_QUALITY_LEVELS": "Variable",
+      "TERRAIN_SPARSE_MAX_LAYERS": "Variable",
       "TERRAIN_STORAGES": "Variable",
       "TERRAIN_UV_MODES": "Variable",
       "TERRAIN_VERTEX_COLOR_LAYOUTS": "Variable",
@@ -4894,8 +4928,19 @@
       "TerrainMaterialConfigSchema": "Variable",
       "TerrainMaterialDefine": "TypeAlias",
       "TerrainMaterialDefineSchema": "Variable",
+      "TerrainProjection": "TypeAlias",
+      "TerrainProjectionSchema": "Variable",
       "TerrainQualityOverrides": "TypeAlias",
-      "TerrainQualityOverridesSchema": "Variable"
+      "TerrainQualityOverridesSchema": "Variable",
+      "TerrainRuleSchema": "Variable"
+    },
+    "src/toolkit/terrain/material/TerrainQualityPreset.ts": {
+      "getTerrainQualityPreset": "Function",
+      "TerrainQualityPresetOpts": "TypeAlias"
+    },
+    "src/toolkit/terrain/material/TerrainSlots.ts": {
+      "buildSlots": "Function",
+      "SlotContext": "TypeAlias"
     },
     "src/toolkit/terrain/material/TerrainStorage.ts": {
       "checkTextureBudget": "Function",
@@ -4963,6 +5008,25 @@
       "WorleyOptions": "TypeAlias",
       "WorleySample": "TypeAlias"
     },
+    "src/toolkit/terrain/nodes/Projection.ts": {
+      "createProjectionContext": "Function",
+      "getProjectionWeights": "Function",
+      "getSlope": "Function",
+      "ProjectedLayer": "TypeAlias",
+      "ProjectedSample": "TypeAlias",
+      "ProjectionContext": "TypeAlias",
+      "ProjectionNodes": "TypeAlias",
+      "ProjectionTiling": "TypeAlias",
+      "sampleProjected": "Function"
+    },
+    "src/toolkit/terrain/nodes/Rules.ts": {
+      "applyRules": "Function",
+      "createRuleContext": "Function",
+      "createRuleNodes": "Function",
+      "getRuleCoverage": "Function",
+      "RuleContext": "TypeAlias",
+      "RuleNodes": "TypeAlias"
+    },
     "src/toolkit/terrain/nodes/SampleTextureSet.ts": {
       "bumpNormalView": "Function",
       "sampleTextureSet": "Function",
@@ -4970,12 +5034,25 @@
       "TextureSetSample": "TypeAlias",
       "transformTangentNormalToView": "Function"
     },
+    "src/toolkit/terrain/nodes/SlopeGate.ts": {
+      "getSlopeGateShare": "Function",
+      "sampleSlopeGated": "Function"
+    },
+    "src/toolkit/terrain/nodes/Sparse.ts": {
+      "insertTopLayers": "Function",
+      "KeptLayer": "TypeAlias",
+      "pickByLayer": "Function",
+      "selectTopLayers": "Function",
+      "spreadSlotWeights": "Function",
+      "TopLayerOps": "TypeAlias"
+    },
     "src/toolkit/terrain/nodes/TerrainNormals.ts": {
       "bumpNormalWorld": "Function",
       "getPlanarTangentFrame": "Function",
       "getUvTangentFrame": "Function",
       "transformTangentNormalToWorld": "Function",
       "transformWorldNormalToView": "Function",
+      "UvMapping": "TypeAlias",
       "WorldTangentFrame": "TypeAlias"
     },
     "src/toolkit/terrain/nodes/Weights.ts": {
@@ -6060,8 +6137,14 @@
       "ScatterOptions",
       "ScatterPlacement",
       "SpawnScatterMeshOptions",
+      "TERRAIN_RULE_DEFAULTS",
+      "TERRAIN_RULE_NOISE_CHANNELS",
       "TerrainNoiseOctave",
       "TerrainOptions",
+      "TerrainRule",
+      "TerrainRuleAspect",
+      "TerrainRuleNoise",
+      "TerrainRuleRange",
       "TreeGeometryOptions",
       "bakeScatterToInstancedMesh",
       "generateAsteroid",
@@ -6131,9 +6214,12 @@
       "TerrainMaterialConfigSchema",
       "TerrainMaterialDefine",
       "TerrainMaterialDefineSchema",
+      "TerrainProjection",
+      "TerrainProjectionSchema",
       "TerrainQualityLevel",
       "TerrainQualityOverrides",
       "TerrainQualityOverridesSchema",
+      "TerrainQualityPresetOpts",
       "TextureSetSample",
       "WorleyOptions",
       "WorleySample",
@@ -6153,6 +6239,7 @@
       "getSurfacePackingOutputs",
       "getTerrainMaterialProps",
       "getTerrainMaterialVariant",
+      "getTerrainQualityPreset",
       "gradientNoise",
       "grassGround",
       "hash12",

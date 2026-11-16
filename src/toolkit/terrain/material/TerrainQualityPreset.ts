@@ -59,7 +59,9 @@ const DEFAULT_CLIFF_GATE: [number, number] = [35, 50];
  * The suggested quality tiers of a terrain material (p305 D10), a `quality` table for its config:
  * each tier's anti-tiling (`LOW` none, `MEDIUM` `DUAL_SCALE`, `HIGH` `HEX` on the dominant layer
  * and `DUAL_SCALE` on the others, `ULTRA` `HEX` on all), sparse sampling (`LOW` 2 layers a pixel,
- * `MEDIUM` and `HIGH` 3, `ULTRA` 4) and the cliff layers' projection. Sparse sampling and
+ * `MEDIUM` and `HIGH` 3, `ULTRA` 4) and the cliff layers' projection. On an 8-layer terrain at
+ * 1080p (p305 Phase 6, an AMD RDNA 3 GPU) `LOW` cost about half of `MEDIUM`, `HIGH` about a fifth
+ * more than `MEDIUM` (1.7 ms for the whole frame) and `ULTRA` 1.7-2.6 × `HIGH`. Sparse sampling and
  * `DOMINANT` read the layers from a set array: the code route's `storage: 'AUTO'` takes `ARRAY`
  * for such a material, whose set array must be built (a scene's `textureSetArrays`, or
  * `buildTextureSetArray`). A layer's own anti-tiling must then be the tier's mode, every layer
