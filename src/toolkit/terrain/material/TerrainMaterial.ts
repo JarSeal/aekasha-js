@@ -56,6 +56,7 @@ import {
 } from '../nodes/TerrainNormals';
 import { getSplatMapWeights, getVertexColorWeights, type PaintedWeights } from '../nodes/Weights';
 import {
+  getTerrainDefine,
   getTerrainInputs,
   readLayerSources,
   readMacroTexture,
@@ -74,11 +75,7 @@ import {
 } from './TerrainDefine';
 import type { TerrainDebugView, TerrainDebugViewContext } from '../debug/_dbg__DebugViews';
 import { getLoadedTerrainDebugViews, loadTerrainDebugViewsAsync } from './TerrainDebugViews';
-import type {
-  TERRAIN_QUALITY_LEVELS,
-  TerrainMaterialConfig,
-  TerrainMaterialDefine,
-} from './TerrainMaterialConfig';
+import type { TERRAIN_QUALITY_LEVELS, TerrainMaterialConfig } from './TerrainMaterialConfig';
 
 /** The id the code route registers the terrain material's functions under (`tslMaterialId`). */
 export const TERRAIN_TSL_MATERIAL_ID = 'aek.terrain';
@@ -654,32 +651,6 @@ const applyDebugView = (
 const terrainMaterialFns = { setup: setupTerrainMaterial } satisfies TslMaterialFns;
 
 /**
- * The config's static define: no id, no packing, no layer sets, no storage, no splat maps and no
- * macro or noise texture (the inputs carry them)
- */
-const getTerrainDefine = (config: TerrainMaterialConfig): TerrainMaterialDefine => {
-  const {
-    id: _id,
-    packing: _packing,
-    splatMaps: _splatMaps,
-    noiseTexture: _noiseTexture,
-    storage: _storage,
-    layers,
-    macro,
-    ...rest
-  } = config;
-  const define: TerrainMaterialDefine = {
-    ...rest,
-    layers: layers.map(({ set: _set, ...settings }) => settings),
-  };
-  if (macro) {
-    const { texture: _texture, ...settings } = macro;
-    define.macro = settings;
-  }
-  return define;
-};
-
-/**
  * The material props {@link createTerrainMaterial} creates from a config: a
  * `STANDARDNODEMATERIAL` of the registered `aek.terrain` functions, the config as the static
  * define `terrain` (without the id, the layers' sets, the splat maps and the macro texture), each
@@ -706,13 +677,16 @@ const getTerrainDefine = (config: TerrainMaterialConfig): TerrainMaterialDefine 
  */
 export const getTerrainMaterialProps = (
   config: TerrainMaterialConfig
-): Extract<MatProps, { type: 'STANDARDNODEMATERIAL' }> => ({
-  id: config.id,
-  type: 'STANDARDNODEMATERIAL',
-  tslMaterialId: TERRAIN_TSL_MATERIAL_ID,
-  staticDefines: { terrain: getTerrainDefine(config) },
-  inputs: getTerrainInputs(config),
-});
+): Extract<MatProps, { type: 'STANDARDNODEMATERIAL' }> => {
+  const define = getTerrainDefine(config);
+  return {
+    id: config.id,
+    type: 'STANDARDNODEMATERIAL',
+    tslMaterialId: TERRAIN_TSL_MATERIAL_ID,
+    staticDefines: { terrain: define },
+    inputs: getTerrainInputs(config, define),
+  };
+};
 
 /**
  * Creates a terrain material from a config (p305): one `MeshStandardNodeMaterial` whose graph has

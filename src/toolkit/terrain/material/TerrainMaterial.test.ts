@@ -814,6 +814,29 @@ describe('getTerrainMaterialProps', () => {
     );
   });
 
+  it('chooses ARRAY for AUTO where the layers sample in slots, its own or a tier', () => {
+    stubs.renderer = null;
+    stubs.sets = { grass01: { defaultPacking: 'LITE' } };
+    const config = (fields = {}) => ({
+      id: 'slots',
+      layers: Array.from({ length: 3 }, () => ({ set: 'grass01' })),
+      blend: { source: 'VERTEX_COLOR' as const },
+      ...fields,
+    });
+    expect(getTerrainMaterialProps(config()).inputs).toHaveProperty('layer2');
+    const sparse = { sparse: { maxLayers: 2 } };
+    expect(getTerrainMaterialProps(config(sparse)).inputs).toHaveProperty('layers');
+    // Keeping every layer: no slots
+    expect(getTerrainMaterialProps(config({ sparse: { maxLayers: 3 } })).inputs).toHaveProperty(
+      'layer2'
+    );
+    expect(getTerrainMaterialProps(config({ quality: { LOW: sparse } })).inputs).toHaveProperty(
+      'layers'
+    );
+    const dominant = { antiTiling: { mode: 'HEX' as const, apply: 'DOMINANT' as const } };
+    expect(getTerrainMaterialProps(config(dominant)).inputs).toHaveProperty('layers');
+  });
+
   it('puts the splat maps in the inputs splat<i>, none in the define', () => {
     const props = getTerrainMaterialProps({
       id: 'valley',

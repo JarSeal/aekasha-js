@@ -58,9 +58,9 @@ export const TERRAIN_BLEND_LAYER_COUNTS = {
 export const TERRAIN_PACKINGS = ['FULL', 'LITE', 'MINIMAL'] as const;
 /**
  * How the code route binds the layers' textures (p305 D9): `AUTO` (default) `SEPARATE` while that
- * fits the texture budget, else `ARRAY`; `SEPARATE` each layer's packing slots (`{ textureSet }`
- * inputs `layer<i>`); `ARRAY` one array texture per slot for every layer (a `{ textureSetArray }`
- * input `layers`).
+ * fits the texture budget and nothing samples the layers in slots (`sparse`, `HEX`'s `DOMINANT`),
+ * else `ARRAY`; `SEPARATE` each layer's packing slots (`{ textureSet }` inputs `layer<i>`); `ARRAY`
+ * one array texture per slot for every layer (a `{ textureSetArray }` input `layers`).
  */
 export const TERRAIN_STORAGES = ['AUTO', 'SEPARATE', 'ARRAY'] as const;
 /** The quality tiers a terrain material's `quality` table overrides (p240's scale). */
@@ -89,6 +89,14 @@ export const TERRAIN_MAX_RULES = 16;
  */
 export const TERRAIN_ANTI_TILING_MODES = ['NONE', 'DUAL_SCALE', 'HEX'] as const;
 /**
+ * Which layers `HEX` samples (p305 D3): `ALL` (default) every layer; `DOMINANT` the layer weighing
+ * most at the pixel, the others `DUAL_SCALE`. `DOMINANT` sorts the layers by weight at the pixel
+ * (the slot path, as `sparse` does), so it needs `ARRAY` storage.
+ */
+export const TERRAIN_ANTI_TILING_APPLIES = ['ALL', 'DOMINANT'] as const;
+/** The most layers sparse sampling keeps at a pixel, and the fewest (p305 D6). */
+export const TERRAIN_SPARSE_MAX_LAYERS = [2, 4] as const;
+/**
  * How a layer's texture meets the surface (p305 D5): `PLANAR` the tiling's coordinates alone (the
  * world's `(x, −z)` or the mesh's UV; 1 tap per slot), `BIPLANAR` the world projected along the two
  * axes the surface faces most (Quilez; 2), `TRIPLANAR` along all three (3).
@@ -114,6 +122,26 @@ const metreRange = (description: string) =>
     .refine(([from, to]) => from < to, 'the first value under the second')
     .describe(description);
 
+/** `DUAL_SCALE`'s numbers, which `HEX` with `apply: 'DOMINANT'` gives its other layers too */
+const dualScaleFields = (of: string) => ({
+  /** The second tap's scale of the UV, under 1 (default 0.23: tiles 4.3 × as large). */
+  farScale: z
+    .number()
+    .gt(0)
+    .lt(1)
+    .optional()
+    .describe(
+      `${of}The second tap's scale of the UV, under 1 (default 0.23: tiles 4.3 × as large).`
+    ),
+  /**
+   * The view distances in metres over which the second tap's share grows from the near share to
+   * the far one (default `[6, 40]`).
+   */
+  distance: metreRange(
+    `${of}The view distances in metres over which the second tap's share grows (default [6, 40]).`
+  ).optional(),
+});
+
 /**
  * How a layer breaks its tiling's repetition (p305 D3), by `mode`: `NONE`, `DUAL_SCALE` or `HEX`,
  * each with its own fields. The numbers are uniforms (`terrain_l<i>_<name>`), the mode a build-time
@@ -138,22 +166,7 @@ export const TerrainAntiTilingSchema = z
           .describe(
             "A second tap at the UV × farScale, turned 37°, mixed in with the distance and the macro texture's patches: 2 taps."
           ),
-        /** The second tap's scale of the UV, under 1 (default 0.23: tiles 4.3 × as large). */
-        farScale: z
-          .number()
-          .gt(0)
-          .lt(1)
-          .optional()
-          .describe(
-            "The second tap's scale of the UV, under 1 (default 0.23: tiles 4.3 × as large)."
-          ),
-        /**
-         * The view distances in metres over which the second tap's share grows from the near
-         * share to the far one (default `[6, 40]`).
-         */
-        distance: metreRange(
-          "The view distances in metres over which the second tap's share grows (default [6, 40])."
-        ).optional(),
+        ...dualScaleFields(''),
       })
       .strict(),
     z
@@ -191,6 +204,18 @@ export const TerrainAntiTilingSchema = z
           .describe(
             'How far a tap may turn, 0..1 of a full turn either way (default 1): lower for a directional texture, 0 for none.'
           ),
+        /**
+         * Which layers sample `HEX` (default `ALL`): `DOMINANT` the one weighing most at the pixel,
+         * the others `DUAL_SCALE` (`farScale`, `distance`): 3 taps for it, 2 for each other. Needs
+         * `ARRAY` storage, every layer's anti-tiling alike.
+         */
+        apply: z
+          .enum(TERRAIN_ANTI_TILING_APPLIES)
+          .optional()
+          .describe(
+            'Which layers sample HEX (default ALL): DOMINANT the one weighing most at the pixel, the others DUAL_SCALE. Needs ARRAY storage.'
+          ),
+        ...dualScaleFields("With apply DOMINANT, the other layers' DUAL_SCALE: "),
       })
       .strict(),
   ])
@@ -713,6 +738,32 @@ const TerrainDistanceSchema = z
   .describe("The view distance's effects on the surface.");
 
 /**
+ * Sparse sampling (p305 D6): at each pixel only the layers weighing most are sampled, sorted by
+ * weight, their weights renormalized. Needs `ARRAY` storage (each kept layer read at a per-pixel
+ * index) and every layer's anti-tiling alike, the projected layers' projection alike (planar ones
+ * mix in). No effect on a material of no more layers than it keeps.
+ */
+const TerrainSparseSchema = z
+  .object({
+    /**
+     * The layers sampled at a pixel, 2..4: a layer past them where more weigh in is dropped (its
+     * weight shared out), so 3 hides most of the popping where a third crosses the cut.
+     */
+    maxLayers: z
+      .number()
+      .int()
+      .min(TERRAIN_SPARSE_MAX_LAYERS[0])
+      .max(TERRAIN_SPARSE_MAX_LAYERS[1])
+      .describe(
+        'The layers sampled at a pixel, 2..4: a layer past them where more weigh in is dropped (its weight shared out).'
+      ),
+  })
+  .strict()
+  .describe(
+    'Sparse sampling: only the layers weighing most at a pixel are sampled. Needs ARRAY storage and every layer sampled alike.'
+  );
+
+/**
  * The macro variation's settings, without its texture (the static define's `macro`): one fetch of
  * a macro noise texture (the toolkit's `macroNoise`: R brightness, G hue and roughness, B patches)
  * at the world's XZ, which varies every layer. Each number is a uniform (`terrain_macro<Name>`).
@@ -792,14 +843,43 @@ const sharedFields = {
   projection: TerrainProjectionSchema.optional(),
   /** The view distance's effects: the detail normals' fade. */
   distance: TerrainDistanceSchema.optional(),
+  /** Sparse sampling: only the layers weighing most at each pixel (default: every layer). */
+  sparse: TerrainSparseSchema.optional(),
 };
+
+/** A quality tier's overrides of one layer's own settings */
+const TerrainLayerOverridesSchema = z
+  .object({
+    /** The layer's anti-tiling in this tier, in place of its own and the material's. */
+    antiTiling: TerrainAntiTilingSchema.optional(),
+    /** The layer's projection in this tier, in place of its own and the material's: eg. cliffs. */
+    projection: TerrainProjectionSchema.optional(),
+  })
+  .strict()
+  .describe("A quality tier's overrides of one layer's own settings.");
 
 /**
  * A quality tier's overrides: material-wide fields over the material's own (shallowly, a field's
- * object replacing the material's whole), for the tier's variant (`getTerrainMaterialVariant`).
+ * object replacing the material's whole), for the tier's variant (`getTerrainMaterialVariant`). A
+ * tier's material-wide `antiTiling` and `projection` don't reach a layer that has its own: its
+ * `layers` entry does.
  */
 export const TerrainQualityOverridesSchema = z
-  .object(sharedFields)
+  .object({
+    ...sharedFields,
+    /**
+     * Per layer, in the layers' order (at most one entry a layer; `{}` for none): its anti-tiling
+     * and projection in this tier, over its own and the material's (eg. the cliff layer's
+     * `BIPLANAR` on `LOW`).
+     */
+    layers: z
+      .array(TerrainLayerOverridesSchema)
+      .max(TERRAIN_MAX_LAYERS)
+      .optional()
+      .describe(
+        "Per layer, in the layers' order ({} for none): its anti-tiling and projection in this tier, over its own and the material's."
+      ),
+  })
   .strict()
   .describe("A quality tier's material-wide fields over the material's own (shallowly).");
 
@@ -996,41 +1076,189 @@ const checkBlend = (
   }
 };
 
-type ProjectionFields = { uv?: (typeof TERRAIN_UV_MODES)[number]; projection?: TerrainProjection };
+type Path = (string | number)[];
+/** A layer's settings a tier can override */
+type LayerSampling = { antiTiling?: TerrainAntiTiling; projection?: TerrainProjection };
+/** The material-wide fields the layers' sampling reads, the material's or a tier's */
+type SamplingFields = LayerSampling & {
+  uv?: (typeof TERRAIN_UV_MODES)[number];
+  sparse?: { maxLayers: number };
+};
+type TierSampling = SamplingFields & { layers?: LayerSampling[] };
+type SampledValue = SamplingFields & {
+  layers: LayerSampling[];
+  quality?: Partial<Record<string, TierSampling | undefined>>;
+};
+/** A setting as a context resolves it, and the path it was given at (for an issue) */
+type Given<T> = { value: T; path: Path };
+
+/**
+ * The material's own fields and each tier's over them, each layer's anti-tiling and projection
+ * resolved: the tier's `layers` entry, else the layer's own, else the tier's, else the material's,
+ * each with the path it was given at
+ */
+const getSamplingContexts = (value: SampledValue) => {
+  const tiers = Object.entries(value.quality ?? {}).map(([level, tier]) => ({
+    path: ['quality', level],
+    tier,
+  }));
+  return [{ path: [], tier: undefined }, ...tiers].map(({ path, tier }) => {
+    const wide = <K extends keyof SamplingFields>(key: K): Given<SamplingFields[K]> =>
+      tier?.[key] !== undefined
+        ? { value: tier[key] as SamplingFields[K], path: [...path, key] }
+        : { value: value[key], path: [key] };
+    const resolve = <K extends keyof LayerSampling>(i: number, key: K): Given<LayerSampling[K]> => {
+      const override = tier?.layers?.[i]?.[key];
+      if (override !== undefined) return { value: override, path: [...path, 'layers', i, key] };
+      const own = value.layers[i][key];
+      return own !== undefined ? { value: own, path: ['layers', i, key] } : wide(key);
+    };
+    return {
+      uv: wide('uv').value,
+      sparse: wide('sparse').value,
+      layers: value.layers.map((_, i) => ({
+        antiTiling: resolve(i, 'antiTiling'),
+        projection: resolve(i, 'projection'),
+      })),
+    };
+  });
+};
+
+/** Reports an issue once per path: several layers can share the material's setting */
+const createIssueReporter = (ctx: z.RefinementCtx) => {
+  const reported = new Set<string>();
+  return (path: Path, message: string) => {
+    const key = path.join('.');
+    if (reported.has(key)) return;
+    reported.add(key);
+    ctx.addIssue({ code: 'custom', path, message });
+  };
+};
 
 /**
  * The projections against the tiling's coordinates, the material's and each tier's (a tier's `uv`
- * and `projection` over the material's): `BIPLANAR` and `TRIPLANAR` project the world, so a layer
- * that has one (its own, else the material's) needs `uv: 'WORLD'`. The refinement both schemas
+ * and projections over the material's): `BIPLANAR` and `TRIPLANAR` project the world, so a layer
+ * that has one (as its context resolves it) needs `uv: 'WORLD'`. The refinement both schemas
  * share.
  */
-const checkProjection = (
-  value: ProjectionFields & {
-    layers: { projection?: TerrainProjection }[];
-    quality?: Partial<Record<string, ProjectionFields | undefined>>;
-  },
-  ctx: z.RefinementCtx
-) => {
-  const tiers = Object.entries(value.quality ?? {}).map(([level, tier]) => ({
-    path: ['quality', level],
-    uv: tier?.uv ?? value.uv,
-    projection: tier?.projection ?? value.projection,
-  }));
-  const refuse = (path: (string | number)[], projection: TerrainProjection | undefined) => {
-    if (!projection || projection.mode === 'PLANAR') return;
-    ctx.addIssue({
-      code: 'custom',
-      path: [...path, 'projection', 'mode'],
-      message: `is ${projection.mode}: it projects the world, which needs uv WORLD (not MESH_UV).`,
-    });
-  };
-  const material = { path: [], uv: value.uv, projection: value.projection };
-  for (const { path, uv, projection } of [material, ...tiers]) {
+const checkProjection = (value: SampledValue, ctx: z.RefinementCtx) => {
+  const issue = createIssueReporter(ctx);
+  for (const { uv, layers } of getSamplingContexts(value)) {
     if (uv !== 'MESH_UV') continue;
-    refuse(path, projection);
-    value.layers.forEach((layer, i) => refuse(['layers', i], layer.projection));
+    for (const { projection } of layers) {
+      const mode = projection.value?.mode ?? 'PLANAR';
+      if (mode === 'PLANAR') continue;
+      issue(
+        [...projection.path, 'mode'],
+        `is ${mode}: it projects the world, which needs uv WORLD (not MESH_UV).`
+      );
+    }
   }
 };
+
+/**
+ * Whether a context samples the layers in slots sorted by weight at the pixel (p305 D6, the
+ * `ARRAY` storage's per-pixel layer index): sparse sampling that keeps fewer layers than there
+ * are, or `HEX` with `apply: 'DOMINANT'` over two layers or more
+ */
+const takesSlots = (
+  sparse: SamplingFields['sparse'],
+  layers: { antiTiling: Given<TerrainAntiTiling | undefined> }[]
+) => {
+  const isDominant = layers.some(
+    ({ antiTiling: { value } }) => value?.mode === 'HEX' && value.apply === 'DOMINANT'
+  );
+  return (
+    (sparse !== undefined && sparse.maxLayers < layers.length) || (isDominant && layers.length > 1)
+  );
+};
+
+/** An anti-tiling as the slots compare it: its mode, and `HEX`'s `apply` */
+const describeSlotAntiTiling = (antiTiling: TerrainAntiTiling | undefined) => {
+  if (antiTiling?.mode !== 'HEX') return antiTiling?.mode ?? 'NONE';
+  return `HEX ${antiTiling.apply ?? 'ALL'}`;
+};
+
+/** Every anti-tiling the value gives, with its path: the material's, the layers', the tiers' */
+const getGivenAntiTilings = (value: SampledValue) => {
+  const given: { antiTiling: TerrainAntiTiling | undefined; path: Path }[] = [
+    { antiTiling: value.antiTiling, path: ['antiTiling'] },
+    ...value.layers.map((layer, i) => ({
+      antiTiling: layer.antiTiling,
+      path: ['layers', i, 'antiTiling'],
+    })),
+  ];
+  for (const [level, tier] of Object.entries(value.quality ?? {})) {
+    given.push({ antiTiling: tier?.antiTiling, path: ['quality', level, 'antiTiling'] });
+    tier?.layers?.forEach((layer, i) =>
+      given.push({
+        antiTiling: layer.antiTiling,
+        path: ['quality', level, 'layers', i, 'antiTiling'],
+      })
+    );
+  }
+  return given;
+};
+
+/**
+ * The slots' rules, the material's and each tier's: `HEX`'s `farScale` and `distance` only with
+ * `apply: 'DOMINANT'`; a tier's `layers` no longer than the layers; and where the layers sample in
+ * slots (sparse, `DOMINANT`), every layer's anti-tiling alike (its mode and `apply`; the numbers
+ * may differ) and the projected layers' projection alike (its mode and normal blend; planar
+ * layers mix in): a slot samples whichever layer weighs most there. The refinement both schemas
+ * share.
+ */
+const checkSlots = (value: SampledValue, ctx: z.RefinementCtx) => {
+  const issue = createIssueReporter(ctx);
+  for (const { antiTiling, path } of getGivenAntiTilings(value)) {
+    if (antiTiling?.mode !== 'HEX' || antiTiling.apply === 'DOMINANT') continue;
+    for (const key of ['farScale', 'distance'] as const) {
+      if (antiTiling[key] !== undefined) {
+        issue([...path, key], "is for apply DOMINANT (the other layers' DUAL_SCALE).");
+      }
+    }
+  }
+  for (const [level, tier] of Object.entries(value.quality ?? {})) {
+    const count = tier?.layers?.length ?? 0;
+    if (count > value.layers.length) {
+      issue(
+        ['quality', level, 'layers'],
+        `has ${count} entries: there are ${value.layers.length} layers.`
+      );
+    }
+  }
+  for (const { sparse, layers } of getSamplingContexts(value)) {
+    if (!takesSlots(sparse, layers)) continue;
+    const first = describeSlotAntiTiling(layers[0].antiTiling.value);
+    for (const { antiTiling } of layers) {
+      const own = describeSlotAntiTiling(antiTiling.value);
+      if (own === first) continue;
+      issue(
+        antiTiling.path,
+        `is ${own}, layer 0's ${first}: sparse sampling and DOMINANT sample every layer alike, so the layers take one anti-tiling mode (their numbers may differ).`
+      );
+    }
+    const projected = layers
+      .map(({ projection }) => projection)
+      .filter((projection) => projection.value && projection.value.mode !== 'PLANAR');
+    const describe = ({ value: projection }: Given<TerrainProjection | undefined>) =>
+      `${projection?.mode} ${(projection?.mode !== 'PLANAR' && projection?.normalBlend) || 'WHITEOUT'}`;
+    for (const projection of projected) {
+      if (describe(projection) === describe(projected[0])) continue;
+      issue(
+        projection.path,
+        `is ${describe(projection)}, the first projected layer's ${describe(projected[0])}: sparse sampling and DOMINANT project every projected layer alike, so they take one mode and normal blend (planar layers mix in).`
+      );
+    }
+  }
+};
+
+/**
+ * Whether the config (its own fields or a tier's) samples the layers in slots, which read the
+ * layers at a per-pixel index: `ARRAY` storage
+ */
+const takesLayerArray = (value: SampledValue) =>
+  getSamplingContexts(value).some(({ sparse, layers }) => takesSlots(sparse, layers));
 
 /**
  * The code route's texture ids: the splat maps, one per map the painted layers need, with the
@@ -1071,6 +1299,20 @@ const checkTextureIds = (
 };
 
 /**
+ * The code route's storage against the slots: sparse sampling and `DOMINANT` (the material's or a
+ * tier's) read each layer at a per-pixel index, which `SEPARATE` can't
+ */
+const checkStorage = (value: SampledValue & { storage?: string }, ctx: z.RefinementCtx) => {
+  if (value.storage !== 'SEPARATE' || !takesLayerArray(value)) return;
+  ctx.addIssue({
+    code: 'custom',
+    path: ['storage'],
+    message:
+      "is SEPARATE: sparse sampling and HEX's apply DOMINANT (the material's or a tier's) read each layer at a per-pixel index, which needs ARRAY storage (or AUTO).",
+  });
+};
+
+/**
  * The JSON route's static define, `staticDefines.terrain` of a material whose TSL functions are
  * the terrain material's (`terrain.material.json`, or `tslMaterialId: 'aek.terrain'`): the config
  * without the material's id, the layers without their sets (the inputs `layer0`, `layer1`, … give
@@ -1094,6 +1336,7 @@ export const TerrainMaterialDefineSchema = z
   .strict()
   .superRefine(checkBlend)
   .superRefine(checkProjection)
+  .superRefine(checkSlots)
   .describe("The terrain material's static define (staticDefines.terrain).");
 
 /**
@@ -1143,11 +1386,6 @@ export const TerrainMaterialConfigSchema = z
         "With blend.source SPLAT_MAP or SPLAT_MAP_AND_RULES, the splat maps' texture ids: the first weighs layers 1-4, the second 5-8 (inputs splat0, splat1)."
       ),
     /**
-     * How the layers' textures bind (default `AUTO`: `SEPARATE` while it fits the texture budget,
-     * else `ARRAY`). An `ARRAY` material's set array must be built before it's created
-     * (`buildTextureSetArray({ sets, packing })`, or a scene's `textureSetArrays`).
-     */
-    /**
      * The macro noise texture the rules' noise reads (the input `macro`), for a material with
      * rule noise and no `macro`, whose texture they read otherwise (default `macroNoise`, the
      * toolkit's).
@@ -1159,11 +1397,18 @@ export const TerrainMaterialConfigSchema = z
       .describe(
         "The macro noise texture the rules' noise reads, without a macro (whose texture it reads otherwise; default macroNoise)."
       ),
+    /**
+     * How the layers' textures bind (default `AUTO`: `SEPARATE` while it fits the texture budget
+     * and nothing samples the layers in slots, else `ARRAY`). Sparse sampling and `HEX`'s
+     * `apply: 'DOMINANT'` (the material's or a tier's) need `ARRAY`. An `ARRAY` material's set
+     * array must be built before it's created (`buildTextureSetArray({ sets, packing })`, or a
+     * scene's `textureSetArrays`).
+     */
     storage: z
       .enum(TERRAIN_STORAGES)
       .optional()
       .describe(
-        "How the layers' textures bind (default AUTO: SEPARATE while it fits the texture budget, else ARRAY, one array per packing slot)."
+        "How the layers' textures bind (default AUTO: SEPARATE while it fits the texture budget and nothing samples the layers in slots, else ARRAY, one array per packing slot). Sparse sampling and DOMINANT need ARRAY."
       ),
     ...budgetFields,
     ...sharedFields,
@@ -1172,7 +1417,9 @@ export const TerrainMaterialConfigSchema = z
   .strict()
   .superRefine(checkBlend)
   .superRefine(checkProjection)
+  .superRefine(checkSlots)
   .superRefine(checkTextureIds)
+  .superRefine(checkStorage)
   .describe("The terrain material's config (createTerrainMaterial).");
 
 /**

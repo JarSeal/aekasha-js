@@ -3,6 +3,7 @@ import type { z } from 'zod';
 import { TERRAIN_RULE_NOISE_CHANNELS, type TerrainRule } from 'aekasha/toolkit/geometry';
 import { readTerrainDefine, TERRAIN_DEFINE_VALUES } from './TerrainDefine';
 import {
+  TERRAIN_ANTI_TILING_APPLIES,
   TERRAIN_ANTI_TILING_MODES,
   TERRAIN_BLEND_LAYER_COUNTS,
   TERRAIN_BLEND_MODES,
@@ -14,6 +15,7 @@ import {
   TERRAIN_MAX_RULES,
   TERRAIN_NORMAL_BLENDS,
   TERRAIN_PROJECTION_MODES,
+  TERRAIN_SPARSE_MAX_LAYERS,
   TERRAIN_UV_MODES,
   TERRAIN_VERTEX_COLOR_LAYOUTS,
   TerrainAntiTilingSchema,
@@ -30,6 +32,16 @@ const read = (terrain: unknown) => readTerrainDefine({ terrain });
 
 /** `count` layers of no settings */
 const layersOf = (count: number) => Array.from({ length: count }, () => ({}));
+
+/** `count` layers weighed by the vertex colour (`RGBA`: up to 5) and these fields */
+const paintedOf = (count: number, fields: object = {}) => ({
+  layers: layersOf(count),
+  blend: { source: 'VERTEX_COLOR', vertexColor: { layout: 'RGBA' } },
+  ...fields,
+});
+
+const hexDominant = { mode: 'HEX', apply: 'DOMINANT' };
+const gatedTriplanar = { mode: 'TRIPLANAR', slopeGate: [30, 50] };
 
 /** A `RULES` blend of these rules, over `count` layers */
 const rulesOf = (count: number, ...rules: unknown[]) => ({
@@ -184,6 +196,40 @@ const ACCEPTED: unknown[] = [
     },
     qualityLevel: 'HIGH',
   },
+  { layers: [{}], sparse: { maxLayers: 4 } },
+  paintedOf(3, { sparse: { maxLayers: 2 } }),
+  paintedOf(5, { sparse: { maxLayers: 4 }, antiTiling: { mode: 'DUAL_SCALE' } }),
+  paintedOf(3, { antiTiling: { mode: 'HEX', apply: 'ALL', hexContrast: 0.7 } }),
+  paintedOf(3, { antiTiling: { ...hexDominant, farScale: 0.3, distance: [2, 30] } }),
+  { layers: [{ antiTiling: hexDominant }] },
+  paintedOf(3, {
+    antiTiling: hexDominant,
+    sparse: { maxLayers: 2 },
+    layers: [{}, { antiTiling: { ...hexDominant, hexRotation: 0.2 } }, {}],
+  }),
+  // Planar and projected layers mix in slots: the projected ones alike
+  paintedOf(4, {
+    sparse: { maxLayers: 3 },
+    layers: [{}, { projection: gatedTriplanar }, {}, { projection: { mode: 'TRIPLANAR' } }],
+  }),
+  // Not in slots: anything goes
+  paintedOf(3, {
+    layers: [{ antiTiling: { mode: 'HEX' } }, { projection: { mode: 'BIPLANAR' } }, {}],
+    projection: { mode: 'TRIPLANAR', normalBlend: 'RNM' },
+  }),
+  { layers: [{}], quality: { LOW: { layers: [] } } },
+  paintedOf(2, {
+    layers: [{}, { projection: { mode: 'TRIPLANAR' } }],
+    quality: {
+      LOW: {
+        sparse: { maxLayers: 2 },
+        layers: [{}, { projection: { mode: 'BIPLANAR', slopeGate: [30, 50] } }],
+      },
+      ULTRA: { layers: [{ antiTiling: { mode: 'HEX' } }, {}] },
+    },
+    qualityLevel: 'LOW',
+  }),
+  paintedOf(4, { quality: { MEDIUM: { sparse: { maxLayers: 3 } } }, qualityLevel: 'MEDIUM' }),
 ];
 const REFUSED: unknown[] = [
   {},
@@ -222,8 +268,50 @@ const REFUSED: unknown[] = [
   { layers: [{}], ao: { textureInfluence: 1.5 } },
   { layers: [{}], ao: { vertex: true } },
   { layers: [{}], quality: { EPIC: {} } },
-  { layers: [{}], quality: { LOW: { layers: [] } } },
   { layers: [{}], quality: { LOW: { debugView: 'NORMALS' } } },
+  { layers: [{}], sparse: {} },
+  { layers: [{}], sparse: { maxLayers: 1 } },
+  { layers: [{}], sparse: { maxLayers: 5 } },
+  { layers: [{}], sparse: { maxLayers: 2.5 } },
+  { layers: [{}], sparse: { maxLayers: 2, mode: 'TOP' } },
+  { layers: [{}], antiTiling: { mode: 'HEX', apply: 'SOME' } },
+  { layers: [{}], antiTiling: { mode: 'HEX', apply: 'ALL', distance: [2, 30] } },
+  { layers: [{}], antiTiling: { mode: 'DUAL_SCALE', apply: 'DOMINANT' } },
+  { layers: [{ antiTiling: { mode: 'HEX', farScale: 0.3 } }], antiTiling: hexDominant },
+  // In slots, one anti-tiling for every layer, one projection for the projected ones
+  paintedOf(3, { sparse: { maxLayers: 2 }, layers: [{ antiTiling: { mode: 'HEX' } }, {}, {}] }),
+  paintedOf(3, { antiTiling: hexDominant, layers: [{}, { antiTiling: { mode: 'HEX' } }, {}] }),
+  paintedOf(3, {
+    sparse: { maxLayers: 2 },
+    layers: [{ projection: { mode: 'TRIPLANAR' } }, { projection: { mode: 'BIPLANAR' } }, {}],
+  }),
+  paintedOf(3, {
+    sparse: { maxLayers: 2 },
+    layers: [
+      {},
+      { projection: gatedTriplanar },
+      { projection: { ...gatedTriplanar, normalBlend: 'UDN' } },
+    ],
+  }),
+  paintedOf(3, {
+    layers: [{ antiTiling: { mode: 'HEX' } }, {}, {}],
+    quality: { LOW: { sparse: { maxLayers: 2 } } },
+    qualityLevel: 'LOW',
+  }),
+  paintedOf(3, {
+    sparse: { maxLayers: 2 },
+    quality: { LOW: { layers: [{ antiTiling: { mode: 'DUAL_SCALE' } }] } },
+    qualityLevel: 'LOW',
+  }),
+  { layers: [{}], quality: { LOW: { layers: [{}, {}] } }, qualityLevel: 'LOW' },
+  { layers: [{}], quality: { LOW: { layers: {} } }, qualityLevel: 'LOW' },
+  { layers: [{}], quality: { LOW: { layers: [{ tint: '#ffffff' }] } }, qualityLevel: 'LOW' },
+  {
+    layers: [{}],
+    uv: 'MESH_UV',
+    quality: { LOW: { layers: [{ projection: { mode: 'TRIPLANAR' } }] } },
+    qualityLevel: 'LOW',
+  },
   { layers: [{}], quality: { LOW: { uv: 'XZ' } }, qualityLevel: 'LOW' },
   { layers: [{}], quality: { LOW: { blend: { source: 'SINGLE' } } }, qualityLevel: 'low' },
   { layers: [{}], debugView: 'LAYER_COUNT' },
@@ -241,7 +329,6 @@ const REFUSED: unknown[] = [
   { layers: [{}], antiTiling: { mode: 'HEX', hexContrast: 1 } },
   { layers: [{}], antiTiling: { mode: 'HEX', hexContrast: 0 } },
   { layers: [{}], antiTiling: { mode: 'HEX', hexRotation: 1.5 } },
-  { layers: [{}], antiTiling: { mode: 'HEX', apply: 'DOMINANT' } },
   { layers: [{ antiTiling: { mode: 'HEX', hexRotation: -1 } }] },
   { layers: [{}], macro: {} },
   { layers: [{}], macro: { scale: 0 } },
@@ -445,6 +532,7 @@ describe('readTerrainDefine', () => {
       macro: null,
       takesMacroTexture: false,
       distanceFade: null,
+      slotCount: null,
       qualityLevel: null,
       debugView: null,
     });
@@ -456,6 +544,13 @@ describe('readTerrainDefine', () => {
       mode: 'HEX',
       hexContrast: 0.5,
       hexRotation: 1,
+      dominant: null,
+    });
+    expect(read({ layers: [{}], antiTiling: hexDominant }).layers[0].antiTiling).toEqual({
+      mode: 'HEX',
+      hexContrast: 0.5,
+      hexRotation: 1,
+      dominant: { farScale: 0.23, distance: [6, 40] },
     });
     expect(read({ layers: [{}], projection: { mode: 'TRIPLANAR' } }).layers[0].projection).toEqual({
       mode: 'TRIPLANAR',
@@ -571,6 +666,42 @@ describe('readTerrainDefine', () => {
     expect(read({ ...define, qualityLevel: 'HIGH' }).layers[0].projection.mode).toBe('TRIPLANAR');
   });
 
+  it('samples in slots where sparse keeps fewer layers than there are, or DOMINANT reaches 2', () => {
+    const slots = (count: number, fields: object) => read(paintedOf(count, fields)).slotCount;
+    expect(slots(3, { sparse: { maxLayers: 2 } })).toBe(2);
+    expect(slots(5, { sparse: { maxLayers: 4 } })).toBe(4);
+    expect(slots(3, { sparse: { maxLayers: 3 } })).toBeNull();
+    expect(slots(2, { sparse: { maxLayers: 4 } })).toBeNull();
+    expect(slots(3, { antiTiling: hexDominant })).toBe(3);
+    expect(slots(4, { antiTiling: hexDominant, sparse: { maxLayers: 2 } })).toBe(2);
+    expect(slots(3, { antiTiling: hexDominant, sparse: { maxLayers: 4 } })).toBe(3);
+    expect(read({ layers: [{ antiTiling: hexDominant }] }).slotCount).toBeNull();
+    // A tier's sparse sampling, its variant only
+    const tiered = paintedOf(4, { quality: { LOW: { sparse: { maxLayers: 2 } } } });
+    expect(read(tiered).slotCount).toBeNull();
+    expect(read({ ...tiered, qualityLevel: 'LOW' }).slotCount).toBe(2);
+  });
+
+  it("gives a layer its tier's entry over its own, the tier's material-wide field not", () => {
+    const define = paintedOf(3, {
+      layers: [{ projection: { mode: 'TRIPLANAR' } }, { projection: { mode: 'TRIPLANAR' } }, {}],
+      quality: {
+        LOW: {
+          projection: { mode: 'BIPLANAR' },
+          layers: [{ projection: gatedTriplanar }, {}],
+        },
+      },
+    });
+    const low = read({ ...define, qualityLevel: 'LOW' });
+    expect(low.layers.map((layer) => layer.projection)).toEqual([
+      { mode: 'TRIPLANAR', sharpness: 4, slopeGate: [30, 50], normalBlend: 'WHITEOUT' },
+      { mode: 'TRIPLANAR', sharpness: 4, slopeGate: null, normalBlend: 'WHITEOUT' },
+      { mode: 'BIPLANAR', sharpness: 8, slopeGate: null, normalBlend: 'WHITEOUT' },
+    ]);
+    // Another tier's entries don't reach it
+    expect(read(define).layers[0].projection).toMatchObject({ slopeGate: null });
+  });
+
   it('takes and refuses what the schema does', () => {
     for (const define of ACCEPTED) {
       expect(TerrainMaterialDefineSchema.safeParse(define).success, JSON.stringify(define)).toBe(
@@ -647,9 +778,20 @@ describe('readTerrainDefine', () => {
     expect(TerrainAntiTilingSchema.options.map((option) => option.shape.mode.value)).toEqual([
       ...TERRAIN_ANTI_TILING_MODES,
     ]);
+    const tier = TerrainQualityOverridesSchema.shape;
+    expect(values.tierKeys.sort()).toEqual(Object.keys(tier).sort());
     expect(values.overrideKeys.sort()).toEqual(
-      Object.keys(TerrainQualityOverridesSchema.shape).sort()
+      Object.keys(tier)
+        .filter((key) => key !== 'layers')
+        .sort()
     );
+    const layerOverride = tier.layers.unwrap().element.shape;
+    expect(values.layerOverrideKeys.sort()).toEqual(Object.keys(layerOverride).sort());
+    expect(values.sparseKeys.sort()).toEqual(Object.keys(tier.sparse.unwrap().shape).sort());
+    expect(values.sparseMaxLayers).toEqual(TERRAIN_SPARSE_MAX_LAYERS);
+    const hex = TerrainAntiTilingSchema.options[2].shape;
+    expect(hex.apply.unwrap().options).toEqual([...TERRAIN_ANTI_TILING_APPLIES]);
+    expect(values.antiTilingApplies).toEqual(TERRAIN_ANTI_TILING_APPLIES);
     expect(values.qualityLevels).toEqual(TERRAIN_QUALITY_LEVELS);
     expect(values.debugViews).toEqual(TERRAIN_DEBUG_VIEWS);
     expect(values.layerSources).toEqual(TERRAIN_LAYER_SOURCES);
@@ -745,5 +887,55 @@ describe('readTerrainDefine', () => {
         qualityLevel: 'HIGH',
       })
     ).toThrow('staticDefines.terrain.quality.HIGH.distance.fade: is [5, 1]');
+    expect(() => read({ layers: [{}], sparse: { maxLayers: 5 } })).toThrow(
+      "staticDefines.terrain.sparse.maxLayers: is 5: it's at least 2 and at most 4."
+    );
+    expect(() => read({ layers: [{}], antiTiling: { mode: 'HEX', farScale: 0.3 } })).toThrow(
+      "staticDefines.terrain.antiTiling.farScale: is for apply DOMINANT (the other layers' DUAL_SCALE)."
+    );
+    expect(() =>
+      read(
+        paintedOf(3, {
+          sparse: { maxLayers: 2 },
+          layers: [{}, { antiTiling: { mode: 'HEX' } }, {}],
+        })
+      )
+    ).toThrow(
+      "staticDefines.terrain.layers[1].antiTiling: is HEX ALL, layer 0's NONE: sparse sampling and DOMINANT sample every layer alike"
+    );
+    expect(() =>
+      read(
+        paintedOf(3, {
+          antiTiling: hexDominant,
+          quality: { LOW: { layers: [{}, {}, { antiTiling: { mode: 'DUAL_SCALE' } }] } },
+          qualityLevel: 'LOW',
+        })
+      )
+    ).toThrow(
+      "staticDefines.terrain.quality.LOW.layers[2].antiTiling: is DUAL_SCALE, layer 0's HEX DOMINANT"
+    );
+    expect(() =>
+      read(
+        paintedOf(3, {
+          sparse: { maxLayers: 2 },
+          layers: [{}, { projection: { mode: 'TRIPLANAR' } }, { projection: { mode: 'BIPLANAR' } }],
+        })
+      )
+    ).toThrow(
+      "staticDefines.terrain.layers[2].projection: is BIPLANAR WHITEOUT, the first projected layer's TRIPLANAR WHITEOUT"
+    );
+    expect(() =>
+      read({
+        layers: [{}],
+        uv: 'MESH_UV',
+        quality: { LOW: { layers: [{ projection: { mode: 'TRIPLANAR' } }] } },
+        qualityLevel: 'LOW',
+      })
+    ).toThrow(
+      'staticDefines.terrain.quality.LOW.layers[0].projection.mode: is TRIPLANAR: it projects the world'
+    );
+    expect(() =>
+      read({ layers: [{}], quality: { LOW: { layers: [{}, {}] } }, qualityLevel: 'LOW' })
+    ).toThrow('staticDefines.terrain.quality.LOW.layers: has 2 entries: there are 1 layers.');
   });
 });

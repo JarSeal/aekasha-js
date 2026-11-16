@@ -62,6 +62,46 @@ describe('TerrainMaterialConfigSchema', () => {
     expect(issuesOf(configOf(2, tierNoise))).toEqual([]);
   });
 
+  it('refuses SEPARATE storage where the layers sample in slots, its own or a tier', () => {
+    const painted = { blend: { source: 'VERTEX_COLOR' } };
+    const sparse = { sparse: { maxLayers: 2 } };
+    expect(issuesOf(configOf(3, { ...painted, ...sparse, storage: 'ARRAY' }))).toEqual([]);
+    expect(issuesOf(configOf(3, { ...painted, ...sparse }))).toEqual([]);
+    expect(issuesOf(configOf(3, { ...painted, ...sparse, storage: 'SEPARATE' }))).toEqual([
+      'storage',
+    ]);
+    const tiered = { ...painted, quality: { LOW: sparse }, storage: 'SEPARATE' };
+    expect(issuesOf(configOf(3, tiered))).toEqual(['storage']);
+    // Keeping every layer: no slots
+    expect(issuesOf(configOf(2, { ...painted, ...sparse, storage: 'SEPARATE' }))).toEqual([]);
+    const dominant = { antiTiling: { mode: 'HEX', apply: 'DOMINANT' } };
+    expect(issuesOf(configOf(2, { ...painted, ...dominant, storage: 'SEPARATE' }))).toEqual([
+      'storage',
+    ]);
+  });
+
+  it("names a tier's layer entry where it's given, once for a setting layers share", () => {
+    const painted = { blend: { source: 'VERTEX_COLOR' } };
+    const tier = {
+      sparse: { maxLayers: 2 },
+      layers: [{}, { antiTiling: { mode: 'HEX' } }],
+    };
+    expect(issuesOf(configOf(3, { ...painted, quality: { LOW: tier } }))).toEqual([
+      'quality.LOW.layers.1.antiTiling',
+    ]);
+    // The material's HEX against layer 0's own: reported once, not per layer
+    const own = {
+      ...painted,
+      sparse: { maxLayers: 2 },
+      antiTiling: { mode: 'HEX' },
+      layers: [{ set: 'grass01', antiTiling: { mode: 'NONE' } }, { set: 'a' }, { set: 'b' }],
+    };
+    expect(issuesOf(configOf(3, own))).toEqual(['antiTiling']);
+    expect(issuesOf(configOf(1, { quality: { HIGH: { layers: [{}, {}] } } }))).toEqual([
+      'quality.HIGH.layers',
+    ]);
+  });
+
   it("names the rule's path in a tier", () => {
     const blend = { source: 'RULES', rules: [{ layer: 3, slope: { min: 30 } }] };
     expect(issuesOf(configOf(2, { quality: { LOW: { blend } } }))).toContain(

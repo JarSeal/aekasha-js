@@ -18,9 +18,14 @@ import {
   DEFAULT_RESERVED_TEXTURES,
   getPaintedLayerCount,
   getSplatMapCount,
+  readTerrainDefine,
   type ResolvedTerrainDefine,
 } from './TerrainDefine';
-import type { TerrainBlend, TerrainMaterialConfig } from './TerrainMaterialConfig';
+import type {
+  TerrainBlend,
+  TerrainMaterialConfig,
+  TerrainMaterialDefine,
+} from './TerrainMaterialConfig';
 import { chooseTerrainStorage, TERRAIN_PACKING_SLOTS, type TerrainBinding } from './TerrainStorage';
 
 /** A layer's input key: `layer0`, `layer1`, … */
@@ -262,13 +267,52 @@ const getMacroTextureId = (config: TerrainMaterialConfig) => {
 };
 
 /**
- * The code route's storage: `AUTO` (the default) is `SEPARATE` while each layer's packing slots,
- * the splat maps and the macro texture fit the budget (a set no data has counts as fitting: its
- * input throws then)
+ * The config's static define: no id, no packing, no layer sets, no storage, no splat maps and no
+ * macro or noise texture (the inputs carry them)
+ * @internal
  */
-const getStorage = (config: TerrainMaterialConfig) => {
+export const getTerrainDefine = (config: TerrainMaterialConfig): TerrainMaterialDefine => {
+  const {
+    id: _id,
+    packing: _packing,
+    splatMaps: _splatMaps,
+    noiseTexture: _noiseTexture,
+    storage: _storage,
+    layers,
+    macro,
+    ...rest
+  } = config;
+  const define: TerrainMaterialDefine = {
+    ...rest,
+    layers: layers.map(({ set: _set, ...settings }) => settings),
+  };
+  if (macro) {
+    const { texture: _texture, ...settings } = macro;
+    define.macro = settings;
+  }
+  return define;
+};
+
+/**
+ * Whether the define samples the layers in slots (sparse, `HEX`'s `DOMINANT`) at its own fields or
+ * at a tier of its `quality` table: a tier's variant shares the material's inputs, so the
+ * material's storage must suit every tier
+ */
+const takesSlots = (define: TerrainMaterialDefine) =>
+  [define.qualityLevel, ...Object.keys(define.quality ?? {})].some(
+    (qualityLevel) => readTerrainDefine({ terrain: { ...define, qualityLevel } }).slotCount !== null
+  );
+
+/**
+ * The code route's storage: `AUTO` (the default) is `ARRAY` where the layers sample in slots (the
+ * material's fields or a tier's), else `SEPARATE` while each layer's packing slots, the splat maps
+ * and the macro texture fit the budget (a set no data has counts as fitting: its input throws
+ * then)
+ */
+const getStorage = (config: TerrainMaterialConfig, define: TerrainMaterialDefine) => {
   const storage = config.storage ?? 'AUTO';
   if (storage !== 'AUTO') return storage;
+  if (takesSlots(define)) return 'ARRAY';
   const layerSlots = config.layers.map((layer) => {
     const packing = getLayerPacking(config, layer.set);
     return packing ? TERRAIN_PACKING_SLOTS[packing].length : 0;
@@ -287,10 +331,11 @@ const getStorage = (config: TerrainMaterialConfig) => {
  * (`splat<i>`) and the macro texture (`macro`: the macro variation's, or the rules' noise
  * texture)
  * @internal
+ * @param define the config's static define (`getTerrainDefine`'s): `AUTO` reads its slots
  */
-export const getTerrainInputs = (config: TerrainMaterialConfig) => {
+export const getTerrainInputs = (config: TerrainMaterialConfig, define: TerrainMaterialDefine) => {
   const inputs: Record<string, unknown> =
-    getStorage(config) === 'ARRAY'
+    getStorage(config, define) === 'ARRAY'
       ? {
           [ARRAY_INPUT_KEY]: {
             textureSetArray: config.layers.map((layer) => layer.set),

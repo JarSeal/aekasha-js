@@ -29,6 +29,9 @@ const BLEND_LAYER_COUNTS = {
   SPLAT_MAP_AND_RULES: [2, 16],
 } as const;
 const ANTI_TILING_MODES = ['NONE', 'DUAL_SCALE', 'HEX'] as const;
+const ANTI_TILING_APPLIES = ['ALL', 'DOMINANT'] as const;
+/** The fewest and the most layers sparse sampling keeps (the schema's `TERRAIN_SPARSE_MAX_LAYERS`) */
+const SPARSE_MAX_LAYERS = [2, 4] as const;
 const PROJECTION_MODES = ['PLANAR', 'BIPLANAR', 'TRIPLANAR'] as const;
 const NORMAL_BLENDS = ['WHITEOUT', 'UDN', 'RNM'] as const;
 const MAX_LAYERS = 16;
@@ -37,7 +40,11 @@ const QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as const;
 const DEBUG_VIEWS = ['TEXEL_DENSITY', 'NORMALS', 'WEIGHTS', 'PROJECTION', 'TAPS'] as const;
 
 /** The keys each object of the define takes (the schema's) */
-const OVERRIDE_KEYS = ['uv', 'blend', 'ao', 'antiTiling', 'projection', 'distance'];
+const OVERRIDE_KEYS = ['uv', 'blend', 'ao', 'antiTiling', 'projection', 'distance', 'sparse'];
+/** A tier's keys: the material-wide ones and its layers' overrides */
+const TIER_KEYS = [...OVERRIDE_KEYS, 'layers'];
+const LAYER_OVERRIDE_KEYS = ['antiTiling', 'projection'];
+const SPARSE_KEYS = ['maxLayers'];
 const DEFINE_KEYS = [
   'layers',
   'macro',
@@ -83,7 +90,7 @@ const AO_KEYS = ['textureInfluence', 'vertex', 'bakedAlbedoInfluence'];
 const ANTI_TILING_KEYS: Record<(typeof ANTI_TILING_MODES)[number], string[]> = {
   NONE: ['mode'],
   DUAL_SCALE: ['mode', 'farScale', 'distance'],
-  HEX: ['mode', 'hexContrast', 'hexRotation'],
+  HEX: ['mode', 'hexContrast', 'hexRotation', 'apply', 'farScale', 'distance'],
 };
 const PROJECTED_KEYS = ['mode', 'sharpness', 'slopeGate', 'normalBlend'];
 const PROJECTION_KEYS: Record<(typeof PROJECTION_MODES)[number], string[]> = {
@@ -114,11 +121,22 @@ const BAKED_ALBEDO_INFLUENCE = 0.5;
  */
 export const DEFAULT_RESERVED_TEXTURES = 6;
 
-/** A layer's anti-tiling with its defaults filled in: the mode's fields only */
+/** `DUAL_SCALE`'s numbers with their defaults filled in */
+export type TerrainDualScaleDefine = { farScale: number; distance: [number, number] };
+
+/**
+ * A layer's anti-tiling with its defaults filled in: the mode's fields only; `HEX`'s `dominant` is
+ * the other layers' `DUAL_SCALE` with `apply: 'DOMINANT'`, null for `ALL`
+ */
 export type TerrainAntiTilingDefine =
   | { mode: 'NONE' }
-  | { mode: 'DUAL_SCALE'; farScale: number; distance: [number, number] }
-  | { mode: 'HEX'; hexContrast: number; hexRotation: number };
+  | ({ mode: 'DUAL_SCALE' } & TerrainDualScaleDefine)
+  | {
+      mode: 'HEX';
+      hexContrast: number;
+      hexRotation: number;
+      dominant: TerrainDualScaleDefine | null;
+    };
 
 /**
  * A layer's projection with its defaults filled in: the projecting modes' sharpness, slope gate
@@ -226,6 +244,12 @@ export type ResolvedTerrainDefine = {
   takesMacroTexture: boolean;
   /** The detail normals' fade, view distances in metres, or null for none */
   distanceFade: [number, number] | null;
+  /**
+   * The layers sampled at a pixel in slots sorted by weight there (p305 D6: sparse sampling's kept
+   * layers, or every layer for `HEX`'s `DOMINANT`; `ARRAY` storage, each read at a per-pixel
+   * index), or null: every layer at its own index
+   */
+  slotCount: number | null;
   /** The tier whose overrides applied, or null for the material's own fields */
   qualityLevel: (typeof QUALITY_LEVELS)[number] | null;
   /** The debug view in place of the surface, or null */
@@ -258,6 +282,11 @@ export const TERRAIN_DEFINE_VALUES = {
   vertexColorLayouts: VERTEX_COLOR_LAYOUTS,
   blendLayerCounts: BLEND_LAYER_COUNTS,
   antiTilingModes: ANTI_TILING_MODES,
+  antiTilingApplies: ANTI_TILING_APPLIES,
+  sparseKeys: SPARSE_KEYS,
+  sparseMaxLayers: SPARSE_MAX_LAYERS,
+  tierKeys: TIER_KEYS,
+  layerOverrideKeys: LAYER_OVERRIDE_KEYS,
   projectionModes: PROJECTION_MODES,
   normalBlends: NORMAL_BLENDS,
   maxLayers: MAX_LAYERS,
@@ -362,6 +391,18 @@ const readMetreRange = (
 const NON_NEGATIVE: { min: Bound } = { min: { value: 0 } };
 const UNIT: { min: Bound; max: Bound } = { min: { value: 0 }, max: { value: 1 } };
 
+/** `DUAL_SCALE`'s numbers (and `HEX`'s for `DOMINANT`'s other layers), with their defaults */
+const readDualScale = (obj: Record<string, unknown>, path: string): TerrainDualScaleDefine => {
+  const farScale = readNumber(
+    obj,
+    'farScale',
+    DUAL_SCALE_FAR_SCALE,
+    { min: { value: 0, isExclusive: true }, max: { value: 1, isExclusive: true } },
+    path
+  );
+  return { farScale, distance: readMetreRange(obj, 'distance', DUAL_SCALE_DISTANCE, path) };
+};
+
 /** An anti-tiling object, its mode's fields only, with their defaults */
 const readAntiTiling = (value: unknown, path: string): TerrainAntiTilingDefine => {
   const obj = readObject(value, path);
@@ -369,22 +410,22 @@ const readAntiTiling = (value: unknown, path: string): TerrainAntiTilingDefine =
     fail(`${path}.mode`, `is missing: use ${ANTI_TILING_MODES.join(', ')}.`);
   const mode = readEnum(obj, 'mode', ANTI_TILING_MODES, path);
   checkKeys(obj, ANTI_TILING_KEYS[mode], path);
-  if (mode === 'DUAL_SCALE') {
-    const farScale = readNumber(
-      obj,
-      'farScale',
-      DUAL_SCALE_FAR_SCALE,
-      { min: { value: 0, isExclusive: true }, max: { value: 1, isExclusive: true } },
-      path
-    );
-    return { mode, farScale, distance: readMetreRange(obj, 'distance', DUAL_SCALE_DISTANCE, path) };
-  }
+  if (mode === 'DUAL_SCALE') return { mode, ...readDualScale(obj, path) };
   if (mode === 'HEX') {
     const contrastBounds = { min: { value: 0.05 }, max: { value: 0.95 } };
+    const apply = readEnum(obj, 'apply', ANTI_TILING_APPLIES, path);
+    if (apply === 'ALL') {
+      for (const key of ['farScale', 'distance']) {
+        if (obj[key] !== undefined) {
+          fail(`${path}.${key}`, "is for apply DOMINANT (the other layers' DUAL_SCALE).");
+        }
+      }
+    }
     return {
       mode,
       hexContrast: readNumber(obj, 'hexContrast', HEX_CONTRAST, contrastBounds, path),
       hexRotation: readNumber(obj, 'hexRotation', HEX_ROTATION, UNIT, path),
+      dominant: apply === 'DOMINANT' ? readDualScale(obj, path) : null,
     };
   }
   return { mode };
@@ -666,14 +707,30 @@ type LayerFallbacks = {
   projection: TerrainProjectionDefine;
 };
 
+/** A layer's settings a tier overrides (`quality.<tier>.layers[i]`) */
+type LayerSamplingKey = 'antiTiling' | 'projection';
+
+/**
+ * Where each layer's anti-tiling and projection are given: its tier's `layers` entry, else its
+ * own, else the material-wide path (the tier's when it gives one); the paths for errors
+ */
+type LayerPaths = Record<LayerSamplingKey, string>[];
+
+/**
+ * A layer, its anti-tiling and projection read at the paths that give them (a tier's override,
+ * its own, else the material-wide fallback)
+ */
 const readLayer = (
   value: unknown,
   index: number,
-  fallbacks: LayerFallbacks
+  fallbacks: LayerFallbacks,
+  override: Record<string, unknown> | undefined,
+  paths: Record<LayerSamplingKey, string>
 ): TerrainLayerDefine => {
   const path = `.layers[${index}]`;
   const layer = readObject(value, path);
   checkKeys(layer, LAYER_KEYS, path);
+  const given = (key: LayerSamplingKey) => override?.[key] ?? layer[key];
   const tint = layer.tint ?? '#ffffff';
   if (typeof tint !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(tint)) {
     fail(`${path}.tint`, `is ${JSON.stringify(tint)}, not an sRGB "#rrggbb".`);
@@ -694,35 +751,122 @@ const readLayer = (
       path
     ),
     antiTiling:
-      layer.antiTiling === undefined
+      given('antiTiling') === undefined
         ? fallbacks.antiTiling
-        : readAntiTiling(layer.antiTiling, `${path}.antiTiling`),
+        : readAntiTiling(given('antiTiling'), `${paths.antiTiling}.antiTiling`),
     projection:
-      layer.projection === undefined
+      given('projection') === undefined
         ? fallbacks.projection
-        : readProjection(layer.projection, `${path}.projection`),
+        : readProjection(given('projection'), `${paths.projection}.projection`),
   };
 };
 
 /**
  * The layers' projections against the tiling's coordinates: `BIPLANAR` and `TRIPLANAR` project the
  * world, so they need `uv: 'WORLD'`
- * @param materialPath where the material's projection is (the tier's, when it gave one)
  */
 const checkProjectionUv = (
-  rawLayers: unknown[],
   layers: TerrainLayerDefine[],
   uv: (typeof UV_MODES)[number],
-  materialPath: string
+  paths: LayerPaths
 ) => {
   if (uv !== 'MESH_UV') return;
   layers.forEach(({ projection }, i) => {
     if (projection.mode === 'PLANAR') return;
-    const isOwn = (rawLayers[i] as Record<string, unknown>).projection !== undefined;
     fail(
-      `${isOwn ? `.layers[${i}]` : materialPath}.projection.mode`,
+      `${paths[i].projection}.projection.mode`,
       `is ${projection.mode}: it projects the world, which needs uv WORLD (not MESH_UV).`
     );
+  });
+};
+
+/** An anti-tiling as the slots compare it: its mode, and `HEX`'s `apply` */
+const describeSlotAntiTiling = (antiTiling: TerrainAntiTilingDefine) => {
+  if (antiTiling.mode !== 'HEX') return antiTiling.mode;
+  return `HEX ${antiTiling.dominant ? 'DOMINANT' : 'ALL'}`;
+};
+
+/** A projecting layer's projection as the slots compare it: its mode and normal blend */
+const describeSlotProjection = (projection: TerrainProjectionDefine) =>
+  projection.mode === 'PLANAR' ? 'PLANAR' : `${projection.mode} ${projection.normalBlend}`;
+
+/**
+ * The layers sampled in slots sorted by weight (p305 D6), or null for every layer at its own
+ * index: sparse sampling keeping fewer layers than there are (its `maxLayers` of them), or `HEX`'s
+ * `DOMINANT` over two layers or more (every layer). In slots, every layer's anti-tiling is alike
+ * (its mode and `apply`) and the projected layers' projection (its mode and normal blend): a slot
+ * samples whichever layer weighs most there.
+ */
+const readSlotCount = (layers: TerrainLayerDefine[], sparse: number | null, paths: LayerPaths) => {
+  const count = layers.length;
+  const isDominant = layers.some(
+    ({ antiTiling }) => antiTiling.mode === 'HEX' && antiTiling.dominant !== null
+  );
+  if (!((sparse !== null && sparse < count) || (isDominant && count > 1))) return null;
+  const first = describeSlotAntiTiling(layers[0].antiTiling);
+  layers.forEach(({ antiTiling }, i) => {
+    const own = describeSlotAntiTiling(antiTiling);
+    if (own !== first) {
+      fail(
+        `${paths[i].antiTiling}.antiTiling`,
+        `is ${own}, layer 0's ${first}: sparse sampling and DOMINANT sample every layer alike, so the layers take one anti-tiling mode (their numbers may differ).`
+      );
+    }
+  });
+  const projected = layers.flatMap(({ projection }, i) =>
+    projection.mode === 'PLANAR' ? [] : [{ i, kind: describeSlotProjection(projection) }]
+  );
+  for (const { i, kind } of projected) {
+    if (kind !== projected[0].kind) {
+      fail(
+        `${paths[i].projection}.projection`,
+        `is ${kind}, the first projected layer's ${projected[0].kind}: sparse sampling and DOMINANT project every projected layer alike, so they take one mode and normal blend (planar layers mix in).`
+      );
+    }
+  }
+  return Math.min(sparse ?? count, count);
+};
+
+/** The sparse sampling's kept layers (`maxLayers`, a whole number 2..4), or null for none */
+const readSparse = (fields: Record<string, unknown>, path: string) => {
+  if (fields.sparse === undefined) return null;
+  const sparsePath = `${path}.sparse`;
+  const sparse = readObject(fields.sparse, sparsePath);
+  checkKeys(sparse, SPARSE_KEYS, sparsePath);
+  const [min, max] = SPARSE_MAX_LAYERS;
+  const bounds = { min: { value: min }, max: { value: max } };
+  const maxLayers = readNumber(sparse, 'maxLayers', undefined, bounds, sparsePath);
+  if (!Number.isInteger(maxLayers)) {
+    fail(`${sparsePath}.maxLayers`, `is ${maxLayers}, not a whole number.`);
+  }
+  return maxLayers;
+};
+
+/**
+ * A tier's per-layer overrides (`layers`, at most one entry a layer, each `antiTiling` and
+ * `projection` only), or undefined without
+ */
+const readTierLayers = (
+  tier: Record<string, unknown> | undefined,
+  layerCount: number,
+  path: string
+) => {
+  if (tier?.layers === undefined) return undefined;
+  const overrides = tier.layers;
+  if (!Array.isArray(overrides)) {
+    fail(
+      `${path}.layers`,
+      `is ${JSON.stringify(overrides)}: give one entry a layer ({} for none).`
+    );
+  }
+  if (overrides.length > layerCount) {
+    fail(`${path}.layers`, `has ${overrides.length} entries: there are ${layerCount} layers.`);
+  }
+  return (overrides as unknown[]).map((override, i) => {
+    const overridePath = `${path}.layers[${i}]`;
+    const obj = readObject(override, overridePath);
+    checkKeys(obj, LAYER_OVERRIDE_KEYS, overridePath);
+    return obj;
   });
 };
 
@@ -761,7 +905,7 @@ const readQualityTable = (define: Record<string, unknown>) => {
   for (const level of QUALITY_LEVELS) {
     if (table[level] === undefined) continue;
     const tier = readObject(table[level], `.quality.${level}`);
-    checkKeys(tier, OVERRIDE_KEYS, `.quality.${level}`);
+    checkKeys(tier, TIER_KEYS, `.quality.${level}`);
     tiers[level] = tier;
   }
   return tiers;
@@ -772,7 +916,8 @@ const readQualityTable = (define: Record<string, unknown>) => {
  * throws naming the first field that's wrong or unknown (a later phase's field included). With a
  * `qualityLevel`, that tier's overrides replace the material's fields (shallowly) before they're
  * read; a tier that isn't applied is checked for its keys only. A layer's own `antiTiling` and
- * `projection` replace the material's (the tier's, when it gives one).
+ * `projection` replace the material's (the tier's, when it gives one), and the tier's `layers`
+ * entry replaces the layer's own.
  * @internal
  */
 export const readTerrainDefine = (
@@ -792,11 +937,21 @@ export const readTerrainDefine = (
   }
   const quality = readQualityTable(define);
   const qualityLevel = readOptionalEnum(define, 'qualityLevel', QUALITY_LEVELS, '');
-  // The tier's fields over the material's (shallowly), read as the material's own
+  // The tier's fields over the material's (shallowly), read as the material's own; its layers'
+  // overrides over the layers' own settings
   const tier = qualityLevel ? quality[qualityLevel] : undefined;
-  const fields = tier ? { ...define, ...tier } : define;
+  const { layers: _tierLayers, ...tierFields } = tier ?? {};
+  const fields = tier ? { ...define, ...tierFields } : define;
   const path = tier ? `.quality.${qualityLevel}` : '';
   const pathOf = (key: string) => (tier && key in tier ? path : '');
+  const overrides = readTierLayers(tier, (rawLayers as unknown[]).length, path);
+  const paths: LayerPaths = (rawLayers as unknown[]).map((raw, i) => {
+    const whereGiven = (key: LayerSamplingKey) => {
+      if (overrides?.[i]?.[key] !== undefined) return `${path}.layers[${i}]`;
+      return isRecord(raw) && raw[key] !== undefined ? `.layers[${i}]` : pathOf(key);
+    };
+    return { antiTiling: whereGiven('antiTiling'), projection: whereGiven('projection') };
+  });
 
   const antiTiling: TerrainAntiTilingDefine =
     fields.antiTiling === undefined
@@ -807,10 +962,11 @@ export const readTerrainDefine = (
       ? { mode: 'PLANAR' }
       : readProjection(fields.projection, `${pathOf('projection')}.projection`);
   const layers = (rawLayers as unknown[]).map((layer, i) =>
-    readLayer(layer, i, { antiTiling, projection })
+    readLayer(layer, i, { antiTiling, projection }, overrides?.[i], paths[i])
   );
   const uv = readEnum(fields, 'uv', UV_MODES, pathOf('uv'));
-  checkProjectionUv(rawLayers as unknown[], layers, uv, pathOf('projection'));
+  checkProjectionUv(layers, uv, paths);
+  const slotCount = readSlotCount(layers, readSparse(fields, pathOf('sparse')), paths);
 
   const blend = readBlend(fields.blend, `${pathOf('blend')}.blend`);
   const { counts, name } = getBlendLayerCounts(blend);
@@ -857,6 +1013,7 @@ export const readTerrainDefine = (
       [define.blend, ...Object.values(quality).map((tier) => tier.blend)].some(hasRawRuleNoise),
     reservedTextures: readReservedTextures(define),
     distanceFade: distance ? readMetreRange(distance, 'fade', undefined, distancePath) : null,
+    slotCount,
     qualityLevel,
     debugView: readOptionalEnum(define, 'debugView', DEBUG_VIEWS, ''),
   };
