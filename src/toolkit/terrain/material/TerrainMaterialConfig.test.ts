@@ -78,6 +78,30 @@ describe('TerrainMaterialConfigSchema', () => {
     expect(issuesOf(configOf(2, { ...painted, ...dominant, storage: 'SEPARATE' }))).toEqual([
       'storage',
     ]);
+    // A live layer is sampled beside the slots: two sampled layers, top-2 keeps both
+    const withLive = configOf(3, { ...painted, ...sparse, storage: 'SEPARATE' });
+    withLive.layers[2] = { set: 'grass01', source: 'PROCEDURAL_LIVE' } as never;
+    expect(issuesOf(withLive)).toEqual([]);
+  });
+
+  it("refuses a live layer's anti-tiling where it's live, and its taps where it never is", () => {
+    const live = { set: 'dunes', source: 'PROCEDURAL_LIVE' };
+    const painted = { blend: { source: 'VERTEX_COLOR' } };
+    const twoLayers = (second: object, fields: object = {}) => ({
+      ...configOf(1, { ...painted, ...fields }),
+      layers: [{ set: 'grass01' }, second],
+    });
+    expect(issuesOf(twoLayers(live, { antiTiling: { mode: 'HEX' } }))).toEqual([]);
+    expect(issuesOf(twoLayers({ ...live, antiTiling: { mode: 'HEX' } }))).toEqual([
+      'layers.1.antiTiling',
+    ]);
+    const tierHex = { quality: { HIGH: { layers: [{}, { antiTiling: { mode: 'DUAL_SCALE' } }] } } };
+    expect(issuesOf(twoLayers(live, tierHex))).toEqual(['quality.HIGH.layers.1.antiTiling']);
+    expect(issuesOf(twoLayers({ set: 'dunes', live: { normal: 'TAPS' } }))).toEqual([
+      'layers.1.live',
+    ]);
+    const ultraLive = { quality: { ULTRA: { layers: [{}, { source: 'PROCEDURAL_LIVE' }] } } };
+    expect(issuesOf(twoLayers({ set: 'dunes', live: { normal: 'TAPS' } }, ultraLive))).toEqual([]);
   });
 
   it("names a tier's layer entry where it's given, once for a setting layers share", () => {

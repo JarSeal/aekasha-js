@@ -13,6 +13,8 @@ import {
   TERRAIN_FAR_MODES,
   TERRAIN_QUALITY_LEVELS,
   TERRAIN_LAYER_SOURCES,
+  TERRAIN_LIVE_AOS,
+  TERRAIN_LIVE_NORMALS,
   TERRAIN_MAX_LAYERS,
   TERRAIN_MAX_RULES,
   TERRAIN_NORMAL_BLENDS,
@@ -25,6 +27,7 @@ import {
   TerrainBlendSchema,
   TerrainColorMapSettingsSchema,
   TerrainLayerSettingsSchema,
+  TerrainLiveSchema,
   TerrainMacroSettingsSchema,
   TerrainMaterialDefineSchema,
   TerrainProjectionSchema,
@@ -258,6 +261,29 @@ const ACCEPTED: unknown[] = [
     qualityLevel: 'LOW',
   }),
   paintedOf(4, { quality: { MEDIUM: { sparse: { maxLayers: 3 } } }, qualityLevel: 'MEDIUM' }),
+  // Live layers (p305 Phase 8)
+  { layers: [{ source: 'PROCEDURAL_LIVE' }] },
+  { layers: [{ source: 'PROCEDURAL_LIVE', live: { normal: 'TAPS', ao: 'CAVITY' } }] },
+  { layers: [{ source: 'PROCEDURAL_LIVE', antiTiling: { mode: 'NONE' } }] },
+  { layers: [{ source: 'PROCEDURAL_LIVE', projection: gatedTriplanar }] },
+  // A material-wide anti-tiling doesn't reach a live layer; the slots leave it out
+  paintedOf(2, { antiTiling: { mode: 'HEX' }, layers: [{}, { source: 'PROCEDURAL_LIVE' }] }),
+  paintedOf(4, {
+    sparse: { maxLayers: 2 },
+    antiTiling: { mode: 'DUAL_SCALE' },
+    layers: [{}, {}, {}, { source: 'PROCEDURAL_LIVE' }],
+  }),
+  // A tier samples the bake (its anti-tiling its own then), or runs a layer live
+  paintedOf(2, {
+    layers: [{}, { source: 'PROCEDURAL_LIVE', live: { normal: 'TAPS' } }],
+    quality: { LOW: { layers: [{}, { source: 'TEXTURE', antiTiling: { mode: 'HEX' } }] } },
+    qualityLevel: 'LOW',
+  }),
+  paintedOf(2, {
+    layers: [{}, { live: {} }],
+    quality: { ULTRA: { layers: [{}, { source: 'PROCEDURAL_LIVE' }] } },
+    qualityLevel: 'ULTRA',
+  }),
 ];
 const REFUSED: unknown[] = [
   {},
@@ -268,8 +294,20 @@ const REFUSED: unknown[] = [
   { layers: [{ normalStrength: -1 }] },
   { layers: [{ tint: 'red' }] },
   { layers: [{ tint: '#fff' }] },
-  { layers: [{ source: 'PROCEDURAL_LIVE' }] },
+  { layers: [{ source: 'PROCEDURAL' }] },
   { layers: [{ set: 'grass01' }] },
+  // Live layers (p305 Phase 8)
+  { layers: [{ source: 'PROCEDURAL_LIVE', antiTiling: { mode: 'HEX' } }] },
+  { layers: [{ live: {} }] },
+  { layers: [{ source: 'PROCEDURAL_LIVE', live: { normal: 'NONE' } }] },
+  { layers: [{ source: 'PROCEDURAL_LIVE', live: { ao: 'BAKED' } }] },
+  { layers: [{ source: 'PROCEDURAL_LIVE', live: { taps: 4 } }] },
+  {
+    ...paintedOf(2, { layers: [{}, { source: 'PROCEDURAL_LIVE' }] }),
+    quality: { HIGH: { layers: [{}, { antiTiling: { mode: 'DUAL_SCALE' } }] } },
+    qualityLevel: 'HIGH',
+  },
+  { layers: [{}], quality: { LOW: { layers: [{ source: 'LIVE' }] } }, qualityLevel: 'LOW' },
   { layers: [{}], uv: 'XZ' },
   { layers: [{}], projection: {} },
   { layers: [{}], projection: { mode: 'CUBIC' } },
@@ -568,6 +606,7 @@ describe('readTerrainDefine', () => {
       layers: [
         {
           source: 'TEXTURE',
+          live: null,
           tiling: 1,
           rotation: null,
           tint: '#ffffff',
@@ -748,6 +787,37 @@ describe('readTerrainDefine', () => {
     expect(read({ ...tiered, qualityLevel: 'LOW' }).slotCount).toBe(2);
   });
 
+  it('reads a live layer: its taps, no anti-tiling, beside the slots, a tier its bake', () => {
+    const live = { source: 'PROCEDURAL_LIVE' };
+    expect(read({ layers: [live] }).layers[0]).toMatchObject({
+      source: 'PROCEDURAL_LIVE',
+      live: { normal: 'BUMP', ao: 'NONE' },
+      antiTiling: { mode: 'NONE' },
+    });
+    const define = paintedOf(4, {
+      antiTiling: { mode: 'HEX' },
+      sparse: { maxLayers: 3 },
+      layers: [{}, {}, {}, { ...live, live: { ao: 'CAVITY' } }],
+      quality: { LOW: { layers: [{}, {}, {}, { source: 'TEXTURE' }] } },
+    });
+    const own = read(define);
+    expect(own.layers[3]).toMatchObject({ live: { normal: 'BUMP', ao: 'CAVITY' } });
+    expect(own.layers[3].antiTiling).toEqual({ mode: 'NONE' });
+    expect(own.layers[0].antiTiling.mode).toBe('HEX');
+    // Three sampled layers, sparse keeps three: every one at its own index
+    expect(own.slotCount).toBeNull();
+    const low = read({ ...define, qualityLevel: 'LOW' });
+    expect(low.layers[3]).toMatchObject({ source: 'TEXTURE', live: null });
+    expect(low.layers[3].antiTiling.mode).toBe('HEX');
+    expect(low.slotCount).toBe(3);
+    expect(() => read({ layers: [{ ...live, antiTiling: { mode: 'HEX' } }] })).toThrow(
+      'staticDefines.terrain.layers[0].antiTiling: is HEX on a live layer (source PROCEDURAL_LIVE)'
+    );
+    expect(() => read({ layers: [{ live: {} }] })).toThrow(
+      'staticDefines.terrain.layers[0].live: is for a live layer'
+    );
+  });
+
   it("gives a layer its tier's entry over its own, the tier's material-wide field not", () => {
     const define = paintedOf(3, {
       layers: [{ projection: { mode: 'TRIPLANAR' } }, { projection: { mode: 'TRIPLANAR' } }, {}],
@@ -871,6 +941,9 @@ describe('readTerrainDefine', () => {
     expect(values.qualityLevels).toEqual(TERRAIN_QUALITY_LEVELS);
     expect(values.debugViews).toEqual(TERRAIN_DEBUG_VIEWS);
     expect(values.layerSources).toEqual(TERRAIN_LAYER_SOURCES);
+    expect(values.liveKeys.sort()).toEqual(Object.keys(TerrainLiveSchema.shape).sort());
+    expect(values.liveNormals).toEqual(TERRAIN_LIVE_NORMALS);
+    expect(values.liveAos).toEqual(TERRAIN_LIVE_AOS);
     expect(values.uvModes).toEqual(TERRAIN_UV_MODES);
     expect(values.spaces).toEqual(TERRAIN_SPACES);
     expect(values.blendSources).toEqual(TERRAIN_BLEND_SOURCES);

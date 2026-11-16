@@ -11,8 +11,22 @@
 import { z } from 'zod';
 import { TERRAIN_RULE_NOISE_CHANNELS } from 'aekasha/toolkit/geometry';
 
-/** The layer's sampled source: `TEXTURE`, a texture set's maps. */
-export const TERRAIN_LAYER_SOURCES = ['TEXTURE'] as const;
+/**
+ * What a layer samples: `TEXTURE` its texture set's maps; `PROCEDURAL_LIVE` its procedural set's
+ * generator run live in the material (p305 Phase 8: no repetition, no texture memory, the whole
+ * graph per pixel).
+ */
+export const TERRAIN_LAYER_SOURCES = ['TEXTURE', 'PROCEDURAL_LIVE'] as const;
+/**
+ * A live layer's normal where its generator gives none: `BUMP` (default) its height bumped, `TAPS`
+ * a bake's central differences (4 more evaluations of the height a pixel).
+ */
+export const TERRAIN_LIVE_NORMALS = ['BUMP', 'TAPS'] as const;
+/**
+ * A live layer's AO where its generator gives none: `NONE` (default), or `CAVITY` a bake's cavity
+ * (8 more evaluations of the height a pixel).
+ */
+export const TERRAIN_LIVE_AOS = ['NONE', 'CAVITY'] as const;
 /**
  * The space the material samples in (p305 D8): `WORLD` (default) the world's position and normal,
  * seamless across pieces; `OBJECT` the mesh's own (scaled back to metres), so the texture sticks to
@@ -321,6 +335,37 @@ export const TerrainProjectionSchema = z
 /** How a layer's texture meets the surface (p305 D5): `PLANAR`, `BIPLANAR` or `TRIPLANAR`. */
 export type TerrainProjection = z.infer<typeof TerrainProjectionSchema>;
 
+/** What a layer samples: {@link TERRAIN_LAYER_SOURCES}' */
+const layerSourceField = z
+  .enum(TERRAIN_LAYER_SOURCES)
+  .optional()
+  .describe(
+    "What the layer samples: TEXTURE (default), its texture set's maps; PROCEDURAL_LIVE, its procedural set's generator run live (no repetition, no texture memory, the whole graph per pixel)."
+  );
+
+/**
+ * A live layer's taps (`source: 'PROCEDURAL_LIVE'`): what its normal and AO take where its
+ * generator gives none.
+ */
+export const TerrainLiveSchema = z
+  .object({
+    /** The normal: `BUMP` (default) its height bumped; `TAPS` 4 more height evaluations. */
+    normal: z
+      .enum(TERRAIN_LIVE_NORMALS)
+      .optional()
+      .describe('The normal: BUMP (default) its height bumped; TAPS 4 more height evaluations.'),
+    /** The AO: `NONE` (default); `CAVITY` 8 more height evaluations. */
+    ao: z
+      .enum(TERRAIN_LIVE_AOS)
+      .optional()
+      .describe('The AO: NONE (default); CAVITY 8 more height evaluations.'),
+  })
+  .strict()
+  .describe("A live layer's taps: what its normal and AO take where its generator gives none.");
+
+/** A live layer's taps: what its normal and AO take where its generator gives none. */
+export type TerrainLive = z.infer<typeof TerrainLiveSchema>;
+
 /**
  * A layer's settings, without its set: the static define's layer. Each tunable becomes a uniform
  * (`terrain_l<i>_<name>` in the material's `userData.uniforms`), so the material editor and code
@@ -328,11 +373,15 @@ export type TerrainProjection = z.infer<typeof TerrainProjectionSchema>;
  */
 export const TerrainLayerSettingsSchema = z
   .object({
-    /** What the layer samples: `TEXTURE` (default), its texture set's maps. */
-    source: z
-      .enum(TERRAIN_LAYER_SOURCES)
-      .optional()
-      .describe("What the layer samples: TEXTURE (default), its texture set's maps."),
+    /**
+     * What the layer samples: `TEXTURE` (default), its texture set's maps; `PROCEDURAL_LIVE`, its
+     * procedural set's generator run live (its set baked too, for a tier that samples the bake).
+     * A live layer takes no anti-tiling (its surface never repeats), and it's sampled beside the
+     * slots of sparse sampling and `DOMINANT`, not in them.
+     */
+    source: layerSourceField,
+    /** A live layer's taps for its normal and AO (a layer some context samples live only). */
+    live: TerrainLiveSchema.optional(),
     /** × the set's `physicalSize` (default 1): 2 tiles twice as large. */
     tiling: z
       .number()
@@ -976,6 +1025,11 @@ const sharedFields = {
 /** A quality tier's overrides of one layer's own settings */
 const TerrainLayerOverridesSchema = z
   .object({
+    /**
+     * What the layer samples in this tier, in place of its own: eg. a live layer's bake
+     * (`TEXTURE`) on a low tier.
+     */
+    source: layerSourceField,
     /** The layer's anti-tiling in this tier, in place of its own and the material's. */
     antiTiling: TerrainAntiTilingSchema.optional(),
     /** The layer's projection in this tier, in place of its own and the material's: eg. cliffs. */
@@ -994,16 +1048,16 @@ export const TerrainQualityOverridesSchema = z
   .object({
     ...sharedFields,
     /**
-     * Per layer, in the layers' order (at most one entry a layer; `{}` for none): its anti-tiling
-     * and projection in this tier, over its own and the material's (eg. the cliff layer's
-     * `BIPLANAR` on `LOW`).
+     * Per layer, in the layers' order (at most one entry a layer; `{}` for none): its source,
+     * anti-tiling and projection in this tier, over its own and the material's (eg. the cliff
+     * layer's `BIPLANAR` on `LOW`, a live layer's bake).
      */
     layers: z
       .array(TerrainLayerOverridesSchema)
       .max(TERRAIN_MAX_LAYERS)
       .optional()
       .describe(
-        "Per layer, in the layers' order ({} for none): its anti-tiling and projection in this tier, over its own and the material's."
+        "Per layer, in the layers' order ({} for none): its source, anti-tiling and projection in this tier, over its own and the material's."
       ),
   })
   .strict()
@@ -1204,7 +1258,11 @@ const checkBlend = (
 
 type Path = (string | number)[];
 /** A layer's settings a tier can override */
-type LayerSampling = { antiTiling?: TerrainAntiTiling; projection?: TerrainProjection };
+type LayerSampling = {
+  source?: (typeof TERRAIN_LAYER_SOURCES)[number];
+  antiTiling?: TerrainAntiTiling;
+  projection?: TerrainProjection;
+};
 /** The material-wide fields the layers' sampling reads, the material's or a tier's */
 type SamplingFields = LayerSampling & {
   uv?: (typeof TERRAIN_UV_MODES)[number];
@@ -1212,7 +1270,7 @@ type SamplingFields = LayerSampling & {
 };
 type TierSampling = SamplingFields & { layers?: LayerSampling[] };
 type SampledValue = SamplingFields & {
-  layers: LayerSampling[];
+  layers: (LayerSampling & { live?: TerrainLive })[];
   quality?: Partial<Record<string, TierSampling | undefined>>;
 };
 /** A setting as a context resolves it, and the path it was given at (for an issue) */
@@ -1221,7 +1279,8 @@ type Given<T> = { value: T; path: Path };
 /**
  * The material's own fields and each tier's over them, each layer's anti-tiling and projection
  * resolved: the tier's `layers` entry, else the layer's own, else the tier's, else the material's,
- * each with the path it was given at
+ * each with the path it was given at; and whether it's live (its source: the tier's entry, else
+ * its own)
  */
 const getSamplingContexts = (value: SampledValue) => {
   const tiers = Object.entries(value.quality ?? {}).map(([level, tier]) => ({
@@ -1243,6 +1302,7 @@ const getSamplingContexts = (value: SampledValue) => {
       uv: wide('uv').value,
       sparse: wide('sparse').value,
       layers: value.layers.map((_, i) => ({
+        isLive: (tier?.layers?.[i]?.source ?? value.layers[i].source) === 'PROCEDURAL_LIVE',
         antiTiling: resolve(i, 'antiTiling'),
         projection: resolve(i, 'projection'),
       })),
@@ -1282,20 +1342,27 @@ const checkProjection = (value: SampledValue, ctx: z.RefinementCtx) => {
   }
 };
 
+/** A context's layer as the slots read it: live, its anti-tiling and projection where given */
+type SampledLayer = {
+  isLive: boolean;
+  antiTiling: Given<TerrainAntiTiling | undefined>;
+  projection: Given<TerrainProjection | undefined>;
+};
+
 /**
  * Whether a context samples the layers in slots sorted by weight at the pixel (p305 D6, the
  * `ARRAY` storage's per-pixel layer index): sparse sampling that keeps fewer layers than there
- * are, or `HEX` with `apply: 'DOMINANT'` over two layers or more
+ * are, or `HEX` with `apply: 'DOMINANT'` over two layers or more; live layers are sampled beside
+ * the slots, so they don't count
  */
-const takesSlots = (
-  sparse: SamplingFields['sparse'],
-  layers: { antiTiling: Given<TerrainAntiTiling | undefined> }[]
-) => {
-  const isDominant = layers.some(
+const takesSlots = (sparse: SamplingFields['sparse'], layers: SampledLayer[]) => {
+  const sampled = layers.filter((layer) => !layer.isLive);
+  const isDominant = sampled.some(
     ({ antiTiling: { value } }) => value?.mode === 'HEX' && value.apply === 'DOMINANT'
   );
   return (
-    (sparse !== undefined && sparse.maxLayers < layers.length) || (isDominant && layers.length > 1)
+    (sparse !== undefined && sparse.maxLayers < sampled.length) ||
+    (isDominant && sampled.length > 1)
   );
 };
 
@@ -1355,16 +1422,18 @@ const checkSlots = (value: SampledValue, ctx: z.RefinementCtx) => {
   }
   for (const { sparse, layers } of getSamplingContexts(value)) {
     if (!takesSlots(sparse, layers)) continue;
-    const first = describeSlotAntiTiling(layers[0].antiTiling.value);
-    for (const { antiTiling } of layers) {
+    // Live layers are sampled beside the slots, in their own way
+    const sampled = layers.flatMap((layer, i) => (layer.isLive ? [] : [{ ...layer, i }]));
+    const first = describeSlotAntiTiling(sampled[0].antiTiling.value);
+    for (const { antiTiling } of sampled) {
       const own = describeSlotAntiTiling(antiTiling.value);
       if (own === first) continue;
       issue(
         antiTiling.path,
-        `is ${own}, layer 0's ${first}: sparse sampling and DOMINANT sample every layer alike, so the layers take one anti-tiling mode (their numbers may differ).`
+        `is ${own}, layer ${sampled[0].i}'s ${first}: sparse sampling and DOMINANT sample every layer alike, so the layers take one anti-tiling mode (their numbers may differ).`
       );
     }
-    const projected = layers
+    const projected = sampled
       .map(({ projection }) => projection)
       .filter((projection) => projection.value && projection.value.mode !== 'PLANAR');
     const describe = ({ value: projection }: Given<TerrainProjection | undefined>) =>
@@ -1377,6 +1446,34 @@ const checkSlots = (value: SampledValue, ctx: z.RefinementCtx) => {
       );
     }
   }
+};
+
+/**
+ * The live layers (p305 Phase 8), the material's and each tier's: a live layer takes no
+ * anti-tiling (its surface never repeats), so one given at the layer (its own, or its tier's
+ * entry) is refused where it's live (a material-wide one doesn't reach it); and a layer's `live`
+ * taps only where some context samples it live. The refinement both schemas share.
+ */
+const checkLive = (value: SampledValue, ctx: z.RefinementCtx) => {
+  const issue = createIssueReporter(ctx);
+  const contexts = getSamplingContexts(value);
+  for (const { layers } of contexts) {
+    for (const { isLive, antiTiling } of layers) {
+      const mode = antiTiling.value?.mode ?? 'NONE';
+      if (!isLive || mode === 'NONE' || !antiTiling.path.includes('layers')) continue;
+      issue(
+        antiTiling.path,
+        `is ${mode} on a live layer (source PROCEDURAL_LIVE): its surface never repeats, so it takes no anti-tiling.`
+      );
+    }
+  }
+  value.layers.forEach((layer, i) => {
+    if (!layer.live || contexts.some((context) => context.layers[i].isLive)) return;
+    issue(
+      ['layers', i, 'live'],
+      "is for a live layer: give source PROCEDURAL_LIVE (the layer's, or a tier's layers entry)."
+    );
+  });
 };
 
 type DistanceValue = { far?: string; farBlend?: number };
@@ -1514,6 +1611,7 @@ export const TerrainMaterialDefineSchema = z
   .superRefine(checkBlend)
   .superRefine(checkProjection)
   .superRefine(checkSlots)
+  .superRefine(checkLive)
   .superRefine(checkFar)
   .describe("The terrain material's static define (staticDefines.terrain).");
 
@@ -1603,6 +1701,7 @@ export const TerrainMaterialConfigSchema = z
   .superRefine(checkBlend)
   .superRefine(checkProjection)
   .superRefine(checkSlots)
+  .superRefine(checkLive)
   .superRefine(checkFar)
   .superRefine(checkTextureIds)
   .superRefine(checkStorage)

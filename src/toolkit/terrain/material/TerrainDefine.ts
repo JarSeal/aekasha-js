@@ -6,7 +6,9 @@
 // schema field by field, so a field and its refusals sit next to its neighbours'.
 import { TERRAIN_RULE_DEFAULTS, TERRAIN_RULE_NOISE_CHANNELS } from 'aekasha/toolkit/geometry';
 
-const LAYER_SOURCES = ['TEXTURE'] as const;
+const LAYER_SOURCES = ['TEXTURE', 'PROCEDURAL_LIVE'] as const;
+const LIVE_NORMALS = ['BUMP', 'TAPS'] as const;
+const LIVE_AOS = ['NONE', 'CAVITY'] as const;
 const UV_MODES = ['WORLD', 'MESH_UV'] as const;
 const SPACES = ['WORLD', 'OBJECT'] as const;
 const BLEND_SOURCES = [
@@ -53,7 +55,8 @@ const DEBUG_VIEWS = [
 const OVERRIDE_KEYS = ['uv', 'blend', 'ao', 'antiTiling', 'projection', 'distance', 'sparse'];
 /** A tier's keys: the material-wide ones and its layers' overrides */
 const TIER_KEYS = [...OVERRIDE_KEYS, 'layers'];
-const LAYER_OVERRIDE_KEYS = ['antiTiling', 'projection'];
+const LAYER_OVERRIDE_KEYS = ['source', 'antiTiling', 'projection'];
+const LIVE_KEYS = ['normal', 'ao'];
 const SPARSE_KEYS = ['maxLayers'];
 const DEFINE_KEYS = [
   'layers',
@@ -68,6 +71,7 @@ const DEFINE_KEYS = [
 ];
 const LAYER_KEYS = [
   'source',
+  'live',
   'tiling',
   'rotation',
   'tint',
@@ -169,9 +173,18 @@ export type TerrainProjectionDefine =
       normalBlend: (typeof NORMAL_BLENDS)[number];
     };
 
+/** A live layer's taps with their defaults filled in */
+export type TerrainLiveDefine = {
+  normal: (typeof LIVE_NORMALS)[number];
+  ao: (typeof LIVE_AOS)[number];
+};
+
 /** A layer's settings with their defaults filled in */
 export type TerrainLayerDefine = {
+  /** Its own, else its tier's `layers` entry's */
   source: (typeof LAYER_SOURCES)[number];
+  /** A live layer's taps (`PROCEDURAL_LIVE`), null for a sampled one */
+  live: TerrainLiveDefine | null;
   tiling: number;
   /** Degrees; null compiles no rotation */
   rotation: number | null;
@@ -183,7 +196,7 @@ export type TerrainLayerDefine = {
   heightContrast: number;
   /** Added to the height (the height blend's) */
   heightOffset: number;
-  /** The layer's own, else the material's (after its tier's override) */
+  /** The layer's own, else the material's (after its tier's override); a live layer's `NONE` */
   antiTiling: TerrainAntiTilingDefine;
   /** The layer's own, else the material's (after its tier's override) */
   projection: TerrainProjectionDefine;
@@ -285,7 +298,8 @@ export type ResolvedTerrainDefine = {
   /**
    * The layers sampled at a pixel in slots sorted by weight there (p305 D6: sparse sampling's kept
    * layers, or every layer for `HEX`'s `DOMINANT`; `ARRAY` storage, each read at a per-pixel
-   * index), or null: every layer at its own index
+   * index), or null: every layer at its own index. Live layers are sampled beside the slots: they
+   * don't count.
    */
   slotCount: number | null;
   /** The tier whose overrides applied, or null for the material's own fields */
@@ -317,6 +331,9 @@ export const TERRAIN_DEFINE_VALUES = {
   qualityLevels: QUALITY_LEVELS,
   debugViews: DEBUG_VIEWS,
   layerSources: LAYER_SOURCES,
+  liveKeys: LIVE_KEYS,
+  liveNormals: LIVE_NORMALS,
+  liveAos: LIVE_AOS,
   uvModes: UV_MODES,
   spaces: SPACES,
   blendSources: BLEND_SOURCES,
@@ -750,17 +767,44 @@ type LayerFallbacks = {
 };
 
 /** A layer's settings a tier overrides (`quality.<tier>.layers[i]`) */
-type LayerSamplingKey = 'antiTiling' | 'projection';
+type LayerSamplingKey = 'source' | 'antiTiling' | 'projection';
 
 /**
- * Where each layer's anti-tiling and projection are given: its tier's `layers` entry, else its
- * own, else the material-wide path (the tier's when it gives one); the paths for errors
+ * Where each layer's source, anti-tiling and projection are given: its tier's `layers` entry, else
+ * its own, else the material-wide path (the tier's when it gives one); the paths for errors
  */
 type LayerPaths = Record<LayerSamplingKey, string>[];
 
+/** A live layer's taps (`live`), its defaults filled in; checked where it isn't live too */
+const readLive = (layer: Record<string, unknown>, path: string): TerrainLiveDefine => {
+  const livePath = `${path}.live`;
+  const live = readOptionalObject(layer, 'live', path);
+  checkKeys(live, LIVE_KEYS, livePath);
+  return {
+    normal: readEnum(live, 'normal', LIVE_NORMALS, livePath),
+    ao: readEnum(live, 'ao', LIVE_AOS, livePath),
+  };
+};
+
 /**
- * A layer, its anti-tiling and projection read at the paths that give them (a tier's override,
- * its own, else the material-wide fallback)
+ * A live layer's anti-tiling: `NONE` (its surface never repeats); one given at the layer (its own,
+ * its tier's entry) is refused unless `NONE`, a material-wide one doesn't reach it
+ */
+const readLiveAntiTiling = (given: unknown, path: string): TerrainAntiTilingDefine => {
+  if (given === undefined) return { mode: 'NONE' };
+  const antiTiling = readAntiTiling(given, `${path}.antiTiling`);
+  if (antiTiling.mode !== 'NONE') {
+    fail(
+      `${path}.antiTiling`,
+      `is ${antiTiling.mode} on a live layer (source PROCEDURAL_LIVE): its surface never repeats, so it takes no anti-tiling.`
+    );
+  }
+  return antiTiling;
+};
+
+/**
+ * A layer, its source, anti-tiling and projection read at the paths that give them (a tier's
+ * override, its own, else the material-wide fallback; a live layer's anti-tiling its own or none)
  */
 const readLayer = (
   value: unknown,
@@ -773,12 +817,16 @@ const readLayer = (
   const layer = readObject(value, path);
   checkKeys(layer, LAYER_KEYS, path);
   const given = (key: LayerSamplingKey) => override?.[key] ?? layer[key];
+  const source = readEnum({ source: given('source') }, 'source', LAYER_SOURCES, paths.source);
+  const live = readLive(layer, path);
   const tint = layer.tint ?? '#ffffff';
   if (typeof tint !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(tint)) {
     fail(`${path}.tint`, `is ${JSON.stringify(tint)}, not an sRGB "#rrggbb".`);
   }
+  const isLive = source === 'PROCEDURAL_LIVE';
   return {
-    source: readEnum(layer, 'source', LAYER_SOURCES, path),
+    source,
+    live: isLive ? live : null,
     tiling: readNumber(layer, 'tiling', 1, { min: { value: 0, isExclusive: true } }, path),
     rotation: layer.rotation === undefined ? null : readNumber(layer, 'rotation', 0, {}, path),
     tint: tint as string,
@@ -792,8 +840,9 @@ const readLayer = (
       { min: { value: -1 }, max: { value: 1 } },
       path
     ),
-    antiTiling:
-      given('antiTiling') === undefined
+    antiTiling: isLive
+      ? readLiveAntiTiling(given('antiTiling'), paths.antiTiling)
+      : given('antiTiling') === undefined
         ? fallbacks.antiTiling
         : readAntiTiling(given('antiTiling'), `${paths.antiTiling}.antiTiling`),
     projection:
@@ -835,27 +884,29 @@ const describeSlotProjection = (projection: TerrainProjectionDefine) =>
 /**
  * The layers sampled in slots sorted by weight (p305 D6), or null for every layer at its own
  * index: sparse sampling keeping fewer layers than there are (its `maxLayers` of them), or `HEX`'s
- * `DOMINANT` over two layers or more (every layer). In slots, every layer's anti-tiling is alike
- * (its mode and `apply`) and the projected layers' projection (its mode and normal blend): a slot
- * samples whichever layer weighs most there.
+ * `DOMINANT` over two layers or more (every layer). Live layers are sampled beside the slots and
+ * don't count. In slots, every sampled layer's anti-tiling is alike (its mode and `apply`) and the
+ * projected layers' projection (its mode and normal blend): a slot samples whichever layer weighs
+ * most there.
  */
 const readSlotCount = (layers: TerrainLayerDefine[], sparse: number | null, paths: LayerPaths) => {
-  const count = layers.length;
-  const isDominant = layers.some(
+  const sampled = layers.flatMap((layer, i) => (layer.live ? [] : [{ ...layer, i }]));
+  const count = sampled.length;
+  const isDominant = sampled.some(
     ({ antiTiling }) => antiTiling.mode === 'HEX' && antiTiling.dominant !== null
   );
   if (!((sparse !== null && sparse < count) || (isDominant && count > 1))) return null;
-  const first = describeSlotAntiTiling(layers[0].antiTiling);
-  layers.forEach(({ antiTiling }, i) => {
+  const first = describeSlotAntiTiling(sampled[0].antiTiling);
+  sampled.forEach(({ antiTiling, i }) => {
     const own = describeSlotAntiTiling(antiTiling);
     if (own !== first) {
       fail(
         `${paths[i].antiTiling}.antiTiling`,
-        `is ${own}, layer 0's ${first}: sparse sampling and DOMINANT sample every layer alike, so the layers take one anti-tiling mode (their numbers may differ).`
+        `is ${own}, layer ${sampled[0].i}'s ${first}: sparse sampling and DOMINANT sample every layer alike, so the layers take one anti-tiling mode (their numbers may differ).`
       );
     }
   });
-  const projected = layers.flatMap(({ projection }, i) =>
+  const projected = sampled.flatMap(({ projection, i }) =>
     projection.mode === 'PLANAR' ? [] : [{ i, kind: describeSlotProjection(projection) }]
   );
   for (const { i, kind } of projected) {
@@ -909,6 +960,24 @@ const readTierLayers = (
     const obj = readObject(override, overridePath);
     checkKeys(obj, LAYER_OVERRIDE_KEYS, overridePath);
     return obj;
+  });
+};
+
+/**
+ * A layer's `live` taps only where some context samples it live: its own source, or a tier's
+ * `layers` entry
+ */
+const checkLiveTaps = (rawLayers: unknown[], tiers: Record<string, unknown>[]) => {
+  rawLayers.forEach((layer, i) => {
+    if (!isRecord(layer) || layer.live === undefined) return;
+    const tierSources = tiers.map((tier) =>
+      Array.isArray(tier.layers) && isRecord(tier.layers[i]) ? tier.layers[i].source : undefined
+    );
+    if ([layer.source, ...tierSources].includes('PROCEDURAL_LIVE')) return;
+    fail(
+      `.layers[${i}].live`,
+      "is for a live layer: give source PROCEDURAL_LIVE (the layer's, or a tier's layers entry)."
+    );
   });
 };
 
@@ -1063,7 +1132,11 @@ export const readTerrainDefine = (
       if (overrides?.[i]?.[key] !== undefined) return `${path}.layers[${i}]`;
       return isRecord(raw) && raw[key] !== undefined ? `.layers[${i}]` : pathOf(key);
     };
-    return { antiTiling: whereGiven('antiTiling'), projection: whereGiven('projection') };
+    return {
+      source: whereGiven('source'),
+      antiTiling: whereGiven('antiTiling'),
+      projection: whereGiven('projection'),
+    };
   });
 
   const antiTiling: TerrainAntiTilingDefine =
@@ -1077,6 +1150,7 @@ export const readTerrainDefine = (
   const layers = (rawLayers as unknown[]).map((layer, i) =>
     readLayer(layer, i, { antiTiling, projection }, overrides?.[i], paths[i])
   );
+  checkLiveTaps(rawLayers as unknown[], Object.values(quality));
   const uv = readEnum(fields, 'uv', UV_MODES, pathOf('uv'));
   checkProjectionUv(layers, uv, paths);
   const slotCount = readSlotCount(layers, readSparse(fields, pathOf('sparse')), paths);

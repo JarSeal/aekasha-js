@@ -514,6 +514,12 @@ Each phase adds a gallery row (or extends one) so it can be checked and measured
 - **The set of a bundle:** a bundle is nodes only (the kernel's `MaterialInputResolvers.ts` treats an object of anything else as no bundle), so the `{ textureSet }` resolver maps each bundle it makes to its set in a `WeakMap`, read with `getTextureSetOfInput(bundle)` (the TSL function gets the object the resolver returned). A live layer reads its set's `procedural` field (generator, params, seed) there; no kernel change.
 - **The generator:** `loadTextureSetGeneratorAsync(id)` (the bakes' loader and cache, through the lazy chunk; rejects naming the call) and `getTextureSetGenerator(id)` (synchronous, undefined until a bake or that load has it), on `aekasha/texturesets`. The scene's bake of a live layer's set loads its generator before the materials.
 
+**As built (section 2):**
+
+- **The config** (`TerrainMaterialConfig.ts`, the hand reader in step): a layer's `source` `TEXTURE` (default) or `PROCEDURAL_LIVE`, and `live: { normal?: 'BUMP' | 'TAPS', ao?: 'NONE' | 'CAVITY' }` (`TerrainLiveSchema`, on the entry; `BUMP` in place of `createLiveSurface`'s `NONE`: the layer bumps its height), refused on a layer no context samples live. A tier's `layers[i]` entry takes `source`, so a tier samples a live layer's bake (`TEXTURE`) or runs a baked one live; `live` is the layer's own either way. The resolved layer has `live` (null where it samples), its source the tier entry's over its own.
+- **A live layer's anti-tiling is `NONE`:** a material-wide or a tier's material-wide one doesn't reach it; one given at the layer (its own, its tier's entry) is refused where the layer is live (a tier that samples its bake takes one).
+- **Live layers are beside the slots:** `slotCount` and the slots' alike checks count the sampled layers only (both readers, and the code route's storage: a live layer doesn't make `AUTO` choose `ARRAY` or refuse `SEPARATE`). Section 4 adds the procedural sets on their own inputs, which the define can't see.
+
 ### Phase 9 — Handbook pages and versioning
 
 1. **Pages:** write `terrain-single-layer.md`, `terrain-vertex-color-splat.md`, `terrain-splat-map.md`, `terrain-procedural-rules.md`, `terrain-triplanar-cliffs.md`, `terrain-colormap-detail.md` and `structure-materials.md`, following the page template (p301 §5), with measured numbers from Phase 6.
