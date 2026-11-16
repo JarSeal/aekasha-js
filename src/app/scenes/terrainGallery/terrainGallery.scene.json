@@ -49,6 +49,18 @@
     {
       "sets": ["grass01", "sand01", "mud01", "rocks02", "snow01", "cliffs01"],
       "packing": "LITE"
+    },
+    {
+      "sets": ["grass01", "rocks01", "sand01", "mud01"],
+      "packing": "LITE"
+    },
+    {
+      "sets": ["grass01", "rocks02", "snow01", "cliffs01"],
+      "packing": "LITE"
+    },
+    {
+      "sets": ["grass01", "sand01", "mud01", "rocks02", "snow01", "cliffs01", "grass02", "ice01"],
+      "packing": "LITE"
     }
   ]
 }

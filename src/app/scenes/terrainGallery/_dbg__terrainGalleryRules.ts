@@ -58,7 +58,7 @@ const getBlockRow = (block: RulesBlock) => ({
   description: block.description,
 });
 
-/** A live value's field: a slider over the uniform it sets on both blocks */
+/** A live value's field: a slider over the uniform it sets on every block */
 const valueItem = (
   key: keyof RulesValues,
   label: string,

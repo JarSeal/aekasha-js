@@ -5,17 +5,17 @@
 // into the blocks' vertex colours and into splat map `DataTexture`s (p306 brings the Blender
 // versions). Rows from the back, `LINEAR` left of `HEIGHT`: the vertex colour (`RGBA`, 5 layers),
 // the splat map (5 layers), then `RGB_AO` with the vertex AO (4 layers) left of the 9-layer block
-// (two splat maps). Each block is a code route material (`createTerrainMaterial`, storage `AUTO`):
-// the vertex colour blocks bind their sets' 10 textures (`SEPARATE`, at the budget), the splat
-// blocks one more each, so `AUTO` makes them `ARRAY` (one set array per list, which the scene's
-// `textureSetArrays` lists, so its load builds them). Not the JSON route's `terrain` with variants:
-// a variant can't drop `terrain`'s `layer0` input for `ARRAY`'s `layers`. The debug view is a
-// variant of the block's material.
+// (two splat maps). Each block is a code route material (`createTerrainMaterial`, storage `AUTO`)
+// with the gallery's quality table (p305 Phase 6): its tiers' sparse sampling reads the layers
+// from a set array, so `AUTO` takes `ARRAY` for every block (one set array per list, which the
+// scene's `textureSetArrays` lists, so its load builds them; Phase 3's vertex colour blocks bound
+// their 10 textures `SEPARATE`). Not the JSON route's `terrain` with variants: a variant can't drop
+// `terrain`'s `layer0` input for `ARRAY`'s `layers`. The debug view and the tier are a variant of
+// the block's material.
 import * as THREE from 'three/webgpu';
 import {
   createMeshEntity,
   getGeometry,
-  getMaterialVariant,
   getMeshByAppId,
   getTexture,
   saveBufferGeometry,
@@ -32,9 +32,12 @@ import {
 import {
   BLOCK_GAP,
   BLOCK_PITCH,
+  getGalleryQuality,
+  getTerrainBlockVariant,
   NO_SHADOWS,
   setMaterialUniform,
   type GalleryDebugView,
+  type GalleryQuality,
 } from './galleryBlocks';
 
 /** A block's side, metres: room for every layer's patch */
@@ -162,6 +165,7 @@ export const DEFAULT_SPLATTING_VALUES: Readonly<SplattingValues> = {
 };
 const values: SplattingValues = { ...DEFAULT_SPLATTING_VALUES };
 let debugView: GalleryDebugView = 'NONE';
+let quality: GalleryQuality = 'OWN';
 
 /** The live values (the tab's fields bind them; {@link applySplattingValues} after a change) */
 export const getSplattingValues = () => values;
@@ -273,6 +277,7 @@ const getBlockConfig = (block: SplattingBlock): TerrainMaterialConfig => {
     layers: block.sets.map((set, i) => ({ set, ...layers[i] })),
     ...(isSplat ? { splatMaps: block.key === 'ARRAY_9' ? SPLAT_9_IDS : [SPLAT_5_ID] } : {}),
     ...settings,
+    quality: getGalleryQuality(),
   };
 };
 
@@ -280,14 +285,14 @@ const getBlockConfig = (block: SplattingBlock): TerrainMaterialConfig => {
 export const getSplattingStorage = (block: SplattingBlock) =>
   'layers' in (getTerrainMaterialProps(getBlockConfig(block)).inputs ?? {}) ? 'ARRAY' : 'SEPARATE';
 
-/** A block's material: its code route material, or that material's variant with the debug view */
+/**
+ * A block's material: its code route material, or that material's variant with the debug view and
+ * the quality tier
+ */
 const getBlockMaterial = (block: SplattingBlock) => {
   const config = getBlockConfig(block);
-  const base = createTerrainMaterial(config);
-  if (debugView === 'NONE') return base;
-  return getMaterialVariant(config.id, {
-    staticDefines: { terrain: { ...block.define, debugView } },
-  });
+  createTerrainMaterial(config);
+  return getTerrainBlockVariant(config.id, { debugView, quality });
 };
 
 /** The live values on a block's material: the uniforms it has */
@@ -306,11 +311,12 @@ export const applySplattingValues = () => {
 };
 
 /**
- * Shows the debug view on the blocks: each swaps to its view's variant (made the first time), the
- * live values written in. The views must be loaded (`loadTerrainDebugViewsAsync`).
+ * Shows the debug view and the quality tier on the blocks: each swaps to its variant (made the
+ * first time), the live values written in. The views must be loaded (`loadTerrainDebugViewsAsync`).
  */
-export const setSplattingDebugView = (view: GalleryDebugView) => {
+export const setSplattingView = (view: GalleryDebugView, tier: GalleryQuality) => {
   debugView = view;
+  quality = tier;
   for (const block of SPLATTING_BLOCKS) {
     const mesh = getMeshByAppId(getSplattingAppId(block.key));
     if (!mesh) continue;
@@ -326,6 +332,7 @@ export const setSplattingDebugView = (view: GalleryDebugView) => {
  */
 export const createSplattingRow = () => {
   debugView = 'NONE';
+  quality = 'OWN';
   Object.assign(values, DEFAULT_SPLATTING_VALUES);
   const terrain = generateBlockTerrain();
   const geometries: Record<string, THREE.BufferGeometry> = {

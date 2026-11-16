@@ -1,15 +1,19 @@
 // What the terrain gallery's rows share (the library's blocks in `terrainGallery.ts`, the
 // Procedural row's in `proceduralRow.ts`): a block's size and spacing, its generated geometry with
-// the ramp, the cliffs' wall, and the baseline material's variant for a texture set.
+// the ramp, the cliffs' wall, the baseline material's variant for a texture set, and a terrain
+// material's variant for the tab's debug view and quality tier.
 import * as THREE from 'three/webgpu';
 import {
   existsOrThrow,
   getGeometry,
+  getMaterial,
+  getMaterialVariant,
   saveBufferGeometry,
   type MaterialVariantOverrides,
 } from 'aekasha';
 import type { TextureSetPacking } from 'aekasha/texturesets';
 import { generateTerrain } from 'aekasha/toolkit/geometry';
+import { getTerrainQualityPreset, type TerrainQualityLevel } from 'aekasha/toolkit/terrain';
 
 /** A block's side, metres */
 export const BLOCK_SIZE = 12;
@@ -73,12 +77,47 @@ export type GalleryDebugView =
   | 'NORMALS'
   | 'WEIGHTS'
   | 'PROJECTION'
-  | 'TAPS';
+  | 'TAPS'
+  | 'LAYER_COUNT';
+
+/** A quality tier the tab shows (p305 D10), or the materials' own fields */
+export type GalleryQuality = 'OWN' | TerrainQualityLevel;
+
+/**
+ * The quality table of the gallery's terrain materials without cliff layers (the library's, the
+ * Splatting row's): the toolkit's preset (p305 Phase 6)
+ */
+export const getGalleryQuality = () => getTerrainQualityPreset();
+
+/**
+ * A terrain material's variant for the tab's debug view and quality tier, over its own define (its
+ * `quality` table included), or the material itself for neither: one shader per view and tier
+ * used, shared by every block of the material
+ * @param id the terrain material's id (its code route's)
+ */
+export const getTerrainBlockVariant = (
+  id: string,
+  { debugView, quality }: { debugView: GalleryDebugView; quality: GalleryQuality }
+) => {
+  const base = existsOrThrow(getMaterial(id), `[terrainGallery] No material "${id}".`);
+  if (debugView === 'NONE' && quality === 'OWN') return base;
+  const terrain = base.userData.terrainDefine as object;
+  return getMaterialVariant(id, {
+    staticDefines: {
+      terrain: {
+        ...terrain,
+        ...(debugView === 'NONE' ? {} : { debugView }),
+        ...(quality === 'OWN' ? {} : { qualityLevel: quality }),
+      },
+    },
+  });
+};
 
 /**
  * A block's (or its wall's) variant of the gallery's terrain material (or with `isBaseline` of
  * `textureSetSurface`): its set, in a packing (none: the set's default, the variant the scene's
- * load made), a wall at its UVs in metres, and a terrain debug view (the debug env's tab)
+ * load made), a wall at its UVs in metres, and a terrain debug view and quality tier (the debug
+ * env's tab; the tier over the gallery's quality table)
  */
 export const getSurfaceOverrides = (
   setId: string,
@@ -87,6 +126,7 @@ export const getSurfaceOverrides = (
     isWall?: boolean;
     isBaseline?: boolean;
     debugView?: GalleryDebugView;
+    quality?: GalleryQuality;
   } = {}
 ): MaterialVariantOverrides => {
   const set = opts.packing ? { textureSet: setId, packing: opts.packing } : { textureSet: setId };
@@ -97,11 +137,13 @@ export const getSurfaceOverrides = (
     };
   }
   const hasView = opts.debugView && opts.debugView !== 'NONE';
-  if (!opts.isWall && !hasView) return { inputs: { layer0: set } };
+  const hasTier = opts.quality && opts.quality !== 'OWN';
+  if (!opts.isWall && !hasView && !hasTier) return { inputs: { layer0: set } };
   const terrain = {
     layers: [{}],
     ...(opts.isWall ? { uv: 'MESH_UV' } : {}),
     ...(hasView ? { debugView: opts.debugView } : {}),
+    ...(hasTier ? { quality: getGalleryQuality(), qualityLevel: opts.quality } : {}),
   };
   return { inputs: { layer0: set }, staticDefines: { terrain } };
 };

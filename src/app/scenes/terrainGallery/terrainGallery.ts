@@ -49,14 +49,16 @@ import {
  * - **The Splatting row** (`splattingRow.ts`, p305 Phase 3): six 24 × 24 m generated blocks left of
  *   the library, several sets each blended by weights painted in code: the vertex colour and the
  *   splat map, each `LINEAR` beside `HEIGHT`, `RGB_AO` with the vertex AO, and 9 layers with two
- *   splat maps; code route materials with storage `AUTO`, which makes the splat blocks `ARRAY` (the
- *   scene's `textureSetArrays` lists their two set arrays); the tab tunes the height blend and the
- *   vertex AO.
- * - **The Rules row** (`rulesRow.ts`, p305 Phase 4): two 64 × 64 m blocks in front of the library on
- *   one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks by
- *   slope, snow by height and facing, cliffs on steep faces): the rules alone, and a splat map's
- *   sandy path and mud under the same rules (its 6 sets a set array the scene lists); the cliffs'
- *   layer is slope-gated `TRIPLANAR` (p305 Phase 5); the tab tunes the rules.
+ *   splat maps; code route materials with storage `AUTO` and the gallery's quality table (p305
+ *   Phase 6), whose tiers' sparse sampling makes every block `ARRAY` (the scene's
+ *   `textureSetArrays` lists their set arrays); the tab tunes the height blend and the vertex AO.
+ * - **The Rules row** (`rulesRow.ts`, p305 Phase 4): three 64 × 64 m blocks in front of the library
+ *   on one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks
+ *   by slope, snow by height and facing, cliffs on steep faces): the rules alone, a splat map's
+ *   sandy path and mud under the same rules, and (p305 Phase 6, the tiers' terrain) that with
+ *   grass02 patches, ice on the flat tops and the macro, 8 layers; the cliffs' layer is slope-gated
+ *   `TRIPLANAR` (p305 Phase 5), each block has the toolkit's quality preset and so a set array the
+ *   scene lists; the tab tunes the rules.
  * - **The Cliffs row** (`cliffsRow.ts`, p305 Phase 5): four 40 × 40 m blocks in front of the Rules
  *   row on one generated mesa (its face about 48° on one side, 85° on the other), `cliffs01` in
  *   each projection: `PLANAR`, `BIPLANAR`, `TRIPLANAR` and slope-gated `TRIPLANAR`; the tab
@@ -74,8 +76,9 @@ import {
  * debug env adds the scene's tab (`_dbg__terrainGallery.ts`): the library's material (the terrain
  * material's JSON or code route, or the baseline `textureSetSurface`, which look the same), the set
  * list flying the camera, the packing of the sets that ship every packing, a 1 m checker over the
- * blocks, and the Procedural row's controls (its mode, bake size, each generator's params, its
- * export and the GPU measurement).
+ * blocks, the quality tier (p305 Phase 6: the library, the Splatting and the Rules rows), and the
+ * Procedural row's controls (its mode, bake size, each generator's params, its export and the GPU
+ * measurement).
  */
 
 export const TERRAIN_GALLERY_SCENE_ID = 'terrainGallery';

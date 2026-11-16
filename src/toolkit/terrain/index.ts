@@ -72,6 +72,8 @@ export {
   TERRAIN_TSL_MATERIAL_ID,
 } from './material/TerrainMaterial';
 export type { TerrainQualityLevel } from './material/TerrainMaterial';
+export { getTerrainQualityPreset } from './material/TerrainQualityPreset';
+export type { TerrainQualityPresetOpts } from './material/TerrainQualityPreset';
 export { loadTerrainDebugViewsAsync } from './material/TerrainDebugViews';
 export {
   TerrainAntiTilingSchema,

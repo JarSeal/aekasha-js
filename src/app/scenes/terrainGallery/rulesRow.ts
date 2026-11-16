@@ -1,20 +1,23 @@
-// The terrain gallery's Rules row (p305 Phase 4): two 64 × 64 m blocks in front of the library on
+// The terrain gallery's Rules row (p305 Phase 4): three 64 × 64 m blocks in front of the library on
 // one generated terrain (rolling hills and a step whose face is a cliff band), their layers laid by
 // the terrain material's procedural rules: grass everywhere, rocks by slope (broken up by the
 // macro noise's A), snow above a height on the slopes that face north (−z) and on flat tops (R
 // breaking its edge), cliffs on the steep faces (slope-gated `TRIPLANAR`, p305 Phase 5: planar
 // tiling streaked them). The left block is `RULES` alone; the right one
 // paints a sandy path and mud in the hollows into a splat map (`paintedLayers: 3`, one map: R
-// sand, G mud) under the same rules (`SPLAT_MAP_AND_RULES`). Code route materials, storage `AUTO`:
-// the rules block binds its 4 sets' 8 textures and the noise texture (`SEPARATE`), the combo's 6
-// sets go over the budget and take a set array (the scene's `textureSetArrays` lists it). The rules
+// sand, G mud) under the same rules (`SPLAT_MAP_AND_RULES`). The third (p305 Phase 6, the tiers'
+// terrain) is the combo with two more rule layers, grass02 patches on the gentle slopes and ice on
+// the flat tops facing south, and the macro variation: 8 layers. Code route materials, storage
+// `AUTO`, each with the toolkit's quality preset (its cliff layer projected per tier): the tiers'
+// sparse sampling reads the layers from a set array, so every block takes one (the scene's
+// `textureSetArrays` lists them; Phase 4's rules block bound its 8 textures `SEPARATE`). The rules
 // read the world height, so the snow line follows the block's lift; the noise is the toolkit's
-// `macroNoise` (the code route's default noise texture, which the scene lists).
+// `macroNoise` (the code route's default noise texture and the 8 layers' macro, which the scene
+// lists). The debug view and the tier are a variant of the block's material.
 import * as THREE from 'three/webgpu';
 import {
   createMeshEntity,
   getGeometry,
-  getMaterialVariant,
   getMeshByAppId,
   getTexture,
   saveBufferGeometry,
@@ -25,10 +28,18 @@ import { generateTerrain, type TerrainRule } from 'aekasha/toolkit/geometry';
 import {
   createTerrainMaterial,
   getTerrainMaterialProps,
+  getTerrainQualityPreset,
   type TerrainMaterialConfig,
   type TerrainProjection,
 } from 'aekasha/toolkit/terrain';
-import { BLOCK_GAP, NO_SHADOWS, setMaterialUniform, type GalleryDebugView } from './galleryBlocks';
+import {
+  BLOCK_GAP,
+  getTerrainBlockVariant,
+  NO_SHADOWS,
+  setMaterialUniform,
+  type GalleryDebugView,
+  type GalleryQuality,
+} from './galleryBlocks';
 
 /** A block's side, metres: hills, a cliff band and a snow line on one block */
 export const RULES_BLOCK_SIZE = 64;
@@ -56,7 +67,7 @@ const GEOMETRY_ID = 'terrainGalleryRulesBlock';
 const SPLAT_ID = 'terrainGalleryRules.splat0';
 
 /** The row's blocks */
-export const RULES_KEYS = ['RULES', 'SPLAT_AND_RULES'] as const;
+export const RULES_KEYS = ['RULES', 'SPLAT_AND_RULES', 'EIGHT_LAYERS'] as const;
 /** One of {@link RULES_KEYS} */
 export type RulesKey = (typeof RULES_KEYS)[number];
 
@@ -74,10 +85,15 @@ export type RulesBlock = {
 
 /** The rule layers' sets, after the painted ones */
 const RULE_SETS = ['rocks02', 'snow01', 'cliffs01'];
+/** The 8 layers' rule layers past the combo's */
+const EXTRA_SETS = ['grass02', 'ice01'];
 const SETS: Record<RulesKey, string[]> = {
   RULES: ['grass01', ...RULE_SETS],
   SPLAT_AND_RULES: ['grass01', 'sand01', 'mud01', ...RULE_SETS],
+  EIGHT_LAYERS: ['grass01', 'sand01', 'mud01', ...RULE_SETS, ...EXTRA_SETS],
 };
+/** The 8 layers' macro variation: a block's worth of `macroNoise` */
+const EIGHT_LAYERS_MACRO = { texture: 'macroNoise', scale: 64 };
 const DESCRIPTIONS: Record<RulesKey, [string, string]> = {
   RULES: [
     'Rules',
@@ -87,14 +103,21 @@ const DESCRIPTIONS: Record<RulesKey, [string, string]> = {
     'Splat map + rules',
     'A sandy path and mud in the hollows painted (one 256² map), the same rules over them',
   ],
+  EIGHT_LAYERS: [
+    '8 layers',
+    'The splat map + rules, grass02 patches on gentle slopes, ice on flat tops facing south, macro',
+  ],
 };
 
-/** Where the row stands: in front of the library and the Splatting row (+z), two blocks */
+/**
+ * Where the row stands: in front of the library and the Splatting row (+z), the first two blocks
+ * either side of x 0, the third right of them
+ */
 const ROW_NEAR_Z = 40 + 2 * BLOCK_GAP;
 const ROW_Z = ROW_NEAR_Z + RULES_BLOCK_SIZE / 2;
 const PITCH = RULES_BLOCK_SIZE + 2 * BLOCK_GAP;
 
-/** The two blocks, the rules alone left of the combo */
+/** The three blocks from the left: the rules alone, the combo, the 8 layers */
 export const RULES_BLOCKS: readonly RulesBlock[] = RULES_KEYS.map((key, i) => ({
   key,
   title: DESCRIPTIONS[key][0],
@@ -108,12 +131,12 @@ export const RULES_BLOCKS: readonly RulesBlock[] = RULES_KEYS.map((key, i) => ({
 /** The row's extent on the ground, for the gallery's ground */
 export const RULES_ROW_BOUNDS = {
   minX: -PITCH / 2 - RULES_BLOCK_SIZE / 2,
-  maxX: PITCH / 2 + RULES_BLOCK_SIZE / 2,
+  maxX: (RULES_KEYS.length - 1.5) * PITCH + RULES_BLOCK_SIZE / 2,
   minZ: ROW_NEAR_Z,
   maxZ: ROW_NEAR_Z + RULES_BLOCK_SIZE,
 };
 
-/** The row's live values, uniforms on both blocks (the tab's) */
+/** The row's live values, uniforms on every block (the tab's) */
 export type RulesValues = {
   /** Rocks from this slope, degrees */
   rocksSlope: number;
@@ -138,6 +161,7 @@ const values: RulesValues = { ...DEFAULT_VALUES, snowHeight: 0 };
 /** This load's: the block's lift and its world heights' range */
 const terrainState = { y: 0, top: 0, bottom: 0 };
 let debugView: GalleryDebugView = 'NONE';
+let quality: GalleryQuality = 'OWN';
 
 /** The live values (the tab's fields bind them; {@link applyRulesValues} after a change) */
 export const getRulesValues = () => values;
@@ -154,7 +178,7 @@ export const getRulesAppId = (key: RulesKey) => `terrainGallery_rules_${key}`;
 
 /**
  * The rules, their layers after `first` painted ones (the rule order and so their uniforms'
- * `r<i>` are the same on both blocks): rocks, snow, cliffs
+ * `r<i>` are the same on every block): rocks, snow, cliffs
  */
 const getRules = (first: number): TerrainRule[] => [
   {
@@ -173,25 +197,53 @@ const getRules = (first: number): TerrainRule[] => [
 ];
 
 /**
+ * The 8 layers' extra rules, after the shared ones (their uniforms `r3`, `r4`, at the load's
+ * values): grass02 where the macro noise's R (an fbm: B's Worley cells would cut straight edges) is
+ * high on gentle slopes above the hollows, ice on the flat tops facing south
+ */
+const getExtraRules = (first: number): TerrainRule[] => [
+  {
+    layer: first,
+    slope: { max: 15, softness: 5 },
+    height: { min: terrainState.bottom + 2, softness: 1 },
+    noise: { scale: 30, amount: 1, channel: 'R' },
+  },
+  {
+    layer: first + 1,
+    height: { min: values.snowHeight - 1, softness: 1 },
+    slope: { max: 10, softness: 4 },
+    aspect: { direction: [0, 1], range: 80, softness: 30 },
+  },
+];
+
+/**
  * The cliffs' layer's projection (p305 Phase 5): planar world tiling streaks on its steep faces, so
  * it's projected past the gate (the other layers lie on gentler slopes: planar)
  */
 const CLIFF_PROJECTION: TerrainProjection = { mode: 'TRIPLANAR', slopeGate: [35, 50] };
 
-/** A block's code route config: its sets and rules, the combo's splat map; storage `AUTO` */
+/**
+ * A block's code route config: its sets and rules, the combo's splat map, the 8 layers' extra
+ * rules and macro, the toolkit's quality preset with its cliff layer; storage `AUTO`
+ */
 const getBlockConfig = (block: RulesBlock): TerrainMaterialConfig => {
   const id = `terrainGalleryRules_${block.key}`;
   const layers = block.sets.map((set) =>
     set === 'cliffs01' ? { set, projection: CLIFF_PROJECTION } : { set }
   );
+  const quality = getTerrainQualityPreset({ cliffLayers: [block.sets.indexOf('cliffs01')] });
   if (block.key === 'RULES') {
-    return { id, layers, blend: { source: 'RULES', rules: getRules(1) } };
+    return { id, layers, blend: { source: 'RULES', rules: getRules(1) }, quality };
   }
+  const isEight = block.key === 'EIGHT_LAYERS';
+  const rules = isEight ? [...getRules(3), ...getExtraRules(6)] : getRules(3);
   return {
     id,
     layers,
-    blend: { source: 'SPLAT_MAP_AND_RULES', paintedLayers: 3, rules: getRules(3) },
+    blend: { source: 'SPLAT_MAP_AND_RULES', paintedLayers: 3, rules },
     splatMaps: [SPLAT_ID],
+    ...(isEight ? { macro: EIGHT_LAYERS_MACRO } : {}),
+    quality,
   };
 };
 
@@ -199,15 +251,15 @@ const getBlockConfig = (block: RulesBlock): TerrainMaterialConfig => {
 export const getRulesStorage = (block: RulesBlock) =>
   'layers' in (getTerrainMaterialProps(getBlockConfig(block)).inputs ?? {}) ? 'ARRAY' : 'SEPARATE';
 
-/** A block's material: its code route material, or that material's variant with the debug view */
+/**
+ * A block's material: its code route material, or that material's variant with the debug view and
+ * the quality tier (over its own define, its rules at the load's values, not the live values': a
+ * slider writes uniforms, never another variant)
+ */
 const getBlockMaterial = (block: RulesBlock) => {
   const config = getBlockConfig(block);
-  const base = createTerrainMaterial(config);
-  if (debugView === 'NONE') return base;
-  // The material's own define (its rules at the load's values), not the live values': a slider
-  // writes uniforms, never another variant
-  const terrain = base.userData.terrainDefine as object;
-  return getMaterialVariant(config.id, { staticDefines: { terrain: { ...terrain, debugView } } });
+  createTerrainMaterial(config);
+  return getTerrainBlockVariant(config.id, { debugView, quality });
 };
 
 /** The live values on a block's material (the rules `r0` rocks, `r1` snow, `r2` cliffs) */
@@ -220,7 +272,7 @@ const writeValues = (material: THREE.Material) => {
   setMaterialUniform(material, 'terrain_heightBlendDepth', values.heightBlendDepth);
 };
 
-/** Writes the live values into both blocks' materials (after a field's change) */
+/** Writes the live values into the blocks' materials (after a field's change) */
 export const applyRulesValues = () => {
   for (const { key } of RULES_BLOCKS) {
     const mesh = getMeshByAppId(getRulesAppId(key));
@@ -229,11 +281,12 @@ export const applyRulesValues = () => {
 };
 
 /**
- * Shows the debug view on the blocks: each swaps to its view's variant (made the first time), the
- * live values written in. The views must be loaded (`loadTerrainDebugViewsAsync`).
+ * Shows the debug view and the quality tier on the blocks: each swaps to its variant (made the
+ * first time), the live values written in. The views must be loaded (`loadTerrainDebugViewsAsync`).
  */
-export const setRulesDebugView = (view: GalleryDebugView) => {
+export const setRulesView = (view: GalleryDebugView, tier: GalleryQuality) => {
   debugView = view;
+  quality = tier;
   for (const block of RULES_BLOCKS) {
     const mesh = getMeshByAppId(getRulesAppId(block.key));
     if (!mesh) continue;
@@ -310,10 +363,11 @@ const getSplatMap = (terrain: BlockTerrain) => {
 
 /**
  * Creates the row (the scene's load): the terrain (its edges on the ground), the splat map, then
- * both blocks with their materials, the scene's defaults (the tab applies its view)
+ * the blocks with their materials, the scene's defaults (the tab applies its view)
  */
 export const createRulesRow = () => {
   debugView = 'NONE';
+  quality = 'OWN';
   const terrain = generateBlockTerrain();
   const top = terrain.heights.reduce((high, h) => Math.max(high, h), -Infinity);
   terrainState.y = GROUND_TOP_Y;

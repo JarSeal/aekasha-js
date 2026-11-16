@@ -17,7 +17,11 @@ import {
   type DebuggerTabSection,
 } from 'aekasha/debug';
 import { getTextureSet, loadTextureSetAsync, type TextureSetPacking } from 'aekasha/texturesets';
-import { createTerrainMaterial, loadTerrainDebugViewsAsync } from 'aekasha/toolkit/terrain';
+import {
+  createTerrainMaterial,
+  getTerrainMaterialVariant,
+  loadTerrainDebugViewsAsync,
+} from 'aekasha/toolkit/terrain';
 import {
   clearAntiTilingSelection,
   getAntiTilingSections,
@@ -45,17 +49,19 @@ import {
 import {
   BASELINE_MATERIAL_ID,
   GALLERY_MATERIAL_ID,
+  getGalleryQuality,
   getSurfaceOverrides,
   type GalleryDebugView,
+  type GalleryQuality,
 } from './galleryBlocks';
 import { ANTI_TILING_BLOCKS, getAntiTilingAppId, setAntiTilingRowState } from './antiTilingRow';
 import {
   getSplattingAppId,
-  setSplattingDebugView,
+  setSplattingView,
   SPLATTING_BLOCK_Y,
   SPLATTING_BLOCKS,
 } from './splattingRow';
-import { getRulesAppId, getRulesTerrain, RULES_BLOCKS, setRulesDebugView } from './rulesRow';
+import { getRulesAppId, getRulesTerrain, RULES_BLOCKS, setRulesView } from './rulesRow';
 import { CLIFFS_BLOCK_Y, CLIFFS_BLOCKS, getCliffsAppId, setCliffsDebugView } from './cliffsRow';
 import {
   getProceduralBakeSettings,
@@ -96,6 +102,15 @@ const DEBUG_VIEWS: readonly { label: string; value: GalleryDebugView }[] = [
   { label: 'Weights', value: 'WEIGHTS' },
   { label: 'Projection', value: 'PROJECTION' },
   { label: 'Taps', value: 'TAPS' },
+  { label: 'Layer count', value: 'LAYER_COUNT' },
+];
+
+const QUALITIES: readonly { label: string; value: GalleryQuality }[] = [
+  { label: 'Own', value: 'OWN' },
+  { label: 'Low', value: 'LOW' },
+  { label: 'Medium', value: 'MEDIUM' },
+  { label: 'High', value: 'HIGH' },
+  { label: 'Ultra', value: 'ULTRA' },
 ];
 
 /** The tab's saved settings */
@@ -104,12 +119,14 @@ type GalleryTabState = {
   checker: boolean;
   material: GalleryMaterial;
   debugView: GalleryDebugView;
+  quality: GalleryQuality;
 };
 const DEFAULT_STATE: GalleryTabState = {
   packing: 'LITE',
   checker: false,
   material: 'TERRAIN',
   debugView: 'NONE',
+  quality: 'OWN',
 };
 const state: GalleryTabState = { ...DEFAULT_STATE };
 
@@ -173,8 +190,8 @@ const getBlockPacking = (setId: string): TextureSetPacking | undefined =>
 
 /**
  * A block's material in the material mode: a variant of the scene's `terrain` or
- * `textureSetSurface`, or the code route's own (`createTerrainMaterial`, made once per set, packing
- * and wall, the scene's)
+ * `textureSetSurface`, or the code route's own (`createTerrainMaterial`, made once per set, packing,
+ * wall and view, the scene's); the terrain's at the tab's quality tier (the gallery's table)
  */
 const getBlockMaterial = (
   setId: string,
@@ -184,16 +201,19 @@ const getBlockMaterial = (
 ) => {
   // The set's default packing is the variant the scene's load made (no packing key)
   const isDefault = !packing || getTextureSet(setId)?.defaultPacking === packing;
-  const debugView = state.debugView;
+  const { debugView, quality } = state;
   if (material === 'TERRAIN_CODE') {
     const view = debugView === 'NONE' ? '' : `_${debugView}`;
-    return createTerrainMaterial({
-      id: `terrainGalleryCode_${setId}_${packing ?? 'default'}${isWall ? '_wall' : ''}${view}`,
+    const id = `terrainGalleryCode_${setId}_${packing ?? 'default'}${isWall ? '_wall' : ''}${view}`;
+    const code = createTerrainMaterial({
+      id,
       layers: [{ set: setId }],
       ...(isDefault ? {} : { packing }),
       ...(isWall ? { uv: 'MESH_UV' as const } : {}),
       ...(debugView === 'NONE' ? {} : { debugView }),
+      quality: getGalleryQuality(),
     });
+    return quality === 'OWN' ? code : getTerrainMaterialVariant(id, quality);
   }
   const isBaseline = material === 'BASELINE';
   const overrides = getSurfaceOverrides(setId, {
@@ -201,6 +221,7 @@ const getBlockMaterial = (
     isWall,
     isBaseline,
     debugView,
+    quality,
   });
   return getMaterialVariant(isBaseline ? BASELINE_MATERIAL_ID : GALLERY_MATERIAL_ID, overrides);
 };
@@ -222,16 +243,18 @@ const applyDebugViewAsync = async () => {
   if (startedOn.isCurrent) applyMaterial();
 };
 
-/** Every library block (and wall) in the material mode, and the Anti-tiling, Splatting, Rules and
- * Cliffs rows in the view */
+/**
+ * Every library block (and wall) in the material mode, and the Anti-tiling, Splatting, Rules and
+ * Cliffs rows in the view; the library, the Splatting and the Rules rows at the quality tier
+ */
 const applyMaterial = () => {
   for (const block of GALLERY_BLOCKS) {
     swapSurface(getBlockAppId(block.setId), block.setId, false);
     if (block.hasWall) swapSurface(getWallAppId(block.setId), block.setId, true);
   }
   setAntiTilingRowState({ debugView: state.debugView });
-  setSplattingDebugView(state.debugView);
-  setRulesDebugView(state.debugView);
+  setSplattingView(state.debugView, state.quality);
+  setRulesView(state.debugView, state.quality);
   setCliffsDebugView(state.debugView);
 };
 
@@ -393,7 +416,7 @@ export const createTerrainGalleryTab = () => {
     sceneId: TERRAIN_GALLERY_SCENE_ID,
     state,
     lsKey: 'AEK_debugTerrainGallery',
-    persistKeys: ['packing', 'checker', 'material', 'debugView'],
+    persistKeys: ['packing', 'checker', 'material', 'debugView', 'quality'],
     refreshIntervalMs: 500,
     onRefresh: refreshProceduralFigures,
     onClearLS: () => {
@@ -419,8 +442,16 @@ export const createTerrainGalleryTab = () => {
             label: 'Debug view',
             kind: 'select',
             options: DEBUG_VIEWS.map((option) => ({ ...option })),
-            hint: 'The terrain material’s debug view on the library (not the baseline), the Anti-tiling, Splatting, Rules and Cliffs rows: texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048), the shaded normal in world space, the layers’ weights (layer 0 white, 1 red, 2 green, 3 blue, 4 yellow, …), the projections’ planes (X red, Y green, Z blue; a slope gate’s band striped) or the material’s own texture fetches a pixel (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more magenta)',
+            hint: 'The terrain material’s debug view on the library (not the baseline), the Anti-tiling, Splatting, Rules and Cliffs rows: texel density (a 1 m checker in bands of texels a metre, blue under 128 to red from 2048), the shaded normal in world space, the layers’ weights (layer 0 white, 1 red, 2 green, 3 blue, 4 yellow, …), the projections’ planes (X red, Y green, Z blue; a slope gate’s band striped), the material’s own texture fetches a pixel (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more magenta) or the layers weighing in a pixel (1 dark blue, 2 green, 3 yellow, 4 orange, 5+ red; striped where sparse sampling drops one)',
             onChange: () => void applyDebugViewAsync(),
+          },
+          {
+            key: 'quality',
+            label: 'Quality',
+            kind: 'segmented',
+            options: QUALITIES.map((option) => ({ ...option })),
+            hint: 'The quality tier (getTerrainQualityPreset, p305 D10) on the library, the Splatting and the Rules rows: low (no anti-tiling, 2 layers a pixel, cliffs biplanar slope-gated), medium (dual scale, 3, triplanar gated), high (hex on the dominant layer, 3, triplanar gated), ultra (hex on all, 4, triplanar); own: the materials’ own fields. The Anti-tiling and Cliffs rows compare one technique each and keep theirs',
+            onChange: () => applyMaterial(),
           },
           {
             key: 'packing',
@@ -491,6 +522,6 @@ export const createTerrainGalleryTab = () => {
 
   if (state.checker) setChecker(true);
   if (state.debugView !== 'NONE') void applyDebugViewAsync();
-  else if (state.material !== 'TERRAIN') applyMaterial();
+  else if (state.material !== 'TERRAIN' || state.quality !== 'OWN') applyMaterial();
   if (state.packing !== 'LITE') void applyPackingAsync(state.packing);
 };
