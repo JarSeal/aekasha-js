@@ -1,6 +1,7 @@
 // The terrain material's inputs (p305 D1, D9): what the setup reads of them, each checked against
 // the define (the layers' sets: a `{ textureSet }` bundle each, `layer<i>`, or one
-// `{ textureSetArray }` bundle, `layers`; the splat maps `splat<i>`; the macro texture `macro`),
+// `{ textureSetArray }` bundle, `layers`; the splat maps `splat<i>`; the macro texture `macro`, of
+// the macro variation and the rules' noise),
 // and what the code route makes of its config. Inputs, not defines: the gather's texture closure
 // loads them (and builds the set arrays they name), and a block's variant swaps them without
 // another shader.
@@ -15,10 +16,11 @@ import {
 } from 'aekasha/texturesets';
 import {
   DEFAULT_RESERVED_TEXTURES,
+  getPaintedLayerCount,
   getSplatMapCount,
   type ResolvedTerrainDefine,
 } from './TerrainDefine';
-import type { TerrainMaterialConfig } from './TerrainMaterialConfig';
+import type { TerrainBlend, TerrainMaterialConfig } from './TerrainMaterialConfig';
 import { chooseTerrainStorage, TERRAIN_PACKING_SLOTS, type TerrainBinding } from './TerrainStorage';
 
 /** A layer's input key: `layer0`, `layer1`, … */
@@ -27,6 +29,8 @@ const getLayerInputKey = (index: number) => `layer${index}`;
 const getSplatInputKey = (index: number) => `splat${index}`;
 /** The macro texture's input key */
 const MACRO_INPUT_KEY = 'macro';
+/** The texture the code route's rule noise reads without a `macro` or a `noiseTexture` */
+const DEFAULT_NOISE_TEXTURE = 'macroNoise';
 /** The layers' set array's input key (`ARRAY` storage) */
 const ARRAY_INPUT_KEY = 'layers';
 
@@ -162,24 +166,23 @@ export const readLayerSources = (
 };
 
 /**
- * The splat maps' texture nodes (`SPLAT_MAP`: one per four layers past the base), or none for the
- * other sources, whose inputs may have no `splat<i>`
+ * The splat maps' texture nodes (`SPLAT_MAP`, `SPLAT_MAP_AND_RULES`: one per four painted layers
+ * past the base), or none for the other sources, whose inputs may have no `splat<i>`
  * @internal
  */
 export const readSplatMaps = (
   inputs: Record<string, unknown>,
   define: ResolvedTerrainDefine
 ): TextureNode[] => {
-  const layerCount = define.layers.length;
-  const count = define.blend.source === 'SPLAT_MAP' ? getSplatMapCount(layerCount) : 0;
+  const count = getSplatMapCount(define.blend, define.layers.length);
   const keys = Array.from({ length: count }, (_, i) => getSplatInputKey(i));
   checkNumberedKeys(
     inputs,
     'splat',
     keys,
     count
-      ? `has no splat map: ${layerCount} layers take ${count}`
-      : 'has no splat map: staticDefines.terrain.blend.source is SPLAT_MAP for splat maps'
+      ? `has no splat map: ${getPaintedLayerCount(define.blend, define.layers.length)} painted layers take ${count}`
+      : 'has no splat map: staticDefines.terrain.blend.source is SPLAT_MAP or SPLAT_MAP_AND_RULES for splat maps'
   );
   return keys.map((key, i) => {
     const node = inputs[key];
@@ -192,9 +195,13 @@ export const readSplatMaps = (
   });
 };
 
+/** Whether the define's blend (as read, its tier's) has a rule with noise */
+const hasRuleNoise = (define: ResolvedTerrainDefine) =>
+  define.blend.source !== 'SINGLE' && define.blend.rules.some((rule) => rule.noise);
+
 /**
- * The macro texture's node when the define has `macro` (which only then takes the input `macro`),
- * else null
+ * The macro texture's node when the define reads it (`macro`, or a rule's noise), else null. The
+ * input is refused where nothing in the define (its tiers included) takes it.
  * @internal
  */
 export const readMacroTexture = (
@@ -202,15 +209,15 @@ export const readMacroTexture = (
   define: ResolvedTerrainDefine
 ): TextureNode | null => {
   const input = inputs[MACRO_INPUT_KEY];
-  if (!define.macro) {
-    if (input === undefined) return null;
+  if (!define.takesMacroTexture && input !== undefined) {
     throw new Error(
-      `[terrain] Input "${MACRO_INPUT_KEY}" has no macro: give staticDefines.terrain.macro (its scale) to use it.`
+      `[terrain] Input "${MACRO_INPUT_KEY}" has no use: give staticDefines.terrain.macro (its scale) or a rule's noise to use it.`
     );
   }
+  if (!define.macro && !hasRuleNoise(define)) return null;
   if (!isTextureNode(input)) {
     throw new Error(
-      `[terrain] Missing input "${MACRO_INPUT_KEY}": the macro texture ({ "texture": id }, eg. macroNoise) of staticDefines.terrain.macro.`
+      `[terrain] Missing input "${MACRO_INPUT_KEY}": the macro texture ({ "texture": id }, eg. macroNoise) that staticDefines.terrain.macro and the rules' noise read.`
     );
   }
   return input;
@@ -239,6 +246,21 @@ const getArrayPacking = (config: TerrainMaterialConfig): TextureSetPacking => {
   return packings[0];
 };
 
+/** Whether a blend of the code route's config (the material's or a tier's) has rule noise */
+const hasConfigRuleNoise = (blend: TerrainBlend | undefined) =>
+  Boolean(blend && 'rules' in blend && blend.rules.some((rule) => rule.noise));
+
+/**
+ * The code route's macro texture id: `macro`'s, else the rules' `noiseTexture` (default
+ * `macroNoise`) when a rule of the material's or a tier's has noise; undefined for none
+ */
+const getMacroTextureId = (config: TerrainMaterialConfig) => {
+  if (config.macro) return config.macro.texture;
+  const tiers = Object.values(config.quality ?? {}).map((tier) => tier?.blend);
+  const hasNoise = [config.blend, ...tiers].some(hasConfigRuleNoise);
+  return hasNoise ? config.noiseTexture ?? DEFAULT_NOISE_TEXTURE : undefined;
+};
+
 /**
  * The code route's storage: `AUTO` (the default) is `SEPARATE` while each layer's packing slots,
  * the splat maps and the macro texture fit the budget (a set no data has counts as fitting: its
@@ -251,7 +273,7 @@ const getStorage = (config: TerrainMaterialConfig) => {
     const packing = getLayerPacking(config, layer.set);
     return packing ? TERRAIN_PACKING_SLOTS[packing].length : 0;
   });
-  const extra = (config.splatMaps?.length ?? 0) + (config.macro ? 1 : 0);
+  const extra = (config.splatMaps?.length ?? 0) + (getMacroTextureId(config) ? 1 : 0);
   return chooseTerrainStorage(
     layerSlots,
     extra,
@@ -262,7 +284,8 @@ const getStorage = (config: TerrainMaterialConfig) => {
 /**
  * The code route's inputs: the layers' sets (`SEPARATE`: `layer<i>`, `{ textureSet, packing? }`
  * each; `ARRAY`: `layers`, `{ textureSetArray, packing }`, `AUTO` choosing), the splat maps
- * (`splat<i>`) and the macro texture (`macro`)
+ * (`splat<i>`) and the macro texture (`macro`: the macro variation's, or the rules' noise
+ * texture)
  * @internal
  */
 export const getTerrainInputs = (config: TerrainMaterialConfig) => {
@@ -285,6 +308,7 @@ export const getTerrainInputs = (config: TerrainMaterialConfig) => {
   config.splatMaps?.forEach((id, i) => {
     inputs[getSplatInputKey(i)] = { texture: id };
   });
-  if (config.macro) inputs[MACRO_INPUT_KEY] = { texture: config.macro.texture };
+  const macroTexture = getMacroTextureId(config);
+  if (macroTexture) inputs[MACRO_INPUT_KEY] = { texture: macroTexture };
   return inputs;
 };

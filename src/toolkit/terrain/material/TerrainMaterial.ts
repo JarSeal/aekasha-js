@@ -316,6 +316,10 @@ const getLayerWeights = (
 ): PaintedWeights | null => {
   const { blend } = define;
   if (blend.source === 'SINGLE') return null;
+  // TODO(p305 Phase 4, section 2): the rules' masks over the weights
+  if (blend.rules.length) {
+    throw new Error(`[terrain] blend.source ${blend.source}: the rules aren't built yet.`);
+  }
   const painted =
     blend.source === 'VERTEX_COLOR'
       ? getVertexColorWeights(layers.length, blend.layout)
@@ -511,13 +515,14 @@ const terrainMaterialFns = { setup: setupTerrainMaterial } satisfies TslMaterial
 
 /**
  * The config's static define: no id, no packing, no layer sets, no storage, no splat maps and no
- * macro texture (the inputs carry them)
+ * macro or noise texture (the inputs carry them)
  */
 const getTerrainDefine = (config: TerrainMaterialConfig): TerrainMaterialDefine => {
   const {
     id: _id,
     packing: _packing,
     splatMaps: _splatMaps,
+    noiseTexture: _noiseTexture,
     storage: _storage,
     layers,
     macro,

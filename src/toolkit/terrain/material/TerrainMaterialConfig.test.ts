@@ -1,0 +1,60 @@
+import { describe, expect, it } from 'vitest';
+import { TerrainMaterialConfigSchema } from './TerrainMaterialConfig';
+
+/** The code route's config of `count` grass layers and these fields */
+const configOf = (count: number, fields: object = {}) => ({
+  id: 'valley',
+  layers: Array.from({ length: count }, () => ({ set: 'grass01' })),
+  ...fields,
+});
+
+const issuesOf = (config: unknown) => {
+  const result = TerrainMaterialConfigSchema.safeParse(config);
+  return result.success ? [] : result.error.issues.map((issue) => issue.path.join('.'));
+};
+
+const noisyRule = { layer: 1, slope: { min: 30 }, noise: { scale: 40, amount: 0.5 } };
+
+describe('TerrainMaterialConfigSchema', () => {
+  it("wants a splat map id per four painted layers, the combo's rule-only layers aside", () => {
+    expect(
+      issuesOf(configOf(6, { blend: { source: 'SPLAT_MAP' }, splatMaps: ['a', 'b'] }))
+    ).toEqual([]);
+    expect(issuesOf(configOf(6, { blend: { source: 'SPLAT_MAP' }, splatMaps: ['a'] }))).toEqual([
+      'splatMaps',
+    ]);
+    const combo = (rules: object[]) => ({
+      source: 'SPLAT_MAP_AND_RULES',
+      rules,
+    });
+    const cliffs = { layer: 9, slope: { min: 50 } };
+    expect(issuesOf(configOf(10, { blend: combo([cliffs]), splatMaps: ['a', 'b'] }))).toEqual([]);
+    expect(issuesOf(configOf(10, { blend: combo([cliffs]) }))).toEqual(['splatMaps']);
+    expect(
+      issuesOf(configOf(2, { blend: { source: 'RULES', rules: [cliffs] }, splatMaps: ['a'] }))
+    ).toContain('splatMaps');
+  });
+
+  it('takes a noiseTexture only for rule noise without a macro', () => {
+    const blend = { source: 'RULES', rules: [noisyRule] };
+    expect(issuesOf(configOf(2, { blend, noiseTexture: 'noise' }))).toEqual([]);
+    expect(issuesOf(configOf(1, { noiseTexture: 'noise' }))).toEqual(['noiseTexture']);
+    const macro = { texture: 'macroNoise', scale: 80 };
+    expect(issuesOf(configOf(2, { blend, macro, noiseTexture: 'noise' }))).toEqual([
+      'noiseTexture',
+    ]);
+    const tierNoise = {
+      blend: { source: 'RULES', rules: [{ layer: 1, slope: { min: 30 } }] },
+      quality: { HIGH: { blend } },
+      noiseTexture: 'noise',
+    };
+    expect(issuesOf(configOf(2, tierNoise))).toEqual([]);
+  });
+
+  it("names the rule's path in a tier", () => {
+    const blend = { source: 'RULES', rules: [{ layer: 3, slope: { min: 30 } }] };
+    expect(issuesOf(configOf(2, { quality: { LOW: { blend } } }))).toContain(
+      'quality.LOW.blend.rules.0.layer'
+    );
+  });
+});

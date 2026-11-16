@@ -7,6 +7,7 @@
 // no zod: it checks the define's values by hand as it reads them (the tests keep both in step).
 // Each phase of p305 adds its fields: a key the schema doesn't know is refused.
 import { z } from 'zod';
+import { TERRAIN_RULE_NOISE_CHANNELS } from 'aekasha/toolkit/geometry';
 
 /** The layer's sampled source: `TEXTURE`, a texture set's maps. */
 export const TERRAIN_LAYER_SOURCES = ['TEXTURE'] as const;
@@ -14,9 +15,18 @@ export const TERRAIN_LAYER_SOURCES = ['TEXTURE'] as const;
 export const TERRAIN_UV_MODES = ['WORLD', 'MESH_UV'] as const;
 /**
  * Where the layers' weights come from (p305 D4): `SINGLE` one layer everywhere, `VERTEX_COLOR` the
- * mesh's colour attribute, `SPLAT_MAP` one or two RGBA textures at the mesh's UV.
+ * mesh's colour attribute, `SPLAT_MAP` one or two RGBA textures at the mesh's UV, `RULES` the base
+ * layer under procedural rules (slope, height, facing, noise), and `VERTEX_COLOR_AND_RULES` and
+ * `SPLAT_MAP_AND_RULES` the painted weights under rules.
  */
-export const TERRAIN_BLEND_SOURCES = ['SINGLE', 'VERTEX_COLOR', 'SPLAT_MAP'] as const;
+export const TERRAIN_BLEND_SOURCES = [
+  'SINGLE',
+  'VERTEX_COLOR',
+  'SPLAT_MAP',
+  'RULES',
+  'VERTEX_COLOR_AND_RULES',
+  'SPLAT_MAP_AND_RULES',
+] as const;
 /**
  * How painted weights blend the layers: `HEIGHT` (default) by each layer's height (Mishkinis), so
  * the higher surface (pebbles, a rock's top) shows through a border; `LINEAR` by the weights alone.
@@ -29,13 +39,18 @@ export const TERRAIN_BLEND_MODES = ['HEIGHT', 'LINEAR'] as const;
 export const TERRAIN_VERTEX_COLOR_LAYOUTS = ['RGB_AO', 'RGBA'] as const;
 /**
  * The layers each blend source takes, `[min, max]`: `SINGLE` one; a vertex colour the base and one
- * per weight channel (`RGB_AO` 3, `RGBA` 4); splat maps the base and four per map (two maps at most).
+ * per weight channel (`RGB_AO` 3, `RGBA` 4); splat maps the base and four per map (two maps at
+ * most); the rules and the combos up to 16, the painted source's own count painted (from layer 0)
+ * and each layer past them a rule's.
  */
 export const TERRAIN_BLEND_LAYER_COUNTS = {
   SINGLE: [1, 1],
   VERTEX_COLOR_RGB_AO: [2, 4],
   VERTEX_COLOR_RGBA: [2, 5],
   SPLAT_MAP: [2, 9],
+  RULES: [2, 16],
+  VERTEX_COLOR_AND_RULES: [2, 16],
+  SPLAT_MAP_AND_RULES: [2, 16],
 } as const;
 /** The texture set packings a terrain material samples (p303 D2). */
 export const TERRAIN_PACKINGS = ['FULL', 'LITE', 'MINIMAL'] as const;
@@ -55,6 +70,8 @@ export const TERRAIN_QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as cons
 export const TERRAIN_DEBUG_VIEWS = ['TEXEL_DENSITY', 'NORMALS', 'WEIGHTS'] as const;
 /** The most layers a terrain material blends. */
 export const TERRAIN_MAX_LAYERS = 16;
+/** The most rules a terrain material's blend takes. */
+export const TERRAIN_MAX_RULES = 16;
 /**
  * The anti-tiling modes (p305 D3): `NONE` plain tiling (1 tap), `DUAL_SCALE` a second, larger and
  * turned tap mixed in by distance and the macro texture's patches (2), `HEX` Mikkelsen's hex
@@ -266,10 +283,162 @@ const paintedBlendFields = {
     ),
 };
 
+/** A rule's range of one measure, its ends within `bounds` when it has some */
+const ruleRange = (unit: string, bounds: [number, number] | null, description: string) => {
+  const end = () => (bounds ? z.number().min(bounds[0]).max(bounds[1]) : z.number());
+  return z
+    .object({
+      /** The lowest value at which the rule is whole; none: no lower end. */
+      min: end()
+        .optional()
+        .describe(`The lowest ${unit} at which the rule is whole; none: no lower end.`),
+      /** The highest value at which the rule is whole; none: no upper end. */
+      max: end()
+        .optional()
+        .describe(`The highest ${unit} at which the rule is whole; none: no upper end.`),
+      /** How far past each end the rule fades out to 0, in the range's units (≥ 0). */
+      softness: z
+        .number()
+        .min(0)
+        .optional()
+        .describe(`The ${unit} past each end over which the rule fades out to 0.`),
+    })
+    .strict()
+    .refine((range) => range.min !== undefined || range.max !== undefined, 'give min, max or both')
+    .refine(
+      (range) => range.min === undefined || range.max === undefined || range.min <= range.max,
+      'min at most max'
+    )
+    .describe(description);
+};
+
 /**
- * How the layers' weights are made (p305 D4), by `source`: `SINGLE`, `VERTEX_COLOR` or
- * `SPLAT_MAP`, each with its own fields. The layer count must suit the source
- * ({@link TERRAIN_BLEND_LAYER_COUNTS}).
+ * A procedural rule (p305 D4; the type is `aekasha/toolkit/geometry`'s `TerrainRule`, which the
+ * CPU evaluation shares): where the slope, height and facing are in its ranges, its layer covers
+ * the layers under it, the coverage moved by a macro noise channel and × its strength. Its
+ * numbers are uniforms (`terrain_r<i>_<name>`), its tests build-time branches.
+ */
+export const TerrainRuleSchema = z
+  .object({
+    /** The layer this rule lays down, by its index in the material's layers. */
+    layer: z
+      .number()
+      .int()
+      .min(0)
+      .max(TERRAIN_MAX_LAYERS - 1)
+      .describe("The layer this rule lays down, by its index in the material's layers."),
+    /** The slope in degrees (0 flat, 90 a vertical face; default softness 5). */
+    slope: ruleRange(
+      'slope in degrees',
+      [0, 90],
+      'The slope in degrees (0 flat, 90 a vertical face; default softness 5).'
+    ).optional(),
+    /** The world height in metres (default softness 2). */
+    height: ruleRange(
+      'height in metres',
+      null,
+      'The world height in metres (default softness 2).'
+    ).optional(),
+    /**
+     * The surface's facing: its downhill direction within `range` degrees of `direction`; flat
+     * ground passes.
+     */
+    aspect: z
+      .object({
+        /** The facing, a horizontal world direction `[x, z]` (its length doesn't matter, not 0). */
+        direction: z
+          .tuple([z.number(), z.number()])
+          .refine(([x, z]) => x !== 0 || z !== 0, 'a direction, not [0, 0]')
+          .describe('The facing, a horizontal world direction [x, z] (not [0, 0]).'),
+        /** Degrees either side of `direction` at which the rule is whole, 0..180. */
+        range: z
+          .number()
+          .min(0)
+          .max(180)
+          .describe('Degrees either side of direction at which the rule is whole, 0..180.'),
+        /** Degrees past `range` over which the rule fades out, 0..180 (default 15). */
+        softness: z
+          .number()
+          .min(0)
+          .max(180)
+          .optional()
+          .describe('Degrees past range over which the rule fades out, 0..180 (default 15).'),
+      })
+      .strict()
+      .optional()
+      .describe("The surface's facing: its downhill direction within range degrees of direction."),
+    /**
+     * A macro noise channel at the world's `(x, −z) / scale` that raises and lowers the coverage
+     * by up to `amount`: the material's macro texture (the input `macro`), one fetch per rule.
+     */
+    noise: z
+      .object({
+        /** The metres one tile of the noise texture covers. */
+        scale: z.number().positive().describe('The metres one tile of the noise texture covers.'),
+        /** How far the noise moves the coverage either way, 0..1. */
+        amount: z
+          .number()
+          .min(0)
+          .max(1)
+          .describe('How far the noise moves the coverage either way, 0..1.'),
+        /** The macro noise texture's channel (default `R`). */
+        channel: z
+          .enum(TERRAIN_RULE_NOISE_CHANNELS)
+          .optional()
+          .describe("The macro noise texture's channel (default R)."),
+      })
+      .strict()
+      .optional()
+      .describe(
+        'A macro noise channel that raises and lowers the coverage by up to amount (the input macro).'
+      ),
+    /** The coverage's scale, 0..1 (default 1): under 1 the layers under it show through. */
+    strength: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe('The coverage scale, 0..1 (default 1): under 1 the layers under it show through.'),
+  })
+  .strict()
+  .refine(
+    (rule) => Boolean(rule.slope || rule.height || rule.aspect || rule.noise),
+    'give slope, height, aspect or noise'
+  )
+  .describe('A procedural rule: its layer covers the others where the surface is in its ranges.');
+
+/** The rules' list of a blend source that takes them */
+const rulesField = {
+  /**
+   * The rules, 1 to 16, in order: each composites its layer over the weights so far
+   * (`w = mix(w, onehot(layer), coverage)`).
+   */
+  rules: z
+    .array(TerrainRuleSchema)
+    .min(1)
+    .max(TERRAIN_MAX_RULES)
+    .describe('The rules, 1 to 16, in order: each composites its layer over the weights so far.'),
+};
+
+/** The vertex colour's channels field of the vertex colour sources */
+const vertexColorField = {
+  /** The colour's channels (default `{ layout: 'RGB_AO' }`). */
+  vertexColor: z
+    .object({
+      /** `RGB_AO`: R, G, B weigh layers 1-3, A a baked AO; `RGBA`: layers 1-4. */
+      layout: z
+        .enum(TERRAIN_VERTEX_COLOR_LAYOUTS)
+        .describe('RGB_AO: R, G, B weigh layers 1-3, A a baked AO; RGBA: layers 1-4.'),
+    })
+    .strict()
+    .optional()
+    .describe("The colour's channels (default RGB_AO)."),
+};
+
+/**
+ * How the layers' weights are made (p305 D4), by `source`: `SINGLE`, `VERTEX_COLOR`,
+ * `SPLAT_MAP`, `RULES`, `VERTEX_COLOR_AND_RULES` or `SPLAT_MAP_AND_RULES`, each with its own
+ * fields. The layer count must suit the source ({@link TERRAIN_BLEND_LAYER_COUNTS}).
  */
 export const TerrainBlendSchema = z
   .discriminatedUnion('source', [
@@ -290,17 +459,7 @@ export const TerrainBlendSchema = z
           .describe(
             "The mesh's vertex colour weighs the layers; layer 0 takes what the weight channels leave."
           ),
-        /** The colour's channels (default `{ layout: 'RGB_AO' }`). */
-        vertexColor: z
-          .object({
-            /** `RGB_AO`: R, G, B weigh layers 1-3, A a baked AO; `RGBA`: layers 1-4. */
-            layout: z
-              .enum(TERRAIN_VERTEX_COLOR_LAYOUTS)
-              .describe('RGB_AO: R, G, B weigh layers 1-3, A a baked AO; RGBA: layers 1-4.'),
-          })
-          .strict()
-          .optional()
-          .describe("The colour's channels (default RGB_AO)."),
+        ...vertexColorField,
         ...paintedBlendFields,
       })
       .strict(),
@@ -319,10 +478,58 @@ export const TerrainBlendSchema = z
         ...paintedBlendFields,
       })
       .strict(),
+    z
+      .object({
+        /**
+         * The base layer (0) everywhere, under the rules: each lays its layer over the weights so
+         * far where the surface is in its ranges. No texture fetch but the rules' noise.
+         */
+        source: z
+          .literal('RULES')
+          .describe(
+            'The base layer (0) everywhere, under the rules, which lay their layers in order.'
+          ),
+        ...rulesField,
+        ...paintedBlendFields,
+      })
+      .strict(),
+    z
+      .object({
+        /**
+         * The vertex colour's weights (as `VERTEX_COLOR`) under the rules: paint where it matters,
+         * rules everywhere. The colour weighs as many layers as its layout does, from layer 0; a
+         * layer past those is a rule's.
+         */
+        source: z
+          .literal('VERTEX_COLOR_AND_RULES')
+          .describe("The vertex colour's weights (as VERTEX_COLOR) under the rules."),
+        ...vertexColorField,
+        ...rulesField,
+        ...paintedBlendFields,
+      })
+      .strict(),
+    z
+      .object({
+        /**
+         * The splat maps' weights (as `SPLAT_MAP`) under the rules. The maps weigh up to 9 layers
+         * from layer 0 (one map per four past the base); a layer past those is a rule's.
+         */
+        source: z
+          .literal('SPLAT_MAP_AND_RULES')
+          .describe("The splat maps' weights (as SPLAT_MAP) under the rules."),
+        ...rulesField,
+        ...paintedBlendFields,
+      })
+      .strict(),
   ])
-  .describe("How the layers' weights are made: SINGLE, VERTEX_COLOR or SPLAT_MAP.");
+  .describe(
+    "How the layers' weights are made: SINGLE, VERTEX_COLOR, SPLAT_MAP, RULES, VERTEX_COLOR_AND_RULES or SPLAT_MAP_AND_RULES."
+  );
 
-/** How a terrain material's layers are weighed (p305 D4): `SINGLE`, `VERTEX_COLOR` or `SPLAT_MAP`. */
+/**
+ * How a terrain material's layers are weighed (p305 D4): `SINGLE`, `VERTEX_COLOR`, `SPLAT_MAP`,
+ * `RULES`, `VERTEX_COLOR_AND_RULES` or `SPLAT_MAP_AND_RULES`.
+ */
 export type TerrainBlend = z.infer<typeof TerrainBlendSchema>;
 
 /** Where the ambient occlusion goes: `aoNode`, which darkens indirect light only. */
@@ -343,13 +550,14 @@ const TerrainAoSchema = z
       ),
     /**
      * The vertex colour's A as a baked AO, to `aoNode` (large-scale occlusion: hollows, a wall's
-     * foot). `blend.source: 'VERTEX_COLOR'` with the `RGB_AO` layout only.
+     * foot). `blend.source` `VERTEX_COLOR` or `VERTEX_COLOR_AND_RULES` with the `RGB_AO` layout
+     * only.
      */
     vertex: z
       .boolean()
       .optional()
       .describe(
-        "The vertex colour's A as a baked AO, to aoNode. blend.source VERTEX_COLOR with the RGB_AO layout only."
+        "The vertex colour's A as a baked AO, to aoNode. blend.source VERTEX_COLOR or VERTEX_COLOR_AND_RULES with the RGB_AO layout only."
       ),
     /**
      * The vertex AO's influence, 0..1 (default 0.5), where the layers' albedo has its own AO baked
@@ -542,15 +750,77 @@ const getBlendLayerCounts = (blend: TerrainBlend | undefined) => {
   return { counts: TERRAIN_BLEND_LAYER_COUNTS[source], name: source };
 };
 
-/** The splat maps `count` layers take: one per four layers past the base */
-const getSplatMapCount = (layerCount: number) => Math.ceil((layerCount - 1) / 4);
+/**
+ * The layers a blend's painted weights reach, from layer 0: a combo's painted source's most,
+ * fewer when there are fewer layers; 1 (the base) for `RULES` and `SINGLE`
+ */
+const getPaintedLayerCount = (blend: TerrainBlend | undefined, layerCount: number) => {
+  const source = blend?.source ?? 'SINGLE';
+  if (source === 'VERTEX_COLOR' || source === 'VERTEX_COLOR_AND_RULES') {
+    const layout = (blend as { vertexColor?: { layout: string } }).vertexColor?.layout;
+    const counts =
+      TERRAIN_BLEND_LAYER_COUNTS[`VERTEX_COLOR_${layout === 'RGBA' ? 'RGBA' : 'RGB_AO'}`];
+    return Math.min(layerCount, counts[1]);
+  }
+  if (source === 'SPLAT_MAP' || source === 'SPLAT_MAP_AND_RULES') {
+    return Math.min(layerCount, TERRAIN_BLEND_LAYER_COUNTS.SPLAT_MAP[1]);
+  }
+  return 1;
+};
+
+/** The splat maps a blend takes: one per four painted layers past the base, with splat maps only */
+const getSplatMapCount = (blend: TerrainBlend | undefined, layerCount: number) =>
+  blend?.source === 'SPLAT_MAP' || blend?.source === 'SPLAT_MAP_AND_RULES'
+    ? Math.ceil((getPaintedLayerCount(blend, layerCount) - 1) / 4)
+    : 0;
+
+/** A blend's rules, none for a source without */
+const getRules = (blend: TerrainBlend | undefined) =>
+  blend && 'rules' in blend ? blend.rules : [];
+
+/** Whether a rule of the material's blend or of a tier's reads the noise texture */
+const hasRuleNoise = (value: {
+  blend?: TerrainBlend;
+  quality?: Partial<Record<string, { blend?: TerrainBlend } | undefined>>;
+}) =>
+  [value.blend, ...Object.values(value.quality ?? {}).map((tier) => tier?.blend)].some((blend) =>
+    getRules(blend).some((rule) => rule.noise)
+  );
 
 type BlendFields = { blend?: TerrainBlend; ao?: z.infer<typeof TerrainAoSchema> };
 
 /**
+ * The rules' layers: each one of the material's, and each layer past the painted ones some rule's
+ * (nothing else weighs it)
+ */
+const checkRuleLayers = (
+  blend: TerrainBlend | undefined,
+  layerCount: number,
+  issue: (at: (string | number)[], message: string) => void,
+  path: (string | number)[]
+) => {
+  const rules = getRules(blend);
+  if (!rules.length) return;
+  rules.forEach((rule, i) => {
+    if (rule.layer >= layerCount) {
+      issue(
+        [...path, 'blend', 'rules', i, 'layer'],
+        `is ${rule.layer}: there are ${layerCount} layers.`
+      );
+    }
+  });
+  for (let layer = getPaintedLayerCount(blend, layerCount); layer < layerCount; layer++) {
+    if (!rules.some((rule) => rule.layer === layer)) {
+      issue(['layers', layer], `is neither painted nor a rule's layer: nothing weighs it.`);
+    }
+  }
+};
+
+/**
  * The blend and the AO of the material's fields and of each tier's (a tier's over the material's):
- * the layer count suits the source, a depth only with the height blend, the vertex AO only with
- * `RGB_AO` vertex colours. The refinement both schemas share.
+ * the layer count suits the source, the rules' layers are the material's and reach the layers the
+ * paint doesn't, a depth only with the height blend, the vertex AO only with `RGB_AO` vertex
+ * colours. The refinement both schemas share.
  */
 const checkBlend = (
   value: BlendFields & {
@@ -573,37 +843,57 @@ const checkBlend = (
     if (count < counts[0] || count > counts[1]) {
       issue(['layers'], `blend.source ${name} takes ${counts.join(' to ')} layers, not ${count}.`);
     }
+    checkRuleLayers(blend, count, issue, path);
     if (blend && blend.source !== 'SINGLE' && blend.mode === 'LINEAR' && blend.heightBlendDepth) {
       issue([...path, 'blend', 'heightBlendDepth'], 'is for blend.mode HEIGHT, not LINEAR.');
     }
-    const isRgbAo = blend?.source === 'VERTEX_COLOR' && blend.vertexColor?.layout !== 'RGBA';
+    const isRgbAo =
+      (blend?.source === 'VERTEX_COLOR' || blend?.source === 'VERTEX_COLOR_AND_RULES') &&
+      blend.vertexColor?.layout !== 'RGBA';
     if (ao?.vertex && !isRgbAo) {
-      issue([...path, 'ao', 'vertex'], 'needs blend.source VERTEX_COLOR with the RGB_AO layout.');
+      issue(
+        [...path, 'ao', 'vertex'],
+        'needs blend.source VERTEX_COLOR or VERTEX_COLOR_AND_RULES with the RGB_AO layout.'
+      );
     }
   }
 };
 
 /**
- * The code route's splat maps: one texture id per map the layers need, with `SPLAT_MAP` only
+ * The code route's texture ids: the splat maps, one per map the painted layers need, with the
+ * splat map sources only; the noise texture only for rules with noise and no `macro`
  */
-const checkSplatMaps = (
-  value: { layers: unknown[]; blend?: TerrainBlend; splatMaps?: string[] },
+const checkTextureIds = (
+  value: {
+    layers: unknown[];
+    blend?: TerrainBlend;
+    splatMaps?: string[];
+    macro?: unknown;
+    noiseTexture?: string;
+    quality?: Partial<Record<string, { blend?: TerrainBlend } | undefined>>;
+  },
   ctx: z.RefinementCtx
 ) => {
-  const isSplat = value.blend?.source === 'SPLAT_MAP';
-  const count = isSplat ? getSplatMapCount(value.layers.length) : 0;
-  if (!isSplat && value.splatMaps) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['splatMaps'],
-      message: 'is for blend.source SPLAT_MAP.',
-    });
-  } else if (isSplat && value.splatMaps?.length !== count) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['splatMaps'],
-      message: `${value.layers.length} layers take ${count} splat map${count === 1 ? '' : 's'}: give their texture ids.`,
-    });
+  const count = getSplatMapCount(value.blend, value.layers.length);
+  const issue = (path: string, message: string) => {
+    ctx.addIssue({ code: 'custom', path: [path], message });
+  };
+  if (!count && value.splatMaps) {
+    issue('splatMaps', 'is for blend.source SPLAT_MAP or SPLAT_MAP_AND_RULES.');
+  } else if (count && value.splatMaps?.length !== count) {
+    const painted = getPaintedLayerCount(value.blend, value.layers.length);
+    issue(
+      'splatMaps',
+      `${painted} painted layers take ${count} splat map${count === 1 ? '' : 's'}: give their texture ids.`
+    );
+  }
+  if (value.noiseTexture !== undefined && !hasRuleNoise(value)) {
+    issue(
+      'noiseTexture',
+      "is for rules with noise (blend.rules[i].noise, the material's or a tier's)."
+    );
+  } else if (value.noiseTexture !== undefined && value.macro) {
+    issue('noiseTexture', "is macro.texture's with a macro: the rules' noise reads it.");
   }
 };
 
@@ -611,7 +901,8 @@ const checkSplatMaps = (
  * The JSON route's static define, `staticDefines.terrain` of a material whose TSL functions are
  * the terrain material's (`terrain.material.json`, or `tslMaterialId: 'aek.terrain'`): the config
  * without the material's id, the layers without their sets (the inputs `layer0`, `layer1`, … give
- * them, `{ "textureSet": id, "packing"? }`, all in one packing).
+ * them, `{ "textureSet": id, "packing"? }`, all in one packing). The input `macro`
+ * (`{ "texture": id }`) is the texture the macro variation and the rules' noise read.
  */
 export const TerrainMaterialDefineSchema = z
   .object({
@@ -658,12 +949,16 @@ export const TerrainMaterialConfigSchema = z
       .describe(
         "The packing every layer samples (each set must have it); default: each set's defaultPacking, which must then agree."
       ),
-    /** The macro variation: one fetch of a macro texture that varies every layer. */
+    /**
+     * The macro variation: one fetch of a macro texture that varies every layer. The rules' noise
+     * reads its texture too.
+     */
     macro: TerrainMacroSchema.optional(),
     /**
-     * With `blend.source: 'SPLAT_MAP'`, the splat maps' texture ids (`data` slot textures, linear):
-     * the first weighs layers 1-4 (RGBA), the second 5-8, one per four layers past the base. They
-     * become the inputs `splat0` and `splat1`, which a block's variant swaps.
+     * With `blend.source` `SPLAT_MAP` or `SPLAT_MAP_AND_RULES`, the splat maps' texture ids (`data`
+     * slot textures, linear): the first weighs layers 1-4 (RGBA), the second 5-8, one per four
+     * painted layers past the base. They become the inputs `splat0` and `splat1`, which a block's
+     * variant swaps.
      */
     splatMaps: z
       .array(z.string().min(1))
@@ -671,13 +966,25 @@ export const TerrainMaterialConfigSchema = z
       .max(2)
       .optional()
       .describe(
-        "With blend.source SPLAT_MAP, the splat maps' texture ids: the first weighs layers 1-4, the second 5-8 (inputs splat0, splat1)."
+        "With blend.source SPLAT_MAP or SPLAT_MAP_AND_RULES, the splat maps' texture ids: the first weighs layers 1-4, the second 5-8 (inputs splat0, splat1)."
       ),
     /**
      * How the layers' textures bind (default `AUTO`: `SEPARATE` while it fits the texture budget,
      * else `ARRAY`). An `ARRAY` material's set array must be built before it's created
      * (`buildTextureSetArray({ sets, packing })`, or a scene's `textureSetArrays`).
      */
+    /**
+     * The macro noise texture the rules' noise reads (the input `macro`), for a material with
+     * rule noise and no `macro`, whose texture they read otherwise (default `macroNoise`, the
+     * toolkit's).
+     */
+    noiseTexture: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "The macro noise texture the rules' noise reads, without a macro (whose texture it reads otherwise; default macroNoise)."
+      ),
     storage: z
       .enum(TERRAIN_STORAGES)
       .optional()
@@ -690,7 +997,7 @@ export const TerrainMaterialConfigSchema = z
   })
   .strict()
   .superRefine(checkBlend)
-  .superRefine(checkSplatMaps)
+  .superRefine(checkTextureIds)
   .describe("The terrain material's config (createTerrainMaterial).");
 
 /**

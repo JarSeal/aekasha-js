@@ -306,7 +306,7 @@ describe('setupTerrainMaterial', () => {
     ).toThrow(/Missing input "macro"/);
     expect(() =>
       build({ layers: [{}] }, { layer0: makeBundle(), macro: texture(new Texture()) })
-    ).toThrow(/Input "macro" has no macro/);
+    ).toThrow(/Input "macro" has no use/);
   });
 
   it('fades the normal only with distance, its range a uniform', () => {
@@ -405,7 +405,7 @@ describe('setupTerrainMaterial: blending', () => {
         { layers: layersOf(5), blend: { source: 'SPLAT_MAP' } },
         layerInputs(5, 'LITE', { splat0: texture(new Texture()), splat1: texture(new Texture()) })
       )
-    ).toThrow(/Input "splat1" has no splat map: 5 layers take 1/);
+    ).toThrow(/Input "splat1" has no splat map: 5 painted layers take 1/);
     expect(() =>
       build(vertexColor(2), layerInputs(2, 'LITE', { splat0: texture(new Texture()) }))
     ).toThrow(/Input "splat0" has no splat map/);
@@ -631,6 +631,34 @@ describe('getTerrainMaterialProps', () => {
       layer0: { textureSet: 'grass01' },
       macro: { texture: 'macroNoise' },
     });
+  });
+
+  it("gives rule noise the macro's texture, else noiseTexture or macroNoise, and none without noise", () => {
+    const layers = [{ set: 'grass01' }, { set: 'snow01' }];
+    const noisy = { layer: 1, height: { min: 4 }, noise: { scale: 40, amount: 0.4 } };
+    const rules = (rule: object) => ({ source: 'RULES' as const, rules: [rule] as never });
+    const inputsOf = (config: object) =>
+      getTerrainMaterialProps({ id: 'ridge', layers, storage: 'SEPARATE', ...config }).inputs;
+    expect(inputsOf({ blend: rules({ layer: 1, height: { min: 4 } }) })).not.toHaveProperty(
+      'macro'
+    );
+    expect(inputsOf({ blend: rules(noisy) })).toHaveProperty('macro', { texture: 'macroNoise' });
+    expect(inputsOf({ blend: rules(noisy), noiseTexture: 'ridge.noise' })).toHaveProperty('macro', {
+      texture: 'ridge.noise',
+    });
+    expect(
+      inputsOf({ blend: rules(noisy), macro: { texture: 'macroNoise.data', scale: 90 } })
+    ).toHaveProperty('macro', { texture: 'macroNoise.data' });
+    // A tier's noise: the tier's variant shares the material's inputs
+    const tiered = inputsOf({
+      blend: rules({ layer: 1, height: { min: 4 } }),
+      quality: { ULTRA: { blend: rules(noisy) } },
+    });
+    expect(tiered).toHaveProperty('macro', { texture: 'macroNoise' });
+    expect(
+      getTerrainMaterialProps({ id: 'ridge', layers, blend: rules(noisy), noiseTexture: 'x' })
+        .staticDefines
+    ).toEqual({ terrain: { layers: [{}, {}], blend: rules(noisy) } });
   });
 });
 

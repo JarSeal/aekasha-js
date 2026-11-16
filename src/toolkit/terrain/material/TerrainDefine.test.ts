@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
+import type { z } from 'zod';
+import { TERRAIN_RULE_NOISE_CHANNELS, type TerrainRule } from 'aekasha/toolkit/geometry';
 import { readTerrainDefine, TERRAIN_DEFINE_VALUES } from './TerrainDefine';
 import {
   TERRAIN_ANTI_TILING_MODES,
@@ -9,6 +11,7 @@ import {
   TERRAIN_QUALITY_LEVELS,
   TERRAIN_LAYER_SOURCES,
   TERRAIN_MAX_LAYERS,
+  TERRAIN_MAX_RULES,
   TERRAIN_UV_MODES,
   TERRAIN_VERTEX_COLOR_LAYOUTS,
   TerrainAntiTilingSchema,
@@ -17,12 +20,19 @@ import {
   TerrainMacroSettingsSchema,
   TerrainMaterialDefineSchema,
   TerrainQualityOverridesSchema,
+  TerrainRuleSchema,
 } from './TerrainMaterialConfig';
 
 const read = (terrain: unknown) => readTerrainDefine({ terrain });
 
 /** `count` layers of no settings */
 const layersOf = (count: number) => Array.from({ length: count }, () => ({}));
+
+/** A `RULES` blend of these rules, over `count` layers */
+const rulesOf = (count: number, ...rules: unknown[]) => ({
+  layers: layersOf(count),
+  blend: { source: 'RULES', rules },
+});
 
 /** Defines both must take, and ones both must refuse */
 const ACCEPTED: unknown[] = [
@@ -76,6 +86,67 @@ const ACCEPTED: unknown[] = [
     blend: { source: 'SPLAT_MAP' },
     quality: { LOW: { blend: { source: 'SPLAT_MAP', mode: 'LINEAR' } } },
     qualityLevel: 'LOW',
+  },
+  rulesOf(2, { layer: 1, slope: { min: 30 } }),
+  rulesOf(2, { layer: 1, slope: { min: 0, max: 90, softness: 0 } }),
+  rulesOf(2, { layer: 1, slope: { min: 20, max: 20 } }),
+  rulesOf(2, { layer: 1, height: { min: -40, softness: 10 }, strength: 0.5 }),
+  rulesOf(2, { layer: 1, aspect: { direction: [0, -1], range: 45, softness: 0 } }),
+  rulesOf(2, { layer: 1, noise: { scale: 30, amount: 1, channel: 'A' } }),
+  rulesOf(
+    3,
+    { layer: 0, slope: { max: 10 } },
+    { layer: 1, height: { max: 0 } },
+    { layer: 2, height: { min: 5 } }
+  ),
+  rulesOf(
+    3,
+    {
+      layer: 2,
+      slope: { max: 30 },
+      height: { min: 40, max: 400 },
+      aspect: { direction: [1, 2], range: 180 },
+      noise: { scale: 0.5, amount: 0 },
+      strength: 0,
+    },
+    { layer: 1, slope: { min: 45 } }
+  ),
+  {
+    ...rulesOf(2, { layer: 1, slope: { min: 30 } }),
+    blend: { source: 'RULES', rules: [{ layer: 1, slope: { min: 30 } }], mode: 'LINEAR' },
+  },
+  {
+    layers: layersOf(16),
+    blend: {
+      source: 'RULES',
+      rules: Array.from({ length: 16 }, (_, i) => ({ layer: i, height: { min: i } })),
+    },
+  },
+  {
+    layers: layersOf(6),
+    blend: {
+      source: 'VERTEX_COLOR_AND_RULES',
+      vertexColor: { layout: 'RGBA' },
+      rules: [{ layer: 5, slope: { min: 50 } }],
+      heightBlendDepth: 0.1,
+    },
+  },
+  {
+    layers: layersOf(3),
+    blend: { source: 'VERTEX_COLOR_AND_RULES', rules: [{ layer: 1, height: { min: 2 } }] },
+    ao: { vertex: true },
+  },
+  {
+    layers: layersOf(10),
+    blend: { source: 'SPLAT_MAP_AND_RULES', rules: [{ layer: 9, slope: { min: 50 } }] },
+  },
+  {
+    layers: layersOf(2),
+    blend: { source: 'SPLAT_MAP' },
+    quality: {
+      HIGH: { blend: { source: 'SPLAT_MAP_AND_RULES', rules: [{ layer: 1, slope: { min: 9 } }] } },
+    },
+    qualityLevel: 'HIGH',
   },
 ];
 const REFUSED: unknown[] = [
@@ -165,6 +236,85 @@ const REFUSED: unknown[] = [
     quality: { HIGH: { blend: { source: 'SPLAT_MAP' } } },
     qualityLevel: 'HIGH',
   },
+  { layers: layersOf(2), blend: { source: 'RULES' } },
+  { layers: layersOf(2), blend: { source: 'RULES', rules: [] } },
+  { layers: layersOf(2), blend: { source: 'RULES', rules: {} } },
+  {
+    layers: layersOf(2),
+    blend: {
+      source: 'RULES',
+      rules: Array.from({ length: TERRAIN_MAX_RULES + 1 }, () => ({ layer: 1, slope: { min: 1 } })),
+    },
+  },
+  rulesOf(1, { layer: 0, slope: { min: 30 } }),
+  rulesOf(2, { layer: 1 }),
+  rulesOf(2, { layer: 1, strength: 1 }),
+  rulesOf(2, { layer: 2, slope: { min: 30 } }),
+  rulesOf(2, { layer: -1, slope: { min: 30 } }),
+  rulesOf(2, { layer: 0.5, slope: { min: 30 } }),
+  rulesOf(2, { slope: { min: 30 } }),
+  rulesOf(3, { layer: 1, slope: { min: 30 } }),
+  rulesOf(2, { layer: 1, slope: { min: 30 }, set: 'snow01' }),
+  rulesOf(2, { layer: 1, slope: {} }),
+  rulesOf(2, { layer: 1, slope: { softness: 4 } }),
+  rulesOf(2, { layer: 1, slope: { min: 40, max: 30 } }),
+  rulesOf(2, { layer: 1, slope: { min: -5 } }),
+  rulesOf(2, { layer: 1, slope: { max: 95 } }),
+  rulesOf(2, { layer: 1, slope: { min: 30, softness: -1 } }),
+  rulesOf(2, { layer: 1, slope: [0, 30] }),
+  rulesOf(2, { layer: 1, height: { min: 10, max: 5 } }),
+  rulesOf(2, { layer: 1, height: { min: 10, step: 1 } }),
+  rulesOf(2, { layer: 1, aspect: { direction: [0, 0], range: 30 } }),
+  rulesOf(2, { layer: 1, aspect: { direction: [0, 1, 0], range: 30 } }),
+  rulesOf(2, { layer: 1, aspect: { direction: [0, 1] } }),
+  rulesOf(2, { layer: 1, aspect: { direction: [0, 1], range: 200 } }),
+  rulesOf(2, { layer: 1, aspect: { direction: [0, 1], range: 30, softness: 181 } }),
+  rulesOf(2, { layer: 1, noise: { scale: 30 } }),
+  rulesOf(2, { layer: 1, noise: { scale: 0, amount: 0.5 } }),
+  rulesOf(2, { layer: 1, noise: { scale: 30, amount: 1.5 } }),
+  rulesOf(2, { layer: 1, noise: { scale: 30, amount: 0.5, channel: 'X' } }),
+  rulesOf(2, { layer: 1, slope: { min: 30 }, strength: 2 }),
+  {
+    layers: layersOf(2),
+    blend: { source: 'VERTEX_COLOR', rules: [{ layer: 1, slope: { min: 30 } }] },
+  },
+  {
+    layers: layersOf(2),
+    blend: { source: 'SPLAT_MAP', rules: [{ layer: 1, slope: { min: 30 } }] },
+  },
+  {
+    layers: layersOf(2),
+    blend: {
+      source: 'RULES',
+      vertexColor: { layout: 'RGBA' },
+      rules: [{ layer: 1, slope: { min: 30 } }],
+    },
+  },
+  { ...rulesOf(2, { layer: 1, slope: { min: 30 } }), ao: { vertex: true } },
+  {
+    layers: layersOf(5),
+    blend: { source: 'VERTEX_COLOR_AND_RULES', rules: [{ layer: 1, slope: { min: 30 } }] },
+  },
+  {
+    layers: layersOf(3),
+    blend: {
+      source: 'VERTEX_COLOR_AND_RULES',
+      vertexColor: { layout: 'RGBA' },
+      rules: [{ layer: 1, slope: { min: 30 } }],
+    },
+    ao: { vertex: true },
+  },
+  {
+    layers: layersOf(11),
+    blend: { source: 'SPLAT_MAP_AND_RULES', rules: [{ layer: 9, slope: { min: 50 } }] },
+  },
+  { layers: layersOf(17), blend: { source: 'RULES', rules: [{ layer: 1, slope: { min: 1 } }] } },
+  {
+    layers: layersOf(2),
+    blend: { source: 'SPLAT_MAP' },
+    quality: { HIGH: { blend: { source: 'RULES', rules: [{ layer: 2, slope: { min: 9 } }] } } },
+    qualityLevel: 'HIGH',
+  },
 ];
 
 describe('readTerrainDefine', () => {
@@ -190,6 +340,7 @@ describe('readTerrainDefine', () => {
       aoBakedAlbedoInfluence: 0.5,
       reservedTextures: 6,
       macro: null,
+      takesMacroTexture: false,
       distanceFade: null,
       qualityLevel: null,
       debugView: null,
@@ -214,10 +365,56 @@ describe('readTerrainDefine', () => {
       source: 'VERTEX_COLOR',
       layout: 'RGB_AO',
       heightBlend: 0.2,
+      rules: [],
     });
     expect(
       read({ layers: layersOf(2), blend: { source: 'SPLAT_MAP', mode: 'LINEAR' } }).blend
-    ).toEqual({ source: 'SPLAT_MAP', heightBlend: null });
+    ).toEqual({ source: 'SPLAT_MAP', heightBlend: null, rules: [] });
+  });
+
+  it("fills a rule's defaults, its tests not given null", () => {
+    const rule = { layer: 1, slope: { min: 30 }, height: { max: 12 } };
+    expect(read(rulesOf(2, rule)).blend).toEqual({
+      source: 'RULES',
+      heightBlend: 0.2,
+      rules: [
+        {
+          layer: 1,
+          slope: { min: 30, max: null, softness: 5 },
+          height: { min: null, max: 12, softness: 2 },
+          aspect: null,
+          noise: null,
+          strength: 1,
+        },
+      ],
+    });
+    const facing = { layer: 1, aspect: { direction: [0, -2], range: 40 } };
+    expect(read(rulesOf(2, facing)).blend).toMatchObject({
+      rules: [{ aspect: { direction: [0, -2], range: 40, softness: 15 } }],
+    });
+    const noisy = { layer: 1, noise: { scale: 50, amount: 0.3 } };
+    expect(read(rulesOf(2, noisy)).blend).toMatchObject({
+      rules: [{ noise: { scale: 50, amount: 0.3, channel: 'R' } }],
+    });
+    const combo = read({
+      layers: layersOf(2),
+      blend: { source: 'VERTEX_COLOR_AND_RULES', rules: [rule], mode: 'LINEAR' },
+    });
+    expect(combo.blend).toMatchObject({ layout: 'RGB_AO', heightBlend: null });
+  });
+
+  it("takes the macro input with a macro or rule noise, a tier's included", () => {
+    const noisy = { layer: 1, noise: { scale: 50, amount: 0.3 } };
+    expect(read(rulesOf(2, { layer: 1, slope: { min: 9 } })).takesMacroTexture).toBe(false);
+    expect(read(rulesOf(2, noisy)).takesMacroTexture).toBe(true);
+    expect(read({ layers: [{}], macro: { scale: 50 } }).takesMacroTexture).toBe(true);
+    const tierNoise = {
+      layers: layersOf(2),
+      blend: { source: 'SPLAT_MAP' },
+      quality: { ULTRA: { blend: { source: 'SPLAT_MAP_AND_RULES', rules: [noisy] } } },
+    };
+    expect(read(tierNoise).takesMacroTexture).toBe(true);
+    expect(read({ ...tierNoise, qualityLevel: 'LOW' }).takesMacroTexture).toBe(true);
   });
 
   it("gives a layer its own anti-tiling, else the material's (its tier's)", () => {
@@ -313,6 +510,21 @@ describe('readTerrainDefine', () => {
     expect(values.uvModes).toEqual(TERRAIN_UV_MODES);
     expect(values.blendSources).toEqual(TERRAIN_BLEND_SOURCES);
     expect(values.maxLayers).toBe(TERRAIN_MAX_LAYERS);
+    expect(values.maxRules).toBe(TERRAIN_MAX_RULES);
+    const rule = TerrainRuleSchema.shape;
+    expect(values.ruleKeys.sort()).toEqual(Object.keys(rule).sort());
+    for (const range of [rule.slope, rule.height]) {
+      const shape = range.unwrap().shape;
+      expect(values.ruleRangeKeys.sort()).toEqual(Object.keys(shape).sort());
+    }
+    expect(values.ruleAspectKeys.sort()).toEqual(Object.keys(rule.aspect.unwrap().shape).sort());
+    const noise = rule.noise.unwrap().shape;
+    expect(values.ruleNoiseKeys.sort()).toEqual(Object.keys(noise).sort());
+    expect(noise.channel.unwrap().options).toEqual([...TERRAIN_RULE_NOISE_CHANNELS]);
+  });
+
+  it("validates geometry's TerrainRule", () => {
+    expectTypeOf<z.infer<typeof TerrainRuleSchema>>().toEqualTypeOf<TerrainRule>();
   });
 
   it('names the field', () => {
@@ -344,7 +556,19 @@ describe('readTerrainDefine', () => {
       'staticDefines.terrain.blend.heightBlendDepth: is for blend.mode HEIGHT, not LINEAR.'
     );
     expect(() => read({ layers: [{}], ao: { vertex: true } })).toThrow(
-      'staticDefines.terrain.ao.vertex: needs blend.source VERTEX_COLOR with the RGB_AO layout.'
+      'staticDefines.terrain.ao.vertex: needs blend.source VERTEX_COLOR or VERTEX_COLOR_AND_RULES with the RGB_AO layout.'
+    );
+    expect(() => read(rulesOf(3, { layer: 1, slope: { min: 30 } }))).toThrow(
+      "staticDefines.terrain.layers[2]: is neither painted nor a rule's layer: nothing weighs it."
+    );
+    expect(() => read(rulesOf(2, { layer: 4, slope: { min: 30 } }))).toThrow(
+      'staticDefines.terrain.blend.rules[0].layer: is 4: there are 2 layers.'
+    );
+    expect(() => read(rulesOf(2, { layer: 1, slope: { min: 40, max: 30 } }))).toThrow(
+      'staticDefines.terrain.blend.rules[0].slope: has min 40 over max 30'
+    );
+    expect(() => read(rulesOf(2, { layer: 1 }))).toThrow(
+      'staticDefines.terrain.blend.rules[0]: has no test: give slope, height, aspect or noise.'
     );
     expect(() => read({ layers: [{}], macro: {} })).toThrow(
       'staticDefines.terrain.macro.scale: is missing'

@@ -3,9 +3,18 @@
 // (`TerrainMaterialConfig.ts`): a build carrying the generator would carry zod with it (the texture
 // sets' trap, `src/_engine/features/texturesets/CLAUDE.md`). `TerrainDefine.test.ts` keeps the two
 // in step: the same keys, values and refusals.
+import { TERRAIN_RULE_DEFAULTS, TERRAIN_RULE_NOISE_CHANNELS } from 'aekasha/toolkit/geometry';
+
 const LAYER_SOURCES = ['TEXTURE'] as const;
 const UV_MODES = ['WORLD', 'MESH_UV'] as const;
-const BLEND_SOURCES = ['SINGLE', 'VERTEX_COLOR', 'SPLAT_MAP'] as const;
+const BLEND_SOURCES = [
+  'SINGLE',
+  'VERTEX_COLOR',
+  'SPLAT_MAP',
+  'RULES',
+  'VERTEX_COLOR_AND_RULES',
+  'SPLAT_MAP_AND_RULES',
+] as const;
 const BLEND_MODES = ['HEIGHT', 'LINEAR'] as const;
 const VERTEX_COLOR_LAYOUTS = ['RGB_AO', 'RGBA'] as const;
 /** The layers each blend source takes, `[min, max]` (the schema's `TERRAIN_BLEND_LAYER_COUNTS`) */
@@ -14,9 +23,13 @@ const BLEND_LAYER_COUNTS = {
   VERTEX_COLOR_RGB_AO: [2, 4],
   VERTEX_COLOR_RGBA: [2, 5],
   SPLAT_MAP: [2, 9],
+  RULES: [2, 16],
+  VERTEX_COLOR_AND_RULES: [2, 16],
+  SPLAT_MAP_AND_RULES: [2, 16],
 } as const;
 const ANTI_TILING_MODES = ['NONE', 'DUAL_SCALE', 'HEX'] as const;
 const MAX_LAYERS = 16;
+const MAX_RULES = 16;
 const QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as const;
 const DEBUG_VIEWS = ['TEXEL_DENSITY', 'NORMALS', 'WEIGHTS'] as const;
 
@@ -46,7 +59,14 @@ const BLEND_KEYS: Record<(typeof BLEND_SOURCES)[number], string[]> = {
   SINGLE: ['source'],
   VERTEX_COLOR: ['source', 'vertexColor', 'mode', 'heightBlendDepth'],
   SPLAT_MAP: ['source', 'mode', 'heightBlendDepth'],
+  RULES: ['source', 'rules', 'mode', 'heightBlendDepth'],
+  VERTEX_COLOR_AND_RULES: ['source', 'vertexColor', 'rules', 'mode', 'heightBlendDepth'],
+  SPLAT_MAP_AND_RULES: ['source', 'rules', 'mode', 'heightBlendDepth'],
 };
+const RULE_KEYS = ['layer', 'slope', 'height', 'aspect', 'noise', 'strength'];
+const RULE_RANGE_KEYS = ['min', 'max', 'softness'];
+const RULE_ASPECT_KEYS = ['direction', 'range', 'softness'];
+const RULE_NOISE_KEYS = ['scale', 'amount', 'channel'];
 const VERTEX_COLOR_KEYS = ['layout'];
 const AO_KEYS = ['textureInfluence', 'vertex', 'bakedAlbedoInfluence'];
 const ANTI_TILING_KEYS: Record<(typeof ANTI_TILING_MODES)[number], string[]> = {
@@ -100,17 +120,42 @@ export type TerrainLayerDefine = {
 };
 
 /**
- * How the layers are weighed, with its defaults filled in: the painted sources' `heightBlend` is
- * the height blend's depth, or null for `LINEAR`
+ * How the layers are weighed, with its defaults filled in: past `SINGLE`, `heightBlend` is the
+ * height blend's depth (null for `LINEAR`) and `rules` the rules (none for a painted source alone)
  */
 export type TerrainBlendDefine =
   | { source: 'SINGLE' }
   | {
-      source: 'VERTEX_COLOR';
+      source: 'VERTEX_COLOR' | 'VERTEX_COLOR_AND_RULES';
       layout: (typeof VERTEX_COLOR_LAYOUTS)[number];
       heightBlend: number | null;
+      rules: TerrainRuleDefine[];
     }
-  | { source: 'SPLAT_MAP'; heightBlend: number | null };
+  | {
+      source: 'SPLAT_MAP' | 'SPLAT_MAP_AND_RULES' | 'RULES';
+      heightBlend: number | null;
+      rules: TerrainRuleDefine[];
+    };
+
+/** A rule's range with its defaults filled in: an end not given is null (open) */
+export type TerrainRuleRangeDefine = { min: number | null; max: number | null; softness: number };
+
+/** A rule with its defaults filled in: a test not given is null (not built) */
+export type TerrainRuleDefine = {
+  layer: number;
+  /** Degrees */
+  slope: TerrainRuleRangeDefine | null;
+  /** Metres */
+  height: TerrainRuleRangeDefine | null;
+  /** The facing `[x, z]` as given, its range and softness in degrees */
+  aspect: { direction: [number, number]; range: number; softness: number } | null;
+  noise: {
+    scale: number;
+    amount: number;
+    channel: (typeof TERRAIN_RULE_NOISE_CHANNELS)[number];
+  } | null;
+  strength: number;
+};
 
 /** The macro variation with its defaults filled in */
 export type TerrainMacroDefine = {
@@ -137,6 +182,11 @@ export type ResolvedTerrainDefine = {
   reservedTextures: number;
   /** The macro variation (its texture the input `macro`), or null for none */
   macro: TerrainMacroDefine | null;
+  /**
+   * Whether the define takes the input `macro`: it has a macro, or a rule of its blend or of a
+   * tier's has noise (a tier's variant shares the material's inputs)
+   */
+  takesMacroTexture: boolean;
   /** The detail normals' fade, view distances in metres, or null for none */
   distanceFade: [number, number] | null;
   /** The tier whose overrides applied, or null for the material's own fields */
@@ -150,6 +200,11 @@ export const TERRAIN_DEFINE_VALUES = {
   defineKeys: DEFINE_KEYS,
   layerKeys: LAYER_KEYS,
   blendKeys: BLEND_KEYS,
+  ruleKeys: RULE_KEYS,
+  ruleRangeKeys: RULE_RANGE_KEYS,
+  ruleAspectKeys: RULE_ASPECT_KEYS,
+  ruleNoiseKeys: RULE_NOISE_KEYS,
+  maxRules: MAX_RULES,
   vertexColorKeys: VERTEX_COLOR_KEYS,
   aoKeys: AO_KEYS,
   antiTilingKeys: ANTI_TILING_KEYS,
@@ -305,11 +360,146 @@ const getBlendLayerCounts = (blend: TerrainBlendDefine) =>
     : { counts: BLEND_LAYER_COUNTS[blend.source], name: blend.source };
 
 /**
- * The splat maps a layer count takes: one per four layers past the base (`splat0` layers 1-4,
- * `splat1` 5-8).
+ * The painted source a blend has: `VERTEX_COLOR`, `SPLAT_MAP` (alone or under rules), or null
+ * (`SINGLE`, `RULES`).
  * @internal
  */
-export const getSplatMapCount = (layerCount: number) => Math.ceil((layerCount - 1) / 4);
+export const getPaintedSource = (blend: TerrainBlendDefine) => {
+  if (blend.source === 'VERTEX_COLOR' || blend.source === 'VERTEX_COLOR_AND_RULES') {
+    return 'VERTEX_COLOR';
+  }
+  if (blend.source === 'SPLAT_MAP' || blend.source === 'SPLAT_MAP_AND_RULES') return 'SPLAT_MAP';
+  return null;
+};
+
+/**
+ * The layers the blend's paint weighs, from layer 0 (its base): the painted source's most, fewer
+ * with fewer layers; 1 without paint (the base, which the rules cover).
+ * @internal
+ */
+export const getPaintedLayerCount = (blend: TerrainBlendDefine, layerCount: number) => {
+  if (blend.source === 'VERTEX_COLOR' || blend.source === 'VERTEX_COLOR_AND_RULES') {
+    return Math.min(layerCount, BLEND_LAYER_COUNTS[`VERTEX_COLOR_${blend.layout}`][1]);
+  }
+  if (getPaintedSource(blend) === 'SPLAT_MAP') {
+    return Math.min(layerCount, BLEND_LAYER_COUNTS.SPLAT_MAP[1]);
+  }
+  return 1;
+};
+
+/**
+ * The splat maps a blend takes: one per four painted layers past the base (`splat0` layers 1-4,
+ * `splat1` 5-8), none without splat maps.
+ * @internal
+ */
+export const getSplatMapCount = (blend: TerrainBlendDefine, layerCount: number) =>
+  getPaintedSource(blend) === 'SPLAT_MAP'
+    ? Math.ceil((getPaintedLayerCount(blend, layerCount) - 1) / 4)
+    : 0;
+
+/** An optional number field: null when it's absent */
+const readOptionalNumber = (
+  obj: Record<string, unknown>,
+  key: string,
+  bounds: { min?: Bound; max?: Bound },
+  path: string
+) => (obj[key] === undefined ? null : readNumber(obj, key, undefined, bounds, path));
+
+/** A rule's range: `min`, `max` or both (`min` at most `max`), its softness defaulted */
+const readRuleRange = (
+  value: unknown,
+  bounds: { min?: Bound; max?: Bound },
+  softness: number,
+  path: string
+): TerrainRuleRangeDefine => {
+  const obj = readObject(value, path);
+  checkKeys(obj, RULE_RANGE_KEYS, path);
+  const min = readOptionalNumber(obj, 'min', bounds, path);
+  const max = readOptionalNumber(obj, 'max', bounds, path);
+  if (min === null && max === null) fail(path, 'has no end: give min, max or both.');
+  if (min !== null && max !== null && min > max) {
+    fail(path, `has min ${min} over max ${max}: min is at most max.`);
+  }
+  return { min, max, softness: readNumber(obj, 'softness', softness, NON_NEGATIVE, path) };
+};
+
+/** A rule's facing: a direction that isn't `[0, 0]`, its range and softness in degrees */
+const readRuleAspect = (value: unknown, path: string): TerrainRuleDefine['aspect'] => {
+  const obj = readObject(value, path);
+  checkKeys(obj, RULE_ASPECT_KEYS, path);
+  const direction = obj.direction;
+  const isPair =
+    Array.isArray(direction) &&
+    direction.length === 2 &&
+    direction.every((n) => typeof n === 'number' && Number.isFinite(n)) &&
+    (direction[0] !== 0 || direction[1] !== 0);
+  if (!isPair) {
+    fail(`${path}.direction`, `is ${JSON.stringify(direction)}: give [x, z], not [0, 0].`);
+  }
+  const degrees = { min: { value: 0 }, max: { value: 180 } };
+  return {
+    direction: [...(direction as [number, number])],
+    range: readNumber(obj, 'range', undefined, degrees, path),
+    softness: readNumber(obj, 'softness', TERRAIN_RULE_DEFAULTS.aspectSoftness, degrees, path),
+  };
+};
+
+/** A rule's noise: its scale, amount and channel */
+const readRuleNoise = (value: unknown, path: string): TerrainRuleDefine['noise'] => {
+  const obj = readObject(value, path);
+  checkKeys(obj, RULE_NOISE_KEYS, path);
+  return {
+    scale: readNumber(obj, 'scale', undefined, { min: { value: 0, isExclusive: true } }, path),
+    amount: readNumber(obj, 'amount', undefined, UNIT, path),
+    channel: readEnum(
+      { channel: obj.channel ?? TERRAIN_RULE_DEFAULTS.noiseChannel },
+      'channel',
+      TERRAIN_RULE_NOISE_CHANNELS,
+      path
+    ),
+  };
+};
+
+/** A rule: its layer (checked against the layers later), the tests it gives, its strength */
+const readRule = (value: unknown, path: string): TerrainRuleDefine => {
+  const obj = readObject(value, path);
+  checkKeys(obj, RULE_KEYS, path);
+  const layer = readNumber(obj, 'layer', undefined, { min: { value: 0 } }, path);
+  if (!Number.isInteger(layer)) fail(`${path}.layer`, `is ${layer}, not a whole number.`);
+  const slopeBounds = { min: { value: 0 }, max: { value: 90 } };
+  const rule: TerrainRuleDefine = {
+    layer,
+    slope:
+      obj.slope === undefined
+        ? null
+        : readRuleRange(
+            obj.slope,
+            slopeBounds,
+            TERRAIN_RULE_DEFAULTS.slopeSoftness,
+            `${path}.slope`
+          ),
+    height:
+      obj.height === undefined
+        ? null
+        : readRuleRange(obj.height, {}, TERRAIN_RULE_DEFAULTS.heightSoftness, `${path}.height`),
+    aspect: obj.aspect === undefined ? null : readRuleAspect(obj.aspect, `${path}.aspect`),
+    noise: obj.noise === undefined ? null : readRuleNoise(obj.noise, `${path}.noise`),
+    strength: readNumber(obj, 'strength', TERRAIN_RULE_DEFAULTS.strength, UNIT, path),
+  };
+  if (!rule.slope && !rule.height && !rule.aspect && !rule.noise) {
+    fail(path, 'has no test: give slope, height, aspect or noise.');
+  }
+  return rule;
+};
+
+/** A rules source's rules: 1 to 16 */
+const readRules = (obj: Record<string, unknown>, path: string) => {
+  const rules = obj.rules;
+  if (!Array.isArray(rules) || rules.length < 1 || rules.length > MAX_RULES) {
+    fail(`${path}.rules`, `is ${JSON.stringify(rules)}: give 1 to ${MAX_RULES} rules.`);
+  }
+  return (rules as unknown[]).map((rule, i) => readRule(rule, `${path}.rules[${i}]`));
+};
 
 /** The blend object (absent: `SINGLE`), its source's fields only, with their defaults */
 const readBlend = (value: unknown, path: string): TerrainBlendDefine => {
@@ -329,7 +519,10 @@ const readBlend = (value: unknown, path: string): TerrainBlendDefine => {
     mode === 'HEIGHT'
       ? readNumber(obj, 'heightBlendDepth', HEIGHT_BLEND_DEPTH, depthBounds, path)
       : null;
-  if (source === 'SPLAT_MAP') return { source, heightBlend };
+  const rules = BLEND_KEYS[source].includes('rules') ? readRules(obj, path) : [];
+  if (source !== 'VERTEX_COLOR' && source !== 'VERTEX_COLOR_AND_RULES') {
+    return { source, heightBlend, rules };
+  }
   const vertexColorPath = `${path}.vertexColor`;
   const vertexColor = readOptionalObject(obj, 'vertexColor', path);
   checkKeys(vertexColor, VERTEX_COLOR_KEYS, vertexColorPath);
@@ -337,7 +530,31 @@ const readBlend = (value: unknown, path: string): TerrainBlendDefine => {
     fail(`${vertexColorPath}.layout`, `is missing: use ${VERTEX_COLOR_LAYOUTS.join(', ')}.`);
   }
   const layout = readEnum(vertexColor, 'layout', VERTEX_COLOR_LAYOUTS, vertexColorPath);
-  return { source, layout, heightBlend };
+  return { source, layout, heightBlend, rules };
+};
+
+/**
+ * The rules' layers against the material's: each rule's one of them, and each layer past the
+ * painted ones some rule's (nothing else weighs it)
+ */
+const checkRuleLayers = (blend: TerrainBlendDefine, layerCount: number, path: string) => {
+  if (blend.source === 'SINGLE' || !blend.rules.length) return;
+  blend.rules.forEach((rule, i) => {
+    if (rule.layer >= layerCount) {
+      fail(`${path}.rules[${i}].layer`, `is ${rule.layer}: there are ${layerCount} layers.`);
+    }
+  });
+  for (let layer = getPaintedLayerCount(blend, layerCount); layer < layerCount; layer++) {
+    if (!blend.rules.some((rule) => rule.layer === layer)) {
+      fail(`.layers[${layer}]`, "is neither painted nor a rule's layer: nothing weighs it.");
+    }
+  }
+};
+
+/** Whether a raw blend (a tier's, not read unless applied) has a rule with noise */
+const hasRawRuleNoise = (blend: unknown) => {
+  const rules = isRecord(blend) ? blend.rules : undefined;
+  return Array.isArray(rules) && rules.some((rule) => isRecord(rule) && rule.noise !== undefined);
 };
 
 /** An optional boolean field: false when it's absent */
@@ -468,13 +685,20 @@ export const readTerrainDefine = (
       `blend.source ${name} takes ${counts.join(' to ')} layers, not ${layers.length}.`
     );
   }
+  checkRuleLayers(blend, layers.length, `${pathOf('blend')}.blend`);
   const aoPath = `${pathOf('ao')}.ao`;
   const ao = readOptionalObject(fields, 'ao', pathOf('ao'));
   checkKeys(ao, AO_KEYS, aoPath);
   const aoTextureInfluence = readNumber(ao, 'textureInfluence', 1, UNIT, aoPath);
   const aoVertex = readBoolean(ao, 'vertex', aoPath);
-  if (aoVertex && !(blend.source === 'VERTEX_COLOR' && blend.layout === 'RGB_AO')) {
-    fail(`${aoPath}.vertex`, 'needs blend.source VERTEX_COLOR with the RGB_AO layout.');
+  if (
+    aoVertex &&
+    !(getPaintedSource(blend) === 'VERTEX_COLOR' && 'layout' in blend && blend.layout === 'RGB_AO')
+  ) {
+    fail(
+      `${aoPath}.vertex`,
+      'needs blend.source VERTEX_COLOR or VERTEX_COLOR_AND_RULES with the RGB_AO layout.'
+    );
   }
   const distancePath = `${pathOf('distance')}.distance`;
   const distance = fields.distance === undefined ? null : readObject(fields.distance, distancePath);
@@ -493,6 +717,9 @@ export const readTerrainDefine = (
       aoPath
     ),
     macro: readMacro(define),
+    takesMacroTexture:
+      define.macro !== undefined ||
+      [define.blend, ...Object.values(quality).map((tier) => tier.blend)].some(hasRawRuleNoise),
     reservedTextures: readReservedTextures(define),
     distanceFade: distance ? readMetreRange(distance, 'fade', undefined, distancePath) : null,
     qualityLevel,
