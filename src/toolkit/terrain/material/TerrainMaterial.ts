@@ -3,9 +3,25 @@
 // coordinates → weights → per-layer samples → surface → sockets). Two routes reach the same
 // `setupTerrainMaterial`: the code route (`createTerrainMaterial`, registered as `aek.terrain`) and
 // the JSON route (`materials/terrain/terrain.tsl.ts`, whose `setup` it is).
-import { color, float, mix, positionWorld, uniform, uv as meshUv, vec2, vec3 } from 'three/tsl';
+import {
+  color,
+  float,
+  mix,
+  positionView,
+  positionWorld,
+  uniform,
+  uv as meshUv,
+  vec2,
+  vec3,
+} from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
-import type { MeshStandardNodeMaterial, Node, NodeMaterial, TextureNode } from 'three/webgpu';
+import {
+  Vector2,
+  type MeshStandardNodeMaterial,
+  type Node,
+  type NodeMaterial,
+  type TextureNode,
+} from 'three/webgpu';
 import {
   createMaterial,
   existsOrThrow,
@@ -18,7 +34,8 @@ import {
   type TslMaterialFns,
 } from 'aekasha';
 import type { TextureSetInput } from 'aekasha/texturesets';
-import { sampleTextureSet, type TextureSetSample } from '../nodes/SampleTextureSet';
+import { sampleAntiTiled, type AntiTilingNodes } from '../nodes/AntiTiling';
+import type { TextureSetSample } from '../nodes/SampleTextureSet';
 import {
   bumpNormalWorld,
   getPlanarTangentFrame,
@@ -29,6 +46,7 @@ import {
 import {
   readTerrainDefine,
   type ResolvedTerrainDefine,
+  type TerrainAntiTilingDefine,
   type TerrainLayerDefine,
 } from './TerrainDefine';
 import type { TerrainDebugView, TerrainDebugViewContext } from '../debug/_dbg__DebugViews';
@@ -58,6 +76,9 @@ type LayerUniforms = {
   tint: Node<'color'>;
   normalStrength: Node<'float'>;
   roughnessScale: Node<'float'>;
+  /** The anti-tiling's mode and its uniforms (`farScale`, `antiTilingDistance`; `hexContrast`,
+   * `hexRotation`) */
+  antiTiling: AntiTilingNodes;
 };
 
 /** A layer's surface, its normal in world space: what the layers blend (one, for SINGLE) */
@@ -97,6 +118,29 @@ const readLayerBundles = (inputs: Record<string, unknown>, define: ResolvedTerra
   });
 };
 
+/** A layer's anti-tiling uniforms, those of its mode only */
+const createAntiTilingNodes = (
+  antiTiling: TerrainAntiTilingDefine,
+  keep: (name: string, node: unknown) => unknown
+): AntiTilingNodes => {
+  if (antiTiling.mode === 'DUAL_SCALE') {
+    const [from, to] = antiTiling.distance;
+    return {
+      mode: 'DUAL_SCALE',
+      farScale: keep('farScale', uniform(antiTiling.farScale)) as Node<'float'>,
+      distance: keep('antiTilingDistance', uniform(new Vector2(from, to))) as Node<'vec2'>,
+    };
+  }
+  if (antiTiling.mode === 'HEX') {
+    return {
+      mode: 'HEX',
+      contrast: keep('hexContrast', uniform(antiTiling.hexContrast)) as Node<'float'>,
+      rotation: keep('hexRotation', uniform(antiTiling.hexRotation)) as Node<'float'>,
+    };
+  }
+  return { mode: 'NONE' };
+};
+
 /** Makes a layer's uniforms (`terrain_l<i>_<name>`) */
 const createLayerUniforms = (
   material: NodeMaterial,
@@ -105,6 +149,7 @@ const createLayerUniforms = (
 ): LayerUniforms => {
   const keep = (name: string, node: unknown) => keepUniform(material, `l${index}_${name}`, node);
   return {
+    antiTiling: createAntiTilingNodes(layer.antiTiling, keep),
     tiling: keep('tiling', uniform(layer.tiling)) as Node<'float'>,
     rotation:
       layer.rotation === null ? null : (keep('rotation', uniform(layer.rotation)) as Node<'float'>),
@@ -212,10 +257,12 @@ const getLayerSurface = (
  * (`layer0`, `layer1`, …, a `{ textureSet }` bundle each, all in one packing) and sets the
  * material's sockets: the colour, the normal (each layer's in world space, into view space once),
  * the roughness, metalness 0, and the texture AO (`FULL`) to `aoNode`, which darkens indirect
- * light only (`LITE` and `MINIMAL` have theirs baked into the albedo). Only what the define
+ * light only (`LITE` and `MINIMAL` have theirs baked into the albedo). Each layer samples its set
+ * with its anti-tiling (`NONE` one tap, `DUAL_SCALE` two, `HEX` three). Only what the define
  * enables is built. The tunables are uniforms in `material.userData.uniforms`: per layer
  * `terrain_l<i>_<name>` (`tiling`, `rotation` when given, `tint`, `normalStrength`,
- * `roughnessScale`), and `terrain_aoTextureInfluence` when a layer has texture AO. A
+ * `roughnessScale`; `farScale` and `antiTilingDistance` with `DUAL_SCALE`, `hexContrast` and
+ * `hexRotation` with `HEX`), and `terrain_aoTextureInfluence` when a layer has texture AO. A
  * `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug env, once
  * {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the view. The
  * define as given is kept at `material.userData.terrainDefine`.
@@ -252,11 +299,18 @@ export const setupTerrainMaterial = (
       uniform(define.aoTextureInfluence)
     ) as Node<'float'>);
 
+  // Shared by every layer, built before any of them
+  const viewDistance = positionView.length() as unknown as Node<'float'>;
   const layers = define.layers.map((layerDefine, i) => {
     const bundle = bundles[i];
     const uniforms = createLayerUniforms(material, layerDefine, i);
     const uv = getLayerUv(define, bundle, uniforms);
-    return { bundle, uniforms, uv, sample: sampleTextureSet(bundle, uv.tileUv) };
+    const sample = sampleAntiTiled(bundle, uv.tileUv, uniforms.antiTiling, {
+      viewDistance,
+      patches: null,
+      seed: i,
+    });
+    return { bundle, uniforms, uv, sample };
   });
   checkOnePacking(layers.map((layer) => layer.sample));
   const surfaces = layers.map(({ bundle, uniforms, uv, sample }) =>

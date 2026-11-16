@@ -80,18 +80,25 @@ const build = (terrain: unknown, inputs: Record<string, unknown> = { layer0: mak
   return material;
 };
 
-/** The nodes a material's sockets reach */
+/**
+ * The nodes a material's sockets reach, each once (three's `traverse` walks a shared node once per
+ * path to it, which a hex-tiled graph has exponentially many of)
+ */
 const collectNodes = (material: MeshStandardNodeMaterial) => {
   const nodes = new Set<Node>();
-  for (const root of [
+  const stack = [
     material.colorNode,
     material.normalNode,
     material.roughnessNode,
     material.metalnessNode,
     material.aoNode,
     material.emissiveNode,
-  ]) {
-    (root as Node | null)?.traverse((node) => nodes.add(node));
+  ] as (Node | null)[];
+  while (stack.length) {
+    const node = stack.pop();
+    if (!node || nodes.has(node)) continue;
+    nodes.add(node);
+    for (const child of node.getChildren()) stack.push(child as Node);
   }
   return [...nodes];
 };
@@ -165,6 +172,29 @@ describe('setupTerrainMaterial', () => {
       (turned.userData.uniforms as Record<string, { value: unknown }>).terrain_l0_rotation.value
     ).toBe(30);
     expect(countMethod(turned, 'cos')).toBeGreaterThan(0);
+  });
+
+  it("keeps the anti-tiling's uniforms of the layer's mode, the layer's own over the material's", () => {
+    const dual = build({ layers: [{}], antiTiling: { mode: 'DUAL_SCALE', farScale: 0.3 } });
+    const dualUniforms = dual.userData.uniforms as Record<string, { value: unknown }>;
+    expect(getUniformKeys(dual)).toEqual(
+      [...LAYER_UNIFORMS, 'terrain_l0_antiTilingDistance', 'terrain_l0_farScale'].sort()
+    );
+    expect(dualUniforms.terrain_l0_farScale.value).toBe(0.3);
+    expect(dualUniforms.terrain_l0_antiTilingDistance.value).toEqual({ x: 6, y: 40 });
+    const hex = build({
+      layers: [{ antiTiling: { mode: 'HEX', hexRotation: 0.25 } }],
+      antiTiling: { mode: 'DUAL_SCALE' },
+    });
+    expect(getUniformKeys(hex)).toEqual(
+      [...LAYER_UNIFORMS, 'terrain_l0_hexContrast', 'terrain_l0_hexRotation'].sort()
+    );
+    expect(
+      (hex.userData.uniforms as Record<string, { value: unknown }>).terrain_l0_hexRotation.value
+    ).toBe(0.25);
+    // HEX's taps take the UV's gradients; planar world tiling has no derivatives otherwise
+    expect(countMethod(hex, 'dFdx')).toBeGreaterThan(0);
+    expect(countMethod(dual, 'dFdx')).toBe(0);
   });
 
   it("starts the AO influence at the define's", () => {
