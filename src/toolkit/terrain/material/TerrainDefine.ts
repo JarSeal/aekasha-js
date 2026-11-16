@@ -22,7 +22,15 @@ const DEBUG_VIEWS = ['TEXEL_DENSITY', 'NORMALS'] as const;
 
 /** The keys each object of the define takes (the schema's) */
 const OVERRIDE_KEYS = ['uv', 'blend', 'ao', 'antiTiling', 'distance'];
-const DEFINE_KEYS = ['layers', 'macro', ...OVERRIDE_KEYS, 'quality', 'qualityLevel', 'debugView'];
+const DEFINE_KEYS = [
+  'layers',
+  'macro',
+  'reservedTextures',
+  ...OVERRIDE_KEYS,
+  'quality',
+  'qualityLevel',
+  'debugView',
+];
 const LAYER_KEYS = [
   'source',
   'tiling',
@@ -61,6 +69,11 @@ const MACRO_ROUGHNESS = 0.15;
 /** The height blend's and the vertex AO's defaults (p305 D4) */
 const HEIGHT_BLEND_DEPTH = 0.2;
 const BAKED_ALBEDO_INFLUENCE = 0.5;
+/**
+ * The texture budget's default reserve (p305 D9: shadow maps, the environment).
+ * @internal
+ */
+export const DEFAULT_RESERVED_TEXTURES = 6;
 
 /** A layer's anti-tiling with its defaults filled in: the mode's fields only */
 export type TerrainAntiTilingDefine =
@@ -120,6 +133,8 @@ export type ResolvedTerrainDefine = {
   aoVertex: boolean;
   /** The vertex AO's influence where the albedo has its AO baked in (`LITE`, `MINIMAL`), 0..1 */
   aoBakedAlbedoInfluence: number;
+  /** The sampled textures kept for the rest of the shader: the budget is the limit less these */
+  reservedTextures: number;
   /** The macro variation (its texture the input `macro`), or null for none */
   macro: TerrainMacroDefine | null;
   /** The detail normals' fade, view distances in metres, or null for none */
@@ -386,6 +401,14 @@ const readMacro = (define: Record<string, unknown>): TerrainMacroDefine | null =
   };
 };
 
+/** The texture budget's reserve: a whole number 0..15 */
+const readReservedTextures = (define: Record<string, unknown>) => {
+  const bounds = { min: { value: 0 }, max: { value: 15 } };
+  const value = readNumber(define, 'reservedTextures', DEFAULT_RESERVED_TEXTURES, bounds, '');
+  if (!Number.isInteger(value)) fail('.reservedTextures', `is ${value}, not a whole number.`);
+  return value;
+};
+
 /** The `quality` table: each tier's overrides checked for their keys (read when applied) */
 const readQualityTable = (define: Record<string, unknown>) => {
   const table = define.quality === undefined ? {} : readObject(define.quality, '.quality');
@@ -470,6 +493,7 @@ export const readTerrainDefine = (
       aoPath
     ),
     macro: readMacro(define),
+    reservedTextures: readReservedTextures(define),
     distanceFade: distance ? readMetreRange(distance, 'fade', undefined, distancePath) : null,
     qualityLevel,
     debugView: readOptionalEnum(define, 'debugView', DEBUG_VIEWS, ''),

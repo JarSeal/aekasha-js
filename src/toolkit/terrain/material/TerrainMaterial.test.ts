@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { color, normalWorldGeometry, texture, uniform } from 'three/tsl';
-import { MeshStandardNodeMaterial, Texture, Vector2, type Node } from 'three/webgpu';
+import { color, int, normalWorldGeometry, texture, uniform, uniformArray } from 'three/tsl';
+import { MeshStandardNodeMaterial, Texture, Vector2, Vector4, type Node } from 'three/webgpu';
 import type { MatProps, TslMaterialFns } from 'aekasha';
-import type { TextureSetInput } from 'aekasha/texturesets';
+import type { TextureSetArrayInput, TextureSetInput } from 'aekasha/texturesets';
 import { loadTerrainDebugViewsAsync } from './TerrainDebugViews';
 import {
   createTerrainMaterial,
@@ -36,6 +36,17 @@ const makeBundle = (packing: Packing = 'LITE') =>
     wetRoughness: uniform(0.3),
   }) as unknown as TextureSetInput;
 
+/** A `{ textureSetArray }` bundle of the packing's slot arrays, its params and layer count */
+const makeArrayBundle = (count: number, packing: Packing = 'LITE') =>
+  ({
+    ...Object.fromEntries(PACKING_SLOTS[packing].map((slot) => [slot, texture(new Texture())])),
+    layerParams: uniformArray(
+      Array.from({ length: count * 4 }, () => new Vector4(3, 3, 0.05, 1)),
+      'vec4'
+    ),
+    layerCount: int(count),
+  }) as unknown as TextureSetArrayInput;
+
 /** The kernel's TSL path in short: the registered setup over the props' inputs as bundles */
 const stubs = vi.hoisted(() => ({
   registered: new Map<string, unknown>(),
@@ -43,11 +54,19 @@ const stubs = vi.hoisted(() => ({
   materials: new Map<string, MeshStandardNodeMaterial>(),
   variants: [] as { id: string; overrides: unknown }[],
   warnings: [] as string[],
+  renderer: null as unknown,
+  sets: {} as Record<string, { defaultPacking: string }>,
+}));
+
+vi.mock('aekasha/texturesets', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('aekasha/texturesets')>()),
+  getTextureSet: (id: string) => stubs.sets[id],
 }));
 
 vi.mock('aekasha', async (importOriginal) => ({
   ...(await importOriginal<typeof import('aekasha')>()),
   IS_DEBUG_ENV: true,
+  getRenderer: () => stubs.renderer,
   lwarn: (message: string) => stubs.warnings.push(message),
   getMaterial: (id: string) => stubs.materials.get(id),
   getMaterialVariant: (id: string, overrides: unknown) => {
@@ -66,7 +85,13 @@ vi.mock('aekasha', async (importOriginal) => ({
     const inputs = Object.fromEntries(
       Object.keys(tsl.inputs).map((key) => [
         key,
-        key.startsWith('layer') ? makeBundle() : texture(new Texture()),
+        key === 'layers'
+          ? makeArrayBundle(
+              (tsl.inputs.layers as { textureSetArray: string[] }).textureSetArray.length
+            )
+          : key.startsWith('layer')
+            ? makeBundle()
+            : texture(new Texture()),
       ])
     );
     fns.setup?.(
@@ -362,16 +387,17 @@ describe('setupTerrainMaterial: blending', () => {
   });
 
   it('samples each splat map once at the mesh UV, as many as the layers take', () => {
-    const inputs = layerInputs(9, 'LITE', {
+    const inputs = {
+      layers: makeArrayBundle(9),
       splat0: texture(new Texture()),
       splat1: texture(new Texture()),
-    });
+    };
     const material = build({ layers: layersOf(9), blend: { source: 'SPLAT_MAP' } }, inputs);
     expect(countSamples(material, inputs)).toBe(9 * 2 + 2);
     expect(() =>
       build(
         { layers: layersOf(9), blend: { source: 'SPLAT_MAP' } },
-        layerInputs(9, 'LITE', { splat0: texture(new Texture()) })
+        { layers: makeArrayBundle(9), splat0: texture(new Texture()) }
       )
     ).toThrow(/Missing input "splat1": a splat map's texture .* for layers 5-8/);
     expect(() =>
@@ -413,6 +439,87 @@ describe('setupTerrainMaterial: blending', () => {
   });
 });
 
+describe('setupTerrainMaterial: storage', () => {
+  beforeEach(() => {
+    stubs.renderer = null;
+  });
+
+  /** The sockets' samples of an array's slots, each with its layer (`.depth()`) */
+  const getArraySamples = (material: MeshStandardNodeMaterial, bundle: TextureSetArrayInput) => {
+    const arrays = new Set(Object.values(bundle));
+    return collectNodes(material).filter(
+      (node) =>
+        (node as unknown as { isTextureNode?: boolean }).isTextureNode && !arrays.has(node as never)
+    ) as unknown as { depthNode: { value: number } | null }[];
+  };
+
+  it('samples every layer from the one set array, each at its layer, with the same uniforms', () => {
+    const bundle = makeArrayBundle(3);
+    const define = { layers: layersOf(3), blend: { source: 'VERTEX_COLOR' } };
+    const material = build(define, { layers: bundle });
+    const samples = getArraySamples(material, bundle);
+    expect(samples).toHaveLength(3 * 2);
+    expect(samples.map((sample) => sample.depthNode?.value).sort()).toEqual([0, 0, 1, 1, 2, 2]);
+    expect(getUniformKeys(material)).toEqual(getUniformKeys(build(define, layerInputs(3))));
+    // The array's params, not a set's uniforms: they read its uniform array
+    const params = (bundle as unknown as { layerParams: Node }).layerParams;
+    expect(collectNodesFrom([material.colorNode]).includes(params)).toBe(true);
+  });
+
+  it('takes anti-tiling taps from the array at the layer', () => {
+    const bundle = makeArrayBundle(2);
+    const material = build(
+      { layers: layersOf(2), blend: { source: 'VERTEX_COLOR' }, antiTiling: { mode: 'HEX' } },
+      { layers: bundle }
+    );
+    const samples = getArraySamples(material, bundle);
+    expect(samples).toHaveLength(2 * 2 * 3);
+    expect(samples.every((sample) => sample.depthNode)).toBe(true);
+  });
+
+  it('refuses both storages at once, a non-array layers input and another layer count', () => {
+    const define = { layers: layersOf(2), blend: { source: 'VERTEX_COLOR' } };
+    expect(() => build(define, { layers: makeArrayBundle(2), layer0: makeBundle() })).toThrow(
+      /Inputs "layers" .* and "layer0" .* are both given/
+    );
+    expect(() => build(define, { layers: makeBundle() })).toThrow(
+      /Input "layers" isn't a texture set array/
+    );
+    expect(() => build(define, { layers: makeArrayBundle(3) })).toThrow(
+      /Input "layers" has 3 layers, staticDefines.terrain.layers 2/
+    );
+  });
+
+  it("throws over the texture budget, naming what's bound, by the renderer's limit", () => {
+    const define = { layers: layersOf(4), blend: { source: 'VERTEX_COLOR' } };
+    // 4 FULL layers: 12 textures, over 16 less 6
+    expect(() => build(define, layerInputs(4, 'FULL'))).toThrow(
+      '[terrain] The material binds 12 textures, over its budget of 10 (16 a stage less 6 reserved): layer0-layer3 (albedoHeight, normal, orm each): 12. Try ARRAY storage'
+    );
+    expect(() => build({ ...define, reservedTextures: 4 }, layerInputs(4, 'FULL'))).not.toThrow();
+    stubs.renderer = {
+      backend: {
+        isWebGPUBackend: true,
+        device: { limits: { maxSampledTexturesPerShaderStage: 32, maxSamplersPerShaderStage: 20 } },
+      },
+    };
+    expect(() => build(define, layerInputs(4, 'FULL'))).not.toThrow();
+    stubs.renderer = null;
+    // An array binds its slots, then the splat maps and the macro texture count
+    const splat = { layers: layersOf(9), blend: { source: 'SPLAT_MAP' }, macro: { scale: 50 } };
+    const inputs = {
+      layers: makeArrayBundle(9, 'FULL'),
+      splat0: texture(new Texture()),
+      splat1: texture(new Texture()),
+      macro: texture(new Texture()),
+    };
+    expect(() => build({ ...splat, reservedTextures: 11 }, inputs)).toThrow(
+      'binds 6 textures, over its budget of 5 (16 a stage less 11 reserved): layers (arrays albedoHeight, normal, orm): 3; splat maps: 2; macro: 1. Try fewer splat maps'
+    );
+    expect(() => build({ ...splat, reservedTextures: 10 }, inputs)).not.toThrow();
+  });
+});
+
 describe('getTerrainMaterialProps', () => {
   it('puts the sets in the inputs and the rest in the define', () => {
     expect(
@@ -434,12 +541,66 @@ describe('getTerrainMaterialProps', () => {
     });
   });
 
+  it("binds ARRAY storage as one set array input, its packing given or the sets' default", () => {
+    stubs.sets = { grass01: { defaultPacking: 'LITE' }, rocks01: { defaultPacking: 'LITE' } };
+    const layers = [{ set: 'grass01' }, { set: 'rocks01' }];
+    const config = { id: 'a', layers, blend: { source: 'VERTEX_COLOR' as const } };
+    const arrayProps = getTerrainMaterialProps({ ...config, storage: 'ARRAY' });
+    expect(arrayProps.inputs).toEqual({
+      layers: { textureSetArray: ['grass01', 'rocks01'], packing: 'LITE' },
+    });
+    expect(arrayProps.staticDefines).toEqual({
+      terrain: { layers: layersOf(2), blend: { source: 'VERTEX_COLOR' } },
+    });
+    expect(
+      getTerrainMaterialProps({ ...config, storage: 'ARRAY', packing: 'FULL' }).inputs
+    ).toEqual({ layers: { textureSetArray: ['grass01', 'rocks01'], packing: 'FULL' } });
+    expect(getTerrainMaterialProps({ ...config, storage: 'SEPARATE' }).inputs).toEqual({
+      layer0: { textureSet: 'grass01' },
+      layer1: { textureSet: 'rocks01' },
+    });
+    stubs.sets.rocks01 = { defaultPacking: 'FULL' };
+    expect(() => getTerrainMaterialProps({ ...config, storage: 'ARRAY' })).toThrow(
+      /default packings differ \(grass01: LITE, rocks01: FULL\)/
+    );
+    expect(() =>
+      getTerrainMaterialProps({
+        ...config,
+        layers: [{ set: 'nothing' }, ...layers],
+        storage: 'ARRAY',
+      })
+    ).toThrow(/no data has the texture set "nothing"/);
+  });
+
+  it('chooses ARRAY for AUTO only over the budget', () => {
+    stubs.renderer = null;
+    stubs.sets = { grass01: { defaultPacking: 'LITE' } };
+    const of = (count: number) => Array.from({ length: count }, () => ({ set: 'grass01' }));
+    const config = (count: number, extra = {}) => ({
+      id: 'auto',
+      layers: of(count),
+      blend: { source: 'SPLAT_MAP' as const },
+      splatMaps: count > 5 ? ['s0', 's1'] : ['s0'],
+      ...extra,
+    });
+    // 5 LITE layers and a splat map: 11 textures, over 10
+    expect(getTerrainMaterialProps(config(4)).inputs).toHaveProperty('layer3');
+    expect(getTerrainMaterialProps(config(5)).inputs).toHaveProperty('layers');
+    expect(getTerrainMaterialProps(config(5, { reservedTextures: 5 })).inputs).toHaveProperty(
+      'layer4'
+    );
+    expect(getTerrainMaterialProps(config(5, { packing: 'MINIMAL' })).inputs).toHaveProperty(
+      'layer4'
+    );
+  });
+
   it('puts the splat maps in the inputs splat<i>, none in the define', () => {
     const props = getTerrainMaterialProps({
       id: 'valley',
       layers: Array.from({ length: 6 }, () => ({ set: 'grass01' })),
       blend: { source: 'SPLAT_MAP' },
       splatMaps: ['valley.splat0', 'valley.splat1'],
+      storage: 'SEPARATE',
     });
     expect(props.staticDefines).toEqual({
       terrain: { layers: layersOf(6), blend: { source: 'SPLAT_MAP' } },

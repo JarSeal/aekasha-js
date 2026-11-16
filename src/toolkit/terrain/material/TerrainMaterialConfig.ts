@@ -39,6 +39,13 @@ export const TERRAIN_BLEND_LAYER_COUNTS = {
 } as const;
 /** The texture set packings a terrain material samples (p303 D2). */
 export const TERRAIN_PACKINGS = ['FULL', 'LITE', 'MINIMAL'] as const;
+/**
+ * How the code route binds the layers' textures (p305 D9): `AUTO` (default) `SEPARATE` while that
+ * fits the texture budget, else `ARRAY`; `SEPARATE` each layer's packing slots (`{ textureSet }`
+ * inputs `layer<i>`); `ARRAY` one array texture per slot for every layer (a `{ textureSetArray }`
+ * input `layers`).
+ */
+export const TERRAIN_STORAGES = ['AUTO', 'SEPARATE', 'ARRAY'] as const;
 /** The quality tiers a terrain material's `quality` table overrides (p240's scale). */
 export const TERRAIN_QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as const;
 /**
@@ -467,6 +474,24 @@ export const TerrainQualityOverridesSchema = z
 /** A quality tier's material-wide fields over the material's own (shallowly). */
 export type TerrainQualityOverrides = z.infer<typeof TerrainQualityOverridesSchema>;
 
+/** The texture budget's field the code route's config and the static define share */
+const budgetFields = {
+  /**
+   * The sampled textures kept for the rest of the shader (shadow maps, the environment), 0..15
+   * (default 6): the material's own may bind the renderer's limit (16) less these, or it throws
+   * listing what it binds.
+   */
+  reservedTextures: z
+    .number()
+    .int()
+    .min(0)
+    .max(15)
+    .optional()
+    .describe(
+      "The sampled textures kept for the rest of the shader (shadow maps, the environment), 0..15 (default 6): the material's own bind the renderer's limit less these."
+    ),
+};
+
 /** The tier and debug fields the code route's config and the static define share */
 const variantFields = {
   /** Each quality tier's overrides (`LOW`, `MEDIUM`, `HIGH`, `ULTRA`; any of them). */
@@ -598,6 +623,7 @@ export const TerrainMaterialDefineSchema = z
       .describe("The layers' settings, in the inputs' order (layer0, …): 1 to 16."),
     /** The macro variation, its texture the input `macro` (`{ "texture": id }`). */
     macro: TerrainMacroSettingsSchema.optional(),
+    ...budgetFields,
     ...sharedFields,
     ...variantFields,
   })
@@ -647,6 +673,18 @@ export const TerrainMaterialConfigSchema = z
       .describe(
         "With blend.source SPLAT_MAP, the splat maps' texture ids: the first weighs layers 1-4, the second 5-8 (inputs splat0, splat1)."
       ),
+    /**
+     * How the layers' textures bind (default `AUTO`: `SEPARATE` while it fits the texture budget,
+     * else `ARRAY`). An `ARRAY` material's set array must be built before it's created
+     * (`buildTextureSetArray({ sets, packing })`, or a scene's `textureSetArrays`).
+     */
+    storage: z
+      .enum(TERRAIN_STORAGES)
+      .optional()
+      .describe(
+        "How the layers' textures bind (default AUTO: SEPARATE while it fits the texture budget, else ARRAY, one array per packing slot)."
+      ),
+    ...budgetFields,
     ...sharedFields,
     ...variantFields,
   })

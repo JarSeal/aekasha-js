@@ -20892,7 +20892,7 @@
           "id": "terrain",
           "debugData": {
             "name": "Terrain",
-            "description": "The toolkit's terrain material generator (p305) through its JSON route: staticDefines.terrain is the config without its id and the layers' sets (layers' settings: tiling, rotation, tint, normalStrength, roughnessScale, heightContrast, heightOffset; uv WORLD or MESH_UV; blend SINGLE, VERTEX_COLOR or SPLAT_MAP, by height or linear), the inputs layer0, layer1, … the layers' texture sets ({ textureSet, packing? }, all in one packing), splat0 and splat1 the splat maps ({ texture }). Give a mesh its sets with matOverrides.inputs."
+            "description": "The toolkit's terrain material generator (p305) through its JSON route: staticDefines.terrain is the config without its id and the layers' sets (layers' settings: tiling, rotation, tint, normalStrength, roughnessScale, heightContrast, heightOffset; uv WORLD or MESH_UV; blend SINGLE, VERTEX_COLOR or SPLAT_MAP, by height or linear), the inputs layer0, layer1, … the layers' texture sets ({ textureSet, packing? }, all in one packing) or layers one set array for all ({ textureSetArray: [ids], packing }: the texture budget is 16 a stage less reservedTextures, 6), splat0 and splat1 the splat maps ({ texture }). Give a mesh its sets with matOverrides.inputs."
           },
           "tslFile": "materials/terrain/terrain.tsl.ts",
           "staticDefines": {
@@ -37565,7 +37565,7 @@
       "id": "terrain",
       "debugData": {
         "name": "Terrain",
-        "description": "The toolkit's terrain material generator (p305) through its JSON route: staticDefines.terrain is the config without its id and the layers' sets (layers' settings: tiling, rotation, tint, normalStrength, roughnessScale, heightContrast, heightOffset; uv WORLD or MESH_UV; blend SINGLE, VERTEX_COLOR or SPLAT_MAP, by height or linear), the inputs layer0, layer1, … the layers' texture sets ({ textureSet, packing? }, all in one packing), splat0 and splat1 the splat maps ({ texture }). Give a mesh its sets with matOverrides.inputs."
+        "description": "The toolkit's terrain material generator (p305) through its JSON route: staticDefines.terrain is the config without its id and the layers' sets (layers' settings: tiling, rotation, tint, normalStrength, roughnessScale, heightContrast, heightOffset; uv WORLD or MESH_UV; blend SINGLE, VERTEX_COLOR or SPLAT_MAP, by height or linear), the inputs layer0, layer1, … the layers' texture sets ({ textureSet, packing? }, all in one packing) or layers one set array for all ({ textureSetArray: [ids], packing }: the texture budget is 16 a stage less reservedTextures, 6), splat0 and splat1 the splat maps ({ texture }). Give a mesh its sets with matOverrides.inputs."
       },
       "tslFile": "materials/terrain/terrain.tsl.ts",
       "staticDefines": {

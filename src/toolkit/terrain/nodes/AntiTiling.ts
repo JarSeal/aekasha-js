@@ -39,6 +39,8 @@ export type AntiTilingContext = {
   patches: Node<'float'> | null;
   /** The layer's own seed, so two layers of one set don't share their hexes (`HEX`) */
   seed: number;
+  /** The layer of a `{ textureSetArray }` bundle, or undefined for a `{ textureSet }` one */
+  layer?: number;
 };
 
 /** The second tap's turn (D3: 37°, so its texels never line up with the first's) and offset */
@@ -138,12 +140,12 @@ const sampleDualScale = (
   const share = mix(patch, patch.add(0.5), byDistance) as Node<'float'>;
   return blendTaps([
     {
-      sample: sampleTextureSet(bundle, uv),
+      sample: sampleTextureSet(bundle, uv, { layer: ctx.layer }),
       weight: float(1).sub(share) as Node<'float'>,
       turn: null,
     },
     {
-      sample: sampleTextureSet(bundle, farUv),
+      sample: sampleTextureSet(bundle, farUv, { layer: ctx.layer }),
       weight: share,
       turn: { cos: FAR_COS, sin: FAR_SIN },
     },
@@ -233,6 +235,7 @@ const sampleHex = (
       .add(centre)
       .add(hashCell22(vertex, offsetSeed)) as Node<'vec2'>;
     const sample = sampleTextureSet(bundle, tapUv, {
+      layer: ctx.layer,
       grad: { dx: turn2(dx, cos, sin), dy: turn2(dy, cos, sin) },
     });
     const heightInfluence = mix(float(1), sample.height, HEX_HEIGHT_INFLUENCE);
@@ -253,10 +256,11 @@ const sampleHex = (
  * into one sample whose tangent-space normal is in the UV's frame, so the layer turns it into the
  * world as a plain sample's.
  * @internal
- * @param bundle the layer's `{ textureSet }` bundle
+ * @param bundle the layer's `{ textureSet }` bundle, or the `{ textureSetArray }` bundle with
+ * `ctx.layer`
  * @param uv the layer's tiling UV, in tiles (continuous: `HEX` takes its gradients)
  * @param nodes the mode and its uniforms
- * @param ctx the view distance, the macro patches and the layer's seed
+ * @param ctx the view distance, the macro patches, the layer's seed and its array layer
  */
 export const sampleAntiTiled = (
   bundle: TextureSetInput | TextureSetArrayInput,
@@ -266,5 +270,5 @@ export const sampleAntiTiled = (
 ): TextureSetSample => {
   if (nodes.mode === 'DUAL_SCALE') return sampleDualScale(bundle, uv, nodes, ctx);
   if (nodes.mode === 'HEX') return sampleHex(bundle, uv, nodes, ctx);
-  return sampleTextureSet(bundle, uv);
+  return sampleTextureSet(bundle, uv, { layer: ctx.layer });
 };
