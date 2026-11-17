@@ -68,7 +68,7 @@ File → Export → glTF 2.0:
 - Transform: **+Y Up ✓**.
 - Mesh: Apply Modifiers ✓, UVs ✓, Normals ✓, Tangents ✗ (three's normal maps work without them), Vertex Colors only if every piece has them, Loose Edges / Points ✗.
 - Materials: no export, unless the kit's textures come with the file (then `importTextures`, see the asset optimization guide). The engine gives an import one material.
-- Compression ✗: the asset pipeline compresses (meshopt) and keeps collider sources lossless.
+- Compression ✗: the asset pipeline compresses (meshopt) and never simplifies collider sources.
 - Animation ✗.
 
 ## Import into Ækasha

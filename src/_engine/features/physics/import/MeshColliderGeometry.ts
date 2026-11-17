@@ -1,5 +1,5 @@
 import type * as THREE from 'three/webgpu';
-import { lerror, lwarn } from '../../../utils/Logger';
+import { lwarn } from '../../../utils/Logger';
 import type { ColliderParams } from '../types/PhysicsColliderTypes';
 import type { ImportedGeometryInfo, Vector3Like } from '../../../kernel/assets/import/ImportTypes';
 import { getColliderBounds, toSpineAxis } from './ColliderBounds';
@@ -22,14 +22,6 @@ const readScaledPositions = (geometry: THREE.BufferGeometry, scale: Vector3Like)
   }
   return vertices;
 };
-
-/**
- * Whether the position attribute is stored as integers (gltf-transform's `quantize()`, meshopt's
- * quantization, KHR_mesh_quantization). Checked by the array type, not by interleaving: the assets
- * worker hands quantized positions over de-interleaved.
- */
-const isQuantizedPosition = (geometry: THREE.BufferGeometry) =>
-  !(geometry.getAttribute('position').array instanceof Float32Array);
 
 /**
  * Shape data for TRIMESH/HEIGHTFIELD/CONVEXHULL, which the Physics API can't infer, read from the
@@ -61,20 +53,8 @@ const deriveMeshDependentColliderFields = (
 
   if (colliderParams.type === 'HEIGHTFIELD') {
     if (colliderParams.heights) return colliderParams;
-    if (info.isDracoCompressed) {
-      lerror(
-        `Import "${info.importId}", node "${info.nodeName}": HEIGHTFIELD collider skipped, the geometry is DRACO-compressed and DRACO's default encoding reorders the vertices the height grid is read from. Export heightfield terrains uncompressed (or with DRACO's sequential encoding).`
-      );
-      return null;
-    }
-    // meshopt's quantization comes with a reorder, which can't be detected: refused on every
-    // worker target alike
-    if (isQuantizedPosition(geometry)) {
-      lerror(
-        `Import "${info.importId}", node "${info.nodeName}": HEIGHTFIELD collider skipped, the geometry's positions are quantized (${geometry.getAttribute('position').array.constructor.name}), and meshopt's quantization also reorders the vertices the height grid is read from. Set "optimize": { "mesh": { "quantize": false } } in the asset's importedAsset JSON (the asset pipeline's default for nodes with a colliderType), or export the terrain unquantized.`
-      );
-      return null;
-    }
+    // Read by position, so a reorder (Draco, meshopt) doesn't matter, and through the getters,
+    // so quantized positions don't either (p306 D3)
     return deriveHeightfield(
       colliderParams,
       readScaledPositions(geometry, scale),
@@ -126,7 +106,7 @@ const derivePrimitiveDimensions = (
  * @param colliderParams the collider so far: its `type`, and any field to keep
  * @param source the node's registered geometry and its manifest entry
  * @returns the completed collider params, or null when the collider has to be skipped (logged: a
- * HEIGHTFIELD on Draco-compressed or quantized positions, or whose grid doesn't fit)
+ * HEIGHTFIELD whose vertices make no regular grid)
  * @example
  * ```ts
  * import { getGeometry, importAssetAsync } from 'aekasha';

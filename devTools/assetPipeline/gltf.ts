@@ -92,7 +92,7 @@ const COMPRESSION_EXTENSIONS: [string, ResolvedMeshSettings['codec']][] = [
  * - meshopt, quantized: gltf-transform's `meshopt()` (reorder, quantize, filters). Texcoords are
  *   quantized only inside [0, 1], as normalized integers (no KHR_texture_transform).
  * - meshopt, `quantize: false`: lossless, EXT_meshopt_compression alone (no reorder, no
- *   quantization, no filters: `QUANTIZE` means "no filters"), the collider default.
+ *   quantization, no filters: `QUANTIZE` means "no filters").
  * - draco: always quantized.
  * - none: `quantize()` alone (KHR_mesh_quantization), or the geometry as it is.
  * `simplify` (a triangle ratio) welds and simplifies first.

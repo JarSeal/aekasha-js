@@ -156,7 +156,7 @@ A single-file add-on (Blender ≥ 4.2; installable with _Edit → Preferences �
 - Transform: +Y Up ✓.
 - Mesh: Apply Modifiers ✓, UVs ✓, Normals ✓, Tangents ✗, Vertex Colors: Active (Blender 4.2+ naming), Attributes ✓ (`_`-prefixed), Loose Edges/Points ✗.
 - Materials: No export. Images: None.
-- Compression ✗: p300 applies meshopt without quantization; Draco breaks colliders.
+- Compression ✗: p300 applies meshopt (the `terrainBlock` profile keeps it lossless, so neighbouring blocks' shared edge vertices stay exactly equal; colliders no longer need it, Phase 1's As built).
 - Animation ✗.
 
 **"AEK Terrain Preview" node group:** a Blender shader approximation of p305 (up to 5 layers, height blend via Math nodes, world-space tiling from the Object/Geometry position, colour-attribute weights). Artists see roughly the engine result while painting. It's documented as an approximation.
@@ -251,6 +251,15 @@ Add sections 5–7 (Blender, Export, Import) to the seven p305 pages, each refer
 3. `yarn test`, and `yarn verify:scenes` for the scenes with heightfields (`thirdPersonGymScene`): a collider that moves changes the probe's hash, so update its baseline in the same commit and say why.
 
 **Exit:** collider wireframe coincides with the mesh (≤ 1 mm) on the Gym terrains and on a generated asymmetric terrain.
+
+**As built (steps 1-2):**
+
+- **The layout, verified** against Rapier 0.19.3 by raycasts (`HeightfieldColliderParams.test.ts`): `heights[row + col·(nrows+1)]`, `nrows` cells along +z and `ncols` along +x, both from −scale / 2, no flip. The survey's mapping holds. Each cell is split along the diagonal (row + 1, col)–(row, col + 1), the same as `generateTerrain`'s b–c diagonal, so a generated terrain's collider can match its mesh between vertices too (Phase 3's `collider: true` keeps that diagonal). rapier.js can't choose the diagonal per cell.
+- **`toHeightfieldColliderParams({ heights, rows, cols, width, depth })`**: `rows` / `cols` count heights (vertices), not cells; returns `HeightFieldData & { type: 'HEIGHTFIELD' }` with `scale.y` 1 (heights already in the body's units). Throws on a grid that doesn't fit.
+- **The import** (`import/HeightfieldFromGeometry.ts`): buckets the raw positions (node space × scale, not rotated: the body carries the rotation), **without `mergeVertices`** (unlike D3): duplicates on one grid point (seams, flat shading) pass when their heights agree within 1 mm. A count not given as `nCols` / `nRows` is counted from the distinct x / z, so non-square grids work without custom props. `nCols` counts the cells along x, `nRows` along z (the old loop had `nRows` along x). Grid tolerance: 1 % of the spacing. The centre offset is the collider's `translation` (`ImportPhysics.ts` composes it with a non-anchor member's node offset); the terrain-block warning keys on the `aekBlockSize` custom prop. A warning counts the cells the mesh splits along the other diagonal, with the worst gap.
+- **The refusals are lifted** (Draco, quantized positions): read by position and through the getters, both work. Measured on p300's `terrainSmooth` copies: the Draco and meshopt colliders are within 3–4 mm of the source surface (their height quantization); the visible quantized mesh sits up to 1.6 cm from the collider on slopes (its x / z jitter at 14 bits over 100 m).
+- **The asset pipeline** no longer keeps collider sources lossless: `COLLIDER_LEVEL` is `{ mesh: { simplify: null } }` (never simplified, quantized like any mesh). The one collider source, `testDebugScene`'s `p371MergeKit`, re-encoded (9.8 KB). The `terrainBlock` profile stays lossless, for the shared edges.
+- **The Gym terrains:** `terrainSmooth` was off by up to 0.216 m near its z = 49 edge (the p990 bug: the vertex-order read); `terrainSpiked`'s bounds sit 0.03 / 0.52 m off its origin. `terrainSpiked.glb` split 899 of its 10 000 cells along the other diagonal: re-triangulated onto the collider's (the index only; its normals are Blender's quad normals, independent of the split). Both now match their `TRIMESH` within 0.2 mm over 400 × 400 raycasts. The Gym loads without a HEIGHTFIELD error or warning.
 
 ### Phase 2 — Terrain block asset (D2)
 

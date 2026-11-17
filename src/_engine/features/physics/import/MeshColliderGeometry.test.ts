@@ -49,13 +49,16 @@ const heightAt = (params: ColliderParams | null, row: number, col: number) => {
   return params.heights[row + col * (params.nrows + 1)];
 };
 
-/** Expects the collider to hold `surface` on a 10 × 10 m grid of `cols` × `rows` cells. */
-const expectSurface = (params: ColliderParams | null, cols: number, rows: number) => {
+/**
+ * Expects the collider to hold `surface` on a 10 × 10 m grid of `cols` × `rows` cells, to
+ * `digits` decimals.
+ */
+const expectSurface = (params: ColliderParams | null, cols: number, rows: number, digits = 5) => {
   expect(params).toMatchObject({ nrows: rows, ncols: cols, scale: { x: 10, y: 1, z: 10 } });
   for (let row = 0; row <= rows; row++) {
     for (let col = 0; col <= cols; col++) {
       const expected = surface((col / cols) * 10 - 5, (row / rows) * 10 - 5);
-      expect(heightAt(params, row, col), `row ${row}, column ${col}`).toBeCloseTo(expected, 5);
+      expect(heightAt(params, row, col), `row ${row}, column ${col}`).toBeCloseTo(expected, digits);
     }
   }
 };
@@ -107,6 +110,28 @@ describe('deriveColliderFromGeometry, HEIGHTFIELD (p306 D3)', () => {
     expectSurface(heightfield(flipped), 5, 3);
     // Every corner duplicated (no index): the duplicates agree, so they're one grid point
     expectSurface(heightfield(terrain(5, 3).toNonIndexed()), 5, 3);
+  });
+
+  it('reads quantized and interleaved positions, as meshopt and Draco outputs have them', () => {
+    // Normalized Int16 positions in -1..1, the dequantization in the node's scale (as
+    // gltf-transform's quantize() writes it), in an interleaved buffer with a normal
+    const source = terrain(5, 3).toNonIndexed().getAttribute('position');
+    const range = 10;
+    const data = new Int16Array(source.count * 6);
+    for (let i = 0; i < source.count; i++) {
+      for (let axis = 0; axis < 3; axis++) {
+        data[i * 6 + axis] = Math.round((source.getComponent(i, axis) / range) * 32767);
+      }
+      data[i * 6 + 4] = 32767;
+    }
+    const buffer = new THREE.InterleavedBuffer(data, 6);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.InterleavedBufferAttribute(buffer, 3, 0, true));
+    geometry.setAttribute('normal', new THREE.InterleavedBufferAttribute(buffer, 3, 3, true));
+    const scale = { x: range, y: range, z: range };
+    const params = heightfield(geometry, { scale });
+    // 16 bits over 20 m: within a millimetre
+    expectSurface(params, 5, 3, 3);
   });
 
   it('takes the counts given as custom props: nCols along x, nRows along z', () => {

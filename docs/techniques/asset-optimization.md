@@ -110,15 +110,15 @@ Gaps:
 
 ### Collider sources
 
-Quantized positions break CONVEXHULL and HEIGHTFIELD colliders, and the meshopt vertex reorder scrambles a heightfield's grid. So a GLB with a node that has `colliderType` in its extras, or in its mesh's extras (the custom property the importer reads, which three's loader merges from both), gets **lossless** meshopt: compressed, but not quantized, reordered or simplified. You don't need to set anything.
+Simplification changes a collider's shape and takes a heightfield's grid apart. So a GLB with a node that has `colliderType` in its extras, or in its mesh's extras (the custom property the importer reads, which three's loader merges from both), is **never simplified**, whatever its rules or profile say. You don't need to set anything.
 
-The pipeline can't see colliders that only code adds (`ImportPhysicsParams`). For those sources, set it yourself:
+It's quantized and reordered like any other mesh: every collider reads its positions through the attribute getters, and a HEIGHTFIELD reads its grid by vertex position, not order (so Draco works too). A 16-bit position is within a millimetre on a 64 m block. (Before p306 they were kept lossless.)
+
+The pipeline can't see colliders that only code adds (`ImportPhysicsParams`). If such a source has a simplification rule, turn it off yourself:
 
 ```jsonc
-"optimize": { "mesh": { "quantize": false } }
+"optimize": { "mesh": { "simplify": null } }
 ```
-
-If a quantized mesh ends up under a HEIGHTFIELD anyway, the collider is skipped with an error that names this fix. TRIMESH, BOX and CONVEXHULL handle quantized positions.
 
 ## Profiles and settings
 
@@ -144,7 +144,7 @@ The ones `assets.config.json` ships with. Add your own there.
 | `hero`         | Textures up to 2048 px, VRAM budget 24 MB                                                           | Assets the camera gets close to                                            |
 | `compact`      | ETC1S for the `baseColor` and `emissive` slots                                                      | Distant and background assets, mobile VRAM budgets                         |
 | `terrainLayer` | Encodes the `data` slot as UASTC λ 1                                                                | Terrain layer textures (packed normal + height)                            |
-| `terrainBlock` | Lossless meshopt                                                                                    | Terrain meshes, colliders the pipeline can't detect                        |
+| `terrainBlock` | Lossless meshopt                                                                                    | Terrain blocks: neighbours' shared edge vertices stay exactly equal        |
 | `data`         | No texture is encoded                                                                               | Textures that must stay exact (LUTs, splat maps, anything read on the CPU) |
 
 ### Slots

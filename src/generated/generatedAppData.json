@@ -21999,14 +21999,14 @@
           },
           "__fileSize": 32068,
           "__sourceUrl": "/app/scenes/testDebugScene/p371MergeKit.glb",
-          "__url": "/aek-assets/app/scenes/testDebugScene/p371MergeKit.81c7db98.glb",
+          "__url": "/aek-assets/app/scenes/testDebugScene/p371MergeKit.6b3f5e26.glb",
           "__bytes": {
             "in": 32068,
-            "out": 16576
+            "out": 9828
           },
           "__vramBytes": {
             "in": 16800,
-            "out": 21000
+            "out": 13032
           }
         }
       ],
@@ -38060,14 +38060,14 @@
       "__sourcePath": "src/app/scenes/testDebugScene/p371MergeKit.importedAsset.json",
       "__fileSize": 32068,
       "__sourceUrl": "/app/scenes/testDebugScene/p371MergeKit.glb",
-      "__url": "/aek-assets/app/scenes/testDebugScene/p371MergeKit.81c7db98.glb",
+      "__url": "/aek-assets/app/scenes/testDebugScene/p371MergeKit.6b3f5e26.glb",
       "__bytes": {
         "in": 32068,
-        "out": 16576
+        "out": 9828
       },
       "__vramBytes": {
         "in": 16800,
-        "out": 21000
+        "out": 13032
       }
     },
     "aekashaSymbol": {

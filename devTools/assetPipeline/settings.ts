@@ -49,12 +49,13 @@ export const BUILTIN_DEFAULTS = {
 } satisfies OptimizeLevel;
 
 /**
- * Collider sources (DD6) get lossless meshopt: quantized positions break CONVEXHULL and
- * HEIGHTFIELD colliders (Phase 1d). No simplification either: it changes the collider's shape
- * and, like a reorder, scrambles a HEIGHTFIELD's grid. Applied after the profile, so only the
- * asset's own JSON can turn either back on.
+ * Collider sources (DD6) aren't simplified: it changes the collider's shape and takes a
+ * HEIGHTFIELD's grid apart. They're quantized and reordered like any mesh: every collider reads
+ * its positions through the attribute getters and a HEIGHTFIELD its grid by position (p306 D3;
+ * until then they were lossless). Applied after the profile, so only the asset's own JSON can
+ * turn simplification back on.
  */
-const COLLIDER_LEVEL: OptimizeLevel = { mesh: { quantize: false, simplify: null } };
+const COLLIDER_LEVEL: OptimizeLevel = { mesh: { simplify: null } };
 
 /** Only the keys the codec reads, so equal encodes resolve (and hash) equally. */
 export type ResolvedTextureSettings =

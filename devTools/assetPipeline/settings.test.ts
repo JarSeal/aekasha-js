@@ -90,17 +90,20 @@ describe('createSettingsResolver', () => {
     expect(settings.passThrough.textures).toBe('off in src/CONFIG.ts');
   });
 
-  it('gives a collider source lossless geometry, unless the asset JSON says otherwise', () => {
-    expect(resolve({ sourcePath: 'src/a.glb', isColliderSource: true }).mesh).toMatchObject({
-      quantize: false,
-      simplify: null,
-    });
-    const own = resolve({
+  it('never simplifies a collider source, unless the asset JSON says so (p306 D3)', () => {
+    const simplified = { rules: [{ glob: '**', mesh: { simplify: 0.5 } }] };
+    const collider = createSettingsResolver(simplified)({
       sourcePath: 'src/a.glb',
       isColliderSource: true,
-      optimize: { mesh: { quantize: true } },
     });
-    expect(own.mesh).toMatchObject({ quantize: true });
+    // Quantized like any mesh: the collider derivations read positions through the getters
+    expect(collider.mesh).toMatchObject({ quantize: true, simplify: null });
+    const own = createSettingsResolver(simplified)({
+      sourcePath: 'src/a.glb',
+      isColliderSource: true,
+      optimize: { mesh: { simplify: 0.25 } },
+    });
+    expect(own.mesh).toMatchObject({ simplify: 0.25 });
   });
 
   it('throws for an unknown profile, in a rule or an asset', () => {
