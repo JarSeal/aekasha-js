@@ -97,6 +97,7 @@ const makeSet = (id: string, extra: Partial<TextureSetDef> = {}): TextureSetDef 
     wetDarkening: 0.55,
     wetRoughness: 0.4,
   },
+  averageColor: '#ffffff',
   ...extra,
 });
 
@@ -131,6 +132,7 @@ beforeEach(() => {
       physicalSize: [6, 6],
       heightScale: 0.2,
       surface: { ...makeSet('x').surface, tint: '#ff0000', wetRoughness: 0.1 },
+      averageColor: '#00ff00',
     }),
     makeSet('mud'),
     makeSet('ice', { packings: { FULL: { albedoHeight: 'a', normal: 'n', orm: 'o' } } })
@@ -166,12 +168,26 @@ describe('buildTextureSetArray', () => {
       [3, 2, 0.03, 1.5],
       [1, 1, 1, 1],
       [0.9, 1, 0.85, 0.55],
-      [0.4, 0, 0, 0],
+      [0.4, 1, 1, 1],
     ]);
-    // The tint is linear
+    // The tint and the average colour are linear
     expect(paramsOf(values, 1)[0]).toEqual([6, 6, 0.2, 1.5]);
     expect(paramsOf(values, 1)[1]).toEqual([1, 0, 0, 1]);
-    expect(paramsOf(values, 1)[3][0]).toBe(0.1);
+    expect(paramsOf(values, 1)[3]).toEqual([0.1, 0, 1, 0]);
+    expect(env.warn).not.toHaveBeenCalled();
+  });
+
+  test('a set without an average colour reads mid-grey, warned', async () => {
+    addSets(makeSet('bare', { averageColor: undefined }));
+
+    const built = await buildTextureSetArray({ sets: ['sand', 'bare'], packing: 'LITE' });
+
+    const grey = new THREE.Color('#808080');
+    expect(paramsOf(built.layerParams.array, 1)[3]).toEqual([0.4, grey.r, grey.g, grey.b]);
+    expect(env.warn).toHaveBeenCalledWith(expect.stringContaining('"bare" has no averageColor'));
+    // Once per set
+    await buildTextureSetArray({ sets: ['bare', 'sand'], packing: 'LITE' });
+    expect(env.warn).toHaveBeenCalledTimes(1);
   });
 
   test('derives one id per packing and list, and a build of a registered one returns it', async () => {
@@ -357,6 +373,7 @@ describe('getTextureSetLayerParams', () => {
         'porosity',
         'wetDarkening',
         'wetRoughness',
+        'averageColor',
       ]);
       expect(Object.values(params).every((node) => (node as THREE.Node).isNode)).toBe(true);
     }

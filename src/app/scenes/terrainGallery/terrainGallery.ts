@@ -16,6 +16,13 @@ import {
   getWallPosition,
   NO_SHADOWS,
 } from './galleryBlocks';
+import { ANTI_TILING_ROW_BOUNDS, createAntiTilingRow } from './antiTilingRow';
+import { createSplattingRow, SPLATTING_ROW_BOUNDS } from './splattingRow';
+import { createRulesRow, RULES_ROW_BOUNDS } from './rulesRow';
+import { CLIFFS_ROW_BOUNDS, createCliffsRow } from './cliffsRow';
+import { COLOR_MAP_ROW_BOUNDS, createColorMapRowAsync } from './colorMapRow';
+import { createStructuresRow, STRUCTURES_ROW_BOUNDS } from './structuresRow';
+import { createLiveBlock, LIVE_BLOCK_BOUNDS } from './liveBlock';
 import {
   createProceduralRowAsync,
   PROCEDURAL_ROW_DEPTH,
@@ -24,33 +31,72 @@ import {
 
 /**
  * The terrain gallery (p303 D8): the toolkit's 16 texture sets, one isolated generated block each,
- * drawn by the toolkit's baseline material `textureSetSurface` in the set's default packing, and
- * right of them the Procedural row (p304 Phase 6), the toolkit's ten surface generators. The place
- * p305 compares its techniques against, p307 adds the wet controls to and p310 its camera presets
- * and measurements.
+ * drawn by the toolkit's terrain material (p305, its JSON route `terrain`) in the set's default
+ * packing, and right of them the Procedural row (p304 Phase 6), the toolkit's ten surface
+ * generators. Where p305 adds a row per technique, p307 the wet controls and p310 its camera
+ * presets and measurements.
  *
  * - **The library:** 4 × 4 blocks of 12 × 12 m with 4 m gaps over a dark ground, a row per pair of
  *   categories from the back (−z): sand and mud, rocks and cliffs, snow and ice, grass and
  *   concrete (`GALLERY_BLOCKS`, the debug tab's list).
  * - **A block** (`galleryBlocks.ts`): `generateTerrain` at 48 segments, gentle 0.4 m noise, a seed
  *   of its own, and its back edge (−z) raised into a 35° ramp, so the normals' orientation and the
- *   sun on a slope can be judged; `textureSetSurface` tiles it at the world's `(x, −z)` over the
+ *   sun on a slope can be judged; the terrain material tiles it at the world's `(x, −z)` over the
  *   set's `physicalSize`.
  * - **The cliffs' walls:** a 6 m wall on the left of each `cliffs*` block, tiled at its UVs in
- *   metres (`tiling: "UV"`).
+ *   metres (`uv: "MESH_UV"`).
+ * - **The Anti-tiling row** (`antiTilingRow.ts`, p305 Phase 2): three flat 48 × 48 m blocks of
+ *   `grass01` 8 m behind the library and the Procedural row, `NONE`, `DUAL_SCALE` and `HEX` from the left, the macro
+ *   variation (`macroNoise`, which the scene lists) on; the tab switches the macro and tunes the
+ *   modes' and the macro's uniforms.
+ * - **The Splatting row** (`splattingRow.ts`, p305 Phase 3): six 24 × 24 m generated blocks left of
+ *   the library, several sets each blended by weights painted in code: the vertex colour and the
+ *   splat map, each `LINEAR` beside `HEIGHT`, `RGB_AO` with the vertex AO, and 9 layers with two
+ *   splat maps; code route materials with storage `AUTO` and the gallery's quality table (p305
+ *   Phase 6), whose tiers' sparse sampling makes every block `ARRAY` (the scene's
+ *   `textureSetArrays` lists their set arrays); the tab tunes the height blend and the vertex AO.
+ * - **The Rules row** (`rulesRow.ts`, p305 Phase 4): three 64 × 64 m blocks in front of the library
+ *   on one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks
+ *   by slope, snow by height and facing, cliffs on steep faces): the rules alone, a splat map's
+ *   sandy path and mud under the same rules, and (p305 Phase 6, the tiers' terrain) that with
+ *   grass02 patches, ice on the flat tops and the macro, 8 layers; the cliffs' layer is slope-gated
+ *   `TRIPLANAR` (p305 Phase 5), each block has the toolkit's quality preset and so a set array the
+ *   scene lists; the tab tunes the rules.
+ * - **The Cliffs row** (`cliffsRow.ts`, p305 Phase 5): four 40 × 40 m blocks in front of the Rules
+ *   row on one generated mesa (its face about 48° on one side, 85° on the other), `cliffs01` in
+ *   each projection: `PLANAR`, `BIPLANAR`, `TRIPLANAR` and slope-gated `TRIPLANAR`; the tab
+ *   switches the normal blend and the gated block's mode and tunes the sharpness and the gate.
+ * - **The Colour map row** (`colorMapRow.ts`, p305 Phase 7): four 64 × 64 m blocks in front of the
+ *   Cliffs row on the Rules row's terrain: its 8-layer material, then that with a `DETAIL` colour
+ *   map, with the far `COLOR_MAP` surface and with the far `AVERAGE_COLOR` one; the two colour maps
+ *   are baked during the load from the source material on each block's mesh
+ *   (`bakeTerrainColorMap`); the tab tunes the fades and the band and bakes them again.
+ * - **The Structures row** (`structuresRow.ts`, p305 Phase 7): structure materials
+ *   (`createStructureMaterial`) in front of the Colour map row on pieces made in code: a wall of
+ *   two segments in world space and a bunker's passage piece in object space, both worn by their
+ *   vertex colour (clean, stained, grime, damage), and two pillars turning and rising in object
+ *   space beside world space; the tab pauses them.
  * - **The Procedural row** (`proceduralRow.ts`): five rows of two blocks 8 m right of the library,
  *   a generator each (`PROCEDURAL_BLOCKS`: sand, mud, rocks and strata, snow and ice, grass and
  *   concrete from the back), baked during the load (`bakeSurfaceGenerator`, 1024² `LITE`: the
  *   loader counts the ten bakes). The tab switches the row between an imported set of each
  *   category, the bake and the generator live in the material.
+ * - **The Live block** (`liveBlock.ts`, p305 Phase 8): a 48 × 48 m generated terrain right of the
+ *   Procedural row, grass, rocks by slope and snow on the tops laid by rules and sand ripples in
+ *   the hollows from the gallery's procedural set `terrainGalleryLiveDunes` (which the scene lists,
+ *   so its load bakes it), run live in the terrain material or sampled baked; the quality preset's
+ *   tiers put the imported sets in a set array and the procedural set beside it. The tab switches
+ *   live and baked, tunes the generator's values and measures both.
  * - **The light:** the scene's own DAY_NIGHT sky box standing at 10:00 (`terrainGallerySky`); its
  *   sun and sky are the only lights. No shadows for now (`NO_SHADOWS`).
  *
  * The scene lists the 16 sets (`textureSets`), so their default packing's textures load with it;
- * each block's mesh is a variant of `textureSetSurface` naming its set (`matOverrides.inputs`). The
- * debug env adds the scene's tab (`_dbg__terrainGallery.ts`): the set list flying the camera, the
- * packing of the sets that ship every packing, a 1 m checker over the blocks, and the Procedural
- * row's controls (its mode, bake size, each generator's params, its export and the GPU
+ * each block's mesh is a variant of `terrain` naming its set (`matOverrides.inputs.layer0`). The
+ * debug env adds the scene's tab (`_dbg__terrainGallery.ts`): the library's material (the terrain
+ * material's JSON or code route, or the baseline `textureSetSurface`, which look the same), the set
+ * list flying the camera, the packing of the sets that ship every packing, a 1 m checker over the
+ * blocks, the quality tier (p305 Phase 6: the library, the Splatting and the Rules rows), and the
+ * Procedural row's controls (its mode, bake size, each generator's params, its export and the GPU
  * measurement).
  */
 
@@ -148,29 +194,62 @@ export const scene = async () => {
   registerOnSceneExit(TERRAIN_GALLERY_SCENE_ID, () => {
     for (const cleanup of exitCleanups.splice(0)) cleanup();
   });
-  // The ground under the library (centred on x = 0) and the Procedural row right of it
-  const left = -(ROWS[0].length * BLOCK_PITCH) / 2 - BLOCK_GAP / 2;
-  const right = PROCEDURAL_ROW_EDGE_X + BLOCK_GAP;
-  const depth = Math.max(ROWS.length * BLOCK_PITCH, PROCEDURAL_ROW_DEPTH + BLOCK_GAP) + BLOCK_GAP;
+  // The ground under the library (centred on x = 0), the Procedural row right of it, the
+  // Splatting row left of it, the Anti-tiling row behind it, the Rules row in front, the Cliffs
+  // row in front of that, the Colour map row in front of that and the Structures row in front of
+  // that
+  const left = Math.min(
+    -(ROWS[0].length * BLOCK_PITCH) / 2 - BLOCK_GAP / 2,
+    ANTI_TILING_ROW_BOUNDS.minX - BLOCK_GAP,
+    SPLATTING_ROW_BOUNDS.minX - BLOCK_GAP,
+    CLIFFS_ROW_BOUNDS.minX - BLOCK_GAP,
+    COLOR_MAP_ROW_BOUNDS.minX - BLOCK_GAP,
+    STRUCTURES_ROW_BOUNDS.minX - BLOCK_GAP
+  );
+  const right =
+    Math.max(
+      PROCEDURAL_ROW_EDGE_X,
+      LIVE_BLOCK_BOUNDS.maxX,
+      ANTI_TILING_ROW_BOUNDS.maxX,
+      CLIFFS_ROW_BOUNDS.maxX,
+      COLOR_MAP_ROW_BOUNDS.maxX,
+      STRUCTURES_ROW_BOUNDS.maxX
+    ) + BLOCK_GAP;
+  const front = Math.max(
+    (Math.max(ROWS.length * BLOCK_PITCH, PROCEDURAL_ROW_DEPTH + BLOCK_GAP) + BLOCK_GAP) / 2,
+    SPLATTING_ROW_BOUNDS.maxZ + BLOCK_GAP,
+    RULES_ROW_BOUNDS.maxZ + BLOCK_GAP,
+    CLIFFS_ROW_BOUNDS.maxZ + BLOCK_GAP,
+    COLOR_MAP_ROW_BOUNDS.maxZ + BLOCK_GAP,
+    STRUCTURES_ROW_BOUNDS.maxZ + BLOCK_GAP
+  );
+  const back = ANTI_TILING_ROW_BOUNDS.minZ - BLOCK_GAP;
   createMeshEntity(
     {
       geo: {
         id: 'terrainGalleryGround',
         type: 'BOX',
-        params: { width: right - left, height: 0.2, depth },
+        params: { width: right - left, height: 0.2, depth: front - back },
       },
       mat: {
         id: 'terrainGalleryGround',
         type: 'STANDARD',
         params: { color: '#2e2f31', roughness: 0.95 },
       },
-      position: { x: (left + right) / 2, y: GROUND_Y - 0.1 },
+      position: { x: (left + right) / 2, y: GROUND_Y - 0.1, z: (front + back) / 2 },
       ...NO_SHADOWS,
     },
     { appId: 'terrainGallery_ground', debugData: { name: 'Gallery ground' } }
   );
   GALLERY_BLOCKS.forEach((block, i) => createBlock(block, SEED_BASE + i));
+  createAntiTilingRow();
+  createSplattingRow();
+  createRulesRow();
+  createCliffsRow();
+  await createColorMapRowAsync();
+  createStructuresRow(TERRAIN_GALLERY_SCENE_ID);
   await createProceduralRowAsync(addGalleryExitCleanup);
+  createLiveBlock();
 
   // Debug env only: a dynamic import, so the tab's code isn't in a production build. It applies
   // its saved packing and checker once the blocks exist.

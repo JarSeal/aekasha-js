@@ -288,16 +288,33 @@ export type SurfaceGraph<P extends SurfaceParamSpecs> = {
 };
 
 /**
- * Builds a generator's surface at a point, the params and the seed as uniforms: the shared first
- * step of a bake (`buildSurfacePacking`) and of the live mode (`createLiveSurface`).
+ * A generator's surface ready to build at any point: the params and the seed as uniforms, shared
+ * by every point it's built at (a live terrain layer's planes, its taps).
+ * @internal
+ */
+export type PreparedSurfaceGraph<P extends SurfaceParamSpecs> = {
+  params: SurfaceParamsBuild<P>;
+  seed: UniformNode<'uint', number>;
+  /** The facts in effect (the given ones, else the generator's). */
+  physicalSize: [number, number];
+  heightScale: number;
+  /** The surface built at a point (the whole graph again), with its build context. */
+  surfaceAt: (uv: Node<'vec2'>) => { surface: SurfaceOutputs; ctx: SurfaceBuildContext };
+  /** The height at a point: one layout function (made on its first call) the taps share. */
+  heightAt: HeightFunction;
+};
+
+/**
+ * Prepares a generator's surface: checks its facts and seed, builds its params and seed as
+ * uniforms, and returns the builds at any point over them ({@link buildSurfaceGraph}'s first step).
  * @internal
  * @throws for a param the generator lacks or a value it refuses, a seed that isn't a whole
  * number, or physical facts out of range
  */
-export const buildSurfaceGraph = <P extends SurfaceParamSpecs>(
+export const prepareSurfaceGraph = <P extends SurfaceParamSpecs>(
   generator: SurfaceGenerator<P>,
-  opts: SurfaceGraphOpts<P>
-): SurfaceGraph<P> => {
+  opts: Omit<SurfaceGraphOpts<P>, 'uv'>
+): PreparedSurfaceGraph<P> => {
   const { id } = generator;
   const physicalSize = opts.physicalSize ?? generator.physicalSize;
   const heightScale = opts.heightScale ?? generator.heightScale;
@@ -313,16 +330,41 @@ export const buildSurfaceGraph = <P extends SurfaceParamSpecs>(
     tileSize: vec2(physicalSize[0], physicalSize[1]) as unknown as Node<'vec2'>,
     texel: opts.texel,
   };
-  const ctx = createSurfaceContext({ ...base, uv: opts.uv, seed: seedNode });
-  const surface = generator.build(ctx, params.nodes);
-
   let heightAt: HeightFunction | null = null;
-  // The taps' height; the point's own is the surface's (the cavity reads it once more)
-  const tapHeight: HeightFunction = (at) => {
-    if (at === ctx.uv) return surface.height;
-    heightAt ??= createHeightFunction(generator, params, base, seedNode);
-    return heightAt(at);
+  return {
+    params,
+    seed,
+    physicalSize,
+    heightScale,
+    surfaceAt: (uv) => {
+      const ctx = createSurfaceContext({ ...base, uv, seed: seedNode });
+      return { surface: generator.build(ctx, params.nodes), ctx };
+    },
+    heightAt: (at) => {
+      heightAt ??= createHeightFunction(generator, params, base, seedNode);
+      return heightAt(at);
+    },
   };
+};
+
+/**
+ * Builds a generator's surface at a point, the params and the seed as uniforms: the shared first
+ * step of a bake (`buildSurfacePacking`) and of the live mode (`createLiveSurface`).
+ * @internal
+ * @throws for a param the generator lacks or a value it refuses, a seed that isn't a whole
+ * number, or physical facts out of range
+ */
+export const buildSurfaceGraph = <P extends SurfaceParamSpecs>(
+  generator: SurfaceGenerator<P>,
+  opts: SurfaceGraphOpts<P>
+): SurfaceGraph<P> => {
+  const { uv, ...rest } = opts;
+  const prepared = prepareSurfaceGraph(generator, rest);
+  const { surface, ctx } = prepared.surfaceAt(uv);
+  // The taps' height; the point's own is the surface's (the cavity reads it once more)
+  const tapHeight: HeightFunction = (at) =>
+    at === ctx.uv ? surface.height : prepared.heightAt(at);
+  const { params, seed, physicalSize, heightScale } = prepared;
   return { surface, ctx, params, seed, physicalSize, heightScale, tapHeight };
 };
 

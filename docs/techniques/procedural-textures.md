@@ -330,7 +330,7 @@ A baked texture tiles when its graph has the same value at uv and at uv + 1. The
 
 What it can't guarantee is yours to hold: a wave needs a whole count per axis (`sandRipples`), bands that differ can't be tilted (`cliffStrata` bends them with a periodic noise instead and leaves a tilt to the material's UV), and a seam-count or similar must divide the tile. The `proceduralSurfaces` scene bakes each generator's difference against itself a whole tile away and fails on any texel that differs.
 
-Tiling at `physicalSize` means the surface repeats every 2–4 m, like an imported set: on a wide view, break it up with the terrain material's anti-tiling (p305), or run the surface live.
+Tiling at `physicalSize` means the surface repeats every 2–4 m, like an imported set: on a wide view, break it up with the terrain material's [anti-tiling](terrain-single-layer.md#variations), or run the surface live ([below](#live-layers-in-a-terrain-material)).
 
 ## Seeds and determinism
 
@@ -339,6 +339,60 @@ Tiling at `physicalSize` means the surface repeats every 2–4 m, like an import
 - So baked and live procedural data is **visual only**. Never read gameplay, a collider, a spawn point or anything networked from it. Derive those on the CPU from the seed (`getRandomStream`).
 - An exported set is the same bytes for everyone: export when it has to be.
 
+## Live layers in a terrain material
+
+A layer of the terrain material (`createTerrainMaterial`, [Single-layer terrain](terrain-single-layer.md)) can run its procedural set's generator live instead of sampling the set's textures: `source: 'PROCEDURAL_LIVE'`. It blends with the other layers like any layer (the height blend, rules, sparse sampling around it) and never repeats.
+
+```ts
+import { createTerrainMaterial, getTerrainQualityPreset } from 'aekasha/toolkit/terrain';
+
+createTerrainMaterial({
+  id: 'duneValley',
+  layers: [
+    { set: 'grass01' },
+    { set: 'rocks02' },
+    { set: 'duneSand', source: 'PROCEDURAL_LIVE', live: { normal: 'BUMP' } },
+  ],
+  blend: {
+    source: 'RULES',
+    rules: [
+      { layer: 1, slope: { min: 22, softness: 6 } },
+      {
+        layer: 2,
+        height: { max: 1.6, softness: 0.8 },
+        slope: { max: 24 },
+        noise: { scale: 20, amount: 0.3 },
+      },
+    ],
+  },
+  quality: getTerrainQualityPreset({ liveLayers: [2] }),
+});
+```
+
+- **Its set is procedural** (`duneSand` above, [Import into Ækasha](#import-into-ækasha)), and its input is the set's `{ textureSet }`, as for any layer. The scene that lists the set (or the material, by naming it) bakes it, which also loads the generator; the material's uniforms take the set's params, seed, `physicalSize` and `heightScale`. A material made in code before any bake awaits `loadTextureSetAsync(set)` or `loadTextureSetGeneratorAsync(getTextureSet(set).procedural.generator)` (`aekasha/texturesets`) first; the material refuses a set that isn't procedural or whose generator isn't loaded, naming the input and what to await.
+- **The bake is the tiers' fallback:** a tier's `layers[i]: { source: 'TEXTURE' }` samples the bake instead, and `getTerrainQualityPreset({ liveLayers })` does that on `LOW` and `MEDIUM` and runs the layer live on `HIGH` and `ULTRA`. The bake is made even when no tier samples it (a 1024² `LITE` set is 10.7 MB): a set only ever run live could skip it, but nothing marks one so yet.
+- **`live`:** `normal: 'BUMP'` (the default: the layer bumps its height, free; `MINIMAL` always bumps) or `'TAPS'` (a bake's central differences, 4 more height evaluations a pixel); `ao: 'NONE'` (the default) or `'CAVITY'` (8 more). The generator's own normal and AO come first when it has them.
+- **No anti-tiling:** it never repeats. A material-wide one doesn't reach a live layer; one given on the layer is refused (a tier that samples its bake can take one).
+- **Every projection:** the graph runs once per plane (a `TRIPLANAR` live layer is three generators), gated too.
+- **Beside the slots:** sparse sampling and `HEX`'s `DOMINANT` keep the top layers of the set array; a live layer (and any procedural set's layer) has its own `layer<i>` input beside the array and is built beside the slots, its weight in the same blend. A set array takes imported sets only; the code route's `storage: 'AUTO'` splits them so (a dev log says so). A live layer binds no texture and counts no fetch in `TAPS`.
+- **Live tuning:** its params and seed are uniforms, `terrain_l<i>_live_<param>` and `terrain_l<i>_live_seed`: a slider changes the next frame, no rebake.
+
+**What it costs** (p305 Phase 8, 2026-11-17: Windows Chrome 157 on an AMD RDNA 3 GPU, WebGPU, a 48 m block of rules over `grass01`, `rocks02` and `snow01` with `sandRipples` (the cheapest generator) live or baked in its hollows; the frame's GPU ms, the mean of 120 frames after 30; empty frame 0.06 above, 0.09 third person at 1280 × 800, 0.11 / 0.18 at 1080p):
+
+| Frame GPU ms                                              | Baked       | Live        |
+| --------------------------------------------------------- | ----------- | ----------- |
+| 1280 × 800, above                                         | 0.21        | 0.41        |
+| 1280 × 800, third person                                  | 0.32        | 0.39        |
+| 1280 × 800, above / third, `LOW` (slots + the live layer) | 0.21 / 0.27 | 0.40 / 0.35 |
+| 1920 × 1080, above                                        | 0.37        | 0.70        |
+| 1920 × 1080, third person                                 | 0.61        | 0.73        |
+
+Live about doubles the block's cost from above and adds a fifth to a third in the third person, where the far ripples are a smaller share of the pixels. The other generators cost up to about twice `sandRipples`. The layer runs on every pixel of the material, its weight zero or not: a branch on its weight (the generator only where it weighs) was built and measured 0.15–0.45 ms _dearer_, because the branch's normal needs two more height evaluations where the unbranched bump's derivatives are free, and the pixels diverge along the layer's borders.
+
+**It shimmers at a distance:** a live surface has no mips, so its fine detail aliases far away (the gallery's ripples carry finer detail into the distance than the bake, and flicker there). Fade it out with a far surface ([Colour map + detail](terrain-colormap-detail.md)), or keep it to the `HIGH` tiers and mid distances.
+
+**Best for:** unique, never-repeating large surfaces (dunes, snowfields, mudflats) seen from a mid distance, on capable GPUs, with a baked fallback for the low tiers. **Poor fit:** low tiers and low-end hardware, and close-ups of fine detail on them; a material that already spends its budget on many layers.
+
 ## Variations
 
 - **`MINIMAL` at 512²:** one texture, 1.3 MB baked. For a top-down or RTS camera, where 64–128 px a metre is enough. The normal becomes a bump from the height in the material.
@@ -346,7 +400,7 @@ Tiling at `physicalSize` means the surface repeats every 2–4 m, like an import
 - **Rebaking at runtime:** `bakeSurfaceGenerator` returns the controls (`setParams`, `setSeed`, `bake.rebake()`). A surface that dries, a biome that changes with a seed: one bake a frame at most, no rebuild. Static params need a new bake under a new id.
 - **Live with a bake's normal and AO:** `createLiveSurface(generator, { normal: 'TAPS', ao: 'CAVITY' })`. Matches the bake's look close up at two to five times the live cost. For stills and comparison.
 - **The shared textures:** `macroNoise` (512², four tileable noises in RGBA for a terrain's large-scale variation and dithering) and `rippleAtlas` (256², 4 × 4 drops for rain rings; `decodeRippleAtlas` animates it). Each is a committed KTX2 texture (list `"textures": ["macroNoise"]`: 0.35 MB of VRAM) and a bake (`bakeMacroNoise()`, registered as `macroNoise.data`: 1.4 MB, exact texels, another seed or size). A material that needs the alpha's exact texels (an ordered dither) bakes; anything else uses the committed one.
-- **Your own bake:** `bakeTexture({ id, size, outputs, build })` for anything that isn't a surface: a lookup table, a mask, a flow map, several layers (`layers`, read `ctx.layer`), up to four outputs in one render, `HALF_FLOAT` outputs. The same ownership and queue.
+- **Your own bake:** `bakeTexture({ id, size, outputs, build })` for anything that isn't a surface: a lookup table, a mask, a flow map, several layers (`layers`, read `ctx.layer`), up to four outputs in one render, `HALF_FLOAT` outputs. The same ownership and queue. With `mesh: { geometry, matrixWorld? }` it bakes in that mesh's UV space (each vertex drawn at its UV, the graph reading the mesh's attributes and world position): a block's colour map (the terrain material's `bakeTerrainColorMap`) or its AO.
 
 ## Pitfalls and checklist
 
@@ -363,6 +417,8 @@ Tiling at `physicalSize` means the surface repeats every 2–4 m, like an import
 - **"A bake of that id is alive":** `bakeTexture` and `bakeSurfaceGenerator` return the live bake for an id and ignore the new options. Dispose it first, or rebake it.
 - **White surface after a scene load:** the bake failed (the console names the set and the generator: an unknown param, a value out of its range); the load goes on without it.
 - **Shimmer on a live surface far away:** nothing filters it. Fade to a flat colour or a baked layer with distance, or bake.
+- **A live terrain layer refused "it takes no anti-tiling":** the layer (or its tier's entry) gives one; a live surface never repeats. A material-wide anti-tiling skips it on its own.
+- **A live terrain layer refused for its generator:** the set's generator isn't loaded yet. List the set in the scene (its bake loads it), or await `loadTextureSetGeneratorAsync` before creating the material.
 - **A queued bake that never renders:** queued bakes run in the main loop, so they wait while the loop is paused or an editor view is open.
 
 ## Template file and example asset ids

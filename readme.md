@@ -68,9 +68,10 @@ These are ready-made modules you can import as they are, or copy into your app a
 
 - **ECS effects** (`ecs/effects/`): `HoverEffect` (bobbing), `FollowTool` (follow a target), `SunShadowFit` (fits a directional light's shadow to the camera's view), `MutualGravity` (gravity between bodies, for zero-g scenes) and `WorldAnchorSync` (keeps the UI kit's world anchors on their entities and turns its compass with the camera).
 - **Gameplay** (`ecs/gameplay/`): a camera rig that follows an object (looking at it, keeping a fixed view direction, or orbiting it with the mouse or a stick, with an optional look-ahead in the direction of travel), and kinematic moving platforms that characters ride.
-- **TSL materials** (`materials/<id>/`): triplanar checkerboard, triplanar grid and asteroid materials, and `textureSetSurface` (one texture set tiled in world space, or at UVs in metres for walls: the terrain baseline), each a material JSON with its TSL file.
+- **TSL materials** (`materials/<id>/`): triplanar checkerboard, triplanar grid and asteroid materials, `textureSetSurface` (one texture set tiled in world space, or at UVs in metres for walls: the terrain baseline) and `terrain` (the terrain material's JSON route, below), each a material JSON with its TSL file.
 - **Terrain texture library** (`textures/<setId>/`): 16 CC0 texture sets from ambientCG and Poly Haven, two each of sand, mud, rocks, cliffs, snow, ice and grass ground and two concretes, at 1K in KTX2 (`LITE`, three of them in every packing), each with its real-world size and relief measured against its normal map and a tint where its scan needed one. `yarn fetchTextureSources` downloads their source maps (only needed to re-encode them), and `aekasha/toolkit/terrain` decodes any packing in a material of your own (`sampleTextureSet`), its normal lit from the right side at world UVs.
 - **Procedural textures** (`terrain/`): a noise library that tiles (value and gradient noise, fbm, domain warp, Worley cells, height to normal and cavity), each periodic for a bake or not for live use, and hashed with integers, so it's safe on software WebGL and agrees across backends up to float precision; ten surface generators (`sandRipples`, `sandFlat`, `mudCracked`, `mudSmooth`, `rockyGround`, `cliffStrata`, `snowDrift`, `iceSheet`, `grassGround`, `concretePores`), each baked into any packing (`bakeSurfaceGenerator`, or a procedural texture set) or evaluated live in a material (`createLiveSurface`: it never repeats, and costs per pixel); and two shared generated textures, a macro noise for breaking up tiling and a rain ripple atlas, both bakeable and committed as KTX2 (`textures/macroNoise/`, `textures/rippleAtlas/`).
+- **Terrain materials** (`terrain/material/`): `createTerrainMaterial` builds one material from a declarative config of up to 16 texture set layers, and compiles only what the config turns on: weights from vertex colours, one or two splat maps, or rules of slope, height, facing and noise (alone or over the paint), with height blending; dual-scale or hex anti-tiling and a macro variation; biplanar, triplanar and slope-gated projection for cliffs; sparse sampling of the few layers that matter at each pixel from a set array; a block's baked colour map under tiled detail (`bakeTerrainColorMap`), and a far surface that stops sampling the layers in the distance; object space for structures (`createStructureMaterial`); layers that run a procedural surface live; quality tiers (`getTerrainQualityPreset`); and debug views (texel density, weights, projection, fetches a pixel, layers a pixel). Its numbers are uniforms, its texture budget checked, and the JSON route (`terrain`) lets a mesh swap a block's sets and splat maps without another shader. A handbook page per technique: [`docs/techniques/`](docs/techniques/README.md).
 - **Procedural geometry** (`geometry/`): seeded noise terrain, foliage, asteroids and scattering on surfaces: the same seed gives the same world.
 - **Models** (`models/<category>/<id>/`): the Ækasha symbol, the Æ glyph extruded with a soft bevel, as a Draco-compressed GLB with its asset JSON, ready for `importAssetAsync`.
 
@@ -203,9 +204,10 @@ Open `http://localhost:8080/?isDebug=true` to get the full debug suite, then pre
 │   │   ├── ecs/            # (aekasha/toolkit/ecs) effects/ and gameplay/
 │   │   ├── geometry/       # (aekasha/toolkit/geometry) generate/, scatter/
 │   │   ├── materials/      # (aekasha/toolkit/materials) a TSL material per folder
-│   │   ├── terrain/        # (aekasha/toolkit/terrain) nodes/: the texture set decode and
-│   │   │                   # the noise library; procedural/: the surface generators;
-│   │   │                   # textures/: the shared generated textures' bakes
+│   │   ├── terrain/        # (aekasha/toolkit/terrain) material/: the terrain material
+│   │   │                   # generator; nodes/: the texture set decode, the material's
+│   │   │                   # techniques and the noise library; procedural/: the surface
+│   │   │                   # generators; textures/: the shared generated textures' bakes
 │   │   ├── models/         # Models by category: brand/aekashaSymbol/
 │   │   └── textures/       # The terrain texture library: a texture set per folder,
 │   │                       # and the shared generated textures' committed copies
@@ -345,7 +347,49 @@ Put the source next to its asset JSON and choose a profile. On save, the dev ser
 
 `*.importedAsset.json` files take the same `optimize` key. See [`docs/techniques/asset-optimization.md`](docs/techniques/asset-optimization.md) for profiles, channel packing, texture arrays and atlases, merging a model's pieces, budgets, colliders and opting out.
 
-### 4. Add code-driven content and physics
+### 4. Texture a terrain
+
+The toolkit's terrain material blends texture sets by rules, paint or both, in one shader holding only what its config turns on. Here grass, rocks by slope, snow by height and projected cliffs, with the suggested quality tiers:
+
+```ts
+// src/app/scenes/highlands/highlands.ts: its scene JSON lists macroNoise and the four sets as a
+// textureSetArrays entry (the tiers sample the layers from a set array)
+import { createMeshEntity } from 'aekasha';
+import {
+  createTerrainMaterial,
+  getTerrainMaterialVariant,
+  getTerrainQualityPreset,
+} from 'aekasha/toolkit/terrain';
+
+export const scene = async () => {
+  createTerrainMaterial({
+    id: 'highlands',
+    layers: [
+      { set: 'grass01' },
+      { set: 'rocks02' },
+      { set: 'snow01' },
+      { set: 'cliffs01', projection: { mode: 'TRIPLANAR', slopeGate: [35, 50] } },
+    ],
+    blend: {
+      source: 'RULES',
+      rules: [
+        { layer: 1, slope: { min: 26 }, noise: { scale: 18, amount: 0.35, channel: 'A' } },
+        { layer: 2, height: { min: 40 }, slope: { max: 38 } },
+        { layer: 3, slope: { min: 46 } },
+      ],
+    },
+    antiTiling: { mode: 'DUAL_SCALE' },
+    macro: { texture: 'macroNoise', scale: 64 },
+    quality: getTerrainQualityPreset({ cliffLayers: [3] }),
+  });
+  // Each tier is its own shader, compiled on first use
+  createMeshEntity({ geo: 'highlandsGround', mat: getTerrainMaterialVariant('highlands', 'HIGH') });
+};
+```
+
+A scene's JSON reaches the same generator through the material `terrain`, a mesh's `matOverrides` giving a block its sets and splat maps. Which technique suits which game, and what each costs: [`docs/techniques/`](docs/techniques/README.md), starting from [single-layer terrain](docs/techniques/terrain-single-layer.md).
+
+### 5. Add code-driven content and physics
 
 The `sceneFile` exports a `scene` function that runs while the scene loads.
 
@@ -370,7 +414,7 @@ export const scene = async () => {
 };
 ```
 
-### 5. Write your own component and system
+### 6. Write your own component and system
 
 ```ts
 // src/app/shared/Spin.ts
@@ -418,7 +462,7 @@ ecsWorld.addComponent(ballId, SpinComponentType.SPIN, { speed: 2 });
 
 > Anything that moves physics bodies (poses, velocities, impulses, kinematic targets) goes in an `APP_PHYSICS_STEP` system, so it stays in lockstep with the simulation and deterministic.
 
-### 6. Configure the app
+### 7. Configure the app
 
 `InitEngine`'s `config` (example 1): every key is optional, and one you leave out keeps its default, set by the part of the engine that reads it (`physics.workerTarget`: `'WORKER_THREAD'`).
 
@@ -438,7 +482,7 @@ const config: AppConfig = {
 };
 ```
 
-### 7. Embed a scene in a site
+### 8. Embed a scene in a site
 
 An embed profile (`sbp.config.ts`) builds into `dist-embed/<id>/` with `yarn sbp --profile <id>`. Its entry binds the profile's data and features; the site copies the folder and mounts it into any element:
 
@@ -466,7 +510,7 @@ The page keeps its own styles and input; the scene pauses out of view, and `scen
 
 The Ækasha Hub's Examples section (`/hub/examples/`) walks through twelve examples: eleven scenes, each in [`src/app/examples/`](src/app/examples/) and named "Example: …" in the scene dropdowns (the quick start, physics, a keyboard-driven character with a look-ahead follow camera, the toolkit's model and materials, the sky box and day-night, a component and system of your own, LOD and instancing, mesh merging (a ruined courtyard of about 280 kit pieces drawn as five merged meshes, a gate swung in place and pillars toppled out of their group), a debug tab of your own, an app HUD from the UI kit with a settings grid, a form, an inspector of the scene's objects and a command palette, and a game HUD played with a keyboard and mouse or a gamepad, with prompts that follow the device, world anchors, a compass, a minimap, a conversation, an inventory and a controls page; each page opens its scene with `?startScene`), and embedding the banner in a site, which runs live on its page.
 
-The other scenes, a folder each in [`src/app/scenes/`](src/app/scenes/), cover more: the start scene (`sceneTestECS`: JSON meshes, a TSL material, an imported GLB and the toolkit's hover effect), a physics and joints test, a physics simulation tiers demo (686 crates and a plough), a large procedural world with instancing and culling, an instance stress test (instanced LOD pools against an instance set, up to a million trees), a third-person character gym, a top-down character scene (world-fixed controls, hills, and sun shadows fitted to the view), the LOD showcase, a sky showcase with day-night, a zero-g space scene with asteroids under mutual gravity, the KTX2 codecs next to their uncompressed sources, texture arrays and atlases (built and runtime arrays, an atlas at each mip level, and a layer and a cell sampled from a material JSON), texture sets in each packing and as set arrays, the terrain gallery (every set of the toolkit's library on its own block of generated terrain, and a row of the procedural generators, baked, live or as the library's sets, with their frame cost), and the procedural textures' verification scenes (`noiseLibrary`: every noise function baked and tiled next to its live variant, and the shared textures; `proceduralSurfaces`: the ten generators in every packing, baked, live and from a set JSON).
+The other scenes, a folder each in [`src/app/scenes/`](src/app/scenes/), cover more: the start scene (`sceneTestECS`: JSON meshes, a TSL material, an imported GLB and the toolkit's hover effect), a physics and joints test, a physics simulation tiers demo (686 crates and a plough), a large procedural world with instancing and culling, an instance stress test (instanced LOD pools against an instance set, up to a million trees), a third-person character gym, a top-down character scene (world-fixed controls, hills, and sun shadows fitted to the view), the LOD showcase, a sky showcase with day-night, a zero-g space scene with asteroids under mutual gravity, the KTX2 codecs next to their uncompressed sources, texture arrays and atlases (built and runtime arrays, an atlas at each mip level, and a layer and a cell sampled from a material JSON), texture sets in each packing and as set arrays, the terrain gallery (every set of the toolkit's library on its own block of generated terrain, a row per technique of the terrain material (anti-tiling, splatting, rules, cliffs, colour maps, structures, a live procedural layer) with its quality tiers and debug views, and a row of the procedural generators, baked, live or as the library's sets, with their frame cost), and the procedural textures' verification scenes (`noiseLibrary`: every noise function baked and tiled next to its live variant, and the shared textures; `proceduralSurfaces`: the ten generators in every packing, baked, live and from a set JSON).
 
 ---
 
@@ -490,7 +534,7 @@ The engine, toolkit and example app each have their own semantic version and cod
 - **API reference**: the Hub's Documentation section (`/hub/documentation/`): a page per public entry (`aekasha`, `aekasha/physics`, …, at `/hub/documentation/aekasha/physics/`) with every name it exports, its signature, JSDoc and source link, searchable and linked from the other Hub pages. `yarn docs` still writes TypeDoc's own HTML to `docs-api/`.
 - **Architecture**: the Hub's `/hub/documentation/architecture/`: how the engine fits together (the layers, the kernel and the features, a frame, a scene load, the threads, simulation and presentation, debug code, the build) and where a feature of your own goes.
 - **Migration guide**: the Hub's `/hub/documentation/migration/`: what changes for an app in each major version, with its codemods: `migrateToEntries.ts` for engine 5's entry imports, `devTools/migrate/migrateEngine6.ts` for engine 6.
-- **Guides**: [`docs/techniques/`](docs/techniques/), starting from [the index](docs/techniques/README.md), eg. [asset optimization](docs/techniques/asset-optimization.md), [texture sets](docs/techniques/texture-sets.md), [procedural textures](docs/techniques/procedural-textures.md) and [modular kits and tile-chunk worlds](docs/techniques/terrain-modular-kits.md).
+- **Guides**: [`docs/techniques/`](docs/techniques/), starting from [the index](docs/techniques/README.md), eg. [asset optimization](docs/techniques/asset-optimization.md), [texture sets](docs/techniques/texture-sets.md), [procedural textures](docs/techniques/procedural-textures.md), the terrain material's techniques (from [single-layer terrain](docs/techniques/terrain-single-layer.md)) and [modular kits and tile-chunk worlds](docs/techniques/terrain-modular-kits.md).
 - **Design docs**: [`docs/plans/`](docs/plans/), and the app's in [`docsApp/plans/`](docsApp/plans/). Files prefixed `_DONE_` describe features that are already implemented. Known issues are in [`docs/issues/`](docs/issues/) (the app's in [`docsApp/issues/`](docsApp/issues/)) and on the Hub's Issues page.
 - **Contributor and agent guide**: [`.claude/CLAUDE.md`](.claude/CLAUDE.md), with a map of the `CLAUDE.md` next to each subsystem.
 

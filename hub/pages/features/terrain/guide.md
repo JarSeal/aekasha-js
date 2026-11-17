@@ -25,15 +25,16 @@ facts. The toolkit's `sand01`:
 - **`category`** (`SAND`, `MUD`, `ROCKS`, `CLIFF`, `SNOW`, `ICE`, `GRASS`, `CONCRETE`, `OTHER`)
   is for the terrain tools' defaults and grouping.
 - **`averageColor`** is measured by the [asset pipeline](hub:features/asset-optimization) from the
-  default packing's albedo; give one in the JSON to override it.
+  default packing's albedo; give one in the JSON to override it. A material gets it as a uniform
+  (linear), for a colour map's detail and a far surface's colour. A procedural set has none.
 
 ### The packings
 
-| Packing   | Textures | Slots and channels                                                                              | For                                                     |
-| --------- | -------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `FULL`    | 3        | `albedoHeight` (RGB albedo, A height), `normal` (RGB), `orm` (AO, roughness, metalness)         | Hero surfaces close to the camera; structures           |
-| `LITE`    | 2        | `albedoRough` (RGB albedo × AO, A roughness), `normalHeight` (RG normal XY, B height)           | The terrain default: every camera, height blending      |
-| `MINIMAL` | 1        | `albedoHeight` (RGB albedo × AO, A height); the normal a bump from the height, or flat          | Stylized, top-down, low-end                             |
+| Packing   | Textures | Slots and channels                                                                      | For                                                |
+| --------- | -------- | --------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `FULL`    | 3        | `albedoHeight` (RGB albedo, A height), `normal` (RGB), `orm` (AO, roughness, metalness) | Hero surfaces close to the camera; structures      |
+| `LITE`    | 2        | `albedoRough` (RGB albedo × AO, A roughness), `normalHeight` (RG normal XY, B height)   | The terrain default: every camera, height blending |
+| `MINIMAL` | 1        | `albedoHeight` (RGB albedo × AO, A height); the normal a bump from the height, or flat  | Stylized, top-down, low-end                        |
 
 Normals are OpenGL (+Y), as three.js's. `LITE` and `MINIMAL` bake the AO into the albedo when
 packing, which saves a texture per layer per sample: it then darkens direct light too, and stacks
@@ -114,7 +115,8 @@ array texture per slot, so `LITE` binds 2 textures for up to 16 layers:
 - **In a material:** `{ "textureSetArray": ["sand01", "grass01", "rocks01"], "packing": "LITE" }`
   is built with the scene's load; a scene's `textureSetArrays` lists one by `id` (with
   `swappable`), which an input names as `{ "textureSetArray": "<id>" }`. The material gets the
-  arrays by slot, `layerCount`, and every layer's fields as one uniform array
+  arrays by slot, `layerCount`, and every layer's fields (its `averageColor` too, mid-grey for a
+  set without one) as one uniform array
   ([`TextureSetArrayInput`](api:TextureSetArrayInput); read a layer's with
   [`getTextureSetLayerParams`](api:getTextureSetLayerParams)).
 - **From code:** [`buildTextureSetArray`](api:buildTextureSetArray) builds one (two builds of the
@@ -126,8 +128,9 @@ array texture per slot, so `LITE` binds 2 textures for up to 16 layers:
 
 ## Writing a terrain material
 
-`aekasha/toolkit/terrain` has the pieces `textureSetSurface` is made of, for a material of your
-own:
+The [terrain material generator](hub:features/terrain#terrain-materials) covers most terrains.
+For a material of your own, `aekasha/toolkit/terrain` has the pieces `textureSetSurface` is made
+of:
 
 - [`sampleTextureSet`](api:sampleTextureSet) decodes a `{ textureSet }` input, or a layer of a
   `{ textureSetArray }` input, at a UV, into `albedo`, `normalTS`, `roughness`, `ao`, `height` and
@@ -145,24 +148,24 @@ In `src/toolkit/textures/<setId>/`, each with its recipes and `source.json`; the
 licences are in `src/toolkit/textures/CREDITS.md`. All `LITE`, three in every packing for
 comparing them:
 
-| Set          | Surface               | Source                           | Tile          | Relief  | Packings              |
-| ------------ | --------------------- | -------------------------------- | ------------- | ------- | --------------------- |
-| `sand01`     | Dry dunes             | ambientCG Ground080              | 3 m           | 0.057 m | `LITE` `FULL` `MINIMAL` |
-| `sand02`     | Coastal ripples       | ambientCG Ground093C             | 3 m           | 0.033 m | `LITE`                |
-| `mud01`      | Soil                  | Poly Haven brown_mud_02          | 1.3 m         | 0.04 m  | `LITE`                |
-| `mud02`      | Forest mud            | ambientCG Ground071              | 1.75 m        | 0.009 m | `LITE`                |
-| `rocks01`    | Gravel                | ambientCG Ground079S             | 2 m           | 0.018 m | `LITE`                |
-| `rocks02`    | Stony mud             | Poly Haven brown_mud_rocks_01    | 1.3 m         | 0.037 m | `LITE`                |
-| `cliffs01`   | Grey mountain         | ambientCG Rock051                | 6 m           | 0.16 m  | `LITE` `FULL` `MINIMAL` |
-| `cliffs02`   | Dark veined           | ambientCG Rock058                | 6 m           | 0.25 m  | `LITE`                |
-| `snow01`     | Clean                 | ambientCG Snow010A               | 3 m           | 0.048 m | `LITE`                |
-| `snow02`     | Wind-shaped           | ambientCG Snow008A               | 4 m           | 0.058 m | `LITE`                |
-| `ice01`      | Lake                  | ambientCG Ice002                 | 4 m           | 0.006 m | `LITE`                |
-| `ice02`      | Dark lake             | ambientCG Ice003                 | 4 m           | 0.004 m | `LITE`                |
-| `grass01`    | Lawn ground           | ambientCG Grass004               | 1.4 m         | 0.002 m | `LITE` `FULL` `MINIMAL` |
-| `grass02`    | Forest floor          | ambientCG Ground037              | 2.1 m         | 0.027 m | `LITE`                |
-| `concrete01` | Smooth concrete       | ambientCG Concrete034            | 1.1 × 0.55 m  | 0.012 m | `LITE`                |
-| `concrete02` | Damaged concrete      | ambientCG Concrete044D           | 2 m           | 0.013 m | `LITE`                |
+| Set          | Surface          | Source                        | Tile         | Relief  | Packings                |
+| ------------ | ---------------- | ----------------------------- | ------------ | ------- | ----------------------- |
+| `sand01`     | Dry dunes        | ambientCG Ground080           | 3 m          | 0.057 m | `LITE` `FULL` `MINIMAL` |
+| `sand02`     | Coastal ripples  | ambientCG Ground093C          | 3 m          | 0.033 m | `LITE`                  |
+| `mud01`      | Soil             | Poly Haven brown_mud_02       | 1.3 m        | 0.04 m  | `LITE`                  |
+| `mud02`      | Forest mud       | ambientCG Ground071           | 1.75 m       | 0.009 m | `LITE`                  |
+| `rocks01`    | Gravel           | ambientCG Ground079S          | 2 m          | 0.018 m | `LITE`                  |
+| `rocks02`    | Stony mud        | Poly Haven brown_mud_rocks_01 | 1.3 m        | 0.037 m | `LITE`                  |
+| `cliffs01`   | Grey mountain    | ambientCG Rock051             | 6 m          | 0.16 m  | `LITE` `FULL` `MINIMAL` |
+| `cliffs02`   | Dark veined      | ambientCG Rock058             | 6 m          | 0.25 m  | `LITE`                  |
+| `snow01`     | Clean            | ambientCG Snow010A            | 3 m          | 0.048 m | `LITE`                  |
+| `snow02`     | Wind-shaped      | ambientCG Snow008A            | 4 m          | 0.058 m | `LITE`                  |
+| `ice01`      | Lake             | ambientCG Ice002              | 4 m          | 0.006 m | `LITE`                  |
+| `ice02`      | Dark lake        | ambientCG Ice003              | 4 m          | 0.004 m | `LITE`                  |
+| `grass01`    | Lawn ground      | ambientCG Grass004            | 1.4 m        | 0.002 m | `LITE` `FULL` `MINIMAL` |
+| `grass02`    | Forest floor     | ambientCG Ground037           | 2.1 m        | 0.027 m | `LITE`                  |
+| `concrete01` | Smooth concrete  | ambientCG Concrete034         | 1.1 × 0.55 m | 0.012 m | `LITE`                  |
+| `concrete02` | Damaged concrete | ambientCG Concrete044D        | 2 m          | 0.013 m | `LITE`                  |
 
 - **The cost:** a `LITE` set is 2.67 MB of GPU memory with its mips (`FULL` 4.00 MB, `MINIMAL`
   1.33 MB) and a 1.4–2.5 MB download. A material pays only for the sets it samples, and a
@@ -170,7 +173,8 @@ comparing them:
 - **The grass sets are ground**, the soil the blades stand on, not blades. The concretes are for
   structures: `concrete01` isn't square, so it can't join a set array with the others.
 - **Visible repetition:** `mud01`, `rocks02` and `concrete01` repeat noticeably at a few tiles,
-  which anti-tiling (a later terrain material's) hides.
+  which the terrain material's anti-tiling hides (see
+  [Terrain materials](hub:features/terrain#terrain-materials)).
 
 ## Procedural textures
 
@@ -255,7 +259,7 @@ SwiftShader) and tiling at a whole-number `period`: [`valueNoise`](api:valueNois
 server), and write a set over the PNGs with two plain texture JSONs. The bake is already packed,
 so no recipe: the [steps](repo:docs/techniques/procedural-textures.md#export).
 
-**Two shared textures** for the terrain materials to come, each committed as KTX2 (list it by id)
+**Two shared textures** for the terrain materials, each committed as KTX2 (list it by id)
 and bakeable (another seed or size):
 
 - `macroNoise` (512², [`bakeMacroNoise`](api:bakeMacroNoise)): four tileable noises in RGBA, for
@@ -266,6 +270,139 @@ and bakeable (another seed or size):
 The baked or live data is visual only: GPUs round floats differently, so never read gameplay or a
 collider from it. The baker itself is the engine's, for any graph:
 [Texture bakes](hub:features/rendering#texture-bakes).
+
+## Terrain materials
+
+[`createTerrainMaterial`](api:createTerrainMaterial) (`aekasha/toolkit/terrain`) builds one
+`MeshStandardNodeMaterial` from a config: up to 16 layers of texture sets, how they're weighed and
+how each is sampled. Every technique is a build-time branch, so the shader holds only what the
+config turns on (one layer without anti-tiling is two texture samples), and every number (tiling,
+tint, a rule's slope, a fade distance) is a uniform that changes live.
+
+```ts
+import { createTerrainMaterial, getTerrainQualityPreset } from 'aekasha/toolkit/terrain';
+
+const highlands = createTerrainMaterial({
+  id: 'highlands',
+  layers: [
+    { set: 'grass01' },
+    { set: 'rocks02' },
+    { set: 'snow01' },
+    { set: 'cliffs01', projection: { mode: 'TRIPLANAR', slopeGate: [35, 50] } },
+  ],
+  blend: {
+    source: 'RULES',
+    rules: [
+      { layer: 1, slope: { min: 26 }, noise: { scale: 18, amount: 0.35, channel: 'A' } },
+      { layer: 2, height: { min: 40 }, slope: { max: 38 } },
+      { layer: 3, slope: { min: 46 } },
+    ],
+  },
+  antiTiling: { mode: 'DUAL_SCALE' },
+  macro: { texture: 'macroNoise', scale: 64 },
+  quality: getTerrainQualityPreset({ cliffLayers: [3] }),
+});
+```
+
+It needs the `textureSets()` feature and is synchronous: the sets' textures must be loaded (a
+scene that lists the sets, or `await ensureMaterialDependencies(getTerrainMaterialProps(config))`
+first). The handbook has a page per technique, linked from each part below.
+
+### The techniques
+
+| Part         | Config                                                                                           | What it does                                                                                                                                        | Handbook                                                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| A layer      | `layers[i]`: `set`, `tiling`, `rotation`, `tint`, `normalStrength`, `roughnessScale`             | One texture set, tiled at the world's `(x, −z)` over its `physicalSize` (or the mesh's UVs in metres, `uv: 'MESH_UV'`); each number × the set's own | [Single layer](repo:docs/techniques/terrain-single-layer.md)                                                                |
+| Anti-tiling  | `antiTiling`: `NONE`, `DUAL_SCALE`, `HEX`                                                        | A second tap at another scale and angle (2 taps), or Mikkelsen's hex tiling (3 taps, no mip seams)                                                  | [Single layer](repo:docs/techniques/terrain-single-layer.md#variations)                                                     |
+| Macro        | `macro`: `{ texture, scale }`                                                                    | One fetch of `macroNoise` at the world's XZ: brightness, hue and roughness over tens of metres, for every layer                                     | [Single layer](repo:docs/techniques/terrain-single-layer.md#variations)                                                     |
+| Paint        | `blend.source`: `VERTEX_COLOR` (`RGB_AO`, `RGBA`), `SPLAT_MAP`                                   | Weights from the vertex colour (up to 5 layers, no fetch) or one or two splat maps (up to 9)                                                        | [Vertex colour](repo:docs/techniques/terrain-vertex-color-splat.md), [splat map](repo:docs/techniques/terrain-splat-map.md) |
+| Height blend | `blend.mode: 'HEIGHT'` (default), `heightBlendDepth`; a layer's `heightContrast`, `heightOffset` | Borders that follow the surfaces' relief instead of the weights' gradient                                                                           | [Vertex colour](repo:docs/techniques/terrain-vertex-color-splat.md#set-up-and-parameters)                                   |
+| Rules        | `blend.source`: `RULES`, `VERTEX_COLOR_AND_RULES`, `SPLAT_MAP_AND_RULES`; `rules`                | Layers by slope, height and facing, broken up by a noise channel, composited in order over layer 0 or the paint                                     | [Procedural rules](repo:docs/techniques/terrain-procedural-rules.md)                                                        |
+| Projection   | `projection`: `PLANAR`, `BIPLANAR`, `TRIPLANAR`; `slopeGate`, `normalBlend`                      | Steep faces without streaks: the planes the surface faces, gated by slope so flat ground pays one tap                                               | [Triplanar cliffs](repo:docs/techniques/terrain-triplanar-cliffs.md)                                                        |
+| Sparse       | `sparse: { maxLayers }` (2–4)                                                                    | Only the layers weighing most at a pixel are sampled, from a set array                                                                              | [Splat map](repo:docs/techniques/terrain-splat-map.md#sparse-sampling)                                                      |
+| Colour map   | `colorMap`: `DETAIL`, `FAR_ONLY`                                                                 | A block's own colour at its UVs under the layers' grey detail, or only far away                                                                     | [Colour map + detail](repo:docs/techniques/terrain-colormap-detail.md)                                                      |
+| Distance     | `distance`: `fade`, `far` (`AVERAGE_COLOR`, `COLOR_MAP`), `farBlend`                             | The detail normals fade out; past the fade the layers aren't sampled at all                                                                         | [Colour map + detail](repo:docs/techniques/terrain-colormap-detail.md#set-up-and-parameters)                                |
+| Space        | `space`: `WORLD`, `OBJECT`                                                                       | Object space for pieces that move or turn                                                                                                           | [Structures](repo:docs/techniques/structure-materials.md)                                                                   |
+| Live layers  | a layer's `source: 'PROCEDURAL_LIVE'`, `live`                                                    | Its procedural set's generator in the material: never repeats, no texture memory                                                                    | [Procedural textures](repo:docs/techniques/procedural-textures.md#live-layers-in-a-terrain-material)                        |
+
+### The JSON route
+
+The material `terrain` (`src/toolkit/materials/terrain/`) is the same generator for scene JSON:
+its static define `terrain` is the config without the id and the texture ids, and the textures are
+inputs, so a mesh's variant swaps a block's sets or splat maps without another shader
+([`getTerrainMaterialProps`](api:getTerrainMaterialProps) shows what a config becomes):
+
+```json
+{
+  "mat": "terrain",
+  "matOverrides": {
+    "inputs": {
+      "layer0": { "textureSet": "grass01" },
+      "macro": { "texture": "macroNoise" }
+    },
+    "staticDefines": {
+      "terrain": {
+        "layers": [{ "tiling": 1.5 }],
+        "antiTiling": { "mode": "DUAL_SCALE" },
+        "macro": { "scale": 64 }
+      }
+    }
+  }
+}
+```
+
+- **The inputs:** `layer0`, `layer1`, … (`{ textureSet, packing? }`), or one set array `layers`
+  (`{ textureSetArray: [ids], packing }`); `splat0` and `splat1`, `macro` and `colorMap`
+  (`{ texture }`).
+- **A variant's `staticDefines` replace the base's key by key**, so `terrain` is always the whole
+  define. A variant's inputs merge over the base's, so a material with a set array is a material
+  JSON of its own, its TSL file the two lines `export const setup = setupTerrainMaterial`
+  ([`setupTerrainMaterial`](api:setupTerrainMaterial); a `tslFile` resolves from its JSON's own top
+  folder).
+- **The define is checked when the material builds**, by hand (no zod in a build), and refused
+  naming the field and why.
+
+### The budget and the tiers
+
+- **The texture budget:** a shader stage binds 16 sampled textures, shadow maps and the environment
+  included. The material counts its own (the layers' slots, the splat maps, the macro, the colour
+  map) against the limit less `reservedTextures` (default 6) and throws listing them. `storage`
+  (code route, default `AUTO`) binds each layer's textures (`SEPARATE`) while they fit, else one
+  array per slot for all layers (`ARRAY`, a [set array](hub:features/terrain#set-arrays)): `LITE`
+  binds 2 for up to 16 layers. A procedural set's layer keeps its own input beside the array.
+- **Quality tiers:** a config's `quality` holds overrides per tier (`LOW`, `MEDIUM`, `HIGH`,
+  `ULTRA`), and [`getTerrainMaterialVariant(id, level)`](api:getTerrainMaterialVariant) returns a
+  tier's material, its own shader. [`getTerrainQualityPreset`](api:getTerrainQualityPreset) is the
+  suggested table:
+
+  | Tier     | Anti-tiling                 | Layers a pixel | `cliffLayers`      | `far` from | `liveLayers` |
+  | -------- | --------------------------- | -------------- | ------------------ | ---------- | ------------ |
+  | `LOW`    | `NONE`                      | 2              | `BIPLANAR`, gated  | 60 m       | The bake     |
+  | `MEDIUM` | `DUAL_SCALE`                | 3              | `TRIPLANAR`, gated | 120 m      | The bake     |
+  | `HIGH`   | `HEX` on the dominant layer | 3              | `TRIPLANAR`, gated | 200 m      | Live         |
+  | `ULTRA`  | `HEX` on all                | 4              | `TRIPLANAR`        | None       | Live         |
+
+  On an 8-layer terrain at 1080p (Windows Chrome, an AMD RDNA 3 GPU), `LOW` cost about half of
+  `MEDIUM`, `HIGH` about a fifth more than `MEDIUM` (1.7 ms for the whole frame) and `ULTRA` 1.7–2.6
+  × `HIGH`. A tier reaches a layer's own anti-tiling, projection and source through its `layers`
+  entries; its material-wide fields replace the material's.
+
+### Colour maps, structures and live layers
+
+- [`bakeTerrainColorMap({ id, mesh, size?, ao? })`](api:bakeTerrainColorMap) renders a block's
+  own terrain material at its UVs into `<id>.color`: the block's colour map for `DETAIL` or the far
+  surface, used as baked or exported (`exportBakedTexture`) and encoded per block.
+- [`createStructureMaterial(layers, opts)`](api:createStructureMaterial) is the material with a
+  structure's defaults (object space, `TRIPLANAR`, `DUAL_SCALE`, a macro at 12 m), wear layers
+  painted in the vertex colour; [`getStructureMaterialConfig`](api:getStructureMaterialConfig)
+  returns the config.
+- A **live layer** runs its procedural set's generator per pixel, its set's bake the low tiers'
+  fallback; its generator loads with the set's bake, or with
+  [`loadTextureSetGeneratorAsync`](api:loadTextureSetGeneratorAsync).
+
+What a technique costs in fetches, the measured GPU time, the maps and the pitfalls are its handbook
+page's; the [techniques index](repo:docs/techniques/README.md#which-technique-for-my-game) matches
+techniques to game types.
 
 ## Debugging
 
@@ -278,6 +415,22 @@ collider from it. The baker itself is the engine's, for any graph:
   imported set of each category; the tab shows the bake's GPU time and memory, "Copy JSON" gives
   the values as a set's `procedural` block, "Export PNGs" writes the bake, and "Measure block"
   times the frame in each mode.
+- **The gallery's terrain material rows**, each with a section in the tab: Anti-tiling (`NONE`,
+  `DUAL_SCALE`, `HEX`, the macro), Splatting (vertex colours and splat maps, `LINEAR` beside
+  `HEIGHT`, 9 layers in a set array), Rules (rules alone, a splat map combo, the 8-layer terrain),
+  Cliffs (each projection and the slope gate), Colour map (`DETAIL` and both far surfaces, each
+  block's map baked at load), Structures (world and object space, wear, moving pillars) and the
+  Live block (a procedural layer live or baked). The tab's Quality select switches every terrain
+  block to a tier, and its Debug view select to a view.
+- **The debug views** (a config's `debugView`, debug builds only; from code, after
+  [`loadTerrainDebugViewsAsync`](api:loadTerrainDebugViewsAsync)): `TEXEL_DENSITY` (texels a metre
+  in colour bands over a 1 m checker), `NORMALS`, `WEIGHTS` (each layer's false colour),
+  `PROJECTION` (the planes' weights and the slope gate's band), `TAPS` (the texture fetches at the
+  pixel, heat-mapped) and `LAYER_COUNT` (striped where sparse sampling drops a layer). Their code is
+  a debug chunk, so a production build has none.
+- **The uniforms** are in a terrain material's `userData.uniforms` (`terrain_l<i>_tiling`,
+  `terrain_r<i>_slopeMin`, `terrain_macroScale`, …): set a uniform's `value` from code, as the
+  gallery's sliders do.
 - **The verification scenes:** `proceduralSurfaces` checks every generator in every packing, that
   each bake tiles and its live surface doesn't, and that a procedural set's bake equals the code's;
   `noiseLibrary` tiles each noise 3 × 3 beside its live twin, and checks the shared textures and
@@ -302,6 +455,16 @@ collider from it. The baker itself is the engine's, for any graph:
   [`createLiveSurface`](api:createLiveSurface): procedural surfaces; [`fbm`](api:fbm),
   [`worley`](api:worley) and the rest of the noise; [`bakeMacroNoise`](api:bakeMacroNoise) and
   [`bakeRippleAtlas`](api:bakeRippleAtlas): the shared textures.
+- [`createTerrainMaterial`](api:createTerrainMaterial),
+  [`getTerrainMaterialProps`](api:getTerrainMaterialProps),
+  [`getTerrainMaterialVariant`](api:getTerrainMaterialVariant) and
+  [`setupTerrainMaterial`](api:setupTerrainMaterial): the terrain material, its config
+  [`TerrainMaterialConfig`](api:TerrainMaterialConfig) and define
+  [`TerrainMaterialDefine`](api:TerrainMaterialDefine).
+- [`getTerrainQualityPreset`](api:getTerrainQualityPreset): the tiers;
+  [`bakeTerrainColorMap`](api:bakeTerrainColorMap): a block's colour map;
+  [`createStructureMaterial`](api:createStructureMaterial): structures;
+  [`loadTerrainDebugViewsAsync`](api:loadTerrainDebugViewsAsync): the debug views.
 
 ## Related issues
 
@@ -317,7 +480,14 @@ collider from it. The baker itself is the engine's, for any graph:
 - The handbook: [Texture sets](repo:docs/techniques/texture-sets.md) (choosing a packing, AO,
   texel density, your own set in Blender, KTX2 settings, the checklist),
   [Procedural textures](repo:docs/techniques/procedural-textures.md) (baked, exported or live,
-  what each costs, writing a generator, tiling and seeds) and the
+  what each costs, writing a generator, tiling and seeds, live terrain layers), the terrain
+  material's techniques ([single layer](repo:docs/techniques/terrain-single-layer.md),
+  [vertex-colour splat](repo:docs/techniques/terrain-vertex-color-splat.md),
+  [splat map](repo:docs/techniques/terrain-splat-map.md),
+  [procedural rules](repo:docs/techniques/terrain-procedural-rules.md),
+  [triplanar cliffs](repo:docs/techniques/terrain-triplanar-cliffs.md),
+  [colour map + detail](repo:docs/techniques/terrain-colormap-detail.md) and
+  [structure materials](repo:docs/techniques/structure-materials.md)) and the
   [techniques index](repo:docs/techniques/README.md) (which technique for which game).
 - The API reference: [`aekasha/texturesets`](hub:documentation/aekasha/texturesets) and
   [`aekasha/toolkit/terrain`](hub:documentation/aekasha/toolkit/terrain).

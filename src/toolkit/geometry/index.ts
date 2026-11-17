@@ -13,6 +13,13 @@ export type {
 } from './generate/Foliage';
 export { generateTerrain } from './generate/Terrain';
 export type { GeneratedTerrain, TerrainNoiseOctave, TerrainOptions } from './generate/Terrain';
+export { TERRAIN_RULE_DEFAULTS, TERRAIN_RULE_NOISE_CHANNELS } from './generate/TerrainRules';
+export type {
+  TerrainRule,
+  TerrainRuleAspect,
+  TerrainRuleNoise,
+  TerrainRuleRange,
+} from './generate/TerrainRules';
 export {
   bakeScatterToInstancedMesh,
   scatterOnSurface,

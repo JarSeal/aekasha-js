@@ -112,6 +112,12 @@ createMaterial({ id: 'checkerMat', type: 'STANDARD', params: { map: baked.textur
   (`HALF_FLOAT` for values outside 0..1). **`layers`** bakes an array texture, the graph reading
   `ctx.layer`; sample a layer with [`sampleArrayLayer`](api:sampleArrayLayer). Mips by default,
   built once after the last layer; `REPEAT` by default.
+- **In a mesh's UV space:** `mesh: { geometry, matrixWorld? }` draws the geometry with each
+  vertex at its UV instead of a full-screen triangle, so a texel holds the graph at the surface
+  point its UV maps to: the graph reads the mesh's attributes, `positionWorld` and its normal (a
+  block's colour map, its AO). A texel no triangle covers stays transparent black, and the camera
+  is the bake's, so the graph shouldn't read the view or the facing. The terrain material's
+  [`bakeTerrainColorMap`](api:bakeTerrainColorMap) bakes this way.
 - **When it renders:** during a scene load, at once, after its pipeline compiles off the frame,
   and the loader hears of it (`updateBakeStatusFn`: the template shows "Baking textures, n / m").
   Outside a load, bakes queue: one a frame, and a rebake of one id at most every 150 ms (the last

@@ -48,8 +48,8 @@ export type TextureSetTextures<P extends TextureSetPacking = TextureSetPacking> 
 /**
  * What a TSL function gets for a `{ "textureSet": id }` input: the packing's texture nodes by slot
  * (only the sampled packing's slots are there), and uniforms of the set's `physicalSize`,
- * `heightScale` and each `surface` field (`tint` a colour, linear; the rest floats), which the
- * material may change (`material.userData.uniforms`).
+ * `heightScale`, each `surface` field (`tint` a colour, linear; the rest floats) and its
+ * `averageColor` when it has one, which the material may change (`material.userData.uniforms`).
  */
 export type TextureSetInput = {
   /** `FULL` and `MINIMAL`: RGB albedo (sRGB), A height. */
@@ -66,6 +66,12 @@ export type TextureSetInput = {
   physicalSize: THREE.UniformNode<'vec2'>;
   /** The metres of relief a height of 1 stands for. */
   heightScale: THREE.UniformNode<'float'>;
+  /**
+   * The albedo's average colour (linear, from the set's sRGB `averageColor`): what a colour map's
+   * detail divides by and a far surface shows. Absent when the set has none (a procedural set, or
+   * one whose albedo the asset pipeline didn't encode).
+   */
+  averageColor?: THREE.UniformNode<'color'>;
 } & {
   [K in keyof TextureSetSurface]: K extends 'tint'
     ? THREE.UniformNode<'color'>
@@ -212,11 +218,32 @@ export const getTextureSetPackingTextures = <P extends TextureSetPacking = Textu
 const describeInput = (value: TextureSetInputRef, key: string, group: string, id?: string) =>
   `The texture set "${value.textureSet}" of input "${key}" (${group}) in material "${id}"`;
 
+/** Each `{ textureSet }` bundle the resolver made, to its set (a bundle is nodes only) */
+const inputSets = new WeakMap<object, TextureSetDef>();
+
+/**
+ * The texture set a `{ textureSet }` input was resolved from: what a TSL function needs of the set
+ * beyond its bundle's nodes (its id, or a procedural set's `procedural` field: its generator, params
+ * and seed, p305's live layers).
+ * @param input a `{ textureSet }` bundle as a TSL function gets it
+ * @returns the gathered set, or undefined for a value the resolver didn't make
+ * @example
+ * ```ts
+ * import { getTextureSetOfInput, type TextureSetInput } from 'aekasha/texturesets';
+ *
+ * export const setup = (inputs: { ground: TextureSetInput }) => {
+ *   const set = getTextureSetOfInput(inputs.ground);
+ *   if (set?.procedural) console.log(`Baked by "${set.procedural.generator}".`);
+ * };
+ * ```
+ */
+export const getTextureSetOfInput = (input: TextureSetInput) => inputSets.get(input);
+
 /**
  * `{ "textureSet": id, "packing"? }` (p303 D1, decision 2): a bundle of the packing's texture
- * nodes by slot, and uniforms of the set's `physicalSize`, `heightScale` and `surface` fields
- * (`TextureSetInput`). A texture that isn't registered samples the white texel, warned, as a bare
- * id does.
+ * nodes by slot, and uniforms of the set's `physicalSize`, `heightScale`, `surface` fields and
+ * `averageColor` when it has one (`TextureSetInput`). A texture that isn't registered samples the
+ * white texel, warned, as a bare id does. The bundle maps to its set (`getTextureSetOfInput`).
  */
 const TEXTURE_SET_RESOLVER: MaterialInputResolver<TextureSetInputRef> = {
   kind: 'textureSet',
@@ -248,6 +275,10 @@ const TEXTURE_SET_RESOLVER: MaterialInputResolver<TextureSetInputRef> = {
           ? uniform(fieldValue)
           : uniform(new THREE.Color(toThreeColor(fieldValue)));
     }
+    if (set.averageColor !== undefined) {
+      bundle.averageColor = uniform(new THREE.Color(toThreeColor(set.averageColor)));
+    }
+    inputSets.set(bundle, set);
     return bundle;
   },
   dependencies: (value) => getTextureSetInputDependencies(value, getTextureSet),
@@ -262,6 +293,47 @@ const loadBakesModuleAsync = async () => {
   bakesModule ??= await import('./TextureSetBakes');
   return bakesModule;
 };
+
+/**
+ * Loads a procedural texture set generator's module (p304 D3, a `<id>.generator.ts` the gather
+ * found: the gathered code names it only when a scene's set or a material input names a set of
+ * it), for code that runs it itself (p305's live terrain layers) rather than through a set's bake.
+ * A bake loads it too; once loaded it's kept for the page, and {@link getTextureSetGenerator}
+ * returns it synchronously.
+ * @param id the generator's id (a procedural set's `procedural.generator`)
+ * @returns the generator as the engine bakes it (a toolkit generator has more: its `build`)
+ * @throws (rejects) for a generator the gathered code lacks, or a module that doesn't export it as
+ * `generator`
+ * @example
+ * ```ts
+ * import { getTextureSet, loadTextureSetGeneratorAsync } from 'aekasha/texturesets';
+ *
+ * const procedural = getTextureSet('dunes')?.procedural;
+ * if (procedural) await loadTextureSetGeneratorAsync(procedural.generator);
+ * ```
+ */
+export const loadTextureSetGeneratorAsync = async (id: string) => {
+  const bakes = await loadBakesModuleAsync();
+  try {
+    return await bakes.loadGeneratorAsync(id);
+  } catch (err) {
+    throw new Error(`loadTextureSetGeneratorAsync: ${(err as Error).message}`);
+  }
+};
+
+/**
+ * A procedural texture set generator loaded by a bake or {@link loadTextureSetGeneratorAsync}:
+ * for a TSL function, which can't await one.
+ * @param id the generator's id (a procedural set's `procedural.generator`)
+ * @returns the generator, or undefined when it isn't loaded
+ * @example
+ * ```ts
+ * import { getTextureSetGenerator } from 'aekasha/texturesets';
+ *
+ * const isReady = getTextureSetGenerator('sandRipples') !== undefined;
+ * ```
+ */
+export const getTextureSetGenerator = (id: string) => bakesModule?.getLoadedGenerator(id);
 
 /** Starts the bakes of a scene's procedural sets (p304 D3): synchronously once the module is
  * loaded, so a set the next scene shares is re-tagged before the previous scene's release */

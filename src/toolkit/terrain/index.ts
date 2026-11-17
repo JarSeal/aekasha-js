@@ -64,3 +64,48 @@ export {
   transformTangentNormalToView,
 } from './nodes/SampleTextureSet';
 export type { SampleTextureSetOptions, TextureSetSample } from './nodes/SampleTextureSet';
+export {
+  createTerrainMaterial,
+  getTerrainMaterialProps,
+  getTerrainMaterialVariant,
+  setupTerrainMaterial,
+  TERRAIN_TSL_MATERIAL_ID,
+} from './material/TerrainMaterial';
+export type { TerrainQualityLevel } from './material/TerrainMaterial';
+export { bakeTerrainColorMap } from './material/TerrainColorMapBake';
+export type { BakeTerrainColorMapOpts } from './material/TerrainColorMapBake';
+export { createStructureMaterial, getStructureMaterialConfig } from './material/StructureMaterial';
+export type { StructureMaterialOpts } from './material/StructureMaterial';
+export { getTerrainQualityPreset } from './material/TerrainQualityPreset';
+export type { TerrainQualityPresetOpts } from './material/TerrainQualityPreset';
+export { loadTerrainDebugViewsAsync } from './material/TerrainDebugViews';
+export {
+  TerrainAntiTilingSchema,
+  TerrainBlendSchema,
+  TerrainColorMapSchema,
+  TerrainColorMapSettingsSchema,
+  TerrainLayerSchema,
+  TerrainLayerSettingsSchema,
+  TerrainLiveSchema,
+  TerrainMacroSchema,
+  TerrainMacroSettingsSchema,
+  TerrainMaterialConfigSchema,
+  TerrainMaterialDefineSchema,
+  TerrainProjectionSchema,
+  TerrainQualityOverridesSchema,
+} from './material/TerrainMaterialConfig';
+export type {
+  TerrainAntiTiling,
+  TerrainBlend,
+  TerrainColorMap,
+  TerrainColorMapSettings,
+  TerrainLayer,
+  TerrainLayerSettings,
+  TerrainLive,
+  TerrainMacro,
+  TerrainMacroSettings,
+  TerrainMaterialConfig,
+  TerrainMaterialDefine,
+  TerrainProjection,
+  TerrainQualityOverrides,
+} from './material/TerrainMaterialConfig';

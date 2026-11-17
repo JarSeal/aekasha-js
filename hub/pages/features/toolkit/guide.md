@@ -17,7 +17,9 @@ src/toolkit/
     <id>/                   <id>.material.json and <id>.tsl.ts
     TriplanarProjection.ts
   terrain/                  aekasha/toolkit/terrain
-    nodes/                  SampleTextureSet; noise/: the noise library
+    material/               the terrain material generator: createTerrainMaterial and the rest
+    nodes/                  SampleTextureSet, the material's techniques; noise/: the noise library
+    debug/                  the terrain material's debug views (debug builds only)
     procedural/             the surface generators' API; <id>/<id>.generator.ts, ten of them
     textures/               MacroNoise, RippleAtlas: the shared textures' bakes
   models/<category>/<id>/   the model next to its *.importedAsset.json
@@ -103,6 +105,10 @@ any material:
   packing, tiled in world space (`tiling: "WORLD_XZ"`) or at UVs in metres (`"UV"`, walls). A mesh
   gives it its set with `matOverrides: { inputs: { surface: { textureSet: "rocks01" } } }`. The
   baseline of the terrain materials, built on `aekasha/toolkit/terrain`.
+- **`terrain`**: the [terrain material](hub:features/terrain#terrain-materials) through its JSON
+  route: layers of texture sets blended by paint or rules, anti-tiled, projected, with colour maps
+  and quality tiers, its config the static define `terrain` and its textures inputs, so a mesh's
+  `matOverrides` gives a block its own sets and splat maps.
 - **`asteroid`**: a rock surface in object space: mottled colours, pits, mineral speckles, and the
   roughness and a bump from the same noise. Every input is on its `colorNode`, and a mesh gives it
   a `seed` of its own (`matOverrides: { nodes: { colorNode: { seed: 7 } } }`) for a different rock.
@@ -148,6 +154,13 @@ imports from there too.
 The surfaces and the TSL pieces terrain materials are built from (the
 [Terrain](hub:features/terrain) page has the whole of it):
 
+- **The terrain material** (`material/`): [`createTerrainMaterial`](api:createTerrainMaterial)
+  builds one material from a config of up to 16 layers: weights from vertex colours, splat maps or
+  slope / height / facing rules with the height blend, anti-tiling, slope-gated triplanar cliffs,
+  sparse sampling from a set array, a colour map and far surface, object space, live procedural
+  layers and quality tiers ([`getTerrainQualityPreset`](api:getTerrainQualityPreset)).
+  [`createStructureMaterial`](api:createStructureMaterial) is its preset for concrete and large
+  structures, [`bakeTerrainColorMap`](api:bakeTerrainColorMap) bakes a block's colour map.
 - **The texture library** (`textures/<setId>/`): 16 CC0 texture sets, two each of sand, mud,
   rocks, cliffs, snow, ice and grass ground, and two concretes, packed `LITE` (`sand01`,
   `grass01` and `cliffs01` also `FULL` and `MINIMAL`) and compressed to KTX2. A scene or a
@@ -343,9 +356,10 @@ in place of `../TriplanarProjection`.
 ## See it
 
 - The [toolkit example](hub:examples/toolkit): the model, two materials and `HoverEffect`.
-- The app's `terrainGallery` scene: every set of the texture library on its own block with
-  `textureSetSurface`, and the procedural surfaces beside them, baked or live (see
-  [Terrain](hub:features/terrain)). Open it with `?isDebug=true&startScene=terrainGallery`.
+- The app's `terrainGallery` scene: every set of the texture library on its own block, a row per
+  technique of the terrain material with its measurements, and the procedural surfaces, baked or
+  live (see [Terrain](hub:features/terrain)). Open it with
+  `?isDebug=true&startScene=terrainGallery`.
 - The app's `proceduralSurfaces` and `noiseLibrary` scenes: the generators and the noise, each
   checked as it loads.
 - The [game HUD example](hub:examples/game-hud): the world anchor sync and the follow rig's

@@ -3,7 +3,7 @@
   "chunks": {
     "assets/Announcer.js": {
       "bytes": 2435,
-      "gzip": 1251
+      "gzip": 1250
     },
     "assets/AssetsSwitchGLTF.js": {
       "bytes": 150090,
@@ -75,7 +75,7 @@
     },
     "assets/GeometryTransfer.js": {
       "bytes": 1933,
-      "gzip": 871
+      "gzip": 870
     },
     "assets/GeometryTransfer.js@AssetsWorker": {
       "bytes": 1939,
@@ -83,11 +83,11 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 47087,
-      "gzip": 14029
+      "gzip": 14028
     },
     "assets/HDRLoader.js": {
       "bytes": 3406,
-      "gzip": 1635
+      "gzip": 1634
     },
     "assets/hsva.js": {
       "bytes": 6262,
@@ -143,7 +143,7 @@
     },
     "assets/TextureInputResolvers.js": {
       "bytes": 3306,
-      "gzip": 1366
+      "gzip": 1365
     },
     "assets/three.core.js": {
       "bytes": 199218,
@@ -163,7 +163,7 @@
     },
     "assets/uiKit.embed.js": {
       "bytes": 973129,
-      "gzip": 272001
+      "gzip": 271998
     },
     "assets/uiKitEmbed.css": {
       "bytes": 18013,
@@ -171,7 +171,7 @@
     },
     "assets/uiKitEmbed.js": {
       "bytes": 46618,
-      "gzip": 16881
+      "gzip": 16885
     },
     "assets/uiKitEmbedData.css": {
       "bytes": 24414,
@@ -187,7 +187,7 @@
     },
     "assets/uiKitEmbedForm.js": {
       "bytes": 47693,
-      "gzip": 18060
+      "gzip": 18059
     },
     "assets/uiKitEmbedGame.css": {
       "bytes": 13897,
@@ -199,14 +199,14 @@
     },
     "uiKit.embed.js": {
       "bytes": 249,
-      "gzip": 212
+      "gzip": 211
     }
   },
   "main": {
     "chunk": "assets/uiKit.embed.js",
     "modules": 69,
     "minified": 997155,
-    "gzip": 278223
+    "gzip": 278224
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -222,7 +222,7 @@
     "_engine/kernel/config": {
       "modules": 1,
       "minified": 2433,
-      "gzip": 1081
+      "gzip": 1082
     },
     "_engine/kernel/ecs": {
       "modules": 6,

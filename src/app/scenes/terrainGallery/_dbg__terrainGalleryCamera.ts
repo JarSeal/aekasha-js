@@ -38,20 +38,26 @@ export const stopGalleryFlight = (isSceneLeft = false) => {
   flightLooper = null;
 };
 
+/** A camera pose: where it stands and the point it looks at */
+export type GalleryCameraPose = {
+  pos: { x: number; y: number; z: number };
+  look: { x: number; y: number; z: number };
+};
+
 /**
- * Flies the scene's camera to a block over `FLIGHT_SEC`: its position and its look-at point eased
+ * Flies the scene's camera to a pose over `FLIGHT_SEC`: its position and its look-at point eased
  * from where they are. A flight started meanwhile replaces it.
- * @param block the block's centre on the ground
+ * @param pose where the camera ends and what it looks at
  */
-export const flyToGalleryBlock = (block: { x: number; z: number }) => {
+export const flyGalleryCamera = (pose: GalleryCameraPose) => {
   const world = getECSWorld();
   const cameraId = getCameraId();
   if (cameraId === undefined) return;
   const transform = world.getTransform(cameraId);
   const fromPos = transform.position.clone();
+  const toPos = new THREE.Vector3(pose.pos.x, pose.pos.y, pose.pos.z);
+  const toLook = new THREE.Vector3(pose.look.x, pose.look.y, pose.look.z);
   // The current look-at point, as far ahead as the target is
-  const toPos = new THREE.Vector3(block.x, VIEW_OFFSET.y, block.z + VIEW_OFFSET.z);
-  const toLook = new THREE.Vector3(block.x, LOOK_OFFSET.y, block.z + LOOK_OFFSET.z);
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(transform.rotation);
   const fromLook = fromPos.clone().addScaledVector(forward, fromPos.distanceTo(toLook));
   const pos = new THREE.Vector3();
@@ -74,12 +80,22 @@ export const flyToGalleryBlock = (block: { x: number; z: number }) => {
 };
 
 /**
- * Puts the scene's camera in the measurement's pose over a block at once (a running flight
- * stops).
+ * Flies the scene's camera to a 12 m block (the lists' click): in front of it and above, looking
+ * at its ramp side
  * @param block the block's centre on the ground
+ */
+export const flyToGalleryBlock = (block: { x: number; z: number }) =>
+  flyGalleryCamera({
+    pos: { x: block.x, y: VIEW_OFFSET.y, z: block.z + VIEW_OFFSET.z },
+    look: { x: block.x, y: LOOK_OFFSET.y, z: block.z + LOOK_OFFSET.z },
+  });
+
+/**
+ * Puts the scene's camera in a pose at once (a running flight stops)
+ * @param pose where the camera stands and what it looks at
  * @returns a function that puts the camera back where it was, or null without the camera
  */
-export const holdMeasurePose = (block: { x: number; z: number }) => {
+export const holdGalleryCameraPose = (pose: GalleryCameraPose) => {
   const world = getECSWorld();
   const cameraId = getCameraId();
   if (cameraId === undefined) return null;
@@ -87,17 +103,23 @@ export const holdMeasurePose = (block: { x: number; z: number }) => {
   const transform = world.getTransform(cameraId);
   const pos = transform.position.clone();
   const rot = transform.rotation.clone();
-  world.setTransform(cameraId, {
-    pos: { x: block.x, y: MEASURE_OFFSET.y, z: block.z + MEASURE_OFFSET.z },
-  });
-  cameraLookAtPoint(
-    cameraId,
-    { x: block.x, y: MEASURE_LOOK_OFFSET.y, z: block.z + MEASURE_LOOK_OFFSET.z },
-    world
-  );
+  world.setTransform(cameraId, { pos: pose.pos });
+  cameraLookAtPoint(cameraId, pose.look, world);
   return () => {
     // The scene was left meanwhile: its camera went with it
     if (getCameraId() !== cameraId) return;
     world.setTransform(cameraId, { pos, rot });
   };
 };
+
+/**
+ * Puts the scene's camera in the measurement's pose over a block at once (a running flight
+ * stops).
+ * @param block the block's centre on the ground
+ * @returns a function that puts the camera back where it was, or null without the camera
+ */
+export const holdMeasurePose = (block: { x: number; z: number }) =>
+  holdGalleryCameraPose({
+    pos: { x: block.x, y: MEASURE_OFFSET.y, z: block.z + MEASURE_OFFSET.z },
+    look: { x: block.x, y: MEASURE_LOOK_OFFSET.y, z: block.z + MEASURE_LOOK_OFFSET.z },
+  });

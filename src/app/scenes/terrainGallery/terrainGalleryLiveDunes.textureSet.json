@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "terrainGalleryLiveDunes",
+  "category": "SAND",
+  "physicalSize": [2, 2],
+  "heightScale": 0.03,
+  "procedural": {
+    "generator": "sandRipples",
+    "params": { "wavelength": 0.14, "warp": 0.5 },
+    "seed": 7,
+    "size": 1024
+  },
+  "debugData": {
+    "name": "Terrain gallery live dunes",
+    "description": "p305 Phase 8: sandRipples as a procedural set (LITE, 1024²) for the gallery's Live block, whose terrain material runs it live (source PROCEDURAL_LIVE) or samples its bake; the bake is also what a tier falls back to."
+  }
+}

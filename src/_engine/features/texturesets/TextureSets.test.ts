@@ -9,9 +9,13 @@ import type {
 import type { TextureSetDef } from '../../schemas/TextureSetSchema';
 import {
   getTextureSet,
+  getTextureSetGenerator,
+  getTextureSetOfInput,
   getTextureSetPackingTextures,
   installTextureSets,
   loadTextureSetAsync,
+  loadTextureSetGeneratorAsync,
+  type TextureSetInput,
 } from './TextureSets';
 import { textureSets } from './TextureSetsFeature';
 import type { TextureSetInputRef } from './TextureSetRefs';
@@ -56,6 +60,7 @@ const bakes = vi.hoisted(() => ({
   sets: [] as string[],
   scopes: [] as string[],
   release: () => {},
+  generators: new Map<string, { id: string }>(),
 }));
 vi.mock(import('./TextureSetBakes'), () => ({
   bakeSceneProceduralTextureSetsAsync: ((sceneData: unknown) => {
@@ -70,6 +75,13 @@ vi.mock(import('./TextureSetBakes'), () => ({
     const slots = Object.entries(set.packings[set.defaultPacking] ?? {});
     return Object.fromEntries(slots.map(([slot, id]) => [slot, { id }]));
   }) as never,
+  loadGeneratorAsync: (async (id: string) => {
+    if (id === 'nope') throw new Error('the gathered code has no generator "nope".');
+    const generator = { id };
+    bakes.generators.set(id, generator);
+    return generator;
+  }) as never,
+  getLoadedGenerator: ((id: string) => bakes.generators.get(id)) as never,
 }));
 
 const SURFACE: TextureSetDef['surface'] = {
@@ -222,6 +234,21 @@ describe('loadTextureSetAsync of a procedural set (p304 D3)', () => {
   });
 });
 
+describe('the generators of procedural sets (p305 Phase 8)', () => {
+  test('loads one through the bakes’ module, then returns it synchronously', async () => {
+    expect(getTextureSetGenerator('sandFlat')).toBeUndefined();
+    const generator = await loadTextureSetGeneratorAsync('sandFlat');
+    expect(generator).toEqual({ id: 'sandFlat' });
+    expect(getTextureSetGenerator('sandFlat')).toBe(generator);
+  });
+
+  test('rejects naming the call for a generator the gathered code lacks', async () => {
+    await expect(loadTextureSetGeneratorAsync('nope')).rejects.toThrow(
+      'loadTextureSetGeneratorAsync: the gathered code has no generator "nope".'
+    );
+  });
+});
+
 describe('getTextureSetPackingTextures', () => {
   beforeEach(() => {
     fns.json = { scenes: { a: { id: 'a', textureSets: [makeSet('sand01')] } } };
@@ -284,6 +311,28 @@ describe('the { textureSet } resolver', () => {
     expect(bundle.roughnessScale.value).toBe(0.9);
     // The JSON's sRGB tint, as a linear colour
     expect(bundle.tint.value).toEqual(new THREE.Color('#ff0000'));
+  });
+
+  test('the set’s average colour, linear, when it has one', () => {
+    fns.json = {
+      scenes: { a: { id: 'a', textureSets: [makeSet('sand01', { averageColor: '#336699' })] } },
+    };
+    const bundle = getResolver().resolve(
+      { textureSet: 'sand01' },
+      inputContext()
+    ) as unknown as Record<string, { value: unknown }>;
+    expect(Object.keys(bundle).at(-1)).toBe('averageColor');
+    expect(bundle.averageColor.value).toEqual(new THREE.Color('#336699'));
+  });
+
+  test('maps each bundle to its set (getTextureSetOfInput), its fields nodes only', () => {
+    const resolver = getResolver();
+    const bundle = resolver.resolve({ textureSet: 'sand01' }, inputContext());
+    const again = resolver.resolve({ textureSet: 'sand01' }, inputContext());
+    expect(getTextureSetOfInput(bundle as unknown as TextureSetInput)?.id).toBe('sand01');
+    expect(getTextureSetOfInput(again as unknown as TextureSetInput)?.id).toBe('sand01');
+    expect(getTextureSetOfInput({ ...bundle } as unknown as TextureSetInput)).toBeUndefined();
+    expect(Object.values(bundle).every((node) => (node as { isNode?: boolean }).isNode)).toBe(true);
   });
 
   test('a { r, g, b } tint is sRGB 0-255', () => {

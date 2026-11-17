@@ -4,7 +4,9 @@
 //
 // A bake is a full-screen triangle (three's `QuadMesh`) whose material's `fragmentNode` is the
 // graph (several outputs: `mrt()` keyed by the target's texture names, which is how three matches
-// an MRT output to its attachment), rendered into one target with a texture per output, each
+// an MRT output to its attachment), or a mesh drawn in its UV space (`mesh`: each vertex placed at
+// its UV, so the graph reads the mesh's attributes and world position at every texel its triangles
+// cover, p305 Phase 7: a terrain block's colour map), rendered into one target with a texture per output, each
 // registered as `<id>.<name>` and owned like any other: released with the scene loading it (or
 // current), unless persistent. An array bake (`layers` > 1) renders its layers one by one into an
 // array target (`setRenderTarget(target, layer)`, both backends on three r187), the graph reading
@@ -67,6 +69,17 @@ export type BakeBuildContext = {
   texel: THREE.Node<'vec2'>;
 };
 
+/**
+ * A mesh a bake draws in its UV space ({@link BakeTextureOpts}' `mesh`): its geometry, with a `uv`
+ * attribute, placed in the world by `matrixWorld`.
+ */
+export type BakeMesh = {
+  /** The geometry drawn: each vertex at its `uv` in the texture. Keep it alive for `rebake()`. */
+  geometry: THREE.BufferGeometry;
+  /** Where the mesh stands, for the graph's world position and normal (default the identity). */
+  matrixWorld?: THREE.Matrix4;
+};
+
 /** What {@link bakeTexture} bakes. */
 export type BakeTextureOpts = {
   /** The bake's id: each output's texture is registered as `<id>.<name>`. */
@@ -92,6 +105,14 @@ export type BakeTextureOpts = {
   anisotropy?: number | 'MAX';
   /** Never released with its scene. */
   isPersistent?: boolean;
+  /**
+   * Bakes in a mesh's UV space instead of over the whole texture: its triangles drawn at their
+   * UVs, both faces, so a texel holds the graph at the surface point its UV maps to (the mesh's
+   * attributes, `positionWorld`, `normalWorldGeometry`; `ctx.uv` the mesh's UV), eg. a block's
+   * colour map. A texel no triangle covers keeps the clear (transparent black: no dilation), and
+   * the camera is the bake's (at the origin), so a graph shouldn't read the view or the facing.
+   */
+  mesh?: BakeMesh;
 };
 
 /** A bake's textures and its controls, from {@link bakeTexture}. */
@@ -123,7 +144,9 @@ type BakeState = {
   target: THREE.RenderTarget;
   /** `BakeBuildContext.layer`: set before each layer's render. */
   layerNode: THREE.UniformNode<'int', number>;
-  quad: THREE.QuadMesh;
+  /** What renders: the full-screen triangle, or the `mesh` drawn in its UV space */
+  object: THREE.Mesh;
+  camera: THREE.Camera;
   material: THREE.NodeMaterial;
   registered: [string, THREE.Texture][];
   onTextureDispose: (event: { target: THREE.Texture }) => void;
@@ -166,6 +189,16 @@ const createFullScreenVertexNode = () =>
     1
   );
 
+// A mesh vertex at its UV: u across, v = 0 the target's top row (a render target's v = 0 is the
+// top of the rendered image on both backends), so a material sampling the bake at the mesh's UV
+// reads what the graph wrote for that point
+const createUvSpaceVertexNode = () => {
+  const meshUv = uv() as unknown as THREE.Node<'vec2'>;
+  const x = meshUv.x.mul(2).sub(1) as THREE.Node<'float'>;
+  const y = float(1).sub(meshUv.y.mul(2)) as unknown as THREE.Node<'float'>;
+  return vec4(x, y, 0, 1);
+};
+
 const resolveOutputNodes = (opts: BakeTextureOpts, ctx: BakeBuildContext) => {
   const built = opts.build?.(ctx) ?? {};
   return opts.outputs.map(({ name, node }) => {
@@ -180,7 +213,10 @@ const resolveOutputNodes = (opts: BakeTextureOpts, ctx: BakeBuildContext) => {
 };
 
 const validateOpts = (opts: BakeTextureOpts) => {
-  const { id, outputs, layers = 1 } = opts;
+  const { id, outputs, layers = 1, mesh } = opts;
+  if (mesh && !mesh.geometry.getAttribute('uv')) {
+    throw new Error(`bakeTexture: the mesh of "${id}" has no uv attribute to bake in.`);
+  }
   if (outputs.length < 1 || outputs.length > MAX_OUTPUTS) {
     throw new Error(
       `bakeTexture: "${id}" has ${outputs.length} outputs; it takes 1 to ${MAX_OUTPUTS}.`
@@ -257,16 +293,39 @@ const createOutputNode = (target: THREE.RenderTarget, nodes: THREE.Node[]) => {
   return mrt(outputs);
 };
 
-const createBakeMaterial = (id: string, node: THREE.Node) => {
+const createBakeMaterial = (id: string, node: THREE.Node, isMesh: boolean) => {
   const material = new THREE.NodeMaterial();
   material.name = `TextureBaker.${id}`;
   material.blending = THREE.NoBlending;
   material.depthTest = false;
   material.depthWrite = false;
   material.fog = false;
-  material.vertexNode = createFullScreenVertexNode();
+  // A UV island may be mirrored: its triangles face away in UV space
+  if (isMesh) material.side = THREE.DoubleSide;
+  material.vertexNode = isMesh ? createUvSpaceVertexNode() : createFullScreenVertexNode();
   material.fragmentNode = node;
   return material;
+};
+
+/**
+ * What a bake renders: three's full-screen triangle with its camera, or the mesh's geometry with
+ * the material, placed by its matrix (fixed: not updated from a position), and a camera like the
+ * triangle's
+ */
+const createBakeObject = (opts: BakeTextureOpts, material: THREE.NodeMaterial) => {
+  if (!opts.mesh) {
+    const quad = new THREE.QuadMesh(material);
+    quad.name = `TextureBaker.${opts.id}`;
+    quad.frustumCulled = false;
+    return { object: quad as THREE.Mesh, camera: quad.camera };
+  }
+  const mesh = new THREE.Mesh(opts.mesh.geometry, material);
+  mesh.name = `TextureBaker.${opts.id}`;
+  mesh.frustumCulled = false;
+  mesh.matrixAutoUpdate = false;
+  if (opts.mesh.matrixWorld) mesh.matrix.copy(opts.mesh.matrixWorld);
+  mesh.matrixWorld.copy(mesh.matrix);
+  return { object: mesh, camera: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1) };
 };
 
 // The mips are generated after every render into a mipped target (WebGPU's `finishRender`, the
@@ -291,7 +350,7 @@ const clearBake = (renderer: THREE.Renderer, state: BakeState) => {
 };
 
 const renderBake = (renderer: THREE.Renderer, state: BakeState) => {
-  const { target, layerNode, quad } = state;
+  const { target, layerNode, object, camera } = state;
   const layers = target.depth;
   try {
     withBakeRendererState(renderer, () => {
@@ -300,7 +359,7 @@ const renderBake = (renderer: THREE.Renderer, state: BakeState) => {
         setMipmapsAutoUpdate(target, layer === layers - 1);
         layerNode.value = layer;
         renderer.setRenderTarget(target, layer);
-        renderer.render(quad, quad.camera);
+        renderer.render(object, camera);
       }
     });
   } finally {
@@ -386,7 +445,7 @@ const compileBakeAsync = (renderer: THREE.Renderer, state: BakeState) =>
     renderer.setRenderTarget(state.target);
     renderer.setMRT(null);
     try {
-      await renderer.compileAsync(state.quad, state.quad.camera);
+      await renderer.compileAsync(state.object, state.camera);
     } finally {
       renderer.setRenderTarget(prevTarget, prevFace, prevLevel);
       renderer.setMRT(prevMRT);
@@ -424,6 +483,9 @@ const disposeBake = (state: BakeState, skip?: THREE.Texture) => {
  * During a scene load the bake renders as soon as it has compiled, and the loader's
  * `updateBakeStatusFn` hears of it (await it in scene code to hold the load until it's baked).
  * Outside a load its renders queue: one bake a frame, a rebake of the bake at most once per 150 ms.
+ *
+ * With `mesh`, the graph is baked in the mesh's UV space: its triangles are drawn at their UVs, so
+ * each texel holds the graph at the surface point its UV maps to (a block's colour map, its AO).
  *
  * The baked textures are uncompressed (see {@link getBakedTextureMemoryBytes}), and their content
  * is visual only: GPUs differ in float precision, so never derive gameplay or colliders from it.
@@ -498,17 +560,16 @@ export const bakeTexture = (opts: BakeTextureOpts): Promise<BakedTexture> => {
   const nodes = resolveOutputNodes(opts, ctx);
 
   const target = createBakeTarget(renderer, opts, width, height);
-  const material = createBakeMaterial(opts.id, createOutputNode(target, nodes));
-  const quad = new THREE.QuadMesh(material);
-  quad.name = `TextureBaker.${opts.id}`;
-  quad.frustumCulled = false;
+  const material = createBakeMaterial(opts.id, createOutputNode(target, nodes), Boolean(opts.mesh));
+  const { object, camera } = createBakeObject(opts, material);
 
   const textures: Record<string, THREE.Texture> = {};
   const state = {
     id: opts.id,
     target,
     layerNode,
-    quad,
+    object,
+    camera,
     material,
     registered: [],
     isDisposed: false,

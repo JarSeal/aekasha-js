@@ -27,7 +27,7 @@ Texture sets are for **surfaces that tile**: ground, rock, snow, walls, floors, 
 | -------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Art style            | Photoreal and stylized PBR from scans or bakes; painterly with `MINIMAL` and a flat or bump normal | Low-poly flat colour (vertex colours, no textures); hand-painted unique textures on one model (a plain material's maps) |
 | Game type and camera | Every camera: the packing and the texel density change, not the set                                | —                                                                                                                       |
-| World size           | A room to an open world: tiling in world space continues across meshes and blocks                  | A surface seen once and never repeated (a unique colour map, p305's colour map + detail)                                |
+| World size           | A room to an open world: tiling in world space continues across meshes and blocks                  | A surface seen once and never repeated (a unique colour map: [Colour map + detail](terrain-colormap-detail.md))         |
 
 Poor fits also: props with UV-unwrapped unique textures (an imported glTF's own maps), and anything with large-scale features baked into the source (a valley's shadow, a path): a tiled layer repeats them every few metres.
 
@@ -58,7 +58,7 @@ A set ships as many packings as it needs: the library's sets are `LITE` only but
 
 - **Bindings:** one per texture, so `P` per set. WebGPU's 16 sampled textures per stage (shadow maps and the environment map included) allow about 3 `FULL` or 4 `LITE` sets in one material; a [set array](#set-arrays) binds `P` arrays for up to 16 layers.
 - **Draw calls:** none of its own. A set is data a material samples.
-- **Quality tier:** the packing (above). p305's terrain material picks it per tier.
+- **Quality tier:** the packing (above). It's a material's: the terrain material's tiers keep it (the packing is in its inputs), so a low-end packing is a material of its own.
 - **Measured GPU time:** p310 adds the gallery's.
 
 ## Maps
@@ -109,8 +109,8 @@ A set ships as many packings as it needs: the library's sets are `LITE` only but
 
 2. **The strength:** `yarn fetchTextureSources --scaffold` writes the set's `surface.aoStrength` (default 1) as the multiply's strength. The library uses 1 everywhere: the scans' AO maps are mild (their 1st percentile is 0.38–0.86). Change it in the recipe, then `yarn assets`: the set's `surface.aoStrength` in the JSON no longer changes a baked AO, only `FULL`'s ORM AO at runtime.
 3. **What it costs:**
-   - **Baked AO darkens direct sunlight too.** Physically, AO only occludes indirect light (`FULL`'s ORM AO goes to the material's `aoNode`, which three applies to indirect light only). At pebble scale nobody can tell. At rock or valley scale they can: never bake large-scale occlusion into a tiling layer (it belongs in vertex AO or a colour map, p306 and p305).
-   - **It stacks with screen-space AO.** The app's `ambientOcclusion` PostFX pass (GTAO, `src/app/postFx/ambientOcclusion.tsl.ts`) multiplies over the whole image, so a crevice darkens twice. `docs/analysis/ambient-occlusion-options.md`'s rule: combine the two with `min()`, or split them by scale (the texture's crevices, GTAO's contact shadows). p305's terrain material lowers its own AO influence when a layer's AO is baked; with GTAO on, a lower recipe strength (0.5–0.7) is the simple fix for a set too dark in the cracks.
+   - **Baked AO darkens direct sunlight too.** Physically, AO only occludes indirect light (`FULL`'s ORM AO goes to the material's `aoNode`, which three applies to indirect light only). At pebble scale nobody can tell. At rock or valley scale they can: never bake large-scale occlusion into a tiling layer (it belongs in [vertex AO](terrain-vertex-color-splat.md#variations) or a [colour map](terrain-colormap-detail.md#variations)).
+   - **It stacks with screen-space AO.** The app's `ambientOcclusion` PostFX pass (GTAO, `src/app/postFx/ambientOcclusion.tsl.ts`) multiplies over the whole image, so a crevice darkens twice. `docs/analysis/ambient-occlusion-options.md`'s rule: combine the two with `min()`, or split them by scale (the texture's crevices, GTAO's contact shadows). The terrain material applies no texture AO of its own to a layer whose AO is baked, and halves its vertex AO there (`ao.bakedAlbedoInfluence`); with GTAO on, a lower recipe strength (0.5–0.7) is the simple fix for a set too dark in the cracks.
 
 ### AO from height (cavity)
 
@@ -254,23 +254,23 @@ Its static defines: `tiling` `"WORLD_XZ"` (the default: the world's `(x, −z)` 
 
 ## Set-up and parameters
 
-| Field                                              | What it is                                                                                                                 | Default                             |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| `id`                                               | The id materials and scenes name it by                                                                                     | The file's name                     |
-| `category`                                         | `SAND`, `MUD`, `ROCKS`, `CLIFF`, `SNOW`, `ICE`, `GRASS`, `CONCRETE`, `OTHER`: for the terrain tools' defaults and grouping | Required                            |
-| `physicalSize`                                     | Metres one tile covers, `[width, height]`                                                                                  | Required                            |
-| `heightScale`                                      | Metres of relief a height of 1 stands for                                                                                  | Required                            |
-| `defaultPacking`                                   | The packing a scene listing it, or an input without `packing`, loads                                                       | `LITE`, else `FULL`, else `MINIMAL` |
-| `packings`                                         | The texture ids per packing and slot (at least one packing)                                                                | Required                            |
-| `surface.tint`                                     | A colour multiplied into the albedo (sRGB)                                                                                 | `#ffffff`                           |
-| `surface.normalStrength`                           | Scales the normal's slope                                                                                                  | 1                                   |
-| `surface.roughnessScale`                           | Scales the roughness (the baseline caps it at 1)                                                                           | 1                                   |
-| `surface.aoStrength`                               | How much of `FULL`'s AO applies; the scaffold's multiply strength for a baked AO                                           | 1                                   |
-| `surface.heightContrast`                           | Sharpens (> 1) or softens (< 1) the height for height blending (p305)                                                      | 1                                   |
-| `surface.porosity`, `wetDarkening`, `wetRoughness` | The wet response (p307)                                                                                                    | 0.5, 0.5, 0.3                       |
-| `averageColor`                                     | The albedo's average (sRGB), for p305's far mode                                                                           | Measured by the asset pipeline      |
+| Field                                              | What it is                                                                                                                                | Default                             |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `id`                                               | The id materials and scenes name it by                                                                                                    | The file's name                     |
+| `category`                                         | `SAND`, `MUD`, `ROCKS`, `CLIFF`, `SNOW`, `ICE`, `GRASS`, `CONCRETE`, `OTHER`: for the terrain tools' defaults and grouping                | Required                            |
+| `physicalSize`                                     | Metres one tile covers, `[width, height]`                                                                                                 | Required                            |
+| `heightScale`                                      | Metres of relief a height of 1 stands for                                                                                                 | Required                            |
+| `defaultPacking`                                   | The packing a scene listing it, or an input without `packing`, loads                                                                      | `LITE`, else `FULL`, else `MINIMAL` |
+| `packings`                                         | The texture ids per packing and slot (at least one packing)                                                                               | Required                            |
+| `surface.tint`                                     | A colour multiplied into the albedo (sRGB)                                                                                                | `#ffffff`                           |
+| `surface.normalStrength`                           | Scales the normal's slope                                                                                                                 | 1                                   |
+| `surface.roughnessScale`                           | Scales the roughness (the baseline caps it at 1)                                                                                          | 1                                   |
+| `surface.aoStrength`                               | How much of `FULL`'s AO applies; the scaffold's multiply strength for a baked AO                                                          | 1                                   |
+| `surface.heightContrast`                           | Sharpens (> 1) or softens (< 1) the height for the terrain material's [height blend](terrain-vertex-color-splat.md#set-up-and-parameters) | 1                                   |
+| `surface.porosity`, `wetDarkening`, `wetRoughness` | The wet response (p307)                                                                                                                   | 0.5, 0.5, 0.3                       |
+| `averageColor`                                     | The albedo's average (sRGB), for the terrain material's [colour map detail and far surface](terrain-colormap-detail.md)                   | Measured by the asset pipeline      |
 
-The `surface` fields are defaults: a terrain material copies them into uniforms, and each of its layers can override any of them.
+The `surface` fields are defaults: a material copies them into uniforms. The terrain material's layers multiply `tint`, `normalStrength`, `roughnessScale` and `heightContrast` by their own ([Single-layer terrain](terrain-single-layer.md#set-up-and-parameters)).
 
 ### Choosing `physicalSize` and texel density
 
@@ -284,7 +284,7 @@ The texel density near the camera is the texture's pixels over `physicalSize`: a
 | Third person  | ~256 px/m      | A 1K set over 4 m                    |
 | Top-down, RTS | 64–128 px/m    | A 512 set is enough (`maxSize: 512`) |
 
-A smaller `physicalSize` is sharper but repeats sooner. The library's 1.3 m sets (`mud01`, `rocks02`) and `concrete01` (1.1 m) show their repetition at 2 × 2 tiles: that's p305's anti-tiling's job, not a larger size's.
+A smaller `physicalSize` is sharper but repeats sooner. The library's 1.3 m sets (`mud01`, `rocks02`) and `concrete01` (1.1 m) show their repetition at 2 × 2 tiles: that's [anti-tiling](terrain-single-layer.md#variations)'s job, not a larger size's.
 
 ### Choosing `heightScale`
 
@@ -304,7 +304,7 @@ The height map's relief must agree with the normal map's, or height blending and
 
 ### Set arrays
 
-Several sets of one packing as one array texture per slot: a terrain material binds 2 textures (`LITE`) for up to 16 layers instead of 2 per layer. A material input `{ "textureSetArray": ["sand01", "grass01", "rocks01", "cliffs01"], "packing": "LITE" }` makes one with the scene's load; in code, `buildTextureSetArray({ sets, packing })` (`aekasha/texturesets`). Every set needs the packing, and every slot the same size, mip count and codec (so `concrete01`, 1024 × 512, can't join the others). Each layer's `physicalSize`, `heightScale` and `surface` fields come along as one uniform array (`getTextureSetLayerParams`). A `swappable: true` array can change a layer at runtime (`setTextureSetArrayLayer`), at the cost of a CPU copy as large as its VRAM. p305's terrain material samples them.
+Several sets of one packing as one array texture per slot: a terrain material binds 2 textures (`LITE`) for up to 16 layers instead of 2 per layer. A material input `{ "textureSetArray": ["sand01", "grass01", "rocks01", "cliffs01"], "packing": "LITE" }` makes one with the scene's load; in code, `buildTextureSetArray({ sets, packing })` (`aekasha/texturesets`). Every set needs the packing, and every slot the same size, mip count and codec (so `concrete01`, 1024 × 512, can't join the others). Each layer's `physicalSize`, `heightScale`, `surface` fields and `averageColor` (mid-grey for a set without one, warned) come along as one uniform array (`getTextureSetLayerParams`). A `swappable: true` array can change a layer at runtime (`setTextureSetArrayLayer`), at the cost of a CPU copy as large as its VRAM. The terrain material samples them, with sparse sampling ([Splat map](terrain-splat-map.md#storage-and-the-binding-budget)).
 
 ## Where to get sets
 
