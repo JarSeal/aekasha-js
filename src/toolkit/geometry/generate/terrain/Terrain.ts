@@ -1,14 +1,9 @@
 import * as THREE from 'three/webgpu';
-import { SimplexNoise } from 'three/examples/jsm/math/SimplexNoise.js';
 import { createSeededRandom } from 'aekasha';
 import { toHeightfieldColliderParams, type HeightFieldData } from 'aekasha/physics';
-import { computeTerrainAo, getTerrainAoMarch, type TerrainAoOptions } from './TerrainAo';
-import {
-  evaluateTerrainRulesCPU,
-  type TerrainRule,
-  type TerrainRuleNoiseTexels,
-  type TerrainRulePoint,
-} from './TerrainRules';
+import type { TerrainAoOptions } from './TerrainAo';
+import { buildTerrainData, recordTerrainNoiseDraws, type TerrainData } from './TerrainCore';
+import type { TerrainRule, TerrainRuleNoiseTexels } from './TerrainRules';
 
 /** One octave of a terrain's height noise ({@link TerrainOptions}' `noiseOctaves`). */
 export interface TerrainNoiseOctave {
@@ -145,151 +140,70 @@ export interface GeneratedTerrain {
   heightfield?: HeightFieldData & { type: 'HEIGHTFIELD' };
 }
 
-const DEFAULT_OCTAVES: TerrainNoiseOctave[] = [
-  { frequency: 1 / 50, amplitude: 1 },
-  { frequency: 1 / 18, amplitude: 0.35 },
-];
-/** The layers a vertex colour layout weighs, the base included */
-const LAYOUT_LAYERS = { RGB_AO: 4, RGBA: 5 } as const;
-
-/** The height at a world (x, z): the noise's or `heightFn`'s, then `heightModifier`'s */
-const createHeightSampler = (opts: TerrainOptions) => {
-  const { heightFn, heightModifier, maxHeight, noiseOctaves = DEFAULT_OCTAVES, seed = 1 } = opts;
-  let base = heightFn;
-  if (!base) {
-    if (maxHeight === undefined) {
-      throw new Error('generateTerrain: give maxHeight (the noise peak) or heightFn.');
-    }
-    const simplex = new SimplexNoise({ random: createSeededRandom(seed) });
-    const totalAmplitude = noiseOctaves.reduce((sum, o) => sum + o.amplitude, 0) || 1;
-    base = (x, z) => {
-      let h = 0;
-      for (const octave of noiseOctaves) {
-        h += simplex.noise(x * octave.frequency, z * octave.frequency) * octave.amplitude;
-      }
-      return (h / totalAmplitude) * maxHeight;
-    };
-  }
-  if (!heightModifier) return base;
-  const unmodified = base;
-  return (x: number, z: number) => heightModifier(x, z, unmodified(x, z));
-};
-
-/** The grid's place and spacing, its border cells included where the AO or normals look past it */
-type TerrainGrid = {
-  rows: number;
-  cols: number;
-  border: number;
-  dx: number;
-  dz: number;
-  /** The heights with the border, row-major, `cols + 2 × border` a row */
-  values: Float32Array;
-};
-
-/** Each vertex's normal from the height grid's central differences (the border's included) */
-const getHeightFnNormals = ({ rows, cols, border, dx, dz, values }: TerrainGrid) => {
-  const gridCols = cols + border * 2;
-  const normals = new Float32Array(rows * cols * 3);
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      const g = (row + border) * gridCols + col + border;
-      const nx = -(values[g + 1] - values[g - 1]) / (2 * dx);
-      const nz = -(values[g + gridCols] - values[g - gridCols]) / (2 * dz);
-      const length = Math.sqrt(nx * nx + 1 + nz * nz);
-      const i = (row * cols + col) * 3;
-      normals[i] = nx / length;
-      normals[i + 1] = 1 / length;
-      normals[i + 2] = nz / length;
-    }
-  }
-  return normals;
-};
-
-/** The vertex colours (RGBA bytes): the rules' weights of layers 1+, `RGB_AO`'s A the AO */
-const getVertexColors = (
-  opts: TerrainVertexColorOptions,
-  positions: Float32Array,
-  normals: ArrayLike<number>,
-  center: [number, number],
-  ao: Float32Array | undefined
-) => {
-  const { layout, rules = [], noise } = opts;
-  const layerCount = LAYOUT_LAYERS[layout];
-  const unknown = rules.find((rule) => !(rule.layer >= 0 && rule.layer < layerCount));
-  if (unknown) {
-    throw new Error(
-      `generateTerrain: a rule's layer is ${unknown.layer}: ${layout} weighs layers 0 to ${layerCount - 1}.`
-    );
-  }
-  const count = positions.length / 3;
-  const colors = new Uint8Array(count * 4);
-  const weights = new Float32Array(layerCount);
-  const point: TerrainRulePoint = { x: 0, y: 0, z: 0, normalX: 0, normalY: 1, normalZ: 0 };
-  const toByte = (value: number) => Math.round(Math.min(1, Math.max(0, value)) * 255);
-  for (let i = 0; i < count; i++) {
-    weights.fill(0);
-    weights[0] = 1;
-    if (rules.length) {
-      point.x = center[0] + positions[i * 3];
-      point.y = positions[i * 3 + 1];
-      point.z = center[1] + positions[i * 3 + 2];
-      point.normalX = normals[i * 3];
-      point.normalY = normals[i * 3 + 1];
-      point.normalZ = normals[i * 3 + 2];
-      evaluateTerrainRulesCPU(rules, point, weights, noise);
-    }
-    for (let channel = 0; channel < 4; channel++) {
-      const value =
-        channel === 3 && layout === 'RGB_AO' ? (ao ? ao[i] : 1) : weights[channel + 1] ?? 0;
-      colors[i * 4 + channel] = toByte(value);
-    }
-  }
-  return colors;
-};
-
-/** The grid's edge vertices as one closed loop: the −z edge along +x, then +x, +z and −x */
-const getEdgeLoop = (rows: number, cols: number) => {
-  const loop: number[] = [];
-  for (let col = 0; col < cols; col++) loop.push(col);
-  for (let row = 1; row < rows; row++) loop.push(row * cols + cols - 1);
-  for (let col = cols - 2; col >= 0; col--) loop.push((rows - 1) * cols + col);
-  for (let row = rows - 2; row > 0; row--) loop.push(row * cols);
-  return loop;
-};
-
 /**
- * The skirt: a copy of each edge vertex `depth` lower (its other attributes copied), and a strip
- * of outward-facing triangles between them
+ * The terrain's geometry, `getHeightAt` and collider params from its arrays (`buildTerrainData`'s,
+ * on this thread or the terrain worker's).
+ * @internal
  */
-const addSkirt = (
-  geometry: THREE.BufferGeometry,
-  indices: number[],
-  { rows, cols }: { rows: number; cols: number },
-  depth: number
-) => {
-  const loop = getEdgeLoop(rows, cols);
-  const count = rows * cols;
-  for (const name of Object.keys(geometry.attributes)) {
-    const attribute = geometry.getAttribute(name) as THREE.BufferAttribute;
-    const size = attribute.itemSize;
-    const source = attribute.array as Float32Array | Uint8Array;
-    const array = new (source.constructor as Float32ArrayConstructor | Uint8ArrayConstructor)(
-      (count + loop.length) * size
-    );
-    array.set(source);
-    loop.forEach((vertex, i) => {
-      for (let k = 0; k < size; k++) array[(count + i) * size + k] = source[vertex * size + k];
-      if (name === 'position') array[(count + i) * size + 1] -= depth;
-    });
-    geometry.setAttribute(name, new THREE.BufferAttribute(array, size, attribute.normalized));
+export const toGeneratedTerrain = (
+  data: TerrainData,
+  opts: Pick<TerrainOptions, 'width' | 'depth' | 'center' | 'collider'>
+): GeneratedTerrain => {
+  const { width, depth, center = [0, 0], collider = false } = opts;
+  const { widthSegments, depthSegments, heights } = data;
+  const cols = widthSegments + 1;
+  const rows = depthSegments + 1;
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(data.positions, 3));
+  geometry.setAttribute('uv', new THREE.BufferAttribute(data.uvs, 2));
+  geometry.setIndex(new THREE.BufferAttribute(data.index, 1));
+  geometry.setAttribute('normal', new THREE.BufferAttribute(data.normals, 3));
+  if (data.colors) geometry.setAttribute('color', new THREE.BufferAttribute(data.colors, 4, true));
+  // The arrays' own bounds (three's computations, done where the arrays were made)
+  geometry.boundingBox = new THREE.Box3(
+    new THREE.Vector3(...data.boxMin),
+    new THREE.Vector3(...data.boxMax)
+  );
+  geometry.boundingSphere = new THREE.Sphere(
+    new THREE.Vector3(...data.sphereCenter),
+    data.sphereRadius
+  );
+
+  const getHeightAt = (x: number, z: number): number => {
+    const u = THREE.MathUtils.clamp((x + width / 2) / width, 0, 1) * widthSegments;
+    const v = THREE.MathUtils.clamp((z + depth / 2) / depth, 0, 1) * depthSegments;
+    // The cell (the far edge belongs to the last one) and the point's place in it
+    const col0 = Math.min(Math.floor(u), widthSegments - 1);
+    const row0 = Math.min(Math.floor(v), depthSegments - 1);
+    const tx = u - col0;
+    const tz = v - row0;
+
+    const h00 = heights[row0 * cols + col0];
+    const h10 = heights[row0 * cols + col0 + 1];
+    const h01 = heights[(row0 + 1) * cols + col0];
+    const h11 = heights[(row0 + 1) * cols + col0 + 1];
+
+    // The plane of the triangle under the point: (a, b, c) up to the b–c diagonal, (b, c, d) past it
+    if (tx + tz <= 1) return h00 + (h10 - h00) * tx + (h01 - h00) * tz;
+    return h11 + (h01 - h11) * (1 - tx) + (h10 - h11) * (1 - tz);
+  };
+
+  const result: GeneratedTerrain = {
+    geometry,
+    width,
+    depth,
+    widthSegments,
+    depthSegments,
+    center,
+    getHeightAt,
+    heights,
+  };
+  if (data.ao) result.ao = data.ao;
+  if (collider) {
+    result.heightfield = toHeightfieldColliderParams({ heights, rows, cols, width, depth });
   }
-  loop.forEach((p, i) => {
-    const next = (i + 1) % loop.length;
-    const q = loop[next];
-    const pSkirt = count + i;
-    const qSkirt = count + next;
-    indices.push(p, q, pSkirt, q, qSkirt, pSkirt);
-  });
+  return result;
 };
 
 /**
@@ -354,142 +268,7 @@ const addSkirt = (
  * ```
  */
 export const generateTerrain = (opts: TerrainOptions): GeneratedTerrain => {
-  // The vertices are built here, not by a rotated PlaneGeometry, so the grid's (row, col) → world
-  // (x, z) mapping is the one getHeightAt reads back (a rotated plane's vertex order would mirror
-  // the sampled heights against the mesh)
-  const {
-    width,
-    depth,
-    widthSegments: rawWidthSegments,
-    depthSegments: rawDepthSegments,
-    center = [0, 0],
-    normals: normalSource = 'GEOMETRY',
-    ao: aoOpts,
-    vertexColors,
-    collider = false,
-    skirt = 0,
-  } = opts;
-  if (!(skirt >= 0)) throw new Error(`generateTerrain: skirt is ${skirt}, not 0 or more.`);
-  const aoStrength = aoOpts?.strength ?? 1;
-  if (!(aoStrength >= 0 && aoStrength <= 1)) {
-    throw new Error(`generateTerrain: ao.strength is ${aoStrength}, not within 0..1.`);
-  }
-  const sampleHeight = createHeightSampler(opts);
-
-  // The grid's cell counts: whole numbers of 1 or more, which the arrays below are sized by
-  const widthSegments = Math.max(1, Math.round(rawWidthSegments));
-  const depthSegments = Math.max(1, Math.round(rawDepthSegments));
-  const cols = widthSegments + 1;
-  const rows = depthSegments + 1;
-  const dx = width / widthSegments;
-  const dz = depth / depthSegments;
-
-  // The heights, with a border of the same surface past the edge where the normals or the AO
-  // look past it
-  const march = aoOpts ? getTerrainAoMarch(aoOpts, Math.min(dx, dz)) : null;
-  const border = Math.max(
-    normalSource === 'HEIGHT_FN' ? 1 : 0,
-    march ? march.steps * march.stride : 0
-  );
-  const gridCols = cols + border * 2;
-  const gridRows = rows + border * 2;
-  const grid = new Float32Array(gridCols * gridRows);
-  for (let gridRow = 0; gridRow < gridRows; gridRow++) {
-    const z = ((gridRow - border) / depthSegments) * depth - depth / 2;
-    for (let gridCol = 0; gridCol < gridCols; gridCol++) {
-      const x = ((gridCol - border) / widthSegments) * width - width / 2;
-      grid[gridRow * gridCols + gridCol] = sampleHeight(center[0] + x, center[1] + z);
-    }
-  }
-  const terrainGrid: TerrainGrid = { rows, cols, border, dx, dz, values: grid };
-
-  const heights = border ? new Float32Array(cols * rows) : grid;
-  const positions = new Float32Array(cols * rows * 3);
-  const uvs = new Float32Array(cols * rows * 2);
-  for (let row = 0; row < rows; row++) {
-    const z = (row / depthSegments) * depth - depth / 2;
-    for (let col = 0; col < cols; col++) {
-      const x = (col / widthSegments) * width - width / 2;
-      const i = row * cols + col;
-      const h = grid[(row + border) * gridCols + col + border];
-      heights[i] = h;
-      positions[i * 3] = x;
-      positions[i * 3 + 1] = h;
-      positions[i * 3 + 2] = z;
-      uvs[i * 2] = col / widthSegments;
-      uvs[i * 2 + 1] = row / depthSegments;
-    }
-  }
-
-  const indices: number[] = [];
-  for (let row = 0; row < depthSegments; row++) {
-    for (let col = 0; col < widthSegments; col++) {
-      const a = row * cols + col;
-      const b = a + 1;
-      const c = a + cols;
-      const d = c + 1;
-      // Winding chosen so the computed normal faces +Y before computeVertexNormals()
-      // re-derives the real (slope-aware) normals. The two triangles share the b–c diagonal,
-      // which getHeightAt follows.
-      indices.push(a, c, b, b, c, d);
-    }
-  }
-
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-  geometry.setIndex(indices);
-  if (normalSource === 'HEIGHT_FN') {
-    geometry.setAttribute('normal', new THREE.BufferAttribute(getHeightFnNormals(terrainGrid), 3));
-  } else {
-    geometry.computeVertexNormals();
-  }
-
-  const ao = march ? computeTerrainAo(grid, terrainGrid, march, aoStrength) : undefined;
-  if (vertexColors) {
-    const normals = geometry.getAttribute('normal').array;
-    const colors = getVertexColors(vertexColors, positions, normals, center, ao);
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4, true));
-  }
-  if (skirt > 0) {
-    addSkirt(geometry, indices, { rows, cols }, skirt);
-    geometry.setIndex(indices);
-  }
-  geometry.computeBoundingSphere();
-  geometry.computeBoundingBox();
-
-  const getHeightAt = (x: number, z: number): number => {
-    const u = THREE.MathUtils.clamp((x + width / 2) / width, 0, 1) * widthSegments;
-    const v = THREE.MathUtils.clamp((z + depth / 2) / depth, 0, 1) * depthSegments;
-    // The cell (the far edge belongs to the last one) and the point's place in it
-    const col0 = Math.min(Math.floor(u), widthSegments - 1);
-    const row0 = Math.min(Math.floor(v), depthSegments - 1);
-    const tx = u - col0;
-    const tz = v - row0;
-
-    const h00 = heights[row0 * cols + col0];
-    const h10 = heights[row0 * cols + col0 + 1];
-    const h01 = heights[(row0 + 1) * cols + col0];
-    const h11 = heights[(row0 + 1) * cols + col0 + 1];
-
-    // The plane of the triangle under the point: (a, b, c) up to the b–c diagonal, (b, c, d) past it
-    if (tx + tz <= 1) return h00 + (h10 - h00) * tx + (h01 - h00) * tz;
-    return h11 + (h01 - h11) * (1 - tx) + (h10 - h11) * (1 - tz);
-  };
-
-  const result: GeneratedTerrain = {
-    geometry,
-    width,
-    depth,
-    widthSegments,
-    depthSegments,
-    center,
-    getHeightAt,
-    heights,
-  };
-  if (ao) result.ao = ao;
-  if (collider) {
-    result.heightfield = toHeightfieldColliderParams({ heights, rows, cols, width, depth });
-  }
-  return result;
+  const { seed = 1, collider: _collider, ...coreOpts } = opts;
+  const noiseDraws = opts.heightFn ? undefined : recordTerrainNoiseDraws(createSeededRandom(seed));
+  return toGeneratedTerrain(buildTerrainData({ ...coreOpts, noiseDraws }), opts);
 };

@@ -343,6 +343,16 @@ Add sections 5–7 (Blender, Export, Import) to the seven p305 pages, each refer
 
 **Exit:** a 257² block with AO generates without a frame over 16 ms.
 
+**As built:**
+
+- **Step 0** (`eb3b9434`): as planned.
+- **Step 1, the core** (`geometry/generate/terrain/TerrainCore.ts`): `buildTerrainData(opts)` returns `TerrainData`; `recordTerrainNoiseDraws(random)` records the `SimplexNoise`'s 256 draws, and the core replays them (throwing on a draw past them). Both `@internal`.
+  - **The shape:** `TerrainCoreOptions` is `TerrainOptions` without `seed` and `collider`, plus `noiseDraws`; the closures stay optional, so `generateTerrain` runs everything on it. The option types stay in `Terrain.ts` (the core imports them as types).
+  - **The bounds:** computed in the core, three's `computeBoundingBox` / `computeBoundingSphere` arithmetic, so the main thread doesn't walk the positions after a worker's result.
+  - **Exactness:** `TerrainCore.test.ts` checks the `GEOMETRY` normals and the bounds equal three's to the bit, the index type equals three's `setIndex` on grids either side of 65 535 vertices (a skirt's vertices counted), and the replayed noise equals a seeded `SimplexNoise`'s. `Terrain.test.ts`' and `ScatterOnSurface.test.ts`' pinned hashes are unchanged.
+  - **`generateTerrain`:** its draws, then `buildTerrainData`, then `toGeneratedTerrain(data, opts)` (`@internal`: the geometry, the bounds set from the data, `getHeightAt`, `toHeightfieldColliderParams`), which step 2 reuses for the worker's arrays.
+  - **Faster on the main thread too** (Node 22, 257² block, 3 octaves, median of 9, before → after): the defaults 30 → 11 ms, `HEIGHT_FN` normals 21 → 10 ms, + 3 rules 29 → 17 ms, + AO (16 m) 53 → 40 ms, everything with collider and skirt 65 → 48 ms. The typed index array and the plain-number normals replaced `number[]` and three's `Vector3`s. Every case with AO is still over 16 ms.
+
 ### Phase 5 — Blender add-on (D5)
 
 **Exit:** _Add → paint → bake AO → Validate → Export_ produces a block that spawns correctly, with the splat orientation matching the gallery's orientation block.
