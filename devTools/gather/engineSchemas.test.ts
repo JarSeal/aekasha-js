@@ -90,6 +90,7 @@ describe('getSceneFeatureIds (the scene manifest)', () => {
       'merge',
       'textureSets',
       'textureSetArrays',
+      'terrainBlocks',
     ]);
   });
 });

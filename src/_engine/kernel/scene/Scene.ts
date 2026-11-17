@@ -25,6 +25,7 @@ import type { StreamingManifest } from '../../features/streaming/StreamingManife
 import type { SceneAutoMergeEntry, SceneMergeGroupEntry } from '../../features/merging/MergeTypes';
 import type { SceneMergeMaterial } from '../../features/merging/MergeMaterialSchema';
 import type { SceneTextureSetArrayEntry, TextureSetDef } from '../../schemas/TextureSetSchema';
+import type { TerrainBlockDef } from '../../features/terrain/TerrainBlockSchema';
 
 /** A scene looper: called once per frame with the frame's delta (seconds). */
 export type Looper = (delta: number) => void;
@@ -101,6 +102,10 @@ export type SceneData = {
    * feature). `__textures` declares their members that `textures` doesn't (loaded for the arrays
    * alone, never on their own). */
   textureSetArrays?: (SceneTextureSetArrayEntry & { __textures?: TextureProps[] })[];
+  /** The terrain blocks the scene lists, resolved by the gatherer (their imports and materials
+   * are in `importedAssets` and `materials`, their inputs' textures in `textures`; the `terrain()`
+   * feature's `spawnTerrainBlock` reads them). */
+  terrainBlocks?: TerrainBlockDef[];
   /** The features this scene's data needs (the gatherer's manifest, p607 D10): `InitEngine`
    * fails when its `features` doesn't list one. */
   __features?: string[];

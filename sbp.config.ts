@@ -116,6 +116,9 @@ const profiles: SbpProfile[] = [
         // scene's procedural set bakes (`import()` of `TextureSetBakes.js`, 3.6 KiB with the
         // set arrays' chunk, lazy; the baker with it) took it from 976 B to 1090 B: 1 → 1.25 KiB
         '_engine/features/texturesets': 1.25 * KIB,
+        // p306 Phase 2: only the factory and its install (0.1 KiB gzip, one module); the spawner,
+        // the generator registry and the collider load with the scenes that spawn blocks
+        '_engine/features/terrain': 1 * KIB,
         '_engine/features/viewports': 3 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`). p302 (12 → 15
         // modules: the material code split up, the resolver registry, the input refs) took it to

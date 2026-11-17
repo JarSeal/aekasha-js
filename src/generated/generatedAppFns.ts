@@ -248,6 +248,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  terrainBlockTest: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/terrainBlockTest/terrainBlockTest.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   terrainGallery: async ({ sceneData, assets }) => {
     const module = await import('../app/./scenes/terrainGallery/terrainGallery.ts');
     await (

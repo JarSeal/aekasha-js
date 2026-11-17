@@ -16,6 +16,7 @@ import {
   MergeMaterialAssetSchema,
   PostFxAssetSchema,
   SkyBoxAssetSchema,
+  TerrainBlockAssetSchema,
   TextureArrayAssetSchema,
   TextureAssetSchema,
   TextureAtlasAssetSchema,
@@ -117,6 +118,7 @@ export const writeJsonSchemas = () => {
     { name: 'skyBox.schema.json', schema: SkyBoxAssetSchema },
     { name: 'postFx.schema.json', schema: PostFxAssetSchema },
     { name: 'impostor.schema.json', schema: ImpostorAssetSchema },
+    { name: 'terrainBlock.schema.json', schema: TerrainBlockAssetSchema },
     { name: 'assetsConfig.schema.json', schema: AssetsConfigSchema },
   ];
 

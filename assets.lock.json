@@ -726,32 +726,6 @@
       "ktxVersion": "4.4.2",
       "recipeKey": "caa91fc97797b58569695ae522406b22ffcae7310ccd5137d3545f349a6ee6e7"
     },
-    "4f95c5d6d802bc83ced9e08192fbdef8689be75f3a3b4f2946a2a2c6055cccef": {
-      "source": "src/app/scenes/testDebugScene/p371MergeKit.glb",
-      "url": "/aek-assets/app/scenes/testDebugScene/p371MergeKit.6b3f5e26.glb",
-      "bytes": 9828,
-      "geometryBytes": {
-        "in": 16800,
-        "out": 13032
-      },
-      "merge": {
-        "mode": "ALL",
-        "merged": [
-          {
-            "name": "__merged",
-            "material": "stone",
-            "parts": 20,
-            "vertices": 480,
-            "triangles": 240
-          }
-        ],
-        "kept": {
-          "excluded": 3,
-          "physics": 2,
-          "unsupported": 0
-        }
-      }
-    },
     "50b6d4a45d86b377b22c9b09a20fc5574a65bb3dcb7de5542ff28c09445fefea": {
       "source": "src/app/scenes/textureArrays/p299TestArray.textureArray.json",
       "url": "/aek-assets/app/scenes/textureArrays/p299TestArray.array.5c60d088.ktx2",
@@ -1004,6 +978,32 @@
       ],
       "ktxVersion": "4.4.2",
       "recipeKey": "e7fb7b12a02bb9db4050995af479c28f9dd5ed788fb5fa9f0d98391421c5f1a8"
+    },
+    "766575b07e3bf502d05474d6267b02b83ce02e6786f071c55593173fdfff8014": {
+      "source": "src/app/scenes/testDebugScene/p371MergeKit.glb",
+      "url": "/aek-assets/app/scenes/testDebugScene/p371MergeKit.81c7db98.glb",
+      "bytes": 16576,
+      "geometryBytes": {
+        "in": 16800,
+        "out": 21000
+      },
+      "merge": {
+        "mode": "ALL",
+        "merged": [
+          {
+            "name": "__merged",
+            "material": "stone",
+            "parts": 20,
+            "vertices": 480,
+            "triangles": 240
+          }
+        ],
+        "kept": {
+          "excluded": 3,
+          "physics": 2,
+          "unsupported": 0
+        }
+      }
     },
     "79bca03d150cdca5824a55606ca1c3ec9f673d10738a91bf7e6467e652140d52": {
       "source": "src/toolkit/textures/sand01/sand01_albedoHeightAO.texture.json",
@@ -2075,6 +2075,15 @@
       ],
       "ktxVersion": "4.4.2",
       "recipeKey": "d605d1728fe1a6c9c999ca5f64815ecee1a74262f4f42d2e26d808a2de18ad6c"
+    },
+    "f5afc21cc4337b61bd0800809f5197d8c4dc54fb95e92910ee4243a3816c7acf": {
+      "source": "src/public/debugger/assets/testModels/terrainSmooth.glb",
+      "url": "/aek-assets/debugger/assets/testModels/terrainSmooth.e4afb8f7.glb",
+      "bytes": 264980,
+      "geometryBytes": {
+        "in": 459264,
+        "out": 459264
+      }
     },
     "fb41ebc4f545e25b21e99e93613ea2bafc9bd59f0e32a20a15709d51c885ad24": {
       "source": "src/app/impostors/largeWorldRockImpostor.textureAtlas.json",

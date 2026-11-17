@@ -1126,11 +1126,18 @@
     "src/_engine/features/physics/ColliderDimensions.ts": {
       "deriveColliderDimensionsFromMesh": "Function"
     },
+    "src/_engine/features/physics/HeightfieldColliderParams.ts": {
+      "HeightfieldGrid": "TypeAlias",
+      "toHeightfieldColliderParams": "Function"
+    },
     "src/_engine/features/physics/import/ColliderBounds.ts": {
       "ColliderBounds": "TypeAlias",
       "getColliderBounds": "Function",
       "SpineAxis": "TypeAlias",
       "toSpineAxis": "Function"
+    },
+    "src/_engine/features/physics/import/HeightfieldFromGeometry.ts": {
+      "deriveHeightfield": "Function"
     },
     "src/_engine/features/physics/import/ImportPhysics.ts": {
       "spawnImportedPhysics": "Function"
@@ -2155,6 +2162,41 @@
       "resolveStreamingSettings": "Function",
       "STREAMING_MIN_CELL_SIZE": "Variable",
       "STREAMING_NEARBY_PHYSICS_TIERS": "Variable"
+    },
+    "src/_engine/features/terrain/TerrainBlocks.ts": {
+      "getTerrainBlock": "Function",
+      "spawnTerrainBlock": "Function",
+      "SpawnTerrainBlockOpts": "TypeAlias",
+      "TerrainBlock": "TypeAlias"
+    },
+    "src/_engine/features/terrain/TerrainBlockSchema.ts": {
+      "TERRAIN_BLOCK_COLLIDER_TYPES": "Variable",
+      "TERRAIN_BLOCK_DEFAULTS": "Variable",
+      "TerrainBlockAsset": "TypeAlias",
+      "TerrainBlockAssetSchema": "Variable",
+      "TerrainBlockColliderType": "TypeAlias",
+      "TerrainBlockDef": "TypeAlias",
+      "TerrainBlockGeometry": "TypeAlias",
+      "terrainSchemaPart": "Variable"
+    },
+    "src/_engine/features/terrain/TerrainCollider.ts": {
+      "createTerrainBlockColliderAsync": "Function"
+    },
+    "src/_engine/features/terrain/TerrainFeature.ts": {
+      "terrain": "Function"
+    },
+    "src/_engine/features/terrain/TerrainGenerators.ts": {
+      "getTerrainGenerator": "Function",
+      "getTerrainGeneratorIds": "Function",
+      "registerTerrainGenerator": "Function",
+      "TerrainGenerator": "TypeAlias",
+      "TerrainGeneratorOpts": "TypeAlias",
+      "TerrainGeneratorResult": "TypeAlias",
+      "unregisterTerrainGenerator": "Function"
+    },
+    "src/_engine/features/terrain/TerrainState.ts": {
+      "assertTerrainInstalled": "Function",
+      "terrainState": "Variable"
     },
     "src/_engine/features/texturesets/TextureSetArrays.ts": {
       "buildSceneTextureSetArraysAsync": "Function",
@@ -5874,6 +5916,7 @@
       "EventQueue",
       "FeatureType",
       "HeightFieldData",
+      "HeightfieldGrid",
       "JointAPI",
       "JointAxesMask",
       "JointMotorModel",
@@ -5935,7 +5978,8 @@
       "readBodyPositionsAtStep",
       "requestPhysicsTier",
       "setPhysicsTierPolicy",
-      "setPhysicsTierPolicyMember"
+      "setPhysicsTierPolicyMember",
+      "toHeightfieldColliderParams"
     ],
     "aekasha/postfx": [
       "PostFxLiveParams",
@@ -6017,12 +6061,19 @@
       "StreamingManifestCell",
       "StreamingManifestLayer",
       "StreamingRingsSchema",
+      "TERRAIN_BLOCK_COLLIDER_TYPES",
+      "TERRAIN_BLOCK_DEFAULTS",
       "TEXTURE_SET_CATEGORIES",
       "TEXTURE_SET_PACKINGS",
       "TEXTURE_SET_PACKING_PREFERENCE",
       "TEXTURE_SET_PROCEDURAL_DEFAULTS",
       "TEXTURE_SET_SURFACE_DEFAULTS",
       "TEXTURE_SLOTS",
+      "TerrainBlockAsset",
+      "TerrainBlockAssetSchema",
+      "TerrainBlockColliderType",
+      "TerrainBlockDef",
+      "TerrainBlockGeometry",
       "TextureArrayAsset",
       "TextureArrayAssetSchema",
       "TextureArrayInputSchema",
@@ -6066,6 +6117,7 @@
       "skyBoxSchemaPart",
       "spatialSchemaPart",
       "streamingSchemaPart",
+      "terrainSchemaPart",
       "textureSetsSchemaPart"
     ],
     "aekasha/skybox": [
@@ -6146,6 +6198,22 @@
       "setStreamingFocus",
       "streaming",
       "unregisterStreamingCellContent"
+    ],
+    "aekasha/terrain": [
+      "SpawnTerrainBlockOpts",
+      "TerrainBlock",
+      "TerrainBlockColliderType",
+      "TerrainBlockDef",
+      "TerrainBlockGeometry",
+      "TerrainGenerator",
+      "TerrainGeneratorOpts",
+      "TerrainGeneratorResult",
+      "getTerrainBlock",
+      "getTerrainGenerator",
+      "registerTerrainGenerator",
+      "spawnTerrainBlock",
+      "terrain",
+      "unregisterTerrainGenerator"
     ],
     "aekasha/texturesets": [
       "BuildTextureSetArrayProps",

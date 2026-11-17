@@ -77,6 +77,9 @@
     "textureSetArrays": {
       "$ref": "#/definitions/__schema613"
     },
+    "terrainBlocks": {
+      "$ref": "#/definitions/__schema622"
+    },
     "id": {
       "type": "string",
       "description": "The scene id: it keys the scene's save data, its saved state and ?startScene=."
@@ -96,7 +99,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema622"
+          "$ref": "#/definitions/__schema624"
         }
       ]
     }
@@ -7932,6 +7935,21 @@
       "type": "boolean"
     },
     "__schema622": {
+      "description": "Terrain block ids (*.terrainBlock.json) the scene's code spawns (spawnTerrainBlock): each one's import, material and input textures load with the scene.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema623"
+        }
+      ]
+    },
+    "__schema623": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "__schema624": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -8022,6 +8040,9 @@
             },
             "textureSetArrays": {
               "$ref": "#/definitions/__schema613"
+            },
+            "terrainBlocks": {
+              "$ref": "#/definitions/__schema622"
             }
           },
           "additionalProperties": false

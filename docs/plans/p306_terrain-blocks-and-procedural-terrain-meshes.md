@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phases 1-2 implemented
 Category: Terrain, Assets, Physics, Toolkit
 Blocks: p307_wet-and-dry-surface-states.md, p308_terrain-scatter.md, p309_terrain-decals.md, p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -244,7 +244,7 @@ Add sections 5–7 (Blender, Export, Import) to the seven p305 pages, each refer
 
 ## Phases
 
-### Phase 1 — Heightfield extraction (D3)
+### Phase 1 — Heightfield extraction (D3) — done
 
 1. `toHeightfieldColliderParams` on `aekasha/physics` with its test (the asymmetric-spike check, a non-square grid), then the import on it: position-bucketed extraction, centre offset, regular-grid validation; the `HeightFieldData` docs and `features/physics/CLAUDE.md` (D3).
 2. Re-check the Gym terrains (the former p990 item); mark `docs/issues/heightfield-grid-layout.md` `fixed`.
@@ -252,7 +252,7 @@ Add sections 5–7 (Blender, Export, Import) to the seven p305 pages, each refer
 
 **Exit:** collider wireframe coincides with the mesh (≤ 1 mm) on the Gym terrains and on a generated asymmetric terrain.
 
-**As built (steps 1-2):**
+**As built:**
 
 - **The layout, verified** against Rapier 0.19.3 by raycasts (`HeightfieldColliderParams.test.ts`): `heights[row + col·(nrows+1)]`, `nrows` cells along +z and `ncols` along +x, both from −scale / 2, no flip. The survey's mapping holds. Each cell is split along the diagonal (row + 1, col)–(row, col + 1), the same as `generateTerrain`'s b–c diagonal, so a generated terrain's collider can match its mesh between vertices too (Phase 3's `collider: true` keeps that diagonal). rapier.js can't choose the diagonal per cell.
 - **`toHeightfieldColliderParams({ heights, rows, cols, width, depth })`**: `rows` / `cols` count heights (vertices), not cells; returns `HeightFieldData & { type: 'HEIGHTFIELD' }` with `scale.y` 1 (heights already in the body's units). Throws on a grid that doesn't fit.
@@ -260,8 +260,9 @@ Add sections 5–7 (Blender, Export, Import) to the seven p305 pages, each refer
 - **The refusals are lifted** (Draco, quantized positions): read by position and through the getters, both work. Measured on p300's `terrainSmooth` copies: the Draco and meshopt colliders are within 3–4 mm of the source surface (their height quantization); the visible quantized mesh sits up to 1.6 cm from the collider on slopes (its x / z jitter at 14 bits over 100 m).
 - **The asset pipeline** no longer keeps collider sources lossless: `COLLIDER_LEVEL` is `{ mesh: { simplify: null } }` (never simplified, quantized like any mesh). The one collider source, `testDebugScene`'s `p371MergeKit`, re-encoded (9.8 KB). The `terrainBlock` profile stays lossless, for the shared edges.
 - **The Gym terrains:** `terrainSmooth` was off by up to 0.216 m near its z = 49 edge (the p990 bug: the vertex-order read); `terrainSpiked`'s bounds sit 0.03 / 0.52 m off its origin. `terrainSpiked.glb` split 899 of its 10 000 cells along the other diagonal: re-triangulated onto the collider's (the index only; its normals are Blender's quad normals, independent of the split). Both now match their `TRIMESH` within 0.2 mm over 400 × 400 raycasts. The Gym loads without a HEIGHTFIELD error or warning.
+- **Step 3, `yarn verify:scenes`** (`thirdPersonGymScene`, `testDebugScene`, `assetCompare`, against baselines recorded on `main` at `4b039343`): the Gym's probe hash and character paths are **unchanged** (the probe hashes dynamic bodies only, and the input script's characters never reach the terrains), so no baseline moved. `testDebugScene` broke on the quantized `p371MergeKit`: quantization moves a mesh's dequantization into its node (a new unnamed child for a node with children), which its scene's meshes, made from the geometries' ids, never get. Not a collider matter: the kit opts out (`"optimize": { "mesh": { "quantize": false } }`, back to `main`'s output) and the gap is `docs/issues/quantized-glb-geometry-by-id.md`, with a line in `asset-optimization.md`. `yarn verify:baselines` recorded the new `aekasha/physics` names and the lazy `ImportPhysics` chunk's +0.8 kB gzip (the bucketing, its messages and the diagonal check; `BufferGeometryUtils` −0.3 kB).
 
-### Phase 2 — Terrain block asset (D2)
+### Phase 2 — Terrain block asset (D2) — done
 
 1. The `terrain()` feature (D2): its folder, `TerrainFeature.ts`, the `aekasha/terrain` entry and alias, a layout rule, listed in the template's `features` (`src/index.ts`) after `physics()`.
 2. Schema (next to the feature, on `aekasha/schemas`), the `*.terrainBlock.json` suffix (`GATHERED_SUFFIXES`), the generated section, the scene's `terrainBlocks` as its `FeatureSchemaPart`.
@@ -270,6 +271,15 @@ Add sections 5–7 (Blender, Export, Import) to the seven p305 pages, each refer
 5. `yarn sbp`: no terrain code in the app's first download or in the banner (its feature group at 0).
 
 **Exit:** a JSON-only block (imported Gym terrain re-used as a test) and a generated block spawn, collide and are released on scene exit.
+
+**As built** (the feature's notes: `src/_engine/features/terrain/CLAUDE.md`):
+
+- **The collider (D2's open decision):** no `requires`. The install records `ctx.isInstalled('physics')`, and the collider code (`TerrainCollider.ts`: `createPhysicsEntity`, `deriveColliderFromGeometry`) is `import()`ed with the first block that has one, so a physics-free app (a landscape embed) loads no Rapier for its blocks. The gather adds `physics` to the manifest (`__features`) of a scene listing a block with a collider, so a missing `physics()` is the boot's error; `spawnTerrainBlock` throws naming it as a backstop. The second feature → feature runtime import after character → physics (lazy). The collider is a `FIXED` body on the mesh entity: `physicsEntityId` is the mesh entity's id, and `dispose()` or the scene's exit removes both.
+- **Code moved since the plan:** `terrain()` is the fourteenth feature (Phase 6's "tenth" is stale), listed last in the template (after `textureSets()`, so no install order moved); no layout rule was needed (`features/` is one rule); the banner's 0 budget is automatic (`FEATURE_GROUPS` reads the folders). The app's `_engine/features/terrain` group is budgeted at 1 KiB (`sbp.config.ts`): only `TerrainFeature.ts`, 0.1 KiB gzip, is in the first download.
+- **Preloading through the gather, not a `beforeAssets` hook:** the scene pass (`devTools/gather/terrainBlocks.ts`, before the materials) writes each listed block inline and appends its import and material to the scene's `importedAssets` and `materials`; the texture closure reads its `materialInputs` like a mesh's `matOverrides`. The scene load then loads them like listed assets (a streaming scene keeps them in its base). Pass 1 fails on an unknown import or material id.
+- **The schema** (`TerrainBlockSchema.ts`): `materialInputs` reuses the material inputs' schema; the block conventions (32-256 m, `2^n + 1`) aren't enforced (the Gym terrain test block is 100 m / 101; Phase 5's validator checks them); no `__saveData`; `scatter` / `decals` aren't fields until p308 / p309 (the strict schema refuses them; the result's `scatterIds` / `decalIds` are empty). The runtime reads a block from the spawning scene's data only (no development-data section).
+- **The spawn:** an imported block uses its node's registered geometry (`node` optional: the import's only mesh), placed by its grid; a node transform is ignored with a warning, and quantized positions (whose dequantization is the node's) are refused naming the fix, the `terrainBlock` asset profile (`"optimize": { "profile": "terrainBlock" }` in the importedAsset JSON). The GLB's own custom-prop colliders are the plain import path's: a block's JSON decides its collider. A spawn whose scene is left across an `await` (a counter the install's `exit` hook bumps) deletes what it made and resolves with `null`.
+- **The exit check, `terrainBlockTest`** (`src/app/scenes/terrainBlockTest/`, a debug scene): three 100 m blocks, the Gym's `terrainSmooth.glb` node (`HEIGHTFIELD` read from the geometry, grass through `materialInputs`), a generated one with the generator's heightfield (`toHeightfieldColliderParams`) and a generated `TRIMESH` one (rocks, no shadow), over the scene's own generator wrapping today's `generateTerrain` (Phase 3's `noiseTerrain` replaces it). 27 boxes fall on them; at step 340 the scene logs an error for a box not resting on its block (fell through, caught on nothing, slid off: the Gym terrain's slopes sent one off the edge at 25 m spacing, so they drop on a 15 m grid from 35 m, the closest 6.4 m from an edge). `yarn verify:scenes --only terrainBlockTest` (`probeSteps: 360`): no errors, one probe hash in all three targets, its baseline recorded. A switch to another scene leaves no block mesh, generated geometry or import geometry (checked once from a script).
 
 ### Phase 3 — `generateTerrain` v2 (D4)
 

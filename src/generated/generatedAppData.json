@@ -20028,6 +20028,432 @@
         "streaming"
       ]
     },
+    "terrainBlockTest": {
+      "isDebugScene": true,
+      "name": "Terrain blocks (p306)",
+      "description": "p306 Phase 2's verification scene: three 100 m terrain blocks side by side, spawned with spawnTerrainBlock. Middle: the Gym's terrainSmooth.glb as a JSON-only block (an imported node, a HEIGHTFIELD read from its geometry, grass through its materialInputs' variant of textureSetSurface). Right: a generated block (the scene's own generator over generateTerrain) with the generator's heightfield. Left: a generated block with a TRIMESH collider. A 3 × 3 grid of boxes falls on each. window.__terrainBlockTest holds the spawn results and, after the boxes settle, each box's height above the terrain under it.",
+      "terrainBlocks": [
+        {
+          "id": "terrainBlockTestSmooth",
+          "geometry": {
+            "importedAsset": "terrainBlockTestSmooth",
+            "node": "TerrainSmooth"
+          },
+          "material": "textureSetSurface",
+          "materialInputs": {
+            "surface": {
+              "textureSet": "grass01"
+            }
+          },
+          "grid": {
+            "x": 0,
+            "z": 0,
+            "size": 100,
+            "resolution": 101
+          },
+          "collider": {
+            "type": "HEIGHTFIELD",
+            "friction": 1.2
+          },
+          "shadows": {
+            "cast": true,
+            "receive": true
+          },
+          "debugData": {
+            "name": "Imported block",
+            "description": "The Gym's smooth terrain node: its HEIGHTFIELD read from the geometry, grass through the block's own input."
+          }
+        },
+        {
+          "id": "terrainBlockTestNoise",
+          "geometry": {
+            "generator": "terrainBlockTestNoise",
+            "params": {
+              "maxHeight": 12,
+              "withHeightfield": true
+            },
+            "seed": 11
+          },
+          "material": "textureSetSurface",
+          "grid": {
+            "x": 1,
+            "z": 0,
+            "size": 100,
+            "resolution": 65
+          },
+          "collider": {
+            "type": "HEIGHTFIELD"
+          },
+          "shadows": {
+            "cast": true,
+            "receive": true
+          },
+          "debugData": {
+            "name": "Generated block",
+            "description": "The scene's noise generator, its HEIGHTFIELD from the generator's own heights (toHeightfieldColliderParams)."
+          }
+        },
+        {
+          "id": "terrainBlockTestTrimesh",
+          "geometry": {
+            "generator": "terrainBlockTestNoise",
+            "params": {
+              "maxHeight": 18
+            },
+            "seed": 4
+          },
+          "material": "textureSetSurface",
+          "materialInputs": {
+            "surface": {
+              "textureSet": "rocks01"
+            }
+          },
+          "grid": {
+            "x": -1,
+            "z": 0,
+            "size": 100,
+            "resolution": 65
+          },
+          "collider": {
+            "type": "TRIMESH"
+          },
+          "shadows": {
+            "cast": false,
+            "receive": true
+          },
+          "debugData": {
+            "name": "Generated TRIMESH block",
+            "description": "The scene's noise generator without a heightfield, its TRIMESH collider read from the geometry; casts no shadow."
+          }
+        }
+      ],
+      "id": "terrainBlockTest",
+      "sceneFile": "./scenes/terrainBlockTest/terrainBlockTest.ts",
+      "cameras": [
+        {
+          "camProps": {
+            "type": "PERSPECTIVE",
+            "fov": 90,
+            "active": true
+          },
+          "entityOpts": {
+            "debugData": {
+              "name": "_camera",
+              "description": "Auto-generated camera for the scene"
+            }
+          }
+        }
+      ],
+      "importedAssets": [
+        {
+          "id": "terrainBlockTestSmooth",
+          "fileName": "/debugger/assets/testModels/terrainSmooth.glb",
+          "debugData": {
+            "name": "Gym smooth terrain",
+            "description": "The Gym's terrainSmooth.glb (100 m, 101 × 101 vertices), reused as an imported terrain block's geometry."
+          },
+          "__fileSize": 461412,
+          "__sourceUrl": "/debugger/assets/testModels/terrainSmooth.glb",
+          "__url": "/aek-assets/debugger/assets/testModels/terrainSmooth.e4afb8f7.glb",
+          "__bytes": {
+            "in": 461412,
+            "out": 264980
+          },
+          "__vramBytes": {
+            "in": 459264,
+            "out": 459264
+          }
+        }
+      ],
+      "materials": [
+        {
+          "id": "textureSetSurface",
+          "debugData": {
+            "name": "Texture set surface",
+            "description": "One texture set on a surface, any packing (p303 D7): the baseline of the terrain techniques, no anti-tiling or splat. Give a mesh its set with matOverrides.inputs.surface ({ textureSet, packing? }). Static defines: tiling (WORLD_XZ: the world's (x, -z) over physicalSize, for terrain; UV: the mesh's UV in metres, for walls and structures), minimalNormal (BUMP or FLAT)."
+          },
+          "tslFile": "materials/textureSetSurface/textureSetSurface.tsl.ts",
+          "staticDefines": {
+            "tiling": "WORLD_XZ",
+            "minimalNormal": "BUMP"
+          },
+          "inputs": {
+            "surface": {
+              "textureSet": "sand01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        }
+      ],
+      "textureSets": [
+        {
+          "id": "sand01",
+          "category": "SAND",
+          "physicalSize": [
+            3,
+            3
+          ],
+          "heightScale": 0.057,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "sand01_albedoHeight",
+              "normal": "sand01_normal",
+              "orm": "sand01_orm"
+            },
+            "LITE": {
+              "albedoRough": "sand01_albedoRough",
+              "normalHeight": "sand01_normalHeight"
+            },
+            "MINIMAL": {
+              "albedoHeight": "sand01_albedoHeightAO"
+            }
+          },
+          "debugData": {
+            "name": "Sand 01 (dry dunes)",
+            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.85,
+            "wetDarkening": 0.55,
+            "wetRoughness": 0.4
+          },
+          "averageColor": "#ab966b"
+        },
+        {
+          "id": "grass01",
+          "category": "GRASS",
+          "physicalSize": [
+            1.4,
+            1.4
+          ],
+          "heightScale": 0.002,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "grass01_albedoHeight",
+              "normal": "grass01_normal",
+              "orm": "grass01_orm"
+            },
+            "LITE": {
+              "albedoRough": "grass01_albedoRough",
+              "normalHeight": "grass01_normalHeight"
+            },
+            "MINIMAL": {
+              "albedoHeight": "grass01_albedoHeightAO"
+            }
+          },
+          "debugData": {
+            "name": "Grass 01 (lawn ground)",
+            "description": "ambientCG Grass004, CC0: lawn-grass ground seen from the top, no blades. All three packings (the gallery's packing comparison, p303 D6)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 2.5,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#5c6730"
+        },
+        {
+          "id": "rocks01",
+          "category": "ROCKS",
+          "physicalSize": [
+            2,
+            2
+          ],
+          "heightScale": 0.018,
+          "packings": {
+            "LITE": {
+              "albedoRough": "rocks01_albedoRough",
+              "normalHeight": "rocks01_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Rocks 01 (gravel)",
+            "description": "ambientCG Ground079S, CC0: gravel / rocky ground."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#ad926e"
+        }
+      ],
+      "textures": [
+        {
+          "id": "sand01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "sand01 albedoRough (LITE)",
+            "description": "The texture set sand01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/sand01/sand01_albedoRough.pack.42c89ed4.ktx2",
+          "__bytes": {
+            "in": 9086447,
+            "out": 861827
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.4077,
+            0.303,
+            0.1458
+          ]
+        },
+        {
+          "id": "sand01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "sand01 normalHeight (LITE)",
+            "description": "The texture set sand01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/sand01/sand01_normalHeight.pack.448c5a53.ktx2",
+          "__bytes": {
+            "in": 7695457,
+            "out": 1166404
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "grass01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "grass01 albedoRough (LITE)",
+            "description": "The texture set grass01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/grass01/grass01_albedoRough.pack.50a0bb8d.ktx2",
+          "__bytes": {
+            "in": 14718033,
+            "out": 1310929
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.1071,
+            0.1347,
+            0.0293
+          ]
+        },
+        {
+          "id": "grass01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "grass01 normalHeight (LITE)",
+            "description": "The texture set grass01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/grass01/grass01_normalHeight.pack.59a4f2a1.ktx2",
+          "__bytes": {
+            "in": 13506245,
+            "out": 1321146
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "rocks01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "rocks01 albedoRough (LITE)",
+            "description": "The texture set rocks01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground079S's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/rocks01/rocks01_albedoRough.pack.c6a24dfc.ktx2",
+          "__bytes": {
+            "in": 12442144,
+            "out": 1227608
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.4165,
+            0.2873,
+            0.1564
+          ]
+        },
+        {
+          "id": "rocks01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "rocks01 normalHeight (LITE)",
+            "description": "The texture set rocks01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground079S's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/rocks01/rocks01_normalHeight.pack.e66b9742.ktx2",
+          "__bytes": {
+            "in": 11125458,
+            "out": 1288192
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        }
+      ],
+      "__features": [
+        "texturesets",
+        "terrain",
+        "physics"
+      ]
+    },
     "terrainGallery": {
       "isDebugScene": true,
       "name": "Terrain gallery (p303, p304, p305)",
@@ -21999,14 +22425,14 @@
           },
           "__fileSize": 32068,
           "__sourceUrl": "/app/scenes/testDebugScene/p371MergeKit.glb",
-          "__url": "/aek-assets/app/scenes/testDebugScene/p371MergeKit.6b3f5e26.glb",
+          "__url": "/aek-assets/app/scenes/testDebugScene/p371MergeKit.81c7db98.glb",
           "__bytes": {
             "in": 32068,
-            "out": 9828
+            "out": 16576
           },
           "__vramBytes": {
             "in": 16800,
-            "out": 13032
+            "out": 21000
           }
         }
       ],
@@ -38044,12 +38470,40 @@
         "out": 33824
       }
     },
+    "terrainBlockTestSmooth": {
+      "id": "terrainBlockTestSmooth",
+      "fileName": "/debugger/assets/testModels/terrainSmooth.glb",
+      "debugData": {
+        "name": "Gym smooth terrain",
+        "description": "The Gym's terrainSmooth.glb (100 m, 101 × 101 vertices), reused as an imported terrain block's geometry."
+      },
+      "optimize": {
+        "profile": "terrainBlock"
+      },
+      "__sourcePath": "src/app/scenes/terrainBlockTest/terrainBlockTestSmooth.importedAsset.json",
+      "__fileSize": 461412,
+      "__sourceUrl": "/debugger/assets/testModels/terrainSmooth.glb",
+      "__url": "/aek-assets/debugger/assets/testModels/terrainSmooth.e4afb8f7.glb",
+      "__bytes": {
+        "in": 461412,
+        "out": 264980
+      },
+      "__vramBytes": {
+        "in": 459264,
+        "out": 459264
+      }
+    },
     "p371MergeKit": {
       "id": "p371MergeKit",
       "fileName": "./p371MergeKit.glb",
       "debugData": {
         "name": "Merge kit",
         "description": "The GLB merge check (p371 Phase 3): 20 box pieces in two glTF materials (ten wall blocks, six pillars sharing a mesh, four blocks on a turned empty, one mirrored) that the asset pipeline joins into p371MergeKit/__merged; the door_* nodes (one with a handle child) and the two collider nodes stay as they are. Built by devTools/assetPipeline/fixtures/mergeKitFile.ts."
+      },
+      "optimize": {
+        "mesh": {
+          "quantize": false
+        }
       },
       "merge": {
         "mode": "ALL",
@@ -38060,14 +38514,14 @@
       "__sourcePath": "src/app/scenes/testDebugScene/p371MergeKit.importedAsset.json",
       "__fileSize": 32068,
       "__sourceUrl": "/app/scenes/testDebugScene/p371MergeKit.glb",
-      "__url": "/aek-assets/app/scenes/testDebugScene/p371MergeKit.6b3f5e26.glb",
+      "__url": "/aek-assets/app/scenes/testDebugScene/p371MergeKit.81c7db98.glb",
       "__bytes": {
         "in": 32068,
-        "out": 9828
+        "out": 16576
       },
       "__vramBytes": {
         "in": 16800,
-        "out": 13032
+        "out": 21000
       }
     },
     "aekashaSymbol": {

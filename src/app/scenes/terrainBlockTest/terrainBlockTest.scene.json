@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../../.schemas/scene.schema.json",
+  "id": "terrainBlockTest",
+  "sceneFile": "./scenes/terrainBlockTest/terrainBlockTest.ts",
+  "isDebugScene": true,
+  "terrainBlocks": ["terrainBlockTestSmooth", "terrainBlockTestNoise", "terrainBlockTestTrimesh"],
+  "name": "Terrain blocks (p306)",
+  "description": "p306 Phase 2's verification scene: three 100 m terrain blocks side by side, spawned with spawnTerrainBlock. Middle: the Gym's terrainSmooth.glb as a JSON-only block (an imported node, a HEIGHTFIELD read from its geometry, grass through its materialInputs' variant of textureSetSurface). Right: a generated block (the scene's own generator over generateTerrain) with the generator's heightfield. Left: a generated block with a TRIMESH collider. A 3 × 3 grid of boxes falls on each. window.__terrainBlockTest holds the spawn results and, after the boxes settle, each box's height above the terrain under it."
+}

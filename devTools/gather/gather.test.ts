@@ -1571,3 +1571,101 @@ describe('p304 D3: procedural texture sets', () => {
     expect(errors).toContain(error);
   });
 });
+
+describe('p306 D2: terrain blocks', () => {
+  const albedo = '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg';
+  const files = (block: Record<string, unknown>, sceneFields: Record<string, unknown> = {}) => ({
+    'app/blocks/ground.importedAsset.json': {
+      id: 'ground',
+      fileName: '/debugger/assets/testModels/box01.glb',
+    },
+    'app/blocks/splat.texture.json': { id: 'splat', fileName: albedo },
+    'app/blocks/terrainMat.material.json': material('terrainMat'),
+    'app/blocks/coast.terrainBlock.json': {
+      geometry: { importedAsset: 'ground', node: 'Block' },
+      material: 'terrainMat',
+      grid: { size: 64, resolution: 129 },
+      ...block,
+    },
+    ...scene('s', { terrainBlocks: ['coast'], ...sceneFields }),
+  });
+  const ids = (list: unknown) =>
+    ((list ?? []) as ({ id?: string } | string)[]).map((entry) =>
+      typeof entry === 'string' ? entry : entry.id
+    );
+
+  it('writes a listed block with its defaults, and loads its import, material and input textures', () => {
+    const { isGathered, scene: get } = gather(
+      files({ materialInputs: { splatMap: 'splat' }, debugData: { name: 'Coast' } })
+    );
+    expect(isGathered).toBe(true);
+    const out = get('s');
+    expect(out?.terrainBlocks).toEqual([
+      {
+        id: 'coast',
+        geometry: { importedAsset: 'ground', node: 'Block' },
+        material: 'terrainMat',
+        materialInputs: { splatMap: 'splat' },
+        grid: { x: 0, z: 0, size: 64, resolution: 129 },
+        collider: { type: 'HEIGHTFIELD' },
+        shadows: { cast: true, receive: true },
+        debugData: { name: 'Coast' },
+      },
+    ]);
+    expect(ids(out?.importedAssets)).toEqual(['ground']);
+    expect(ids(out?.materials)).toEqual(['terrainMat']);
+    expect(ids(out?.textures)).toEqual(['splat']);
+    // The collider needs physics(), which has no scene field
+    expect(out?.__features).toEqual(['terrain', 'physics']);
+  });
+
+  it('names no physics without a collider, and adds no import for a generated block', () => {
+    const { scene: get } = gather(
+      files({
+        geometry: { generator: 'noiseTerrain' },
+        collider: { type: 'NONE' },
+        shadows: { cast: false },
+      })
+    );
+    const out = get('s');
+    const [block] = out?.terrainBlocks as Record<string, unknown>[];
+    expect(block).toMatchObject({
+      geometry: { generator: 'noiseTerrain', params: {}, seed: 0 },
+      collider: { type: 'NONE' },
+      shadows: { cast: false, receive: true },
+    });
+    expect(out?.importedAssets).toBeUndefined();
+    expect(out?.__features).toEqual(['terrain']);
+  });
+
+  it('adds an import or material the scene lists only once, and a block listed twice once', () => {
+    const { scene: get } = gather(
+      files(
+        {},
+        { terrainBlocks: ['coast', 'coast'], importedAssets: ['ground'], materials: ['terrainMat'] }
+      )
+    );
+    const out = get('s');
+    expect(ids(out?.terrainBlocks)).toEqual(['coast']);
+    expect(ids(out?.importedAssets)).toEqual(['ground']);
+    expect(ids(out?.materials)).toEqual(['terrainMat']);
+  });
+
+  it('leaves the debug data out of a production build', () => {
+    const { scene: get } = gather(files({ debugData: { name: 'Coast' } }), { isProduction: true });
+    const [block] = get('s')?.terrainBlocks as Record<string, unknown>[];
+    expect(block).not.toHaveProperty('debugData');
+  });
+
+  it('fails the gather on an unknown import, material, block or input texture', () => {
+    expect(gather(files({ geometry: { importedAsset: 'nope' } })).isGathered).toBe(false);
+    expect(gather(files({ material: 'nope' })).isGathered).toBe(false);
+    expect(gather(files({}, { terrainBlocks: ['nope'] })).isGathered).toBe(false);
+    expect(gather(files({ materialInputs: { splatMap: 'nope' } })).isGathered).toBe(false);
+  });
+
+  it('refuses a field the asset doesn’t have, and a resolution under 2', () => {
+    expect(gather(files({ scatter: ['rocks'] })).isGathered).toBe(false);
+    expect(gather(files({ grid: { size: 64, resolution: 1 } })).isGathered).toBe(false);
+  });
+});

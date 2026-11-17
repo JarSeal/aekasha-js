@@ -65,6 +65,18 @@ export { createSceneAssetSchema } from './SceneSchema';
 export type { SceneAsset } from './SceneSchema';
 export { spatialSchemaPart } from '../features/spatial/SpatialSchema';
 export {
+  TERRAIN_BLOCK_COLLIDER_TYPES,
+  TERRAIN_BLOCK_DEFAULTS,
+  TerrainBlockAssetSchema,
+  terrainSchemaPart,
+} from '../features/terrain/TerrainBlockSchema';
+export type {
+  TerrainBlockAsset,
+  TerrainBlockColliderType,
+  TerrainBlockDef,
+  TerrainBlockGeometry,
+} from '../features/terrain/TerrainBlockSchema';
+export {
   SceneStreamingSchema,
   StreamingRingsSchema,
   streamingSchemaPart,

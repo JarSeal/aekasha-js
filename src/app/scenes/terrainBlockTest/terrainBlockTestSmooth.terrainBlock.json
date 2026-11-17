@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../../.schemas/terrainBlock.schema.json",
+  "geometry": { "importedAsset": "terrainBlockTestSmooth", "node": "TerrainSmooth" },
+  "material": "textureSetSurface",
+  "materialInputs": { "surface": { "textureSet": "grass01" } },
+  "grid": { "x": 0, "z": 0, "size": 100, "resolution": 101 },
+  "collider": { "type": "HEIGHTFIELD", "friction": 1.2 },
+  "debugData": {
+    "name": "Imported block",
+    "description": "The Gym's smooth terrain node: its HEIGHTFIELD read from the geometry, grass through the block's own input."
+  }
+}

@@ -12,6 +12,7 @@ import { resolveSceneAssets, type SceneJSON } from './sceneAssets';
 import type { ShipChecks } from './shipChecks';
 import { getTopFolder, resolveCodeFile } from './sources';
 import { buildStreamingManifest } from './streamingManifest';
+import { getTerrainBlockFeatureIds } from './terrainBlocks';
 import { getListedTextureSetTextureIds } from './textureSets';
 
 /** A resolved scene, with the features its data needs (p607 D10) */
@@ -94,7 +95,11 @@ const resolveScene = (
   return buildStreamingManifest(
     ctx,
     sceneId,
-    { ...scene, __features: getSceneFeatureIds(scene) },
+    {
+      ...scene,
+      // A terrain block's collider needs physics(), which has no scene field (p306 D2)
+      __features: [...getSceneFeatureIds(scene), ...getTerrainBlockFeatureIds(scene)],
+    },
     { baseTextureIds }
   );
 };
