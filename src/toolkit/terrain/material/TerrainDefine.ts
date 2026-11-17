@@ -351,8 +351,11 @@ export const TERRAIN_DEFINE_VALUES = {
   maxLayers: MAX_LAYERS,
 };
 
+/** The errors' prefix, before the field's path */
+const FAIL_PREFIX = '[terrain] staticDefines.terrain';
+
 function fail(path: string, message: string): never {
-  throw new Error(`[terrain] staticDefines.terrain${path}: ${message}`);
+  throw new Error(`${FAIL_PREFIX}${path}: ${message}`);
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -669,6 +672,24 @@ const readRule = (value: unknown, path: string): TerrainRuleDefine => {
     fail(path, 'has no test: give slope, height, aspect or noise.');
   }
   return rule;
+};
+
+/**
+ * A terrain rule from outside a define (a terrain block generator's params, p306), checked as the
+ * define's rules are; the errors name `where` and the path in place of the define's.
+ * @internal
+ * @param where what holds the rule, eg. `rulesTerrain: block "hills" params`
+ * @param path the rule's path under it, eg. `.rules[0]`
+ */
+export const checkTerrainRule = (value: unknown, where: string, path: string) => {
+  try {
+    readRule(value, path);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith(FAIL_PREFIX)) {
+      throw new Error(`${where}${error.message.slice(FAIL_PREFIX.length)}`);
+    }
+    throw error;
+  }
 };
 
 /** A rules source's rules: 1 to 16 */

@@ -50,9 +50,11 @@ export type {
   SurfaceParamValues,
   SurfaceToggleParam,
 } from './procedural/SurfaceParams';
+export { registerTerrainGenerators } from './blocks/RegisterTerrainGenerators';
 export { bakeMacroNoise } from './textures/MacroNoise';
 export type { BakeMacroNoiseOpts } from './textures/MacroNoise';
 export { bakeRippleAtlas, decodeRippleAtlas } from './textures/RippleAtlas';
+export { readTextureTexelsAsync } from './textures/ReadTexels';
 export type {
   BakeRippleAtlasOpts,
   DecodeRippleAtlasOpts,

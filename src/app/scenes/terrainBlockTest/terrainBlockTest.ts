@@ -7,19 +7,8 @@ import {
   lerror,
   registerOnSceneExit,
 } from 'aekasha';
-import {
-  createPhysicsEntity,
-  getPhysicsSimClock,
-  toHeightfieldColliderParams,
-} from 'aekasha/physics';
-import {
-  getTerrainGenerator,
-  registerTerrainGenerator,
-  spawnTerrainBlock,
-  type TerrainBlock,
-  type TerrainGenerator,
-} from 'aekasha/terrain';
-import { generateTerrain } from 'aekasha/toolkit/geometry';
+import { createPhysicsEntity, getPhysicsSimClock } from 'aekasha/physics';
+import { spawnTerrainBlock, type TerrainBlock } from 'aekasha/terrain';
 import { nextFrames } from '../../shared/verifyHarness';
 
 /**
@@ -30,10 +19,12 @@ import { nextFrames } from '../../shared/verifyHarness';
  * - **Middle** (`terrainBlockTestSmooth`): the Gym's `terrainSmooth.glb` node as a JSON-only
  *   block, its `HEIGHTFIELD` read from the geometry by position, grass through its own
  *   `materialInputs` (a variant of `textureSetSurface`).
- * - **Right** (`terrainBlockTestNoise`): the scene's generator, with the generator's heightfield
- *   (`toHeightfieldColliderParams` from its row-major heights).
- * - **Left** (`terrainBlockTestTrimesh`): the same generator without one, a `TRIMESH` collider read
- *   from the geometry, rocks through its inputs, casting no shadow.
+ * - **Right** (`terrainBlockTestNoise`): the toolkit's `noiseTerrain` (p306 Phase 3, registered by
+ *   the app's install), with the generator's heightfield (`toHeightfieldColliderParams` from its
+ *   row-major heights).
+ * - **Left** (`terrainBlockTestTrimesh`): the same generator with a `TRIMESH` collider read from
+ *   the geometry (the generator's heightfield unused), rocks through its inputs, casting no
+ *   shadow.
  *
  * A 3 × 3 grid of boxes falls on each block. `window.__terrainBlockTest` holds the spawn results
  * and, after `SETTLE_STEPS` fixed steps, where each box is; a block without its collider, or a box
@@ -44,7 +35,6 @@ import { nextFrames } from '../../shared/verifyHarness';
  */
 
 const SCENE_ID = 'terrainBlockTest';
-const GENERATOR_ID = 'terrainBlockTestNoise';
 const BLOCK_IDS = ['terrainBlockTestSmooth', 'terrainBlockTestNoise', 'terrainBlockTestTrimesh'];
 const BOX_HALF = 1;
 const BLOCK_SIZE = 100;
@@ -63,34 +53,6 @@ const state: {
   boxes: BoxResult[];
   isSettled: boolean;
 } = { blocks: [], boxes: [], isSettled: false };
-
-/**
- * The scene's generator over today's `generateTerrain` (the toolkit's `noiseTerrain` replaces it
- * in p306 Phase 3): a block-local noise terrain of the block's grid, its seed mixed with the grid
- * place, and with `params.withHeightfield` the collider's heights from the generator's own grid.
- */
-const noiseGenerator: TerrainGenerator = ({ params, seed, grid }) => {
-  const segments = grid.resolution - 1;
-  const terrain = generateTerrain({
-    width: grid.size,
-    depth: grid.size,
-    widthSegments: segments,
-    depthSegments: segments,
-    maxHeight: Number(params.maxHeight ?? 8),
-    seed: seed + grid.x * 7919 + grid.z * 104729,
-  });
-  if (!params.withHeightfield) return { geometry: terrain.geometry };
-  return {
-    geometry: terrain.geometry,
-    heightfield: toHeightfieldColliderParams({
-      heights: terrain.heights,
-      rows: terrain.depthSegments + 1,
-      cols: terrain.widthSegments + 1,
-      width: terrain.width,
-      depth: terrain.depth,
-    }),
-  };
-};
 
 /** The 3 × 3 boxes over a block, each a dynamic body on its mesh */
 const dropBoxesAsync = (blockX: number) => {
@@ -167,9 +129,6 @@ export const scene = async () => {
     isLoaded = false;
   });
   const isCurrent = () => isLoaded;
-
-  // Registered on the first visit (the registry outlives the scene)
-  if (!getTerrainGenerator(GENERATOR_ID)) registerTerrainGenerator(GENERATOR_ID, noiseGenerator);
 
   createCameraEntity(
     {

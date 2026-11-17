@@ -20031,7 +20031,7 @@
     "terrainBlockTest": {
       "isDebugScene": true,
       "name": "Terrain blocks (p306)",
-      "description": "p306 Phase 2's verification scene: three 100 m terrain blocks side by side, spawned with spawnTerrainBlock. Middle: the Gym's terrainSmooth.glb as a JSON-only block (an imported node, a HEIGHTFIELD read from its geometry, grass through its materialInputs' variant of textureSetSurface). Right: a generated block (the scene's own generator over generateTerrain) with the generator's heightfield. Left: a generated block with a TRIMESH collider. A 3 × 3 grid of boxes falls on each. window.__terrainBlockTest holds the spawn results and, after the boxes settle, each box's height above the terrain under it.",
+      "description": "p306 Phase 2's verification scene: three 100 m terrain blocks side by side, spawned with spawnTerrainBlock. Middle: the Gym's terrainSmooth.glb as a JSON-only block (an imported node, a HEIGHTFIELD read from its geometry, grass through its materialInputs' variant of textureSetSurface). Right: a generated block (the toolkit's noiseTerrain) with the generator's heightfield. Left: a generated block with a TRIMESH collider. A 3 × 3 grid of boxes falls on each. window.__terrainBlockTest holds the spawn results and, after the boxes settle, each box's height above the terrain under it.",
       "terrainBlocks": [
         {
           "id": "terrainBlockTestSmooth",
@@ -20067,10 +20067,9 @@
         {
           "id": "terrainBlockTestNoise",
           "geometry": {
-            "generator": "terrainBlockTestNoise",
+            "generator": "noiseTerrain",
             "params": {
-              "maxHeight": 12,
-              "withHeightfield": true
+              "maxHeight": 12
             },
             "seed": 11
           },
@@ -20090,13 +20089,13 @@
           },
           "debugData": {
             "name": "Generated block",
-            "description": "The scene's noise generator, its HEIGHTFIELD from the generator's own heights (toHeightfieldColliderParams)."
+            "description": "The toolkit's noiseTerrain, its HEIGHTFIELD from the generator's own heights (toHeightfieldColliderParams)."
           }
         },
         {
           "id": "terrainBlockTestTrimesh",
           "geometry": {
-            "generator": "terrainBlockTestNoise",
+            "generator": "noiseTerrain",
             "params": {
               "maxHeight": 18
             },
@@ -20123,7 +20122,7 @@
           },
           "debugData": {
             "name": "Generated TRIMESH block",
-            "description": "The scene's noise generator without a heightfield, its TRIMESH collider read from the geometry; casts no shadow."
+            "description": "The toolkit's noiseTerrain, its TRIMESH collider read from the geometry (the generator's heightfield unused); casts no shadow."
           }
         }
       ],

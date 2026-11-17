@@ -1,14 +1,14 @@
 {
   "$schema": "../../../../.schemas/terrainBlock.schema.json",
   "geometry": {
-    "generator": "terrainBlockTestNoise",
-    "params": { "maxHeight": 12, "withHeightfield": true },
+    "generator": "noiseTerrain",
+    "params": { "maxHeight": 12 },
     "seed": 11
   },
   "material": "textureSetSurface",
   "grid": { "x": 1, "z": 0, "size": 100, "resolution": 65 },
   "debugData": {
     "name": "Generated block",
-    "description": "The scene's noise generator, its HEIGHTFIELD from the generator's own heights (toHeightfieldColliderParams)."
+    "description": "The toolkit's noiseTerrain, its HEIGHTFIELD from the generator's own heights (toHeightfieldColliderParams)."
   }
 }

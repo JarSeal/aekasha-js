@@ -7,6 +7,7 @@ import {
   registerMovingPlatformSystem,
   registerFollowObjectCameraRigSystem,
 } from 'aekasha/toolkit/ecs';
+import { registerTerrainGenerators } from 'aekasha/toolkit/terrain';
 import { registerSpinSystem } from './app/examples/ecs/SpinSystem';
 import { registerGymDummyBrain } from './app/scenes/thirdPersonGymScene/GymDummyBrain';
 
@@ -32,6 +33,8 @@ export const appECSPlugins: EngineFeature = {
     });
     // The app's brain kinds (a brain goes with its character, so no scene adds a system for it)
     registerGymDummyBrain();
+    // The toolkit's terrain block generators (`noiseTerrain`, `rulesTerrain`), which blocks name
+    registerTerrainGenerators();
   },
 };
 // #endregion ecs-register-plugin
