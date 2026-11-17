@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-8 implemented
+Status: implemented (Phases 1-9)
 Category: Materials, Terrain, Toolkit
 Blocks: p306_terrain-blocks-and-procedural-terrain-meshes.md, p307_wet-and-dry-surface-states.md, p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -554,7 +554,7 @@ Each phase adds a gallery row (or extends one) so it can be checked and measured
   With `sandRipples`, the cheapest generator (p304: the others up to about twice its cost), live about doubles the block's cost from above and adds a fifth to a third in the third person (the far ripples a smaller share of the pixels).
 - **The preset's live layers:** `getTerrainQualityPreset({ liveLayers })` gives each live layer `source: 'TEXTURE'` (its bake) on `LOW` and `MEDIUM` and `PROCEDURAL_LIVE` on `HIGH` and `ULTRA`, through the tiers' `layers` entries (merged with a cliff layer's projection). A baked tier's layer takes the tier's material-wide anti-tiling, as any layer without its own.
 
-### Phase 9 — Handbook pages and versioning
+### Phase 9 — Handbook pages and versioning — done
 
 1. **Pages:** write `terrain-single-layer.md`, `terrain-vertex-color-splat.md`, `terrain-splat-map.md`, `terrain-procedural-rules.md`, `terrain-triplanar-cliffs.md`, `terrain-colormap-detail.md` and `structure-materials.md`, following the page template (p301 §5), with measured numbers from Phase 6.
    - Their sections 5–7 (Blender, Export, Import) get a placeholder linking `terrain-blocks-blender.md`, completed in p306.
@@ -580,6 +580,15 @@ Each phase adds a gallery row (or extends one) so it can be checked and measured
    - `readme.md` Features (toolkit: terrain material generator) and a short example.
    - A nested `src/toolkit/terrain/CLAUDE.md` (created by the first plan that needs it, if p303 hasn't; a line in the root's Architecture map) gets a `## Terrain materials` section: config, JSON route, budget, tiers, debug views. The feature page's `aek:covers` names it. The root's toolkit catalogue (Three-folder split) names the `terrain/` category.
 5. **Versions:** engine minor (Phase 7: the `{ textureSet }` bundle's `averageColor` and a set array's layer params' on `aekasha/texturesets`, `bakeTexture`'s `mesh` and `BakeMesh` on `aekasha`; Phase 8: `getTextureSetOfInput`, `loadTextureSetGeneratorAsync` and `getTextureSetGenerator` on `aekasha/texturesets`); toolkit minor; app minor (gallery rows, the Live block); `CHANGELOG.md`.
+
+**Sections:** 1. `terrain-single-layer.md`. 2. `terrain-vertex-color-splat.md`, `terrain-splat-map.md`. 3. `terrain-procedural-rules.md`, `terrain-triplanar-cliffs.md`. 4. `terrain-colormap-detail.md`, `structure-materials.md`. 5. `procedural-textures.md`'s live layers, the techniques index, the stale references. 6. `src/toolkit/terrain/CLAUDE.md`, the Hub. 7. The readme, the versions and the changelog, marking the plan done.
+
+**As built:**
+
+- **The pages** (2026-11-17): the seven in `docs/techniques/`, each on the page template, with the phases' own measurements and their machine (Phase 2's machine wasn't recorded; Phases 3-8 are Windows Chrome 157 on an AMD RDNA 3 GPU); p310 replaces them with its camera presets. `terrain-single-layer.md` holds what the others link to (the three routes, the parameter tables and uniform names, the tiers, the debug views), `terrain-splat-map.md` the storage and budget, sparse sampling and `DOMINANT`, `terrain-colormap-detail.md` the far surface. `procedural-textures.md` has "Live layers in a terrain material" (item 2's live content). The Blender and Export sections name p306's `terrain-blocks-blender.md` and its templates in plain text (no link to a file that doesn't exist yet), with what the material needs from a mesh. The techniques index's matrix has its technique, anti-tiling and projection columns; the side-view platformer's and racing's texel densities are left to p310 (no measurement here).
+- **Found while writing:** an app material JSON can't name the toolkit's `terrain.tsl.ts` (a `tslFile` resolves from its JSON's top folder), so the pages show a mesh variant of `terrain`, an app JSON with a two-line TSL file (`setup = setupTerrainMaterial`), or the code route; **a set array material can't be a variant of `terrain`** (the variant keeps `terrain`'s `layer0`, which is then sampled beside the array, leaving it a layer short): it's a material JSON of its own; a worn structure with the tiers can't use `concrete01` (its textures aren't square, so it can't join the set array sparse sampling needs: the gallery's Structures row has no quality table for that reason); `texture-sets.md` said the terrain material picks a packing per tier (a tier can't: the packing is in the inputs) and that a layer overrides any `surface` field (it multiplies four). **D1's material editor editing isn't built:** the editor lists only a TSL material's declared inputs' uniforms (`<socket>_<input>`), and the terrain material's aren't inputs; the docs say so, and it's a p990 follow-up (Debugger).
+- **The Hub:** the terrain page is "Terrain texturing" (`aek:covers` Texture sets, Terrain materials), its guide a "Terrain materials" part (the techniques' table with their handbook pages, the JSON route, the budget, the preset's table, colour maps, structures, live layers; debugging, key APIs, read more); the toolkit page's catalogue and materials list; the gallery's Hub image re-saved over the rows. `src/toolkit/terrain/CLAUDE.md` (`## Terrain materials`) with a layout rule and a line in the root's map; `terrain.material.json`'s description brought up to date.
+- **Versions:** engine 6.15.0, toolkit 3.3.0, app 1.27.0; the first download grew 27 B gzip (the `textureSets()` group, the bundle's average colour and set).
 
 ---
 

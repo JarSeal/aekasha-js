@@ -4,6 +4,61 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-17 — p305_terrain-material-generator
+
+The terrain material generator (p305, the fourth child of the terrain texturing epic p301). One toolkit function, `createTerrainMaterial`, and its JSON route, the material `terrain`, build a single node material from a declarative config of up to 16 texture set layers, and compile only what the config turns on: weights from vertex colours, splat maps or rules of slope, height, facing and noise, with height blending; anti-tiling and a macro variation; biplanar, triplanar and slope-gated projection for cliffs; sparse sampling of the few layers that matter at each pixel; a block's baked colour map under tiled detail and a far surface that stops sampling the layers in the distance; object space for structures; layers that run a procedural surface live; quality tiers and debug views. The engine gains what the material needs from texture sets (a set's average colour as a uniform, a bundle's set, the generators) and a bake in a mesh's UV space. The terrain gallery gains a row per technique with its measurements (an 8-layer terrain at the `HIGH` tier costs 1.7 ms of a 1080p frame on an AMD RDNA 3 GPU), and the handbook a page per technique. Nothing breaks.
+
+### Engine 6.15.0 (Sunset)
+
+**Added**
+
+- A `{ textureSet }` bundle's `averageColor` (`TextureSetInput`, on `aekasha/texturesets`): the set's measured average albedo as a linear colour uniform, present only when the set has one (a procedural set, or one whose albedo the asset pipeline didn't encode, has none). A set array's layer params carry it too, in the fourth vec4's `yzw` (`getTextureSetLayerParams().averageColor`), mid-grey (`#808080`) for a set without one, warned once per set a page load.
+- `getTextureSetOfInput(bundle)` on `aekasha/texturesets`: the set a `{ textureSet }` bundle was made from (the resolver keeps each bundle's set; the material sees only the bundle's nodes).
+- `loadTextureSetGeneratorAsync(id)` and `getTextureSetGenerator(id)` on `aekasha/texturesets`: a procedural set's generator, loaded through the bakes' lazy chunk and cache (rejecting with the generator's id), or synchronously once a bake or that load has it.
+- `bakeTexture`'s `mesh: { geometry, matrixWorld? }` (`BakeMesh` on `aekasha`): bakes in the mesh's UV space, each triangle drawn at its UVs (both faces), the graph reading the mesh's attributes and world position. No dilation: a texel no triangle covers stays transparent black.
+
+**Changed**
+
+- The template's first download grows 27 B gzip (`assets/index.js` 404,937 → 404,964 B): the `textureSets()` feature's first-download group from 1090 to 1135 B (the bundle's average colour and set). The lazy `TextureSetBakes.js` chunk grows 248 B gzip (the generator loader), `TextureSetArrays.js` 143 B (the layers' average colours).
+
+### Toolkit 3.3.0 (Gibbous)
+
+**Added**
+
+- The terrain material generator (`aekasha/toolkit/terrain`, `terrain/material/` and `terrain/nodes/`): `createTerrainMaterial(config)` (synchronous: its sets' textures loaded first), `getTerrainMaterialProps(config)` (the JSON route's props for a config, for `ensureMaterialDependencies`), `getTerrainMaterialVariant(id, level)` (a quality tier's variant, its own shader), `setupTerrainMaterial` (the TSL `setup` of the JSON route) and `TERRAIN_TSL_MATERIAL_ID` (`aek.terrain`). The config (`TerrainMaterialConfig`, its Zod schemas `TerrainMaterialConfigSchema`, `TerrainMaterialDefineSchema` and the parts' `Terrain*Schema` with their types) has `layers` (1-16: a set, `tiling`, `rotation`, `tint`, `normalStrength`, `roughnessScale`, `heightContrast`, `heightOffset`, its own anti-tiling and projection, `source`), `packing`, `uv` (`WORLD`, `MESH_UV`), `space` (`WORLD`, `OBJECT`), `blend` (`SINGLE`, `VERTEX_COLOR` with `RGB_AO` or `RGBA`, `SPLAT_MAP` with one or two maps, `RULES`, `VERTEX_COLOR_AND_RULES`, `SPLAT_MAP_AND_RULES`; `HEIGHT` or `LINEAR`), `antiTiling` (`NONE`, `DUAL_SCALE`, `HEX`, `apply: 'DOMINANT'`), `projection` (`PLANAR`, `BIPLANAR`, `TRIPLANAR`, `slopeGate`, `normalBlend`), `macro`, `sparse` (2-4 layers a pixel), `colorMap` (`DETAIL`, `FAR_ONLY`), `distance` (`fade`, `far`: `AVERAGE_COLOR` or `COLOR_MAP`, `farBlend`), `ao`, `storage` (`AUTO`, `SEPARATE`, `ARRAY`), `reservedTextures`, `quality`, `qualityLevel` and `debugView`. Every field is a build-time branch, every number a uniform (`terrain_l<i>_*`, `terrain_r<i>_*`, `terrain_<name>` in `userData.uniforms`); the define is checked by hand in a build (no zod), each refusal naming its field; the textures bound are counted against the renderer's limit less `reservedTextures` (default 6). Under `ARRAY` a procedural set's layer and a live layer keep their own input beside the set array.
+- The JSON route: the material `terrain` (`src/toolkit/materials/terrain/`), its config the static define `terrain` and its textures inputs (`layer<i>` or the set array `layers`, `splat0` / `splat1`, `macro`, `colorMap`), so a mesh's variant swaps a block's sets and splat maps without another shader.
+- `getTerrainQualityPreset({ cliffLayers?, cliffGate?, liveLayers?, far? })` (`TerrainQualityPresetOpts`): the suggested `quality` table, `LOW` (no anti-tiling, 2 layers a pixel, cliffs `BIPLANAR` gated, live layers baked, far from 60 m), `MEDIUM` (`DUAL_SCALE`, 3, `TRIPLANAR` gated, baked, 120 m), `HIGH` (`HEX` on the dominant layer, 3, `TRIPLANAR` gated, live, 200 m), `ULTRA` (`HEX` on all, 4, `TRIPLANAR`, live, no far surface). `TerrainQualityLevel`.
+- `bakeTerrainColorMap({ id, mesh, material?, size?, ao?, isPersistent? })` (`BakeTerrainColorMapOpts`): a block's terrain material rendered at the block's UVs into `<id>.color` (sRGB, mipmapped), for its colour map.
+- `createStructureMaterial(layers, opts)` and `getStructureMaterialConfig` (`StructureMaterialOpts`): the terrain material with a structure's defaults (object space, `TRIPLANAR`, `DUAL_SCALE`, a `macroNoise` macro at 12 m).
+- `loadTerrainDebugViewsAsync()`: the debug views (`TEXEL_DENSITY`, `NORMALS`, `WEIGHTS`, `PROJECTION`, `TAPS`, `LAYER_COUNT`), a debug chunk (`terrain/debug/`) a production build doesn't carry.
+- The terrain rules' type on `aekasha/toolkit/geometry` (`geometry/generate/TerrainRules.ts`, for p306's CPU evaluation to share): `TerrainRule`, `TerrainRuleRange`, `TerrainRuleAspect`, `TerrainRuleNoise`, `TERRAIN_RULE_DEFAULTS`, `TERRAIN_RULE_NOISE_CHANNELS`.
+
+**Changed**
+
+- `buildSurfaceGraph` (internal) is built on a new internal `prepareSurfaceGraph`, which makes a generator's uniforms once and evaluates its graph at any point (a live layer's planes and taps share them).
+
+### App 1.27.0 (Preschooler)
+
+**Added**
+
+- `terrainGallery`: a row per technique of the terrain material, each with its section in the tab (camera poses, live sliders on the material's uniforms, its blocks' list and figures): Anti-tiling (`NONE`, `DUAL_SCALE`, `HEX` on 48 m blocks, the macro switch), Splatting (vertex colours and splat maps, `LINEAR` beside `HEIGHT`, the vertex AO, 9 layers in a set array), Rules (rules alone, a splat map combo, the 8-layer terrain of the tiers' measurement), Cliffs (each projection and the slope gate on a mesa), Colour map (`DETAIL` and both far surfaces, each block's map baked at load from its own mesh), Structures (a world-space wall, an object-space bunker piece, both worn by vertex colours, moving pillars) and the Live block (a procedural layer, `terrainGalleryLiveDunes`, live or baked, with `window.__terrainGalleryLive` for scripts). The tab's Material control switches the library between the JSON route, the code route and the baseline, its Quality select every terrain block to a tier, its Debug view select to a view. The scene lists `macroNoise` and the rows' set arrays; its Hub image shows the rows.
+
+**Changed**
+
+- `terrainGallery`'s library blocks are variants of the toolkit's `terrain` material (the walls `MESH_UV`), with the tier preset; `textureSetSurface` stays as the baseline mode.
+
+### Project
+
+**Added**
+
+- The terrain material's handbook pages in `docs/techniques/`, each on the page template with its measured costs: `terrain-single-layer.md` (the routes, a layer, anti-tiling, macro, tiers, debug views), `terrain-vertex-color-splat.md`, `terrain-splat-map.md` (also set arrays, the binding budget and sparse sampling), `terrain-procedural-rules.md`, `terrain-triplanar-cliffs.md`, `terrain-colormap-detail.md` (also the far surface) and `structure-materials.md`; `procedural-textures.md`'s live terrain layers; the techniques index's matrix filled in. Their Blender and export sections are p306's.
+- `src/toolkit/terrain/CLAUDE.md` (Terrain materials), with its layout rule; the Hub's terrain page ("Terrain texturing") covers it.
+- A p990 follow-up: the material editor can't edit a terrain material's uniforms (they aren't TSL inputs).
+
+**Changed**
+
+- The baselines: `api.json` (the new exports), `docs.json`, and the bundles (above).
+
 ## 2026-11-14 — p304_procedural-texture-baker
 
 The procedural texture baker (p304, the third child of the terrain texturing epic p301). `bakeTexture` renders a TSL node graph once into a mipmapped texture, so a material pays one fetch a pixel instead of the graph's noise maths every frame: up to four outputs in one render, up to 256 array layers, during a scene load with the loader's progress or one bake a frame at runtime. On top of it, the toolkit adds a noise library that tiles, ten procedural surface generators that bake into any texture set packing or run live in a material, and two shared generated textures (a macro noise and a rain ripple atlas). A texture set JSON can name a generator instead of maps and is baked on load. In debug builds a bake's output exports as a PNG into the repo, so a procedural look ships compressed as KTX2 with no bake at load. The terrain gallery gains a Procedural row that measures baked, live and imported surfaces side by side, and `docs/techniques/procedural-textures.md` says which way to choose. Nothing breaks.
