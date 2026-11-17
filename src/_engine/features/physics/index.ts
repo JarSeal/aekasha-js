@@ -1,5 +1,7 @@
 export { deriveColliderFromGeometry } from './import/MeshColliderGeometry';
 export type { ColliderSource } from './import/MeshColliderGeometry';
+export { toHeightfieldColliderParams } from './HeightfieldColliderParams';
+export type { HeightfieldGrid } from './HeightfieldColliderParams';
 export type { PoseArray, RigidBodyAPI, RigidBodyParams } from './types/PhysicsBodyTypes';
 export { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 export type {

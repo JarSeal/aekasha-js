@@ -44,16 +44,37 @@ export enum ShapeType {
 }
 
 /**
- * Everything needed to reconstruct a HeightField collider's surface, as returned by
- * ColliderAPI.heights(). `heights` is a nrows x ncols matrix in column-major order,
- * along the shape's local y axis; `scale` sizes the local x/z plane it spans.
+ * A heightfield's grid, as a `HEIGHTFIELD` collider is made from and `ColliderAPI.heights()`
+ * returns it: (`nrows` + 1) × (`ncols` + 1) heights on the shape's local y, `nrows` cells along
+ * z and `ncols` along x, the surface centred on the shape (from -`scale.x` / 2 to `scale.x` / 2
+ * in x, the same in z). Each cell is split along the diagonal from (row + 1, col) to
+ * (row, col + 1). {@link toHeightfieldColliderParams} makes one from a row-major grid.
+ * @example
+ * ```ts
+ * // One cell of 2 × 2 m: the corner at +x, +z is 1 m up. Column-major: row 0 is at -z, row 1 at
+ * // +z; column 0 at -x, column 1 at +x
+ * const grid: HeightFieldData = {
+ *   nrows: 1,
+ *   ncols: 1,
+ *   heights: new Float32Array([
+ *     0, // row 0, column 0: x -1, z -1
+ *     0, // row 1, column 0: x -1, z 1
+ *     0, // row 0, column 1: x 1, z -1
+ *     1, // row 1, column 1: x 1, z 1
+ *   ]),
+ *   scale: { x: 2, y: 1, z: 2 },
+ * };
+ * ```
  */
 export type HeightFieldData = {
-  /** The grid's rows. */
+  /** The grid's cells along z: its rows of heights less one. */
   nrows: number;
-  /** The grid's columns. */
+  /** The grid's cells along x: its columns of heights less one. */
   ncols: number;
-  /** The heights, `nrows` × `ncols`, column-major. */
+  /**
+   * The heights, (`nrows` + 1) × (`ncols` + 1), column-major: row r (along +z) and column c
+   * (along +x) at `r + c * (nrows + 1)`, each × `scale.y`.
+   */
   heights: Float32Array;
   /** The size of the surface on x and z, and the heights' scale on y. */
   scale: PhysVector;
@@ -313,16 +334,17 @@ export type ShapeParams =
       indices?: Uint32Array;
     }
   | {
-      /** A grid of heights on the local x / z plane (see {@link HeightFieldData}); every field
-       * is required, the create throws without one. */
+      /** A grid of heights on the local x / z plane, centred on the shape (its layout:
+       * {@link HeightFieldData}; from a row-major grid: {@link toHeightfieldColliderParams});
+       * every field is required, the create throws without one. */
       type: 'HEIGHTFIELD';
-      /** The grid's rows (rounded). */
+      /** The grid's cells along z (rounded). */
       nrows?: number;
-      /** The grid's columns (rounded). */
+      /** The grid's cells along x (rounded). */
       ncols?: number;
       /** The size of the surface on x and z, and the heights' scale on y. */
       scale?: PhysVector;
-      /** The heights, `nrows` × `ncols`, column-major. */
+      /** The heights, (`nrows` + 1) × (`ncols` + 1), column-major (see {@link HeightFieldData}). */
       heights?: Float32Array;
     }
   | {

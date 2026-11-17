@@ -63,13 +63,19 @@ export const spawnImportedPhysics = async ({ nodes, params, appIdPrefix }: Impor
         info: member.info,
       });
       if (!collider) continue;
-      if (member !== anchor && !collider.translation && !collider.rotation) {
+      // A placement the params gave is kept; one the derivation made (a HEIGHTFIELD's offset to
+      // its grid's centre, in the node's space) goes with the node's offset
+      if (member !== anchor && !colliderParams.translation && !colliderParams.rotation) {
         const offset = new THREE.Matrix4()
           .compose(member.position, member.quaternion, new THREE.Vector3(1, 1, 1))
           .premultiply(anchorInverse);
         const pos = new THREE.Vector3();
         const rot = new THREE.Quaternion();
         offset.decompose(pos, rot, new THREE.Vector3());
+        if (collider.translation) {
+          const { x, y, z } = collider.translation;
+          pos.add(new THREE.Vector3(x, y, z).applyQuaternion(rot));
+        }
         // An identity rotation is left out (the backend turns the shape by its `orientation` first)
         const isRotated = Math.abs(rot.w) < 1 - 1e-6;
         collider = {

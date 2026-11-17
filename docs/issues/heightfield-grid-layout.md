@@ -1,6 +1,6 @@
 **Title:** A `HEIGHTFIELD` collider's grid layout is documented only by the import's conversion
 
-Status: open | for a physics plan
+Status: fixed | 2026-11-17, p306 (D3, Phase 1)
 Category: Physics, API
 Found: 2026-10-22, p620 §1.4 N4 (T9: the toolkit's `generateTerrain` returns its `heights` row-major)
 Our workaround: the toolkit's `GeneratedTerrain.heights` says it's row-major and the collider column-major; `topDownTestScene` gives its terrain a `TRIMESH` of the geometry, which matches the mesh exactly
@@ -30,3 +30,15 @@ the collider as they are gives another surface than the mesh, with no error.
   loop counts `nRows + 1` along x and strides `heights` by `nCols + 1`, which a square grid can't
   tell from the other way round, and no non-square terrain has been through it.
 - Then `generateTerrain` can return the collider's params as well (a toolkit minor).
+
+## The fix (p306 D3, Phase 1)
+
+- `HeightFieldData` and the `HEIGHTFIELD` shape params document the layout: (`nrows` + 1) ×
+  (`ncols` + 1) heights, column-major, `nrows` cells along +z and `ncols` along +x, centred, each
+  cell split along the diagonal from (row + 1, col) to (row, col + 1), with a two-by-two example.
+  Checked against Rapier 0.19.3 by raycasts (`HeightfieldColliderParams.test.ts`, a 9 × 5 grid
+  with a spike near one corner).
+- `toHeightfieldColliderParams` (`aekasha/physics`) takes a row-major grid and its size; the
+  import reads the grid by vertex position and calls it. Its custom props `nCols` / `nRows`
+  count the cells along x / z (the old loop had it the other way round, which no square grid
+  showed). `generateTerrain`'s collider params are p306 Phase 3.
