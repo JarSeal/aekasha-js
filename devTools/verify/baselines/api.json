@@ -4846,14 +4846,26 @@
       "GeneratedTerrain": "Interface",
       "generateTerrain": "Function",
       "TerrainNoiseOctave": "Interface",
-      "TerrainOptions": "Interface"
+      "TerrainNormalSource": "TypeAlias",
+      "TerrainOptions": "Interface",
+      "TerrainVertexColorOptions": "TypeAlias"
+    },
+    "src/toolkit/geometry/generate/TerrainAo.ts": {
+      "computeTerrainAo": "Function",
+      "getTerrainAoMarch": "Function",
+      "TerrainAoMarch": "TypeAlias",
+      "TerrainAoOptions": "TypeAlias"
     },
     "src/toolkit/geometry/generate/TerrainRules.ts": {
+      "evaluateTerrainRulesCPU": "Function",
+      "getTerrainRuleCoverageCPU": "Function",
       "TERRAIN_RULE_DEFAULTS": "Variable",
       "TERRAIN_RULE_NOISE_CHANNELS": "Variable",
       "TerrainRule": "TypeAlias",
       "TerrainRuleAspect": "TypeAlias",
       "TerrainRuleNoise": "TypeAlias",
+      "TerrainRuleNoiseTexels": "TypeAlias",
+      "TerrainRulePoint": "TypeAlias",
       "TerrainRuleRange": "TypeAlias"
     },
     "src/toolkit/geometry/scatter/ScatterOnSurface.ts": {
@@ -4889,6 +4901,13 @@
       "TriplanarProjection": "TypeAlias",
       "TriplanarProjectionOptions": "Interface"
     },
+    "src/toolkit/terrain/blocks/RegisterTerrainGenerators.ts": {
+      "registerTerrainGenerators": "Function"
+    },
+    "src/toolkit/terrain/blocks/TerrainBlockGenerators.ts": {
+      "generateNoiseTerrainBlock": "Function",
+      "generateRulesTerrainBlockAsync": "Function"
+    },
     "src/toolkit/terrain/material/StructureMaterial.ts": {
       "createStructureMaterial": "Function",
       "getStructureMaterialConfig": "Function",
@@ -4903,6 +4922,7 @@
       "loadTerrainDebugViewsAsync": "Function"
     },
     "src/toolkit/terrain/material/TerrainDefine.ts": {
+      "checkTerrainRule": "Function",
       "DEFAULT_RESERVED_TEXTURES": "Variable",
       "getPaintedLayerCount": "Function",
       "getPaintedSource": "Function",
@@ -5270,6 +5290,9 @@
       "bakeMacroNoise": "Function",
       "BakeMacroNoiseOpts": "TypeAlias",
       "buildMacroNoise": "Function"
+    },
+    "src/toolkit/terrain/textures/ReadTexels.ts": {
+      "readTextureTexelsAsync": "Function"
     },
     "src/toolkit/terrain/textures/RippleAtlas.ts": {
       "bakeRippleAtlas": "Function",
@@ -6295,18 +6318,25 @@
       "SpawnScatterMeshOptions",
       "TERRAIN_RULE_DEFAULTS",
       "TERRAIN_RULE_NOISE_CHANNELS",
+      "TerrainAoOptions",
       "TerrainNoiseOctave",
+      "TerrainNormalSource",
       "TerrainOptions",
       "TerrainRule",
       "TerrainRuleAspect",
       "TerrainRuleNoise",
+      "TerrainRuleNoiseTexels",
+      "TerrainRulePoint",
       "TerrainRuleRange",
+      "TerrainVertexColorOptions",
       "TreeGeometryOptions",
       "bakeScatterToInstancedMesh",
+      "evaluateTerrainRulesCPU",
       "generateAsteroid",
       "generateBushGeometry",
       "generateTerrain",
       "generateTreeGeometry",
+      "getTerrainRuleCoverageCPU",
       "scatterOnSurface",
       "spawnScatterAsMeshEntities"
     ],
@@ -6418,6 +6448,8 @@
       "mudCracked",
       "mudSmooth",
       "packSurfaceOutputs",
+      "readTextureTexelsAsync",
+      "registerTerrainGenerators",
       "rockyGround",
       "sampleTextureSet",
       "sandFlat",

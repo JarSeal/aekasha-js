@@ -2,12 +2,12 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3996,
-      "total": 3996
+      "documented": 4011,
+      "total": 4011
     },
     "members": {
-      "documented": 1107,
-      "total": 1107
+      "documented": 1117,
+      "total": 1117
     }
   },
   "subtrees": {
@@ -23,12 +23,12 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 379,
-        "total": 379
+        "documented": 394,
+        "total": 394
       },
       "members": {
-        "documented": 154,
-        "total": 154
+        "documented": 164,
+        "total": 164
       }
     }
   },
@@ -973,12 +973,12 @@
     },
     "toolkit/geometry/generate": {
       "exports": {
-        "documented": 20,
-        "total": 20
+        "documented": 30,
+        "total": 30
       },
       "members": {
-        "documented": 48,
-        "total": 48
+        "documented": 58,
+        "total": 58
       },
       "undocumented": {
         "exports": [],
@@ -1083,10 +1083,24 @@
         "members": []
       }
     },
+    "toolkit/terrain/blocks": {
+      "exports": {
+        "documented": 3,
+        "total": 3
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
     "toolkit/terrain/material": {
       "exports": {
-        "documented": 133,
-        "total": 133
+        "documented": 134,
+        "total": 134
       },
       "members": {
         "documented": 0,
@@ -1281,8 +1295,8 @@
     },
     "toolkit/terrain/textures": {
       "exports": {
-        "documented": 9,
-        "total": 9
+        "documented": 10,
+        "total": 10
       },
       "members": {
         "documented": 0,
