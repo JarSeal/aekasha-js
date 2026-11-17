@@ -2,19 +2,19 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 3970,
-      "total": 3970
+      "documented": 4030,
+      "total": 4030
     },
     "members": {
-      "documented": 1107,
-      "total": 1107
+      "documented": 1118,
+      "total": 1118
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3591,
-        "total": 3591
+        "documented": 3617,
+        "total": 3617
       },
       "members": {
         "documented": 953,
@@ -23,12 +23,12 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 379,
-        "total": 379
+        "documented": 413,
+        "total": 413
       },
       "members": {
-        "documented": 154,
-        "total": 154
+        "documented": 165,
+        "total": 165
       }
     }
   },
@@ -189,8 +189,8 @@
     },
     "engine/features/physics": {
       "exports": {
-        "documented": 211,
-        "total": 211
+        "documented": 213,
+        "total": 213
       },
       "members": {
         "documented": 34,
@@ -245,8 +245,8 @@
     },
     "engine/features/physics/import": {
       "exports": {
-        "documented": 7,
-        "total": 7
+        "documented": 8,
+        "total": 8
       },
       "members": {
         "documented": 0,
@@ -387,6 +387,20 @@
       "exports": {
         "documented": 117,
         "total": 117
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/terrain": {
+      "exports": {
+        "documented": 23,
+        "total": 23
       },
       "members": {
         "documented": 0,
@@ -959,12 +973,26 @@
     },
     "toolkit/geometry/generate": {
       "exports": {
-        "documented": 20,
-        "total": 20
+        "documented": 10,
+        "total": 10
       },
       "members": {
-        "documented": 48,
-        "total": 48
+        "documented": 31,
+        "total": 31
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/geometry/generate/terrain": {
+      "exports": {
+        "documented": 39,
+        "total": 39
+      },
+      "members": {
+        "documented": 28,
+        "total": 28
       },
       "undocumented": {
         "exports": [],
@@ -1069,10 +1097,24 @@
         "members": []
       }
     },
+    "toolkit/terrain/blocks": {
+      "exports": {
+        "documented": 3,
+        "total": 3
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
     "toolkit/terrain/material": {
       "exports": {
-        "documented": 133,
-        "total": 133
+        "documented": 134,
+        "total": 134
       },
       "members": {
         "documented": 0,
@@ -1267,8 +1309,8 @@
     },
     "toolkit/terrain/textures": {
       "exports": {
-        "documented": 9,
-        "total": 9
+        "documented": 10,
+        "total": 10
       },
       "members": {
         "documented": 0,

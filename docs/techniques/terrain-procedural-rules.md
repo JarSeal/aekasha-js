@@ -75,11 +75,11 @@ Pick the noise channel by the border you want: R or G for broad, wandering edges
 
 ## Blender, step by step
 
-None for the rules: they're the engine's, on any mesh. The combos' painting is p306's (`terrain-blocks-blender.md`), and generated meshes are p306's `terrain-procedural-meshes.md`.
+None for the rules: they're the engine's, on any mesh, read from its shape. A Blender block for a rules material only needs its shape ([Terrain blocks from Blender](terrain-blocks-blender.md), `terrain_blockTemplate.blend`): its normals and heights are what the rules test, so shape it in Blender with the rules in mind (a cliff the slope rule finds, a peak over the snow line). The combos (`VERTEX_COLOR_AND_RULES`, `SPLAT_MAP_AND_RULES`) paint as [vertex colours](terrain-vertex-color-splat.md#blender-step-by-step) or [splat maps](terrain-splat-map.md#blender-step-by-step) where the rules aren't enough (a path, a clearing). The preview shows the painted weights only, not the rules. Generated meshes take the same rules into their vertex colours on the CPU: [Procedural meshes](terrain-procedural-meshes.md).
 
 ## Export
 
-None for the rules. A combo's mesh or splat maps: as [vertex colours](terrain-vertex-color-splat.md#export) or [splat maps](terrain-splat-map.md#export).
+None for the rules. A block: _Export Block_ ([the locked settings](terrain-blocks-blender.md#export)). A combo's colours or maps: as [vertex colours](terrain-vertex-color-splat.md#export) or [splat maps](terrain-splat-map.md#export).
 
 ## Import into Ækasha
 
@@ -186,5 +186,5 @@ Uniforms per rule, its tests' only: `terrain_r<i>_slopeMin`, `_slopeMax`, `_slop
 ## Template file and example asset ids
 
 - **Blender template:** none (the engine evaluates the rules); the combos' painting templates are p306's.
-- **The rule type:** `TerrainRule`, `TERRAIN_RULE_DEFAULTS` (`src/toolkit/geometry/generate/TerrainRules.ts`, `aekasha/toolkit/geometry`).
+- **The rule type:** `TerrainRule`, `TERRAIN_RULE_DEFAULTS` (`src/toolkit/geometry/generate/terrain/TerrainRules.ts`, `aekasha/toolkit/geometry`).
 - **The gallery's Rules row** (`terrainGallery`, `?isDebug=true&startScene=terrainGallery`; `src/app/scenes/terrainGallery/rulesRow.ts`): three 64 m blocks on one generated terrain with a cliff band: `RULES` (`grass01`, `rocks02`, `snow01`, `cliffs01`), the splat map combo (a sandy path and mud in the hollows painted) and the 8-layer combo (`grass02` patches and ice on south-facing tops added), the toolkit's tier preset on each. Its tab has sliders for the rocks' slope and noise, the snow line and facing, the cliffs' slope and the height blend.

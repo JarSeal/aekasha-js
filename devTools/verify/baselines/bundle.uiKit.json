@@ -67,15 +67,15 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7636,
-      "gzip": 3099
+      "gzip": 3097
     },
     "assets/GeometryMerge.js": {
       "bytes": 8249,
-      "gzip": 3428
+      "gzip": 3429
     },
     "assets/GeometryTransfer.js": {
       "bytes": 1933,
-      "gzip": 870
+      "gzip": 869
     },
     "assets/GeometryTransfer.js@AssetsWorker": {
       "bytes": 1939,
@@ -87,7 +87,7 @@
     },
     "assets/HDRLoader.js": {
       "bytes": 3406,
-      "gzip": 1634
+      "gzip": 1633
     },
     "assets/hsva.js": {
       "bytes": 6262,
@@ -123,7 +123,7 @@
     },
     "assets/KTX2Loader.js": {
       "bytes": 60311,
-      "gzip": 24500
+      "gzip": 24499
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2210,
@@ -143,7 +143,7 @@
     },
     "assets/TextureInputResolvers.js": {
       "bytes": 3306,
-      "gzip": 1365
+      "gzip": 1367
     },
     "assets/three.core.js": {
       "bytes": 199218,
@@ -151,7 +151,7 @@
     },
     "assets/three.module.js": {
       "bytes": 219,
-      "gzip": 182
+      "gzip": 183
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -162,8 +162,8 @@
       "gzip": 1987
     },
     "assets/uiKit.embed.js": {
-      "bytes": 973129,
-      "gzip": 271998
+      "bytes": 973172,
+      "gzip": 272014
     },
     "assets/uiKitEmbed.css": {
       "bytes": 18013,
@@ -171,7 +171,7 @@
     },
     "assets/uiKitEmbed.js": {
       "bytes": 46618,
-      "gzip": 16885
+      "gzip": 16882
     },
     "assets/uiKitEmbedData.css": {
       "bytes": 24414,
@@ -195,7 +195,7 @@
     },
     "assets/uiKitEmbedGame.js": {
       "bytes": 23040,
-      "gzip": 8596
+      "gzip": 8595
     },
     "uiKit.embed.js": {
       "bytes": 249,
@@ -205,8 +205,8 @@
   "main": {
     "chunk": "assets/uiKit.embed.js",
     "modules": 69,
-    "minified": 997155,
-    "gzip": 278224
+    "minified": 997198,
+    "gzip": 278230
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -222,7 +222,7 @@
     "_engine/kernel/config": {
       "modules": 1,
       "minified": 2433,
-      "gzip": 1082
+      "gzip": 1081
     },
     "_engine/kernel/ecs": {
       "modules": 6,
@@ -231,8 +231,8 @@
     },
     "_engine/kernel/init": {
       "modules": 5,
-      "minified": 7547,
-      "gzip": 3216
+      "minified": 7590,
+      "gzip": 3223
     },
     "_engine/kernel/input": {
       "modules": 1,

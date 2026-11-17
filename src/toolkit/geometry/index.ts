@@ -11,15 +11,37 @@ export type {
   GeneratedTreeGeometry,
   TreeGeometryOptions,
 } from './generate/Foliage';
-export { generateTerrain } from './generate/Terrain';
-export type { GeneratedTerrain, TerrainNoiseOctave, TerrainOptions } from './generate/Terrain';
-export { TERRAIN_RULE_DEFAULTS, TERRAIN_RULE_NOISE_CHANNELS } from './generate/TerrainRules';
+export { generateTerrain } from './generate/terrain/Terrain';
+export { generateTerrainAsync } from './generate/terrain/TerrainAsync';
+export type { TerrainAsyncOptions } from './generate/terrain/TerrainAsync';
+export type {
+  GeneratedTerrain,
+  TerrainNoiseOctave,
+  TerrainNormalSource,
+  TerrainOptions,
+  TerrainVertexColorOptions,
+} from './generate/terrain/Terrain';
+export type { TerrainAoOptions } from './generate/terrain/TerrainAo';
+export { loadTerrainHeightmapAsync } from './generate/terrain/TerrainHeightmap';
+export type {
+  TerrainHeightmap,
+  TerrainHeightmapFormat,
+  TerrainHeightmapOptions,
+} from './generate/terrain/TerrainHeightmap';
+export {
+  evaluateTerrainRulesCPU,
+  getTerrainRuleCoverageCPU,
+  TERRAIN_RULE_DEFAULTS,
+  TERRAIN_RULE_NOISE_CHANNELS,
+} from './generate/terrain/TerrainRules';
 export type {
   TerrainRule,
   TerrainRuleAspect,
   TerrainRuleNoise,
+  TerrainRuleNoiseTexels,
+  TerrainRulePoint,
   TerrainRuleRange,
-} from './generate/TerrainRules';
+} from './generate/terrain/TerrainRules';
 export {
   bakeScatterToInstancedMesh,
   scatterOnSurface,

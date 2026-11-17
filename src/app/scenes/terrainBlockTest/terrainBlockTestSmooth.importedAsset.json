@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../.schemas/importedAsset.schema.json",
+  "id": "terrainBlockTestSmooth",
+  "fileName": "/debugger/assets/testModels/terrainSmooth.glb",
+  "optimize": { "profile": "terrainBlock" },
+  "debugData": {
+    "name": "Gym smooth terrain",
+    "description": "The Gym's terrainSmooth.glb (100 m, 101 × 101 vertices), reused as an imported terrain block's geometry."
+  }
+}

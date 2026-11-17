@@ -12,6 +12,7 @@ import type {
   MergeMaterialSlotTexture,
   PostFxAsset,
   SkyBoxAsset,
+  TerrainBlockDef,
   TextureArrayAsset,
   TextureAsset,
   TextureAtlasSlotTexture,
@@ -82,6 +83,8 @@ export type Registries = {
   importedAssets: Record<string, ImportedAsset>;
   skyboxes: Record<string, SkyBoxAsset>;
   postFx: Record<string, PostFxAsset>;
+  /** Terrain blocks (p306 D2): their defaults filled in, as scenes get them */
+  terrainBlocks: Record<string, TerrainBlockDef & { __sourcePath?: string }>;
   /** The procedural texture set generators (p304 D3), each module by its id (`<id>.generator.ts`),
    * as paths from `srcDir` */
   generators: Record<string, string>;
@@ -102,7 +105,8 @@ export type IdSpace =
   | 'meshes'
   | 'importedAssets'
   | 'skyboxes'
-  | 'postFx';
+  | 'postFx'
+  | 'terrainBlocks';
 
 /** The ids taken in each space */
 export type TakenIds = Record<IdSpace, Set<string>>;
@@ -127,6 +131,7 @@ export const createRegistries = (): { registries: Registries; taken: TakenIds } 
     importedAssets: {},
     skyboxes: {},
     postFx: {},
+    terrainBlocks: {},
     generators: {},
     loaders: { scenes: {}, tslMaterials: {}, postFx: {}, textureSetGenerators: {} },
   },
@@ -143,6 +148,7 @@ export const createRegistries = (): { registries: Registries; taken: TakenIds } 
     importedAssets: new Set(),
     skyboxes: new Set(),
     postFx: new Set(),
+    terrainBlocks: new Set(),
   },
 });
 
@@ -206,6 +212,7 @@ const TYPE_LABELS: Record<GatheredJsonType, string> = {
   importedAsset: 'imported asset',
   skybox: 'skybox',
   postFx: 'PostFX',
+  terrainBlock: 'terrain block',
 };
 
 /**

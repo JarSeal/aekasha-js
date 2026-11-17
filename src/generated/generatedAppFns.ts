@@ -248,6 +248,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  terrainBlockTest: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/terrainBlockTest/terrainBlockTest.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   terrainGallery: async ({ sceneData, assets }) => {
     const module = await import('../app/./scenes/terrainGallery/terrainGallery.ts');
     await (
@@ -309,6 +317,7 @@ export const sceneFileObjects: {
 export const tslMaterialFileObjects = {
   bannerAether: () => import('../app/profiles/banner/bannerAether.tsl.ts'),
   testTslMat: () => import('../app/scenes/sceneTestECS/testTslMat.tsl.ts'),
+  terrainGalleryPatch: () => import('../app/scenes/terrainGallery/terrainGalleryPatch.tsl.ts'),
   p302ChannelMat: () => import('../app/scenes/testDebugScene/p302ChannelMat.tsl.ts'),
   p299ArrayLayerMat: () => import('../app/scenes/textureArrays/p299ArrayLayerMat.tsl.ts'),
   p299AtlasCellMat: () => import('../app/scenes/textureAtlases/p299AtlasCellMat.tsl.ts'),
@@ -322,6 +331,8 @@ export const tslMaterialFileObjects = {
   textureSetSurface: () => import('../toolkit/materials/textureSetSurface/textureSetSurface.tsl.ts'),
   triplanarCheckerboard: () => import('../toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts'),
   triplanarGrid: () => import('../toolkit/materials/triplanarGrid/triplanarGrid.tsl.ts'),
+  terrainBlockTestBlenderSplat: () => import('../app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts'),
+  terrainBlockTestBlenderVertex: () => import('../app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts'),
 };
 
 export const postFxFileObjects = {

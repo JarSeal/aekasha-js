@@ -20028,10 +20028,828 @@
         "streaming"
       ]
     },
+    "terrainBlockTest": {
+      "isDebugScene": true,
+      "name": "Terrain blocks (p306)",
+      "description": "p306 Phase 2's verification scene: three 100 m terrain blocks side by side, spawned with spawnTerrainBlock. Middle: the Gym's terrainSmooth.glb as a JSON-only block (an imported node, a HEIGHTFIELD read from its geometry, grass through its materialInputs' variant of textureSetSurface). Right: a generated block (the toolkit's noiseTerrain) with the generator's heightfield. Left: a generated block with a TRIMESH collider. Front (p306 Phase 4): a 64 m block from a committed .r16 heightmap (loadTerrainHeightmapAsync, generated on the toolkit's terrain worker with its heightfield), its heights checked against the map's texels. Front left (p306 Phase 5): the terrain add-on's orientation block, a 32 m Blender export with corner markers (snow at the engine's -x, -z corner, mud at +x, -z) and baked AO, twice: through its COLOR_0 and, beside it, through its painted splat map; both must look alike. A 3 × 3 grid of boxes falls on each. The tab (p306 Phase 4) spawns a fourth, a 256 m / 257² rulesTerrain block with AO behind them, and generates the same on the toolkit's terrain worker or the main thread, logging the frames. window.__terrainBlockTest holds the spawn results and, after the boxes settle, each box's height above the terrain under it.",
+      "terrainBlocks": [
+        {
+          "id": "terrainBlockTestSmooth",
+          "geometry": {
+            "importedAsset": "terrainBlockTestSmooth",
+            "node": "TerrainSmooth"
+          },
+          "material": "textureSetSurface",
+          "materialInputs": {
+            "surface": {
+              "textureSet": "grass01"
+            }
+          },
+          "grid": {
+            "x": 0,
+            "z": 0,
+            "size": 100,
+            "resolution": 101
+          },
+          "collider": {
+            "type": "HEIGHTFIELD",
+            "friction": 1.2
+          },
+          "shadows": {
+            "cast": true,
+            "receive": true
+          },
+          "debugData": {
+            "name": "Imported block",
+            "description": "The Gym's smooth terrain node: its HEIGHTFIELD read from the geometry, grass through the block's own input."
+          }
+        },
+        {
+          "id": "terrainBlockTestNoise",
+          "geometry": {
+            "generator": "noiseTerrain",
+            "params": {
+              "maxHeight": 12
+            },
+            "seed": 11
+          },
+          "material": "textureSetSurface",
+          "grid": {
+            "x": 1,
+            "z": 0,
+            "size": 100,
+            "resolution": 65
+          },
+          "collider": {
+            "type": "HEIGHTFIELD"
+          },
+          "shadows": {
+            "cast": true,
+            "receive": true
+          },
+          "debugData": {
+            "name": "Generated block",
+            "description": "The toolkit's noiseTerrain, its HEIGHTFIELD from the generator's own heights (toHeightfieldColliderParams)."
+          }
+        },
+        {
+          "id": "terrainBlockTestTrimesh",
+          "geometry": {
+            "generator": "noiseTerrain",
+            "params": {
+              "maxHeight": 18
+            },
+            "seed": 4
+          },
+          "material": "textureSetSurface",
+          "materialInputs": {
+            "surface": {
+              "textureSet": "rocks01"
+            }
+          },
+          "grid": {
+            "x": -1,
+            "z": 0,
+            "size": 100,
+            "resolution": 65
+          },
+          "collider": {
+            "type": "TRIMESH"
+          },
+          "shadows": {
+            "cast": false,
+            "receive": true
+          },
+          "debugData": {
+            "name": "Generated TRIMESH block",
+            "description": "The toolkit's noiseTerrain, its TRIMESH collider read from the geometry (the generator's heightfield unused); casts no shadow."
+          }
+        },
+        {
+          "id": "terrainBlockTestBlender",
+          "geometry": {
+            "importedAsset": "terrainBlockTestBlender",
+            "node": "terrainBlockTestBlender"
+          },
+          "material": "terrainBlockTestBlenderVertex",
+          "grid": {
+            "x": -3,
+            "z": 3,
+            "size": 32,
+            "resolution": 33
+          },
+          "collider": {
+            "type": "HEIGHTFIELD"
+          },
+          "shadows": {
+            "cast": true,
+            "receive": true
+          },
+          "debugData": {
+            "name": "Orientation block (vertex colour)",
+            "description": "p306 Phase 5's orientation block: the terrain add-on's export (devTools/blender/exportOrientationBlock.py), 32 m / 33, a mound near the engine's +x, +z corner, the corner markers in COLOR_0 (red: snow at -x, -z; green: mud at +x, -z) and the baked AO in its A, its HEIGHTFIELD from the GLB's custom props."
+          }
+        },
+        {
+          "id": "terrainBlockTestBlenderSplatMap",
+          "geometry": {
+            "importedAsset": "terrainBlockTestBlender",
+            "node": "terrainBlockTestBlender"
+          },
+          "material": "terrainBlockTestBlenderSplat",
+          "grid": {
+            "x": -2,
+            "z": 3,
+            "size": 32,
+            "resolution": 33
+          },
+          "collider": {
+            "type": "HEIGHTFIELD"
+          },
+          "shadows": {
+            "cast": true,
+            "receive": true
+          },
+          "debugData": {
+            "name": "Orientation block (splat map)",
+            "description": "The same export at the next grid place, drawn through its painted splat map (terrainBlockTestBlender_splat0, flipY false) instead of COLOR_0: its corners must look like the vertex colour block's."
+          }
+        },
+        {
+          "id": "terrainBlockTestLarge",
+          "geometry": {
+            "generator": "rulesTerrain",
+            "params": {
+              "maxHeight": 24,
+              "octaves": [
+                [
+                  0.0125,
+                  1
+                ],
+                [
+                  0.04,
+                  0.4
+                ],
+                [
+                  0.125,
+                  0.1
+                ]
+              ],
+              "ao": {
+                "radius": 16
+              },
+              "rules": [
+                {
+                  "layer": 1,
+                  "slope": {
+                    "min": 25
+                  }
+                },
+                {
+                  "layer": 2,
+                  "height": {
+                    "min": 10
+                  }
+                },
+                {
+                  "layer": 3,
+                  "slope": {
+                    "min": 45
+                  }
+                }
+              ]
+            },
+            "seed": 3
+          },
+          "material": "textureSetSurface",
+          "grid": {
+            "x": 0,
+            "z": -1,
+            "size": 256,
+            "resolution": 257
+          },
+          "collider": {
+            "type": "HEIGHTFIELD"
+          },
+          "shadows": {
+            "cast": true,
+            "receive": true
+          },
+          "debugData": {
+            "name": "Large generated block",
+            "description": "p306 Phase 4's exit: a 256 m / 257² rulesTerrain block with horizon AO, generated on the toolkit's terrain worker. Not spawned at load: the scene's tab spawns it and measures the frames."
+          }
+        }
+      ],
+      "id": "terrainBlockTest",
+      "sceneFile": "./scenes/terrainBlockTest/terrainBlockTest.ts",
+      "cameras": [
+        {
+          "camProps": {
+            "type": "PERSPECTIVE",
+            "fov": 90,
+            "active": true
+          },
+          "entityOpts": {
+            "debugData": {
+              "name": "_camera",
+              "description": "Auto-generated camera for the scene"
+            }
+          }
+        }
+      ],
+      "importedAssets": [
+        {
+          "id": "terrainBlockTestSmooth",
+          "fileName": "/debugger/assets/testModels/terrainSmooth.glb",
+          "debugData": {
+            "name": "Gym smooth terrain",
+            "description": "The Gym's terrainSmooth.glb (100 m, 101 × 101 vertices), reused as an imported terrain block's geometry."
+          },
+          "__fileSize": 461412,
+          "__sourceUrl": "/debugger/assets/testModels/terrainSmooth.glb",
+          "__url": "/aek-assets/debugger/assets/testModels/terrainSmooth.e4afb8f7.glb",
+          "__bytes": {
+            "in": 461412,
+            "out": 264980
+          },
+          "__vramBytes": {
+            "in": 459264,
+            "out": 459264
+          }
+        },
+        {
+          "id": "terrainBlockTestBlender",
+          "fileName": "./terrainBlockTestBlender.glb",
+          "debugData": {
+            "name": "Orientation block",
+            "description": "The terrain add-on's export of terrainBlockTest's orientation block (devTools/blender/exportOrientationBlock.py; p306 Phase 5). The terrainBlock profile keeps its positions lossless."
+          },
+          "__fileSize": 57168,
+          "__sourceUrl": "/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.glb",
+          "__url": "/aek-assets/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.d49c53dc.glb",
+          "__bytes": {
+            "in": 57168,
+            "out": 16940
+          },
+          "__vramBytes": {
+            "in": 55848,
+            "out": 55848
+          }
+        }
+      ],
+      "materials": [
+        {
+          "id": "textureSetSurface",
+          "debugData": {
+            "name": "Texture set surface",
+            "description": "One texture set on a surface, any packing (p303 D7): the baseline of the terrain techniques, no anti-tiling or splat. Give a mesh its set with matOverrides.inputs.surface ({ textureSet, packing? }). Static defines: tiling (WORLD_XZ: the world's (x, -z) over physicalSize, for terrain; UV: the mesh's UV in metres, for walls and structures), minimalNormal (BUMP or FLAT)."
+          },
+          "tslFile": "materials/textureSetSurface/textureSetSurface.tsl.ts",
+          "staticDefines": {
+            "tiling": "WORLD_XZ",
+            "minimalNormal": "BUMP"
+          },
+          "inputs": {
+            "surface": {
+              "textureSet": "sand01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "terrainBlockTestBlenderVertex",
+          "debugData": {
+            "name": "Orientation block (vertex colour)",
+            "description": "p306 Phase 5's orientation block through its COLOR_0 (RGB_AO): grass, snow on the red marker (the engine's -x, -z corner, the top view's top left), mud on the green one (+x, -z, top right); A the baked AO."
+          },
+          "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
+          "staticDefines": {
+            "terrain": {
+              "layers": [
+                {},
+                {},
+                {}
+              ],
+              "blend": {
+                "source": "VERTEX_COLOR",
+                "vertexColor": {
+                  "layout": "RGB_AO"
+                }
+              },
+              "ao": {
+                "vertex": true
+              }
+            }
+          },
+          "inputs": {
+            "layer0": {
+              "textureSet": "grass01"
+            },
+            "layer1": {
+              "textureSet": "snow01"
+            },
+            "layer2": {
+              "textureSet": "mud01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "terrainBlockTestBlenderSplat",
+          "debugData": {
+            "name": "Orientation block (splat map)",
+            "description": "p306 Phase 5's orientation block through its painted splat map (flipY false): the same sets and corners as the vertex colour material, so both blocks look alike."
+          },
+          "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
+          "staticDefines": {
+            "terrain": {
+              "layers": [
+                {},
+                {},
+                {}
+              ],
+              "blend": {
+                "source": "SPLAT_MAP"
+              }
+            }
+          },
+          "inputs": {
+            "layer0": {
+              "textureSet": "grass01"
+            },
+            "layer1": {
+              "textureSet": "snow01"
+            },
+            "layer2": {
+              "textureSet": "mud01"
+            },
+            "splat0": {
+              "texture": "terrainBlockTestBlender_splat0"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        }
+      ],
+      "textureSets": [
+        {
+          "id": "sand01",
+          "category": "SAND",
+          "physicalSize": [
+            3,
+            3
+          ],
+          "heightScale": 0.057,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "sand01_albedoHeight",
+              "normal": "sand01_normal",
+              "orm": "sand01_orm"
+            },
+            "LITE": {
+              "albedoRough": "sand01_albedoRough",
+              "normalHeight": "sand01_normalHeight"
+            },
+            "MINIMAL": {
+              "albedoHeight": "sand01_albedoHeightAO"
+            }
+          },
+          "debugData": {
+            "name": "Sand 01 (dry dunes)",
+            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.85,
+            "wetDarkening": 0.55,
+            "wetRoughness": 0.4
+          },
+          "averageColor": "#ab966b"
+        },
+        {
+          "id": "grass01",
+          "category": "GRASS",
+          "physicalSize": [
+            1.4,
+            1.4
+          ],
+          "heightScale": 0.002,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "grass01_albedoHeight",
+              "normal": "grass01_normal",
+              "orm": "grass01_orm"
+            },
+            "LITE": {
+              "albedoRough": "grass01_albedoRough",
+              "normalHeight": "grass01_normalHeight"
+            },
+            "MINIMAL": {
+              "albedoHeight": "grass01_albedoHeightAO"
+            }
+          },
+          "debugData": {
+            "name": "Grass 01 (lawn ground)",
+            "description": "ambientCG Grass004, CC0: lawn-grass ground seen from the top, no blades. All three packings (the gallery's packing comparison, p303 D6)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 2.5,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#5c6730"
+        },
+        {
+          "id": "snow01",
+          "category": "SNOW",
+          "physicalSize": [
+            3,
+            3
+          ],
+          "heightScale": 0.048,
+          "packings": {
+            "LITE": {
+              "albedoRough": "snow01_albedoRough",
+              "normalHeight": "snow01_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Snow 01 (clean)",
+            "description": "ambientCG Snow010A, CC0: clean snow."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#fff2e9",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#dbebf8"
+        },
+        {
+          "id": "mud01",
+          "category": "MUD",
+          "physicalSize": [
+            1.3,
+            1.3
+          ],
+          "heightScale": 0.04,
+          "packings": {
+            "LITE": {
+              "albedoRough": "mud01_albedoRough",
+              "normalHeight": "mud01_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Mud 01 (soil)",
+            "description": "Poly Haven brown_mud_02, CC0: brown soil mud."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#484034"
+        },
+        {
+          "id": "rocks01",
+          "category": "ROCKS",
+          "physicalSize": [
+            2,
+            2
+          ],
+          "heightScale": 0.018,
+          "packings": {
+            "LITE": {
+              "albedoRough": "rocks01_albedoRough",
+              "normalHeight": "rocks01_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Rocks 01 (gravel)",
+            "description": "ambientCG Ground079S, CC0: gravel / rocky ground."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#ad926e"
+        }
+      ],
+      "textures": [
+        {
+          "id": "sand01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "sand01 albedoRough (LITE)",
+            "description": "The texture set sand01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/sand01/sand01_albedoRough.pack.42c89ed4.ktx2",
+          "__bytes": {
+            "in": 9086447,
+            "out": 861827
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.4077,
+            0.303,
+            0.1458
+          ]
+        },
+        {
+          "id": "sand01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "sand01 normalHeight (LITE)",
+            "description": "The texture set sand01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/sand01/sand01_normalHeight.pack.448c5a53.ktx2",
+          "__bytes": {
+            "in": 7695457,
+            "out": 1166404
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "grass01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "grass01 albedoRough (LITE)",
+            "description": "The texture set grass01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/grass01/grass01_albedoRough.pack.50a0bb8d.ktx2",
+          "__bytes": {
+            "in": 14718033,
+            "out": 1310929
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.1071,
+            0.1347,
+            0.0293
+          ]
+        },
+        {
+          "id": "grass01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "grass01 normalHeight (LITE)",
+            "description": "The texture set grass01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/grass01/grass01_normalHeight.pack.59a4f2a1.ktx2",
+          "__bytes": {
+            "in": 13506245,
+            "out": 1321146
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "snow01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "snow01 albedoRough (LITE)",
+            "description": "The texture set snow01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Snow010A's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/snow01/snow01_albedoRough.pack.da33b5ed.ktx2",
+          "__bytes": {
+            "in": 9647460,
+            "out": 957546
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.7076,
+            0.8269,
+            0.9346
+          ]
+        },
+        {
+          "id": "snow01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "snow01 normalHeight (LITE)",
+            "description": "The texture set snow01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Snow010A's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/snow01/snow01_normalHeight.pack.28ae055f.ktx2",
+          "__bytes": {
+            "in": 7144752,
+            "out": 1145427
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "mud01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "mud01 albedoRough (LITE)",
+            "description": "The texture set mud01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from polyHaven brown_mud_02's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/mud01/mud01_albedoRough.pack.0f09f635.ktx2",
+          "__bytes": {
+            "in": 5438406,
+            "out": 1096951
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.0646,
+            0.0509,
+            0.0339
+          ]
+        },
+        {
+          "id": "mud01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "mud01 normalHeight (LITE)",
+            "description": "The texture set mud01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from polyHaven brown_mud_02's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/mud01/mud01_normalHeight.pack.37d9ac74.ktx2",
+          "__bytes": {
+            "in": 4820521,
+            "out": 1301764
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "terrainBlockTestBlender_splat0",
+          "fileName": "./terrainBlockTestBlender_splat0.png",
+          "texOpts": {
+            "flipY": false,
+            "colorSpace": ""
+          },
+          "debugData": {
+            "name": "Orientation block's splat map",
+            "description": "The add-on's export: the corner markers painted over the block's UVs (red at the top left: the engine's -x, -z corner), layers 1 and 2 of the splat map material. flipY false: the glTF UVs start at the image's top row."
+          },
+          "__fileSize": 584,
+          "__sourceUrl": "/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.png",
+          "__url": "/aek-assets/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.98f9f948.png",
+          "__bytes": {
+            "in": 584,
+            "out": 584
+          },
+          "__vramBytes": {
+            "in": 87380,
+            "out": 87380
+          },
+          "__codec": "none"
+        },
+        {
+          "id": "rocks01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "rocks01 albedoRough (LITE)",
+            "description": "The texture set rocks01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground079S's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/rocks01/rocks01_albedoRough.pack.c6a24dfc.ktx2",
+          "__bytes": {
+            "in": 12442144,
+            "out": 1227608
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.4165,
+            0.2873,
+            0.1564
+          ]
+        },
+        {
+          "id": "rocks01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "rocks01 normalHeight (LITE)",
+            "description": "The texture set rocks01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground079S's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/rocks01/rocks01_normalHeight.pack.e66b9742.ktx2",
+          "__bytes": {
+            "in": 11125458,
+            "out": 1288192
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        }
+      ],
+      "__features": [
+        "texturesets",
+        "terrain",
+        "physics"
+      ]
+    },
     "terrainGallery": {
       "isDebugScene": true,
-      "name": "Terrain gallery (p303, p304, p305)",
-      "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the toolkit's terrain material (p305, its JSON route; one layer, world tiling) in the set's default packing, which the debug tab switches to the code route or to the baseline textureSetSurface (they look the same). Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). Behind the library, the Anti-tiling row (p305): three flat 48 × 48 m grass01 blocks with the terrain material's anti-tiling NONE, DUAL_SCALE and HEX, the macro variation (macroNoise) on, which the debug tab switches and tunes. Left of the library, the Splatting row (p305): six 24 × 24 m generated blocks blending several sets by weights painted in code, the vertex colour (RGBA, 5 layers) and a splat map (5 layers) each LINEAR beside HEIGHT, RGB_AO with the vertex AO (4 layers), and 9 layers with two splat maps (code route materials, storage AUTO: the splat blocks bind one texture too many for SEPARATE, so each takes a set array the scene lists), which the debug tab tunes. In front of the library, the Rules row (p305): two 64 × 64 m blocks on one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces, macroNoise breaking the borders), the rules alone beside a splat map's sandy path and mud under the same rules (its six sets a set array the scene lists), which the debug tab tunes. In front of the Cliffs row, the Colour map row (p305): the Rules row's 8-layer material on four 64 × 64 m blocks of its terrain, then with a DETAIL colour map (baked at the load from the source on the block's own mesh), with the far COLOR_MAP surface and with the far AVERAGE_COLOR one, which the debug tab tunes and bakes again. In front of that, the Structures row (p305): structure materials (createStructureMaterial: triplanar, dual-scale anti-tiling, a 12 m macro) on pieces made in code, a wall of two segments in world space and a bunker's passage piece in object space worn by their vertex colour (RGBA: clean and stained concrete, grime, damage), and two pillars turning and rising, concrete02 in object space beside world space, which the debug tab pauses. Right of the library, the Procedural row (p304): the toolkit's ten surface generators on a block each (five rows of two), baked at the load (1024² LITE), which the debug tab switches between the bake, the generator live in the material and an imported set of its category, with each generator's params, its export and a GPU measurement. Right of that, the Live block (p305): a 48 × 48 m generated terrain, grass, rocks by slope and snow on the tops by rules, sand ripples in the hollows from the gallery's procedural set terrainGalleryLiveDunes (sandRipples, baked at the load) run live in the terrain material or sampled baked (the imported sets in a set array, the procedural set beside it), which the debug tab switches, tunes and measures. The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
+      "name": "Terrain gallery (p303, p304, p305, p306)",
+      "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the toolkit's terrain material (p305, its JSON route; one layer, world tiling) in the set's default packing, which the debug tab switches to the code route or to the baseline textureSetSurface (they look the same). Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). Behind the library, the Anti-tiling row (p305): three flat 48 × 48 m grass01 blocks with the terrain material's anti-tiling NONE, DUAL_SCALE and HEX, the macro variation (macroNoise) on, which the debug tab switches and tunes. Left of the library, the Splatting row (p305): six 24 × 24 m generated blocks blending several sets by weights painted in code, the vertex colour (RGBA, 5 layers) and a splat map (5 layers) each LINEAR beside HEIGHT, RGB_AO with the vertex AO (4 layers), and 9 layers with two splat maps (code route materials, storage AUTO: the splat blocks bind one texture too many for SEPARATE, so each takes a set array the scene lists), which the debug tab tunes. In front of the library, the Rules row (p305): two 64 × 64 m blocks on one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces, macroNoise breaking the borders), the rules alone beside a splat map's sandy path and mud under the same rules (its six sets a set array the scene lists), which the debug tab tunes. In front of the Cliffs row, the Colour map row (p305): the Rules row's 8-layer material on four 64 × 64 m blocks of its terrain, then with a DETAIL colour map (baked at the load from the source on the block's own mesh), with the far COLOR_MAP surface and with the far AVERAGE_COLOR one, which the debug tab tunes and bakes again. In front of that, the Structures row (p305): structure materials (createStructureMaterial: triplanar, dual-scale anti-tiling, a 12 m macro) on pieces made in code, a wall of two segments in world space and a bunker's passage piece in object space worn by their vertex colour (RGBA: clean and stained concrete, grime, damage), and two pillars turning and rising, concrete02 in object space beside world space, which the debug tab pauses. Right of the library, the Procedural row (p304): the toolkit's ten surface generators on a block each (five rows of two), baked at the load (1024² LITE), which the debug tab switches between the bake, the generator live in the material and an imported set of its category, with each generator's params, its export and a GPU measurement. Right of that, the Live block (p305): a 48 × 48 m generated terrain, grass, rocks by slope and snow on the tops by rules, sand ripples in the hollows from the gallery's procedural set terrainGalleryLiveDunes (sandRipples, baked at the load) run live in the terrain material or sampled baked (the imported sets in a set array, the procedural set beside it), which the debug tab switches, tunes and measures. Behind the Anti-tiling row, past the ground, the Blocks patch (p306): 3 × 3 terrain blocks of 32 m (*.terrainBlock.json) of the toolkit's rulesTerrain, one world-continuous noise with HEIGHT_FN normals, the rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces) laid into the vertex colours on the CPU with the horizon AO in their A, which the debug tab switches to the same rules in the shader (RULES) on the same blocks. The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
       "cameras": [
         {
           "camProps": {
@@ -20926,6 +21744,56 @@
             }
           },
           "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "terrainGalleryPatch",
+          "debugData": {
+            "name": "Terrain gallery patch",
+            "description": "The Blocks patch's terrain material (p306 Phase 3): grass, rocks, snow and cliffs (slope-gated TRIPLANAR) weighed by the vertex colour RGB_AO, which the rulesTerrain generator lays from its rules on the CPU, its A the horizon AO (indirect light)."
+          },
+          "tslFile": "scenes/terrainGallery/terrainGalleryPatch.tsl.ts",
+          "staticDefines": {
+            "terrain": {
+              "layers": [
+                {},
+                {},
+                {},
+                {
+                  "projection": {
+                    "mode": "TRIPLANAR",
+                    "slopeGate": [
+                      35,
+                      50
+                    ]
+                  }
+                }
+              ],
+              "blend": {
+                "source": "VERTEX_COLOR",
+                "vertexColor": {
+                  "layout": "RGB_AO"
+                }
+              },
+              "ao": {
+                "vertex": true
+              }
+            }
+          },
+          "inputs": {
+            "layer0": {
+              "textureSet": "grass01"
+            },
+            "layer1": {
+              "textureSet": "rocks02"
+            },
+            "layer2": {
+              "textureSet": "snow01"
+            },
+            "layer3": {
+              "textureSet": "cliffs01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
         }
       ],
       "skyboxes": [
@@ -21609,11 +22477,833 @@
           "packing": "LITE"
         }
       ],
+      "terrainBlocks": [
+        {
+          "id": "terrainGalleryPatch_c0r0",
+          "geometry": {
+            "generator": "rulesTerrain",
+            "params": {
+              "maxHeight": 10,
+              "octaves": [
+                [
+                  0.016,
+                  1
+                ],
+                [
+                  0.05,
+                  0.35
+                ],
+                [
+                  0.14,
+                  0.1
+                ]
+              ],
+              "layout": "RGB_AO",
+              "rules": [
+                {
+                  "layer": 1,
+                  "slope": {
+                    "min": 26,
+                    "softness": 8
+                  },
+                  "noise": {
+                    "scale": 30,
+                    "amount": 0.35,
+                    "channel": "G"
+                  }
+                },
+                {
+                  "layer": 2,
+                  "height": {
+                    "min": 5,
+                    "softness": 3
+                  },
+                  "slope": {
+                    "max": 38,
+                    "softness": 8
+                  },
+                  "aspect": {
+                    "direction": [
+                      0,
+                      -1
+                    ],
+                    "range": 70,
+                    "softness": 35
+                  },
+                  "noise": {
+                    "scale": 40,
+                    "amount": 0.25
+                  }
+                },
+                {
+                  "layer": 3,
+                  "slope": {
+                    "min": 46,
+                    "softness": 6
+                  }
+                }
+              ],
+              "ao": {
+                "radius": 8,
+                "strength": 0.8
+              }
+            },
+            "seed": 306
+          },
+          "material": "terrainGalleryPatch",
+          "grid": {
+            "x": -1,
+            "z": -6,
+            "size": 32,
+            "resolution": 65
+          },
+          "collider": {
+            "type": "NONE"
+          },
+          "shadows": {
+            "cast": false,
+            "receive": false
+          },
+          "debugData": {
+            "name": "Patch block -1, -6",
+            "description": "One of the terrain gallery's 3 × 3 rulesTerrain patch (p306 Phase 3): world-continuous noise, HEIGHT_FN normals, the rules laid into its vertex colours on the CPU, horizon AO in A."
+          }
+        },
+        {
+          "id": "terrainGalleryPatch_c0r1",
+          "geometry": {
+            "generator": "rulesTerrain",
+            "params": {
+              "maxHeight": 10,
+              "octaves": [
+                [
+                  0.016,
+                  1
+                ],
+                [
+                  0.05,
+                  0.35
+                ],
+                [
+                  0.14,
+                  0.1
+                ]
+              ],
+              "layout": "RGB_AO",
+              "rules": [
+                {
+                  "layer": 1,
+                  "slope": {
+                    "min": 26,
+                    "softness": 8
+                  },
+                  "noise": {
+                    "scale": 30,
+                    "amount": 0.35,
+                    "channel": "G"
+                  }
+                },
+                {
+                  "layer": 2,
+                  "height": {
+                    "min": 5,
+                    "softness": 3
+                  },
+                  "slope": {
+                    "max": 38,
+                    "softness": 8
+                  },
+                  "aspect": {
+                    "direction": [
+                      0,
+                      -1
+                    ],
+                    "range": 70,
+                    "softness": 35
+                  },
+                  "noise": {
+                    "scale": 40,
+                    "amount": 0.25
+                  }
+                },
+                {
+                  "layer": 3,
+                  "slope": {
+                    "min": 46,
+                    "softness": 6
+                  }
+                }
+              ],
+              "ao": {
+                "radius": 8,
+                "strength": 0.8
+              }
+            },
+            "seed": 306
+          },
+          "material": "terrainGalleryPatch",
+          "grid": {
+            "x": -1,
+            "z": -5,
+            "size": 32,
+            "resolution": 65
+          },
+          "collider": {
+            "type": "NONE"
+          },
+          "shadows": {
+            "cast": false,
+            "receive": false
+          },
+          "debugData": {
+            "name": "Patch block -1, -5",
+            "description": "One of the terrain gallery's 3 × 3 rulesTerrain patch (p306 Phase 3): world-continuous noise, HEIGHT_FN normals, the rules laid into its vertex colours on the CPU, horizon AO in A."
+          }
+        },
+        {
+          "id": "terrainGalleryPatch_c0r2",
+          "geometry": {
+            "generator": "rulesTerrain",
+            "params": {
+              "maxHeight": 10,
+              "octaves": [
+                [
+                  0.016,
+                  1
+                ],
+                [
+                  0.05,
+                  0.35
+                ],
+                [
+                  0.14,
+                  0.1
+                ]
+              ],
+              "layout": "RGB_AO",
+              "rules": [
+                {
+                  "layer": 1,
+                  "slope": {
+                    "min": 26,
+                    "softness": 8
+                  },
+                  "noise": {
+                    "scale": 30,
+                    "amount": 0.35,
+                    "channel": "G"
+                  }
+                },
+                {
+                  "layer": 2,
+                  "height": {
+                    "min": 5,
+                    "softness": 3
+                  },
+                  "slope": {
+                    "max": 38,
+                    "softness": 8
+                  },
+                  "aspect": {
+                    "direction": [
+                      0,
+                      -1
+                    ],
+                    "range": 70,
+                    "softness": 35
+                  },
+                  "noise": {
+                    "scale": 40,
+                    "amount": 0.25
+                  }
+                },
+                {
+                  "layer": 3,
+                  "slope": {
+                    "min": 46,
+                    "softness": 6
+                  }
+                }
+              ],
+              "ao": {
+                "radius": 8,
+                "strength": 0.8
+              }
+            },
+            "seed": 306
+          },
+          "material": "terrainGalleryPatch",
+          "grid": {
+            "x": -1,
+            "z": -4,
+            "size": 32,
+            "resolution": 65
+          },
+          "collider": {
+            "type": "NONE"
+          },
+          "shadows": {
+            "cast": false,
+            "receive": false
+          },
+          "debugData": {
+            "name": "Patch block -1, -4",
+            "description": "One of the terrain gallery's 3 × 3 rulesTerrain patch (p306 Phase 3): world-continuous noise, HEIGHT_FN normals, the rules laid into its vertex colours on the CPU, horizon AO in A."
+          }
+        },
+        {
+          "id": "terrainGalleryPatch_c1r0",
+          "geometry": {
+            "generator": "rulesTerrain",
+            "params": {
+              "maxHeight": 10,
+              "octaves": [
+                [
+                  0.016,
+                  1
+                ],
+                [
+                  0.05,
+                  0.35
+                ],
+                [
+                  0.14,
+                  0.1
+                ]
+              ],
+              "layout": "RGB_AO",
+              "rules": [
+                {
+                  "layer": 1,
+                  "slope": {
+                    "min": 26,
+                    "softness": 8
+                  },
+                  "noise": {
+                    "scale": 30,
+                    "amount": 0.35,
+                    "channel": "G"
+                  }
+                },
+                {
+                  "layer": 2,
+                  "height": {
+                    "min": 5,
+                    "softness": 3
+                  },
+                  "slope": {
+                    "max": 38,
+                    "softness": 8
+                  },
+                  "aspect": {
+                    "direction": [
+                      0,
+                      -1
+                    ],
+                    "range": 70,
+                    "softness": 35
+                  },
+                  "noise": {
+                    "scale": 40,
+                    "amount": 0.25
+                  }
+                },
+                {
+                  "layer": 3,
+                  "slope": {
+                    "min": 46,
+                    "softness": 6
+                  }
+                }
+              ],
+              "ao": {
+                "radius": 8,
+                "strength": 0.8
+              }
+            },
+            "seed": 306
+          },
+          "material": "terrainGalleryPatch",
+          "grid": {
+            "x": 0,
+            "z": -6,
+            "size": 32,
+            "resolution": 65
+          },
+          "collider": {
+            "type": "NONE"
+          },
+          "shadows": {
+            "cast": false,
+            "receive": false
+          },
+          "debugData": {
+            "name": "Patch block 0, -6",
+            "description": "One of the terrain gallery's 3 × 3 rulesTerrain patch (p306 Phase 3): world-continuous noise, HEIGHT_FN normals, the rules laid into its vertex colours on the CPU, horizon AO in A."
+          }
+        },
+        {
+          "id": "terrainGalleryPatch_c1r1",
+          "geometry": {
+            "generator": "rulesTerrain",
+            "params": {
+              "maxHeight": 10,
+              "octaves": [
+                [
+                  0.016,
+                  1
+                ],
+                [
+                  0.05,
+                  0.35
+                ],
+                [
+                  0.14,
+                  0.1
+                ]
+              ],
+              "layout": "RGB_AO",
+              "rules": [
+                {
+                  "layer": 1,
+                  "slope": {
+                    "min": 26,
+                    "softness": 8
+                  },
+                  "noise": {
+                    "scale": 30,
+                    "amount": 0.35,
+                    "channel": "G"
+                  }
+                },
+                {
+                  "layer": 2,
+                  "height": {
+                    "min": 5,
+                    "softness": 3
+                  },
+                  "slope": {
+                    "max": 38,
+                    "softness": 8
+                  },
+                  "aspect": {
+                    "direction": [
+                      0,
+                      -1
+                    ],
+                    "range": 70,
+                    "softness": 35
+                  },
+                  "noise": {
+                    "scale": 40,
+                    "amount": 0.25
+                  }
+                },
+                {
+                  "layer": 3,
+                  "slope": {
+                    "min": 46,
+                    "softness": 6
+                  }
+                }
+              ],
+              "ao": {
+                "radius": 8,
+                "strength": 0.8
+              }
+            },
+            "seed": 306
+          },
+          "material": "terrainGalleryPatch",
+          "grid": {
+            "x": 0,
+            "z": -5,
+            "size": 32,
+            "resolution": 65
+          },
+          "collider": {
+            "type": "NONE"
+          },
+          "shadows": {
+            "cast": false,
+            "receive": false
+          },
+          "debugData": {
+            "name": "Patch block 0, -5",
+            "description": "One of the terrain gallery's 3 × 3 rulesTerrain patch (p306 Phase 3): world-continuous noise, HEIGHT_FN normals, the rules laid into its vertex colours on the CPU, horizon AO in A."
+          }
+        },
+        {
+          "id": "terrainGalleryPatch_c1r2",
+          "geometry": {
+            "generator": "rulesTerrain",
+            "params": {
+              "maxHeight": 10,
+              "octaves": [
+                [
+                  0.016,
+                  1
+                ],
+                [
+                  0.05,
+                  0.35
+                ],
+                [
+                  0.14,
+                  0.1
+                ]
+              ],
+              "layout": "RGB_AO",
+              "rules": [
+                {
+                  "layer": 1,
+                  "slope": {
+                    "min": 26,
+                    "softness": 8
+                  },
+                  "noise": {
+                    "scale": 30,
+                    "amount": 0.35,
+                    "channel": "G"
+                  }
+                },
+                {
+                  "layer": 2,
+                  "height": {
+                    "min": 5,
+                    "softness": 3
+                  },
+                  "slope": {
+                    "max": 38,
+                    "softness": 8
+                  },
+                  "aspect": {
+                    "direction": [
+                      0,
+                      -1
+                    ],
+                    "range": 70,
+                    "softness": 35
+                  },
+                  "noise": {
+                    "scale": 40,
+                    "amount": 0.25
+                  }
+                },
+                {
+                  "layer": 3,
+                  "slope": {
+                    "min": 46,
+                    "softness": 6
+                  }
+                }
+              ],
+              "ao": {
+                "radius": 8,
+                "strength": 0.8
+              }
+            },
+            "seed": 306
+          },
+          "material": "terrainGalleryPatch",
+          "grid": {
+            "x": 0,
+            "z": -4,
+            "size": 32,
+            "resolution": 65
+          },
+          "collider": {
+            "type": "NONE"
+          },
+          "shadows": {
+            "cast": false,
+            "receive": false
+          },
+          "debugData": {
+            "name": "Patch block 0, -4",
+            "description": "One of the terrain gallery's 3 × 3 rulesTerrain patch (p306 Phase 3): world-continuous noise, HEIGHT_FN normals, the rules laid into its vertex colours on the CPU, horizon AO in A."
+          }
+        },
+        {
+          "id": "terrainGalleryPatch_c2r0",
+          "geometry": {
+            "generator": "rulesTerrain",
+            "params": {
+              "maxHeight": 10,
+              "octaves": [
+                [
+                  0.016,
+                  1
+                ],
+                [
+                  0.05,
+                  0.35
+                ],
+                [
+                  0.14,
+                  0.1
+                ]
+              ],
+              "layout": "RGB_AO",
+              "rules": [
+                {
+                  "layer": 1,
+                  "slope": {
+                    "min": 26,
+                    "softness": 8
+                  },
+                  "noise": {
+                    "scale": 30,
+                    "amount": 0.35,
+                    "channel": "G"
+                  }
+                },
+                {
+                  "layer": 2,
+                  "height": {
+                    "min": 5,
+                    "softness": 3
+                  },
+                  "slope": {
+                    "max": 38,
+                    "softness": 8
+                  },
+                  "aspect": {
+                    "direction": [
+                      0,
+                      -1
+                    ],
+                    "range": 70,
+                    "softness": 35
+                  },
+                  "noise": {
+                    "scale": 40,
+                    "amount": 0.25
+                  }
+                },
+                {
+                  "layer": 3,
+                  "slope": {
+                    "min": 46,
+                    "softness": 6
+                  }
+                }
+              ],
+              "ao": {
+                "radius": 8,
+                "strength": 0.8
+              }
+            },
+            "seed": 306
+          },
+          "material": "terrainGalleryPatch",
+          "grid": {
+            "x": 1,
+            "z": -6,
+            "size": 32,
+            "resolution": 65
+          },
+          "collider": {
+            "type": "NONE"
+          },
+          "shadows": {
+            "cast": false,
+            "receive": false
+          },
+          "debugData": {
+            "name": "Patch block 1, -6",
+            "description": "One of the terrain gallery's 3 × 3 rulesTerrain patch (p306 Phase 3): world-continuous noise, HEIGHT_FN normals, the rules laid into its vertex colours on the CPU, horizon AO in A."
+          }
+        },
+        {
+          "id": "terrainGalleryPatch_c2r1",
+          "geometry": {
+            "generator": "rulesTerrain",
+            "params": {
+              "maxHeight": 10,
+              "octaves": [
+                [
+                  0.016,
+                  1
+                ],
+                [
+                  0.05,
+                  0.35
+                ],
+                [
+                  0.14,
+                  0.1
+                ]
+              ],
+              "layout": "RGB_AO",
+              "rules": [
+                {
+                  "layer": 1,
+                  "slope": {
+                    "min": 26,
+                    "softness": 8
+                  },
+                  "noise": {
+                    "scale": 30,
+                    "amount": 0.35,
+                    "channel": "G"
+                  }
+                },
+                {
+                  "layer": 2,
+                  "height": {
+                    "min": 5,
+                    "softness": 3
+                  },
+                  "slope": {
+                    "max": 38,
+                    "softness": 8
+                  },
+                  "aspect": {
+                    "direction": [
+                      0,
+                      -1
+                    ],
+                    "range": 70,
+                    "softness": 35
+                  },
+                  "noise": {
+                    "scale": 40,
+                    "amount": 0.25
+                  }
+                },
+                {
+                  "layer": 3,
+                  "slope": {
+                    "min": 46,
+                    "softness": 6
+                  }
+                }
+              ],
+              "ao": {
+                "radius": 8,
+                "strength": 0.8
+              }
+            },
+            "seed": 306
+          },
+          "material": "terrainGalleryPatch",
+          "grid": {
+            "x": 1,
+            "z": -5,
+            "size": 32,
+            "resolution": 65
+          },
+          "collider": {
+            "type": "NONE"
+          },
+          "shadows": {
+            "cast": false,
+            "receive": false
+          },
+          "debugData": {
+            "name": "Patch block 1, -5",
+            "description": "One of the terrain gallery's 3 × 3 rulesTerrain patch (p306 Phase 3): world-continuous noise, HEIGHT_FN normals, the rules laid into its vertex colours on the CPU, horizon AO in A."
+          }
+        },
+        {
+          "id": "terrainGalleryPatch_c2r2",
+          "geometry": {
+            "generator": "rulesTerrain",
+            "params": {
+              "maxHeight": 10,
+              "octaves": [
+                [
+                  0.016,
+                  1
+                ],
+                [
+                  0.05,
+                  0.35
+                ],
+                [
+                  0.14,
+                  0.1
+                ]
+              ],
+              "layout": "RGB_AO",
+              "rules": [
+                {
+                  "layer": 1,
+                  "slope": {
+                    "min": 26,
+                    "softness": 8
+                  },
+                  "noise": {
+                    "scale": 30,
+                    "amount": 0.35,
+                    "channel": "G"
+                  }
+                },
+                {
+                  "layer": 2,
+                  "height": {
+                    "min": 5,
+                    "softness": 3
+                  },
+                  "slope": {
+                    "max": 38,
+                    "softness": 8
+                  },
+                  "aspect": {
+                    "direction": [
+                      0,
+                      -1
+                    ],
+                    "range": 70,
+                    "softness": 35
+                  },
+                  "noise": {
+                    "scale": 40,
+                    "amount": 0.25
+                  }
+                },
+                {
+                  "layer": 3,
+                  "slope": {
+                    "min": 46,
+                    "softness": 6
+                  }
+                }
+              ],
+              "ao": {
+                "radius": 8,
+                "strength": 0.8
+              }
+            },
+            "seed": 306
+          },
+          "material": "terrainGalleryPatch",
+          "grid": {
+            "x": 1,
+            "z": -4,
+            "size": 32,
+            "resolution": 65
+          },
+          "collider": {
+            "type": "NONE"
+          },
+          "shadows": {
+            "cast": false,
+            "receive": false
+          },
+          "debugData": {
+            "name": "Patch block 1, -4",
+            "description": "One of the terrain gallery's 3 × 3 rulesTerrain patch (p306 Phase 3): world-continuous noise, HEIGHT_FN normals, the rules laid into its vertex colours on the CPU, horizon AO in A."
+          }
+        }
+      ],
       "id": "terrainGallery",
       "sceneFile": "./scenes/terrainGallery/terrainGallery.ts",
       "__features": [
         "skybox",
-        "texturesets"
+        "texturesets",
+        "terrain"
       ]
     },
     "testDebugScene": {
@@ -28138,6 +29828,34 @@
         "out": 1398128
       },
       "__codec": "uastc"
+    },
+    "terrainBlockTestBlender_splat0": {
+      "id": "terrainBlockTestBlender_splat0",
+      "fileName": "./terrainBlockTestBlender_splat0.png",
+      "texOpts": {
+        "flipY": false,
+        "colorSpace": ""
+      },
+      "debugData": {
+        "name": "Orientation block's splat map",
+        "description": "The add-on's export: the corner markers painted over the block's UVs (red at the top left: the engine's -x, -z corner), layers 1 and 2 of the splat map material. flipY false: the glTF UVs start at the image's top row."
+      },
+      "optimize": {
+        "slot": "data"
+      },
+      "__sourcePath": "src/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.texture.json",
+      "__fileSize": 584,
+      "__sourceUrl": "/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.png",
+      "__url": "/aek-assets/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.98f9f948.png",
+      "__bytes": {
+        "in": 584,
+        "out": 584
+      },
+      "__vramBytes": {
+        "in": 87380,
+        "out": 87380
+      },
+      "__codec": "none"
     },
     "p303BrickSetKtx_albedoRough": {
       "id": "p303BrickSetKtx_albedoRough",
@@ -37545,6 +39263,57 @@
       "type": "STANDARDNODEMATERIAL",
       "__sourcePath": "src/app/scenes/sceneTestECS/testTslMat.material.json"
     },
+    "terrainGalleryPatch": {
+      "id": "terrainGalleryPatch",
+      "debugData": {
+        "name": "Terrain gallery patch",
+        "description": "The Blocks patch's terrain material (p306 Phase 3): grass, rocks, snow and cliffs (slope-gated TRIPLANAR) weighed by the vertex colour RGB_AO, which the rulesTerrain generator lays from its rules on the CPU, its A the horizon AO (indirect light)."
+      },
+      "tslFile": "scenes/terrainGallery/terrainGalleryPatch.tsl.ts",
+      "staticDefines": {
+        "terrain": {
+          "layers": [
+            {},
+            {},
+            {},
+            {
+              "projection": {
+                "mode": "TRIPLANAR",
+                "slopeGate": [
+                  35,
+                  50
+                ]
+              }
+            }
+          ],
+          "blend": {
+            "source": "VERTEX_COLOR",
+            "vertexColor": {
+              "layout": "RGB_AO"
+            }
+          },
+          "ao": {
+            "vertex": true
+          }
+        }
+      },
+      "inputs": {
+        "layer0": {
+          "textureSet": "grass01"
+        },
+        "layer1": {
+          "textureSet": "rocks02"
+        },
+        "layer2": {
+          "textureSet": "snow01"
+        },
+        "layer3": {
+          "textureSet": "cliffs01"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/terrainGallery/terrainGalleryPatch.material.json"
+    },
     "p302ChannelMat": {
       "id": "p302ChannelMat",
       "debugData": {
@@ -37821,6 +39590,81 @@
       },
       "type": "STANDARDNODEMATERIAL",
       "__sourcePath": "src/toolkit/materials/triplanarGrid/triplanarGrid.material.json"
+    },
+    "terrainBlockTestBlenderSplat": {
+      "id": "terrainBlockTestBlenderSplat",
+      "debugData": {
+        "name": "Orientation block (splat map)",
+        "description": "p306 Phase 5's orientation block through its painted splat map (flipY false): the same sets and corners as the vertex colour material, so both blocks look alike."
+      },
+      "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
+      "staticDefines": {
+        "terrain": {
+          "layers": [
+            {},
+            {},
+            {}
+          ],
+          "blend": {
+            "source": "SPLAT_MAP"
+          }
+        }
+      },
+      "inputs": {
+        "layer0": {
+          "textureSet": "grass01"
+        },
+        "layer1": {
+          "textureSet": "snow01"
+        },
+        "layer2": {
+          "textureSet": "mud01"
+        },
+        "splat0": {
+          "texture": "terrainBlockTestBlender_splat0"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlenderSplat.material.json"
+    },
+    "terrainBlockTestBlenderVertex": {
+      "id": "terrainBlockTestBlenderVertex",
+      "debugData": {
+        "name": "Orientation block (vertex colour)",
+        "description": "p306 Phase 5's orientation block through its COLOR_0 (RGB_AO): grass, snow on the red marker (the engine's -x, -z corner, the top view's top left), mud on the green one (+x, -z, top right); A the baked AO."
+      },
+      "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
+      "staticDefines": {
+        "terrain": {
+          "layers": [
+            {},
+            {},
+            {}
+          ],
+          "blend": {
+            "source": "VERTEX_COLOR",
+            "vertexColor": {
+              "layout": "RGB_AO"
+            }
+          },
+          "ao": {
+            "vertex": true
+          }
+        }
+      },
+      "inputs": {
+        "layer0": {
+          "textureSet": "grass01"
+        },
+        "layer1": {
+          "textureSet": "snow01"
+        },
+        "layer2": {
+          "textureSet": "mud01"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlenderVertex.material.json"
     }
   },
   "mergeMaterials": {
@@ -38044,12 +39888,40 @@
         "out": 33824
       }
     },
+    "terrainBlockTestSmooth": {
+      "id": "terrainBlockTestSmooth",
+      "fileName": "/debugger/assets/testModels/terrainSmooth.glb",
+      "debugData": {
+        "name": "Gym smooth terrain",
+        "description": "The Gym's terrainSmooth.glb (100 m, 101 × 101 vertices), reused as an imported terrain block's geometry."
+      },
+      "optimize": {
+        "profile": "terrainBlock"
+      },
+      "__sourcePath": "src/app/scenes/terrainBlockTest/terrainBlockTestSmooth.importedAsset.json",
+      "__fileSize": 461412,
+      "__sourceUrl": "/debugger/assets/testModels/terrainSmooth.glb",
+      "__url": "/aek-assets/debugger/assets/testModels/terrainSmooth.e4afb8f7.glb",
+      "__bytes": {
+        "in": 461412,
+        "out": 264980
+      },
+      "__vramBytes": {
+        "in": 459264,
+        "out": 459264
+      }
+    },
     "p371MergeKit": {
       "id": "p371MergeKit",
       "fileName": "./p371MergeKit.glb",
       "debugData": {
         "name": "Merge kit",
         "description": "The GLB merge check (p371 Phase 3): 20 box pieces in two glTF materials (ten wall blocks, six pillars sharing a mesh, four blocks on a turned empty, one mirrored) that the asset pipeline joins into p371MergeKit/__merged; the door_* nodes (one with a handle child) and the two collider nodes stay as they are. Built by devTools/assetPipeline/fixtures/mergeKitFile.ts."
+      },
+      "optimize": {
+        "mesh": {
+          "quantize": false
+        }
       },
       "merge": {
         "mode": "ALL",
@@ -38068,6 +39940,29 @@
       "__vramBytes": {
         "in": 16800,
         "out": 21000
+      }
+    },
+    "terrainBlockTestBlender": {
+      "id": "terrainBlockTestBlender",
+      "fileName": "./terrainBlockTestBlender.glb",
+      "debugData": {
+        "name": "Orientation block",
+        "description": "The terrain add-on's export of terrainBlockTest's orientation block (devTools/blender/exportOrientationBlock.py; p306 Phase 5). The terrainBlock profile keeps its positions lossless."
+      },
+      "optimize": {
+        "profile": "terrainBlock"
+      },
+      "__sourcePath": "src/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.importedAsset.json",
+      "__fileSize": 57168,
+      "__sourceUrl": "/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.glb",
+      "__url": "/aek-assets/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.d49c53dc.glb",
+      "__bytes": {
+        "in": 57168,
+        "out": 16940
+      },
+      "__vramBytes": {
+        "in": 55848,
+        "out": 55848
       }
     },
     "aekashaSymbol": {

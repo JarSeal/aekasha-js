@@ -76,13 +76,17 @@ The set is any of the [library's 16](../../hub/pages/features/terrain/guide.md#t
 
 ## Blender, step by step
 
-The block workflow (the grid, its shaping, normals and export) is [p306](../plans/p306_terrain-blocks-and-procedural-terrain-meshes.md)'s, on its page `terrain-blocks-blender.md`, with the template `terrain_singleLayer.blend`.
+The block workflow (set-up, the grid, shaping, validating, exporting) is [Terrain blocks from Blender](terrain-blocks-blender.md); start from `terrain_singleLayer.blend` (`src/toolkit/terrain/blender/`), a 64 m / 129 block shaped by a live Displace with grass01 as its preview. What's particular to one layer:
 
-What the material needs from a mesh: nothing beyond positions and normals with world tiling (`uv: 'WORLD'`, the default). With `uv: 'MESH_UV'`, UVs in metres (1 UV unit = 1 m), so the set's `physicalSize` keeps its scale; the tangent frame comes from the UVs' derivatives, so the mesh needs no tangent attribute.
+1. **Shape only:** nothing to paint. The `Splat` attribute stays black (the export writes it; a single-layer material doesn't read it).
+2. **The Displace modifier** is the quickest heightfield-safe shape: Texture Coordinates _Global_ (the next block with the same modifier continues the hills), Direction _Z_, Midlevel 0, Strength the hills' height. Validate warns that it's unapplied and checks the block with it applied, as the export writes it.
+3. **The preview** (sidebar → Preview Material): the base layer alone, the set you'll use, tiled at its real size at the world position, as the material's world UVs tile it. No anti-tiling or macro in the preview: judge the repetition in the engine.
+
+What the material needs from a mesh: nothing beyond positions and normals with world tiling (`uv: 'WORLD'`, the default). With `uv: 'MESH_UV'`, UVs in metres (1 UV unit = 1 m), so the set's `physicalSize` keeps its scale (a block's 0..1 UVs don't: scale them, or stay in world space); the tangent frame comes from the UVs' derivatives, so the mesh needs no tangent attribute.
 
 ## Export
 
-The exporter's settings are p306's (`terrain-blocks-blender.md`). Any glTF mesh with normals works; no vertex colour or second UV set is read by a single-layer material.
+_Export Block_ ([the locked settings](terrain-blocks-blender.md#export)): the GLB and the two JSON stubs. Any glTF mesh with normals works too (a plain `*.mesh.json` or import); no vertex colour or second UV set is read by a single-layer material.
 
 ## Import into Ækasha
 
@@ -175,6 +179,18 @@ const meadow = createTerrainMaterial(config);
 
 `createTerrainMaterial` is synchronous: the set's textures must be loaded (a scene that lists the set or a material naming it, else `ensureMaterialDependencies` as above; a missing texture samples white, warned). An id that's registered already returns that material. `getTerrainMaterialProps(config)` gives the JSON route's fields for the same config (`staticDefines.terrain` and the inputs), which is also how to see what a config becomes. Every route needs the `textureSets()` feature.
 
+**As a terrain block** (the stub Export Block wrote, its material replaced): the toolkit's `terrain` as it is (one `grass01` layer), or a layer of the block's own through `materialInputs`, a variant per set:
+
+```json
+{
+  "geometry": { "importedAsset": "meadow", "node": "meadow" },
+  "material": "terrain",
+  "materialInputs": { "layer0": { "textureSet": "sand02" } },
+  "grid": { "x": 0, "z": 0, "size": 64, "resolution": 129 },
+  "collider": { "type": "HEIGHTFIELD" }
+}
+```
+
 ## Set-up and parameters
 
 **A layer** (`layers[i]`; in the JSON route without `set`). Each number multiplies the set's own `surface` field of that name, so the defaults look like the set:
@@ -265,7 +281,7 @@ const meadowLow = getTerrainMaterialVariant('meadow', 'LOW');
 
 ## Template file and example asset ids
 
-- **Blender template:** `terrain_singleLayer.blend`, p306.
+- **Blender template:** `src/toolkit/terrain/blender/terrain_singleLayer.blend` (its README text block mirrors this page's Blender steps; the block workflow: [Terrain blocks from Blender](terrain-blocks-blender.md)).
 - **The materials:** `terrain` (`src/toolkit/materials/terrain/`: the JSON route, one `grass01` layer by default); `createTerrainMaterial` and the rest on `aekasha/toolkit/terrain` (`src/toolkit/terrain/material/`).
 - **The sets:** any of the library's (`src/toolkit/textures/<setId>/`); `grass01`, `rocks01` and `sand02` show the anti-tiling best. The macro texture `macroNoise` (`src/toolkit/textures/macroNoise/`).
 - **The gallery** (`terrainGallery`, `?isDebug=true&startScene=terrainGallery`): every library set on a block of `terrain` (each block a variant of it); the Anti-tiling row, three 48 m blocks of `grass01` in `NONE`, `DUAL_SCALE` and `HEX` with the macro switch, sliders for the modes' and the macro's uniforms and camera poses (30 m up, grazing, close), in the "Terrain gallery" tab (`src/app/scenes/terrainGallery/antiTilingRow.ts`); the tab's Debug view and Quality selects.

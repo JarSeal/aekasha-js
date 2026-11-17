@@ -235,6 +235,7 @@ export const ENGINE_FEATURE_FACTORIES: Record<string, string> = {
   streaming: "streaming() from 'aekasha/streaming'",
   merging: "merging() from 'aekasha/merging'",
   texturesets: "textureSets() from 'aekasha/texturesets'",
+  terrain: "terrain() from 'aekasha/terrain'",
 };
 
 /**

@@ -1,7 +1,7 @@
 Status: implemented (epic: Tiers 0-3, p354 the last, 2026-11-10; Tier 4's research moved to p990)
 Category: Rendering, LOD
 Blocks: \_DONE_p345_gpu-memory-and-draw-call-debugger.md, \_DONE_p346_spatial-domains.md, \_DONE_p347_lod-chain-generation.md, \_DONE_p348_ecs-lod-selection.md, \_DONE_p351_impostor-billboard-lod.md, \_DONE_p352_physics-simulation-tiers.md, \_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md, \_DONE_p353_macro-streaming-grid.md, \_DONE_p354_gpu-driven-culling.md
-Related: \_DONE_p300_asset-optimization-pipeline-plan.md (LOD chains reuse its pipeline), p308_terrain-scatter.md (its static instance cells are the static case of p348), p306_terrain-blocks-and-procedural-terrain-meshes.md (block sizes line up with p353's cells), p420_npc-simulation-tiers.md (characters' side of p352), p240_client-device-capability-sniffer.md (device level as a LOD budget input), \_DONE_p050_spatial-index.md (p346 builds its Phase 4)
+Related: \_DONE_p300_asset-optimization-pipeline-plan.md (LOD chains reuse its pipeline), p308_terrain-scatter.md (its static instance cells are the static case of p348), \_DONE_p306_terrain-blocks-and-procedural-terrain-meshes.md (block sizes line up with p353's cells), p420_npc-simulation-tiers.md (characters' side of p352), p240_client-device-capability-sniffer.md (device level as a LOD budget input), \_DONE_p050_spatial-index.md (p346 builds its Phase 4)
 
 # LOD System — Research & Epic
 

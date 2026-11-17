@@ -109,6 +109,8 @@ const getLocalShapeBox = (c: ColliderParams) => {
     const hh = (c.halfHeight ?? 0) + (c.type === 'CAPSULE' ? r : 0);
     box.set(new THREE.Vector3(-r, -hh, -r), new THREE.Vector3(r, hh, r));
   }
+  // A heightfield whose grid isn't centred on its node is moved back under it
+  if (c.translation) box.translate(vertex.set(c.translation.x, c.translation.y, c.translation.z));
   return box;
 };
 

@@ -1,6 +1,6 @@
 Status: implemented (Phases 1-9)
 Category: Materials, Terrain, Toolkit
-Blocks: p306_terrain-blocks-and-procedural-terrain-meshes.md, p307_wet-and-dry-surface-states.md, p310_terrain-preview-scenes.md
+Blocks: \_DONE_p306_terrain-blocks-and-procedural-terrain-meshes.md, p307_wet-and-dry-surface-states.md, p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
 
 # Terrain Material Generator

@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../../.schemas/terrainBlock.schema.json",
+  "geometry": { "generator": "noiseTerrain", "params": { "maxHeight": 18 }, "seed": 4 },
+  "material": "textureSetSurface",
+  "materialInputs": { "surface": { "textureSet": "rocks01" } },
+  "grid": { "x": -1, "z": 0, "size": 100, "resolution": 65 },
+  "collider": { "type": "TRIMESH" },
+  "shadows": { "cast": false },
+  "debugData": {
+    "name": "Generated TRIMESH block",
+    "description": "The toolkit's noiseTerrain, its TRIMESH collider read from the geometry (the generator's heightfield unused); casts no shadow."
+  }
+}

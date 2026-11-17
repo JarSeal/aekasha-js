@@ -26,49 +26,211 @@ const nodeInfo = (
     isDracoCompressed: false,
   }) as unknown as ImportedGeometryInfo;
 
-/** A terrain grid of `cols` × `rows` cells, lying in XZ. */
+/** A terrain grid of `cols` × `rows` cells, lying in XZ, 10 × 10 m, its rows along +z. */
 const grid = (cols: number, rows: number) =>
   new THREE.PlaneGeometry(10, 10, cols, rows).rotateX(-Math.PI / 2);
 
-describe('deriveColliderFromGeometry', () => {
+/** An uneven surface, different along x and z, so a swap, a flip or a transpose shows. */
+const surface = (x: number, z: number) => 0.3 * x + 0.05 * z * z + (x > 2 && z < -2 ? 4 : 0);
+
+/** `grid` with its heights from `surface`, moved by `offset` in x and z. */
+const terrain = (cols: number, rows: number, offset = { x: 0, z: 0 }) => {
+  const geometry = grid(cols, rows).translate(offset.x, 0, offset.z);
+  const position = geometry.getAttribute('position');
+  for (let i = 0; i < position.count; i++) {
+    position.setY(i, surface(position.getX(i) - offset.x, position.getZ(i) - offset.z));
+  }
+  return geometry;
+};
+
+/** The collider's height at its grid point (row along z, column along x), in Rapier's layout. */
+const heightAt = (params: ColliderParams | null, row: number, col: number) => {
+  if (params?.type !== 'HEIGHTFIELD' || !params.heights || params.nrows === undefined) return NaN;
+  return params.heights[row + col * (params.nrows + 1)];
+};
+
+/**
+ * Expects the collider to hold `surface` on a 10 × 10 m grid of `cols` × `rows` cells, to
+ * `digits` decimals.
+ */
+const expectSurface = (params: ColliderParams | null, cols: number, rows: number, digits = 5) => {
+  expect(params).toMatchObject({ nrows: rows, ncols: cols, scale: { x: 10, y: 1, z: 10 } });
+  for (let row = 0; row <= rows; row++) {
+    for (let col = 0; col <= cols; col++) {
+      const expected = surface((col / cols) * 10 - 5, (row / rows) * 10 - 5);
+      expect(heightAt(params, row, col), `row ${row}, column ${col}`).toBeCloseTo(expected, digits);
+    }
+  }
+};
+
+const heightfield = (geometry: THREE.BufferGeometry, opts?: Parameters<typeof nodeInfo>[1]) =>
+  deriveColliderFromGeometry({ type: 'HEIGHTFIELD' }, { geometry, info: nodeInfo('hf', opts) });
+
+/** Runs `run` with console.error and console.warn caught; returns what they were given. */
+const withLogs = <T>(run: () => T) => {
+  const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  const result = run();
+  const logs = {
+    error: error.mock.calls.flat().join(' '),
+    warn: warn.mock.calls.flat().join(' '),
+  };
+  error.mockRestore();
+  warn.mockRestore();
+  return { result, ...logs };
+};
+
+describe('deriveColliderFromGeometry, HEIGHTFIELD (p306 D3)', () => {
   it('reads a square grid into a HEIGHTFIELD', () => {
-    const params = deriveColliderFromGeometry(
-      { type: 'HEIGHTFIELD' },
-      { geometry: grid(2, 2), info: nodeInfo('square') }
-    );
-    expect(params).toMatchObject({ type: 'HEIGHTFIELD', nrows: 2, ncols: 2 });
-    expect(params?.type === 'HEIGHTFIELD' && params.heights?.length).toBe(9);
+    expectSurface(heightfield(terrain(4, 4)), 4, 4);
   });
 
-  it('skips a HEIGHTFIELD whose vertex count makes no square grid (M3)', () => {
-    // 3 × 2 vertices: no whole square root, and params without heights would throw in the backend
-    expect(
-      deriveColliderFromGeometry(
-        { type: 'HEIGHTFIELD' },
-        { geometry: grid(2, 1), info: nodeInfo('notSquare') }
+  it('reads a grid that is not square, its cells counted along x and z', () => {
+    expectSurface(heightfield(terrain(6, 3)), 6, 3);
+  });
+
+  it('reads the grid by position, whatever the vertex order', () => {
+    // Blender's rows run along -z: the same grid mirrored in its vertex order
+    const mirrored = terrain(5, 3);
+    const position = mirrored.getAttribute('position');
+    const index = mirrored.index!;
+    const flipped = new THREE.BufferGeometry();
+    const flippedPositions = new Float32Array(position.count * 3);
+    const perRow = 6;
+    for (let i = 0; i < position.count; i++) {
+      const from = (3 - Math.floor(i / perRow)) * perRow + (i % perRow);
+      flippedPositions.set([position.getX(from), position.getY(from), position.getZ(from)], i * 3);
+    }
+    flipped.setAttribute('position', new THREE.BufferAttribute(flippedPositions, 3));
+    flipped.setIndex(
+      Array.from(index.array as ArrayLike<number>).map(
+        (v) => (3 - Math.floor(v / perRow)) * perRow + (v % perRow)
       )
-    ).toBeNull();
+    );
+    expectSurface(heightfield(flipped), 5, 3);
+    // Every corner duplicated (no index): the duplicates agree, so they're one grid point
+    expectSurface(heightfield(terrain(5, 3).toNonIndexed()), 5, 3);
   });
 
-  it('skips a HEIGHTFIELD whose given rows leave no whole number of columns (M3)', () => {
-    expect(
+  it('reads quantized and interleaved positions, as meshopt and Draco outputs have them', () => {
+    // Normalized Int16 positions in -1..1, the dequantization in the node's scale (as
+    // gltf-transform's quantize() writes it), in an interleaved buffer with a normal
+    const source = terrain(5, 3).toNonIndexed().getAttribute('position');
+    const range = 10;
+    const data = new Int16Array(source.count * 6);
+    for (let i = 0; i < source.count; i++) {
+      for (let axis = 0; axis < 3; axis++) {
+        data[i * 6 + axis] = Math.round((source.getComponent(i, axis) / range) * 32767);
+      }
+      data[i * 6 + 4] = 32767;
+    }
+    const buffer = new THREE.InterleavedBuffer(data, 6);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.InterleavedBufferAttribute(buffer, 3, 0, true));
+    geometry.setAttribute('normal', new THREE.InterleavedBufferAttribute(buffer, 3, 3, true));
+    const scale = { x: range, y: range, z: range };
+    const params = heightfield(geometry, { scale });
+    // 16 bits over 20 m: within a millimetre
+    expectSurface(params, 5, 3, 3);
+  });
+
+  it('takes the counts given as custom props: nCols along x, nRows along z', () => {
+    for (const given of [{ ncols: 6 }, { nrows: 3 }, { ncols: 6, nrows: 3 }]) {
+      const params = deriveColliderFromGeometry(
+        { type: 'HEIGHTFIELD', ...given },
+        { geometry: terrain(6, 3), info: nodeInfo('given') }
+      );
+      expectSurface(params, 6, 3);
+    }
+  });
+
+  it('skips a grid the given counts do not fit', () => {
+    const { result, error } = withLogs(() =>
       deriveColliderFromGeometry(
         { type: 'HEIGHTFIELD', nrows: 4 },
         { geometry: grid(2, 2), info: nodeInfo('badRows') }
       )
-    ).toBeNull();
+    );
+    expect(result).toBeNull();
+    expect(error).toContain('no vertex at');
   });
 
-  it('reads a grid of given rows or given columns into a HEIGHTFIELD', () => {
-    // 2 × 1 cells, 3 × 2 vertices: either count gives the other
-    for (const given of [{ nrows: 2 }, { ncols: 1 }]) {
-      const params = deriveColliderFromGeometry(
-        { type: 'HEIGHTFIELD', ...given },
-        { geometry: grid(2, 1), info: nodeInfo('oblong') }
-      );
-      expect(params).toMatchObject({ nrows: 2, ncols: 1 });
-      expect(params?.type === 'HEIGHTFIELD' && params.heights?.length).toBe(6);
+  it('skips a grid with a vertex moved in x or z', () => {
+    const geometry = terrain(4, 4);
+    geometry.getAttribute('position').setX(7, geometry.getAttribute('position').getX(7) + 0.4);
+    const { result, error } = withLogs(() => heightfield(geometry));
+    expect(result).toBeNull();
+    expect(error).toContain('moved in x or z');
+  });
+
+  it('skips a grid with two heights on one point', () => {
+    // The first triangle's second corner, which the cell's other triangle has too
+    const geometry = terrain(2, 2).toNonIndexed();
+    geometry.getAttribute('position').setY(1, 50);
+    const { result, error } = withLogs(() => heightfield(geometry));
+    expect(result).toBeNull();
+    expect(error).toContain('two heights');
+  });
+
+  it('moves a grid not centred on its origin back under its mesh', () => {
+    const params = heightfield(terrain(4, 4, { x: 3, z: -2 }));
+    expectSurface(params, 4, 4);
+    expect(params?.translation).toEqual({ x: 3, y: 0, z: -2 });
+    expect(heightfield(terrain(4, 4))).not.toHaveProperty('translation');
+    // A translation the params gave is kept
+    const given = deriveColliderFromGeometry(
+      { type: 'HEIGHTFIELD', translation: { x: 0, y: 1, z: 0 } },
+      { geometry: terrain(4, 4, { x: 3, z: -2 }), info: nodeInfo('given') }
+    );
+    expect(given?.translation).toEqual({ x: 0, y: 1, z: 0 });
+  });
+
+  it("warns on a terrain block that isn't centred", () => {
+    const { warn } = withLogs(() =>
+      heightfield(terrain(4, 4, { x: 0.5, z: 0 }), { raw: { aekBlockSize: 10 } })
+    );
+    expect(warn).toContain("a terrain block's grid is centred on its origin");
+    expect(withLogs(() => heightfield(terrain(4, 4, { x: 0.5, z: 0 }))).warn).toBe('');
+  });
+
+  it("applies the node's scale to the size and the heights", () => {
+    const params = heightfield(terrain(4, 2), { scale: { x: 2, y: 3, z: 0.5 } });
+    expect(params).toMatchObject({ nrows: 2, ncols: 4, scale: { x: 20, y: 1, z: 5 } });
+    expect(heightAt(params, 2, 4)).toBeCloseTo(3 * surface(5, 5), 5);
+  });
+
+  it("warns when the mesh splits cells along the other diagonal than the collider's", () => {
+    // three's plane splits each cell along the collider's diagonal: no warning
+    expect(withLogs(() => heightfield(terrain(4, 4))).warn).toBe('');
+    // Each quad split from (row, col) to (row + 1, col + 1) instead
+    const geometry = terrain(4, 4);
+    const index = geometry.index!.array as ArrayLike<number>;
+    const other: number[] = [];
+    for (let t = 0; t < index.length; t += 6) {
+      // three's quad: a (row, col), b (row + 1, col), c (row + 1, col + 1), d (row, col + 1)
+      const [a, b, , , c, d] = [
+        index[t],
+        index[t + 1],
+        index[t + 2],
+        index[t + 3],
+        index[t + 4],
+        index[t + 5],
+      ];
+      other.push(a, b, c, a, c, d);
     }
+    geometry.setIndex(other);
+    const { result, warn } = withLogs(() => heightfield(geometry));
+    expect(result).not.toBeNull();
+    expect(warn).toMatch(/\d+ of the HEIGHTFIELD's cells are split along the other diagonal/);
+  });
+
+  it('keeps heights the params gave', () => {
+    const heights = new Float32Array(9);
+    const params = deriveColliderFromGeometry(
+      { type: 'HEIGHTFIELD', nrows: 2, ncols: 2, heights, scale: { x: 1, y: 1, z: 1 } },
+      { geometry: grid(2, 2), info: nodeInfo('given') }
+    );
+    expect(params?.type === 'HEIGHTFIELD' && params.heights).toBe(heights);
   });
 });
 

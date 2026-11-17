@@ -15,6 +15,7 @@ import { ROOT } from '../paths';
 const EXEMPT = [
   /(^|\/)_dbg__[^/]*\.ts$/,
   /^src\/_engine\/(features\/physics\/worker\/PhysicsWorker|kernel\/assets\/worker\/AssetsWorker)\.ts$/,
+  /^src\/toolkit\/geometry\/generate\/terrain\/TerrainWorker\.ts$/,
   /^src\/index\.ts$/,
 ];
 

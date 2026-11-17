@@ -1,0 +1,656 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "$ref": "#/definitions/__schema0"
+    },
+    "id": {
+      "$ref": "#/definitions/__schema1"
+    },
+    "geometry": {
+      "$ref": "#/definitions/__schema3"
+    },
+    "material": {
+      "$ref": "#/definitions/__schema14"
+    },
+    "materialInputs": {
+      "$ref": "#/definitions/__schema15"
+    },
+    "grid": {
+      "$ref": "#/definitions/__schema37"
+    },
+    "collider": {
+      "$ref": "#/definitions/__schema44"
+    },
+    "shadows": {
+      "$ref": "#/definitions/__schema49"
+    },
+    "debugData": {
+      "$ref": "#/definitions/__schema53"
+    },
+    "__sourcePath": {
+      "$ref": "#/definitions/__schema64"
+    }
+  },
+  "required": [
+    "geometry",
+    "material",
+    "grid"
+  ],
+  "additionalProperties": false,
+  "description": "A terrain block: its geometry, material, grid place, collider and shadows.",
+  "definitions": {
+    "__schema0": {
+      "type": "string",
+      "description": "The JSON Schema in .schemas/ an editor validates this file with. The gatherer ignores it."
+    },
+    "__schema1": {
+      "description": "The id. Default: the file name without .terrainBlock.json.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema2"
+        }
+      ]
+    },
+    "__schema2": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema3": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/__schema4"
+        },
+        {
+          "$ref": "#/definitions/__schema8"
+        }
+      ],
+      "description": "The geometry: an imported node ({ importedAsset, node? }) or a registered generator's ({ generator, params?, seed? })."
+    },
+    "__schema4": {
+      "type": "object",
+      "properties": {
+        "importedAsset": {
+          "$ref": "#/definitions/__schema5"
+        },
+        "node": {
+          "$ref": "#/definitions/__schema6"
+        }
+      },
+      "required": [
+        "importedAsset"
+      ],
+      "additionalProperties": false,
+      "description": "An imported node's geometry."
+    },
+    "__schema5": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The *.importedAsset.json's id. The gather adds it to a scene listing the block."
+    },
+    "__schema6": {
+      "description": "The node whose geometry is the block's (its registered geometry <importedAsset>/<node>). Default: the import's only mesh.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema7"
+        }
+      ]
+    },
+    "__schema7": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema8": {
+      "type": "object",
+      "properties": {
+        "generator": {
+          "$ref": "#/definitions/__schema9"
+        },
+        "params": {
+          "$ref": "#/definitions/__schema10"
+        },
+        "seed": {
+          "$ref": "#/definitions/__schema12"
+        }
+      },
+      "required": [
+        "generator"
+      ],
+      "additionalProperties": false,
+      "description": "A registered generator's geometry, made when the block spawns."
+    },
+    "__schema9": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The generator's id (registerTerrainGenerator; the toolkit's noiseTerrain, …)."
+    },
+    "__schema10": {
+      "description": "The generator's own params, checked by the generator. Default: {}.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema11"
+        }
+      ]
+    },
+    "__schema11": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema12": {
+      "description": "The seed (default 0). A height noise uses it as it is, sampled at the block's world place, so blocks of one seed continue each other; a block's own randomness combines it with its grid coordinates.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema13"
+        }
+      ]
+    },
+    "__schema13": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "__schema14": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The material's id (a *.material.json). The gather adds it to a scene listing the block."
+    },
+    "__schema15": {
+      "description": "The block's own inputs over the material's (a variant per input set): its splat map, colour map, … The same forms as a material's inputs; their textures load with a scene listing the block.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema16"
+        }
+      ]
+    },
+    "__schema16": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema17"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema18"
+      },
+      "description": "The inputs of the TSL file's setup function, which sets any sockets from one graph: a texture id or { texture: id, channel } (a texture node, or its sample's channels, eg. r or rgb), { textureArray: id, layer } (an array layer) or { atlas: id, slot, cell } (an atlas cell), each sampled at the mesh's UV, { textureSet: id, packing? } (a texture set's textures and surface uniforms, by name) or { textureSetArray: [ids] | id, packing } (a texture set array's array textures and layer params; both the textureSets() feature), a uniform's '#rrggbb' colour, number, boolean, or vector as an array or { x, y, z }, or a form a registered input resolver takes."
+    },
+    "__schema17": {
+      "type": "string"
+    },
+    "__schema18": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "texture": {
+              "$ref": "#/definitions/__schema19"
+            },
+            "channel": {
+              "$ref": "#/definitions/__schema20"
+            }
+          },
+          "required": [
+            "texture"
+          ],
+          "additionalProperties": false,
+          "description": "A texture ref: the texture node, or with channel its sample's channels (eg. r, rgb)."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "textureArray": {
+              "$ref": "#/definitions/__schema22"
+            },
+            "layer": {
+              "$ref": "#/definitions/__schema23"
+            }
+          },
+          "required": [
+            "textureArray",
+            "layer"
+          ],
+          "additionalProperties": false,
+          "description": "A texture array's layer, sampled at the mesh's UV."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "atlas": {
+              "$ref": "#/definitions/__schema26"
+            },
+            "slot": {
+              "$ref": "#/definitions/__schema27"
+            },
+            "cell": {
+              "$ref": "#/definitions/__schema28"
+            },
+            "clampToCell": {
+              "$ref": "#/definitions/__schema29"
+            }
+          },
+          "required": [
+            "atlas",
+            "slot",
+            "cell"
+          ],
+          "additionalProperties": false,
+          "description": "An atlas slot's cell, sampled at the mesh's UV mapped into the cell's rect."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "textureSet": {
+              "$ref": "#/definitions/__schema31"
+            },
+            "packing": {
+              "$ref": "#/definitions/__schema32"
+            }
+          },
+          "required": [
+            "textureSet"
+          ],
+          "additionalProperties": false,
+          "description": "A texture set: each slot's texture of its packing and its surface uniforms, by name. Needs the textureSets() feature."
+        },
+        {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/__schema34"
+            },
+            {
+              "$ref": "#/definitions/__schema36"
+            }
+          ],
+          "description": "A texture set array: the packing's array textures and the layers' params, by name. Needs the textureSets() feature."
+        },
+        {}
+      ]
+    },
+    "__schema19": {
+      "type": "string",
+      "description": "The texture's id."
+    },
+    "__schema20": {
+      "description": "One to four of r, g, b, a: the sample's channels, instead of the texture node.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema21"
+        }
+      ]
+    },
+    "__schema21": {
+      "type": "string",
+      "pattern": "^[rgba]{1,4}$"
+    },
+    "__schema22": {
+      "type": "string",
+      "description": "The texture array's id (a *.textureArray.json)."
+    },
+    "__schema23": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/__schema24"
+        },
+        {
+          "$ref": "#/definitions/__schema25"
+        }
+      ],
+      "description": "The layer: its index, or its name (a texture layer's id, a file layer's name without its extension)."
+    },
+    "__schema24": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "__schema25": {
+      "type": "string"
+    },
+    "__schema26": {
+      "type": "string",
+      "description": "The atlas's id (a *.textureAtlas.json)."
+    },
+    "__schema27": {
+      "type": "string",
+      "description": "The slot sampled (a key of the atlas's slots)."
+    },
+    "__schema28": {
+      "type": "string",
+      "description": "The cell's id."
+    },
+    "__schema29": {
+      "description": "Keeps the sample half a texel inside the cell's rect. Default true.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema30"
+        }
+      ]
+    },
+    "__schema30": {
+      "type": "boolean"
+    },
+    "__schema31": {
+      "type": "string",
+      "description": "The texture set's id (a *.textureSet.json)."
+    },
+    "__schema32": {
+      "description": "The packing sampled (FULL, LITE, MINIMAL). Default: the set's defaultPacking.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema33"
+        }
+      ]
+    },
+    "__schema33": {
+      "type": "string",
+      "enum": [
+        "FULL",
+        "LITE",
+        "MINIMAL"
+      ]
+    },
+    "__schema34": {
+      "type": "object",
+      "properties": {
+        "textureSetArray": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/__schema35"
+          },
+          "description": "The texture set ids (*.textureSet.json), layer i from the ith."
+        },
+        "packing": {
+          "type": "string",
+          "enum": [
+            "FULL",
+            "LITE",
+            "MINIMAL"
+          ],
+          "description": "The packing every layer is in (FULL, LITE, MINIMAL): one array per slot."
+        }
+      },
+      "required": [
+        "textureSetArray",
+        "packing"
+      ],
+      "additionalProperties": false
+    },
+    "__schema35": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema36": {
+      "type": "object",
+      "properties": {
+        "textureSetArray": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The id of a set array the scene lists (its textureSetArrays' id)."
+        }
+      },
+      "required": [
+        "textureSetArray"
+      ],
+      "additionalProperties": false
+    },
+    "__schema37": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "$ref": "#/definitions/__schema38"
+        },
+        "z": {
+          "$ref": "#/definitions/__schema40"
+        },
+        "size": {
+          "$ref": "#/definitions/__schema42"
+        },
+        "resolution": {
+          "$ref": "#/definitions/__schema43"
+        }
+      },
+      "required": [
+        "size",
+        "resolution"
+      ],
+      "additionalProperties": false,
+      "description": "The block's place and grid: centred at (x · size, 0, z · size), resolution vertices per side."
+    },
+    "__schema38": {
+      "description": "The grid column (along +x). Default: 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema39"
+        }
+      ]
+    },
+    "__schema39": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "__schema40": {
+      "description": "The grid row (along +z). Default: 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema41"
+        }
+      ]
+    },
+    "__schema41": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "__schema42": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "The block's edge in metres: 32, 64, 128 or 256 by the block conventions."
+    },
+    "__schema43": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 9007199254740991,
+      "description": "Vertices per side (2^n + 1 by the conventions: 65, 129, 257)."
+    },
+    "__schema44": {
+      "description": "The collider. Default: { type: 'HEIGHTFIELD' }. Any but NONE needs physics().",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema45"
+        }
+      ]
+    },
+    "__schema45": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "description": "HEIGHTFIELD (default; from the geometry grid), TRIMESH (overhangs, caves; costlier) or NONE (background blocks).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema46"
+            }
+          ]
+        },
+        "friction": {
+          "description": "Friction (Rapier's default 0.5).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema47"
+            }
+          ]
+        },
+        "restitution": {
+          "description": "Restitution, the bounce (Rapier's default 0).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema48"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema46": {
+      "type": "string",
+      "enum": [
+        "HEIGHTFIELD",
+        "TRIMESH",
+        "NONE"
+      ]
+    },
+    "__schema47": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema48": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema49": {
+      "description": "The mesh's shadows. Default: both.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema50"
+        }
+      ]
+    },
+    "__schema50": {
+      "type": "object",
+      "properties": {
+        "cast": {
+          "description": "Casts shadows. Default: true.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema51"
+            }
+          ]
+        },
+        "receive": {
+          "description": "Receives shadows. Default: true.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema52"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema51": {
+      "type": "boolean"
+    },
+    "__schema52": {
+      "type": "boolean"
+    },
+    "__schema53": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/__schema54"
+        },
+        "description": {
+          "$ref": "#/definitions/__schema56"
+        },
+        "comments": {
+          "$ref": "#/definitions/__schema58"
+        },
+        "todo": {
+          "$ref": "#/definitions/__schema60"
+        },
+        "debugObj": {
+          "$ref": "#/definitions/__schema62"
+        }
+      },
+      "additionalProperties": false,
+      "description": "What the debug tools show for it. Production data has none."
+    },
+    "__schema54": {
+      "description": "The name the debug tools show.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema55"
+        }
+      ]
+    },
+    "__schema55": {
+      "type": "string"
+    },
+    "__schema56": {
+      "description": "A longer description for the debug tools.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema57"
+        }
+      ]
+    },
+    "__schema57": {
+      "type": "string"
+    },
+    "__schema58": {
+      "description": "Notes with their times.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema59"
+        }
+      ]
+    },
+    "__schema59": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "number",
+            "description": "Milliseconds since the UNIX epoch."
+          },
+          "comment": {
+            "type": "string",
+            "description": "The note."
+          }
+        },
+        "required": [
+          "timestamp",
+          "comment"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "__schema60": {
+      "description": "Open items, by key.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema61"
+        }
+      ]
+    },
+    "__schema61": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema62": {
+      "description": "Anything else a debug tool keeps for it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema63"
+        }
+      ]
+    },
+    "__schema63": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema64": {
+      "type": "string",
+      "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
+    }
+  }
+}

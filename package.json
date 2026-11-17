@@ -1,11 +1,11 @@
 {
   "name": "aekasha-js",
-  "version": "6.15.0",
+  "version": "6.16.0",
   "description": "High-performance WebGPU application powered by the Ækasha framework.",
   "repository": "https://github.com/JarSeal/aekasha-js.git",
   "author": "JarSeal",
   "engine_metadata": {
-    "version": "6.15.0",
+    "version": "6.16.0",
     "codename": "Sunset",
     "name": "Ækasha",
     "fullName": "Ækasha Framework",
@@ -15,7 +15,7 @@
     "author": "JarSeal"
   },
   "toolkit_metadata": {
-    "version": "3.3.0",
+    "version": "3.4.0",
     "codename": "Gibbous",
     "name": "Ækasha Toolkit",
     "fullName": "Ækasha Toolkit — Modules & Assets",
@@ -23,7 +23,7 @@
     "url": ""
   },
   "app_metadata": {
-    "version": "1.27.0",
+    "version": "1.28.0",
     "codename": "Preschooler",
     "name": "Example App",
     "fullName": "Example App for Ækasha",
@@ -54,6 +54,7 @@
     "gatherAppData": "tsx ./devTools/gatherAppData.ts",
     "copyDecoders": "tsx ./devTools/copyDecoders.ts",
     "setupAssetTools": "tsx ./devTools/setupAssetTools.ts",
+    "setupBlenderMcp": "tsx ./devTools/blender/setupBlenderMcp.ts",
     "assets": "tsx ./devTools/assets.ts",
     "fetchTextureSources": "tsx ./devTools/fetchTextureSources.ts",
     "checkVersions": "tsx ./devTools/checkVersions.ts",
@@ -70,6 +71,7 @@
     "verify:embed": "tsx ./devTools/verify/embed.ts",
     "verify:ui": "tsx ./devTools/verify/ui.ts",
     "verify:devFiles": "tsx ./devTools/devFiles/selfCheck.ts",
+    "verify:blender": "yarn fetchTextureSources --only grass01,rocks01 && tsx ./devTools/blender/verifyBlender.ts",
     "sbp": "tsx ./devTools/sbp.ts",
     "build": "yarn copyDecoders && NODE_ENV=production yarn gatherAppData && tsc && tsc -p hub && vite build && yarn gatherAppData && yarn sbp --profile all --no-app-build --brief && yarn hub:build",
     "build:test": "yarn copyDecoders && NODE_ENV=production yarn gatherAppData && tsc && tsc -p hub && VITE_APP_ENV=test vite build && yarn gatherAppData && yarn hub:build",

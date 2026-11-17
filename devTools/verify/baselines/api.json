@@ -1126,11 +1126,18 @@
     "src/_engine/features/physics/ColliderDimensions.ts": {
       "deriveColliderDimensionsFromMesh": "Function"
     },
+    "src/_engine/features/physics/HeightfieldColliderParams.ts": {
+      "HeightfieldGrid": "TypeAlias",
+      "toHeightfieldColliderParams": "Function"
+    },
     "src/_engine/features/physics/import/ColliderBounds.ts": {
       "ColliderBounds": "TypeAlias",
       "getColliderBounds": "Function",
       "SpineAxis": "TypeAlias",
       "toSpineAxis": "Function"
+    },
+    "src/_engine/features/physics/import/HeightfieldFromGeometry.ts": {
+      "deriveHeightfield": "Function"
     },
     "src/_engine/features/physics/import/ImportPhysics.ts": {
       "spawnImportedPhysics": "Function"
@@ -2155,6 +2162,41 @@
       "resolveStreamingSettings": "Function",
       "STREAMING_MIN_CELL_SIZE": "Variable",
       "STREAMING_NEARBY_PHYSICS_TIERS": "Variable"
+    },
+    "src/_engine/features/terrain/TerrainBlocks.ts": {
+      "getTerrainBlock": "Function",
+      "spawnTerrainBlock": "Function",
+      "SpawnTerrainBlockOpts": "TypeAlias",
+      "TerrainBlock": "TypeAlias"
+    },
+    "src/_engine/features/terrain/TerrainBlockSchema.ts": {
+      "TERRAIN_BLOCK_COLLIDER_TYPES": "Variable",
+      "TERRAIN_BLOCK_DEFAULTS": "Variable",
+      "TerrainBlockAsset": "TypeAlias",
+      "TerrainBlockAssetSchema": "Variable",
+      "TerrainBlockColliderType": "TypeAlias",
+      "TerrainBlockDef": "TypeAlias",
+      "TerrainBlockGeometry": "TypeAlias",
+      "terrainSchemaPart": "Variable"
+    },
+    "src/_engine/features/terrain/TerrainCollider.ts": {
+      "createTerrainBlockColliderAsync": "Function"
+    },
+    "src/_engine/features/terrain/TerrainFeature.ts": {
+      "terrain": "Function"
+    },
+    "src/_engine/features/terrain/TerrainGenerators.ts": {
+      "getTerrainGenerator": "Function",
+      "getTerrainGeneratorIds": "Function",
+      "registerTerrainGenerator": "Function",
+      "TerrainGenerator": "TypeAlias",
+      "TerrainGeneratorOpts": "TypeAlias",
+      "TerrainGeneratorResult": "TypeAlias",
+      "unregisterTerrainGenerator": "Function"
+    },
+    "src/_engine/features/terrain/TerrainState.ts": {
+      "assertTerrainInstalled": "Function",
+      "terrainState": "Variable"
     },
     "src/_engine/features/texturesets/TextureSetArrays.ts": {
       "buildSceneTextureSetArraysAsync": "Function",
@@ -4800,19 +4842,59 @@
       "generateTreeGeometry": "Function",
       "TreeGeometryOptions": "Interface"
     },
-    "src/toolkit/geometry/generate/Terrain.ts": {
+    "src/toolkit/geometry/generate/terrain/Terrain.ts": {
       "GeneratedTerrain": "Interface",
       "generateTerrain": "Function",
       "TerrainNoiseOctave": "Interface",
-      "TerrainOptions": "Interface"
+      "TerrainNormalSource": "TypeAlias",
+      "TerrainOptions": "Interface",
+      "TerrainVertexColorOptions": "TypeAlias",
+      "toGeneratedTerrain": "Function"
     },
-    "src/toolkit/geometry/generate/TerrainRules.ts": {
+    "src/toolkit/geometry/generate/terrain/TerrainAo.ts": {
+      "computeTerrainAo": "Function",
+      "getTerrainAoMarch": "Function",
+      "TerrainAoMarch": "TypeAlias",
+      "TerrainAoOptions": "TypeAlias"
+    },
+    "src/toolkit/geometry/generate/terrain/TerrainAsync.ts": {
+      "generateTerrainAsync": "Function",
+      "TerrainAsyncOptions": "TypeAlias"
+    },
+    "src/toolkit/geometry/generate/terrain/TerrainCore.ts": {
+      "buildTerrainData": "Function",
+      "recordTerrainNoiseDraws": "Function",
+      "TerrainCoreOptions": "TypeAlias",
+      "TerrainData": "TypeAlias"
+    },
+    "src/toolkit/geometry/generate/terrain/TerrainHeightmap.ts": {
+      "createTerrainHeightmapSampler": "Function",
+      "loadTerrainHeightmapAsync": "Function",
+      "parseTerrainHeightmap": "Function",
+      "TerrainHeightmap": "TypeAlias",
+      "TerrainHeightmapFormat": "TypeAlias",
+      "TerrainHeightmapOptions": "TypeAlias"
+    },
+    "src/toolkit/geometry/generate/terrain/TerrainRules.ts": {
+      "evaluateTerrainRulesCPU": "Function",
+      "getTerrainRuleCoverageCPU": "Function",
       "TERRAIN_RULE_DEFAULTS": "Variable",
       "TERRAIN_RULE_NOISE_CHANNELS": "Variable",
       "TerrainRule": "TypeAlias",
       "TerrainRuleAspect": "TypeAlias",
       "TerrainRuleNoise": "TypeAlias",
+      "TerrainRuleNoiseTexels": "TypeAlias",
+      "TerrainRulePoint": "TypeAlias",
       "TerrainRuleRange": "TypeAlias"
+    },
+    "src/toolkit/geometry/generate/terrain/TerrainWorker.ts": {},
+    "src/toolkit/geometry/generate/terrain/TerrainWorkerProtocol.ts": {
+      "handleTerrainWorkerRequest": "Function",
+      "TERRAIN_WORKER_READY": "Variable",
+      "TerrainWorkerCache": "TypeAlias",
+      "TerrainWorkerOptions": "TypeAlias",
+      "TerrainWorkerRequest": "TypeAlias",
+      "TerrainWorkerResponse": "TypeAlias"
     },
     "src/toolkit/geometry/scatter/ScatterOnSurface.ts": {
       "bakeScatterToInstancedMesh": "Function",
@@ -4847,6 +4929,13 @@
       "TriplanarProjection": "TypeAlias",
       "TriplanarProjectionOptions": "Interface"
     },
+    "src/toolkit/terrain/blocks/RegisterTerrainGenerators.ts": {
+      "registerTerrainGenerators": "Function"
+    },
+    "src/toolkit/terrain/blocks/TerrainBlockGenerators.ts": {
+      "generateNoiseTerrainBlockAsync": "Function",
+      "generateRulesTerrainBlockAsync": "Function"
+    },
     "src/toolkit/terrain/material/StructureMaterial.ts": {
       "createStructureMaterial": "Function",
       "getStructureMaterialConfig": "Function",
@@ -4861,6 +4950,7 @@
       "loadTerrainDebugViewsAsync": "Function"
     },
     "src/toolkit/terrain/material/TerrainDefine.ts": {
+      "checkTerrainRule": "Function",
       "DEFAULT_RESERVED_TEXTURES": "Variable",
       "getPaintedLayerCount": "Function",
       "getPaintedSource": "Function",
@@ -5228,6 +5318,9 @@
       "bakeMacroNoise": "Function",
       "BakeMacroNoiseOpts": "TypeAlias",
       "buildMacroNoise": "Function"
+    },
+    "src/toolkit/terrain/textures/ReadTexels.ts": {
+      "readTextureTexelsAsync": "Function"
     },
     "src/toolkit/terrain/textures/RippleAtlas.ts": {
       "bakeRippleAtlas": "Function",
@@ -5874,6 +5967,7 @@
       "EventQueue",
       "FeatureType",
       "HeightFieldData",
+      "HeightfieldGrid",
       "JointAPI",
       "JointAxesMask",
       "JointMotorModel",
@@ -5935,7 +6029,8 @@
       "readBodyPositionsAtStep",
       "requestPhysicsTier",
       "setPhysicsTierPolicy",
-      "setPhysicsTierPolicyMember"
+      "setPhysicsTierPolicyMember",
+      "toHeightfieldColliderParams"
     ],
     "aekasha/postfx": [
       "PostFxLiveParams",
@@ -6017,12 +6112,19 @@
       "StreamingManifestCell",
       "StreamingManifestLayer",
       "StreamingRingsSchema",
+      "TERRAIN_BLOCK_COLLIDER_TYPES",
+      "TERRAIN_BLOCK_DEFAULTS",
       "TEXTURE_SET_CATEGORIES",
       "TEXTURE_SET_PACKINGS",
       "TEXTURE_SET_PACKING_PREFERENCE",
       "TEXTURE_SET_PROCEDURAL_DEFAULTS",
       "TEXTURE_SET_SURFACE_DEFAULTS",
       "TEXTURE_SLOTS",
+      "TerrainBlockAsset",
+      "TerrainBlockAssetSchema",
+      "TerrainBlockColliderType",
+      "TerrainBlockDef",
+      "TerrainBlockGeometry",
       "TextureArrayAsset",
       "TextureArrayAssetSchema",
       "TextureArrayInputSchema",
@@ -6066,6 +6168,7 @@
       "skyBoxSchemaPart",
       "spatialSchemaPart",
       "streamingSchemaPart",
+      "terrainSchemaPart",
       "textureSetsSchemaPart"
     ],
     "aekasha/skybox": [
@@ -6147,6 +6250,22 @@
       "streaming",
       "unregisterStreamingCellContent"
     ],
+    "aekasha/terrain": [
+      "SpawnTerrainBlockOpts",
+      "TerrainBlock",
+      "TerrainBlockColliderType",
+      "TerrainBlockDef",
+      "TerrainBlockGeometry",
+      "TerrainGenerator",
+      "TerrainGeneratorOpts",
+      "TerrainGeneratorResult",
+      "getTerrainBlock",
+      "getTerrainGenerator",
+      "registerTerrainGenerator",
+      "spawnTerrainBlock",
+      "terrain",
+      "unregisterTerrainGenerator"
+    ],
     "aekasha/texturesets": [
       "BuildTextureSetArrayProps",
       "TextureSetArray",
@@ -6227,18 +6346,31 @@
       "SpawnScatterMeshOptions",
       "TERRAIN_RULE_DEFAULTS",
       "TERRAIN_RULE_NOISE_CHANNELS",
+      "TerrainAoOptions",
+      "TerrainAsyncOptions",
+      "TerrainHeightmap",
+      "TerrainHeightmapFormat",
+      "TerrainHeightmapOptions",
       "TerrainNoiseOctave",
+      "TerrainNormalSource",
       "TerrainOptions",
       "TerrainRule",
       "TerrainRuleAspect",
       "TerrainRuleNoise",
+      "TerrainRuleNoiseTexels",
+      "TerrainRulePoint",
       "TerrainRuleRange",
+      "TerrainVertexColorOptions",
       "TreeGeometryOptions",
       "bakeScatterToInstancedMesh",
+      "evaluateTerrainRulesCPU",
       "generateAsteroid",
       "generateBushGeometry",
       "generateTerrain",
+      "generateTerrainAsync",
       "generateTreeGeometry",
+      "getTerrainRuleCoverageCPU",
+      "loadTerrainHeightmapAsync",
       "scatterOnSurface",
       "spawnScatterAsMeshEntities"
     ],
@@ -6350,6 +6482,8 @@
       "mudCracked",
       "mudSmooth",
       "packSurfaceOutputs",
+      "readTextureTexelsAsync",
+      "registerTerrainGenerators",
       "rockyGround",
       "sampleTextureSet",
       "sandFlat",

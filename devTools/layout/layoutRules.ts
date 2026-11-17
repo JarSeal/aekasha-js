@@ -107,6 +107,12 @@ const getToolkitRules = (files: string[]): LayoutRule[] => [
   { from: `${T}terrain/material/` },
   // The terrain material's debug views (p305 D10): `_dbg__` modules only, loaded by `import()`
   { from: `${T}terrain/debug/` },
+  // The terrain block generators (p306 D4: `noiseTerrain`, `rulesTerrain`) and their registration
+  { from: `${T}terrain/blocks/` },
+  // The Blender side of terrain blocks (p306 D5, D6): the add-on (`aekasha_terrain_tools.py`), the
+  // `.blend` templates and the images painted for them (`splatMap_splat0.png`); not modules, so
+  // the PascalCase rule doesn't reach them
+  { from: `${T}terrain/blender/` },
   // The procedural surfaces (p304 D3): the generator API, and a folder per generator
   // (`<id>/<id>.generator.ts`)
   { from: `${T}terrain/procedural/` },

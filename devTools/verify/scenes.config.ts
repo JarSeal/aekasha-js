@@ -478,6 +478,12 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
   terrainGallery: {
     debugger: { tabs: ['terrainGallery'] },
   },
+  terrainBlockTest: {
+    // 6 s: the boxes' 35 m fall onto the blocks and their tumble take about 4 s, and the scene
+    // checks them at its step 340 (an error for one that isn't resting on its block), before the
+    // freeze
+    probeSteps: 360,
+  },
   thirdPersonGymScene: {
     // 10 s of the input script: the two players walk, turn, run, crouch and jump, the dummy loops
     probeSteps: 600,

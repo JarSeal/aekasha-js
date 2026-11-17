@@ -123,11 +123,19 @@ In `geometry/`. Every generator takes a seed (an integer) and gives the same res
 returns a geometry that isn't registered: save it with `saveBufferGeometry`, or hand it to an
 instanced pool, which owns it.
 
-- [`generateTerrain`](api:generateTerrain): a noise terrain grid, with its `heights` and a
+- [`generateTerrain`](api:generateTerrain): a terrain grid, with its `heights` and a
   `getHeightAt(x, z)` that gives the height of the mesh's own triangle under the point, so what you
-  place with it sits on the mesh. `heights` is row-major, and a `HEIGHTFIELD` collider reads
-  column-major ([an open issue](hub:issues/heightfield-grid-layout)): give the body a `TRIMESH` of
-  the geometry, which matches the mesh exactly.
+  place with it sits on the mesh. Its heights come from seeded noise sampled at the world place
+  (`center`: blocks of one seed continue each other), a `heightFn` or a `heightmap`
+  ([`loadTerrainHeightmapAsync`](api:loadTerrainHeightmapAsync), raw `R16` / `R32F`), then a
+  `heightModifier`; `normals: 'HEIGHT_FN'` agrees across blocks' edges; `vertexColors` lays the
+  terrain material's rules into `COLOR_0` on the CPU
+  ([`evaluateTerrainRulesCPU`](api:evaluateTerrainRulesCPU)); `ao` is a horizon AO; `collider:
+true` returns the `HEIGHTFIELD` collider's params (`heightfield`, the mesh's cells, for
+  `createPhysicsEntity`). [`generateTerrainAsync`](api:generateTerrainAsync) does the same on the
+  toolkit's terrain worker (a 257² block takes about 50 ms; options without functions). The
+  defaults build the same geometry as before. How to use them: [procedural terrain
+  meshes](repo:docs/techniques/terrain-procedural-meshes.md).
 - [`generateTreeGeometry`](api:generateTreeGeometry) and
   [`generateBushGeometry`](api:generateBushGeometry): low-poly foliage. A tree is one geometry
   with two material groups (`materialGroups`: the trunk's and the canopy's).
@@ -161,6 +169,14 @@ The surfaces and the TSL pieces terrain materials are built from (the
   layers and quality tiers ([`getTerrainQualityPreset`](api:getTerrainQualityPreset)).
   [`createStructureMaterial`](api:createStructureMaterial) is its preset for concrete and large
   structures, [`bakeTerrainColorMap`](api:bakeTerrainColorMap) bakes a block's colour map.
+- **Terrain blocks** (`blocks/`, `blender/`): the block generators `noiseTerrain` and
+  `rulesTerrain`, which [`registerTerrainGenerators`](api:registerTerrainGenerators) registers
+  for the [`terrain()`](hub:features/terrain#terrain-blocks) feature's JSON blocks (from an
+  install); and the Blender add-on `aekasha_terrain_tools.py` with seven templates, which make
+  blocks by the conventions and export them ([the
+  workflow](repo:docs/techniques/terrain-blocks-blender.md)).
+  [`readTextureTexelsAsync`](api:readTextureTexelsAsync) reads a texture's texels back to the CPU
+  (the rules' noise on generated blocks).
 - **The texture library** (`textures/<setId>/`): 16 CC0 texture sets, two each of sand, mud,
   rocks, cliffs, snow, ice and grass ground, and two concretes, packed `LITE` (`sand01`,
   `grass01` and `cliffs01` also `FULL` and `MINIMAL`) and compressed to KTX2. A scene or a

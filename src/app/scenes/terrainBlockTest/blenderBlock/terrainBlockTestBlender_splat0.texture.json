@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "terrainBlockTestBlender_splat0",
+  "fileName": "./terrainBlockTestBlender_splat0.png",
+  "optimize": {
+    "slot": "data"
+  },
+  "texOpts": {
+    "flipY": false,
+    "colorSpace": ""
+  },
+  "debugData": {
+    "name": "Orientation block's splat map",
+    "description": "The add-on's export: the corner markers painted over the block's UVs (red at the top left: the engine's -x, -z corner), layers 1 and 2 of the splat map material. flipY false: the glTF UVs start at the image's top row."
+  }
+}

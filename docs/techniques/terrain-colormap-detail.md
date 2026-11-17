@@ -65,11 +65,21 @@ Everything on [Single-layer terrain](terrain-single-layer.md) applies to the lay
 
 ## Blender, step by step
 
-Painting or baking the colour map in Blender (a texture bake of the block's look into its UVs, optionally with AO and lighting) is [p306](../plans/p306_terrain-blocks-and-procedural-terrain-meshes.md)'s (`terrain-blocks-blender.md`, template `terrain_colormapDetail.blend`). The material needs the block's UVs 0..1 over it, without overlaps (each texel one place on the block).
+The block workflow (set-up, the grid, shaping, validating, exporting) is [Terrain blocks from Blender](terrain-blocks-blender.md); start from `terrain_colormapDetail.blend` (`src/toolkit/terrain/blender/`): rolling hills painted in four layers from their shape, the AO baked, ready to bake. The material needs the block's UVs 0..1 over it, without overlaps (each texel one place on the block): the add-on's top-down UVs are.
+
+1. **Paint the block's look** with the preview material: vertex colours or a splat map, as on their pages. The colour map is a picture of that look.
+2. Set the block's _Folder_, then **_Bake Colour Map_**: Cycles bakes the preview's colour (the albedo, no light) through the UVs into `<id>_colorMap` and saves `<id>_colorMap.png`. **Size: 2K for a 64-128 m block** (3-6 cm a texel), 4K for 256 m; 1K for a far-only map.
+3. **_Include AO_:** off when the engine applies the vertex AO itself (an `RGB_AO` block with `ao.vertex`), on for a map that stands alone (a `FAR_ONLY` surface past the splat).
+4. **What not to bake:** light and shadow. The engine lights the map; with day-night, a baked sun is wrong most of the day, and a baked shadow doubles the real one. Bake the albedo, and at most the AO.
+5. **Unique detail** (a road, scorch marks, a field's rows): paint on the baked image in Texture Paint (it's sRGB), then save it.
+
+The preview is an approximation of the engine's material (no anti-tiling or macro): for a map that matches the engine exactly, bake it in the engine instead (below).
 
 ## Export
 
-**From the engine:** bake the block's material (below), then `exportBakedTexture({ id, output: 'color', dir })` (on `aekasha`, debug builds) writes the PNG into the repo through the dev file server, ready for a texture JSON. From Blender: p306's (`terrain-blocks-blender.md`).
+**From Blender:** _Export Block_ ([the locked settings](terrain-blocks-blender.md#export)) saves `<id>_colorMap.png` beside the GLB and writes its texture JSON stub where none is: slot `baseColor`, `texOpts` `{ "flipY": false, "colorSpace": "srgb" }` (glTF's V 0 is the image's top row).
+
+**From the engine:** bake the block's material (below), then `exportBakedTexture({ id, output: 'color', dir })` (on `aekasha`, debug builds) writes the PNG into the repo through the dev file server, ready for a texture JSON.
 
 ## Import into Ækasha
 
@@ -103,7 +113,9 @@ Bake on the block's own mesh where it stands: the macro and the rules' noise are
 }
 ```
 
-**The material**, its colour map the input `colorMap` (each block a variant with its own):
+A map baked in Blender has `"flipY": false` in its texture JSON (Export Block's stub).
+
+**The material**, its colour map the input `colorMap` (each block a variant with its own: a terrain block's `"materialInputs": { "colorMap": { "texture": "valleyBlockA_colorMap" } }`):
 
 ```ts
 import { createTerrainMaterial, getTerrainQualityPreset } from 'aekasha/toolkit/terrain';
@@ -174,6 +186,6 @@ distance: { fade: [60, 120], far: 'AVERAGE_COLOR', farBlend: 8 },
 
 ## Template file and example asset ids
 
-- **Blender template:** `terrain_colormapDetail.blend`, p306.
+- **Blender template:** `src/toolkit/terrain/blender/terrain_colormapDetail.blend` (its README text block mirrors this page's Blender steps; the block workflow: [Terrain blocks from Blender](terrain-blocks-blender.md)).
 - **The bake:** `bakeTerrainColorMap` (`src/toolkit/terrain/material/TerrainColorMapBake.ts`), on the engine's `bakeTexture` with its `mesh` option.
 - **The gallery's Colour map row** (`terrainGallery`, `?isDebug=true&startScene=terrainGallery`; `src/app/scenes/terrainGallery/colorMapRow.ts`): four 64 m blocks on the Rules row's terrain, the 8-layer material, then with a `DETAIL` colour map (`detailDistance` 30–90 m), with the far `COLOR_MAP` surface (`FAR_ONLY`) and with the far `AVERAGE_COLOR` one (their fade 24–40 m, their tiers the preset's far column). Each block's colour map is baked during the load from the source material on the block's own mesh. Its tab has the camera above or a third person across the band, sliders for the fade, the far start, the band and the detail fade, and a rebake.

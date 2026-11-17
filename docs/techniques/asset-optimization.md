@@ -72,6 +72,7 @@ Save it, and the dev server encodes it. Then commit the source, the new file in 
 ```
 
 - The geometry is meshopt-compressed and quantized (smaller download and smaller vertex buffers). The embedded textures are encoded to KTX2, each by the material slot that uses it.
+  - Quantization moves each mesh's dequantization into its node (a scale and a translation; a node with children gets a new child for its mesh). `spawnImportedAsset` applies it, but a mesh made from the geometry's id with its own transform (`"geo": "<importId>/<node>"`) doesn't, and a mesh node with children loses its id: set `"optimize": { "mesh": { "quantize": false } }` on such an asset ([the open issue](../issues/quantized-glb-geometry-by-id.md)).
 - **Without `importTextures`, the output has no textures.** The engine discards glTF materials and registers a GLB's textures only with `importTextures`, so the pipeline drops the textures instead of shipping them. If code imports the file with `importTextures` but the JSON doesn't set it (or a scene's save entry doesn't), the textures are gone: set it in the JSON.
 - `.gltf` files with external buffers and images work; the output is always a `.glb`.
 - **`"lodChain": true`** (or its options: `ratios`, `maxError`, `compactVertices`, …) builds the LOD levels into the output, so the client never runs the simplifier. They are extra meshes no node uses, so glTF viewers show the model as before. Every use of a file shares one output: if the JSON and a scene's save entry ask for different options, the first one wins and the run warns. With the mesh side off (`"optimize": { "mesh": false }`, or a pass-through), the chains are generated at runtime after the load instead. Changing the options re-encodes the file, and so does a three.js update (the simplifier welds with its `mergeVertices`).
@@ -110,15 +111,15 @@ Gaps:
 
 ### Collider sources
 
-Quantized positions break CONVEXHULL and HEIGHTFIELD colliders, and the meshopt vertex reorder scrambles a heightfield's grid. So a GLB with a node that has `colliderType` in its extras, or in its mesh's extras (the custom property the importer reads, which three's loader merges from both), gets **lossless** meshopt: compressed, but not quantized, reordered or simplified. You don't need to set anything.
+Simplification changes a collider's shape and takes a heightfield's grid apart. So a GLB with a node that has `colliderType` in its extras, or in its mesh's extras (the custom property the importer reads, which three's loader merges from both), is **never simplified**, whatever its rules or profile say. You don't need to set anything.
 
-The pipeline can't see colliders that only code adds (`ImportPhysicsParams`). For those sources, set it yourself:
+It's quantized and reordered like any other mesh: every collider reads its positions through the attribute getters, and a HEIGHTFIELD reads its grid by vertex position, not order (so Draco works too). A 16-bit position is within a millimetre on a 64 m block. (Before p306 they were kept lossless.)
+
+The pipeline can't see colliders that only code adds (`ImportPhysicsParams`). If such a source has a simplification rule, turn it off yourself:
 
 ```jsonc
-"optimize": { "mesh": { "quantize": false } }
+"optimize": { "mesh": { "simplify": null } }
 ```
-
-If a quantized mesh ends up under a HEIGHTFIELD anyway, the collider is skipped with an error that names this fix. TRIMESH, BOX and CONVEXHULL handle quantized positions.
 
 ## Profiles and settings
 
@@ -144,7 +145,7 @@ The ones `assets.config.json` ships with. Add your own there.
 | `hero`         | Textures up to 2048 px, VRAM budget 24 MB                                                           | Assets the camera gets close to                                            |
 | `compact`      | ETC1S for the `baseColor` and `emissive` slots                                                      | Distant and background assets, mobile VRAM budgets                         |
 | `terrainLayer` | Encodes the `data` slot as UASTC λ 1                                                                | Terrain layer textures (packed normal + height)                            |
-| `terrainBlock` | Lossless meshopt                                                                                    | Terrain meshes, colliders the pipeline can't detect                        |
+| `terrainBlock` | Lossless meshopt                                                                                    | Terrain blocks: neighbours' shared edge vertices stay exactly equal        |
 | `data`         | No texture is encoded                                                                               | Textures that must stay exact (LUTs, splat maps, anything read on the CPU) |
 
 ### Slots

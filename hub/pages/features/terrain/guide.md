@@ -6,6 +6,13 @@ data names a set fails the boot, naming the feature (see
 [the feature manifest](hub:features/scenes-and-assets#the-feature-manifest)), and a material made
 in code with a `{ textureSet }` input fails to build. The lookups and loads below work without it.
 
+Terrain blocks are a feature of their own: [`terrain()`](api:terrain), from `aekasha/terrain`
+(the template lists it last). A scene listing blocks names it in its manifest, and one whose
+blocks have a collider names `physics()` too; the collider's code loads with the first block that
+has one, so an app without physics (a landscape embed) loads no Rapier for its blocks. The
+toolkit's block generators register from an install with
+[`registerTerrainGenerators()`](api:registerTerrainGenerators) (the template's `appECSPlugins`).
+
 ## A texture set
 
 A `*.textureSet.json` names its textures per packing and slot, and holds the surface's physical
@@ -404,6 +411,115 @@ What a technique costs in fetches, the measured GPU time, the maps and the pitfa
 page's; the [techniques index](repo:docs/techniques/README.md#which-technique-for-my-game) matches
 techniques to game types.
 
+## Terrain blocks
+
+A block is a square grid of the ground (32, 64, 128 or 256 m, `2^n + 1` vertices a side), centred
+on its place `(x · size, 0, z · size)`, its vertices moving in height only so its collider is a
+heightfield. Neighbours share their edge vertices, so blocks tile a world by their grid
+coordinates. The block conventions in full, with the reasons, are the
+[block workflow's](repo:docs/techniques/terrain-blocks-blender.md#what-it-is).
+
+### A block's JSON
+
+A `*.terrainBlock.json` ties the block's parts together: its geometry (an imported node, or a
+registered generator with its params and seed), its terrain material, the inputs that are the
+block's own (its splat map, its colour map, a layer's set: a material variant per block, so blocks
+of one biome share the shader), its grid, its collider and its shadows:
+
+```json
+{
+  "$schema": "../../../../../../.schemas/terrainBlock.schema.json",
+  "geometry": { "importedAsset": "valley", "node": "valley" },
+  "material": "valleyTerrain",
+  "materialInputs": { "splat0": { "texture": "valley_splat0" } },
+  "grid": { "x": 0, "z": 0, "size": 64, "resolution": 129 },
+  "collider": { "type": "HEIGHTFIELD", "friction": 1.2 },
+  "shadows": { "cast": true, "receive": true }
+}
+```
+
+- **`collider.type`:** `HEIGHTFIELD` (the default: from the geometry's grid, or the generator's),
+  `TRIMESH` (the triangles: overhangs and cave mouths, costlier) or `NONE` (a background block).
+  The collider is a `FIXED` body on the block's mesh entity.
+- **The gather** writes each block a scene lists into its data and adds its import, material and
+  textures to the scene's lists, so the load brings everything the block needs. Its id is its file
+  name.
+
+### Spawning a block
+
+A scene lists its blocks (`"terrainBlocks": ["valley"]`) and its code spawns them with
+[`spawnTerrainBlock`](api:spawnTerrainBlock):
+
+```ts
+import { spawnTerrainBlock } from 'aekasha/terrain';
+
+const block = await spawnTerrainBlock('valley');
+if (!block) return; // the scene was left during the spawn: nothing was kept
+// block.meshEntityId, block.physicsEntityId, block.dispose()
+```
+
+- The mesh is placed by the block's grid; an imported node's own transform is ignored, with a
+  warning. A generated geometry is registered for the scene and disposed with its last mesh.
+- The scene's exit deletes the block, its body included, like any entity of the scene; `dispose()`
+  deletes it earlier.
+- It throws when the scene doesn't list the block, its import has no single mesh for `node`, its
+  generator isn't registered, or its collider needs a `physics()` that isn't installed. An imported
+  block whose positions are quantized is refused, naming the fix: its importedAsset JSON's
+  `"optimize": { "profile": "terrainBlock" }` (lossless, so neighbours' edges stay equal).
+
+### Blocks from Blender
+
+The toolkit's Blender add-on (`src/toolkit/terrain/blender/aekasha_terrain_tools.py`, one file:
+_Install from Disk_, Blender 5.3) makes blocks that follow the conventions: _Add Terrain Block_
+(the exact grid, triangles along the heightfield's diagonal, top-down UVs, the vertex colour
+`Splat`, the custom props), a preview material of the terrain material's layers, _New Splat Map_
+for Texture Paint, _Bake AO → Splat Alpha_, _Bake Colour Map_, _Split Into Blocks_ (one large
+grid into neighbours with shared edges and normals), _Validate_ and _Export Block_ (the glTF
+settings locked, the images, and the JSON stubs). Seven templates beside it start a block or a
+technique, each with a README:
+
+| Template                         | What it shows                                                         |
+| -------------------------------- | --------------------------------------------------------------------- |
+| `terrain_blockTemplate.blend`    | An empty 64 m block, the preview material, its custom props           |
+| `terrain_singleLayer.blend`      | A block shaped by a Displace in world coordinates, one layer          |
+| `terrain_vertexColorSplat.blend` | Four layers painted in the vertex colour, the AO baked into its alpha |
+| `terrain_splatMap.blend`         | Five layers in a 1K splat map painted in Texture Paint                |
+| `terrain_triplanarCliff.blend`   | A heightfield cliff, and a `TRIMESH` neighbour with an overhang       |
+| `terrain_colormapDetail.blend`   | A painted block ready to bake its colour map                          |
+| `structure_concrete.blend`       | Walls and a bunker worn by a vertex colour (structures, not blocks)   |
+
+The workflow step by step, from the set-up to the collider check in the engine, is the
+[block workflow](repo:docs/techniques/terrain-blocks-blender.md); each technique's own Blender
+steps are on its page.
+
+### Generated blocks
+
+A block's geometry can come from a generator: `"geometry": { "generator": "rulesTerrain",
+"params": { … }, "seed": 306 }`. The toolkit's two run on its terrain worker during the spawn:
+
+- **`noiseTerrain`:** seeded simplex octaves (`maxHeight`, `octaves` as `[frequency, amplitude]`
+  pairs, `normals`, `skirt`).
+- **`rulesTerrain`:** the same heights, with the terrain material's rules evaluated per vertex into
+  its vertex colours (`layout`, `rules`) and a horizon AO in `RGB_AO`'s alpha (`ao`), for a
+  `VERTEX_COLOR` material.
+
+The noise is sampled at the block's world place with its seed as it is, so blocks of one seed
+continue each other in their heights, normals, AO and colours. Your own generator registers with
+[`registerTerrainGenerator(id, fn)`](api:registerTerrainGenerator) from an install: it gets the
+block's params, seed and grid and returns the geometry (centred, `resolution` vertices a side) and,
+when it has the grid at hand, its heightfield.
+
+From code, [`generateTerrain`](api:generateTerrain) (this thread) and
+[`generateTerrainAsync`](api:generateTerrainAsync) (the worker; options without functions) build a
+grid with world-continuous noise (`center`), a height function or a heightmap
+([`loadTerrainHeightmapAsync`](api:loadTerrainHeightmapAsync): raw `R16` or `R32F` from Gaea, World
+Machine or World Creator), seamless `HEIGHT_FN` normals, rules into vertex colours
+([`evaluateTerrainRulesCPU`](api:evaluateTerrainRulesCPU), the material's math), the horizon AO and
+the collider's params (`collider: true`). A 257² block with everything takes about 50 ms, a dropped
+frame on the main thread and none on the worker. Options, seeds, costs and when to bake rules into
+the colours rather than run them in the shader: [procedural terrain
+meshes](repo:docs/techniques/terrain-procedural-meshes.md).
+
 ## Debugging
 
 - **The gallery** (above): `?isDebug=true&startScene=terrainGallery`. Its packing switch is also
@@ -435,6 +551,18 @@ techniques to game types.
   each bake tiles and its live surface doesn't, and that a procedural set's bake equals the code's;
   `noiseLibrary` tiles each noise 3 × 3 beside its live twin, and checks the shared textures and
   their committed copies. A failure is a console error, so `yarn verify:scenes` fails on it.
+- **The blocks' scene:** `?isDebug=true&startScene=terrainBlockTest`: an imported block, a
+  generated one with its heightfield, a generated `TRIMESH`, a block from a committed `.r16`
+  heightmap, and the add-on's orientation block (red at the engine's −x, −z corner, green at +x,
+  −z) through its vertex colour and its splat map, boxes dropped on each. Its tab spawns a 256 m
+  block and measures its generation on either thread.
+- **A block's collider:** the debug drawer's Physics API tab draws the collider wireframes over the
+  blocks; a `HEIGHTFIELD` lies on the mesh between its vertices too.
+- **The Blender side:** the add-on's _Validate_ lists what Export refuses and why.
+  ::: dev-only
+  `yarn verify:blender` runs every operator of the add-on in a background Blender and reads its GLBs
+  as the engine does; `devTools/blender/buildTerrainTemplates.py` makes the templates again.
+  :::
 - **The Assets tab**'s texture info window names the sets, packings and slots a texture fills.
 - **The material editor** builds a material's set arrays before previewing it, so a
   `{ textureSetArray }` material shows outside the scene that builds them.
@@ -461,6 +589,13 @@ techniques to game types.
   [`setupTerrainMaterial`](api:setupTerrainMaterial): the terrain material, its config
   [`TerrainMaterialConfig`](api:TerrainMaterialConfig) and define
   [`TerrainMaterialDefine`](api:TerrainMaterialDefine).
+- [`terrain`](api:terrain) (the feature), [`spawnTerrainBlock`](api:spawnTerrainBlock) and
+  [`getTerrainBlock`](api:getTerrainBlock): blocks; [`registerTerrainGenerator`](api:registerTerrainGenerator)
+  and [`registerTerrainGenerators`](api:registerTerrainGenerators): their generators.
+- [`generateTerrain`](api:generateTerrain), [`generateTerrainAsync`](api:generateTerrainAsync),
+  [`loadTerrainHeightmapAsync`](api:loadTerrainHeightmapAsync) and
+  [`evaluateTerrainRulesCPU`](api:evaluateTerrainRulesCPU): generated terrain;
+  [`toHeightfieldColliderParams`](api:toHeightfieldColliderParams): a heightfield from a grid.
 - [`getTerrainQualityPreset`](api:getTerrainQualityPreset): the tiers;
   [`bakeTerrainColorMap`](api:bakeTerrainColorMap): a block's colour map;
   [`createStructureMaterial`](api:createStructureMaterial): structures;
@@ -472,8 +607,9 @@ techniques to game types.
   gallery's blocks cast and receive no shadows.
 - [Texture array image layers premultiplied](hub:issues/texture-array-image-layers-premultiplied):
   a set array of PNG sets can be off by 2 / 255 where the roughness is under 1.
-- [Heightfield grid layout](hub:issues/heightfield-grid-layout): `generateTerrain`'s heights and a
-  `HEIGHTFIELD` collider.
+- [Heightfield grid layout](hub:issues/heightfield-grid-layout) (fixed): `generateTerrain`'s
+  row-major heights and a `HEIGHTFIELD` collider's layout, now one conversion,
+  `toHeightfieldColliderParams`.
 
 ## Read more
 
@@ -487,10 +623,14 @@ techniques to game types.
   [procedural rules](repo:docs/techniques/terrain-procedural-rules.md),
   [triplanar cliffs](repo:docs/techniques/terrain-triplanar-cliffs.md),
   [colour map + detail](repo:docs/techniques/terrain-colormap-detail.md) and
-  [structure materials](repo:docs/techniques/structure-materials.md)) and the
+  [structure materials](repo:docs/techniques/structure-materials.md)), the geometry
+  ([terrain blocks from Blender](repo:docs/techniques/terrain-blocks-blender.md) and
+  [procedural terrain meshes](repo:docs/techniques/terrain-procedural-meshes.md)) and the
   [techniques index](repo:docs/techniques/README.md) (which technique for which game).
-- The API reference: [`aekasha/texturesets`](hub:documentation/aekasha/texturesets) and
-  [`aekasha/toolkit/terrain`](hub:documentation/aekasha/toolkit/terrain).
+- The API reference: [`aekasha/texturesets`](hub:documentation/aekasha/texturesets),
+  [`aekasha/terrain`](hub:documentation/aekasha/terrain),
+  [`aekasha/toolkit/terrain`](hub:documentation/aekasha/toolkit/terrain) and
+  [`aekasha/toolkit/geometry`](hub:documentation/aekasha/toolkit/geometry).
 - The [toolkit](hub:features/toolkit#terrain): the library and the baseline material among the
   rest.
 

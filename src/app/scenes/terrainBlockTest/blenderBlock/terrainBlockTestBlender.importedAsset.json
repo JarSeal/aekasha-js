@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../../../.schemas/importedAsset.schema.json",
+  "id": "terrainBlockTestBlender",
+  "fileName": "./terrainBlockTestBlender.glb",
+  "optimize": {
+    "profile": "terrainBlock"
+  },
+  "debugData": {
+    "name": "Orientation block",
+    "description": "The terrain add-on's export of terrainBlockTest's orientation block (devTools/blender/exportOrientationBlock.py; p306 Phase 5). The terrainBlock profile keeps its positions lossless."
+  }
+}

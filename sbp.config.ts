@@ -51,9 +51,12 @@ const profiles: SbpProfile[] = [
     // took the initial to 398.7 and `assets/index.js` to 394.5 KiB, about 0.5 of each p302's:
     // 398 → 399 and 394 → 395 KiB. p303 Phase 1: the `textureSets()` feature (its resolver,
     // the set lookup and load, 0.7 KiB; the template lists it) took the initial to 399.2 and
-    // `assets/index.js` to 395.0 KiB: 399 → 400 and 395 → 396 KiB
+    // `assets/index.js` to 395.0 KiB: 399 → 400 and 395 → 396 KiB. p306 Phase 3: the toolkit's
+    // terrain block generators registered from `appECSPlugins` (`registerTerrainGenerators`, with
+    // the `terrain()` registry it calls; their code is a lazy chunk) took the initial to 400.04
+    // KiB: 400 → 401 KiB (`assets/index.js`, 395.8 KiB, stays within 396)
     budgets: {
-      initial: 400 * KIB,
+      initial: 401 * KIB,
       chunks: {
         'assets/index.js': 396 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
@@ -116,6 +119,9 @@ const profiles: SbpProfile[] = [
         // scene's procedural set bakes (`import()` of `TextureSetBakes.js`, 3.6 KiB with the
         // set arrays' chunk, lazy; the baker with it) took it from 976 B to 1090 B: 1 → 1.25 KiB
         '_engine/features/texturesets': 1.25 * KIB,
+        // p306 Phase 2: only the factory and its install (0.1 KiB gzip, one module); the spawner,
+        // the generator registry and the collider load with the scenes that spawn blocks
+        '_engine/features/terrain': 1 * KIB,
         '_engine/features/viewports': 3 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`). p302 (12 → 15
         // modules: the material code split up, the resolver registry, the input refs) took it to

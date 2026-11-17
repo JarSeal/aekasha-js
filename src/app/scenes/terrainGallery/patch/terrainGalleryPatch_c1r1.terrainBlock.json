@@ -1,0 +1,79 @@
+{
+  "$schema": "../../../../../.schemas/terrainBlock.schema.json",
+  "geometry": {
+    "generator": "rulesTerrain",
+    "params": {
+      "maxHeight": 10,
+      "octaves": [
+        [0.016, 1],
+        [0.05, 0.35],
+        [0.14, 0.1]
+      ],
+      "layout": "RGB_AO",
+      "rules": [
+        {
+          "layer": 1,
+          "slope": {
+            "min": 26,
+            "softness": 8
+          },
+          "noise": {
+            "scale": 30,
+            "amount": 0.35,
+            "channel": "G"
+          }
+        },
+        {
+          "layer": 2,
+          "height": {
+            "min": 5,
+            "softness": 3
+          },
+          "slope": {
+            "max": 38,
+            "softness": 8
+          },
+          "aspect": {
+            "direction": [0, -1],
+            "range": 70,
+            "softness": 35
+          },
+          "noise": {
+            "scale": 40,
+            "amount": 0.25
+          }
+        },
+        {
+          "layer": 3,
+          "slope": {
+            "min": 46,
+            "softness": 6
+          }
+        }
+      ],
+      "ao": {
+        "radius": 8,
+        "strength": 0.8
+      }
+    },
+    "seed": 306
+  },
+  "material": "terrainGalleryPatch",
+  "grid": {
+    "x": 0,
+    "z": -5,
+    "size": 32,
+    "resolution": 65
+  },
+  "collider": {
+    "type": "NONE"
+  },
+  "shadows": {
+    "cast": false,
+    "receive": false
+  },
+  "debugData": {
+    "name": "Patch block 0, -5",
+    "description": "One of the terrain gallery's 3 \u00d7 3 rulesTerrain patch (p306 Phase 3): world-continuous noise, HEIGHT_FN normals, the rules laid into its vertex colours on the CPU, horizon AO in A."
+  }
+}

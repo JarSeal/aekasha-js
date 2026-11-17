@@ -1,7 +1,8 @@
 /**
  * The scene pass's texture closure (p302 D6): the textures a scene's data names without listing
  * them are added to its `textures`, so a scene lists a material and gets that material's
- * textures. They come from its materials (listed, a mesh's inline `mat`, a mesh's `matOverrides`):
+ * textures. They come from its materials (listed, a mesh's inline `mat`, a mesh's `matOverrides`,
+ * a terrain block's `materialInputs`):
  * their `params` texture slots and their TSL `inputs` and `nodes` values that name a texture (a
  * bare id, a texture ref, a texture array layer's array, an atlas cell's slot); and from its spot
  * lights' cookies (`map`) and its `backgroundTexture`. Appended after the listed ids, so they
@@ -40,6 +41,7 @@ import {
   getTextureSetArrayInputError,
   resolveTextureSetArrays,
 } from './textureSetArrays';
+import { getSceneTerrainBlocks } from './terrainBlocks';
 import { appendSceneTextureSets } from './textureSets';
 
 /**
@@ -215,6 +217,10 @@ const getNamedTextureIds = (run: SceneRun): Collect => {
     if (typeof light === 'string') continue;
     const { map, appId } = light.lightProps as { map?: unknown; appId?: string };
     if (typeof map === 'string') addId(named, map, `the light "${appId ?? '(no appId)'}"`);
+  }
+  // A terrain block's own inputs over its material's (p306 D2)
+  for (const block of getSceneTerrainBlocks(scene)) {
+    addMaterialIds({ inputs: block.materialInputs }, collect, `the terrain block "${block.id}"`);
   }
   if (scene.backgroundTexture) addId(named, scene.backgroundTexture, 'backgroundTexture');
   return collect;

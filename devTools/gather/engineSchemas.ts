@@ -14,6 +14,7 @@ import {
   skyBoxSchemaPart,
   spatialSchemaPart,
   streamingSchemaPart,
+  terrainSchemaPart,
   textureSetsSchemaPart,
 } from '../../src/_engine/schemas';
 
@@ -28,6 +29,7 @@ export const ENGINE_SCHEMA_PARTS = [
   streamingSchemaPart,
   mergingSchemaPart,
   textureSetsSchemaPart,
+  terrainSchemaPart,
 ] as const;
 
 /** The scene schema with every engine feature's fields */
