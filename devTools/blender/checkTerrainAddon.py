@@ -11,6 +11,7 @@ import importlib.util
 import json
 import os
 import sys
+import time
 import traceback
 
 import bpy
@@ -68,39 +69,104 @@ def check_triangles(aek):
             expect(shared == {(row + 1) * res + col, row * res + col + 1}, f"cell ({row}, {col})'s diagonal")
 
 
-def check_registration(aek):
-    aek.register()
+def check_settings(aek):
+    expect(hasattr(bpy.types, "VIEW3D_PT_aek_terrain"), "the panel registers")
+    mesh = bpy.data.meshes.new("check")
+    obj = bpy.data.objects.new("check", mesh)
+    settings = obj.aek_terrain_block
+    expect(settings.size == "64" and settings.resolution == "129", "the defaults: 64 m / 129")
+    expect(aek.get_block_settings(obj) is None, "a mesh that isn't a block has no settings")
+    settings.is_block = True
+    expect(aek.get_block_settings(obj) == settings, "a block's settings")
+    bpy.data.objects.remove(obj)
+    bpy.data.meshes.remove(mesh)
+
+
+def expect_refused(call, message):
     try:
-        expect(hasattr(bpy.types, "VIEW3D_PT_aek_terrain"), "the panel registers")
-        mesh = bpy.data.meshes.new("check")
-        obj = bpy.data.objects.new("check", mesh)
-        settings = obj.aek_terrain_block
-        expect(settings.size == "64" and settings.resolution == "129", "the defaults: 64 m / 129")
-        expect(aek.get_block_settings(obj) is None, "a mesh that isn't a block has no settings")
-        settings.is_block = True
-        expect(aek.get_block_settings(obj) is settings or aek.get_block_settings(obj) == settings,
-               "a block's settings")
-        bpy.data.objects.remove(obj)
-        bpy.data.meshes.remove(mesh)
-    finally:
-        aek.unregister()
-    expect(not hasattr(bpy.types, "VIEW3D_PT_aek_terrain"), "the panel unregisters")
+        call()
+    except RuntimeError:
+        return
+    raise AssertionError(message)
 
 
-CHECKS = [check_conventions, check_triangles, check_registration]
+def check_add_block(aek):
+    size, res = 32, 33
+    bpy.ops.aek.add_terrain_block(block_id="checkBlock", size=str(size), resolution=str(res),
+                                  grid_x=1, grid_z=-1, layout="RGB_AO")
+    obj = bpy.data.objects["checkBlock"]
+    mesh = obj.data
+    expect(bpy.context.view_layer.objects.active == obj and obj.select_get(), "the new block is active")
+    expect(len(mesh.vertices) == res * res, "resolution² vertices")
+    for i, v in enumerate(mesh.vertices):
+        x, y = aek.get_grid_vertex(size, res, i // res, i % res)
+        expect(tuple(v.co) == (x, y, 0.0), f"vertex {i} at {tuple(v.co)}, not ({x}, {y}, 0)")
+    triangles = aek.get_grid_triangles(res)
+    expect(len(mesh.polygons) == len(triangles), "two triangles a cell")
+    for poly, tri in zip(mesh.polygons, triangles):
+        expect(tuple(poly.vertices) == tri, f"face {poly.index} is {tuple(poly.vertices)}, not {tri}")
+        expect(poly.use_smooth, f"face {poly.index} is smooth")
+    uv = mesh.uv_layers.active.data
+    for loop in mesh.loops:
+        i = loop.vertex_index
+        expected = aek.get_grid_uv(res, i // res, i % res)
+        got = tuple(uv[loop.index].uv)
+        expect(all(abs(g - e) < 1e-6 for g, e in zip(got, expected)), f"loop {loop.index}'s UV {got}")
+    splat = mesh.color_attributes.get(aek.SPLAT_ATTRIBUTE)
+    expect(splat is not None and splat.data_type == "BYTE_COLOR" and splat.domain == "POINT",
+           "a byte, vertex-domain Splat")
+    expect(mesh.color_attributes.active_color_name == aek.SPLAT_ATTRIBUTE, "the Splat is active")
+    expect(mesh.color_attributes.render_color_index == mesh.color_attributes.active_color_index,
+           "the Splat is the render colour")
+    expect(all(tuple(d.color) == (0.0, 0.0, 0.0, 1.0) for d in splat.data), "RGB_AO starts black, A 1")
+    expect(tuple(obj.location) == (32.0, 32.0, 0.0), "grid (1, -1) of 32 m at Blender (32, 32, 0)")
+    expect(tuple(obj.rotation_euler) == (0, 0, 0) and tuple(obj.scale) == (1, 1, 1), "no rotation or scale")
+    props = {k: obj[k] for k in aek.get_block_custom_props(size, res, 1, -1)}
+    expect(props == aek.get_block_custom_props(size, res, 1, -1), f"the custom props: {props}")
+    expect(mesh.materials[0].name == aek.PREVIEW_MATERIAL, "the preview material")
+
+    expect_refused(lambda: bpy.ops.aek.add_terrain_block(block_id="checkBlock", grid_x=5),
+                   "a taken id is refused")
+    expect_refused(lambda: bpy.ops.aek.add_terrain_block(block_id="other", size="32", grid_x=1, grid_z=-1),
+                   "a taken grid place is refused")
+    expect_refused(lambda: bpy.ops.aek.add_terrain_block(block_id="1st"), "an id starting with a digit is refused")
+
+    bpy.ops.aek.add_terrain_block(block_id="checkRgba", size="32", resolution="33", layout="RGBA")
+    rgba = bpy.data.objects["checkRgba"].data.color_attributes[aek.SPLAT_ATTRIBUTE]
+    expect(all(tuple(d.color) == (0.0, 0.0, 0.0, 0.0) for d in rgba.data), "RGBA starts at 0, A too")
+
+
+def check_add_large_block(aek):
+    started = time.perf_counter()
+    bpy.ops.aek.add_terrain_block(block_id="checkLarge", size="256", resolution="257", grid_x=4)
+    REPORT["add_257_seconds"] = round(time.perf_counter() - started, 3)
+    expect(len(bpy.data.objects["checkLarge"].data.vertices) == 257 * 257, "257² vertices")
+
+
+CHECKS = [check_conventions, check_triangles, check_settings, check_add_block, check_add_large_block]
+REPORT = {"blender": bpy.app.version_string, "checks": {}}
 
 
 def main():
     aek = load_addon()
-    report = {"blender": bpy.app.version_string, "checks": {}}
+    for obj in list(bpy.data.objects):
+        bpy.data.objects.remove(obj)
+    report = REPORT
     failed = []
-    for check in CHECKS:
-        try:
-            check(aek)
-            report["checks"][check.__name__] = "ok"
-        except Exception:
-            report["checks"][check.__name__] = traceback.format_exc()
-            failed.append(check.__name__)
+    aek.register()
+    try:
+        for check in CHECKS:
+            try:
+                check(aek)
+                report["checks"][check.__name__] = "ok"
+            except Exception:
+                report["checks"][check.__name__] = traceback.format_exc()
+                failed.append(check.__name__)
+    finally:
+        aek.unregister()
+    if hasattr(bpy.types, "VIEW3D_PT_aek_terrain"):
+        failed.append("unregister")
+        report["checks"]["unregister"] = "the panel is still registered"
     with open(os.path.join(OUT_DIR, "report.json"), "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
     if failed:
