@@ -54,6 +54,7 @@
     "gatherAppData": "tsx ./devTools/gatherAppData.ts",
     "copyDecoders": "tsx ./devTools/copyDecoders.ts",
     "setupAssetTools": "tsx ./devTools/setupAssetTools.ts",
+    "setupBlenderMcp": "tsx ./devTools/blender/setupBlenderMcp.ts",
     "assets": "tsx ./devTools/assets.ts",
     "fetchTextureSources": "tsx ./devTools/fetchTextureSources.ts",
     "checkVersions": "tsx ./devTools/checkVersions.ts",
