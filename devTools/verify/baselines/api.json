@@ -4848,13 +4848,32 @@
       "TerrainNoiseOctave": "Interface",
       "TerrainNormalSource": "TypeAlias",
       "TerrainOptions": "Interface",
-      "TerrainVertexColorOptions": "TypeAlias"
+      "TerrainVertexColorOptions": "TypeAlias",
+      "toGeneratedTerrain": "Function"
     },
     "src/toolkit/geometry/generate/terrain/TerrainAo.ts": {
       "computeTerrainAo": "Function",
       "getTerrainAoMarch": "Function",
       "TerrainAoMarch": "TypeAlias",
       "TerrainAoOptions": "TypeAlias"
+    },
+    "src/toolkit/geometry/generate/terrain/TerrainAsync.ts": {
+      "generateTerrainAsync": "Function",
+      "TerrainAsyncOptions": "TypeAlias"
+    },
+    "src/toolkit/geometry/generate/terrain/TerrainCore.ts": {
+      "buildTerrainData": "Function",
+      "recordTerrainNoiseDraws": "Function",
+      "TerrainCoreOptions": "TypeAlias",
+      "TerrainData": "TypeAlias"
+    },
+    "src/toolkit/geometry/generate/terrain/TerrainHeightmap.ts": {
+      "createTerrainHeightmapSampler": "Function",
+      "loadTerrainHeightmapAsync": "Function",
+      "parseTerrainHeightmap": "Function",
+      "TerrainHeightmap": "TypeAlias",
+      "TerrainHeightmapFormat": "TypeAlias",
+      "TerrainHeightmapOptions": "TypeAlias"
     },
     "src/toolkit/geometry/generate/terrain/TerrainRules.ts": {
       "evaluateTerrainRulesCPU": "Function",
@@ -4867,6 +4886,15 @@
       "TerrainRuleNoiseTexels": "TypeAlias",
       "TerrainRulePoint": "TypeAlias",
       "TerrainRuleRange": "TypeAlias"
+    },
+    "src/toolkit/geometry/generate/terrain/TerrainWorker.ts": {},
+    "src/toolkit/geometry/generate/terrain/TerrainWorkerProtocol.ts": {
+      "handleTerrainWorkerRequest": "Function",
+      "TERRAIN_WORKER_READY": "Variable",
+      "TerrainWorkerCache": "TypeAlias",
+      "TerrainWorkerOptions": "TypeAlias",
+      "TerrainWorkerRequest": "TypeAlias",
+      "TerrainWorkerResponse": "TypeAlias"
     },
     "src/toolkit/geometry/scatter/ScatterOnSurface.ts": {
       "bakeScatterToInstancedMesh": "Function",
@@ -4905,7 +4933,7 @@
       "registerTerrainGenerators": "Function"
     },
     "src/toolkit/terrain/blocks/TerrainBlockGenerators.ts": {
-      "generateNoiseTerrainBlock": "Function",
+      "generateNoiseTerrainBlockAsync": "Function",
       "generateRulesTerrainBlockAsync": "Function"
     },
     "src/toolkit/terrain/material/StructureMaterial.ts": {
@@ -6319,6 +6347,10 @@
       "TERRAIN_RULE_DEFAULTS",
       "TERRAIN_RULE_NOISE_CHANNELS",
       "TerrainAoOptions",
+      "TerrainAsyncOptions",
+      "TerrainHeightmap",
+      "TerrainHeightmapFormat",
+      "TerrainHeightmapOptions",
       "TerrainNoiseOctave",
       "TerrainNormalSource",
       "TerrainOptions",
@@ -6335,8 +6367,10 @@
       "generateAsteroid",
       "generateBushGeometry",
       "generateTerrain",
+      "generateTerrainAsync",
       "generateTreeGeometry",
       "getTerrainRuleCoverageCPU",
+      "loadTerrainHeightmapAsync",
       "scatterOnSurface",
       "spawnScatterAsMeshEntities"
     ],

@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: in progress | Phases 1-4 implemented
 Category: Terrain, Assets, Physics, Toolkit
 Blocks: p307_wet-and-dry-surface-states.md, p308_terrain-scatter.md, p309_terrain-decals.md, p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -304,7 +304,7 @@ Add sections 5–7 (Blender, Export, Import) to the seven p305 pages, each refer
 - **largeWorld:** unchanged with the defaults: its geometry hash in `Terrain.test.ts`, the `ScatterOnSurface.test.ts` hashes, and `yarn verify:scenes --only largeWorld` against a baseline recorded on `main` (`4b039343`) all pass. The optional collider wasn't added.
 - **The build** (`yarn verify:baselines`, recorded): the first download +0.3 kB gzip (the registration and the engine's generator registry it calls), the generators a lazy 2.9 kB chunk, `generateTerrain`'s chunk +2.5 kB, `bakeTexture` a shared 2.9 kB chunk (the readback uses it; the texture set bakes' chunk −2.7 kB). The app's initial reached 400.04 KiB: `sbp.config.ts`' budget 400 → 401 KiB, with the reason in its history.
 
-### Phase 4 (optional) — Worker generation, heightmap import (D4)
+### Phase 4 (optional) — Worker generation, heightmap import (D4) — done
 
 **Code moved since D4:** `generateTerrain` imports `three/webgpu`, `aekasha` (`createSeededRandom`) and `aekasha/physics` (`toHeightfieldColliderParams`). A worker importing it would tree-shake them in a build, but the dev server doesn't tree-shake: the worker would load the whole engine graph, the UI kit's `.scss` imports included (which need `document`). The engine still has no way to register an app or toolkit job with the assets worker (its job kinds are named in `AssetsWorker.ts`), so the worker is the toolkit's own, as D4 says, over a pure core.
 
@@ -370,6 +370,21 @@ Add sections 5–7 (Blender, Export, Import) to the seven p305 pages, each refer
     | Spawn (5, two page loads) | 55-88 ms | 7.0-16.1 ms | 7.0-14.3 ms | 7.0-14.2 ms |
 
     **Exit met:** on the worker no frame during generation or a spawn (its mesh, its `HEIGHTFIELD` body, its first renders) was longer than idle; the main thread drops one frame of 70-93 ms. One first spawn had a 16.1 ms frame (idle 10.1 ms); three more first-to-third spawns on a fresh page had none over their idle, so it's taken as the headless pacing's noise, not a cost of the spawn.
+
+- **Step 4, heightmap import** (`geometry/generate/terrain/TerrainHeightmap.ts`): `loadTerrainHeightmapAsync({ url, format, size, heightRange, extent, center? })` and the types `TerrainHeightmap`, `TerrainHeightmapFormat`, `TerrainHeightmapOptions` on `aekasha/toolkit/geometry`.
+  - **Beyond the plan:** `size` and `extent` also take `[x, z]` pairs (a map that isn't square). `heightRange` maps both formats: `R16`'s 0..65535 and `R32F`'s 0..1 (a float map in world units takes `[0, 1]`). The corner texels lie on the extent's corners, so a map of `resolution` texels over a block of that size gives its vertices exactly.
+  - **`TerrainHeightmap`** is plain data, its heights already in world units (`{ heights, cols, rows, width, depth, center }`), so a map built by hand works too. The loader refuses a failed fetch, options out of range, a length that isn't the size's at that format (naming both), and a float texel that isn't finite; the sampler (`createTerrainHeightmapSampler`, `@internal`) a map whose heights don't fill its texels.
+  - **The option:** `heightmap` on `TerrainOptions`, bilinear at the vertices' world (x, z), the edge's height past the edge; no `maxHeight` or noise draws with it, and `heightFn` with it throws. `heightModifier` applies after it, as after the noise.
+  - **The worker** gets a map once per object, then its key, as the noise texels: one key counter for both on the client, `TerrainWorkerCache` (`{ noises, heightmaps }`) on the worker.
+  - **Tests:** `TerrainHeightmap.test.ts` (in-memory files, `fetch` stubbed: both formats, the refusals, a 3 × 2 map's orientation, the bilinear values and the edge, two blocks on one map sharing their edge); `TerrainAsync.test.ts` (a map's terrain equal to `generateTerrain`'s, sent once, no noise draws).
+  - **The scene check:** `terrainBlockTest`'s front block, 64 m at (0, 100), from the committed `terrainBlockTestHeightmap.r16` (65², 8 450 bytes, reached with `new URL(…, import.meta.url)`), generated on the worker with `HEIGHT_FN` normals and its `HEIGHTFIELD`. `heightmapShape.ts` is the file's recipe (a ramp up to +x and a mound in the (−x, +z) quarter: a read flipped either way shows), and `heightmapShape.test.ts` fails when the committed file differs from it. The load logs an error where any of the 4 225 heights is over 1 mm from its texel (`window.__terrainBlockTest.heightmapBlock` holds the largest gap), and 9 more boxes drop on it, the box check now by each block's square.
+- **Step 5, the checks:**
+  - `yarn test`: 431 files, 4 070 tests pass. The first full run after the gather failed 3 (`FeatureFactories.test.ts` and two `TerrainAsync` cases, all passing alone); the next two full runs passed, so it's taken as a cold run's timing.
+  - `yarn verify:scenes --only terrainBlockTest,largeWorld` (Windows Chrome, WebGPU, AMD RDNA 3): `largeWorld` passes unchanged (`811c9dc5`). `terrainBlockTest`'s probe hash `87e986cc` → `546546b0` in all three targets (the front block's nine boxes), no error logged (the heights matched, every box resting on its block); its baseline recorded.
+  - `yarn verify:baselines --update`, the whole phase's (steps 1-3 weren't recorded): the first download, the banner and the `uiKit` embed unchanged, no debug code; `Terrain.js` (the core and the heightmap sampler) 3.3 → 4.1 kB gzip, `TerrainBlockGenerators.js` (now carrying `generateTerrainAsync`'s client, its only production user) 2.9 → 3.8 kB, the worker a new lazy 5.6 kB file; the entry's six new names; docs 100 %.
+  - `yarn sbp`: the initial 400.0 kB gzip, unchanged (budget 401 KiB), no budget over; the worker is reached only from the lazy generators' chunk.
+  - **The `.r16` in a build:** no build has `terrainBlockTest` (`yarn build` and `yarn build:test` both gather with `NODE_ENV=production`, which leaves the debug scenes out), so `new URL('./….r16', import.meta.url)` was checked in a two-file Vite build of its own: the file emitted as an asset (`terrainBlockTestHeightmap-<hash>.r16`) and the URL rewritten to it. (A file under Vite's 4 KiB inline limit becomes a `data:` URL, which `fetch` reads too.)
+  - The terrain feature's `CLAUDE.md` Generators line: the toolkit's generators run on the terrain worker, and a heightmap block is scene code until p990's heightmap asset.
 
 ### Phase 5 — Blender add-on (D5)
 

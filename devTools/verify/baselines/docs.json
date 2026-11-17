@@ -2,12 +2,12 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 4023,
-      "total": 4023
+      "documented": 4030,
+      "total": 4030
     },
     "members": {
-      "documented": 1117,
-      "total": 1117
+      "documented": 1118,
+      "total": 1118
     }
   },
   "subtrees": {
@@ -23,12 +23,12 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 406,
-        "total": 406
+        "documented": 413,
+        "total": 413
       },
       "members": {
-        "documented": 164,
-        "total": 164
+        "documented": 165,
+        "total": 165
       }
     }
   },
@@ -987,12 +987,12 @@
     },
     "toolkit/geometry/generate/terrain": {
       "exports": {
-        "documented": 32,
-        "total": 32
+        "documented": 39,
+        "total": 39
       },
       "members": {
-        "documented": 27,
-        "total": 27
+        "documented": 28,
+        "total": 28
       },
       "undocumented": {
         "exports": [],
