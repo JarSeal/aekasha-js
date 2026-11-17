@@ -12,12 +12,26 @@ export type {
   TreeGeometryOptions,
 } from './generate/Foliage';
 export { generateTerrain } from './generate/Terrain';
-export type { GeneratedTerrain, TerrainNoiseOctave, TerrainOptions } from './generate/Terrain';
-export { TERRAIN_RULE_DEFAULTS, TERRAIN_RULE_NOISE_CHANNELS } from './generate/TerrainRules';
+export type {
+  GeneratedTerrain,
+  TerrainNoiseOctave,
+  TerrainNormalSource,
+  TerrainOptions,
+  TerrainVertexColorOptions,
+} from './generate/Terrain';
+export type { TerrainAoOptions } from './generate/TerrainAo';
+export {
+  evaluateTerrainRulesCPU,
+  getTerrainRuleCoverageCPU,
+  TERRAIN_RULE_DEFAULTS,
+  TERRAIN_RULE_NOISE_CHANNELS,
+} from './generate/TerrainRules';
 export type {
   TerrainRule,
   TerrainRuleAspect,
   TerrainRuleNoise,
+  TerrainRuleNoiseTexels,
+  TerrainRulePoint,
   TerrainRuleRange,
 } from './generate/TerrainRules';
 export {
