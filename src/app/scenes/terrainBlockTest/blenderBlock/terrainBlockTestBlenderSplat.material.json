@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../../../.schemas/material.schema.json",
+  "id": "terrainBlockTestBlenderSplat",
+  "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "staticDefines": {
+    "terrain": {
+      "layers": [{}, {}, {}],
+      "blend": { "source": "SPLAT_MAP" }
+    }
+  },
+  "inputs": {
+    "layer0": { "textureSet": "grass01" },
+    "layer1": { "textureSet": "snow01" },
+    "layer2": { "textureSet": "mud01" },
+    "splat0": { "texture": "terrainBlockTestBlender_splat0" }
+  },
+  "debugData": {
+    "name": "Orientation block (splat map)",
+    "description": "p306 Phase 5's orientation block through its painted splat map (flipY false): the same sets and corners as the vertex colour material, so both blocks look alike."
+  }
+}

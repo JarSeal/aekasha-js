@@ -20031,7 +20031,7 @@
     "terrainBlockTest": {
       "isDebugScene": true,
       "name": "Terrain blocks (p306)",
-      "description": "p306 Phase 2's verification scene: three 100 m terrain blocks side by side, spawned with spawnTerrainBlock. Middle: the Gym's terrainSmooth.glb as a JSON-only block (an imported node, a HEIGHTFIELD read from its geometry, grass through its materialInputs' variant of textureSetSurface). Right: a generated block (the toolkit's noiseTerrain) with the generator's heightfield. Left: a generated block with a TRIMESH collider. Front (p306 Phase 4): a 64 m block from a committed .r16 heightmap (loadTerrainHeightmapAsync, generated on the toolkit's terrain worker with its heightfield), its heights checked against the map's texels. A 3 × 3 grid of boxes falls on each. The tab (p306 Phase 4) spawns a fourth, a 256 m / 257² rulesTerrain block with AO behind them, and generates the same on the toolkit's terrain worker or the main thread, logging the frames. window.__terrainBlockTest holds the spawn results and, after the boxes settle, each box's height above the terrain under it.",
+      "description": "p306 Phase 2's verification scene: three 100 m terrain blocks side by side, spawned with spawnTerrainBlock. Middle: the Gym's terrainSmooth.glb as a JSON-only block (an imported node, a HEIGHTFIELD read from its geometry, grass through its materialInputs' variant of textureSetSurface). Right: a generated block (the toolkit's noiseTerrain) with the generator's heightfield. Left: a generated block with a TRIMESH collider. Front (p306 Phase 4): a 64 m block from a committed .r16 heightmap (loadTerrainHeightmapAsync, generated on the toolkit's terrain worker with its heightfield), its heights checked against the map's texels. Front left (p306 Phase 5): the terrain add-on's orientation block, a 32 m Blender export with corner markers (snow at the engine's -x, -z corner, mud at +x, -z) and baked AO, twice: through its COLOR_0 and, beside it, through its painted splat map; both must look alike. A 3 × 3 grid of boxes falls on each. The tab (p306 Phase 4) spawns a fourth, a 256 m / 257² rulesTerrain block with AO behind them, and generates the same on the toolkit's terrain worker or the main thread, logging the frames. window.__terrainBlockTest holds the spawn results and, after the boxes settle, each box's height above the terrain under it.",
       "terrainBlocks": [
         {
           "id": "terrainBlockTestSmooth",
@@ -20123,6 +20123,56 @@
           "debugData": {
             "name": "Generated TRIMESH block",
             "description": "The toolkit's noiseTerrain, its TRIMESH collider read from the geometry (the generator's heightfield unused); casts no shadow."
+          }
+        },
+        {
+          "id": "terrainBlockTestBlender",
+          "geometry": {
+            "importedAsset": "terrainBlockTestBlender",
+            "node": "terrainBlockTestBlender"
+          },
+          "material": "terrainBlockTestBlenderVertex",
+          "grid": {
+            "x": -3,
+            "z": 3,
+            "size": 32,
+            "resolution": 33
+          },
+          "collider": {
+            "type": "HEIGHTFIELD"
+          },
+          "shadows": {
+            "cast": true,
+            "receive": true
+          },
+          "debugData": {
+            "name": "Orientation block (vertex colour)",
+            "description": "p306 Phase 5's orientation block: the terrain add-on's export (devTools/blender/exportOrientationBlock.py), 32 m / 33, a mound near the engine's +x, +z corner, the corner markers in COLOR_0 (red: snow at -x, -z; green: mud at +x, -z) and the baked AO in its A, its HEIGHTFIELD from the GLB's custom props."
+          }
+        },
+        {
+          "id": "terrainBlockTestBlenderSplatMap",
+          "geometry": {
+            "importedAsset": "terrainBlockTestBlender",
+            "node": "terrainBlockTestBlender"
+          },
+          "material": "terrainBlockTestBlenderSplat",
+          "grid": {
+            "x": -2,
+            "z": 3,
+            "size": 32,
+            "resolution": 33
+          },
+          "collider": {
+            "type": "HEIGHTFIELD"
+          },
+          "shadows": {
+            "cast": true,
+            "receive": true
+          },
+          "debugData": {
+            "name": "Orientation block (splat map)",
+            "description": "The same export at the next grid place, drawn through its painted splat map (terrainBlockTestBlender_splat0, flipY false) instead of COLOR_0: its corners must look like the vertex colour block's."
           }
         },
         {
@@ -20227,6 +20277,25 @@
             "in": 459264,
             "out": 459264
           }
+        },
+        {
+          "id": "terrainBlockTestBlender",
+          "fileName": "./terrainBlockTestBlender.glb",
+          "debugData": {
+            "name": "Orientation block",
+            "description": "The terrain add-on's export of terrainBlockTest's orientation block (devTools/blender/exportOrientationBlock.py; p306 Phase 5). The terrainBlock profile keeps its positions lossless."
+          },
+          "__fileSize": 57168,
+          "__sourceUrl": "/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.glb",
+          "__url": "/aek-assets/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.d49c53dc.glb",
+          "__bytes": {
+            "in": 57168,
+            "out": 16940
+          },
+          "__vramBytes": {
+            "in": 55848,
+            "out": 55848
+          }
         }
       ],
       "materials": [
@@ -20244,6 +20313,79 @@
           "inputs": {
             "surface": {
               "textureSet": "sand01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "terrainBlockTestBlenderVertex",
+          "debugData": {
+            "name": "Orientation block (vertex colour)",
+            "description": "p306 Phase 5's orientation block through its COLOR_0 (RGB_AO): grass, snow on the red marker (the engine's -x, -z corner, the top view's top left), mud on the green one (+x, -z, top right); A the baked AO."
+          },
+          "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
+          "staticDefines": {
+            "terrain": {
+              "layers": [
+                {},
+                {},
+                {}
+              ],
+              "blend": {
+                "source": "VERTEX_COLOR",
+                "vertexColor": {
+                  "layout": "RGB_AO"
+                }
+              },
+              "ao": {
+                "vertex": true
+              }
+            }
+          },
+          "inputs": {
+            "layer0": {
+              "textureSet": "grass01"
+            },
+            "layer1": {
+              "textureSet": "snow01"
+            },
+            "layer2": {
+              "textureSet": "mud01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "terrainBlockTestBlenderSplat",
+          "debugData": {
+            "name": "Orientation block (splat map)",
+            "description": "p306 Phase 5's orientation block through its painted splat map (flipY false): the same sets and corners as the vertex colour material, so both blocks look alike."
+          },
+          "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
+          "staticDefines": {
+            "terrain": {
+              "layers": [
+                {},
+                {},
+                {}
+              ],
+              "blend": {
+                "source": "SPLAT_MAP"
+              }
+            }
+          },
+          "inputs": {
+            "layer0": {
+              "textureSet": "grass01"
+            },
+            "layer1": {
+              "textureSet": "snow01"
+            },
+            "layer2": {
+              "textureSet": "mud01"
+            },
+            "splat0": {
+              "texture": "terrainBlockTestBlender_splat0"
             }
           },
           "type": "STANDARDNODEMATERIAL"
@@ -20327,6 +20469,68 @@
             "wetRoughness": 0.3
           },
           "averageColor": "#5c6730"
+        },
+        {
+          "id": "snow01",
+          "category": "SNOW",
+          "physicalSize": [
+            3,
+            3
+          ],
+          "heightScale": 0.048,
+          "packings": {
+            "LITE": {
+              "albedoRough": "snow01_albedoRough",
+              "normalHeight": "snow01_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Snow 01 (clean)",
+            "description": "ambientCG Snow010A, CC0: clean snow."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#fff2e9",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#dbebf8"
+        },
+        {
+          "id": "mud01",
+          "category": "MUD",
+          "physicalSize": [
+            1.3,
+            1.3
+          ],
+          "heightScale": 0.04,
+          "packings": {
+            "LITE": {
+              "albedoRough": "mud01_albedoRough",
+              "normalHeight": "mud01_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Mud 01 (soil)",
+            "description": "Poly Haven brown_mud_02, CC0: brown soil mud."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.5,
+            "wetDarkening": 0.5,
+            "wetRoughness": 0.3
+          },
+          "averageColor": "#484034"
         },
         {
           "id": "rocks01",
@@ -20460,6 +20664,130 @@
             "out": 1398128
           },
           "__codec": "uastc"
+        },
+        {
+          "id": "snow01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "snow01 albedoRough (LITE)",
+            "description": "The texture set snow01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Snow010A's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/snow01/snow01_albedoRough.pack.da33b5ed.ktx2",
+          "__bytes": {
+            "in": 9647460,
+            "out": 957546
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.7076,
+            0.8269,
+            0.9346
+          ]
+        },
+        {
+          "id": "snow01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "snow01 normalHeight (LITE)",
+            "description": "The texture set snow01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Snow010A's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/snow01/snow01_normalHeight.pack.28ae055f.ktx2",
+          "__bytes": {
+            "in": 7144752,
+            "out": 1145427
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "mud01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "mud01 albedoRough (LITE)",
+            "description": "The texture set mud01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from polyHaven brown_mud_02's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/mud01/mud01_albedoRough.pack.0f09f635.ktx2",
+          "__bytes": {
+            "in": 5438406,
+            "out": 1096951
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.0646,
+            0.0509,
+            0.0339
+          ]
+        },
+        {
+          "id": "mud01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "mud01 normalHeight (LITE)",
+            "description": "The texture set mud01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from polyHaven brown_mud_02's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/mud01/mud01_normalHeight.pack.37d9ac74.ktx2",
+          "__bytes": {
+            "in": 4820521,
+            "out": 1301764
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "terrainBlockTestBlender_splat0",
+          "fileName": "./terrainBlockTestBlender_splat0.png",
+          "texOpts": {
+            "flipY": false,
+            "colorSpace": ""
+          },
+          "debugData": {
+            "name": "Orientation block's splat map",
+            "description": "The add-on's export: the corner markers painted over the block's UVs (red at the top left: the engine's -x, -z corner), layers 1 and 2 of the splat map material. flipY false: the glTF UVs start at the image's top row."
+          },
+          "__fileSize": 584,
+          "__sourceUrl": "/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.png",
+          "__url": "/aek-assets/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.98f9f948.png",
+          "__bytes": {
+            "in": 584,
+            "out": 584
+          },
+          "__vramBytes": {
+            "in": 87380,
+            "out": 87380
+          },
+          "__codec": "none"
         },
         {
           "id": "rocks01_albedoRough",
@@ -29500,6 +29828,34 @@
         "out": 1398128
       },
       "__codec": "uastc"
+    },
+    "terrainBlockTestBlender_splat0": {
+      "id": "terrainBlockTestBlender_splat0",
+      "fileName": "./terrainBlockTestBlender_splat0.png",
+      "texOpts": {
+        "flipY": false,
+        "colorSpace": ""
+      },
+      "debugData": {
+        "name": "Orientation block's splat map",
+        "description": "The add-on's export: the corner markers painted over the block's UVs (red at the top left: the engine's -x, -z corner), layers 1 and 2 of the splat map material. flipY false: the glTF UVs start at the image's top row."
+      },
+      "optimize": {
+        "slot": "data"
+      },
+      "__sourcePath": "src/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.texture.json",
+      "__fileSize": 584,
+      "__sourceUrl": "/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.png",
+      "__url": "/aek-assets/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.98f9f948.png",
+      "__bytes": {
+        "in": 584,
+        "out": 584
+      },
+      "__vramBytes": {
+        "in": 87380,
+        "out": 87380
+      },
+      "__codec": "none"
     },
     "p303BrickSetKtx_albedoRough": {
       "id": "p303BrickSetKtx_albedoRough",
@@ -39234,6 +39590,81 @@
       },
       "type": "STANDARDNODEMATERIAL",
       "__sourcePath": "src/toolkit/materials/triplanarGrid/triplanarGrid.material.json"
+    },
+    "terrainBlockTestBlenderSplat": {
+      "id": "terrainBlockTestBlenderSplat",
+      "debugData": {
+        "name": "Orientation block (splat map)",
+        "description": "p306 Phase 5's orientation block through its painted splat map (flipY false): the same sets and corners as the vertex colour material, so both blocks look alike."
+      },
+      "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
+      "staticDefines": {
+        "terrain": {
+          "layers": [
+            {},
+            {},
+            {}
+          ],
+          "blend": {
+            "source": "SPLAT_MAP"
+          }
+        }
+      },
+      "inputs": {
+        "layer0": {
+          "textureSet": "grass01"
+        },
+        "layer1": {
+          "textureSet": "snow01"
+        },
+        "layer2": {
+          "textureSet": "mud01"
+        },
+        "splat0": {
+          "texture": "terrainBlockTestBlender_splat0"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlenderSplat.material.json"
+    },
+    "terrainBlockTestBlenderVertex": {
+      "id": "terrainBlockTestBlenderVertex",
+      "debugData": {
+        "name": "Orientation block (vertex colour)",
+        "description": "p306 Phase 5's orientation block through its COLOR_0 (RGB_AO): grass, snow on the red marker (the engine's -x, -z corner, the top view's top left), mud on the green one (+x, -z, top right); A the baked AO."
+      },
+      "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
+      "staticDefines": {
+        "terrain": {
+          "layers": [
+            {},
+            {},
+            {}
+          ],
+          "blend": {
+            "source": "VERTEX_COLOR",
+            "vertexColor": {
+              "layout": "RGB_AO"
+            }
+          },
+          "ao": {
+            "vertex": true
+          }
+        }
+      },
+      "inputs": {
+        "layer0": {
+          "textureSet": "grass01"
+        },
+        "layer1": {
+          "textureSet": "snow01"
+        },
+        "layer2": {
+          "textureSet": "mud01"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlenderVertex.material.json"
     }
   },
   "mergeMaterials": {
@@ -39509,6 +39940,29 @@
       "__vramBytes": {
         "in": 16800,
         "out": 21000
+      }
+    },
+    "terrainBlockTestBlender": {
+      "id": "terrainBlockTestBlender",
+      "fileName": "./terrainBlockTestBlender.glb",
+      "debugData": {
+        "name": "Orientation block",
+        "description": "The terrain add-on's export of terrainBlockTest's orientation block (devTools/blender/exportOrientationBlock.py; p306 Phase 5). The terrainBlock profile keeps its positions lossless."
+      },
+      "optimize": {
+        "profile": "terrainBlock"
+      },
+      "__sourcePath": "src/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.importedAsset.json",
+      "__fileSize": 57168,
+      "__sourceUrl": "/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.glb",
+      "__url": "/aek-assets/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.d49c53dc.glb",
+      "__bytes": {
+        "in": 57168,
+        "out": 16940
+      },
+      "__vramBytes": {
+        "in": 55848,
+        "out": 55848
       }
     },
     "aekashaSymbol": {

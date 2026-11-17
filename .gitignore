@@ -14,6 +14,9 @@ dist-embed/
 docs-api/
 *.blend[0-9]
 *.kra~
+# Python's bytecode (the Blender add-on and its check script, p306 Phase 5)
+__pycache__/
+*.pyc
 # DRACO decoders and the Basis transcoder, copied from three.js by devTools/copyDecoders.ts
 src/public/draco/
 src/public/basis/

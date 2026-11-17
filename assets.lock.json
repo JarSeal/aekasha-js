@@ -753,6 +753,28 @@
       ],
       "ktxVersion": "4.4.2"
     },
+    "51cbb0aa029ca6769df70057dad5e0e5b6d25b960f5f3e48ddb36b31654f8b5c": {
+      "source": "src/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.png",
+      "url": "/aek-assets/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.98f9f948.png",
+      "bytes": 584,
+      "textures": [
+        {
+          "slot": "data",
+          "bytes": 584,
+          "source": {
+            "width": 128,
+            "height": 128,
+            "bytes": 584
+          },
+          "codec": "none",
+          "width": 128,
+          "height": 128,
+          "hasAlpha": false,
+          "mipmaps": false,
+          "normalMode": false
+        }
+      ]
+    },
     "52c04ad516d4f97a9d3eb212b2f0725e588e2c2a3fcbebd33afa7ad8f356363d": {
       "source": "src/app/scenes/mergeMaterials/source/ruinStone_orm.png",
       "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinStone_orm.44a424b5.ktx2",
@@ -878,6 +900,15 @@
       ],
       "ktxVersion": "4.4.2",
       "recipeKey": "4f4a628f3c1cc8cab68f8410d640c1a6fcbc1ba61adb93ab6329ecd69bdf07e2"
+    },
+    "6828e25a010c6a1ef0f1910cae577b2fed25cf03dc659978108aa63711c5207a": {
+      "source": "src/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.glb",
+      "url": "/aek-assets/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.d49c53dc.glb",
+      "bytes": 16940,
+      "geometryBytes": {
+        "in": 55848,
+        "out": 55848
+      }
     },
     "68971abe800f1b2e9de967f143cbd3c7d2e41fbb71cc7f7a060b5636d46e2ced": {
       "source": "src/app/scenes/mergeMaterials/source/ruinPlaster_albedo.png",

@@ -52,6 +52,14 @@ const ALLOWED_MODULES: Record<string, AllowedModule> = {
   'src/_engine/features/skybox/Presets.ts': {
     reason: 'the sky box presets the gather merges into a definition',
   },
+  'src/_engine/kernel/assets/import/CustomProps.ts': {
+    reason:
+      'the custom props parse, which `yarn verify:blender` reads the terrain add-on’s exported GLBs through as the import does (p306 Phase 5)',
+  },
+  'src/_engine/features/physics/import/HeightfieldFromGeometry.ts': {
+    reason:
+      'the import’s HEIGHTFIELD derivation, which `yarn verify:blender` runs on the terrain add-on’s exported GLBs (p306 Phase 5)',
+  },
   'src/_engine/ui/styles/TokenSheet.ts': {
     reason: 'tokens.css read as data and its contrast pairs, which the Hub’s design document shows',
   },

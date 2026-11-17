@@ -41,6 +41,14 @@ import {
  *   and the load logs an error when the block's heights aren't the map's texels (a map read
  *   flipped, or its fetch's bytes not the file's).
  *
+ * - **Front left** (p306 Phase 5's orientation block, `blenderBlock/`): the terrain add-on's export
+ *   (`devTools/blender/exportOrientationBlock.py`), 32 m / 33, its `HEIGHTFIELD` from the GLB's
+ *   custom props: a mound near the engine's +x, +z corner, the corner markers (snow on the red one
+ *   at -x, -z, the top view's top left; mud on the green one at +x, -z) and the baked AO.
+ *   `terrainBlockTestBlender` draws them from its `COLOR_0`, `terrainBlockTestBlenderSplatMap`
+ *   beside it (the same GLB) from its painted splat map: the two must look alike.
+ *   `blenderBlock/terrainBlockTestBlender.test.ts` pins the orientation in the files.
+ *
  * A 3 × 3 grid of boxes falls on each block. `window.__terrainBlockTest` holds the spawn results
  * and, after `SETTLE_STEPS` fixed steps, where each box is; a block without its collider, or a box
  * that didn't come to rest on its block (under the lowest terrain: fell through; still high:
@@ -54,7 +62,13 @@ import {
  */
 
 const SCENE_ID = 'terrainBlockTest';
-const BLOCK_IDS = ['terrainBlockTestSmooth', 'terrainBlockTestNoise', 'terrainBlockTestTrimesh'];
+const BLOCK_IDS = [
+  'terrainBlockTestSmooth',
+  'terrainBlockTestNoise',
+  'terrainBlockTestTrimesh',
+  'terrainBlockTestBlender',
+  'terrainBlockTestBlenderSplatMap',
+];
 const BOX_HALF = 1;
 const BLOCK_SIZE = 100;
 const BOX_SPACING = 15;
@@ -66,6 +80,15 @@ const SETTLE_STEPS = 340;
 const LOWEST_TERRAIN_Y = -20;
 /** The heightmap block's centre, in front of the others */
 const HEIGHTMAP_CENTER: [number, number] = [0, 100];
+/** The orientation blocks (32 m at grid (-3, 3) and (-2, 3)): their centres and box spacing */
+const ORIENTATION_SIZE = 32;
+const ORIENTATION_CENTERS: [number, number][] = [
+  [-3 * ORIENTATION_SIZE, 3 * ORIENTATION_SIZE],
+  [-2 * ORIENTATION_SIZE, 3 * ORIENTATION_SIZE],
+];
+const ORIENTATION_BOX_SPACING = 8;
+/** Low: from `DROP_HEIGHT` a box glancing off the mound's side bounces off a 32 m block */
+const ORIENTATION_DROP_HEIGHT = 6;
 
 /** A block's square, which its boxes must rest in */
 type BlockSquare = { x: number; z: number; half: number };
@@ -79,13 +102,20 @@ const state: {
   isSettled: boolean;
 } = { blocks: [], heightmapBlock: null, boxes: [], isSettled: false };
 
-/** The 3 × 3 boxes over a block, each a dynamic body on its mesh (`name` in their app ids) */
-const dropBoxesAsync = (block: BlockSquare, name: string | number) => {
+/**
+ * The 3 × 3 boxes over a block, `spacing` apart and `height` up, each a dynamic body on its mesh
+ * (`name` in their app ids)
+ */
+const dropBoxesAsync = (
+  block: BlockSquare,
+  name: string | number,
+  { spacing = BOX_SPACING, height = DROP_HEIGHT } = {}
+) => {
   const drops: Promise<number>[] = [];
   for (let row = -1; row <= 1; row++) {
     for (let col = -1; col <= 1; col++) {
-      const x = block.x + col * BOX_SPACING;
-      const z = block.z + row * BOX_SPACING;
+      const x = block.x + col * spacing;
+      const z = block.z + row * spacing;
       const appId = `terrainBlockTestBox_${name}_${col}_${row}`;
       const meshId = createMeshEntity({
         geo: {
@@ -95,7 +125,7 @@ const dropBoxesAsync = (block: BlockSquare, name: string | number) => {
         mat: 'terrainBlockTestBox',
         castShadow: true,
         receiveShadow: true,
-        position: { x, y: DROP_HEIGHT, z },
+        position: { x, y: height, z },
         appId,
       });
       drops.push(
@@ -105,7 +135,7 @@ const dropBoxesAsync = (block: BlockSquare, name: string | number) => {
           target: meshId,
         })
       );
-      state.boxes.push({ appId, block, x, y: DROP_HEIGHT, z });
+      state.boxes.push({ appId, block, x, y: height, z });
     }
   }
   return Promise.all(drops);
@@ -276,6 +306,12 @@ export const scene = async () => {
     dropBoxesAsync(
       { x: HEIGHTMAP_CENTER[0], z: HEIGHTMAP_CENTER[1], half: HEIGHTMAP_EXTENT / 2 },
       'heightmap'
+    ),
+    ...ORIENTATION_CENTERS.map(([x, z], i) =>
+      dropBoxesAsync({ x, z, half: ORIENTATION_SIZE / 2 }, `orientation${i}`, {
+        spacing: ORIENTATION_BOX_SPACING,
+        height: ORIENTATION_DROP_HEIGHT,
+      })
     ),
   ]);
   if (!isCurrent()) return;

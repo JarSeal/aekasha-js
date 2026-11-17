@@ -71,6 +71,7 @@
     "verify:embed": "tsx ./devTools/verify/embed.ts",
     "verify:ui": "tsx ./devTools/verify/ui.ts",
     "verify:devFiles": "tsx ./devTools/devFiles/selfCheck.ts",
+    "verify:blender": "yarn fetchTextureSources --only grass01,rocks01 && tsx ./devTools/blender/verifyBlender.ts",
     "sbp": "tsx ./devTools/sbp.ts",
     "build": "yarn copyDecoders && NODE_ENV=production yarn gatherAppData && tsc && tsc -p hub && vite build && yarn gatherAppData && yarn sbp --profile all --no-app-build --brief && yarn hub:build",
     "build:test": "yarn copyDecoders && NODE_ENV=production yarn gatherAppData && tsc && tsc -p hub && VITE_APP_ENV=test vite build && yarn gatherAppData && yarn hub:build",

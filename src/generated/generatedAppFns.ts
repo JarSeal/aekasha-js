@@ -331,6 +331,8 @@ export const tslMaterialFileObjects = {
   textureSetSurface: () => import('../toolkit/materials/textureSetSurface/textureSetSurface.tsl.ts'),
   triplanarCheckerboard: () => import('../toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts'),
   triplanarGrid: () => import('../toolkit/materials/triplanarGrid/triplanarGrid.tsl.ts'),
+  terrainBlockTestBlenderSplat: () => import('../app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts'),
+  terrainBlockTestBlenderVertex: () => import('../app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts'),
 };
 
 export const postFxFileObjects = {

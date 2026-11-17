@@ -65,7 +65,7 @@ All blocks come from `terrainBlock` JSONs with generated geometry (p306), kept i
 | J Wet/dry     | One block per category + a blended beach; global wetness slider                           | p307 responses                                                                |
 | K Scatter     | Procedural vs imported rocks, leaf cards, colliders                                       | p308                                                                          |
 | L Decals      | Atlas showcase quads; a footprint pad (click to stamp, toggle wet)                        | p309                                                                          |
-| — Orientation | A block with a corner-marker splat                                                        | Splat/UV orientation check (p306)                                             |
+| — Orientation | A block with a corner-marker splat: `terrainBlockTest`'s (`blenderBlock/`, p306 Phase 5)  | Splat/UV orientation check (p306)                                             |
 
 ### 2.2 Camera presets per game type
 
