@@ -1,11 +1,11 @@
 // The toolkit's terrain block generators (p306 D4), `noiseTerrain` and `rulesTerrain`: a
 // `*.terrainBlock.json`'s `"geometry": { "generator": …, "params": …, "seed": … }` built with
-// `generateTerrain`. Loaded by `registerTerrainGenerators`' generators on a block's first spawn,
+// `generateTerrainAsync`, on the toolkit's terrain worker (p306 Phase 4). Loaded by `registerTerrainGenerators`' generators on a block's first spawn,
 // so an app registering them carries none of this before it uses one. The params come from JSON,
 // so they're checked here, by hand (no zod in a build), each error naming the block and the param.
 import type { TerrainGeneratorOpts, TerrainGeneratorResult } from 'aekasha/terrain';
 import {
-  generateTerrain,
+  generateTerrainAsync,
   type TerrainNoiseOctave,
   type TerrainOptions,
   type TerrainRule,
@@ -113,9 +113,12 @@ const getNoiseOptions = (opts: TerrainGeneratorOpts, read: ParamReader): Terrain
   };
 };
 
-/** The geometry and its heightfield (cheap: the heights transposed; a `TRIMESH` block ignores it) */
-const toResult = (options: TerrainOptions): TerrainGeneratorResult => {
-  const terrain = generateTerrain(options);
+/**
+ * The geometry, generated on the terrain worker, and its heightfield (cheap: the heights
+ * transposed on this thread; a `TRIMESH` block ignores it)
+ */
+const toResultAsync = async (options: TerrainOptions): Promise<TerrainGeneratorResult> => {
+  const terrain = await generateTerrainAsync(options);
   return { geometry: terrain.geometry, heightfield: terrain.heightfield };
 };
 
@@ -124,10 +127,10 @@ const toResult = (options: TerrainOptions): TerrainGeneratorResult => {
  * continue each other in their heights and (with `HEIGHT_FN` normals) their lighting.
  * @internal
  */
-export const generateNoiseTerrainBlock = (opts: TerrainGeneratorOpts) => {
+export const generateNoiseTerrainBlockAsync = async (opts: TerrainGeneratorOpts) => {
   const read = createParamReader('noiseTerrain', opts);
   read.checkKeys(opts.params, NOISE_KEYS);
-  return toResult(getNoiseOptions(opts, read));
+  return toResultAsync(getNoiseOptions(opts, read));
 };
 
 /** `rules`: 1 to 16 rules, each checked as the terrain material's are */
@@ -181,5 +184,5 @@ export const generateRulesTerrainBlockAsync = async (opts: TerrainGeneratorOpts)
   const noise = rules.some((rule) => rule.noise)
     ? await readTextureTexelsAsync(textureId)
     : undefined;
-  return toResult({ ...options, ao, vertexColors: { layout, rules, noise } });
+  return toResultAsync({ ...options, ao, vertexColors: { layout, rules, noise } });
 };

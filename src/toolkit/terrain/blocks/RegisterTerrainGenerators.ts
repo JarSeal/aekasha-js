@@ -6,7 +6,8 @@ const loadGeneratorsAsync = () => import('./TerrainBlockGenerators');
 /**
  * Registers the toolkit's terrain block generators (p306 D4), which a `*.terrainBlock.json`'s
  * `geometry.generator` names. Call it once, from an install (an app's `appECSPlugins`), never at
- * module load; their code loads with the first block that uses one.
+ * module load; their code loads with the first block that uses one, and they generate on the
+ * toolkit's terrain worker (`generateTerrainAsync`).
  *
  * - **`noiseTerrain`**: seeded simplex octaves sampled at the block's world place (its `grid`
  *   × `size`), the block's seed as it is, so neighbouring blocks of one seed continue each other.
@@ -47,7 +48,7 @@ const loadGeneratorsAsync = () => import('./TerrainBlockGenerators');
  */
 export const registerTerrainGenerators = () => {
   registerTerrainGenerator('noiseTerrain', async (opts: TerrainGeneratorOpts) =>
-    (await loadGeneratorsAsync()).generateNoiseTerrainBlock(opts)
+    (await loadGeneratorsAsync()).generateNoiseTerrainBlockAsync(opts)
   );
   registerTerrainGenerator('rulesTerrain', async (opts: TerrainGeneratorOpts) =>
     (await loadGeneratorsAsync()).generateRulesTerrainBlockAsync(opts)

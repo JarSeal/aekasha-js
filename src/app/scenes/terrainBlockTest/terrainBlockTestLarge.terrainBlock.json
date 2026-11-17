@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../../.schemas/terrainBlock.schema.json",
+  "geometry": {
+    "generator": "rulesTerrain",
+    "params": {
+      "maxHeight": 24,
+      "octaves": [
+        [0.0125, 1],
+        [0.04, 0.4],
+        [0.125, 0.1]
+      ],
+      "ao": { "radius": 16 },
+      "rules": [
+        { "layer": 1, "slope": { "min": 25 } },
+        { "layer": 2, "height": { "min": 10 } },
+        { "layer": 3, "slope": { "min": 45 } }
+      ]
+    },
+    "seed": 3
+  },
+  "material": "textureSetSurface",
+  "grid": { "x": 0, "z": -1, "size": 256, "resolution": 257 },
+  "debugData": {
+    "name": "Large generated block",
+    "description": "p306 Phase 4's exit: a 256 m / 257² rulesTerrain block with horizon AO, generated on the toolkit's terrain worker. Not spawned at load: the scene's tab spawns it and measures the frames."
+  }
+}

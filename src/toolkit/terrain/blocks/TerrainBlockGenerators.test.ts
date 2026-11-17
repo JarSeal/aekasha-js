@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TerrainGenerator, TerrainGeneratorOpts } from 'aekasha/terrain';
 import { generateTerrain } from 'aekasha/toolkit/geometry';
 import {
-  generateNoiseTerrainBlock,
+  generateNoiseTerrainBlockAsync,
   generateRulesTerrainBlockAsync,
 } from './TerrainBlockGenerators';
 import { registerTerrainGenerators } from './RegisterTerrainGenerators';
@@ -12,6 +12,20 @@ const readTexels = vi.hoisted(() =>
   vi.fn(async () => ({ data: [255, 255, 255, 255], width: 1, height: 1 }))
 );
 vi.mock('../textures/ReadTexels', () => ({ readTextureTexelsAsync: readTexels }));
+
+// The generators run generateTerrainAsync: here generateTerrain's work on this thread (no module
+// worker in Node; `TerrainAsync.test.ts` checks the two give the same terrain)
+const asyncCalls = vi.hoisted(() => ({ count: 0 }));
+vi.mock('aekasha/toolkit/geometry', async (importOriginal) => {
+  const geometry = await importOriginal<typeof import('aekasha/toolkit/geometry')>();
+  return {
+    ...geometry,
+    generateTerrainAsync: (opts: Parameters<typeof geometry.generateTerrainAsync>[0]) => {
+      asyncCalls.count += 1;
+      return geometry.generateTerrainAsync({ ...opts, workerTarget: 'MAIN_THREAD' });
+    },
+  };
+});
 
 const registered = vi.hoisted(() => new Map<string, unknown>());
 vi.mock('aekasha/terrain', () => ({
@@ -35,8 +49,8 @@ beforeEach(() => {
 });
 
 describe('noiseTerrain', () => {
-  it("is generateTerrain at the block's world place, its seed as it is, with its heightfield", () => {
-    const block = generateNoiseTerrainBlock(blockAt(1, -2, { maxHeight: 5 }));
+  it("is generateTerrain at the block's world place, its seed as it is, with its heightfield", async () => {
+    const block = await generateNoiseTerrainBlockAsync(blockAt(1, -2, { maxHeight: 5 }));
     const expected = generateTerrain({
       width: 32,
       depth: 32,
@@ -54,31 +68,36 @@ describe('noiseTerrain', () => {
       expected.geometry.getAttribute('normal').array
     );
     expect(block.heightfield?.nrows).toBe(16);
+    expect(asyncCalls.count).toBeGreaterThan(0);
   });
 
-  it('continues across neighbouring blocks of one seed', () => {
-    const left = generateNoiseTerrainBlock(blockAt(0, 0)).geometry.getAttribute('position');
-    const right = generateNoiseTerrainBlock(blockAt(1, 0)).geometry.getAttribute('position');
+  it('continues across neighbouring blocks of one seed', async () => {
+    const left = (await generateNoiseTerrainBlockAsync(blockAt(0, 0))).geometry.getAttribute(
+      'position'
+    );
+    const right = (await generateNoiseTerrainBlockAsync(blockAt(1, 0))).geometry.getAttribute(
+      'position'
+    );
     for (let row = 0; row < 17; row++) {
       expect(right.getY(row * 17)).toBe(left.getY(row * 17 + 16));
     }
   });
 
-  it('takes octaves, normals and skirt, and refuses the rest naming the block', () => {
-    const block = generateNoiseTerrainBlock(
+  it('takes octaves, normals and skirt, and refuses the rest naming the block', async () => {
+    const block = await generateNoiseTerrainBlockAsync(
       blockAt(0, 0, { octaves: [[0.05, 1]], normals: 'GEOMETRY', skirt: 1 })
     );
     expect(block.geometry.getAttribute('position').count).toBe(17 * 17 + 64);
-    expect(() => generateNoiseTerrainBlock(blockAt(0, 0, { maxHeight: -1 }))).toThrow(
+    await expect(generateNoiseTerrainBlockAsync(blockAt(0, 0, { maxHeight: -1 }))).rejects.toThrow(
       'noiseTerrain: block "block_0_0" params.maxHeight: is -1, not a number over 0.'
     );
-    expect(() => generateNoiseTerrainBlock(blockAt(0, 0, { octaves: [[0, 1]] }))).toThrow(
-      /params\.octaves: is \[\[0,1\]\]/
-    );
-    expect(() => generateNoiseTerrainBlock(blockAt(0, 0, { normals: 'FLAT' }))).toThrow(
-      /params\.normals: is "FLAT": use HEIGHT_FN, GEOMETRY/
-    );
-    expect(() => generateNoiseTerrainBlock(blockAt(0, 0, { rules: [] }))).toThrow(
+    await expect(
+      generateNoiseTerrainBlockAsync(blockAt(0, 0, { octaves: [[0, 1]] }))
+    ).rejects.toThrow(/params\.octaves: is \[\[0,1\]\]/);
+    await expect(
+      generateNoiseTerrainBlockAsync(blockAt(0, 0, { normals: 'FLAT' }))
+    ).rejects.toThrow(/params\.normals: is "FLAT": use HEIGHT_FN, GEOMETRY/);
+    await expect(generateNoiseTerrainBlockAsync(blockAt(0, 0, { rules: [] }))).rejects.toThrow(
       /params\.rules: isn't a param here/
     );
   });

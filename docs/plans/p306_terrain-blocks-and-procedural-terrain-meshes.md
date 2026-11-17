@@ -357,6 +357,19 @@ Add sections 5–7 (Blender, Export, Import) to the seven p305 pages, each refer
   - **Not the engine's `initWorker`** (`@internal`, not on an entry): a 20-line handshake of its own (15 s timeout). `heightFn` / `heightModifier` reject, naming them; `workerTarget: 'MAIN_THREAD'` and a worker that couldn't start (one `lwarn`) run `generateTerrain`; a worker error after the start rejects its pending requests, terminates it, warns once, and this thread generates from then on.
   - **Tests:** `TerrainAsync.test.ts` (an in-process worker, structured clones both ways with the transfers: the same terrain as `generateTerrain` to the bit, bounds, AO and heightfield included; the noise sent once; the refusals, `MAIN_THREAD`, the failed start, the crash). `TerrainWorker.test.ts` bundles the entry with esbuild: its own folder's modules and three's `SimplexNoise` only. The entries' aliases are marked external there, since esbuild resolves them through `tsconfig.json`'s `paths` (a mutation check with a value import of `aekasha` failed the build on the engine's styles before that, and fails the check naming `aekasha` now). `moduleSideEffects.test.ts` exempts the entry; `devTools/verify/CLAUDE.md` lists both.
   - **Not yet in a browser:** nothing calls it before step 3, so the Vite `?worker` build and the real worker are checked there.
+- **Step 3, the generators on it:** `noiseTerrain` and `rulesTerrain` call `generateTerrainAsync` (`generateNoiseTerrainBlock` became `generateNoiseTerrainBlockAsync`, `@internal`). Their tests run it on `MAIN_THREAD` through a mock of the geometry entry (Node has no module worker), checking that they call it.
+  - **The scenes, on the real worker** (`yarn verify:scenes --only terrainBlockTest,terrainGallery`, Windows Chrome, WebGPU, AMD RDNA 3): `terrainBlockTest`'s probe hash stays `87e986cc` in all three physics targets, and the gallery's nine `rulesTerrain` patch blocks load without its geometry check's error; every snapshot within tolerance.
+  - **The exit's measurement:** `terrainBlockTest` lists a fourth block, `terrainBlockTestLarge` (256 m / 257², `rulesTerrain`, 3 octaves, 3 rules, AO 16 m), which the load doesn't spawn. Its tab (`_dbg__terrainBlockTest.ts`, the scene's first) runs three measurements: the same generation through `generateTerrainAsync` on either thread, and the block spawned (then disposed). Each records every frame's delta from its start until 20 frames after its work resolved, beside 60 idle frames measured first; `window.__terrainBlockTest.measureAsync(run)` runs one from a script.
+  - **The figures** (the same browser; its headless frame pacing was 7-14 ms, so a run is compared with its own idle stretch):
+
+    | Run | Work | Longest frame until resolved | After | Idle |
+    | --- | --- | --- | --- | --- |
+    | Worker, cold (its module loads) | 94 ms | 9.8 ms | 10.7 ms | 9.9 ms |
+    | Worker, warm (twice) | 78 / 72 ms | 11.4 / 8.8 ms | 9.7 / 9.5 ms | 11.0 / 9.7 ms |
+    | Main thread (twice) | 94 / 72 ms | **93 / 69 ms** | 11.0 / 8.7 ms | 10.0 / 11.1 ms |
+    | Spawn (5, two page loads) | 55-88 ms | 7.0-16.1 ms | 7.0-14.3 ms | 7.0-14.2 ms |
+
+    **Exit met:** on the worker no frame during generation or a spawn (its mesh, its `HEIGHTFIELD` body, its first renders) was longer than idle; the main thread drops one frame of 70-93 ms. One first spawn had a 16.1 ms frame (idle 10.1 ms); three more first-to-third spawns on a fresh page had none over their idle, so it's taken as the headless pacing's noise, not a cost of the spawn.
 
 ### Phase 5 — Blender add-on (D5)
 

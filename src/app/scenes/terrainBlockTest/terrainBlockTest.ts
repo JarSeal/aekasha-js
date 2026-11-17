@@ -1,4 +1,5 @@
 import {
+  IS_DEBUG_ENV,
   createCameraEntity,
   createLightEntity,
   createMaterial,
@@ -32,6 +33,10 @@ import { nextFrames } from '../../shared/verifyHarness';
  * caught on nothing; outside the block's square: slid off), logs an error, which fails the scene
  * runner (its `probeSteps` is past `SETTLE_STEPS`, `devTools/verify/scenes.config.ts`). The collider
  * wireframes are in the Physics API tab.
+ *
+ * The scene also lists `terrainBlockTestLarge` (a 256 m / 257² `rulesTerrain` block with AO), which
+ * its tab spawns (p306 Phase 4's exit: the frames while it generates on the toolkit's terrain
+ * worker, `_dbg__terrainBlockTest.ts`); the load doesn't.
  */
 
 const SCENE_ID = 'terrainBlockTest';
@@ -160,6 +165,11 @@ export const scene = async () => {
     { appId: 'terrainBlockTestSun' }
   );
   createMaterial({ id: 'terrainBlockTestBox', type: 'STANDARD', params: { color: '#d9822b' } });
+  if (IS_DEBUG_ENV) {
+    const { createTerrainBlockTestTab } = await import('./_dbg__terrainBlockTest');
+    if (!isCurrent()) return;
+    createTerrainBlockTestTab(state);
+  }
 
   for (const id of BLOCK_IDS) {
     const block = await spawnTerrainBlock(id);
