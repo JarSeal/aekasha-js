@@ -22,6 +22,12 @@ export type {
   TerrainVertexColorOptions,
 } from './generate/terrain/Terrain';
 export type { TerrainAoOptions } from './generate/terrain/TerrainAo';
+export { loadTerrainHeightmapAsync } from './generate/terrain/TerrainHeightmap';
+export type {
+  TerrainHeightmap,
+  TerrainHeightmapFormat,
+  TerrainHeightmapOptions,
+} from './generate/terrain/TerrainHeightmap';
 export {
   evaluateTerrainRulesCPU,
   getTerrainRuleCoverageCPU,

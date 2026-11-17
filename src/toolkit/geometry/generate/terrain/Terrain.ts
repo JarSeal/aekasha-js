@@ -3,6 +3,7 @@ import { createSeededRandom } from 'aekasha';
 import { toHeightfieldColliderParams, type HeightFieldData } from 'aekasha/physics';
 import type { TerrainAoOptions } from './TerrainAo';
 import { buildTerrainData, recordTerrainNoiseDraws, type TerrainData } from './TerrainCore';
+import type { TerrainHeightmap } from './TerrainHeightmap';
 import type { TerrainRule, TerrainRuleNoiseTexels } from './TerrainRules';
 
 /** One octave of a terrain's height noise ({@link TerrainOptions}' `noiseOctaves`). */
@@ -57,7 +58,7 @@ export interface TerrainOptions {
   depthSegments: number;
   /**
    * The noise's peak height in world units: heights stay within ±`maxHeight`. Required unless
-   * `heightFn` gives the heights.
+   * `heightFn` or `heightmap` gives the heights.
    */
   maxHeight?: number;
   /**
@@ -74,10 +75,17 @@ export interface TerrainOptions {
    */
   center?: [number, number];
   /**
-   * The height at a world-space (x, z), in place of the noise (custom shapes, a heightmap's
-   * reader). With it, `maxHeight`, `noiseOctaves` and `seed` aren't used.
+   * The height at a world-space (x, z), in place of the noise (custom shapes). With it,
+   * `maxHeight`, `noiseOctaves` and `seed` aren't used. Not with `heightmap`.
    */
   heightFn?: (x: number, z: number) => number;
+  /**
+   * A heightmap ({@link loadTerrainHeightmapAsync}'s) in place of the noise, sampled bilinearly
+   * at the vertices' world (x, z) (`center` added), the edge's height past its edge. Plain data,
+   * so `generateTerrainAsync` takes it, unlike `heightFn`. With it, `maxHeight`, `noiseOctaves`
+   * and `seed` aren't used. Not with `heightFn`.
+   */
+  heightmap?: TerrainHeightmap;
   /**
    * Reshapes the height per vertex: gets the vertex's world-space (x, z) (`center` added) and its
    * height `h` (the noise's or `heightFn`'s), returns the final height. Applied before the
@@ -207,15 +215,16 @@ export const toGeneratedTerrain = (
 };
 
 /**
- * Builds a low-poly terrain: a grid centred on the origin, its heights from seeded simplex noise
- * or `heightFn` (and `heightModifier`), with `getHeightAt` to place things on it (scattering,
- * spawn points) and the heights as an array. Optionally sampled at a world `center` (blocks that
+ * Builds a low-poly terrain: a grid centred on the origin, its heights from seeded simplex noise,
+ * `heightFn` or a heightmap (and `heightModifier`), with `getHeightAt` to place things on it
+ * (scattering, spawn points) and the heights as an array. Optionally sampled at a world `center` (blocks that
  * continue each other), with normals from the height function (no lighting seam between blocks),
  * horizon AO, the terrain material's rules as vertex colours, the `HEIGHTFIELD` collider's params
  * and a skirt. The geometry isn't registered: save it with `saveBufferGeometry` to have it
  * disposed with its scene.
- * @throws for neither `maxHeight` nor `heightFn`, a negative `skirt`, `ao`'s or a rule's values
- * out of range, or a rule's layer the vertex colour layout doesn't weigh
+ * @throws for none of `maxHeight`, `heightFn` and `heightmap`, both `heightFn` and `heightmap`, a
+ * heightmap whose heights don't fill its texels, a negative `skirt`, `ao`'s or a rule's values out
+ * of range, or a rule's layer the vertex colour layout doesn't weigh
  * @example
  * ```ts
  * const terrain = generateTerrain({
@@ -269,6 +278,7 @@ export const toGeneratedTerrain = (
  */
 export const generateTerrain = (opts: TerrainOptions): GeneratedTerrain => {
   const { seed = 1, collider: _collider, ...coreOpts } = opts;
-  const noiseDraws = opts.heightFn ? undefined : recordTerrainNoiseDraws(createSeededRandom(seed));
+  const noiseDraws =
+    opts.heightFn || opts.heightmap ? undefined : recordTerrainNoiseDraws(createSeededRandom(seed));
   return toGeneratedTerrain(buildTerrainData({ ...coreOpts, noiseDraws }), opts);
 };

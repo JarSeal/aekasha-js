@@ -9,6 +9,7 @@ import {
   type TerrainOptions,
 } from './Terrain';
 import { recordTerrainNoiseDraws, type TerrainData } from './TerrainCore';
+import type { TerrainHeightmap } from './TerrainHeightmap';
 import type { TerrainRuleNoiseTexels } from './TerrainRules';
 import {
   TERRAIN_WORKER_READY,
@@ -34,13 +35,25 @@ const HANDSHAKE_TIMEOUT_MS = 15000;
 
 type PendingRequest = { resolve: (data: TerrainData) => void; reject: (err: Error) => void };
 
-/** The worker's start (null: it didn't, so this thread generates), requests and noise keys */
+/**
+ * The worker's start (null: it didn't, so this thread generates), its requests, and the keys of
+ * the noise texels and heightmaps it was sent
+ */
 const client = {
   start: null as Promise<Worker | null> | null,
   pending: new Map<number, PendingRequest>(),
   nextId: 1,
-  nextNoiseKey: 1,
-  noiseKeys: new WeakMap<TerrainRuleNoiseTexels, number>(),
+  nextKey: 1,
+  keys: new WeakMap<TerrainRuleNoiseTexels | TerrainHeightmap, number>(),
+};
+
+/** A shared object's key, and whether the worker hasn't been sent it yet */
+const getKey = (value: TerrainRuleNoiseTexels | TerrainHeightmap) => {
+  const known = client.keys.get(value);
+  if (known !== undefined) return { key: known, isNew: false };
+  const key = client.nextKey++;
+  client.keys.set(value, key);
+  return { key, isNew: true };
 };
 
 const onResponse = ({ data: response }: MessageEvent<TerrainWorkerResponse>) => {
@@ -100,27 +113,27 @@ const startWorkerAsync = () =>
     }));
 
 /**
- * The worker's request: the options without what it can't take or doesn't need, the noise's draws,
- * and the rules' noise texels by key (the texels themselves only the first time)
+ * The worker's request: the options without what it can't take or doesn't need, the noise's draws
+ * (no heightmap), and the rules' noise texels and the heightmap by key (each itself only the first
+ * time)
  */
 const toRequest = (opts: Omit<TerrainAsyncOptions, 'workerTarget'>): TerrainWorkerRequest => {
-  const { seed = 1, collider: _collider, vertexColors, ...rest } = opts;
-  const options: TerrainWorkerOptions = {
-    ...rest,
-    noiseDraws: recordTerrainNoiseDraws(createSeededRandom(seed)),
-  };
+  const { seed = 1, collider: _collider, vertexColors, heightmap, ...rest } = opts;
+  const options: TerrainWorkerOptions = rest;
+  if (!heightmap) options.noiseDraws = recordTerrainNoiseDraws(createSeededRandom(seed));
   const request: TerrainWorkerRequest = { id: client.nextId++, options };
+  if (heightmap) {
+    const { key, isNew } = getKey(heightmap);
+    request.heightmapKey = key;
+    if (isNew) request.heightmap = heightmap;
+  }
   if (!vertexColors) return request;
   const { noise, ...colors } = vertexColors;
   options.vertexColors = colors;
   if (noise) {
-    let key = client.noiseKeys.get(noise);
-    if (key === undefined) {
-      key = client.nextNoiseKey++;
-      client.noiseKeys.set(noise, key);
-      request.noise = noise;
-    }
+    const { key, isNew } = getKey(noise);
     request.noiseKey = key;
+    if (isNew) request.noise = noise;
   }
   return request;
 };
@@ -129,7 +142,8 @@ const toRequest = (opts: Omit<TerrainAsyncOptions, 'workerTarget'>): TerrainWork
  * {@link generateTerrain} on the toolkit's terrain worker: the same terrain (to the bit), without
  * blocking the main thread for the generation (tens of milliseconds for a 257² block with AO).
  * The worker starts with the first call and stays for the page; it takes one request at a time,
- * in order. Only the declarative options go: no `heightFn` or `heightModifier`. Where the worker
+ * in order. Only the declarative options go: no `heightFn` or `heightModifier` (a `heightmap`
+ * does, sent once per object, so blocks sharing one map send it once). Where the worker
  * can't start (no module workers, its handshake failed), it warns once and generates on this
  * thread from then on.
  * @returns the terrain, once generated: its geometry, `getHeightAt` and the rest are made here

@@ -18,7 +18,7 @@ vi.mock('./TerrainWorker?worker', async () => {
     onmessage: ((event: { data: unknown }) => void) | null = null;
     onerror: ((event: { message: string }) => void) | null = null;
     terminated = false;
-    noises = new Map();
+    cache = { noises: new Map(), heightmaps: new Map() };
     constructor() {
       if (bridge.mode === 'NO_START') throw new Error('Worker is not defined');
       bridge.workers.push(this);
@@ -30,7 +30,7 @@ vi.mock('./TerrainWorker?worker', async () => {
       setTimeout(() => {
         if (this.terminated) return;
         if (bridge.mode === 'CRASH') return this.onerror?.({ message: 'out of memory' });
-        const { response, transfer } = handleTerrainWorkerRequest(request, this.noises);
+        const { response, transfer } = handleTerrainWorkerRequest(request, this.cache);
         this.onmessage?.({ data: structuredClone(response, { transfer }) });
       });
     }
@@ -131,6 +131,30 @@ describe('generateTerrainAsync (p306 Phase 4)', () => {
     expect(second.noiseKey).toBe(first.noiseKey);
     expect(first.options.vertexColors).not.toHaveProperty('noise');
     expect(bridge.workers).toHaveLength(1);
+  });
+
+  it('sends a heightmap once, then its key, and no noise draws', async () => {
+    const { generateTerrainAsync, generateTerrain } = await importAsync();
+    const heightmap = {
+      heights: Float32Array.from({ length: 81 }, (_, i) => ((i * 13) % 17) * 0.5),
+      cols: 9,
+      rows: 9,
+      width: 64,
+      depth: 64,
+      center: [16, -16] as [number, number],
+    };
+    const { maxHeight: _maxHeight, ...block } = BLOCK;
+    const fromMap = { ...block, heightmap };
+    expectSameTerrain(await generateTerrainAsync(fromMap), generateTerrain(fromMap));
+    await generateTerrainAsync({ ...fromMap, center: [0, 0] });
+    const [first, second] = bridge.requests;
+    expect(first.heightmap).toEqual(heightmap);
+    expect(second.heightmap).toBeUndefined();
+    expect(second.heightmapKey).toBe(first.heightmapKey);
+    // The noise texels have a key of their own
+    expect(first.noiseKey).not.toBe(first.heightmapKey);
+    expect(Object.keys(first.options)).not.toContain('heightmap');
+    expect(first.options.noiseDraws).toBeUndefined();
   });
 
   it('refuses heightFn and heightModifier, naming them', async () => {

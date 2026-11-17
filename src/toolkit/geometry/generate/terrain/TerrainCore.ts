@@ -1,11 +1,12 @@
 // A generated terrain's arrays (p306 Phase 4): `generateTerrain`'s work on plain typed arrays, so
 // the toolkit's terrain worker runs it too. It imports no three but `SimplexNoise` (a file of its
-// own) and no engine entry: the dev server doesn't tree-shake, so a worker importing `aekasha`
-// would load the whole engine, styles included. Its callers make the geometry, the seeded draws
+// own), its siblings and no engine entry: the dev server doesn't tree-shake, so a worker
+// importing `aekasha` would load the whole engine, styles included. Its callers make the geometry, the seeded draws
 // and the collider's params (`Terrain.ts`).
 import { SimplexNoise } from 'three/examples/jsm/math/SimplexNoise.js';
 import type { TerrainOptions, TerrainNoiseOctave, TerrainVertexColorOptions } from './Terrain';
 import { computeTerrainAo, getTerrainAoMarch } from './TerrainAo';
+import { createTerrainHeightmapSampler } from './TerrainHeightmap';
 import { evaluateTerrainRulesCPU, type TerrainRulePoint } from './TerrainRules';
 
 /**
@@ -85,13 +86,17 @@ const replayNoise = (draws: Float64Array) => {
   });
 };
 
-/** The height at a world (x, z): the noise's or `heightFn`'s, then `heightModifier`'s */
+/** The height at a world (x, z): the noise's, `heightFn`'s or `heightmap`'s, then the modifier's */
 const createHeightSampler = (opts: TerrainCoreOptions) => {
-  const { heightFn, heightModifier, maxHeight, noiseOctaves = DEFAULT_OCTAVES, noiseDraws } = opts;
-  let base = heightFn;
+  const { heightFn, heightmap, heightModifier, maxHeight, noiseOctaves = DEFAULT_OCTAVES } = opts;
+  if (heightFn && heightmap) {
+    throw new Error('generateTerrain: give heightFn or heightmap, not both.');
+  }
+  let base = heightFn ?? (heightmap ? createTerrainHeightmapSampler(heightmap) : undefined);
   if (!base) {
+    const { noiseDraws } = opts;
     if (maxHeight === undefined) {
-      throw new Error('generateTerrain: give maxHeight (the noise peak) or heightFn.');
+      throw new Error('generateTerrain: give maxHeight (the noise peak), heightFn or heightmap.');
     }
     if (!noiseDraws) throw new Error('generateTerrain: the noise has no recorded draws.');
     const simplex = replayNoise(noiseDraws);

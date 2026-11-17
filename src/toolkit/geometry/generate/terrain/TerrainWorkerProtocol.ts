@@ -2,17 +2,22 @@
 // the core run on it, and the arrays sent back as transfers. Apart from the worker entry, so a
 // test runs the handler in this thread. Worker-safe: the core and types only.
 import { buildTerrainData, type TerrainCoreOptions, type TerrainData } from './TerrainCore';
+import type { TerrainHeightmap } from './TerrainHeightmap';
 import type { TerrainRuleNoiseTexels } from './TerrainRules';
 
 /**
- * The core's options a worker takes: no closures, and the rules' noise texels by key (sent once).
+ * The core's options a worker takes: no closures, and the rules' noise texels and the heightmap
+ * by key (each sent once).
  * @internal
  */
-export type TerrainWorkerOptions = Omit<TerrainCoreOptions, 'heightFn' | 'heightModifier'>;
+export type TerrainWorkerOptions = Omit<
+  TerrainCoreOptions,
+  'heightFn' | 'heightModifier' | 'heightmap'
+>;
 
 /**
- * A generation request: its id, the options and the rules' noise by key, with the texels the first
- * time that key is sent.
+ * A generation request: its id, the options, and the rules' noise and the heightmap by key, each
+ * with its data the first time its key is sent.
  * @internal
  */
 export type TerrainWorkerRequest = {
@@ -20,6 +25,17 @@ export type TerrainWorkerRequest = {
   options: TerrainWorkerOptions;
   noiseKey?: number;
   noise?: TerrainRuleNoiseTexels;
+  heightmapKey?: number;
+  heightmap?: TerrainHeightmap;
+};
+
+/**
+ * The noise texels and heightmaps a worker keeps by key across its requests.
+ * @internal
+ */
+export type TerrainWorkerCache = {
+  noises: Map<number, TerrainRuleNoiseTexels>;
+  heightmaps: Map<number, TerrainHeightmap>;
 };
 
 /**
@@ -33,28 +49,45 @@ export type TerrainWorkerResponse =
 /** The handshake's status, the engine workers' (`initWorker`) */
 export const TERRAIN_WORKER_READY = 'INIT_READY';
 
+/** A keyed value: kept with its key when the request carries it, else the one kept before */
+const getKeyed = <T>(
+  cache: Map<number, T>,
+  key: number | undefined,
+  value: T | undefined,
+  name: string
+) => {
+  if (key === undefined) return undefined;
+  if (value) cache.set(key, value);
+  const kept = cache.get(key);
+  if (!kept) throw new Error(`generateTerrain: the terrain worker has no ${name} ${key}.`);
+  return kept;
+};
+
 /**
- * Runs a request: the noise kept by its key (the first request with it carries the texels), the
- * core on the options, its arrays' buffers to transfer.
+ * Runs a request: the noise and the heightmap kept by their keys (the first request with one
+ * carries it), the core on the options, its arrays' buffers to transfer.
  * @internal
- * @param noises the worker's noise texels by key, kept across its requests
+ * @param cache the worker's noise texels and heightmaps by key, kept across its requests
  */
 export const handleTerrainWorkerRequest = (
-  { id, options, noiseKey, noise }: TerrainWorkerRequest,
-  noises: Map<number, TerrainRuleNoiseTexels>
+  request: TerrainWorkerRequest,
+  cache: TerrainWorkerCache
 ): { response: TerrainWorkerResponse; transfer: ArrayBuffer[] } => {
+  const { id, options } = request;
   try {
-    if (noiseKey !== undefined && noise) noises.set(noiseKey, noise);
-    const texels = noiseKey === undefined ? undefined : noises.get(noiseKey);
-    if (noiseKey !== undefined && !texels) {
-      throw new Error(`generateTerrain: the terrain worker has no noise texels ${noiseKey}.`);
-    }
-    const { vertexColors } = options;
-    const data = buildTerrainData(
-      vertexColors && texels
-        ? { ...options, vertexColors: { ...vertexColors, noise: texels } }
-        : options
+    const texels = getKeyed(cache.noises, request.noiseKey, request.noise, 'noise texels');
+    const heightmap = getKeyed(
+      cache.heightmaps,
+      request.heightmapKey,
+      request.heightmap,
+      'heightmap'
     );
+    const { vertexColors } = options;
+    const data = buildTerrainData({
+      ...options,
+      ...(vertexColors && texels ? { vertexColors: { ...vertexColors, noise: texels } } : {}),
+      ...(heightmap ? { heightmap } : {}),
+    });
     const arrays = [
       data.positions,
       data.uvs,

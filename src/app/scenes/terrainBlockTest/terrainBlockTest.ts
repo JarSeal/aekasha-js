@@ -7,10 +7,18 @@ import {
   getMeshByAppId,
   lerror,
   registerOnSceneExit,
+  saveBufferGeometry,
 } from 'aekasha';
 import { createPhysicsEntity, getPhysicsSimClock } from 'aekasha/physics';
 import { spawnTerrainBlock, type TerrainBlock } from 'aekasha/terrain';
+import { generateTerrainAsync, loadTerrainHeightmapAsync } from 'aekasha/toolkit/geometry';
 import { nextFrames } from '../../shared/verifyHarness';
+import {
+  getHeightmapTexel,
+  HEIGHTMAP_EXTENT,
+  HEIGHTMAP_RANGE,
+  HEIGHTMAP_SIZE,
+} from './heightmapShape';
 
 /**
  * p306 Phase 2's verification scene: three 100 m terrain blocks side by side, spawned from their
@@ -26,6 +34,12 @@ import { nextFrames } from '../../shared/verifyHarness';
  * - **Left** (`terrainBlockTestTrimesh`): the same generator with a `TRIMESH` collider read from
  *   the geometry (the generator's heightfield unused), rocks through its inputs, casting no
  *   shadow.
+ *
+ * - **Front** (p306 Phase 4's heightmap import, built in this file): a 64 m block from the
+ *   committed `terrainBlockTestHeightmap.r16` (`loadTerrainHeightmapAsync`, generated on the
+ *   toolkit's terrain worker with its `HEIGHTFIELD`). Its map is asymmetric (`heightmapShape.ts`),
+ *   and the load logs an error when the block's heights aren't the map's texels (a map read
+ *   flipped, or its fetch's bytes not the file's).
  *
  * A 3 × 3 grid of boxes falls on each block. `window.__terrainBlockTest` holds the spawn results
  * and, after `SETTLE_STEPS` fixed steps, where each box is; a block without its collider, or a box
@@ -50,23 +64,29 @@ const DROP_HEIGHT = 35;
 const SETTLE_STEPS = 340;
 /** Below every block's lowest point (the TRIMESH block's noise reaches -18 m) */
 const LOWEST_TERRAIN_Y = -20;
+/** The heightmap block's centre, in front of the others */
+const HEIGHTMAP_CENTER: [number, number] = [0, 100];
 
-/** A box: the block it fell on (its grid x), and where it is (after `SETTLE_STEPS`) */
-type BoxResult = { appId: string; blockX: number; x: number; y: number; z: number };
+/** A block's square, which its boxes must rest in */
+type BlockSquare = { x: number; z: number; half: number };
+/** A box: the block it fell on, and where it is (after `SETTLE_STEPS`) */
+type BoxResult = { appId: string; block: BlockSquare; x: number; y: number; z: number };
 const state: {
   blocks: Pick<TerrainBlock, 'id' | 'meshEntityId' | 'physicsEntityId'>[];
+  /** The heightmap block's mesh and its heights' largest gap to the map's texels */
+  heightmapBlock: { meshEntityId: number; maxGap: number } | null;
   boxes: BoxResult[];
   isSettled: boolean;
-} = { blocks: [], boxes: [], isSettled: false };
+} = { blocks: [], heightmapBlock: null, boxes: [], isSettled: false };
 
-/** The 3 × 3 boxes over a block, each a dynamic body on its mesh */
-const dropBoxesAsync = (blockX: number) => {
+/** The 3 × 3 boxes over a block, each a dynamic body on its mesh (`name` in their app ids) */
+const dropBoxesAsync = (block: BlockSquare, name: string | number) => {
   const drops: Promise<number>[] = [];
   for (let row = -1; row <= 1; row++) {
     for (let col = -1; col <= 1; col++) {
-      const x = blockX * BLOCK_SIZE + col * BOX_SPACING;
-      const z = row * BOX_SPACING;
-      const appId = `terrainBlockTestBox_${blockX}_${col}_${row}`;
+      const x = block.x + col * BOX_SPACING;
+      const z = block.z + row * BOX_SPACING;
+      const appId = `terrainBlockTestBox_${name}_${col}_${row}`;
       const meshId = createMeshEntity({
         geo: {
           type: 'BOX',
@@ -85,7 +105,7 @@ const dropBoxesAsync = (blockX: number) => {
           target: meshId,
         })
       );
-      state.boxes.push({ appId, blockX, x, y: DROP_HEIGHT, z });
+      state.boxes.push({ appId, block, x, y: DROP_HEIGHT, z });
     }
   }
   return Promise.all(drops);
@@ -93,14 +113,76 @@ const dropBoxesAsync = (blockX: number) => {
 
 /** Whether a box rests on its block: above the lowest terrain, below its drop and inside the
  * block's square */
-const isOnItsBlock = ({ blockX, x, y, z }: BoxResult) => {
-  const half = BLOCK_SIZE / 2;
-  return (
-    y > LOWEST_TERRAIN_Y &&
-    y < DROP_HEIGHT - BOX_HALF * 4 &&
-    Math.abs(x - blockX * BLOCK_SIZE) < half &&
-    Math.abs(z) < half
-  );
+const isOnItsBlock = ({ block, x, y, z }: BoxResult) =>
+  y > LOWEST_TERRAIN_Y &&
+  y < DROP_HEIGHT - BOX_HALF * 4 &&
+  Math.abs(x - block.x) < block.half &&
+  Math.abs(z - block.z) < block.half;
+
+/**
+ * The heightmap block: the committed `.r16` loaded, generated on the terrain worker over the map's
+ * extent, its heightfield on a fixed body. Logs an error where its heights aren't the map's texels.
+ * @returns its mesh entity, or null when the scene was left meanwhile
+ */
+const spawnHeightmapBlockAsync = async (isCurrent: () => boolean) => {
+  const [x, z] = HEIGHTMAP_CENTER;
+  const heightmap = await loadTerrainHeightmapAsync({
+    url: new URL('./terrainBlockTestHeightmap.r16', import.meta.url).href,
+    format: 'R16',
+    size: HEIGHTMAP_SIZE,
+    heightRange: HEIGHTMAP_RANGE,
+    extent: HEIGHTMAP_EXTENT,
+    center: HEIGHTMAP_CENTER,
+  });
+  if (!isCurrent()) return null;
+  const segments = HEIGHTMAP_SIZE - 1;
+  const terrain = await generateTerrainAsync({
+    width: HEIGHTMAP_EXTENT,
+    depth: HEIGHTMAP_EXTENT,
+    widthSegments: segments,
+    depthSegments: segments,
+    center: HEIGHTMAP_CENTER,
+    heightmap,
+    normals: 'HEIGHT_FN',
+    collider: true,
+  });
+  if (!isCurrent()) return null;
+
+  // A vertex per texel: each height is its texel's (within float32's rounding)
+  const [min, max] = HEIGHTMAP_RANGE;
+  let maxGap = 0;
+  for (let row = 0; row < HEIGHTMAP_SIZE; row++) {
+    for (let col = 0; col < HEIGHTMAP_SIZE; col++) {
+      const expected = min + (getHeightmapTexel(col, row) / 65535) * (max - min);
+      const gap = Math.abs(terrain.heights[row * HEIGHTMAP_SIZE + col] - expected);
+      maxGap = Math.max(maxGap, gap);
+    }
+  }
+  if (maxGap > 1e-3) {
+    lerror(
+      `terrainBlockTest: the heightmap block's heights are up to ${maxGap.toFixed(3)} m off its map's texels (read flipped?).`
+    );
+  }
+
+  const meshEntityId = createMeshEntity({
+    geo: saveBufferGeometry(terrain.geometry, { id: 'terrainBlockTestHeightmapGeo' }),
+    mat: 'textureSetSurface',
+    castShadow: true,
+    receiveShadow: true,
+    position: { x, y: 0, z },
+    appId: 'terrainBlockTestHeightmapBlock',
+  });
+  if (!terrain.heightfield) {
+    lerror('terrainBlockTest: the heightmap block has no heightfield.');
+    return meshEntityId;
+  }
+  await createPhysicsEntity({
+    colliders: [terrain.heightfield],
+    body: { rigidType: 'FIXED' },
+    target: meshEntityId,
+  });
+  state.heightmapBlock = { meshEntityId, maxGap };
+  return meshEntityId;
 };
 
 /** After `SETTLE_STEPS` steps, where each box is; logs an error for one not on its block */
@@ -127,6 +209,7 @@ const checkSettledAsync = async (isCurrent: () => boolean) => {
 export const scene = async () => {
   (window as unknown as { __terrainBlockTest: typeof state }).__terrainBlockTest = state;
   state.blocks = [];
+  state.heightmapBlock = null;
   state.boxes = [];
   state.isSettled = false;
   let isLoaded = true;
@@ -186,7 +269,15 @@ export const scene = async () => {
       `terrainBlockTest: no collider for ${withoutCollider.map((block) => block.id).join(', ')}.`
     );
   }
-  await Promise.all([-1, 0, 1].map((blockX) => dropBoxesAsync(blockX)));
+  if (!(await spawnHeightmapBlockAsync(isCurrent)) || !isCurrent()) return;
+  const blockSquare = (blockX: number) => ({ x: blockX * BLOCK_SIZE, z: 0, half: BLOCK_SIZE / 2 });
+  await Promise.all([
+    ...[-1, 0, 1].map((blockX) => dropBoxesAsync(blockSquare(blockX), blockX)),
+    dropBoxesAsync(
+      { x: HEIGHTMAP_CENTER[0], z: HEIGHTMAP_CENTER[1], half: HEIGHTMAP_EXTENT / 2 },
+      'heightmap'
+    ),
+  ]);
   if (!isCurrent()) return;
   void checkSettledAsync(isCurrent);
 };

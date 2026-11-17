@@ -6,15 +6,15 @@
 import {
   handleTerrainWorkerRequest,
   TERRAIN_WORKER_READY,
+  type TerrainWorkerCache,
   type TerrainWorkerRequest,
 } from './TerrainWorkerProtocol';
-import type { TerrainRuleNoiseTexels } from './TerrainRules';
 
-/** The rules' noise texels by key, sent once each */
-const noises = new Map<number, TerrainRuleNoiseTexels>();
+/** The rules' noise texels and the heightmaps by key, sent once each */
+const cache: TerrainWorkerCache = { noises: new Map(), heightmaps: new Map() };
 
 self.onmessage = (event: MessageEvent<TerrainWorkerRequest>) => {
-  const { response, transfer } = handleTerrainWorkerRequest(event.data, noises);
+  const { response, transfer } = handleTerrainWorkerRequest(event.data, cache);
   self.postMessage(response, transfer);
 };
 
