@@ -12,6 +12,8 @@ export type {
   TreeGeometryOptions,
 } from './generate/Foliage';
 export { generateTerrain } from './generate/terrain/Terrain';
+export { generateTerrainAsync } from './generate/terrain/TerrainAsync';
+export type { TerrainAsyncOptions } from './generate/terrain/TerrainAsync';
 export type {
   GeneratedTerrain,
   TerrainNoiseOctave,

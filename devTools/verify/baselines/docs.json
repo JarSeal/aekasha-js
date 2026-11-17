@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 4016,
-      "total": 4016
+      "documented": 4023,
+      "total": 4023
     },
     "members": {
       "documented": 1117,
@@ -23,8 +23,8 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 399,
-        "total": 399
+        "documented": 406,
+        "total": 406
       },
       "members": {
         "documented": 164,
@@ -987,8 +987,8 @@
     },
     "toolkit/geometry/generate/terrain": {
       "exports": {
-        "documented": 25,
-        "total": 25
+        "documented": 32,
+        "total": 32
       },
       "members": {
         "documented": 27,
