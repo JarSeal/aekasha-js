@@ -14,6 +14,8 @@ import sys
 import time
 import traceback
 
+import bmesh
+import numpy as np
 import bpy
 
 args = sys.argv[sys.argv.index("--") + 1 :]
@@ -143,7 +145,126 @@ def check_add_large_block(aek):
     expect(len(bpy.data.objects["checkLarge"].data.vertices) == 257 * 257, "257² vertices")
 
 
-CHECKS = [check_conventions, check_triangles, check_settings, check_add_block, check_add_large_block]
+def validate(aek, name):
+    bpy.context.view_layer.update()
+    obj = bpy.data.objects[name]
+    return aek.validate_block(obj, bpy.context.evaluated_depsgraph_get(), bpy.context.scene.objects)
+
+
+def expect_issue(issues, level, fragment, message):
+    expect(any(lv == level and fragment in text for lv, text in issues), f"{message}: got {issues}")
+
+
+def check_validate(aek):
+    # checkBlock: 32 m / 33 at grid (1, -1), from check_add_block
+    expect(validate(aek, "checkBlock") == [], "a new block is valid")
+    obj = bpy.data.objects["checkBlock"]
+    mesh = obj.data
+
+    # A neighbour at +x shares checkBlock's last column as its first
+    bpy.ops.aek.add_terrain_block(block_id="checkEast", size="32", resolution="33", grid_x=2, grid_z=-1)
+    east = bpy.data.objects["checkEast"].data
+    east.vertices[5 * 33].co.z = 0.5
+    east.update()
+    expect_issue(validate(aek, "checkBlock"), "ERROR", '+x edge differs from "checkEast"', "a mismatched edge")
+    expect_issue(validate(aek, "checkEast"), "ERROR", '-x edge differs from "checkBlock"', "seen from the other side")
+    mesh.vertices[5 * 33 + 32].co.z = 0.5
+    mesh.update()
+    expect(validate(aek, "checkBlock") == [], "matching edges are valid")
+
+    # A vertex moved in X/Z
+    mesh.vertices[40].co.x += 0.01
+    mesh.update()
+    expect_issue(validate(aek, "checkBlock"), "ERROR", "moved off their grid point", "a moved vertex")
+    mesh.vertices[40].co.x -= 0.01
+    mesh.update()
+
+    # A cell split along the other diagonal
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    bm.verts.ensure_lookup_table()
+    diagonal = next(e for e in bm.verts[1].link_edges if e.other_vert(bm.verts[1]).index == 33)
+    bmesh.ops.rotate_edges(bm, edges=[diagonal], use_ccw=False)
+    bm.to_mesh(mesh)
+    bm.free()
+    mesh.update()
+    expect_issue(validate(aek, "checkBlock"), "WARNING", "1 cells are split along the other diagonal",
+                 "a flipped cell")
+
+    # The transform
+    obj.rotation_euler.z = 0.1
+    expect_issue(validate(aek, "checkBlock"), "ERROR", "Rotated", "a rotation")
+    obj.rotation_euler.z = 0
+    obj.scale.x = 2
+    expect_issue(validate(aek, "checkBlock"), "ERROR", "Scaled", "a scale")
+    obj.scale.x = 1
+    obj.location.x += 1
+    expect_issue(validate(aek, "checkBlock"), "ERROR", "Not at its grid place", "a moved block")
+    obj.location.x -= 1
+
+    # A modifier: checked applied, so the raised block no longer meets its neighbour
+    displace = obj.modifiers.new("lift", "DISPLACE")
+    displace.strength = 0.25
+    # Along the normals (its default) the raised vertex's neighbours drift in X/Z
+    expect_issue(validate(aek, "checkBlock"), "ERROR", "moved off their grid point", "a Displace along normals")
+    displace.direction = "Z"
+    displace.mid_level = 0  # without a texture: (1 - midlevel) × strength
+    issues = validate(aek, "checkBlock")
+    expect_issue(issues, "WARNING", "1 modifiers", "a modifier")
+    expect_issue(issues, "ERROR", '+x edge differs from "checkEast" by up to 250.00 mm', "the modifier's heights")
+    obj.modifiers.remove(displace)
+
+    # Over-painting, then Normalize Splat
+    splat = mesh.color_attributes[aek.SPLAT_ATTRIBUTE]
+    splat.data[0].color = (0.6, 0.6, 0.0, 1.0)
+    splat.data[1].color = (0.25, 0.25, 0.25, 0.5)
+    under = tuple(splat.data[1].color)
+    expect_issue(validate(aek, "checkBlock"), "WARNING", "1 vertices' splat weights sum over 1", "an over-painted vertex")
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.aek.normalize_splat()
+    r, g, b, a = splat.data[0].color
+    expect(1 - 0.01 <= r + g + b <= 1 + 1e-6 and abs(r - g) < 0.01 and a == 1.0,
+           f"normalized to a sum of 1 at most as stored (sRGB bytes), its ratio and A kept: {(r, g, b, a)}")
+    expect(tuple(splat.data[1].color) == under, "a sum under 1 is left alone")
+    issues = validate(aek, "checkBlock")
+    expect(not any("splat weights" in text for _, text in issues), f"no splat warning after it: {issues}")
+
+    # Many random over-painted vertices, every layout: no stored sum over 1 after it
+    for name, layout in (("checkBlock", "RGB_AO"), ("checkRgba", "RGBA")):
+        target = bpy.data.objects[name]
+        colors = target.data.color_attributes[aek.SPLAT_ATTRIBUTE]
+        rng = np.random.default_rng(7)
+        values = rng.uniform(0, 1, (len(colors.data), 4))
+        colors.data.foreach_set("color", values.ravel())
+        bpy.context.view_layer.objects.active = target
+        bpy.ops.aek.normalize_splat()
+        stored = np.empty(len(colors.data) * 4)
+        colors.data.foreach_get("color", stored)
+        sums = stored.reshape(-1, 4)[:, : aek.get_splat_channels(layout)].sum(axis=1)
+        expect(sums.max() <= 1 + 1e-6, f"{layout}: every stored sum within 1, the largest {sums.max()}")
+        expect(sums[values[:, : aek.get_splat_channels(layout)].sum(axis=1) > 1].min() > 0.98,
+               f"{layout}: the normalized sums close to 1, the smallest {sums.min()}")
+    bpy.context.view_layer.objects.active = obj
+    for data in splat.data:
+        data.color = (0.0, 0.0, 0.0, 1.0)
+
+    # The operator fills the panel's last result
+    bpy.ops.aek.validate_terrain_block()
+    expect("checkBlock" in aek._last_validation, "Validate keeps its findings for the panel")
+
+    started = time.perf_counter()
+    expect(validate(aek, "checkLarge") == [], "the 257² block is valid")
+    REPORT["validate_257_seconds"] = round(time.perf_counter() - started, 3)
+
+
+CHECKS = [
+    check_conventions,
+    check_triangles,
+    check_settings,
+    check_add_block,
+    check_add_large_block,
+    check_validate,
+]
 REPORT = {"blender": bpy.app.version_string, "checks": {}}
 
 

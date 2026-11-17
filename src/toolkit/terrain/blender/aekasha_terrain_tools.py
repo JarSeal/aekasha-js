@@ -383,6 +383,388 @@ def draw_add_menu(self: bpy.types.Menu, context: bpy.types.Context) -> None:
                          icon="MESH_GRID")
 
 
+# --- Validation ---------------------------------------------------------------------------------
+
+#: How far a vertex may sit off its grid point in X/Z, metres (the engine's import allows 1 % of
+#: the spacing; a block sculpted with X and Y locked is exact)
+GRID_TOLERANCE = 1e-4
+#: How far neighbouring blocks' shared edge heights may differ, metres
+EDGE_TOLERANCE = 1e-5
+#: How far over 1 a splat sum may go: one byte step, which the sRGB storage of a byte colour
+#: makes two half-weights sum to (0.5029 each)
+SPLAT_SUM_TOLERANCE = 1 / 255
+#: How far a UV may sit from the top-down projection's
+UV_TOLERANCE = 1e-4
+
+#: A check's finding: `(level, message)`, the level `ERROR` (Export refuses) or `WARNING`
+Issue = tuple[str, str]
+
+
+def get_splat_channels(layout: str) -> int:
+    """The splat channels that weigh layers: RGB for `RGB_AO` (A is the AO), RGBA for `RGBA`"""
+    return 3 if layout == "RGB_AO" else 4
+
+
+def read_grid(
+    positions: np.ndarray, size: int, resolution: int
+) -> tuple[np.ndarray | None, list[Issue]]:
+    """Each vertex's grid point index (`row * res + col`) from its block-local Blender (x, y),
+    or None with the errors when the vertices aren't the block's regular grid: one vertex on each
+    grid point, none moved off its column or row
+    """
+    spacing = get_spacing(size, resolution)
+    half = size / 2
+    col_f = (positions[:, 0] + half) / spacing
+    row_f = (half - positions[:, 1]) / spacing
+    cols, rows = np.rint(col_f), np.rint(row_f)
+    drift = np.maximum(np.abs(col_f - cols), np.abs(row_f - rows)) * spacing
+    issues: list[Issue] = []
+    moved = np.flatnonzero(drift > GRID_TOLERANCE)
+    if moved.size:
+        i = int(moved[np.argmax(drift[moved])])
+        x, y = positions[i, 0], positions[i, 1]
+        issues.append(("ERROR", f"{moved.size} vertices moved off their grid point in X/Z, the "
+                       f"worst vertex {i} by {drift[i] * 1000:.1f} mm at ({x:.3f}, {y:.3f}): "
+                       "shape it in height only (sculpt with X and Y locked)"))
+    outside = np.flatnonzero((cols < 0) | (cols >= resolution) | (rows < 0) | (rows >= resolution))
+    if outside.size:
+        i = int(outside[0])
+        issues.append(("ERROR", f"{outside.size} vertices outside the {size} m block, eg. vertex "
+                       f"{i} at ({positions[i, 0]:.3f}, {positions[i, 1]:.3f}): is the origin at "
+                       "its centre?"))
+    if issues:
+        return None, issues
+    grid = (rows * resolution + cols).astype(np.int64)
+    counts = np.bincount(grid, minlength=resolution * resolution)
+    missing = np.flatnonzero(counts == 0)
+    doubled = np.flatnonzero(counts > 1)
+    if missing.size:
+        row, col = divmod(int(missing[0]), resolution)
+        issues.append(("ERROR", f"{missing.size} grid points have no vertex, the first at row "
+                       f"{row}, column {col}"))
+    if doubled.size:
+        row, col = divmod(int(doubled[0]), resolution)
+        issues.append(("ERROR", f"{doubled.size} grid points have more than one vertex, the "
+                       f"first at row {row}, column {col}: merge by distance"))
+    return (None if issues else grid), issues
+
+
+def read_mesh_arrays(mesh: bpy.types.Mesh) -> dict:
+    """A mesh's positions, faces and loops as numpy arrays"""
+    positions = np.empty(len(mesh.vertices) * 3)
+    mesh.vertices.foreach_get("co", positions)
+    loop_vertices = np.empty(len(mesh.loops), dtype=np.int64)
+    mesh.loops.foreach_get("vertex_index", loop_vertices)
+    loop_starts = np.empty(len(mesh.polygons), dtype=np.int64)
+    mesh.polygons.foreach_get("loop_start", loop_starts)
+    loop_totals = np.empty(len(mesh.polygons), dtype=np.int64)
+    mesh.polygons.foreach_get("loop_total", loop_totals)
+    return {
+        "positions": positions.reshape(-1, 3),
+        "loop_vertices": loop_vertices,
+        "loop_starts": loop_starts,
+        "loop_totals": loop_totals,
+    }
+
+
+def check_faces(arrays: dict, grid: np.ndarray, resolution: int) -> list[Issue]:
+    """Two triangles a cell along the heightfield's diagonal; quads and n-gons the exporter splits
+    its own way, loose geometry the export drops
+    """
+    issues: list[Issue] = []
+    totals, starts, loops = arrays["loop_totals"], arrays["loop_starts"], arrays["loop_vertices"]
+    not_triangles = int(np.count_nonzero(totals != 3))
+    if not_triangles:
+        issues.append(("WARNING", f"{not_triangles} faces aren't triangles: the export splits "
+                       "them its own way, maybe off the collider's diagonal (Add makes triangles)"))
+    tri_starts = starts[totals == 3]
+    tris = grid[loops[tri_starts[:, None] + np.arange(3)]]
+    rows, cols = np.divmod(tris, resolution)
+    r0, c0 = rows.min(axis=1), cols.min(axis=1)
+    # A triangle off the diagonal holds both (r0, c0) and (r0 + 1, c0 + 1)
+    has_first = ((rows == r0[:, None]) & (cols == c0[:, None])).any(axis=1)
+    has_last = ((rows == r0[:, None] + 1) & (cols == c0[:, None] + 1)).any(axis=1)
+    flipped = np.unique((r0 * resolution + c0)[has_first & has_last])
+    if flipped.size:
+        row, col = divmod(int(flipped[0]), resolution)
+        issues.append(("WARNING", f"{flipped.size} cells are split along the other diagonal, the "
+                       f"first at row {row}, column {col}: the collider differs from the mesh "
+                       "between their vertices"))
+    expected = 2 * (resolution - 1) ** 2
+    if not not_triangles and len(tris) != expected:
+        issues.append(("ERROR", f"{len(tris)} triangles, not {expected}: holes or extra faces"))
+    used = np.bincount(loops, minlength=len(grid))
+    loose = int(np.count_nonzero(used == 0))
+    if loose:
+        issues.append(("ERROR", f"{loose} vertices belong to no face (loose geometry)"))
+    return issues
+
+
+def check_uvs(mesh: bpy.types.Mesh, arrays: dict, grid: np.ndarray, resolution: int) -> list[Issue]:
+    """The top-down projection: U along +x, V along Blender's +y (D1)"""
+    if not mesh.uv_layers:
+        return [("ERROR", "No UV map: the splat and colour maps need the top-down UVs")]
+    uvs = np.empty(len(mesh.loops) * 2)
+    mesh.uv_layers.active.data.foreach_get("uv", uvs)
+    rows, cols = np.divmod(grid[arrays["loop_vertices"]], resolution)
+    cells = resolution - 1
+    expected = np.stack([cols / cells, 1 - rows / cells], axis=1)
+    off = np.flatnonzero(np.abs(uvs.reshape(-1, 2) - expected).max(axis=1) > UV_TOLERANCE)
+    if not off.size:
+        return []
+    return [("ERROR", f"{off.size} UVs aren't the top-down projection (U along +x, V along +y): "
+             "re-project from the top view (UV → Project from View (Bounds))")]
+
+
+def check_splat(mesh: bpy.types.Mesh, layout: str) -> list[Issue]:
+    """The splat attribute: on vertices, the active colour, its weights summing to 1 at most"""
+    splat = mesh.color_attributes.get(SPLAT_ATTRIBUTE)
+    if splat is None:
+        return [("ERROR", f'No "{SPLAT_ATTRIBUTE}" colour attribute (exported as COLOR_0)')]
+    issues: list[Issue] = []
+    if splat.domain != "POINT":
+        issues.append(("ERROR", f'"{SPLAT_ATTRIBUTE}" is on face corners: it must be on vertices, '
+                       "or the export splits them"))
+    if splat.data_type != "BYTE_COLOR":
+        issues.append(("WARNING", f'"{SPLAT_ATTRIBUTE}" is a float colour: the .blend is bigger '
+                       "for no gain (the GLB is the same)"))
+    if mesh.color_attributes.active_color_name != SPLAT_ATTRIBUTE:
+        issues.append(("WARNING", f'"{SPLAT_ATTRIBUTE}" isn\'t the active colour attribute: the '
+                       "export makes it so"))
+    colors = np.empty(len(splat.data) * 4)
+    splat.data.foreach_get("color", colors)
+    sums = colors.reshape(-1, 4)[:, : get_splat_channels(layout)].sum(axis=1)
+    over = int(np.count_nonzero(sums > 1 + SPLAT_SUM_TOLERANCE))
+    if over:
+        issues.append(("WARNING", f"{over} vertices' splat weights sum over 1 (up to "
+                       f"{sums.max():.3f}): Normalize Splat"))
+    return issues
+
+
+def get_block_heights(obj: bpy.types.Object, depsgraph) -> np.ndarray | None:
+    """The block's evaluated heights as a `(res, res)` grid, row along the engine's +z; None when
+    its vertices aren't the regular grid
+    """
+    settings = obj.aek_terrain_block
+    size, resolution = int(settings.size), int(settings.resolution)
+    evaluated = obj.evaluated_get(depsgraph)
+    mesh = evaluated.to_mesh()
+    try:
+        positions = read_mesh_arrays(mesh)["positions"]
+    finally:
+        evaluated.to_mesh_clear()
+    grid, _ = read_grid(positions, size, resolution)
+    if grid is None:
+        return None
+    heights = np.empty(resolution * resolution)
+    heights[grid] = positions[:, 2]
+    return heights.reshape(resolution, resolution)
+
+
+#: A neighbour's grid offset, then the side of ours and the side of theirs that touch
+_NEIGHBOURS = (
+    ((1, 0), lambda h: h[:, -1], lambda h: h[:, 0], "+x"),
+    ((-1, 0), lambda h: h[:, 0], lambda h: h[:, -1], "-x"),
+    ((0, 1), lambda h: h[-1, :], lambda h: h[0, :], "+z"),
+    ((0, -1), lambda h: h[0, :], lambda h: h[-1, :], "-z"),
+)
+
+
+def check_neighbours(obj: bpy.types.Object, heights: np.ndarray, depsgraph, objects) -> list[Issue]:
+    """The shared edges' heights against the blocks next to this one in the scene (D1: neighbours
+    share edge vertices exactly)
+    """
+    settings = obj.aek_terrain_block
+    size = int(settings.size)
+    issues: list[Issue] = []
+    for (dx, dz), ours, theirs, side in _NEIGHBOURS:
+        other = find_block(objects, place=(size, settings.grid_x + dx, settings.grid_z + dz))
+        if other is None or other == obj:
+            continue
+        if other.aek_terrain_block.resolution != settings.resolution:
+            issues.append(("WARNING", f'The {side} neighbour "{other.name}" has another '
+                           "resolution: its edge isn't compared (a skirt hides the gap)"))
+            continue
+        other_heights = get_block_heights(other, depsgraph)
+        if other_heights is None:
+            issues.append(("WARNING", f'The {side} neighbour "{other.name}" isn\'t a regular grid: '
+                           "validate it"))
+            continue
+        gap = np.abs(ours(heights) - theirs(other_heights))
+        if gap.max() > EDGE_TOLERANCE:
+            issues.append(("ERROR", f'The {side} edge differs from "{other.name}" by up to '
+                           f"{gap.max() * 1000:.2f} mm ({np.count_nonzero(gap > EDGE_TOLERANCE)} "
+                           "vertices): neighbours share their edge heights"))
+    return issues
+
+
+def validate_block(obj: bpy.types.Object, depsgraph, objects) -> list[Issue]:
+    """Every check of a block (D1): its transform, its evaluated mesh (modifiers applied, as the
+    export writes it), its grid, faces, UVs and splat, and its edges against the blocks next to it
+    among `objects`. An `ERROR` makes Export refuse.
+    """
+    settings = get_block_settings(obj)
+    if settings is None:
+        return [("ERROR", f'"{obj.name}" isn\'t a terrain block')]
+    size, resolution = int(settings.size), int(settings.resolution)
+    issues: list[Issue] = []
+    expected_location = get_grid_location(size, settings.grid_x, settings.grid_z)
+    if any(abs(a - b) > GRID_TOLERANCE for a, b in zip(obj.location, expected_location)):
+        x, y, z = expected_location
+        issues.append(("ERROR", f"Not at its grid place ({x:g}, {y:g}, {z:g}): move it back, or "
+                       "change its Grid X / Z"))
+    if any(abs(r) > 1e-6 for r in obj.rotation_euler) or obj.rotation_mode != "XYZ":
+        issues.append(("ERROR", "Rotated: apply the rotation (Ctrl A → Rotation)"))
+    if any(abs(s - 1) > 1e-6 for s in obj.scale):
+        issues.append(("ERROR", "Scaled: apply the scale (Ctrl A → Scale)"))
+    if obj.parent is not None:
+        issues.append(("ERROR", f'Parented to "{obj.parent.name}": a block has no parent'))
+    if obj.modifiers:
+        issues.append(("WARNING", f"{len(obj.modifiers)} modifiers: checked and exported applied"))
+    props = get_block_custom_props(size, resolution, settings.grid_x, settings.grid_z)
+    if any(obj.get(key) != value for key, value in props.items()):
+        issues.append(("WARNING", "The custom props differ from the block's settings: the export "
+                       "writes them again"))
+
+    evaluated = obj.evaluated_get(depsgraph)
+    mesh = evaluated.to_mesh()
+    try:
+        arrays = read_mesh_arrays(mesh)
+        if len(arrays["positions"]) != resolution * resolution:
+            issues.append(("ERROR", f"{len(arrays['positions'])} vertices, not {resolution}² = "
+                           f"{resolution * resolution}"))
+        grid, grid_issues = read_grid(arrays["positions"], size, resolution)
+        issues += grid_issues
+        if grid is not None:
+            issues += check_faces(arrays, grid, resolution)
+            issues += check_uvs(mesh, arrays, grid, resolution)
+            heights = np.empty(resolution * resolution)
+            heights[grid] = arrays["positions"][:, 2]
+            issues += check_neighbours(obj, heights.reshape(resolution, resolution), depsgraph,
+                                       objects)
+        issues += check_splat(mesh, settings.layout)
+    finally:
+        evaluated.to_mesh_clear()
+    return issues
+
+
+#: The last Validate's findings by object name, for the panel
+_last_validation: dict[str, list[Issue]] = {}
+
+
+class AEK_OT_validate_terrain_block(bpy.types.Operator):
+    """Check the active terrain block against the block conventions: errors make Export refuse"""
+
+    bl_idname = "aek.validate_terrain_block"
+    bl_label = "Validate Block"
+    bl_options = {"REGISTER"}
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context) -> bool:
+        return get_block_settings(context.active_object) is not None
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        obj = context.active_object
+        issues = validate_block(obj, context.evaluated_depsgraph_get(), context.scene.objects)
+        _last_validation[obj.name] = issues
+        errors = sum(1 for level, _ in issues if level == "ERROR")
+        for level, message in issues:
+            self.report({level}, message)
+        if not issues:
+            self.report({"INFO"}, f"{obj.name}: valid")
+        elif not errors:
+            self.report({"INFO"}, f"{obj.name}: valid, {len(issues)} warnings")
+        return {"FINISHED"}
+
+
+def srgb_to_linear(srgb: np.ndarray) -> np.ndarray:
+    return np.where(srgb <= 0.04045, srgb / 12.92, ((srgb + 0.055) / 1.055) ** 2.4)
+
+
+def linear_to_srgb(linear: np.ndarray) -> np.ndarray:
+    return np.where(linear <= 0.0031308, linear * 12.92, 1.055 * linear ** (1 / 2.4) - 0.055)
+
+
+def quantize_weights(weights: np.ndarray) -> np.ndarray:
+    """A byte colour's stored bytes for linear weights summing to 1 at most, whose linear values
+    (what the export writes) still sum to 1 at most: each channel rounded down, then the channels
+    that lost the most raised a step where the sum stays within 1. RGB are stored as sRGB, A as
+    it is.
+    """
+    is_srgb = np.arange(weights.shape[1]) < 3
+
+    def to_steps(linear: np.ndarray) -> np.ndarray:
+        return np.floor(np.where(is_srgb, linear_to_srgb(linear), linear) * 255 + 1e-6)
+
+    def to_linear(steps: np.ndarray, srgb: np.ndarray = is_srgb) -> np.ndarray:
+        return np.where(srgb, srgb_to_linear(steps / 255), steps / 255)
+
+    steps = to_steps(np.clip(weights, 0, 1))
+    linear = to_linear(steps)
+    for rank in range(weights.shape[1]):
+        channel = np.argsort(linear - weights, axis=1)[:, rank]
+        rows = np.arange(len(weights))
+        raised = np.minimum(steps[rows, channel] + 1, 255)
+        raised_linear = to_linear(raised, is_srgb[channel])
+        fits = linear.sum(axis=1) - linear[rows, channel] + raised_linear <= 1
+        steps[rows[fits], channel[fits]] = raised[fits]
+        linear[rows[fits], channel[fits]] = raised_linear[fits]
+    return steps
+
+
+def normalize_splat(mesh: bpy.types.Mesh, layout: str) -> int:
+    """Scales each vertex's splat weights down to a sum of 1 where they sum over it (RGB for
+    `RGB_AO`, RGBA for `RGBA`); A stays as it is for `RGB_AO`. A byte colour is stored as sRGB, so
+    its weights are rounded to bytes that still sum to 1 at most (`quantize_weights`). Returns the
+    vertices changed.
+    """
+    splat = mesh.color_attributes[SPLAT_ATTRIBUTE]
+    colors = np.empty(len(splat.data) * 4)
+    splat.data.foreach_get("color", colors)
+    colors = colors.reshape(-1, 4)
+    channels = get_splat_channels(layout)
+    sums = colors[:, :channels].sum(axis=1)
+    over = sums > 1
+    weights = colors[over, :channels] / sums[over, None]
+    if splat.data_type == "BYTE_COLOR":
+        srgb = np.empty(len(splat.data) * 4)
+        splat.data.foreach_get("color_srgb", srgb)
+        srgb = srgb.reshape(-1, 4)
+        srgb[over, :channels] = quantize_weights(weights) / 255
+        splat.data.foreach_set("color_srgb", srgb.ravel())
+    else:
+        colors[over, :channels] = weights
+        splat.data.foreach_set("color", colors.ravel())
+    mesh.update()
+    return int(np.count_nonzero(over))
+
+
+class AEK_OT_normalize_splat(bpy.types.Operator):
+    """Scale the active block's splat weights down where they sum over 1 (over-painting)"""
+
+    bl_idname = "aek.normalize_splat"
+    bl_label = "Normalize Splat"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context) -> bool:
+        settings = get_block_settings(context.active_object)
+        return (settings is not None and context.mode in {"OBJECT", "PAINT_VERTEX"}
+                and SPLAT_ATTRIBUTE in context.active_object.data.color_attributes)
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        obj = context.active_object
+        # Vertex Paint keeps its own copy of the colours: write them in Object Mode
+        painting = context.mode == "PAINT_VERTEX"
+        if painting:
+            bpy.ops.object.mode_set(mode="OBJECT")
+        changed = normalize_splat(obj.data, obj.aek_terrain_block.layout)
+        if painting:
+            bpy.ops.object.mode_set(mode="VERTEX_PAINT")
+        self.report({"INFO"}, f"{obj.name}: {changed} vertices normalized")
+        return {"FINISHED"}
+
+
 # --- The sidebar -------------------------------------------------------------------------------
 
 
@@ -412,12 +794,24 @@ class VIEW3D_PT_aek_terrain(bpy.types.Panel):
         box.prop(settings, "layout")
         box.prop(settings, "output_dir")
 
+        col = layout.column(align=True)
+        col.operator(AEK_OT_validate_terrain_block.bl_idname, icon="CHECKMARK")
+        col.operator(AEK_OT_normalize_splat.bl_idname, icon="BRUSH_DATA")
+        issues = _last_validation.get(context.active_object.name)
+        if issues is not None:
+            box = layout.box()
+            box.label(text="Last Validate:" if issues else "Last Validate: valid")
+            for level, message in issues:
+                box.label(text=message, icon="ERROR" if level == "ERROR" else "INFO")
+
 
 # --- Registration ------------------------------------------------------------------------------
 
 CLASSES = (
     AEK_PG_terrain_block,
     AEK_OT_add_terrain_block,
+    AEK_OT_validate_terrain_block,
+    AEK_OT_normalize_splat,
     VIEW3D_PT_aek_terrain,
 )
 
