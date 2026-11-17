@@ -176,7 +176,7 @@ A shader stage binds 16 sampled textures (WebGPU's default, which the engine req
 - **Why:** most terrain pixels have one or two layers that matter. A 9-layer material sampled densely pays for all nine everywhere; top-3 pays for three.
 - **Needs** `ARRAY` storage (each kept layer is read from the arrays at a per-pixel index), every layer's anti-tiling mode alike, and the projected layers' projection alike (planar layers can mix in). The material's build refuses otherwise, naming where the setting was given. No effect on a material of no more layers than it keeps.
 - **The cost of the cut:** where a third layer crosses into the top K, its weight pops in. The height blend hides most of it; `maxLayers: 3` hides the rest. The `LAYER_COUNT` debug view shows where more layers weigh in than the slots keep (striped).
-- **Each kept slot reads its layer's own uniforms**, so the material editor's `terrain_l<i>_*` still reach every layer, and a slot samples with the continuous coordinates' gradients, so there's no mip seam where its layer changes.
+- **Each kept slot reads its layer's own uniforms**, so a layer's `terrain_l<i>_*` uniforms still reach it in every slot, and a slot samples with the continuous coordinates' gradients, so there's no mip seam where its layer changes.
 
 ### HEX on the dominant layer
 

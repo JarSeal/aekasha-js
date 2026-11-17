@@ -100,6 +100,7 @@ const getToolkitRules = (files: string[]): LayoutRule[] => [
   { from: `${T}ecs/gameplay/` },
   { from: `${T}geometry/generate/` },
   { from: `${T}geometry/scatter/` },
+  { from: `${T}terrain/CLAUDE.md`, note: "the terrain material generator's notes" },
   // The terrain's TSL building blocks (p303 D7; p305's techniques)
   { from: `${T}terrain/nodes/` },
   // The terrain material generator (p305): its config, define reader, graph and routes
