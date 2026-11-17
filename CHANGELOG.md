@@ -4,6 +4,73 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-17 — p306_terrain-blocks-and-procedural-terrain-meshes
+
+Terrain blocks and procedural terrain meshes (p306, the geometry side of the terrain texturing epic p301). A terrain block is a square heightfield grid that a scene lists and spawns as one unit: its mesh, its terrain material with the block's own inputs, and its collider, from a `*.terrainBlock.json` of the new `terrain()` feature. Blocks come from Blender, through a new add-on and seven templates, or from generators: the toolkit's terrain generator now samples its noise at the world place, so neighbouring blocks continue each other in shape and light, lays the terrain material's rules into vertex colours on the CPU, bakes a horizon AO, reads raw heightmaps, returns its heightfield collider and runs on a worker. A `HEIGHTFIELD` collider's grid layout is now one tested conversion, and the import reads a heightfield by position, which fixes colliders that missed their mesh by up to 0.2 m. The handbook gains the block workflow and generated terrain, and the p305 pages their Blender sections. Nothing breaks.
+
+### Engine 6.16.0 (Sunset)
+
+**Added**
+
+- The `terrain()` feature (`aekasha/terrain`, `features/terrain/`; the template lists it last): the `*.terrainBlock.json` asset (`geometry`: an imported node or a registered generator with its `params` and `seed`; `material` and the block's own `materialInputs`, a variant per block; `grid`: `x`, `z`, `size`, `resolution`; `collider`: `HEIGHTFIELD`, `TRIMESH` or `NONE`, with `friction` and `restitution`; `shadows`), its schema on `aekasha/schemas` (`TerrainBlockAssetSchema`, `TERRAIN_BLOCK_COLLIDER_TYPES`, `TERRAIN_BLOCK_DEFAULTS`, `terrainSchemaPart` and the types), and a scene's `terrainBlocks` list as the feature's schema part (the gather writes each listed block into the scene's data and adds its import, material and textures to the scene's lists; a block with a collider names `physics()` in the scene's feature manifest).
+- `spawnTerrainBlock(id, { appId? })` and `getTerrainBlock(id)` (`TerrainBlock`, `SpawnTerrainBlockOpts`): the block's mesh at `(x · size, 0, z · size)` (an imported node's transform ignored, with a warning; quantized positions refused, naming the `terrainBlock` asset profile), its collider a `FIXED` body on it, both released with the scene or by `dispose()`; a spawn whose scene is left across an `await` deletes what it made and resolves with `null`. The collider's code loads with the first block that has one, so an app without physics loads no Rapier for its blocks.
+- `registerTerrainGenerator(id, fn)`, `unregisterTerrainGenerator(id)` and `getTerrainGenerator(id)` (`TerrainGenerator`, `TerrainGeneratorOpts`, `TerrainGeneratorResult`): a block's geometry from its params, seed and grid, optionally with its heightfield, maybe async.
+- `toHeightfieldColliderParams({ heights, rows, cols, width, depth })` (`HeightfieldGrid`, on `aekasha/physics`): a `HEIGHTFIELD` collider's params from a row-major height grid, the layout (column-major, `nrows` cells along +z, `ncols` along +x, centred, each cell split along (row + 1, col)–(row, col + 1)) pinned by raycasts against Rapier.
+
+**Changed**
+
+- An imported `HEIGHTFIELD` node is read by position, not vertex order: each vertex to the grid point under it, so Blender's and three's row orders, non-square grids and quantized, reordered (meshopt, Draco) meshes all work. It skips the collider, naming the node, for a vertex off its grid line (over 1 % of the spacing), a grid point with no vertex, or duplicates whose heights differ; a grid not centred on its node gets the offset as the collider's `translation`; it warns, counting them, for cells split along the other diagonal. `nCols` counts the cells along x and `nRows` along z (the old read had `nRows` along x); a count not given is counted from the vertices.
+- The template's first download grows 353 B gzip (`assets/index.js` 404,964 → 405,317 B): the `terrain()` factory and install (the feature's group 338 B) and the toolkit's generator registration in `appECSPlugins`. Lazy: `ImportPhysics.js` +0.6 kB (the by-position read), `HeightfieldColliderParams.js` 0.4 kB.
+
+**Fixed**
+
+- A `HEIGHTFIELD` collider imported from a glTF missed its mesh (the Gym's `terrainSmooth` by up to 0.216 m near an edge): the import read the vertices in their order, and the layout was documented nowhere but in that conversion (`docs/issues/heightfield-grid-layout.md`, fixed).
+
+### Toolkit 3.4.0 (Gibbous)
+
+**Added**
+
+- `generateTerrain`'s new options (`aekasha/toolkit/geometry`, `geometry/generate/terrain/`; the defaults build the same geometry as before): `center` (the noise sampled at the world's `center + (x, z)`, so blocks of one seed continue each other), `heightFn`, `heightmap`, `normals` (`GEOMETRY`, `HEIGHT_FN`: central differences past the edge, seamless across blocks), `ao` (`TerrainAoOptions`: a horizon AO on the height grid, 8 directions, the result's `ao` and `RGB_AO`'s A), `vertexColors` (`TerrainVertexColorOptions`: the terrain rules into `COLOR_0`, bytes), `collider` (the result's `heightfield`, its cells split as the mesh's) and `skirt`; `maxHeight` optional with a height function or map; the result's `center`. Types `TerrainNormalSource`.
+- `generateTerrainAsync(opts)` (`TerrainAsyncOptions`): the same on the toolkit's own module worker (loaded on first use; a 257² block with rules and AO about 70-90 ms there, no frame dropped, against one dropped frame of that length on the main thread), or `workerTarget: 'MAIN_THREAD'`; options without functions.
+- `loadTerrainHeightmapAsync({ url, format, size, heightRange, extent, center? })` (`TerrainHeightmap`, `TerrainHeightmapFormat`, `TerrainHeightmapOptions`): raw `R16` or `R32F` heightmaps from terrain tools, plain data that `heightmap` samples bilinearly and the worker gets once.
+- `evaluateTerrainRulesCPU` and `getTerrainRuleCoverageCPU` (`TerrainRuleNoiseTexels`, `TerrainRulePoint`): the terrain material's rules evaluated per vertex with its math.
+- `registerTerrainGenerators()` and `readTextureTexelsAsync(textureOrId, { size? })` (`aekasha/toolkit/terrain`): the block generators `noiseTerrain` and `rulesTerrain` (seeded octaves; `rulesTerrain` adds the rules into vertex colours and the AO), registered from an install, their code a lazy chunk generating on the worker; and a texture's texels read back to the CPU (the rules' `macroNoise`).
+- The Blender add-on `src/toolkit/terrain/blender/aekasha_terrain_tools.py` (one file, Install from Disk, Blender 5.3): Add Terrain Block (the exact grid, triangles along the heightfield's diagonal, top-down UVs, the byte `Splat` colour, the custom props), a Collider setting (`HEIGHTFIELD`, `TRIMESH`, `NONE`), Validate Block, Normalize Splat, a preview material of the terrain material's layers, New Splat Map (a Non-Color, channel-packed map drawn by the block's own preview material for Texture Paint), Bake AO → Splat Alpha, Bake Colour Map, Split Into Blocks (shared edges, the large grid's normals) and Export Block (the locked glTF settings, the images, the JSON stubs, the GLB read back).
+- Seven templates beside it, each with a README text block: `terrain_blockTemplate`, `terrain_singleLayer`, `terrain_vertexColorSplat`, `terrain_splatMap` (with `splatMap_splat0.png`), `terrain_triplanarCliff`, `terrain_colormapDetail` and `structure_concrete`.
+
+**Changed**
+
+- `generateTerrain` moved into `geometry/generate/terrain/` and builds on an internal core shared with the worker: 2-3 × faster on the main thread (a 257² block with the defaults 30 → 11 ms).
+- Lazy chunks: `Terrain.js` 0.8 → 4.2 kB gzip (the core and the heightmap sampler), `TerrainBlockGenerators.js` 3.8 kB, the worker 5.8 kB, and the shared `TextureBaker.js` 3.0 kB (out of `TextureSetBakes.js`, now 1.1 kB, for the texel readback).
+
+### App 1.28.0 (Preschooler)
+
+**Added**
+
+- `terrainBlockTest` (a debug scene): an imported block (the Gym's `terrainSmooth`), a `noiseTerrain` block with its heightfield, a generated `TRIMESH` block, a block from the committed `terrainBlockTestHeightmap.r16` (its heights checked against the texels), and the add-on's orientation block (`blenderBlock/`: red at the engine's −x, −z corner, green at +x, −z, a mound and its AO) through its vertex colour and through its splat map; boxes dropped on each, an error logged for one not resting on its block. Its tab spawns a 256 m `rulesTerrain` block and measures its generation on either thread. Its probe in `yarn verify:scenes`.
+- `terrainGallery`'s Blocks patch: 3 × 3 `rulesTerrain` blocks (`patch/*.terrainBlock.json`, one seed, rocks by slope, snow by height and facing, cliffs, 8 m AO) under `terrainGalleryPatch`, switchable with its `RULES` variant built from the blocks' own rules.
+- `appECSPlugins` registers the toolkit's terrain generators; `src/index.ts` lists `terrain()`.
+
+**Changed**
+
+- The Gym's `terrainSpiked.glb` re-triangulated onto the heightfield collider's diagonal (899 of its 10,000 cells; the index only): its colliders match their mesh within 0.2 mm.
+- `testDebugScene`'s `p371MergeKit` keeps its positions unquantized (`"quantize": false`): quantization moves a mesh's dequantization into its node, which meshes made from its geometries' ids never get (`docs/issues/quantized-glb-geometry-by-id.md`).
+
+### Project
+
+**Added**
+
+- The handbook's `terrain-blocks-blender.md` (the block conventions, the add-on's workflow step by step, the locked export settings, the import, the pitfalls) and `terrain-procedural-meshes.md` (the options, CPU against shader rules, the AO, colliders, seeds, the worker's measurements, heightmaps); the Blender, Export and block import sections of the seven p305 technique pages.
+- `yarn verify:blender` (`devTools/blender/`): every add-on operator in a background Blender, then its GLBs read as the engine reads them; `devTools/blender/buildTerrainTemplates.py` and `exportOrientationBlock.py` make the templates and the orientation block again.
+- `yarn setupBlenderMcp`, `.mcp.json`'s `blender` server and the `blender-assets` skill: Blender Lab's MCP server for agents, `findBlender` (`AEK_BLENDER`, PATH, the Windows installs from WSL2).
+- `src/_engine/features/terrain/CLAUDE.md` (Terrain blocks); the Hub's terrain page (now "Terrain") covers blocks, the toolkit and physics pages the new terrain and heightfield APIs.
+
+**Changed**
+
+- The asset pipeline no longer keeps collider sources lossless (the import reads any encoding by position): `COLLIDER_LEVEL` is never simplified, quantized like any mesh; the `terrainBlock` profile stays lossless for blocks' shared edges.
+- `sbp.config.ts`: the app's initial budget 400 → 401 KiB (the generators' registration), the `_engine/features/terrain` group at 1 KiB.
+- The baselines: `api.json` (the new exports), `docs.json`, and the bundles (above).
+
 ## 2026-11-17 — p305_terrain-material-generator
 
 The terrain material generator (p305, the fourth child of the terrain texturing epic p301). One toolkit function, `createTerrainMaterial`, and its JSON route, the material `terrain`, build a single node material from a declarative config of up to 16 texture set layers, and compile only what the config turns on: weights from vertex colours, splat maps or rules of slope, height, facing and noise, with height blending; anti-tiling and a macro variation; biplanar, triplanar and slope-gated projection for cliffs; sparse sampling of the few layers that matter at each pixel; a block's baked colour map under tiled detail and a far surface that stops sampling the layers in the distance; object space for structures; layers that run a procedural surface live; quality tiers and debug views. The engine gains what the material needs from texture sets (a set's average colour as a uniform, a bundle's set, the generators) and a bake in a mesh's UV space. The terrain gallery gains a row per technique with its measurements (an 8-layer terrain at the `HIGH` tier costs 1.7 ms of a 1080p frame on an AMD RDNA 3 GPU), and the handbook a page per technique. Nothing breaks.

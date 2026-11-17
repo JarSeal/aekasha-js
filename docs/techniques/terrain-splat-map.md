@@ -68,13 +68,18 @@ Everything on [Single-layer terrain](terrain-single-layer.md) applies to each la
 
 ## Blender, step by step
 
-Painting the splat maps (texture paint on the block's UVs, a channel per layer, the remainder as the base) is [p306](../plans/p306_terrain-blocks-and-procedural-terrain-meshes.md)'s, on its page `terrain-blocks-blender.md`, with the template `terrain_splatMap.blend`.
+The block workflow (set-up, the grid, shaping, validating, exporting) is [Terrain blocks from Blender](terrain-blocks-blender.md); start from `terrain_splatMap.blend` (`src/toolkit/terrain/blender/`): a block with a 1K map (rocks01 patches, a sand01 trail, mud01 puddles, grass02 lush areas over grass01), `splatMap_splat0.png` beside it. Painting:
 
-What the material reads: the block's first UV set, 0..1 over the block, and each map's RGBA as weights 0..1. Unpainted (black) is the base layer; channels that sum over 1 are normalized.
+1. **The preview** (sidebar → Preview Material): layout `RGBA` (the base and layers 1-4 from one map), each layer's set in the material's order, _Update Preview_.
+2. **_New Splat Map_** on the block: `<id>_splat0`, black (the base), at a size by the block's: **1K for 64 m, 2K for 128 m** (about 6 cm a texel), 512 for a 32 m block. It's **Non-Color** from the start and _Channel Packed_ (A a weight, not transparency), and the block gets a preview material of its own drawing it, its image node the paint target. Set a map you made yourself to Non-Color **before the first stroke**: changing the colour space later reloads the image and drops its unsaved paint, and a map painted in sRGB stores a half weight as 188, not 128.
+3. **Texture Paint mode:** one channel a layer with pure colours, as for [vertex colours](terrain-vertex-color-splat.md#blender-step-by-step): (1, 0, 0) layer 1, (0, 1, 0) layer 2, (0, 0, 1) layer 3, black the base, the Mix blend at strength 1; layer 4 is the alpha (the brush's _Add Alpha_ blend, _Erase Alpha_ to remove). Falloff off (or a hard brush) for a crisp road edge: the map holds a border far finer than the mesh.
+4. **Orientation:** the map's top row is the block's −z edge in the engine (the top view's top), its top left the engine's −x, −z corner; check with a corner stroke against `terrainBlockTest`'s orientation block, whose splat map is painted that way.
+5. **Save it:** _Image → Save_ (8-bit PNG), or let _Export Block_ save it. Blender doesn't keep unsaved paint in the `.blend` (the templates pack no images).
+6. **Eight layers:** a second map `<id>_splat1` (layers 5-8), painted the same way; the preview shows the first map's four.
 
 ## Export
 
-p306's (`terrain-blocks-blender.md`): each map an 8-bit RGBA PNG, linear (no colour management), next to the block.
+_Export Block_ ([the locked settings](terrain-blocks-blender.md#export)) saves `<id>_splat0.png` (and `_splat1`) beside the GLB as they are (8-bit RGBA, no colour conversion; a float image is warned), and writes each one's `*.texture.json` stub where none is: slot `data`, `texOpts` `{ "flipY": false, "colorSpace": "" }` (glTF's V 0 is the image's top row). By hand: _Image → Save As_, PNG, RGBA, 8 bits, the image Non-Color.
 
 ## Import into Ækasha
 
@@ -89,9 +94,16 @@ p306's (`terrain-blocks-blender.md`): each map an 8-bit RGBA PNG, linear (no col
     "slot": "data",
     "textures": { "data": { "codec": "uastc", "rdo": 0 } }
   },
-  "texOpts": { "wrapS": "CLAMP_TO_EDGE", "wrapT": "CLAMP_TO_EDGE" }
+  "texOpts": {
+    "flipY": false,
+    "colorSpace": "",
+    "wrapS": "CLAMP_TO_EDGE",
+    "wrapT": "CLAMP_TO_EDGE"
+  }
 }
 ```
+
+`flipY: false`: the block's UVs are glTF's, whose V 0 is the image's top row (Export Block's stub has it; a flipped map shows its layers mirrored along z).
 
 **The material.** The sets as a set array (the input `layers`, which the gather builds), the maps as `splat0` and `splat1`. An array material needs a material JSON of its own ([the routes](terrain-single-layer.md#import-into-ækasha)), not a variant of the toolkit's `terrain`: a variant's inputs merge over the base's, so it would keep `terrain`'s `layer0`, and a layer with an input of its own is sampled beside the array (the way a procedural set's layer is), which leaves the array a layer short. Here 5 layers with sparse sampling, its TSL file the two lines `export const setup = setupTerrainMaterial`:
 
@@ -119,7 +131,7 @@ p306's (`terrain-blocks-blender.md`): each map an 8-bit RGBA PNG, linear (no col
 }
 ```
 
-Each block is a mesh with `"mat": "valleyGround"` and `"matOverrides": { "inputs": { "splat0": { "texture": "valleyBlockB_splat0" } } }`: the same shader and array, its own map.
+Each block is a terrain block with `"material": "valleyGround"` and its own map, `"materialInputs": { "splat0": { "texture": "valleyBlockB_splat0" } }` (or a mesh with `"mat": "valleyGround"` and the same in `"matOverrides": { "inputs": … }`): the same shader and array, its own map.
 
 **From code:**
 
@@ -207,7 +219,7 @@ A shader stage binds 16 sampled textures (WebGPU's default, which the engine req
 
 ## Template file and example asset ids
 
-- **Blender template:** `terrain_splatMap.blend`, p306.
+- **Blender template:** `src/toolkit/terrain/blender/terrain_splatMap.blend` with `splatMap_splat0.png` (its README text block mirrors this page's Blender steps; the block workflow: [Terrain blocks from Blender](terrain-blocks-blender.md)). `terrainBlockTest`'s `terrainBlockTestBlenderSplatMap` is an add-on export drawn through its splat map (`flipY: false`).
 - **The material:** `terrain`, or an app material of its own for an array; `createTerrainMaterial` with `blend.source: 'SPLAT_MAP'` and `splatMaps`.
 - **The gallery's Splatting row** (`terrainGallery`, `?isDebug=true&startScene=terrainGallery`; `src/app/scenes/terrainGallery/splattingRow.ts`): 24 m generated blocks with one painted pattern, `LINEAR` left of `HEIGHT`: 5 layers with one 256² splat map (`AUTO`: an array) and 9 layers with two (`cliffs01`, `ice01`, `grass02` and `mud02` added). Its tab lists each block's storage; the Quality select shows the tiers, the Debug view select `WEIGHTS` and `LAYER_COUNT`. The 8-layer terrain of the measurement is the Rules row's third block.
 - **Set arrays:** the scene's `textureSetArrays` (`src/app/scenes/terrainGallery/terrainGallery.scene.json`).

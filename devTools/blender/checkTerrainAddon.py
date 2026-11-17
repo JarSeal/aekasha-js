@@ -58,6 +58,12 @@ def check_conventions(aek):
     props = aek.get_block_custom_props(64, 129, 2, -1)
     expect(props["nCols"] == 128 and props["nRows"] == 128, "nCols / nRows count cells")
     expect(props["colliderType"] == "HEIGHTFIELD" and props["keepMesh"] == 1, "a visible heightfield body")
+    trimesh = aek.get_block_custom_props(64, 129, 2, -1, "TRIMESH")
+    expect(trimesh["colliderType"] == "TRIMESH" and "nCols" not in trimesh and trimesh["aekBlockRes"] == 129,
+           f"a trimesh body has no cell counts: {trimesh}")
+    none = aek.get_block_custom_props(64, 129, 2, -1, "NONE")
+    expect(set(none) == {"aekBlockSize", "aekBlockRes", "aekGridX", "aekGridZ"}, f"no collider, no body: {none}")
+    expect(all(set(p) <= set(aek.BLOCK_PROP_KEYS) for p in (props, trimesh, none)), "every key is in BLOCK_PROP_KEYS")
 
 
 def check_triangles(aek):
@@ -328,6 +334,7 @@ def check_preview(aek):
     tree.nodes.clear()
     group_node = tree.nodes.new("ShaderNodeGroup")
     group_node.node_tree = group
+    aek.link_vertex_splat(tree, group_node)
     emit = tree.nodes.new("ShaderNodeEmission")
     output = tree.nodes.new("ShaderNodeOutputMaterial")
     tree.links.new(group_node.outputs["Color"], emit.inputs["Color"])
@@ -735,6 +742,142 @@ def check_export(aek):
     expect("No COLOR_0" in findings and "transform" in findings, f"the GLB check's findings: {findings}")
 
 
+def check_trimesh(aek):
+    bpy.ops.aek.add_terrain_block(block_id="checkTrimesh", size="32", resolution="33", grid_z=15,
+                                  collider="TRIMESH")
+    block = bpy.data.objects["checkTrimesh"]
+    expect(block["colliderType"] == "TRIMESH" and "nCols" not in block, "a trimesh block's props")
+    # An overhang: a 6 m step from column 17 on, its edge column pushed 1.5 m back over its foot
+    mesh = block.data
+    co = np.empty(len(mesh.vertices) * 3)
+    mesh.vertices.foreach_get("co", co)
+    co = co.reshape(-1, 3)
+    cols = np.arange(33 * 33) % 33
+    co[cols >= 17, 2] = 6.0
+    co[cols == 17, 0] -= 1.5
+    mesh.vertices.foreach_set("co", co.ravel())
+    mesh.update()
+    issues = validate(aek, "checkTrimesh")
+    expect(not any(level == "ERROR" for level, _ in issues), f"an overhang validates as a trimesh: {issues}")
+
+    block.aek_terrain_block.collider = "HEIGHTFIELD"
+    issues = validate(aek, "checkTrimesh")
+    expect_issue(issues, "ERROR", "moved off their grid point", "the same overhang as a heightfield is refused")
+    expect_issue(issues, "WARNING", "custom props differ", "the props of another collider are warned")
+    aek.write_block_custom_props(block)
+    expect(block["colliderType"] == "HEIGHTFIELD" and block["nCols"] == 32, "the heightfield's props written")
+    block.aek_terrain_block.collider = "NONE"
+    aek.write_block_custom_props(block)
+    expect(not any(k in block for k in ("isPhysObj", "colliderType", "nCols", "keepMesh")) and block["aekBlockRes"] == 33,
+           "no collider: the body's props removed, the block's kept")
+    block.aek_terrain_block.collider = "TRIMESH"
+
+    # A heightfield neighbour doesn't compare its edge with a trimesh block
+    bpy.ops.aek.add_terrain_block(block_id="checkTrimeshWest", size="32", resolution="33", grid_x=-1, grid_z=15)
+    expect_issue(validate(aek, "checkTrimeshWest"), "WARNING", "trimesh block", "a trimesh neighbour is named")
+    # A vertex outside the block's square is warned
+    mesh.vertices[33 * 10 + 32].co.x += 2.0
+    mesh.update()
+    expect_issue(validate(aek, "checkTrimesh"), "WARNING", "outside the 32 m square", "a vertex past the square")
+    mesh.vertices[33 * 10 + 32].co.x -= 2.0
+    mesh.update()
+
+    folder = os.path.join(OUT_DIR, "export", "checkTrimesh")
+    export_into(aek, block, folder)
+    gltf, binary = read_glb(os.path.join(folder, "checkTrimesh.glb"))
+    findings = aek.check_exported_glb(gltf, "checkTrimesh", 33, "TRIMESH")
+    expect(findings == [], f"the trimesh GLB's own check: {findings}")
+    node = next(n for n in gltf["nodes"] if "mesh" in n)
+    expect(node["extras"] == aek.get_block_custom_props(32, 33, 0, 15, "TRIMESH"), f"its extras: {node['extras']}")
+    positions = read_accessor(gltf, binary, gltf["meshes"][0]["primitives"][0]["attributes"]["POSITION"])
+    expect(np.abs(positions - np.stack([co[:, 0], co[:, 2], -co[:, 1]], axis=1)).max() < 1e-5,
+           "the overhang's positions as they are")
+    with open(os.path.join(folder, "checkTrimesh.terrainBlock.json"), encoding="utf-8") as f:
+        expect(json.load(f)["collider"] == {"type": "TRIMESH"}, "the stub's collider is the block's")
+
+
+def check_splat_map(aek):
+    scene = bpy.context.scene
+    bpy.ops.aek.add_terrain_block(block_id="checkSplatMap", size="32", resolution="33", grid_z=18)
+    block = bpy.data.objects["checkSplatMap"]
+    for obj in bpy.data.objects:
+        obj.hide_render = obj != block
+    scene.world = None
+    scene.aek_terrain_preview.layout = "RGBA"
+    flat = ["noSuchSet"] * 5
+    aek.build_preview_group(flat, {}, layout="RGBA")
+    bpy.context.view_layer.objects.active = block
+    bpy.ops.aek.new_splat_map(size="256")
+    image = bpy.data.images["checkSplatMap_splat0"]
+    expect(tuple(image.size) == (256, 256) and image.colorspace_settings.name == "Non-Color"
+           and image.alpha_mode == "CHANNEL_PACKED", "a 256² Non-Color, channel-packed splat map")
+    expect(not np.any(np.array(image.pixels[:])), "black, A 0: the base layer")
+    material = block.active_material
+    tree = material.node_tree
+    expect(material.name == "AEK Terrain Preview checkSplatMap" and material[aek.SPLAT_MAP_PROP] == image.name,
+           f"the block's own material: {material.name}")
+    expect(tree.nodes.active.type == "TEX_IMAGE" and tree.nodes.active.image == image, "its image node is the paint target")
+    expect(bpy.data.materials[aek.PREVIEW_MATERIAL].users >= 1, "the shared material stays")
+    preview = aek.get_preview_group_node(material)
+    expect(preview.inputs["Splat Alpha"].is_linked, "RGBA: A weighs layer 4")
+
+    # Quarters, from the top left (the engine's -x, -z): layer 1 (R, under A 0), layer 4 (A),
+    # then the base, layer 2 (G); pixels run bottom-up
+    painted = np.zeros((256, 256, 4), dtype=np.float32)
+    painted[128:, :128] = (1.0, 0.0, 0.0, 0.0)
+    painted[128:, 128:] = (0.0, 0.0, 0.0, 1.0)
+    painted[:128, 128:] = (0.0, 1.0, 0.0, 0.0)
+    image.pixels.foreach_set(painted.ravel())
+
+    output = next(n for n in tree.nodes if n.type == "OUTPUT_MATERIAL")
+    bsdf_link = output.inputs["Surface"].links[0].from_socket
+    emission = tree.nodes.new("ShaderNodeEmission")
+    tree.links.new(preview.outputs["Color"], emission.inputs["Color"])
+    tree.links.new(emission.outputs[0], output.inputs["Surface"])
+    path = os.path.join(OUT_DIR, "splat_map.exr")
+    setup_render(32, block.location, 32, path, "OPEN_EXR")
+    pixels = render_pixels(path)
+    for (row, col), layer, where in (((24, 8), 1, "top left"), ((24, 24), 4, "top right"),
+                                     ((8, 8), 0, "bottom left"), ((8, 24), 2, "bottom right")):
+        got = pixels[row, col, :3]
+        expect(np.abs(got - aek.FALLBACK_COLORS[layer]).max() < 1e-3, f"the {where} is layer {layer}: {got}")
+
+    # RGB + AO: three layers from the map, A not read
+    scene.aek_terrain_preview.layout = "RGB_AO"
+    aek.build_preview_group(flat, {}, layout="RGB_AO")
+    aek.update_splat_map_materials(scene)
+    expect(not preview.inputs["Splat Alpha"].is_linked, "RGB_AO: the map's A isn't linked")
+    pixels = render_pixels(path)
+    expect(np.abs(pixels[24, 24, :3] - aek.FALLBACK_COLORS[0]).max() < 1e-3, f"A unread: the base: {pixels[24, 24, :3]}")
+    tree.links.new(bsdf_link, output.inputs["Surface"])
+    tree.nodes.remove(emission)
+
+    # Bake Colour Map draws through the block's own material
+    block.aek_terrain_block.output_dir = OUT_DIR
+    bpy.context.view_layer.objects.active = block
+    bpy.ops.aek.bake_color_map(size="512", samples=1)
+    baked = bpy.data.images.load(os.path.join(OUT_DIR, "checkSplatMap_colorMap.png"), check_existing=False)
+    px = np.array(baked.pixels[:]).reshape(512, 512, 4)
+    bpy.data.images.remove(baked)
+    layer = aek.linear_to_srgb(np.array(aek.FALLBACK_COLORS[1]))
+    expect(np.abs(px[384, 128, :3] - layer).max() < 2.5 / 255, f"the colour map's top left is layer 1: {px[384, 128, :3]}")
+    expect(tree.nodes.active.image == image, "the splat map is the paint target again")
+
+    # Export saves the map with RGB kept under A 0
+    folder = os.path.join(OUT_DIR, "export", "checkSplatMap")
+    export_into(aek, block, folder)
+    saved = bpy.data.images.load(os.path.join(folder, "checkSplatMap_splat0.png"), check_existing=False)
+    saved.alpha_mode = "CHANNEL_PACKED"
+    got = np.array(saved.pixels[:]).reshape(256, 256, 4)
+    bpy.data.images.remove(saved)
+    expect(np.abs(got - painted).max() < 1 / 255, f"the PNG holds the map, RGB under A 0 (off by {np.abs(got - painted).max()})")
+    with open(os.path.join(folder, "checkSplatMap_splat0.texture.json"), encoding="utf-8") as f:
+        texture = json.load(f)
+    expect(texture["optimize"] == {"slot": "data"} and texture["texOpts"] == {"flipY": False, "colorSpace": ""},
+           f"its texture stub: {texture}")
+    aek.build_preview_group(["NONE"] * 5, {})
+
+
 #: The workflow block's shape: a bump near the engine's +x, +z corner (local x 16, z 20), so a
 #: collider read with a flipped axis puts it in the wrong corner
 WORKFLOW_BUMP = {"x": 16.0, "z": 20.0, "height": 8.0, "radius": 3.0}
@@ -819,6 +962,8 @@ CHECKS = [
     check_bake_color_map,
     check_split,
     check_export,
+    check_trimesh,
+    check_splat_map,
     check_workflow,
 ]
 REPORT = {"blender": bpy.app.version_string, "checks": {}, "exports": []}

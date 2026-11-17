@@ -53,11 +53,17 @@ The library's structure sets are `concrete01` (smooth, 1.1 × 0.55 m: not square
 
 ## Blender, step by step
 
-Modelling the pieces and painting their wear is [p306](../plans/p306_terrain-blocks-and-procedural-terrain-meshes.md)'s (`terrain-blocks-blender.md`, template `structure_concrete.blend`). The material needs positions and normals (no UVs), and for wear a colour attribute with enough vertices to carry it: a box of 12 triangles can't hold streaks, so subdivide the faces where wear goes (the gallery tessellates its bunker to 0.35 m).
+Structures aren't terrain blocks: no add-on operator applies, and any modelling works. Start from `structure_concrete.blend` (`src/toolkit/terrain/blender/`): two wall segments in world space and a bunker passage in object space, worn by a `Wear` colour attribute, with a box-projected preview of the four sets (Blender's triplanar).
+
+1. **Model at real scale,** in metres; apply rotation and scale (_Ctrl A_), or keep the scale on the object: object space measures the piece × its scale in metres either way. **The origin** is the pivot the engine moves and turns the piece about, and object space's texture is anchored to it: put it at the base's centre, and give pieces that should line up origins on a common grid.
+2. **No UVs:** the material projects every set from three axes (`TRIPLANAR`), so there's no unwrapping and no stretching on any face.
+3. **Vertices for the wear:** a 12-triangle box can't hold a streak. Cut the faces where wear goes every 0.3-0.5 m (Loop Cut, or _Mesh → Bisect_ repeatedly; the template is cut every 0.35 m).
+4. **Paint the wear** in Vertex Paint on a byte colour attribute on vertices (the template's `Wear`), as a terrain splat: pure red, green, blue for layers 1-3 (the template: stains, grime, chips), black for clean concrete (the base), Mix at strength 1; the alpha for a fifth layer (`RGBA`). Streaks run down from the tops, grime gathers at the foot, chips sit on the edges.
+5. **World or object space:** static pieces that join (a wall's segments) in `WORLD`, so the concrete runs on across a joint; a piece that moves or turns in `OBJECT`, so its texture moves with it. The template's two preview materials show both.
 
 ## Export
 
-p306's (`terrain-blocks-blender.md`): glTF with normals and, for wear, the colour attribute. Keep the piece's real-world scale in the mesh, or in its node's scale: object space measures in metres either way.
+_File → Export → glTF 2.0_, by hand (the add-on's Export Block is for terrain blocks): glTF Binary; Include: Selected Objects; Transform: +Y Up; Data → Mesh: Apply Modifiers ✓, UVs ✗ (not read), Normals ✓, Tangents ✗; Vertex Color: Active (the wear attribute active), Export All Vertex Colors ✗; Material: No Export, Images: None; Compression off (the asset pipeline encodes). Keep the piece's real-world scale in the mesh, or in its node's scale: object space measures in metres either way. Then an `<id>.importedAsset.json` beside it ([Asset optimization](asset-optimization.md)).
 
 ## Import into Ækasha
 
@@ -159,7 +165,7 @@ createStructureMaterial('concrete02', { id: 'wallConcrete', space: 'WORLD' });
 
 ## Template file and example asset ids
 
-- **Blender template:** `structure_concrete.blend`, p306.
+- **Blender template:** `src/toolkit/terrain/blender/structure_concrete.blend` (its README text block mirrors this page's Blender steps).
 - **The helpers:** `createStructureMaterial`, `getStructureMaterialConfig` (`src/toolkit/terrain/material/StructureMaterial.ts`, `aekasha/toolkit/terrain`).
 - **The sets:** `concrete01`, `concrete02`; `mud01` and `rocks02` for grime and damage.
 - **The gallery's Structures row** (`terrainGallery`, `?isDebug=true&startScene=terrainGallery`; `src/app/scenes/terrainGallery/structuresRow.ts`): a wall of two 8 m segments in `WORLD` space (the concrete runs on across the joint) and a bunker's passage piece turned 25° in `OBJECT` space, both worn by their vertex colour (`concrete01` clean, `concrete02` in rain streaks and stains, `mud01` grime at the foot, `rocks02` on chipped edges and impacts); two `concrete02` pillars turning and rising, `OBJECT` beside `WORLD`. Its tab holds the pillars and flies the camera to each piece; the Debug view select reaches it.

@@ -44,13 +44,17 @@ const GeneratedGeometrySchema = z
       .record(z.string(), z.unknown())
       .optional()
       .describe("The generator's own params, checked by the generator. Default: {}."),
-    /** The seed, which the generator combines with the block's grid coordinates. Default: 0. */
+    /**
+     * The seed (default 0). A height noise uses it as it is, sampled at the block's world place,
+     * so blocks of one seed continue each other; a block's own randomness combines it with its
+     * grid coordinates.
+     */
     seed: z
       .number()
       .int()
       .optional()
       .describe(
-        "The seed, which the generator combines with the block's grid coordinates. Default: 0."
+        "The seed (default 0). A height noise uses it as it is, sampled at the block's world place, so blocks of one seed continue each other; a block's own randomness combines it with its grid coordinates."
       ),
   })
   .describe("A registered generator's geometry, made when the block spawns.");

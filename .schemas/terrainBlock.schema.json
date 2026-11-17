@@ -141,7 +141,7 @@
       "additionalProperties": {}
     },
     "__schema12": {
-      "description": "The seed, which the generator combines with the block's grid coordinates. Default: 0.",
+      "description": "The seed (default 0). A height noise uses it as it is, sampled at the block's world place, so blocks of one seed continue each other; a block's own randomness combines it with its grid coordinates.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema13"

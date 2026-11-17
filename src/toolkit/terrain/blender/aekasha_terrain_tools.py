@@ -2,8 +2,9 @@
 
 A terrain block is a square heightfield grid that the engine spawns from a `*.terrainBlock.json`
 (the `terrain()` feature, `aekasha/terrain`). This add-on makes one that follows the block
-conventions (docs/plans/p306_terrain-blocks-and-procedural-terrain-meshes.md D1), lets you paint
-and bake its splat, checks it and exports it with the locked glTF settings (D5).
+conventions (docs/plans/_DONE_p306_terrain-blocks-and-procedural-terrain-meshes.md D1; the
+handbook's docs/techniques/terrain-blocks-blender.md), lets you paint and bake its splat, checks
+it and exports it with the locked glTF settings (D5).
 
 Install: Edit → Preferences → Add-ons → the drop-down → Install from Disk, then pick this file
 (a legacy add-on: one `.py`, so it installs straight from the repo). Checked with Blender 5.3.
@@ -67,6 +68,13 @@ LAYOUT_ITEMS = [
     ("RGB_AO", "RGB + AO", "RGB weigh layers 1-3, A is the baked ambient occlusion"),
     ("RGBA", "RGBA", "RGBA weigh layers 1-4, no baked AO"),
 ]
+#: The block's collider (the terrainBlock JSON's `collider.type`)
+COLLIDER_ITEMS = [
+    ("HEIGHTFIELD", "Heightfield", "Read from the regular grid: the vertices move in height only"),
+    ("TRIMESH", "Trimesh", "The triangles themselves: overhangs and caves (vertices moved in X/Z "
+     "or added), costlier; the grid, UV and edge checks are skipped"),
+    ("NONE", "None", "No collider: a background block"),
+]
 
 _BLOCK_ID = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 
@@ -129,25 +137,27 @@ def get_grid_location(size: float, grid_x: int, grid_z: int) -> tuple[float, flo
     return (grid_x * size, -grid_z * size, 0.0)
 
 
-def get_block_custom_props(size: int, resolution: int, grid_x: int, grid_z: int) -> dict:
+#: Every custom prop the add-on writes: a key the block's collider no longer takes is removed
+BLOCK_PROP_KEYS = ("isPhysObj", "keepMesh", "rigidType", "colliderType", "nCols", "nRows",
+                   "aekBlockSize", "aekBlockRes", "aekGridX", "aekGridZ")
+
+
+def get_block_custom_props(
+    size: int, resolution: int, grid_x: int, grid_z: int, collider: str = "HEIGHTFIELD"
+) -> dict:
     """The custom props the engine reads (D1): a fixed `HEIGHTFIELD` body of `resolution - 1`
-    cells a side (`nCols` along x, `nRows` along z), and the block's metadata. `keepMesh` keeps
-    the mesh visible when the GLB is spawned as a plain import (`spawnImportedAsset`);
-    `spawnTerrainBlock` decides from the block's JSON and ignores them.
+    cells a side (`nCols` along x, `nRows` along z), a fixed `TRIMESH` body, or none, and the
+    block's metadata. `keepMesh` keeps the mesh visible when the GLB is spawned as a plain import
+    (`spawnImportedAsset`); `spawnTerrainBlock` decides from the block's JSON and ignores them.
     """
     cells = resolution - 1
-    return {
-        "isPhysObj": 1,
-        "keepMesh": 1,
-        "rigidType": "FIXED",
-        "colliderType": "HEIGHTFIELD",
-        "nCols": cells,
-        "nRows": cells,
-        "aekBlockSize": size,
-        "aekBlockRes": resolution,
-        "aekGridX": grid_x,
-        "aekGridZ": grid_z,
-    }
+    props: dict = {}
+    if collider != "NONE":
+        props.update(isPhysObj=1, keepMesh=1, rigidType="FIXED", colliderType=collider)
+    if collider == "HEIGHTFIELD":
+        props.update(nCols=cells, nRows=cells)
+    props.update(aekBlockSize=size, aekBlockRes=resolution, aekGridX=grid_x, aekGridZ=grid_z)
+    return props
 
 
 # --- The block's settings ----------------------------------------------------------------------
@@ -195,6 +205,12 @@ class AEK_PG_terrain_block(bpy.types.PropertyGroup):
         items=LAYOUT_ITEMS,
         default="RGB_AO",
     )
+    collider: EnumProperty(  # type: ignore[valid-type]
+        name="Collider",
+        description="The block's collider",
+        items=COLLIDER_ITEMS,
+        default="HEIGHTFIELD",
+    )
     output_dir: StringProperty(  # type: ignore[valid-type]
         name="Folder",
         description="Where Export Block writes the block's files (a scene's folder in the repo, "
@@ -212,12 +228,20 @@ def get_block_settings(obj: bpy.types.Object | None) -> AEK_PG_terrain_block | N
     return settings if settings.is_block else None
 
 
+def get_settings_custom_props(settings: AEK_PG_terrain_block) -> dict:
+    """`get_block_custom_props` from a block's settings"""
+    return get_block_custom_props(int(settings.size), int(settings.resolution), settings.grid_x,
+                                  settings.grid_z, settings.collider)
+
+
 def write_block_custom_props(obj: bpy.types.Object) -> None:
-    """Writes the engine's custom props (D1) from the block's settings"""
-    settings = obj.aek_terrain_block
-    props = get_block_custom_props(
-        int(settings.size), int(settings.resolution), settings.grid_x, settings.grid_z
-    )
+    """Writes the engine's custom props (D1) from the block's settings, removing the ones its
+    collider doesn't take
+    """
+    props = get_settings_custom_props(obj.aek_terrain_block)
+    for key in BLOCK_PROP_KEYS:
+        if key not in props and key in obj:
+            del obj[key]
     for key, value in props.items():
         obj[key] = value
 
@@ -310,6 +334,9 @@ class AEK_OT_add_terrain_block(bpy.types.Operator):
     layout: EnumProperty(  # type: ignore[valid-type]
         name="Splat Layout", items=LAYOUT_ITEMS, default="RGB_AO"
     )
+    collider: EnumProperty(  # type: ignore[valid-type]
+        name="Collider", items=COLLIDER_ITEMS, default="HEIGHTFIELD"
+    )
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
@@ -347,6 +374,7 @@ class AEK_OT_add_terrain_block(bpy.types.Operator):
         settings.size, settings.resolution = self.size, self.resolution
         settings.grid_x, settings.grid_z = self.grid_x, self.grid_z
         settings.layout = self.layout
+        settings.collider = self.collider
         write_block_custom_props(obj)
 
         for selected in context.selected_objects:
@@ -562,6 +590,11 @@ def check_neighbours(obj: bpy.types.Object, heights: np.ndarray, depsgraph, obje
         other = find_block(objects, place=(size, settings.grid_x + dx, settings.grid_z + dz))
         if other is None or other == obj:
             continue
+        if other.aek_terrain_block.collider == "TRIMESH":
+            issues.append(("WARNING", f'The {side} neighbour "{other.name}" is a trimesh block: '
+                           "its edge isn't compared (keep its edge vertices where this block's "
+                           "are)"))
+            continue
         if other.aek_terrain_block.resolution != settings.resolution:
             issues.append(("WARNING", f'The {side} neighbour "{other.name}" has another '
                            "resolution: its edge isn't compared (a skirt hides the gap)"))
@@ -579,10 +612,30 @@ def check_neighbours(obj: bpy.types.Object, heights: np.ndarray, depsgraph, obje
     return issues
 
 
+def check_trimesh(arrays: dict, size: int) -> list[Issue]:
+    """A trimesh block's geometry: no loose vertices, none outside its square in X/Z (the square
+    is the block's place in the world grid)
+    """
+    issues: list[Issue] = []
+    used = np.bincount(arrays["loop_vertices"], minlength=len(arrays["positions"]))
+    loose = int(np.count_nonzero(used == 0))
+    if loose:
+        issues.append(("ERROR", f"{loose} vertices belong to no face (loose geometry)"))
+    half = size / 2 + GRID_TOLERANCE
+    outside = np.flatnonzero(np.abs(arrays["positions"][:, :2]).max(axis=1) > half)
+    if outside.size:
+        i = int(outside[0])
+        x, y = arrays["positions"][i, :2]
+        issues.append(("WARNING", f"{outside.size} vertices outside the {size} m square, eg. "
+                       f"vertex {i} at ({x:.3f}, {y:.3f}): it reaches into a neighbour's place"))
+    return issues
+
+
 def validate_block(obj: bpy.types.Object, depsgraph, objects) -> list[Issue]:
     """Every check of a block (D1): its transform, its evaluated mesh (modifiers applied, as the
     export writes it), its grid, faces, UVs and splat, and its edges against the blocks next to it
-    among `objects`. An `ERROR` makes Export refuse.
+    among `objects`. A `TRIMESH` block skips the grid, face, UV and edge checks: its vertices may
+    move in X/Z (overhangs) or be added (caves). An `ERROR` makes Export refuse.
     """
     settings = get_block_settings(obj)
     if settings is None:
@@ -602,8 +655,10 @@ def validate_block(obj: bpy.types.Object, depsgraph, objects) -> list[Issue]:
         issues.append(("ERROR", f'Parented to "{obj.parent.name}": a block has no parent'))
     if obj.modifiers:
         issues.append(("WARNING", f"{len(obj.modifiers)} modifiers: checked and exported applied"))
-    props = get_block_custom_props(size, resolution, settings.grid_x, settings.grid_z)
-    if any(obj.get(key) != value for key, value in props.items()):
+    props = get_settings_custom_props(settings)
+    if any(obj.get(key) != value for key, value in props.items()) or any(
+        key in obj for key in BLOCK_PROP_KEYS if key not in props
+    ):
         issues.append(("WARNING", "The custom props differ from the block's settings: the export "
                        "writes them again"))
 
@@ -611,6 +666,8 @@ def validate_block(obj: bpy.types.Object, depsgraph, objects) -> list[Issue]:
     mesh = evaluated.to_mesh()
     try:
         arrays = read_mesh_arrays(mesh)
+        if settings.collider == "TRIMESH":
+            return issues + check_trimesh(arrays, size) + check_splat(mesh, settings.layout)
         if len(arrays["positions"]) != resolution * resolution:
             issues.append(("ERROR", f"{len(arrays['positions'])} vertices, not {resolution}² = "
                            f"{resolution * resolution}"))
@@ -1066,11 +1123,11 @@ def bake_color_map(
     colour map, the Blender way). The AO is left out unless `with_ao` (the engine applies the
     vertex AO itself). The render settings, the selection and the material come back afterwards.
     """
-    material = bpy.data.materials.get(PREVIEW_MATERIAL)
-    if material is None or material.name not in obj.data.materials:
-        raise ValueError(f'"{obj.name}" doesn\'t draw with "{PREVIEW_MATERIAL}": the colour map is '
-                         "its colour")
+    material = obj.active_material
     preview = get_preview_group_node(material)
+    if preview is None:
+        raise ValueError(f'"{obj.name}" doesn\'t draw with "{PREVIEW_MATERIAL}" (or its own splat '
+                         "map's): the colour map is its colour")
     name = f"{obj.aek_terrain_block.block_id}_colorMap"
     image = bpy.data.images.get(name)
     if image is not None and tuple(image.size) != (size, size):
@@ -1236,10 +1293,13 @@ def read_glb_json(path: str) -> dict:
         return json.loads(f.read(chunk_length))
 
 
-def check_exported_glb(gltf: dict, block_id: str, resolution: int) -> list[Issue]:
+def check_exported_glb(
+    gltf: dict, block_id: str, resolution: int, collider: str = "HEIGHTFIELD"
+) -> list[Issue]:
     """What the engine needs of a block's GLB (D1): one node named by the block at the origin with
-    its custom props, one primitive of `resolution²` vertices with positions, normals, the UVs and
-    the splat as `COLOR_0`, no tangents, no other colour, no materials or images
+    its custom props, one primitive with positions, normals, the UVs and the splat as `COLOR_0`
+    (`resolution²` vertices unless a `TRIMESH`), no tangents, no other colour, no materials or
+    images
     """
     issues: list[Issue] = []
     nodes = [n for n in gltf.get("nodes", []) if "mesh" in n]
@@ -1252,7 +1312,8 @@ def check_exported_glb(gltf: dict, block_id: str, resolution: int) -> list[Issue
     if any(key in node for key in ("translation", "rotation", "scale", "matrix")):
         issues.append(("ERROR", "The node has a transform: the engine ignores it"))
     extras = node.get("extras") or {}
-    if extras.get("colliderType") != "HEIGHTFIELD" or extras.get("aekBlockRes") != resolution:
+    collider_type = None if collider == "NONE" else collider
+    if extras.get("colliderType") != collider_type or extras.get("aekBlockRes") != resolution:
         issues.append(("ERROR", "The node's custom props are missing (Include → Custom "
                        "Properties)"))
     primitives = gltf["meshes"][0].get("primitives", [])
@@ -1265,7 +1326,7 @@ def check_exported_glb(gltf: dict, block_id: str, resolution: int) -> list[Issue
     for name in ("TANGENT", "COLOR_1"):
         if name in attributes:
             issues.append(("ERROR", f"A {name}: the export settings weren't the locked ones"))
-    if "POSITION" in attributes:
+    if "POSITION" in attributes and collider != "TRIMESH":
         count = gltf["accessors"][attributes["POSITION"]]["count"]
         if count != resolution * resolution:
             issues.append(("ERROR", f"{count} vertices, not {resolution}²: the export split "
@@ -1407,7 +1468,7 @@ def export_block(context: bpy.types.Context, obj: bpy.types.Object, folder: str)
         "materialInputs": {"surface": {"textureSet": "grass01"}},
         "grid": {"x": settings.grid_x, "z": settings.grid_z, "size": size,
                  "resolution": resolution},
-        "collider": {"type": "HEIGHTFIELD"},
+        "collider": {"type": settings.collider},
         "debugData": {
             "name": f"Terrain block {block_id}",
             "description": "A placeholder material: give it the world's terrain material and "
@@ -1422,7 +1483,7 @@ def export_block(context: bpy.types.Context, obj: bpy.types.Object, folder: str)
         path = os.path.join(folder, name)
         if write_json_if_missing(path, data):
             written.append(path)
-    issues += check_exported_glb(read_glb_json(glb_path), block_id, resolution)
+    issues += check_exported_glb(read_glb_json(glb_path), block_id, resolution, settings.collider)
     return written, issues
 
 
@@ -1634,9 +1695,10 @@ def build_preview_group(
     height_blend: bool = True, blend_depth: float = 0.2,
 ) -> tuple[bpy.types.ShaderNodeTree, list[str]]:
     """(Re)builds the preview node group: `layer_ids` the base, then layers 1-4 (`NONE` unused;
-    the base is always there, a flat colour without a set). Its input "AO Strength" (the
-    material's group node holds the scene's) scales `RGB_AO`'s AO. Returns the group and notes (a
-    set not found, maps not fetched).
+    the base is always there, a flat colour without a set). Its inputs: "Splat" and "Splat Alpha",
+    the weights (the material links the `Splat` colour attribute, or a block's splat map), and
+    "AO Strength" (the material's group node holds the scene's), which scales `RGB_AO`'s AO.
+    Returns the group and notes (a set not found, maps not fetched).
     """
     group = bpy.data.node_groups.get(PREVIEW_GROUP)
     if group is None:
@@ -1646,6 +1708,14 @@ def build_preview_group(
     sockets = [item.name for item in group.interface.items_tree if item.item_type == "SOCKET"]
     if "Color" not in sockets:
         group.interface.new_socket("Color", in_out="OUTPUT", socket_type="NodeSocketColor")
+    if "Splat" not in sockets:
+        weights = group.interface.new_socket("Splat", in_out="INPUT",
+                                             socket_type="NodeSocketColor")
+        weights.default_value = (0.0, 0.0, 0.0, 1.0)
+    if "Splat Alpha" not in sockets:
+        alpha = group.interface.new_socket("Splat Alpha", in_out="INPUT",
+                                           socket_type="NodeSocketFloat")
+        alpha.default_value, alpha.min_value, alpha.max_value = 1.0, 0.0, 1.0
     if "AO Strength" not in sockets:
         strength = group.interface.new_socket("AO Strength", in_out="INPUT",
                                               socket_type="NodeSocketFloat")
@@ -1685,12 +1755,12 @@ def build_preview_group(
         feed(made.inputs[1], b)
         return made.outputs[0]
 
-    splat = node("ShaderNodeVertexColor", layer_name=SPLAT_ATTRIBUTE)
+    group_input = node("NodeGroupInput")
     channels = node("ShaderNodeSeparateColor")
-    links.new(splat.outputs["Color"], channels.inputs[0])
+    links.new(group_input.outputs["Splat"], channels.inputs[0])
     painted = [channels.outputs[0], channels.outputs[1], channels.outputs[2]]
     if layout == "RGBA":
-        painted.append(splat.outputs["Alpha"])
+        painted.append(group_input.outputs["Splat Alpha"])
     position = node("ShaderNodeNewGeometry").outputs["Position"]
 
     # Each layer: its colour and height (a texture set's fetched maps, else a flat colour)
@@ -1770,8 +1840,8 @@ def build_preview_group(
         share_sum = share if share_sum is None else math("ADD", share_sum, share)
     color = scale(color, math("DIVIDE", 1.0, math("MAXIMUM", share_sum, SUM_FLOOR)))
     if layout == "RGB_AO":
-        strength = node("NodeGroupInput").outputs["AO Strength"]
-        color = scale(color, math("MULTIPLY_ADD", splat.outputs["Alpha"], strength,
+        strength = group_input.outputs["AO Strength"]
+        color = scale(color, math("MULTIPLY_ADD", group_input.outputs["Splat Alpha"], strength,
                                   math("SUBTRACT", 1.0, strength)))
     column[0] = 7
     links.new(color, node("NodeGroupOutput").inputs["Color"])
@@ -1797,7 +1867,9 @@ def ensure_preview_material(scene: bpy.types.Scene) -> bpy.types.Material:
     if material.node_tree is None:
         material.use_nodes = True
     nodes, links = material.node_tree.nodes, material.node_tree.links
-    if get_preview_group_node(material) is not None:
+    preview = get_preview_group_node(material)
+    if preview is not None:
+        link_vertex_splat(material.node_tree, preview)
         set_preview_ao_strength(scene.aek_terrain_preview.ao_strength)
         return material
     bsdf = next((n for n in nodes if n.type == "BSDF_PRINCIPLED"), None)
@@ -1810,9 +1882,23 @@ def ensure_preview_material(scene: bpy.types.Scene) -> bpy.types.Material:
     preview.node_tree = group
     preview.location = (bsdf.location.x - 250, bsdf.location.y)
     links.new(preview.outputs["Color"], bsdf.inputs["Base Color"])
+    link_vertex_splat(material.node_tree, preview)
     bsdf.inputs["Roughness"].default_value = 1.0
     set_preview_ao_strength(scene.aek_terrain_preview.ao_strength)
     return material
+
+
+def link_vertex_splat(tree: bpy.types.NodeTree, preview: bpy.types.Node) -> None:
+    """Feeds the `Splat` colour attribute (the vertex weights) into the preview group node's weight
+    inputs, unless something already does
+    """
+    if preview.inputs["Splat"].is_linked:
+        return
+    attribute = tree.nodes.new("ShaderNodeVertexColor")
+    attribute.layer_name = SPLAT_ATTRIBUTE
+    attribute.location = (preview.location.x - 220, preview.location.y)
+    tree.links.new(attribute.outputs["Color"], preview.inputs["Splat"])
+    tree.links.new(attribute.outputs["Alpha"], preview.inputs["Splat Alpha"])
 
 
 def get_preview_group_node(material: bpy.types.Material | None) -> bpy.types.Node | None:
@@ -1825,10 +1911,119 @@ def get_preview_group_node(material: bpy.types.Material | None) -> bpy.types.Nod
 
 
 def set_preview_ao_strength(value: float) -> None:
-    """The preview material's AO strength (its group node's input), live"""
-    preview = get_preview_group_node(bpy.data.materials.get(PREVIEW_MATERIAL))
-    if preview is not None:
-        preview.inputs["AO Strength"].default_value = value
+    """The preview materials' AO strength (their group nodes' input), live"""
+    for material in bpy.data.materials:
+        preview = get_preview_group_node(material)
+        if preview is not None:
+            preview.inputs["AO Strength"].default_value = value
+
+
+# --- Splat maps ---------------------------------------------------------------------------------
+#
+# A block painted in Texture Paint: its splat map `<id>_splat0` (RGBA weigh layers 1-4, the
+# engine's `SPLAT_MAP`), drawn by a preview material of the block's own whose weights come from
+# the image through the UVs. Export saves the image as a PNG with its texture JSON stub.
+
+#: The splat map's name suffix (`BLOCK_IMAGES`' first splat map)
+SPLAT_MAP_SUFFIX = "_splat0"
+#: The material's custom prop naming its splat map, so Update Preview finds it
+SPLAT_MAP_PROP = "aekSplatMap"
+SPLAT_MAP_SIZE_ITEMS = [(str(s), f"{s} px", f"{s} × {s} pixels") for s in (256, 512, 1024, 2048,
+                                                                            4096)]
+
+
+def ensure_splat_map_material(scene: bpy.types.Scene, block_id: str,
+                              image: bpy.types.Image) -> bpy.types.Material:
+    """The block's own preview material (`AEK Terrain Preview <id>`, a copy of the shared one)
+    with its weights from `image` through the UVs: RGB weigh layers 1-3, and A layer 4 when the
+    scene's preview layout is `RGBA` (with `RGB + AO` the preview shows no AO: the engine has no
+    vertex AO on a splat map). The image node is the active one, which Texture Paint paints.
+    """
+    base = ensure_preview_material(scene)
+    name = f"{PREVIEW_MATERIAL} {block_id}"
+    material = bpy.data.materials.get(name)
+    if material is None:
+        material = base.copy()
+        material.name = name
+    material[SPLAT_MAP_PROP] = image.name
+    tree = material.node_tree
+    preview = get_preview_group_node(material)
+    for socket in (preview.inputs["Splat"], preview.inputs["Splat Alpha"]):
+        for link in list(socket.links):
+            tree.links.remove(link)
+    for stale in [n for n in tree.nodes if n.type == "VERTEX_COLOR"]:
+        tree.nodes.remove(stale)
+    texture = next((n for n in tree.nodes if n.type == "TEX_IMAGE"), None)
+    if texture is None:
+        texture = tree.nodes.new("ShaderNodeTexImage")
+        texture.location = (preview.location.x - 300, preview.location.y)
+    texture.image = image
+    texture.interpolation = "Linear"
+    texture.extension = "EXTEND"
+    tree.links.new(texture.outputs["Color"], preview.inputs["Splat"])
+    if scene.aek_terrain_preview.layout == "RGBA":
+        tree.links.new(texture.outputs["Alpha"], preview.inputs["Splat Alpha"])
+    else:
+        preview.inputs["Splat Alpha"].default_value = 1.0
+    tree.nodes.active = texture
+    return material
+
+
+def update_splat_map_materials(scene: bpy.types.Scene) -> None:
+    """Relinks every block's splat map material for the scene's preview layout"""
+    for material in list(bpy.data.materials):
+        image = bpy.data.images.get(material.get(SPLAT_MAP_PROP, ""))
+        if image is not None and get_preview_group_node(material) is not None:
+            block_id = material.name[len(PREVIEW_MATERIAL) + 1 :]
+            ensure_splat_map_material(scene, block_id, image)
+
+
+class AEK_OT_new_splat_map(bpy.types.Operator):
+    """Give the active block a splat map to paint in Texture Paint: <id>_splat0, a Non-Color
+    RGBA image (layers 1-4), drawn by a preview material of the block's own
+    """
+
+    bl_idname = "aek.new_splat_map"
+    bl_label = "New Splat Map"
+    bl_options = {"REGISTER", "UNDO"}
+
+    size: EnumProperty(  # type: ignore[valid-type]
+        name="Size", description="About 1K for a 64 m block: 6 cm a texel",
+        items=SPLAT_MAP_SIZE_ITEMS, default="1024",
+    )
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context) -> bool:
+        return (get_block_settings(context.active_object) is not None
+                and context.mode in {"OBJECT", "PAINT_TEXTURE"})
+
+    def invoke(self, context: bpy.types.Context, event: bpy.types.Event) -> set[str]:
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        obj = context.active_object
+        name = obj.aek_terrain_block.block_id + SPLAT_MAP_SUFFIX
+        image = bpy.data.images.get(name)
+        if image is None:
+            size = int(self.size)
+            # Non-Color from the start: setting the colour space later reloads the image, blank
+            image = bpy.data.images.new(name, size, size, alpha=True, is_data=True)
+            # A weighs layer 4: kept apart from RGB, not as transparency
+            image.alpha_mode = "CHANNEL_PACKED"
+            image.generated_color = (0.0, 0.0, 0.0, 0.0)
+            self.report({"INFO"}, f"{name}: {size}² pixels, black (the base layer)")
+        else:
+            self.report({"INFO"}, f"{name} is there already ({image.size[0]}² pixels): drawn by "
+                        "the block's material")
+        material = ensure_splat_map_material(context.scene, obj.aek_terrain_block.block_id, image)
+        if obj.data.materials:
+            obj.data.materials[0] = material
+        else:
+            obj.data.materials.append(material)
+        if context.scene.aek_terrain_preview.layout != "RGBA":
+            self.report({"WARNING"}, "The preview shows layers 1-3 (RGB + AO): set the Preview "
+                        "Material's layout to RGBA to see layer 4, the map's alpha")
+        return {"FINISHED"}
 
 
 class AEK_OT_update_terrain_preview(bpy.types.Operator):
@@ -1851,6 +2046,7 @@ class AEK_OT_update_terrain_preview(bpy.types.Operator):
             blend_depth=settings.blend_depth,
         )
         ensure_preview_material(context.scene)
+        update_splat_map_materials(context.scene)
         for note in notes:
             self.report({"WARNING"}, note)
         used = sum(1 for set_id in settings.get_layer_ids()[1:] if set_id != NO_SET)
@@ -1903,11 +2099,13 @@ class VIEW3D_PT_aek_terrain(bpy.types.Panel):
         row.prop(settings, "grid_x")
         row.prop(settings, "grid_z")
         box.prop(settings, "layout")
+        box.prop(settings, "collider")
         box.prop(settings, "output_dir")
 
         col = layout.column(align=True)
         col.operator(AEK_OT_validate_terrain_block.bl_idname, icon="CHECKMARK")
         col.operator(AEK_OT_normalize_splat.bl_idname, icon="BRUSH_DATA")
+        col.operator(AEK_OT_new_splat_map.bl_idname, icon="TPAINT_HLT")
         col.operator(AEK_OT_bake_ao_to_splat.bl_idname, icon="SHADING_RENDERED")
         col.operator(AEK_OT_bake_color_map.bl_idname, icon="IMAGE_DATA")
         layout.operator(AEK_OT_export_terrain_block.bl_idname, icon="EXPORT")
@@ -1960,6 +2158,7 @@ CLASSES = (
     AEK_OT_split_into_blocks,
     AEK_OT_bake_ao_to_splat,
     AEK_OT_bake_color_map,
+    AEK_OT_new_splat_map,
     AEK_OT_export_terrain_block,
     AEK_OT_update_terrain_preview,
     VIEW3D_PT_aek_terrain,

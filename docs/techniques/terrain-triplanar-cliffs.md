@@ -53,11 +53,16 @@ The layer's texture set, any packing. A rock set with a large `physicalSize` (`c
 
 ## Blender, step by step
 
-The cliff blocks' modelling is [p306](../plans/p306_terrain-blocks-and-procedural-terrain-meshes.md)'s (`terrain-blocks-blender.md`, template `terrain_triplanarCliff.blend`). The material needs nothing from the mesh but positions and normals: projection ignores the UVs.
+The block workflow (set-up, the grid, shaping, validating, exporting) is [Terrain blocks from Blender](terrain-blocks-blender.md); start from `terrain_triplanarCliff.blend` (`src/toolkit/terrain/blender/`): a `HEIGHTFIELD` block with a winding cliff 14 m high, and its neighbour, a `TRIMESH` block whose rim overhangs. What's particular to cliffs:
+
+1. **Cliff bands under heightfield rules:** a cliff can be as steep as you like (85°, a 3 m wide band rising 14 m) as long as every vertex moves in height only: sculpt with X and Y locked, or a Displace in Direction Z. A heightfield block's spacing sets how sharp the rim can be (0.5 m on 64 / 129): a denser block for a crisper edge.
+2. **When to switch to `TRIMESH`:** an overhang, an arch, a cave mouth, a rim that leans out. Set the block's _Collider_ to _Trimesh_ (sidebar): Validate then skips the grid, UV and edge checks, so vertices may move in X / Y or be added. The cost is the collider (the triangles, not a height grid) and the edges: keep a trimesh block's edge vertices where its neighbours' are (the template fades its overhang out before the shared edge). Many caves and arches: [modular kits](terrain-modular-kits.md).
+3. **No UV care for the cliffs:** the cliff layer is projected from the world (triplanar or biplanar), so the stretched top-down UVs over the faces don't matter. The preview tiles top-down, so the faces stretch in Blender: the engine won't.
+4. **Paint the cliff layer** where the faces are (the template paints cliffs01 by slope, rocks01 as debris at the foot), or leave it to a slope rule ([Procedural rules](terrain-procedural-rules.md)); bake the AO, which darkens the cliff's foot.
 
 ## Export
 
-p306's (`terrain-blocks-blender.md`). Smooth normals across a cliff's rim give a smooth gate band; a hard edge gives a hard switch.
+_Export Block_ ([the locked settings](terrain-blocks-blender.md#export)); a `TRIMESH` block's stub says `"collider": { "type": "TRIMESH" }`, and its GLB isn't held to `resolution²` vertices. Smooth normals across a cliff's rim give a smooth gate band; a hard edge gives a hard switch.
 
 ## Import into Ækasha
 
@@ -123,6 +128,6 @@ A material-wide `projection` projects every layer (a structure's, a rock's). Pro
 
 ## Template file and example asset ids
 
-- **Blender template:** `terrain_triplanarCliff.blend`, p306.
+- **Blender template:** `src/toolkit/terrain/blender/terrain_triplanarCliff.blend` (its README text block mirrors this page's Blender steps; the block workflow: [Terrain blocks from Blender](terrain-blocks-blender.md)). `terrainBlockTest`'s `terrainBlockTestTrimesh` is a generated `TRIMESH` block.
 - **The projection helpers** the material builds on: `triplanarProjection` and `blendProjections` on `aekasha/toolkit/materials`.
 - **The gallery's Cliffs row** (`terrainGallery`, `?isDebug=true&startScene=terrainGallery`; `src/app/scenes/terrainGallery/cliffsRow.ts`): four 40 m blocks on one generated mesa (a face of about 85° facing +x down to 48° facing −x), `cliffs01` in `PLANAR`, `BIPLANAR`, `TRIPLANAR` and `TRIPLANAR` gated `[30, 50]`. Its tab switches the normal blend and the gated block's mode, has sliders for both sharpnesses and the gate, camera poses above, off the steep face and off the gentle one, and lists each block's fetches; the Debug view select shows `PROJECTION` and `TAPS`. The Rules row's `cliffs01` layer is gated `TRIPLANAR` `[35, 50]`.

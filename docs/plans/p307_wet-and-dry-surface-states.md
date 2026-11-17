@@ -1,6 +1,5 @@
 Status: draft | study + not-implemented
 Category: Materials, Terrain, Weather
-Blocked by: p306_terrain-blocks-and-procedural-terrain-meshes.md
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
 Related: p427_weather-and-mood.md (its weather state drives this plan's surface conditions), p990_follow-ups-from-done-plans.md (precipitation, clouds, a weather driver, SSR)

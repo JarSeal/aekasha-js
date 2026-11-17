@@ -24,6 +24,14 @@ A physics object is an ECS entity with a rigid body and its colliders.
 - A collider is a box, ball, capsule, cone, cylinder, triangle, triangle mesh, convex hull or
   heightfield. A primitive collider without its sizes takes them from the entity's mesh, when
   [`createGeometry`](api:createGeometry) made its geometry.
+- A heightfield's heights are column-major ((`nrows` + 1) × (`ncols` + 1), `nrows` cells along +z
+  and `ncols` along +x, centred on the body, each cell split along the diagonal from (row + 1,
+  col) to (row, col + 1)). Don't fill them by hand:
+  [`toHeightfieldColliderParams({ heights, rows, cols, width, depth })`](api:toHeightfieldColliderParams)
+  takes a row-major grid (a generator's, an image's: row r along z, column c along x) and its size,
+  and returns the collider's params. [`generateTerrain`](api:generateTerrain)'s `collider: true`
+  returns them for its mesh, its cells split as the mesh's, so the collider lies on the mesh
+  between vertices too.
 - It resolves with the entity id once the body exists (in `WORKER_THREAD` mode, after the
   worker's reply). Deleting the entity removes its body and colliders.
 - When the body or a collider can't be made (a `TRIMESH` without indices), it rejects with the
@@ -47,6 +55,14 @@ properties (Blender's custom properties, the glTF `extras`):
 - A collider's sizes come from its node's geometry and scale, unless the properties give them
   (`hx`, `radius`, `halfHeight`, …). A capsule, cone or cylinder stands on Y, and `spineAxis:
 'x'` or `'z'` lays it along that axis. Each shape is centred on its node's origin.
+- A `HEIGHTFIELD` node's heights are read by position, not vertex order: each vertex goes to the
+  grid point under it (`nCols` / `nRows` count the cells, else they're counted), so Blender's and
+  three's row orders both work, and a quantized or reordered mesh too. The collider is skipped,
+  naming the node, when a vertex was moved off its grid line in x or z (an overhang: use
+  `TRIMESH`) or a grid point has no vertex; a grid that isn't centred on its node gets the offset.
+  It warns when the triangles split cells along the other diagonal, since the collider then misses
+  the mesh inside them. A [terrain block](hub:features/terrain#terrain-blocks) from the Blender
+  add-on follows all of it.
 - `density`, `friction` and `restitution` default to 0.2.
 - `spawnImportedAsset`'s `physicsParams` override the properties per node from code, or give
   physics to a node without any.
@@ -200,6 +216,9 @@ every body.
 - [`createPhysicsEntity`](api:createPhysicsEntity): a body and its colliders on an entity, and
   [`getPhysicsEntityByAppId`](api:getPhysicsEntityByAppId) to find one again.
 - [`spawnImportedAsset`](api:spawnImportedAsset): an imported model's nodes, with their physics.
+- [`toHeightfieldColliderParams`](api:toHeightfieldColliderParams): a `HEIGHTFIELD` from a
+  row-major grid; [`deriveColliderFromGeometry`](api:deriveColliderFromGeometry): a collider from
+  a geometry, as the import makes it.
 - [`getPhysicsWorld`](api:getPhysicsWorld): the world, for queries.
 - [`createJoint`](api:PhysicsJoints.createJoint) and [`deleteJoint`](api:PhysicsJoints.deleteJoint).
 - [`physicsTiers`](api:physicsTiers) (the feature), [`requestPhysicsTier`](api:requestPhysicsTier),

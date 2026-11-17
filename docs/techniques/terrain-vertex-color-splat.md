@@ -52,13 +52,21 @@ Height blending needs the layers' heights: every packing has one (`LITE` in `nor
 
 ## Blender, step by step
 
-Painting the blocks (the colour attribute's type, the brush, painting a weight per channel, the AO bake into A) is [p306](../plans/p306_terrain-blocks-and-procedural-terrain-meshes.md)'s, on its page `terrain-blocks-blender.md`, with the template `terrain_vertexColorSplat.blend`.
+The block workflow (set-up, the grid, shaping, validating, exporting) is [Terrain blocks from Blender](terrain-blocks-blender.md); start from `terrain_vertexColorSplat.blend` (`src/toolkit/terrain/blender/`): hills painted in four layers (rocks01 on the slopes, mud01 in the hollows, snow01 on the peaks over grass01), the AO baked. Painting:
 
-What the material reads: the first colour attribute, as glTF stores it (linear 0..1). Black is the base layer; a channel at 1 is its layer alone. Channels that sum over 1 are normalized, so a vertex painted half red and fully green is one third layer 1 and two thirds layer 2.
+1. **The preview** (sidebar → Preview Material): the splat layout (`RGB + AO`: the base and layers 1-3; `RGBA`: 1-4), each layer's texture set in the material's order (the base is `layer0`, R `layer1`, …), then _Update Preview_. It blends with the engine's height blend, so a border looks roughly as it will.
+2. **Vertex Paint mode** on the block, the `Splat` attribute active (Object Data → Color Attributes; Add makes it so).
+3. **One channel a layer, with pure colours:** the brush colour (1, 0, 0) paints layer 1, (0, 1, 0) layer 2, (0, 0, 1) layer 3, black back to the base. Strength 1 and the **Mix** blend: mixing towards a pure colour lowers the other channels as it raises one, so the weights keep summing to 1 at most. Add or Lighten blends push the sum over 1. A soft brush's falloff paints the in-between weights the height blend turns into a natural border.
+4. **Layer 4 (`RGBA`)** is the alpha: the brush's _Add Alpha_ blend paints it, _Erase Alpha_ removes it. The block's and the preview's layout must both be `RGBA`, and there's no AO then.
+5. **Over-painted?** _Normalize Splat_ scales every vertex whose weights sum over 1 back to 1, in the stored bytes; Validate warns where they're over.
+6. **Resolution:** a weight changes from one vertex to the next (0.5 m on a 64 m / 129 block). A road or a sharp path wants a [splat map](terrain-splat-map.md), or a denser block.
+7. **_Bake AO → Splat Alpha_ last** (`RGB_AO`): it rewrites A and keeps every painted RGB byte; bake again after reshaping. Neighbouring blocks in the file occlude too.
+
+What the material reads: the first colour attribute, as glTF stores it (linear 0..1). Black is the base layer; a channel at 1 is its layer alone. Channels that sum over 1 are normalized, so a vertex painted half red and fully green is one third layer 1 and two thirds layer 2. A colour picked in the picker's sRGB is stored linear: half strength there is about 0.21 in the GLB (0 and 1 are exact).
 
 ## Export
 
-p306's (`terrain-blocks-blender.md`): glTF with the colour attribute included. The asset pipeline keeps it (the `terrainBlock` profile's meshopt without quantization).
+_Export Block_ ([the locked settings](terrain-blocks-blender.md#export)): `Splat` as `COLOR_0` (the active colour; _Export All Vertex Colors_ off, so no `COLOR_1`), linear, 16 bits a channel in the GLB. The asset pipeline keeps it (the `terrainBlock` profile's meshopt without quantization).
 
 ## Import into Ækasha
 
@@ -101,6 +109,17 @@ const valley = createTerrainMaterial({
 ```
 
 The code route picks the storage (`storage: 'AUTO'`): separate textures while they fit the budget, else a set array, which must be built first (a scene's `textureSetArrays` entry with the same sets and packing, or `await buildTextureSetArray({ sets, packing })` from `aekasha/texturesets`). The preset's sparse sampling makes `AUTO` choose the array too. In the JSON route the array is the input `layers`, `{ "textureSetArray": ["grass01", …], "packing": "LITE" }`, in place of `layer0` … (the gather builds it), on a material JSON of its own rather than a variant of `terrain`: [Storage](terrain-splat-map.md#storage-and-the-binding-budget) and the [splat map's import](terrain-splat-map.md#import-into-ækasha).
+
+**As a terrain block** (the stub Export Block wrote): the material is the world's, so blocks of one biome share its shader; a block's colours travel in its GLB, so it needs no inputs of its own:
+
+```json
+{
+  "geometry": { "importedAsset": "valleyA", "node": "valleyA" },
+  "material": "valley",
+  "grid": { "x": 0, "z": 0, "size": 64, "resolution": 129 },
+  "collider": { "type": "HEIGHTFIELD" }
+}
+```
 
 A mesh without a colour attribute reads white: with `RGBA` that's layers 1–4 equally and no base.
 
@@ -156,6 +175,6 @@ The height a layer blends with is `(h − 0.5) × contrast + 0.5 + offset`, mult
 
 ## Template file and example asset ids
 
-- **Blender template:** `terrain_vertexColorSplat.blend`, p306.
+- **Blender template:** `src/toolkit/terrain/blender/terrain_vertexColorSplat.blend` (its README text block mirrors this page's Blender steps; the block workflow: [Terrain blocks from Blender](terrain-blocks-blender.md)). `terrainBlockTest`'s orientation block (`blenderBlock/`) is an add-on export drawn through its `COLOR_0`.
 - **The material:** `terrain` (a mesh variant), or `createTerrainMaterial` with `blend.source: 'VERTEX_COLOR'`.
 - **The gallery's Splatting row** (`terrainGallery`, `?isDebug=true&startScene=terrainGallery`; `src/app/scenes/terrainGallery/splattingRow.ts`): 24 m generated blocks with one painted pattern, `LINEAR` left of `HEIGHT`: 5 layers `RGBA` (`grass01`, `rocks01`, `sand01`, `mud01`, `snow01`) and 4 layers `RGB_AO` with the vertex AO darker in the hollows. Its tab section has sliders for the height blend depth, `rocks01`'s `heightOffset` and the vertex AO's influence, and the Debug view select shows `WEIGHTS`.

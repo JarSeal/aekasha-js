@@ -3,7 +3,8 @@
  * `checkTerrainAddon.py` in a background Blender (`findBlender`, at least the add-on's `bl_info`
  * minimum), which loads `src/toolkit/terrain/blender/aekasha_terrain_tools.py` from its path and
  * checks every operator (Add, Validate, Normalize, the preview material, Bake AO, Bake Colour Map,
- * Split, Export), then the plan's path end to end: Add → paint the corner markers → Bake AO →
+ * Split, Export, a trimesh block, New Splat Map), then the plan's path end to end: Add → paint the
+ * corner markers → Bake AO →
  * Validate → Export, and Split's 2 × 2 blocks exported. Then it reads each exported GLB as the
  * engine does (`terrainBlockChecks.ts`): the custom props' HEIGHTFIELD and the import's
  * derivation of it, the UVs against the positions, the workflow block's markers, bump and AO,
