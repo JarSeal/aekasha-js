@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "terrainGalleryPatch",
+  "tslFile": "scenes/terrainGallery/terrainGalleryPatch.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "staticDefines": {
+    "terrain": {
+      "layers": [{}, {}, {}, { "projection": { "mode": "TRIPLANAR", "slopeGate": [35, 50] } }],
+      "blend": { "source": "VERTEX_COLOR", "vertexColor": { "layout": "RGB_AO" } },
+      "ao": { "vertex": true }
+    }
+  },
+  "inputs": {
+    "layer0": { "textureSet": "grass01" },
+    "layer1": { "textureSet": "rocks02" },
+    "layer2": { "textureSet": "snow01" },
+    "layer3": { "textureSet": "cliffs01" }
+  },
+  "debugData": {
+    "name": "Terrain gallery patch",
+    "description": "The Blocks patch's terrain material (p306 Phase 3): grass, rocks, snow and cliffs (slope-gated TRIPLANAR) weighed by the vertex colour RGB_AO, which the rulesTerrain generator lays from its rules on the CPU, its A the horizon AO (indirect light)."
+  }
+}

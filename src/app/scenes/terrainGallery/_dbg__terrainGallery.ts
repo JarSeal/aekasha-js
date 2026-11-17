@@ -49,6 +49,7 @@ import {
   getStructuresSections,
   startStructuresTab,
 } from './_dbg__terrainGalleryStructures';
+import { getPatchSections, startPatchTab } from './_dbg__terrainGalleryPatch';
 import { getLiveSections, startLiveTab, type LiveSectionOpts } from './_dbg__terrainGalleryLive';
 import {
   clearGeneratorSelection,
@@ -76,6 +77,7 @@ import { getRulesAppId, getRulesTerrain, RULES_BLOCKS, setRulesView } from './ru
 import { CLIFFS_BLOCK_Y, CLIFFS_BLOCKS, getCliffsAppId, setCliffsDebugView } from './cliffsRow';
 import { COLOR_MAP_BLOCKS, getColorMapAppId, setColorMapView } from './colorMapRow';
 import { getStructuresAppIds, setStructuresDebugView, STRUCTURES_PIECES } from './structuresRow';
+import { getPatchAppId, PATCH_BLOCK_IDS, setPatchView } from './patchRow';
 import {
   getProceduralAppId,
   getProceduralBakeSettings,
@@ -286,6 +288,7 @@ const applyMaterial = () => {
   setColorMapView(state.debugView, state.quality);
   setStructuresDebugView(state.debugView);
   setLiveView(state.debugView, state.quality);
+  setPatchView({ debugView: state.debugView });
 };
 
 /**
@@ -376,6 +379,7 @@ const getOtherAppIds = () => [
   ...COLOR_MAP_BLOCKS.map(({ key }) => getColorMapAppId(key)),
   ...STRUCTURES_PIECES.flatMap(({ key }) => getStructuresAppIds(key)),
   ...CHECKER_BLOCKS.map(({ key }) => getCheckerAppId(key)),
+  ...PATCH_BLOCK_IDS.map(getPatchAppId),
   LIVE_APP_ID,
 ];
 
@@ -462,6 +466,7 @@ export const createTerrainGalleryTab = () => {
   startCliffsTab();
   startColorMapTab();
   startStructuresTab();
+  startPatchTab();
   const endProceduralTab = startProceduralTab(proceduralOpts);
   const endLiveTab = startLiveTab(liveOpts);
   addGalleryExitCleanup(() => {
@@ -564,6 +569,7 @@ export const createTerrainGalleryTab = () => {
       ...(getStructuresSections(TAB_ID, () =>
         clearSelectionsBut('structures')
       ) as DebuggerTabSection<GalleryTabState>[]),
+      ...(getPatchSections(TAB_ID) as DebuggerTabSection<GalleryTabState>[]),
       // Its fields bind their own targets, none of this tab's state keys
       ...(getProceduralSections(proceduralOpts) as DebuggerTabSection<GalleryTabState>[]),
       ...(getLiveSections(liveOpts) as DebuggerTabSection<GalleryTabState>[]),

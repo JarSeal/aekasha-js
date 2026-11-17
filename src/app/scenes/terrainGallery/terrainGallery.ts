@@ -23,6 +23,7 @@ import { CLIFFS_ROW_BOUNDS, createCliffsRow } from './cliffsRow';
 import { COLOR_MAP_ROW_BOUNDS, createColorMapRowAsync } from './colorMapRow';
 import { createStructuresRow, STRUCTURES_ROW_BOUNDS } from './structuresRow';
 import { createLiveBlock, LIVE_BLOCK_BOUNDS } from './liveBlock';
+import { createPatchRowAsync } from './patchRow';
 import {
   createProceduralRowAsync,
   PROCEDURAL_ROW_DEPTH,
@@ -87,6 +88,12 @@ import {
  *   so its load bakes it), run live in the terrain material or sampled baked; the quality preset's
  *   tiers put the imported sets in a set array and the procedural set beside it. The tab switches
  *   live and baked, tunes the generator's values and measures both.
+ * - **The Blocks patch** (`patchRow.ts`, p306 Phase 3): 3 × 3 terrain blocks of 32 m behind the
+ *   Anti-tiling row, past the ground's back edge (a block stands at y = 0, D1), each a
+ *   `*.terrainBlock.json` (`patch/`, which the scene lists) of the toolkit's `rulesTerrain`: one
+ *   world-continuous noise with `HEIGHT_FN` normals, the rules laid into the vertex colours on the
+ *   CPU, the horizon AO in their A. No seams between the blocks; the tab switches its rules to the
+ *   shader's (`RULES`, the same rules from the blocks' JSON) on the same blocks, and its AO.
  * - **The light:** the scene's own DAY_NIGHT sky box standing at 10:00 (`terrainGallerySky`); its
  *   sun and sky are the only lights. No shadows for now (`NO_SHADOWS`).
  *
@@ -191,7 +198,9 @@ const createBlock = (block: GalleryBlock, seed: number) => {
 
 export const scene = async () => {
   exitCleanups.length = 0;
+  const visit = { isCurrent: true };
   registerOnSceneExit(TERRAIN_GALLERY_SCENE_ID, () => {
+    visit.isCurrent = false;
     for (const cleanup of exitCleanups.splice(0)) cleanup();
   });
   // The ground under the library (centred on x = 0), the Procedural row right of it, the
@@ -250,6 +259,9 @@ export const scene = async () => {
   createStructuresRow(TERRAIN_GALLERY_SCENE_ID);
   await createProceduralRowAsync(addGalleryExitCleanup);
   createLiveBlock();
+  // Past the ground's back edge (the ground's extent leaves it out): its blocks stand on their own
+  await createPatchRowAsync(() => visit.isCurrent, addGalleryExitCleanup);
+  if (!visit.isCurrent) return;
 
   // Debug env only: a dynamic import, so the tab's code isn't in a production build. It applies
   // its saved packing and checker once the blocks exist.
