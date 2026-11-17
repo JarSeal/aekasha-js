@@ -186,5 +186,5 @@ Uniforms per rule, its tests' only: `terrain_r<i>_slopeMin`, `_slopeMax`, `_slop
 ## Template file and example asset ids
 
 - **Blender template:** none (the engine evaluates the rules); the combos' painting templates are p306's.
-- **The rule type:** `TerrainRule`, `TERRAIN_RULE_DEFAULTS` (`src/toolkit/geometry/generate/TerrainRules.ts`, `aekasha/toolkit/geometry`).
+- **The rule type:** `TerrainRule`, `TERRAIN_RULE_DEFAULTS` (`src/toolkit/geometry/generate/terrain/TerrainRules.ts`, `aekasha/toolkit/geometry`).
 - **The gallery's Rules row** (`terrainGallery`, `?isDebug=true&startScene=terrainGallery`; `src/app/scenes/terrainGallery/rulesRow.ts`): three 64 m blocks on one generated terrain with a cliff band: `RULES` (`grass01`, `rocks02`, `snow01`, `cliffs01`), the splat map combo (a sandy path and mud in the hollows painted) and the 8-layer combo (`grass02` patches and ice on south-facing tops added), the toolkit's tier preset on each. Its tab has sliders for the rocks' slope and noise, the snow line and facing, the cliffs' slope and the height blend.

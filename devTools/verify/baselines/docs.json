@@ -973,12 +973,26 @@
     },
     "toolkit/geometry/generate": {
       "exports": {
-        "documented": 30,
-        "total": 30
+        "documented": 10,
+        "total": 10
       },
       "members": {
-        "documented": 58,
-        "total": 58
+        "documented": 31,
+        "total": 31
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/geometry/generate/terrain": {
+      "exports": {
+        "documented": 20,
+        "total": 20
+      },
+      "members": {
+        "documented": 27,
+        "total": 27
       },
       "undocumented": {
         "exports": [],

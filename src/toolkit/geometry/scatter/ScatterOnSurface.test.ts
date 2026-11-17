@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three/webgpu';
-import { generateTerrain } from '../generate/Terrain';
+import { generateTerrain } from '../generate/terrain/Terrain';
 import {
   bakeScatterToInstancedMesh,
   scatterOnSurface,

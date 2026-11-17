@@ -23,7 +23,7 @@ The geometry side of the epic. It covers:
 
 ## Context (grounded)
 
-- **`toolkit/geometry/generate/Terrain.ts`** (`aekasha/toolkit/geometry`):
+- **`toolkit/geometry/generate/terrain/Terrain.ts`** (`aekasha/toolkit/geometry`):
   - `generateTerrain({ width, depth, widthSegments, depthSegments, maxHeight, noiseOctaves?, seed?, heightModifier? })` builds a centred, indexed grid. Vertex (row, col) sits at `x = col/wS·width − width/2`, `z = row/dS·depth − depth/2`. The segment counts are rounded and at least 1, and returned as used.
   - Seeded `SimplexNoise` (`createSeededRandom` from `aekasha`) sampled in **block-local** coordinates. `heightModifier(x, z, h)` reshapes the noise height per vertex before the geometry is built (the same local x, z).
   - Attributes: `position`, `uv` (0..1), `normal` from `computeVertexNormals()`. No colour, no tangents.
@@ -124,7 +124,7 @@ New optional fields on `TerrainOptions`:
 | `center?: [x, z]`                                                                          | Noise is sampled at **world** coordinates `center + local`, so neighbouring blocks continue each other; `heightModifier` (already an option) gets the same world x, z. Default `[0, 0]` reproduces today's output exactly                   |
 | `heightFn?: (x, z) => number`                                                              | Replaces the octave noise (custom shapes, heightmaps)                                                                                                                                                                                        |
 | `normals?: 'GEOMETRY' \| 'HEIGHT_FN'`                                                      | `HEIGHT_FN`: central differences of the height function, including samples beyond the block edge. The result is seamless normals across blocks                                                                                               |
-| `vertexColors?: { layout: 'RGB_AO' \| 'RGBA'; rules?: TerrainRule[]; ao?: HorizonAOOpts }` | CPU evaluation of p305's rules into `COLOR_0` (same `TerrainRule` type and math; one shared pure-TS implementation, `evaluateTerrainRulesCPU`, in `geometry/generate/TerrainRules.ts` with the type, so `terrain` imports both from `aekasha/toolkit/geometry` and never the reverse; unit-tested, and checked against the TSL output on the gallery's rules block; the type and its defaults are there since p305 Phase 4, whose As built has the shape: a range per test as `{ min?, max?, softness? }`, the noise a `macroNoise` channel, which the CPU side reads as texels). AO goes into A for `RGB_AO` |
+| `vertexColors?: { layout: 'RGB_AO' \| 'RGBA'; rules?: TerrainRule[]; ao?: HorizonAOOpts }` | CPU evaluation of p305's rules into `COLOR_0` (same `TerrainRule` type and math; one shared pure-TS implementation, `evaluateTerrainRulesCPU`, in `geometry/generate/terrain/TerrainRules.ts` with the type, so `terrain` imports both from `aekasha/toolkit/geometry` and never the reverse; unit-tested, and checked against the TSL output on the gallery's rules block; the type and its defaults are there since p305 Phase 4, whose As built has the shape: a range per test as `{ min?, max?, softness? }`, the noise a `macroNoise` channel, which the CPU side reads as texels). AO goes into A for `RGB_AO` |
 | `ao?: { directions: 8; radius: number; strength: number }`                                 | Horizon-based AO on the height grid (max elevation angle per direction, averaged). Large-scale occlusion (valleys, under cliffs), the part a tiling layer can't carry                                                                        |
 | `collider?: boolean`                                                                       | Also returns `heightfield: ColliderParams`, from D3's `toHeightfieldColliderParams` (`aekasha/physics`; a pure function, so the geometry chunk carries only it)                                                                             |
 | `skirt?: number`                                                                           | Optional skirt depth (hides cracks between blocks of different resolution later; off by default)                                                                                                                                             |
@@ -292,7 +292,7 @@ Add sections 5–7 (Blender, Export, Import) to the seven p305 pages, each refer
 
 **As built:**
 
-- **`generateTerrain` v2** (`geometry/generate/Terrain.ts`, `TerrainAo.ts`): the heights are sampled once on a grid with a border past the block's edge where `HEIGHT_FN` normals (1 cell) or the AO (its march) look past it, from the same height function (noise or `heightFn`, then `heightModifier`, both at world x, z), so neighbouring blocks agree on their shared edge's heights, normals, AO and colours. The defaults build the same geometry as before: largeWorld's geometry hash and a small grid's with a modifier are pinned in `Terrain.test.ts` (recorded on `d5469387`).
+- **`generateTerrain` v2** (`geometry/generate/terrain/Terrain.ts`, `TerrainAo.ts`): the heights are sampled once on a grid with a border past the block's edge where `HEIGHT_FN` normals (1 cell) or the AO (its march) look past it, from the same height function (noise or `heightFn`, then `heightModifier`, both at world x, z), so neighbouring blocks agree on their shared edge's heights, normals, AO and colours. The defaults build the same geometry as before: largeWorld's geometry hash and a small grid's with a modifier are pinned in `Terrain.test.ts` (recorded on `d5469387`).
   - Changed from D4's table: **`ao` is a top-level option only** (`{ radius, strength?, steps? }`, no `directions`: always 8), returned as the result's `ao` and written into `RGB_AO`'s A (1 without it); `vertexColors` is `{ layout, rules?, noise? }`. **The AO is HBAO** (the horizon above each direction's own tangent, `sin(h) − sin(t)`): measured above the horizontal it darkened every plain slope (13 % on a 17° plane). **`maxHeight` is optional** (required without `heightFn`). **`getHeightAt` takes the mesh's own (x, z)** (the world's less `center`). The colours are normalized `Uint8` (D1's Byte Color). The result also returns `center`.
 - **CPU rules** (`TerrainRules.ts`): `evaluateTerrainRulesCPU` and `getTerrainRuleCoverageCPU`, `Rules.ts`' math line by line; the noise reads `TerrainRuleNoiseTexels` (RGBA8, row 0 at v = 0) bilinear and repeating at `(x, −z) / scale`, at full resolution (the GPU's mips blur it in the distance).
 - **Noise texels: `readTextureTexelsAsync(textureOrId, { size? })`** (`terrain/textures/ReadTexels.ts`, on `aekasha/toolkit/terrain`): a bake draws the texture into an RGBA8 target, read back (WebGL2's rows flipped), so the KTX2 `macroNoise` works; kept per texture and size.
@@ -305,6 +305,41 @@ Add sections 5–7 (Blender, Export, Import) to the seven p305 pages, each refer
 - **The build** (`yarn verify:baselines`, recorded): the first download +0.3 kB gzip (the registration and the engine's generator registry it calls), the generators a lazy 2.9 kB chunk, `generateTerrain`'s chunk +2.5 kB, `bakeTexture` a shared 2.9 kB chunk (the readback uses it; the texture set bakes' chunk −2.7 kB). The app's initial reached 400.04 KiB: `sbp.config.ts`' budget 400 → 401 KiB, with the reason in its history.
 
 ### Phase 4 (optional) — Worker generation, heightmap import (D4)
+
+**Code moved since D4:** `generateTerrain` imports `three/webgpu`, `aekasha` (`createSeededRandom`) and `aekasha/physics` (`toHeightfieldColliderParams`). A worker importing it would tree-shake them in a build, but the dev server doesn't tree-shake: the worker would load the whole engine graph, the UI kit's `.scss` imports included (which need `document`). The engine still has no way to register an app or toolkit job with the assets worker (its job kinds are named in `AssetsWorker.ts`), so the worker is the toolkit's own, as D4 says, over a pure core.
+
+**Decided before starting** (2026-11-17):
+
+- **No JSON heightmap generator here.** A `.r16` named in a block's `params` isn't an asset the gather knows: `yarn build` wouldn't copy it and an embed's prune would drop it. So this phase gives the code API only, and a `heightmapTerrain` generator (a heightmap asset kind) is a p990 item.
+- **The terrain generator's files get their own folder** (the toolkit's "a piece that grows a second file gets its own folder"): step 0.
+
+0. **The move:** `Terrain.ts`, `TerrainAo.ts`, `TerrainRules.ts` and their tests move from `geometry/generate/` to `geometry/generate/terrain/`. The entry's and `ScatterOnSurface.test.ts`' imports, this plan, `src/toolkit/terrain/CLAUDE.md` and `terrain-procedural-rules.md` follow; the `CHANGELOG.md` and the `_DONE_` plans keep the old paths as history.
+1. **The pure core** (`TerrainCore.ts`, `@internal`):
+   - It takes `generateTerrain`'s declarative options and returns plain typed arrays: positions, UVs, normals, colours, the index (`Uint16Array` or `Uint32Array`, as three's `setIndex` picks), heights, AO, the skirt and the bounds.
+   - It imports nothing but three's `SimplexNoise` (a standalone file) and its siblings `TerrainAo.ts` and `TerrainRules.ts`.
+   - **The seed:** the caller records `createSeededRandom(seed)`'s draws while constructing a `SimplexNoise` (256 today, counted rather than assumed) and hands them in; the core's `SimplexNoise` replays them.
+   - **`GEOMETRY` normals:** `computeVertexNormals`' arithmetic, float64 math into a `Float32Array` per accumulation, so the output is bit-for-bit the same.
+   - `generateTerrain` becomes: the draws, then the core, then a `BufferGeometry`, then `toHeightfieldColliderParams`. The pinned hashes (`Terrain.test.ts`, `ScatterOnSurface.test.ts`) don't move.
+2. **The worker:** `generateTerrainAsync(opts)` on `aekasha/toolkit/geometry`.
+   - **Options:** `generateTerrain`'s, without the closures: `heightFn` / `heightModifier` throw, naming them. Plus `workerTarget?: AssetsWorkerTarget` (default `WORKER_THREAD`).
+   - **Result:** the same `GeneratedTerrain`.
+   - **The worker entry** (`TerrainWorker.ts`, Vite's `?worker`): started on first use through `import()`. It answers requests by id and transfers the result's buffers. A rules noise's texels go over once per texels object, then by key.
+   - **Fallbacks:** a worker that can't start (no `Worker`, a failed handshake) runs the core on the main thread, with one warning. The worker is kept for the page, like the assets worker; the toolkit has no `onUnmount`, so an embed's `unmount()` leaves it idle (a limit, noted).
+   - **Tests:** the worker's handler run in-process through `structuredClone` gives `generateTerrain`'s result. The `moduleSideEffects.test.ts` exemption covers the entry. A structural test like `PhysicsWorker.test.ts` checks that the worker bundles without `three/webgpu` or any `aekasha` entry.
+3. **The generators on it:** `noiseTerrain` and `rulesTerrain` call `generateTerrainAsync`.
+   - `terrainBlockTest`'s probe hash and the patch's geometry stay as they are, since the output is the same.
+   - **The exit:** a 257² `rulesTerrain` block with AO, spawned from a debug control on both targets, logs the longest frame during its generation, measured on the Windows Chrome.
+4. **Heightmap import:** `loadTerrainHeightmapAsync({ url, format: 'R16' | 'R32F', size, heightRange, extent, center? })`. It's named `*Async` per the naming rule, in place of D4's `terrainFromHeightmap`.
+   - **What it returns:** plain data (`TerrainHeightmap`), which `generateTerrain(Async)`'s new `heightmap` option samples bilinearly at the world (x, z). It's worker-safe, unlike a `heightFn`.
+   - **File layout:** raw little-endian, row 0 at the map's −z edge, column 0 at −x, and outside the map the edge value.
+   - **Tests:** in-memory files with `fetch` stubbed.
+   - **The scene check:** a small committed `.r16` in `terrainBlockTest`, built in scene code with its collider.
+5. **Checks:**
+   - `yarn test`.
+   - `yarn verify:scenes --only terrainBlockTest,largeWorld`.
+   - `yarn verify:baselines --update` (a new worker file, the entry's new names).
+   - `yarn sbp`: the first download unchanged, the worker a lazy file.
+   - This phase's As built, and the terrain feature's `CLAUDE.md` generators line. The Hub's lines wait for Phase 6.
 
 **Exit:** a 257² block with AO generates without a frame over 16 ms.
 

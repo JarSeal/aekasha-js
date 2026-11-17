@@ -4842,7 +4842,7 @@
       "generateTreeGeometry": "Function",
       "TreeGeometryOptions": "Interface"
     },
-    "src/toolkit/geometry/generate/Terrain.ts": {
+    "src/toolkit/geometry/generate/terrain/Terrain.ts": {
       "GeneratedTerrain": "Interface",
       "generateTerrain": "Function",
       "TerrainNoiseOctave": "Interface",
@@ -4850,13 +4850,13 @@
       "TerrainOptions": "Interface",
       "TerrainVertexColorOptions": "TypeAlias"
     },
-    "src/toolkit/geometry/generate/TerrainAo.ts": {
+    "src/toolkit/geometry/generate/terrain/TerrainAo.ts": {
       "computeTerrainAo": "Function",
       "getTerrainAoMarch": "Function",
       "TerrainAoMarch": "TypeAlias",
       "TerrainAoOptions": "TypeAlias"
     },
-    "src/toolkit/geometry/generate/TerrainRules.ts": {
+    "src/toolkit/geometry/generate/terrain/TerrainRules.ts": {
       "evaluateTerrainRulesCPU": "Function",
       "getTerrainRuleCoverageCPU": "Function",
       "TERRAIN_RULE_DEFAULTS": "Variable",
