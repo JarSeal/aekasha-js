@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Terrain, Rendering, Materials
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -188,11 +188,35 @@ Sections:
 
 **Exit:** `decalsGround` and `decalsStructure` built by `yarn assets` as p299 atlases from the ambientCG sources (procedural cells still placeholders), encoded, with cell tables generated, and drawn in the gallery's Decals row.
 
-### Phase 2 — Decal material (D2)
+### Phase 2 — Decal material (D2) — done
 
 1. BLEND, CUTOUT, edge fade, wet response, puddle mask; `renderOrder` in `MeshProps` and the mesh schema (an engine minor, with its JSDoc and a test).
 
 **Exit:** decal quads on a gallery block show no z-fighting at 200 m, no visible quad edges, and get wet.
+
+Found when it started (2026-11-18), and decided:
+
+- **D2's per-instance rect is stale:** D4 replaced the single-geometry pool with a `BATCHED` group of separate geometries, which has no per-instance attribute. So the material reads atlas-space UVs only (a Blender decal's, `remapUVsToAtlasCell`'s, Phase 4's patches'), and the edge fade a **second UV set (`uv1`), 0..1 over the decal**. Finding the cell in the shader from the cell table was the alternative (a loop over every cell).
+- **`CUTOUT` needs the polygon offset too** (D2's table gave it to `BLEND` only): a coplanar cut-out quad z-fights the same way.
+- **The puddle mask is a relief** for `applySurfaceWetness`'s puddles (`0.5 − mask × puddleDepth`), not its `regional` input, which keeps a place wet in any weather. `Wet.ts` is unchanged.
+- **The mode's flags are the setup's** (`transparent`, `depthWrite`, `alphaToCoverage`, `polygonOffset`), so a JSON can't contradict its mode; the numbers stay tunable through `params`. The toolkit ships a JSON per atlas and mode over one TSL file.
+- `renderOrder`: LOD level swaps never touched it and `LodFades.ts` already copied it into the fade copies, so LOD needed a test, not code. A `BATCHED` merge group already refuses a member with another `renderOrder` (`MergeEligibility.ts`) and draws at its first member's.
+
+Sections:
+
+1. `renderOrder` in the engine — done. As built: `MeshProps.renderOrder` (JSDoc: draw order within a pass; a `BATCHED` group's members share it), applied by `addMeshEntity` (default 0, so `createInstancedMeshEntity` too); `renderOrder` in the mesh JSON's `props` and its save entries (`MeshSchema.ts`, the regenerated `.schemas/`); tests in `Mesh.test.ts` and `LodMeshDrawDelegate.test.ts` (a level change and its fade copy keep it).
+2. The decal material — done. As built:
+   - `src/toolkit/terrain/decals/DecalMaterial.ts` (a layout rule for `terrain/decals/`): `setupDecalMaterial` and `DecalMaterialInputs` on `aekasha/toolkit/terrain`; `src/toolkit/materials/decal/`: `decal.tsl.ts` (`setup = setupDecalMaterial`) and `decalsGround_blend`, `decalsGround_cutout`, `decalsStructure_blend`, `decalsStructure_cutout` (`edgeFade: "UV1"`, `wet: "FULL"`, frost, `NORMAL_Y`; the ground ones take `rippleAtlas`).
+   - Inputs `albedoAlpha` and `normalRough` (whole texture samples), sampled at the mesh's UV; the normal XY (×2−1, z rebuilt, `normalStrength`) in the frame of the sampled UV's derivatives (`transformTangentNormalToView`). Albedo × `tint`, roughness B × `roughnessScale`, metalness 0.
+   - Static defines (read by hand): `mode` (`BLEND` default: transparent, no depth writes; `CUTOUT`: opaque, `alphaTest` 0.5, alpha to coverage), the polygon offset on both (factor −1, units −4; a JSON's `params` win where not 0); `edgeFade` (`NONE` default, `UV1`: a vec2 share of `uv1` at each edge, smoothstepped; **a mesh without `uv1` draws nothing**); `wet` (`FULL` default, `SIMPLE`, `NONE`), `frost`, `rainOcclusion` (`NORMAL_Y`, `MAP`) as the rock material's.
+   - Opacity: A × `opacity` × the edge fade; a `BATCHED` member's `setMergeMemberColor` opacity fades it without code here (three multiplies the batch colour, alpha too, into the diffuse colour before `opacityNode`), so D4 needs nothing in the material.
+   - Wet: `applySurfaceWetness` with its own uniforms (`porosity` 0.5, `wetDarkening` 0.5, `wetRoughness` 0.2, `puddleResponse` **0.5**: at 1 the flat relief, 0.5, would put the whole quad under water at the gallery's puddle level of 0.6; at 0.5 a full mask is under water from a level of 0.1, an unmasked texel never, like the terrain material's flat ground), `FULL`'s puddles, optional `ripples` (`FULL`) and `snow`. The toolkit JSONs have no `snow` (it would pull `snow01` into every scene), so a decal shows over snow-covered ground unless an app's JSON adds it (Phase 5 or a follow-up).
+   - `DecalMaterial.test.ts` (9 tests): each mode's render state and the `params` overrides, the edge fade reading `uv1`, the uniforms, the wet paths, ripples only with `FULL`, the dry fallback, the errors.
+3. The gallery check — done. As built: `src/app/scenes/terrainGallery/decalsStage.ts` (`createDecalsStage`, `DECALS_STAGE_BLOCKS`, `DECALS_STAGE_BOUNDS`, `DECAL_RENDER_ORDER` 10), in front of the Decals row (x 130-158, z −2…11): two flat 12 m mud02 blocks (code route terrain material, wet with puddles and ripples) with a 12 m concrete02 wall behind each (structure material with streaks), every cell of both atlases on them at its `physicalSize`, `BLEND` left and `CUTOUT` right, coplanar with the block's top and the wall's face; the tyre tracks two strips of four tiles running over the asphalt damage. Each quad is built in code (a tile's UVs 0..1, `uv1` 0..1 over the strip), then `remapUVsToAtlasCell`. The scene lists the four decal materials. The tab's Decals section adds the weather (dry, wet, rain), the camera at 1, 50 and 200 m and on the walls, and switches for the polygon offset and the edge fade (reading and setting the materials).
+   - Checked on WebGPU (the Windows Chrome, AMD RDNA 3, MSAA 4×; `.cache/look/p309decals*.mts`), no console errors. **No z-fighting at 200 m**: with the offset off the asphalt damage, the stains and the wall decals break up or vanish at 50 and 200 m, with it on every decal is whole (at 200 m through a narrow lens, 4° and 12° above the ground). **No quad edges**: with the edge fade off a placeholder's square edge shows, with it on none. **Wet**: the track darkens with the mud (sRGB 192→142 at wetness 0.6), rain ripples ring on the ground, and the puddle mask fills the tread (wet: 38 % of the track's pixels change against `puddleDepth` 0, soaked: 53 %; dry: none).
+   - Seen: neutral albedos (the tracks, the asphalt, the concrete) read blue under the gallery's sky, the decal and the bare wall alike (blue − red ≈ 35 sRGB in both), so not the material. A `CUTOUT` strip under two pixels tall thins out under alpha to coverage (a 0.45 m track at 200 m through a 50° lens); at a few pixels it shows. A faint seam where the tyre track's tiles meet (the source strip's ends, or the 9.7 % stretch of its cell): Phase 3's strips will show it.
+
+Later phases build on this: a Blender decal (Phase 3: the template) and a runtime patch (Phase 4) must carry `uv1`, 0..1 over the decal (a strip's u along it, its material's `edgeFade` u 0 or a small share), or `edgeFade: 'UV1'` draws nothing; their meshes are `renderOrder` 10, `castShadow: false`.
 
 ### Phase 3 — Mesh decals from Blender (D3)
 

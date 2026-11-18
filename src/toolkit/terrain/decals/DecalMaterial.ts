@@ -74,7 +74,8 @@ const DECAL_DEFAULTS = {
   porosity: 0.5,
   wetDarkening: 0.5,
   wetRoughness: 0.2,
-  puddleResponse: 1,
+  /** Half: the masked texels fill, the unmasked ones never (1 would put the whole quad under) */
+  puddleResponse: 0.5,
 };
 
 /**
@@ -109,7 +110,12 @@ export type DecalMaterialInputs = {
   wetDarkening?: Node<'float'>;
   /** Its roughness with the pores full (default 0.2). */
   wetRoughness?: Node<'float'>;
-  /** How readily water stands on it, 0..1 (default 1). */
+  /**
+   * How readily water stands on it, 0..1 (default 0.5): a texel fills where the puddle level × this
+   * is over its relief, 0.5 − the mask × `puddleDepth`. At the defaults a full mask is under water
+   * from a level of 0.1, a half one from 0.6, and an unmasked texel never (flat ground's relief, as
+   * the terrain material's); at 1 the flat would fill from 0.5, so the whole quad.
+   */
   puddleResponse?: Node<'float'>;
 };
 

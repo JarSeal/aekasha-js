@@ -579,7 +579,7 @@ export const createTerrainGalleryTab = () => {
       ) as DebuggerTabSection<GalleryTabState>[]),
       ...(getPatchSections(TAB_ID) as DebuggerTabSection<GalleryTabState>[]),
       ...(getScatterSections(TAB_ID) as DebuggerTabSection<GalleryTabState>[]),
-      ...(getDecalsSections() as DebuggerTabSection<GalleryTabState>[]),
+      ...(getDecalsSections(TAB_ID) as DebuggerTabSection<GalleryTabState>[]),
       // Its fields bind their own targets, none of this tab's state keys
       ...(getProceduralSections(proceduralOpts) as DebuggerTabSection<GalleryTabState>[]),
       ...(getLiveSections(liveOpts) as DebuggerTabSection<GalleryTabState>[]),
