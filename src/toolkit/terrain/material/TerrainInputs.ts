@@ -265,7 +265,8 @@ const hasRuleNoise = (define: ResolvedTerrainDefine) =>
   define.blend.source !== 'SINGLE' && define.blend.rules.some((rule) => rule.noise);
 
 /**
- * The macro texture's node when the define reads it (`macro`, or a rule's noise), else null. The
+ * The macro texture's node when the define reads it (`macro`, a rule's noise, or the wet
+ * response's puddle patches), else null. The
  * input is refused where nothing in the define (its tiers included) takes it.
  * @internal
  */
@@ -276,13 +277,13 @@ export const readMacroTexture = (
   const input = inputs[MACRO_INPUT_KEY];
   if (!define.takesMacroTexture && input !== undefined) {
     throw new Error(
-      `[terrain] Input "${MACRO_INPUT_KEY}" has no use: give staticDefines.terrain.macro (its scale) or a rule's noise to use it.`
+      `[terrain] Input "${MACRO_INPUT_KEY}" has no use: give staticDefines.terrain.macro (its scale), a rule's noise or wet.puddles.patches to use it.`
     );
   }
-  if (!define.macro && !hasRuleNoise(define)) return null;
+  if (!define.macro && !hasRuleNoise(define) && !define.wet?.puddles?.patches) return null;
   if (!isTextureNode(input)) {
     throw new Error(
-      `[terrain] Missing input "${MACRO_INPUT_KEY}": the macro texture ({ "texture": id }, eg. macroNoise) that staticDefines.terrain.macro and the rules' noise read.`
+      `[terrain] Missing input "${MACRO_INPUT_KEY}": the macro texture ({ "texture": id }, eg. macroNoise) that staticDefines.terrain.macro, the rules' noise and wet.puddles.patches read.`
     );
   }
   return input;
@@ -359,14 +360,18 @@ const hasConfigRuleNoise = (blend: TerrainBlend | undefined) =>
   Boolean(blend && 'rules' in blend && blend.rules.some((rule) => rule.noise));
 
 /**
- * The code route's macro texture id: `macro`'s, else the rules' `noiseTexture` (default
- * `macroNoise`) when a rule of the material's or a tier's has noise; undefined for none
+ * The code route's macro texture id: `macro`'s, else `noiseTexture` (default `macroNoise`) when a
+ * rule of the material's or a tier's has noise, or its wet response puddle patches; undefined for
+ * none
  */
 const getMacroTextureId = (config: TerrainMaterialConfig) => {
   if (config.macro) return config.macro.texture;
-  const tiers = Object.values(config.quality ?? {}).map((tier) => tier?.blend);
-  const hasNoise = [config.blend, ...tiers].some(hasConfigRuleNoise);
-  return hasNoise ? config.noiseTexture ?? DEFAULT_NOISE_TEXTURE : undefined;
+  const tiers = Object.values(config.quality ?? {});
+  const hasNoise = [config.blend, ...tiers.map((tier) => tier?.blend)].some(hasConfigRuleNoise);
+  const hasPatches = [config.wet, ...tiers.map((tier) => tier?.wet)].some(
+    (wet) => wet?.puddles?.patches !== undefined
+  );
+  return hasNoise || hasPatches ? config.noiseTexture ?? DEFAULT_NOISE_TEXTURE : undefined;
 };
 
 /**

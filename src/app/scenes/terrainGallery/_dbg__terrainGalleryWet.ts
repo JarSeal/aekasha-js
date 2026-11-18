@@ -1,15 +1,23 @@
-// The terrain gallery tab's Wet/dry row sections (p307 Phase 2): the surface conditions' wetness
-// (a slider and the exit's steps, 0, 0.3, 0.6 and 1: the scene's JSON starts it `MANUAL`, so it
-// holds), the row's quality (`FULL`, `SIMPLE`) and the `WETNESS` view, and the blocks' list, a click
-// flying the camera to the block. The "Surface conditions" tab has the rest of the weather.
+// The terrain gallery tab's Wet/dry row sections (p307 Phases 2-3): the surface conditions' wetness
+// and puddle level (a slider each and the exit's steps, 0, 0.3, 0.6 and 1: the scene's JSON starts
+// them `MANUAL`, so they hold), the row's quality (`FULL`, `SIMPLE`) and the `WETNESS` view, and the
+// blocks' list, a click flying the camera to the block. The "Surface conditions" tab has the rest
+// of the weather.
 import { debuggerListCMP, updateDebuggerTab, type DebuggerTabSection } from 'aekasha/debug';
 import { getSurfaceConditions, setSurfaceConditions } from 'aekasha/surface';
 import { getTextureSet } from 'aekasha/texturesets';
 import { loadTerrainDebugViewsAsync } from 'aekasha/toolkit/terrain';
 import { flyToGalleryBlock } from './_dbg__terrainGalleryCamera';
-import { setWetRowView, WET_BLOCKS, type WetBlock, type WetKey, type WetRowView } from './wetRow';
+import {
+  REGIONAL_WET_KEY,
+  setWetRowView,
+  WET_BLOCKS,
+  type WetBlock,
+  type WetKey,
+  type WetRowView,
+} from './wetRow';
 
-/** The wetness steps the plan's exit judges each category at */
+/** The wetness and puddle level steps the plan's exits judge each category at */
 const WETNESS_STEPS = [0, 0.3, 0.6, 1] as const;
 
 /** The row's view (bound by the fields); the selected block */
@@ -27,6 +35,12 @@ const conditions = {
   },
   set wetness(value: number) {
     setSurfaceConditions({ wetness: value });
+  },
+  get puddleLevel() {
+    return getSurfaceConditions()?.puddleLevel ?? 0;
+  },
+  set puddleLevel(value: number) {
+    setSurfaceConditions({ puddleLevel: value });
   },
 };
 
@@ -46,9 +60,12 @@ const getBlockRow = (block: WetBlock) => {
     itemId: block.key,
     title: block.title,
     subTitle: surface
-      ? `porosity ${surface.porosity}, darkening ${surface.wetDarkening}, drying ${surface.dryingSpeed}`
+      ? `porosity ${surface.porosity}, darkening ${surface.wetDarkening}, drying ${surface.dryingSpeed}, puddles ${surface.puddleResponse}`
       : 'not loaded',
-    description: block.sets.join(', '),
+    description:
+      block.key === REGIONAL_WET_KEY
+        ? `${block.sets.join(', ')}; regional wetness along its left edge`
+        : block.sets.join(', '),
   };
 };
 
@@ -82,6 +99,23 @@ export const getWetSections = (tabId: string, onSelect: () => void): DebuggerTab
           updateDebuggerTab(tabId);
         },
       })),
+      {
+        key: 'puddleLevel',
+        target: conditions,
+        label: 'Puddle level',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        hint: 'The surface conditions’ puddle level: puddles fill the relief up to it × each set’s puddleResponse, in patches, on the flat (FULL only)',
+      },
+      ...WETNESS_STEPS.map((puddleLevel) => ({
+        type: 'button' as const,
+        title: `Puddles ${puddleLevel}`,
+        onClick: () => {
+          setSurfaceConditions({ puddleLevel });
+          updateDebuggerTab(tabId);
+        },
+      })),
       { type: 'separator' },
       {
         key: 'quality',
@@ -100,7 +134,7 @@ export const getWetSections = (tabId: string, onSelect: () => void): DebuggerTab
         target: tabState,
         label: 'WETNESS view',
         kind: 'switch',
-        hint: 'The terrain material’s WETNESS debug view on the row: red the pores filling, yellow under a water film, dark grey dry',
+        hint: 'The terrain material’s WETNESS debug view on the row: red the pores filling, yellow under a water film, the blue of a puddle over either (magenta to white), dark grey dry',
         onChange: () => void applyViewAsync(),
       },
     ],

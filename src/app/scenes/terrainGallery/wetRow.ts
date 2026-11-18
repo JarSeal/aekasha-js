@@ -3,11 +3,13 @@
 // flat, rocks on the ramp by a slope rule, height-blended) whose blended response is S4's "a
 // beach blends sand's response with rock's"; 3 × 3 left of the Splatting row. Every block is the
 // library's generated block (its 35° ramp), so a set's response is judged on the flat and on a
-// slope. The wetness is the surface conditions' (the scene's JSON starts it `MANUAL`, so nothing
-// dries it); the tab's slider and steps set it, and switch the row's quality (`FULL`, `SIMPLE`)
-// and the `WETNESS` view. Code route materials (`createTerrainMaterial`): the view and the quality
-// are variants of a block's material.
-import type * as THREE from 'three/webgpu';
+// slope. The wetness and the puddle level are the surface conditions' (the scene's JSON starts
+// them `MANUAL`, so nothing dries them); the tab's sliders and steps set them, and switch the
+// row's quality (`FULL`, `SIMPLE`) and the `WETNESS` view. Phase 3: every block has puddles
+// (filling by its set's `puddleResponse`, in `macroNoise` patches), and the grass block a regional
+// wetness along its left edge (a riverbank: its `_wetness` vertex attribute). Code route materials
+// (`createTerrainMaterial`): the view and the quality are variants of a block's material.
+import * as THREE from 'three/webgpu';
 import {
   createMeshEntity,
   existsOrThrow,
@@ -71,6 +73,14 @@ const RIGHT_X = SPLATTING_ROW_BOUNDS.minX - 2 * BLOCK_GAP - BLOCK_SIZE / 2;
 const SEED_BASE = 307;
 /** The beach's rocks: on slopes past this, degrees (the ramp is 35°, the flat's noise under 10°) */
 const BEACH_ROCK_SLOPE = 22;
+/** The puddle patches' macro tile, metres: a patch is a fifth of it, about two across a block */
+const PUDDLE_PATCH_SCALE = 30;
+/** The block with a regional wetness, and its band: fully wet up to the first distance from the
+ * left edge, metres, dry past the second */
+export const REGIONAL_WET_KEY: WetKey = 'GRASS';
+const REGIONAL_WET_BAND = [2, 5] as const;
+/** The regional wetness's vertex attribute (the terrain material's default) */
+const REGIONAL_WET_ATTRIBUTE = '_wetness';
 
 /** The row's nine blocks, by row from the back and left to right */
 export const WET_BLOCKS: readonly WetBlock[] = GRID.flatMap((keys, row) =>
@@ -95,7 +105,8 @@ export const WET_ROW_BOUNDS = {
 /** A block's mesh entity's app id */
 export const getWetAppId = (key: WetKey) => `terrainGallery_wet_${key}`;
 
-/** A block's code route config: its sets, wet (`FULL`); the beach's rocks by slope */
+/** A block's code route config: its sets, wet (`FULL`, puddles in patches; the grass block's
+ * regional wetness); the beach's rocks by slope */
 const getBlockConfig = (block: WetBlock): TerrainMaterialConfig => ({
   id: `terrainGalleryWet_${block.key}`,
   layers: block.sets.map((set) => ({ set })),
@@ -107,7 +118,10 @@ const getBlockConfig = (block: WetBlock): TerrainMaterialConfig => ({
         },
       }
     : {}),
-  wet: {},
+  wet: {
+    puddles: { patches: { scale: PUDDLE_PATCH_SCALE } },
+    ...(block.key === REGIONAL_WET_KEY ? { regional: {} } : {}),
+  },
 });
 
 /**
@@ -122,12 +136,14 @@ const getBlockMaterial = (block: WetBlock, view: WetRowView): THREE.Material => 
     `[terrainGallery] No material "${config.id}".`
   );
   if (view.quality === 'FULL' && view.debugView === 'NONE') return base;
-  const terrain = base.userData.terrainDefine as { wet?: object };
+  const terrain = base.userData.terrainDefine as { wet?: { puddles?: object } };
+  // SIMPLE has no puddles (no relief to fill)
+  const { puddles, ...wet } = terrain.wet ?? {};
   return getMaterialVariant(config.id, {
     staticDefines: {
       terrain: {
         ...terrain,
-        wet: { ...terrain.wet, quality: view.quality },
+        wet: { ...wet, ...(view.quality === 'FULL' ? { puddles } : {}), quality: view.quality },
         ...(view.debugView === 'NONE' ? {} : { debugView: view.debugView }),
       },
     },
@@ -145,12 +161,30 @@ export const setWetRowView = (view: WetRowView) => {
   }
 };
 
+/**
+ * A block geometry with the regional wetness's band along its left edge (−x), once: the
+ * geometry is the block's own (its seed's), kept across visits
+ */
+const withRegionalWetness = (geometry: THREE.BufferGeometry) => {
+  if (geometry.getAttribute(REGIONAL_WET_ATTRIBUTE)) return geometry;
+  const positions = geometry.getAttribute('position');
+  const wetness = new Float32Array(positions.count);
+  const [wet, dry] = REGIONAL_WET_BAND;
+  for (let i = 0; i < positions.count; i++) {
+    const fromEdge = positions.getX(i) + BLOCK_SIZE / 2;
+    wetness[i] = 1 - THREE.MathUtils.smoothstep(fromEdge, wet, dry);
+  }
+  geometry.setAttribute(REGIONAL_WET_ATTRIBUTE, new THREE.BufferAttribute(wetness, 1));
+  return geometry;
+};
+
 /** Creates the row's blocks, each on the library's generated block with its own seed */
 export const createWetRow = () => {
   for (const block of WET_BLOCKS) {
+    const geometry = getBlockGeometry(block.seed);
     createMeshEntity(
       {
-        geo: getBlockGeometry(block.seed),
+        geo: block.key === REGIONAL_WET_KEY ? withRegionalWetness(geometry) : geometry,
         mat: getBlockMaterial(block, { quality: 'FULL', debugView: 'NONE' }),
         position: { x: block.x, z: block.z },
         ...NO_SHADOWS,

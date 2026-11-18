@@ -46,7 +46,7 @@ describe('TerrainMaterialConfigSchema', () => {
     expect(issuesOf(configOf(5, { blend: painted, splatMaps: ['a', 'b'] }))).toEqual(['splatMaps']);
   });
 
-  it('takes a noiseTexture only for rule noise without a macro', () => {
+  it('takes a noiseTexture only for rule noise or puddle patches without a macro', () => {
     const blend = { source: 'RULES', rules: [noisyRule] };
     expect(issuesOf(configOf(2, { blend, noiseTexture: 'noise' }))).toEqual([]);
     expect(issuesOf(configOf(1, { noiseTexture: 'noise' }))).toEqual(['noiseTexture']);
@@ -60,6 +60,12 @@ describe('TerrainMaterialConfigSchema', () => {
       noiseTexture: 'noise',
     };
     expect(issuesOf(configOf(2, tierNoise))).toEqual([]);
+    // p307's puddle patches read it too
+    const patches = { puddles: { patches: { scale: 30 } } };
+    expect(issuesOf(configOf(1, { wet: patches, noiseTexture: 'noise' }))).toEqual([]);
+    expect(issuesOf(configOf(1, { wet: { puddles: {} }, noiseTexture: 'noise' }))).toEqual([
+      'noiseTexture',
+    ]);
   });
 
   it('refuses SEPARATE storage where the layers sample in slots, its own or a tier', () => {

@@ -28,7 +28,8 @@ facts. The toolkit's `sand01`:
   samples one; `defaultPacking` (else `LITE`) is the one a scene listing the set loads.
 - **`surface`** holds the defaults a material copies into uniforms: `tint` (sRGB, multiplied into
   the albedo, so it can only darken), `normalStrength`, `roughnessScale`, `aoStrength`,
-  `heightContrast` and the wet response (`porosity`, `wetDarkening`, `wetRoughness`).
+  `heightContrast` and the wet response (`porosity`, `wetDarkening`, `wetRoughness`,
+  `puddleResponse`, `dryingSpeed`; the set's category's when not given).
 - **`category`** (`SAND`, `MUD`, `ROCKS`, `CLIFF`, `SNOW`, `ICE`, `GRASS`, `CONCRETE`, `OTHER`)
   is for the terrain tools' defaults and grouping.
 - **`averageColor`** is measured by the [asset pipeline](hub:features/asset-optimization) from the
@@ -543,7 +544,8 @@ meshes](repo:docs/techniques/terrain-procedural-meshes.md).
   in colour bands over a 1 m checker), `NORMALS`, `WEIGHTS` (each layer's false colour),
   `PROJECTION` (the planes' weights and the slope gate's band), `TAPS` (the texture fetches at the
   pixel, heat-mapped), `LAYER_COUNT` (striped where sparse sampling drops a layer) and `WETNESS`
-  (the wet response's stages: red the pores filling, yellow under a film; needs `wet`). Their code
+  (the wet response's stages: red the pores filling, yellow under a film, the blue of a puddle
+  over either; needs `wet`). Their code
   is a debug chunk, so a production build has none.
 - **The uniforms** are in a terrain material's `userData.uniforms` (`terrain_l<i>_tiling`,
   `terrain_r<i>_slopeMin`, `terrain_macroScale`, …): set a uniform's `value` from code, as the

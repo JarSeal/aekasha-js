@@ -1195,6 +1195,16 @@ describe('getTerrainMaterialProps', () => {
       getTerrainMaterialProps({ id: 'ridge', layers, blend: rules(noisy), noiseTexture: 'x' })
         .staticDefines
     ).toEqual({ terrain: { layers: [{}, {}], blend: rules(noisy) } });
+    // p307's puddle patches read it the same way, a tier's too
+    const patches = { puddles: { patches: { scale: 30 } } };
+    expect(inputsOf({ wet: patches })).toHaveProperty('macro', { texture: 'macroNoise' });
+    expect(inputsOf({ wet: patches, noiseTexture: 'ridge.noise' })).toHaveProperty('macro', {
+      texture: 'ridge.noise',
+    });
+    expect(inputsOf({ quality: { HIGH: { wet: patches } } })).toHaveProperty('macro', {
+      texture: 'macroNoise',
+    });
+    expect(inputsOf({ wet: { puddles: {} } })).not.toHaveProperty('macro');
   });
 });
 
@@ -1356,6 +1366,88 @@ describe('setupTerrainMaterial: wet (p307)', () => {
     const warned = stubs.warnings.filter((message) => /builds dry/.test(message));
     expect(warned).toHaveLength(1);
     expect(warned[0]).toMatch(/surfaceConditions\(\)/);
+  });
+
+  it('stands puddles on the relief by the puddle level, their patches one fetch of the macro input', () => {
+    const material = build({ layers: [{}], wet: { puddles: { maxSlope: 10 } } });
+    const PUDDLE_UNIFORMS = ['terrain_wetPuddleEdge', 'terrain_wetPuddleMaxSlope'];
+    expect(getUniformKeys(material)).toEqual(
+      [...LAYER_UNIFORMS, ...WET_UNIFORMS, ...PUDDLE_UNIFORMS].sort()
+    );
+    expect(getUniforms(material).terrain_wetPuddleMaxSlope.value).toBe(10);
+    expect(getUniforms(material).terrain_wetPuddleEdge.value).toBe(0.05);
+    for (const socket of [material.colorNode, material.roughnessNode, material.normalNode]) {
+      expect(reaches(socket, conditions.puddleLevel)).toBe(true);
+    }
+    const dry = build({ layers: [{}], wet: {} });
+    expect(reaches(dry.colorNode, conditions.puddleLevel)).toBe(false);
+    // Patches: the macro texture sampled once at their own scale, beside the macro variation's
+    const macroTexture = texture(new Texture());
+    const isSampleOfMacro = (node: Node) =>
+      (node as unknown as { isTextureNode?: boolean }).isTextureNode &&
+      (node as unknown as { value: unknown }).value === macroTexture.value &&
+      node !== (macroTexture as unknown as Node);
+    const patches = { puddles: { patches: { scale: 30 } } };
+    const patched = build(
+      { layers: [{}], wet: patches },
+      { layer0: makeBundle(), macro: macroTexture }
+    );
+    expect(getUniforms(patched).terrain_wetPuddlePatchScale.value).toBe(30);
+    expect(getUniforms(patched).terrain_wetPuddlePatchAmount.value).toBe(0.75);
+    expect(collectNodes(patched).filter(isSampleOfMacro)).toHaveLength(1);
+    expect(collectNodesFrom([patched.colorNode]).some(isSampleOfMacro)).toBe(true);
+    const both = build(
+      { layers: [{}], macro: { scale: 120 }, wet: patches },
+      { layer0: makeBundle(), macro: macroTexture }
+    );
+    expect(collectNodes(both).filter(isSampleOfMacro)).toHaveLength(2);
+    expect(() => build({ layers: [{}], wet: patches })).toThrow(/Missing input "macro"/);
+    // A tier's patches: the base takes the input, without fetching it
+    const tiered = build(
+      { layers: [{}], wet: {}, quality: { HIGH: { wet: patches } } },
+      { layer0: makeBundle(), macro: macroTexture }
+    );
+    expect(collectNodes(tiered).filter(isSampleOfMacro)).toHaveLength(0);
+    // SIMPLE has none (the reader refuses puddles there)
+    expect(() => build({ layers: [{}], wet: { quality: 'SIMPLE', puddles: {} } })).toThrow(
+      /is for quality FULL/
+    );
+  });
+
+  it("keeps a regional wetness: a vertex attribute, or the first splat map's A", () => {
+    const attributeOf = (material: MeshStandardNodeMaterial) =>
+      collectNodes(material)
+        .map((node) => (node as unknown as { _attributeName?: string })._attributeName)
+        .filter((name) => name !== undefined && name !== 'color');
+    expect(attributeOf(build({ layers: [{}], wet: { regional: {} } }))).toContain('_wetness');
+    const named = build({ layers: [{}], wet: { regional: { attribute: 'swamp' } } });
+    expect(attributeOf(named)).toContain('swamp');
+    expect(attributeOf(build({ layers: [{}], wet: {} }))).not.toContain('_wetness');
+    // With puddles, it raises their level too
+    const puddled = build({ layers: [{}], wet: { regional: {}, puddles: {} } });
+    expect(attributeOf(puddled).filter((name) => name === '_wetness').length).toBeGreaterThan(0);
+    // The splat map's A: a channel of the one splat sample
+    const splat = texture(new Texture());
+    const material = build(
+      {
+        layers: layersOf(4),
+        blend: { source: 'SPLAT_MAP' },
+        wet: { regional: { splatChannel: 'A' } },
+      },
+      layerInputs(4, 'LITE', { splat0: splat })
+    );
+    const isSplatSample = (node: Node) =>
+      (node as unknown as { isTextureNode?: boolean }).isTextureNode &&
+      (node as unknown as { value: unknown }).value === splat.value &&
+      node !== (splat as unknown as Node);
+    expect(collectNodes(material).filter(isSplatSample)).toHaveLength(1);
+    const alpha = collectNodes(material).find(
+      (node) =>
+        (node as unknown as { components?: string }).components === 'w' &&
+        isSplatSample((node as unknown as { node: Node }).node)
+    );
+    expect(alpha).toBeTruthy();
+    expect(reaches(material.colorNode, alpha)).toBe(true);
   });
 
   it('shows the masks in the WETNESS view', async () => {

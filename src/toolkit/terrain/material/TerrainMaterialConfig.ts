@@ -107,6 +107,12 @@ export const TERRAIN_DEBUG_VIEWS = [
  * the film flattens the normal, `SIMPLE` the layers' response and the sky exposure only.
  */
 export const TERRAIN_WET_QUALITIES = ['FULL', 'SIMPLE'] as const;
+
+/**
+ * The splat channels a regional wetness reads (p307 T7): the first splat map's A.
+ * @internal
+ */
+export const TERRAIN_WET_SPLAT_CHANNELS = ['A'] as const;
 /**
  * What a far surface shows past `distance.fade`'s end, where the layers aren't sampled (p305 D7):
  * `NONE` (default) the layers at every distance, `AVERAGE_COLOR` each layer's set's average colour
@@ -838,6 +844,100 @@ const TerrainDistanceSchema = z
   .describe("The view distance's effects on the surface.");
 
 /**
+ * The puddles (p307 T3): water standing where the surface conditions' `puddleLevel` × the layers'
+ * `puddleResponse` is over their blended relief, on flat ground.
+ */
+const TerrainPuddlesSchema = z
+  .object({
+    /** The steepest ground a puddle stands on, degrees from flat, over 0 to 45 (default 15): full
+     * puddles up to half of it. */
+    maxSlope: z
+      .number()
+      .gt(0)
+      .max(45)
+      .optional()
+      .describe(
+        'The steepest ground a puddle stands on, degrees from flat, over 0 to 45 (default 15): full puddles up to half of it.'
+      ),
+    /** The relief height over which a puddle's rim fades in, over 0 to 1 (default 0.05). */
+    edge: z
+      .number()
+      .gt(0)
+      .max(1)
+      .optional()
+      .describe(
+        "The relief height over which a puddle's rim fades in, over 0 to 1 (default 0.05)."
+      ),
+    /**
+     * Patches where the puddles fill ahead or behind: the macro texture's B (its Worley patches,
+     * 5 a tile) at the world's XZ over `scale` metres a tile, one fetch of the macro texture (the
+     * code route's `macro.texture`, else `noiseTexture`, default `macroNoise`; the JSON route's
+     * input `macro`).
+     */
+    patches: z
+      .object({
+        /** The metres a macro texture tile covers here (a patch is a fifth of it). */
+        scale: z
+          .number()
+          .gt(0)
+          .describe('The metres a macro texture tile covers here (a patch is a fifth of it).'),
+        /** How far the patches move the waterline, 0..1 (default 0.75): 1 keeps the lowest dry. */
+        amount: z
+          .number()
+          .min(0)
+          .max(1)
+          .optional()
+          .describe(
+            'How far the patches move the waterline, 0..1 (default 0.75): 1 keeps the lowest patches dry.'
+          ),
+      })
+      .strict()
+      .optional()
+      .describe(
+        "Patches where the puddles fill ahead or behind: the macro texture's B at the world's XZ over scale metres a tile (one fetch)."
+      ),
+  })
+  .strict()
+  .describe(
+    "The puddles: water where the puddle level × the layers' puddleResponse is over their relief, on flat ground. FULL only."
+  );
+
+/**
+ * The regional wetness (p307 T7): an authored wetness, 0..1, the least the surface shows and the
+ * least puddle level, in any weather: a float vertex attribute (default `_wetness`, glTF's
+ * `_WETNESS`), or the first splat map's A.
+ */
+const TerrainWetRegionalSchema = z
+  .union([
+    z
+      .object({
+        /** The float vertex attribute (default `_wetness`: glTF's `_WETNESS`, as GLTFLoader names
+         * it). A mesh without it reads 0, warned by three. */
+        attribute: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(
+            "The float vertex attribute (default _wetness: glTF's _WETNESS, as GLTFLoader names it)."
+          ),
+      })
+      .strict(),
+    z
+      .object({
+        /** The first splat map's A: a splat source painting at most 4 layers (so it weighs none). */
+        splatChannel: z
+          .enum(TERRAIN_WET_SPLAT_CHANNELS)
+          .describe(
+            "The first splat map's A: blend.source SPLAT_MAP or SPLAT_MAP_AND_RULES painting at most 4 layers."
+          ),
+      })
+      .strict(),
+  ])
+  .describe(
+    'The regional wetness: an authored 0..1, the least wetness and puddle level shown, from a float vertex attribute ({ attribute? }) or the first splat map\'s A ({ splatChannel: "A" }).'
+  );
+
+/**
  * The wet response (p307 D2): the surface conditions' wetness (`aekasha/surface`) on the layers,
  * each by its set's `porosity`, `wetDarkening` and `wetRoughness`, blended by weight.
  */
@@ -888,8 +988,21 @@ const TerrainWetSchema = z
       .describe(
         "The geometry's angles from straight up in degrees, [from, to] within 0..180 (default [60, 120]), over which the rain's reach fades out: wet up to from, dry past to."
       ),
+    /** The puddles (`FULL` only); default none. */
+    puddles: TerrainPuddlesSchema.optional(),
+    /** The regional wetness's source; default none. */
+    regional: TerrainWetRegionalSchema.optional(),
   })
   .strict()
+  .superRefine((wet, ctx) => {
+    if (wet.quality === 'SIMPLE' && wet.puddles) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['puddles'],
+        message: 'is for quality FULL: SIMPLE reads no relief to fill.',
+      });
+    }
+  })
   .describe(
     "The wet response: the surface conditions' wetness on the layers, each by its set's porosity, wetDarkening and wetRoughness."
   );
@@ -1236,6 +1349,17 @@ const getSplatMapCount = (blend: TerrainBlend | undefined, layerCount: number) =
 const getRules = (blend: TerrainBlend | undefined) =>
   blend && 'rules' in blend ? blend.rules : [];
 
+type TerrainWet = z.infer<typeof TerrainWetSchema>;
+
+/** Whether the material's wet response or a tier's has puddle patches, which read the noise texture */
+const hasPuddlePatches = (value: {
+  wet?: TerrainWet;
+  quality?: Partial<Record<string, { wet?: TerrainWet } | undefined>>;
+}) =>
+  [value.wet, ...Object.values(value.quality ?? {}).map((tier) => tier?.wet)].some(
+    (wet) => wet?.puddles?.patches !== undefined
+  );
+
 /** Whether a rule of the material's blend or of a tier's reads the noise texture */
 const hasRuleNoise = (value: {
   blend?: TerrainBlend;
@@ -1245,7 +1369,11 @@ const hasRuleNoise = (value: {
     getRules(blend).some((rule) => rule.noise)
   );
 
-type BlendFields = { blend?: TerrainBlend; ao?: z.infer<typeof TerrainAoSchema> };
+type BlendFields = {
+  blend?: TerrainBlend;
+  ao?: z.infer<typeof TerrainAoSchema>;
+  wet?: TerrainWet;
+};
 
 /**
  * The rules' layers: each one of the material's, and each layer past the painted ones some rule's
@@ -1299,8 +1427,10 @@ const checkBlend = (
     path: ['quality', level],
     blend: tier?.blend ?? value.blend,
     ao: tier?.ao ?? value.ao,
+    wet: tier?.wet ?? value.wet,
   }));
-  for (const { path, blend, ao } of [{ path: [], blend: value.blend, ao: value.ao }, ...tiers]) {
+  const own = { path: [], blend: value.blend, ao: value.ao, wet: value.wet };
+  for (const { path, blend, ao, wet } of [own, ...tiers]) {
     const { counts, name } = getBlendLayerCounts(blend);
     const count = value.layers.length;
     const issue = (at: (string | number)[], message: string) => {
@@ -1320,6 +1450,17 @@ const checkBlend = (
       issue(
         [...path, 'ao', 'vertex'],
         'needs blend.source VERTEX_COLOR or VERTEX_COLOR_AND_RULES with the RGB_AO layout.'
+      );
+    }
+    const isSplat = blend?.source === 'SPLAT_MAP' || blend?.source === 'SPLAT_MAP_AND_RULES';
+    if (
+      wet?.regional &&
+      'splatChannel' in wet.regional &&
+      !(isSplat && getPaintedLayerCount(blend, count) <= 4)
+    ) {
+      issue(
+        [...path, 'wet', 'regional', 'splatChannel'],
+        "is A: give blend.source SPLAT_MAP or SPLAT_MAP_AND_RULES painting at most 4 layers, so the first splat map's A weighs none."
       );
     }
   }
@@ -1632,7 +1773,8 @@ const checkTextureIds = (
     splatMaps?: string[];
     macro?: unknown;
     noiseTexture?: string;
-    quality?: Partial<Record<string, { blend?: TerrainBlend } | undefined>>;
+    wet?: TerrainWet;
+    quality?: Partial<Record<string, { blend?: TerrainBlend; wet?: TerrainWet } | undefined>>;
   },
   ctx: z.RefinementCtx
 ) => {
@@ -1649,13 +1791,16 @@ const checkTextureIds = (
       `${painted} painted layers take ${count} splat map${count === 1 ? '' : 's'}: give their texture ids.`
     );
   }
-  if (value.noiseTexture !== undefined && !hasRuleNoise(value)) {
+  if (value.noiseTexture !== undefined && !hasRuleNoise(value) && !hasPuddlePatches(value)) {
     issue(
       'noiseTexture',
-      "is for rules with noise (blend.rules[i].noise, the material's or a tier's)."
+      "is for rules with noise (blend.rules[i].noise) or puddle patches (wet.puddles.patches), the material's or a tier's."
     );
   } else if (value.noiseTexture !== undefined && value.macro) {
-    issue('noiseTexture', "is macro.texture's with a macro: the rules' noise reads it.");
+    issue(
+      'noiseTexture',
+      "is macro.texture's with a macro: the rules' noise and the puddle patches read it."
+    );
   }
 };
 
@@ -1759,16 +1904,16 @@ export const TerrainMaterialConfigSchema = z
         "With blend.source SPLAT_MAP or SPLAT_MAP_AND_RULES, the splat maps' texture ids: the first weighs layers 1-4, the second 5-8 (inputs splat0, splat1)."
       ),
     /**
-     * The macro noise texture the rules' noise reads (the input `macro`), for a material with
-     * rule noise and no `macro`, whose texture they read otherwise (default `macroNoise`, the
-     * toolkit's).
+     * The macro noise texture the rules' noise and the puddle patches (`wet.puddles.patches`) read
+     * (the input `macro`), for a material with either and no `macro`, whose texture they read
+     * otherwise (default `macroNoise`, the toolkit's).
      */
     noiseTexture: z
       .string()
       .min(1)
       .optional()
       .describe(
-        "The macro noise texture the rules' noise reads, without a macro (whose texture it reads otherwise; default macroNoise)."
+        "The macro noise texture the rules' noise and the puddle patches read, without a macro (whose texture they read otherwise; default macroNoise)."
       ),
     /**
      * How the layers' textures bind (default `AUTO`: `SEPARATE` while it fits the texture budget

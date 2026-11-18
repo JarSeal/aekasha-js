@@ -24,6 +24,7 @@ import {
   TERRAIN_UV_MODES,
   TERRAIN_VERTEX_COLOR_LAYOUTS,
   TERRAIN_WET_QUALITIES,
+  TERRAIN_WET_SPLAT_CHANNELS,
   TerrainAntiTilingSchema,
   TerrainBlendSchema,
   TerrainColorMapSettingsSchema,
@@ -294,6 +295,33 @@ const ACCEPTED: unknown[] = [
   },
   { layers: [{}], wet: {}, quality: { LOW: { wet: { quality: 'SIMPLE' } } }, qualityLevel: 'LOW' },
   { layers: [{}], quality: { HIGH: { wet: {} } }, debugView: 'WETNESS' },
+  // Its puddles (a SIMPLE tier's own wet without them) and regional wetness
+  { layers: [{}], wet: { puddles: {} } },
+  {
+    layers: [{}],
+    wet: { puddles: { maxSlope: 45, edge: 1, patches: { scale: 30, amount: 0 } } },
+  },
+  {
+    layers: [{}],
+    wet: { puddles: {} },
+    quality: { LOW: { wet: { quality: 'SIMPLE' } } },
+    qualityLevel: 'LOW',
+  },
+  { layers: [{}], wet: { regional: {} } },
+  { layers: [{}], wet: { quality: 'SIMPLE', regional: { attribute: 'swamp' } } },
+  { layers: layersOf(4), blend: { source: 'SPLAT_MAP' }, wet: { regional: { splatChannel: 'A' } } },
+  {
+    layers: layersOf(6),
+    blend: {
+      source: 'SPLAT_MAP_AND_RULES',
+      paintedLayers: 4,
+      rules: [
+        { layer: 4, slope: { min: 30 } },
+        { layer: 5, slope: { min: 50 } },
+      ],
+    },
+    wet: { regional: { splatChannel: 'A' } },
+  },
 ];
 const REFUSED: unknown[] = [
   {},
@@ -608,7 +636,7 @@ const REFUSED: unknown[] = [
     qualityLevel: 'HIGH',
   },
   // p307's wet response: its keys (a later phase's too), values and ranges; its view without it
-  { layers: [{}], wet: { puddles: {} } },
+  { layers: [{}], wet: { ripples: true } },
   { layers: [{}], wet: { quality: 'NONE' } },
   { layers: [{}], wet: { heightInfluence: -1 } },
   { layers: [{}], wet: { cavityInfluence: '1' } },
@@ -618,6 +646,36 @@ const REFUSED: unknown[] = [
   { layers: [{}], wet: true },
   { layers: [{}], debugView: 'WETNESS' },
   { layers: [{}], wet: {}, quality: { LOW: { wet: { shelter: [90, 90] } } }, qualityLevel: 'LOW' },
+  // Its puddles: FULL only, their ranges and keys
+  { layers: [{}], wet: { quality: 'SIMPLE', puddles: {} } },
+  { layers: [{}], wet: { puddles: { maxSlope: 0 } } },
+  { layers: [{}], wet: { puddles: { maxSlope: 50 } } },
+  { layers: [{}], wet: { puddles: { edge: 0 } } },
+  { layers: [{}], wet: { puddles: { depth: 1 } } },
+  { layers: [{}], wet: { puddles: true } },
+  { layers: [{}], wet: { puddles: { patches: {} } } },
+  { layers: [{}], wet: { puddles: { patches: { scale: 0 } } } },
+  { layers: [{}], wet: { puddles: { patches: { scale: 30, amount: 2 } } } },
+  // Its regional wetness: an attribute's name, or the first splat map's A where it weighs no layer
+  { layers: [{}], wet: { regional: { attribute: '' } } },
+  { layers: [{}], wet: { regional: { splatChannel: 'R' } } },
+  { layers: [{}], wet: { regional: { attribute: 'swamp', splatChannel: 'A' } } },
+  { layers: [{}], wet: { regional: { splatChannel: 'A' } } },
+  { layers: layersOf(5), blend: { source: 'SPLAT_MAP' }, wet: { regional: { splatChannel: 'A' } } },
+  {
+    layers: layersOf(2),
+    blend: { source: 'VERTEX_COLOR' },
+    wet: { regional: { splatChannel: 'A' } },
+  },
+  {
+    layers: layersOf(2),
+    blend: { source: 'SPLAT_MAP' },
+    wet: {},
+    quality: {
+      LOW: { blend: { source: 'VERTEX_COLOR' }, wet: { regional: { splatChannel: 'A' } } },
+    },
+    qualityLevel: 'LOW',
+  },
 ];
 
 describe('readTerrainDefine', () => {
@@ -660,7 +718,16 @@ describe('readTerrainDefine', () => {
       heightInfluence: 0.5,
       cavityInfluence: 0.5,
       shelter: [60, 120],
+      puddles: null,
+      regional: null,
     });
+    expect(read({ layers: [{}], wet: { puddles: {}, regional: {} } }).wet).toMatchObject({
+      puddles: { maxSlope: 15, edge: 0.05, patches: null },
+      regional: { attribute: '_wetness' },
+    });
+    expect(
+      read({ layers: [{}], wet: { puddles: { patches: { scale: 30 } } } }).wet?.puddles?.patches
+    ).toEqual({ scale: 30, amount: 0.75 });
     // A tier's wet replaces the material's whole
     expect(
       read({
@@ -758,7 +825,7 @@ describe('readTerrainDefine', () => {
     expect(combo.blend).toMatchObject({ layout: 'RGB_AO', heightBlend: null });
   });
 
-  it("takes the macro input with a macro or rule noise, a tier's included", () => {
+  it("takes the macro input with a macro, rule noise or puddle patches, a tier's included", () => {
     const noisy = { layer: 1, noise: { scale: 50, amount: 0.3 } };
     expect(read(rulesOf(2, { layer: 1, slope: { min: 9 } })).takesMacroTexture).toBe(false);
     expect(read(rulesOf(2, noisy)).takesMacroTexture).toBe(true);
@@ -770,6 +837,12 @@ describe('readTerrainDefine', () => {
     };
     expect(read(tierNoise).takesMacroTexture).toBe(true);
     expect(read({ ...tierNoise, qualityLevel: 'LOW' }).takesMacroTexture).toBe(true);
+    const patches = { puddles: { patches: { scale: 30 } } };
+    expect(read({ layers: [{}], wet: { puddles: {} } }).takesMacroTexture).toBe(false);
+    expect(read({ layers: [{}], wet: patches }).takesMacroTexture).toBe(true);
+    expect(read({ layers: [{}], quality: { HIGH: { wet: patches } } }).takesMacroTexture).toBe(
+      true
+    );
   });
 
   it("gives a layer its own anti-tiling, else the material's (its tier's)", () => {
@@ -937,6 +1010,16 @@ describe('readTerrainDefine', () => {
     expect(values.wetKeys.sort()).toEqual(Object.keys(wet.unwrap().shape).sort());
     expect(values.wetQualities).toEqual(TERRAIN_WET_QUALITIES);
     expect(wet.unwrap().shape.quality.unwrap().options).toEqual([...TERRAIN_WET_QUALITIES]);
+    const puddles = wet.unwrap().shape.puddles.unwrap();
+    expect(values.wetPuddleKeys.sort()).toEqual(Object.keys(puddles.shape).sort());
+    expect(values.wetPatchKeys.sort()).toEqual(
+      Object.keys(puddles.shape.patches.unwrap().shape).sort()
+    );
+    const [byAttribute, bySplat] = wet.unwrap().shape.regional.unwrap().options;
+    expect(Object.keys(byAttribute.shape)).toEqual(['attribute']);
+    expect(Object.keys(bySplat.shape)).toEqual(['splatChannel']);
+    expect(values.wetSplatChannels).toEqual(TERRAIN_WET_SPLAT_CHANNELS);
+    expect(bySplat.shape.splatChannel.options).toEqual([...TERRAIN_WET_SPLAT_CHANNELS]);
     expect(values.macroKeys.sort()).toEqual(Object.keys(TerrainMacroSettingsSchema.shape).sort());
     for (const option of TerrainColorMapSettingsSchema.options) {
       const mode = option.shape.mode.value;

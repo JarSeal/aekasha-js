@@ -249,8 +249,9 @@ const getSampledFetches = (ctx: TerrainDebugViewContext, sampled: TerrainDebugVi
 
 /**
  * The material's own texture fetches beside the layers': the splat maps, the macro variation's
- * one, each rule's noise and the colour map's one (`DETAIL`, or the far `COLOR_MAP`: sampled
- * outside the far branch); three's lighting, shadows and environment not counted
+ * one, each rule's noise, the colour map's one (`DETAIL`, or the far `COLOR_MAP`: sampled
+ * outside the far branch) and the puddle patches' one (p307); three's lighting, shadows and
+ * environment not counted
  */
 const getMaterialFetches = ({ define }: TerrainDebugViewContext) => {
   const rules = define.blend.source === 'SINGLE' ? [] : define.blend.rules;
@@ -258,14 +259,15 @@ const getMaterialFetches = ({ define }: TerrainDebugViewContext) => {
     getSplatMapCount(define.blend, define.layers.length) +
     (define.macro ? 1 : 0) +
     rules.filter((rule) => rule.noise).length +
-    (define.colorMap?.mode === 'DETAIL' || define.far?.mode === 'COLOR_MAP' ? 1 : 0)
+    (define.colorMap?.mode === 'DETAIL' || define.far?.mode === 'COLOR_MAP' ? 1 : 0) +
+    (define.wet?.puddles?.patches ? 1 : 0)
   );
 };
 
 /**
  * The material's own texture fetches at a pixel, as `TAPS` counts them: those every pixel makes
  * (each sampled layer's or slot's taps, its packing slots × its anti-tiling's taps × its planes;
- * the splat maps, the macro, the rules' noise, the colour map), each slope gate's branch's, made where its
+ * the splat maps, the macro, the rules' noise, the colour map, the puddle patches), each slope gate's branch's, made where its
  * share is over 0 (a slot's: the kept layer's gate).
  * @internal
  */
@@ -301,8 +303,8 @@ const TAP_COLORS = [
 /**
  * `TAPS`: the material's own texture fetches at the pixel (p301 §6's estimate made visible): every
  * sampled layer's or slot's taps (its packing slots × its anti-tiling's taps × its planes), its
- * slope gate's branch's where the share is over 0, the splat maps, the macro, the rules' noise and
- * the colour map; past a far mode's band, those last alone (the far surface samples no layer). In
+ * slope gate's branch's where the share is over 0, the splat maps, the macro, the rules' noise,
+ * the colour map and the puddle patches; past a far mode's band, those last alone (the far surface samples no layer). In
  * bands (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more magenta)
  * over the faint 1 m checker. A layer at its own index is sampled whatever its weight; sparse
  * sampling samples its slots alone.
@@ -376,12 +378,14 @@ const buildLayerCount = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
 const DRY_SHADE = 0.06;
 
 /**
- * `WETNESS`: the wet response's stages, R how full the pores are, G how far the film has formed
- * (red: pores filling, yellow: under a film), over the faint 1 m checker; dark grey where it's dry
- * (and everywhere when the surface conditions feature isn't installed)
+ * `WETNESS`: the wet response's stages, R how full the pores are, G how far the film has formed,
+ * B the puddles (red: pores filling, yellow: under a film, the blue of a puddle over either:
+ * magenta to white), over
+ * the faint 1 m checker; dark grey where it's dry (and everywhere when the surface conditions
+ * feature isn't installed)
  */
 const buildWetness = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
-  const stages = ctx.wet ? vec3(ctx.wet.pores, ctx.wet.film, 0) : vec3(0);
+  const stages = ctx.wet ? vec3(ctx.wet.pores, ctx.wet.film, ctx.wet.puddle) : vec3(0);
   return stages.max(DRY_SHADE).mul(mix(0.8, 1, getChecker(ctx))) as unknown as Node<'vec3'>;
 };
 

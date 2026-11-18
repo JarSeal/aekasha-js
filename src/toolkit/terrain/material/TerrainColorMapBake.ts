@@ -17,6 +17,7 @@ import {
   type NodeMaterial,
 } from 'three/webgpu';
 import { bakeTexture, type BakedTexture } from 'aekasha';
+import { readTerrainDefine } from './TerrainDefine';
 import { buildTerrainGraph, getTerrainMaterialInputs } from './TerrainMaterial';
 
 /** The bake's default size, texels */
@@ -122,13 +123,17 @@ const getTerrainSource = (opts: BakeTerrainColorMapOpts) => {
  */
 export const bakeTerrainColorMap = (opts: BakeTerrainColorMapOpts): Promise<BakedTexture> => {
   const { inputs, define } = getTerrainSource(opts);
-  // The colour map's input: the define without one refuses it
-  const { colorMap: _colorMap, ...bakeInputs } = inputs;
+  const bakeDefine = getBakeDefine(define);
+  // The colour map's input, and the macro texture's when only the wet response's puddle patches
+  // read it: the define without them refuses them
+  const { colorMap: _colorMap, macro, ...rest } = inputs;
+  const takesMacro = readTerrainDefine({ terrain: bakeDefine }).takesMacroTexture;
+  const bakeInputs = takesMacro && macro !== undefined ? { ...rest, macro } : rest;
   const graph = new MeshStandardNodeMaterial();
   buildTerrainGraph(
     bakeInputs,
     graph,
-    { terrain: getBakeDefine(define) },
+    { terrain: bakeDefine },
     { viewDistance: float(0) as unknown as Node<'float'> }
   );
   const albedo = graph.colorNode as unknown as Node<'vec3'>;

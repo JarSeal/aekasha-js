@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Materials, Terrain, Weather
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -232,7 +232,7 @@ type SurfaceConditions = {
 - **SBP:** the feature is 1.7 KiB gzip in the app's first download (three modules; the tab is a lazy chunk): `sbp.config.ts` initial 401 → 402 KiB, `assets/index.js` 396 → 398 KiB, the group `_engine/features/surface` budgeted at 2 KiB; the banner's is 0 (`FEATURE_GROUPS`).
 - **Left for Phase 7:** the nested `CLAUDE.md`, the feature counts in the root's and `kernel/init/CLAUDE.md`'s Bootstrap flow, the readme, the Hub page.
 
-### Phase 2 — Wet response (T1, T2, T6, T9)
+### Phase 2 — Wet response (T1, T2, T6, T9) — done
 
 1. `applySurfaceWetness`, p305 integration (`wet` key), weighted per-layer responses, the `WETNESS` debug view.
 2. Category defaults (S3), `dryingSpeed`.
@@ -286,6 +286,25 @@ type SurfaceConditions = {
 2. Ripples (`rippleAtlas`).
 
 **Exit:** on `mud02` and the `rocks01` gravel, puddles fill the low points first and ripple only while it rains. Frames without rain sample no ripples (verify with the `TAPS` view).
+
+**As built (section 1):**
+
+- **Decided at the start:** the patches are a fetch of their own (not the `macro` sample's B, whose patch size `macro.scale / 5` ties them to the colour variation's 40-300 m); the regional wetness takes both sources, as D2 has them.
+- **The node** (`applySurfaceWetness`): `surface.regional?` (a float node) and `opts.puddles?: { maxSlope?, edge?, patches?, patchAmount? }` (`SurfacePuddleOpts`; `patches` a node the caller samples, so the node stays fetch-free); `masks.puddle` (0 without puddles). `FULL` only.
+- **The puddle, differing from S4:**
+  - `waterline = level × puddleResponse × max(0, 1 + (patches − 0.5)·2·amount)`, `level = max(puddleLevel, regional)`; `puddle = smoothstep(0, edge, waterline − height) × smoothstep(cos maxSlope, cos(maxSlope/2), up)`. S4 adds the patches to the level, which put puddles in high patches at a puddle level of 0; here level 0 is dry. Without a `height`, the relief is flat at 0.5.
+  - Under a puddle: the pores and film full (`max` with the puddle; the masks stay the stages before it), the albedo × (1 − 0.15·puddle) on top of the soaked darkening (S4's 0.85, the "holes" risk's cap), the roughness to 0.02 (`PUDDLE_ROUGHNESS`; never raised), the normal to the geometry's.
+  - Defaults: `maxSlope` 15° (full puddles up to 7.5°: the gallery blocks' noise is under 10°), `edge` 0.05, `patchAmount` 0.75.
+- **The regional wetness, differing from S4:** a floor, not a sum: the wetness shown is `max(wetness × exposure, regional)` (before the drying power, whatever the facing), and the puddle level `max(puddleLevel, regional)`. S4's `+ regional` would push wet ground past 1 and doesn't keep a swamp's puddles.
+- **The terrain `wet` keys** (schema and reader in step):
+  - `puddles?: { maxSlope? (over 0 to 45, 15), edge? (over 0 to 1, 0.05), patches?: { scale (metres a macro tile, over 0), amount? (0..1, 0.75) } }`; refused with `quality: 'SIMPLE'`. Uniforms `terrain_wetPuddleMaxSlope`, `terrain_wetPuddleEdge`, with patches `terrain_wetPuddlePatchScale` and `terrain_wetPuddlePatchAmount`.
+  - `regional?: { attribute? } | { splatChannel: 'A' }`: the attribute's name defaults to `_wetness` (GLTFLoader lowercases glTF's `_WETNESS`; a mesh without it reads 0, warned by three); `A` needs `SPLAT_MAP` or `SPLAT_MAP_AND_RULES` painting at most 4 layers (the first map's A weighs none; `PaintedWeights.splatAlpha`, no extra fetch).
+- **The macro input:** the patches read it like rule noise: `takesMacroTexture` counts the material's or a tier's patches, the code route's id is `macro.texture`, else `noiseTexture` (now also taken for patches), else `macroNoise`. The patches sample at the material's XZ (`sampleMacroTexture`, `OBJECT` space too) outside the far branch. `TAPS` counts the fetch. The colour-map bake drops the `macro` input when only the stripped `wet` read it.
+- **`WETNESS` view:** B is the puddle (magenta to white over the stages).
+- **The gallery's row:** every block `puddles: { patches: { scale: 30 } }` (patches of 6 m, about two a block); the `SIMPLE` variant drops them. The grass block has a `_wetness` band along its left edge (wet to 2 m, dry past 5 m: a riverbank), on its seed's geometry. The scene's JSON starts `puddleLevel: 0.6`; the tab has a Puddle level slider and steps (0, 0.3, 0.6, 1) and each block's `puddleResponse` in its row.
+- **Seen** (2026-11-18, Windows Chrome on WebGPU, AMD RDNA 3; no shader errors):
+  - `WETNESS`: mud has almost no puddles at a puddle level of 0.3 and most of its flat under water at 1, the higher spots and the 35° ramp left out; the rocks' gravel puddles between its stones, more in one patch than the other; cliffs none; the grass's regional band stays wet (with small puddles) at wetness and puddle level 0.
+  - In colour a puddle reads little against a full film (mud from wetness 0.3: roughness 0.05 against 0.02, the normal 60 % flattened against 100 %, 15 % darker): open for section 2's review, with the ripples, which mark puddles apart from the film.
 
 ### Phase 4 — Streaks, shoreline (T5, T8)
 

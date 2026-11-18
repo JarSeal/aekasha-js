@@ -1,17 +1,24 @@
 // The terrain material's wet response (p307 D2): the blended surface wet by the surface conditions
 // (`nodes/Wet.ts`' `applySurfaceWetness`) after the layers, the far branch and the macro, its
 // relief the layers' blended height, its response their sets' `porosity`, `wetDarkening`,
-// `wetRoughness` and `dryingSpeed` by weight, its cavities the AO. The conditions are the
+// `wetRoughness` and `dryingSpeed` by weight, its cavities the AO; its puddles (T3) by the sets'
+// `puddleResponse`, their patches one fetch of the macro texture at their own scale; its regional
+// wetness (T7) a vertex attribute or the first splat map's A. The conditions are the
 // `surfaceConditions()` feature's stable uniforms; without the feature the material builds dry,
 // warned once a page load.
-import { float, uniform } from 'three/tsl';
+import { attribute, float, uniform } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
-import { Vector2, type Node, type NodeMaterial } from 'three/webgpu';
+import { Vector2, type Node, type NodeMaterial, type TextureNode } from 'three/webgpu';
 import { lwarn } from 'aekasha';
 import { getSurfaceConditionNodes } from 'aekasha/surface';
+import { sampleMacroTexture } from '../nodes/Macro';
 import type { SurfaceSpace } from '../nodes/SurfaceSpace';
-import { applySurfaceWetness, type SurfaceWetnessMasks } from '../nodes/Wet';
-import type { ResolvedTerrainDefine } from './TerrainDefine';
+import {
+  applySurfaceWetness,
+  type SurfacePuddleOpts,
+  type SurfaceWetnessMasks,
+} from '../nodes/Wet';
+import type { ResolvedTerrainDefine, TerrainWetDefine } from './TerrainDefine';
 import { keepUniform, type LayerWet } from './TerrainLayers';
 
 /** Whether a material with `wet` has warned that the feature isn't installed (once a page load) */
@@ -19,7 +26,8 @@ let isMissingFeatureWarned = false;
 
 /**
  * The surface the wet response gets: the albedo, the roughness, the shaded normal in the
- * material's space, the AO (the material's `aoNode`, or null) and what the layers' wet reads
+ * material's space, the AO (the material's `aoNode`, or null), what the layers' wet reads, the
+ * macro texture (the puddle patches') and the first splat map's A (a regional wetness's)
  * @internal
  */
 export type TerrainWetInput = {
@@ -28,12 +36,54 @@ export type TerrainWetInput = {
   normal: Node<'vec3'>;
   ao: Node<'float'> | null;
   wet: LayerWet | null;
+  macroTexture: TextureNode | null;
+  splatAlpha: Node<'float'> | null;
+};
+
+type Keep = <T>(name: string, node: unknown) => T;
+
+/**
+ * The puddles' options (uniforms `terrain_wetPuddleMaxSlope`, `terrain_wetPuddleEdge`, and with
+ * patches `terrain_wetPuddlePatchScale` and `terrain_wetPuddlePatchAmount`: one fetch of the
+ * macro texture's B at the material's XZ over the scale), or undefined without
+ */
+const getPuddleOpts = (
+  settings: TerrainWetDefine,
+  surface: TerrainWetInput,
+  space: SurfaceSpace,
+  keep: Keep
+): SurfacePuddleOpts | undefined => {
+  const { puddles } = settings;
+  if (!puddles) return undefined;
+  const opts: SurfacePuddleOpts = {
+    maxSlope: keep('wetPuddleMaxSlope', uniform(puddles.maxSlope)),
+    edge: keep('wetPuddleEdge', uniform(puddles.edge)),
+  };
+  if (!puddles.patches) return opts;
+  // The reader requires the macro input with patches (`takesMacroTexture`)
+  const texture = surface.macroTexture as TextureNode;
+  const scale = keep<Node<'float'>>('wetPuddlePatchScale', uniform(puddles.patches.scale));
+  return {
+    ...opts,
+    patches: sampleMacroTexture(texture, scale, space.position).b as unknown as Node<'float'>,
+    patchAmount: keep('wetPuddlePatchAmount', uniform(puddles.patches.amount)),
+  };
+};
+
+/** The regional wetness's node: the vertex attribute, or the first splat map's A; undefined without */
+const getRegional = (settings: TerrainWetDefine, surface: TerrainWetInput) => {
+  const { regional } = settings;
+  if (!regional) return undefined;
+  if ('attribute' in regional) {
+    return attribute(regional.attribute, 'float') as unknown as Node<'float'>;
+  }
+  return surface.splatAlpha ?? undefined;
 };
 
 /**
  * The surface wet by the surface conditions with the define's `wet` (uniforms
- * `terrain_wetShelter`, and with `FULL` `terrain_wetHeightInfluence` and
- * `terrain_wetCavityInfluence`), and its masks (the `WETNESS` view's); as given, masks null,
+ * `terrain_wetShelter`, and with `FULL` `terrain_wetHeightInfluence`,
+ * `terrain_wetCavityInfluence` and the puddles'), and its masks (the `WETNESS` view's); as given, masks null,
  * without `wet` or without the `surfaceConditions()` feature (warned once a page load).
  * @internal
  */
@@ -56,9 +106,11 @@ export const applyTerrainWetness = (
     }
     return dry;
   }
-  const keep = <T>(name: string, node: unknown) => keepUniform(material, name, node) as T;
+  const keep: Keep = <T>(name: string, node: unknown) => keepUniform(material, name, node) as T;
   const isFull = settings.quality === 'FULL';
   const { height, response, puddleResponse } = surface.wet;
+  const regional = getRegional(settings, surface);
+  const puddles = isFull ? getPuddleOpts(settings, surface, space, keep) : undefined;
   const wet = applySurfaceWetness(
     {
       albedo: surface.albedo,
@@ -66,6 +118,7 @@ export const applyTerrainWetness = (
       normal: surface.normal,
       height,
       ...(surface.ao ? { cavity: float(1).sub(surface.ao) as Node<'float'> } : {}),
+      ...(regional ? { regional } : {}),
       response: {
         porosity: response.x as Node<'float'>,
         wetDarkening: response.y as Node<'float'>,
@@ -85,6 +138,7 @@ export const applyTerrainWetness = (
             cavityInfluence: keep('wetCavityInfluence', uniform(settings.cavityInfluence)),
           }
         : {}),
+      ...(puddles ? { puddles } : {}),
     }
   );
   return {

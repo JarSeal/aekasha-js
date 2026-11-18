@@ -177,6 +177,11 @@ describe('applyTerrainDebugView', () => {
     expect(estimateTerrainFetches(contextOf(colorMapped, 'MINIMAL')).always).toBe(
       3 + 1 + 1 + 1 + 1
     );
+    // p307's puddle patches: one fetch of the macro texture at their own scale; puddles alone none
+    const puddled = { ...blended, wet: { puddles: {} } };
+    expect(estimateTerrainFetches(contextOf(puddled, 'MINIMAL')).always).toBe(3 + 1 + 1 + 1);
+    const patched = { ...blended, wet: { puddles: { patches: { scale: 30 } } } };
+    expect(estimateTerrainFetches(contextOf(patched, 'MINIMAL')).always).toBe(3 + 1 + 1 + 1 + 1);
   });
 
   it("counts only the far surface's fetches past a far mode's band", () => {
@@ -293,15 +298,17 @@ describe('applyTerrainDebugView', () => {
     expect(reaches(taps.emissiveNode, projection.slopeGate)).toBe(true);
   });
 
-  it("shows the wet response's pores and film, a dry grey without its masks", () => {
+  it("shows the wet response's pores, film and puddles, a dry grey without its masks", () => {
     const pores = float(0.3) as unknown as Node<'float'>;
     const film = float(0.1) as unknown as Node<'float'>;
-    const wet = { exposure: float(1), wetness: float(0.4), pores, film } as never;
+    const puddle = float(0.7) as unknown as Node<'float'>;
+    const wet = { exposure: float(1), wetness: float(0.4), pores, film, puddle } as never;
     const view = new MeshStandardNodeMaterial();
     applyTerrainDebugView(view, 'WETNESS', { ...ctx, wet });
     const nodes = collect(view.emissiveNode);
     expect(nodes.has(pores)).toBe(true);
     expect(nodes.has(film)).toBe(true);
+    expect(nodes.has(puddle)).toBe(true);
     const dry = new MeshStandardNodeMaterial();
     applyTerrainDebugView(dry, 'WETNESS', ctx);
     expect(dry.emissiveNode).toBeTruthy();

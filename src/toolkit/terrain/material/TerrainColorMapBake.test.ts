@@ -25,11 +25,17 @@ vi.mock('aekasha', async (importOriginal) => ({
 }));
 
 // The surface conditions' uniforms: the block's material is wet (p307), its bake isn't
-const surface = vi.hoisted(() => ({ wetness: null as unknown }));
+const surface = vi.hoisted(() => ({ wetness: null as unknown, puddleLevel: null as unknown }));
 vi.mock('aekasha/surface', async () => {
   const tsl = await import('three/tsl');
   surface.wetness = tsl.uniform(0.5);
-  return { getSurfaceConditionNodes: () => ({ wetness: surface.wetness }) };
+  surface.puddleLevel = tsl.uniform(0.5);
+  return {
+    getSurfaceConditionNodes: () => ({
+      wetness: surface.wetness,
+      puddleLevel: surface.puddleLevel,
+    }),
+  };
 });
 
 const makeBundle = () =>
@@ -117,6 +123,24 @@ describe('bakeTerrainColorMap', () => {
     expect(nodes).not.toContain(positionView);
     expect(nodes.some((n) => (n as { structNode?: unknown }).structNode)).toBe(false);
     expect(nodes).not.toContain(surface.wetness);
+  });
+
+  it("drops the macro input that only the puddle patches read, and keeps a macro's", async () => {
+    const macro = texture(new Texture());
+    const bakeWith = async (terrain: Record<string, unknown>) => {
+      const material = new MeshStandardNodeMaterial();
+      setupTerrainMaterial({ layer0: makeBundle(), macro }, material, { terrain });
+      material.userData.terrainDefine = terrain;
+      const { mesh } = makeBlock();
+      bakes.opts.length = 0;
+      await bakeTerrainColorMap({ id: 'patched', mesh, material });
+      return collectNodes(bakes.opts[0].outputs[0].node).some(
+        (n) => (n as { value?: unknown }).value === macro.value && n !== (macro as unknown as Node)
+      );
+    };
+    const patches = { puddles: { patches: { scale: 30 } } };
+    expect(await bakeWith({ layers: [{}], wet: patches })).toBe(false);
+    expect(await bakeWith({ layers: [{}], macro: { scale: 90 }, wet: patches })).toBe(true);
   });
 
   it("multiplies the material's AO in when asked", async () => {

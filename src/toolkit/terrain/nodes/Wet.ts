@@ -5,9 +5,12 @@
 // little toward the response's), then a water film forms over them where water stands (the
 // roughness falls to water's, the detail normal flattens toward the geometry's). A porous surface
 // fills its pores before any film, a dense one gets the film at once; one that sheds water (grass,
-// a cliff face) gets little film or none. Every number of the response is a node: a terrain material's
-// are its layers' set uniforms blended by weight, an app material's its own. No texture fetch.
-import { float, max, mix, normalWorldGeometry, smoothstep, vec2 } from 'three/tsl';
+// a cliff face) gets little film or none. Puddles (T3) stand where the puddle level's waterline
+// is over the relief, on the flat, filling some patches first; an authored regional wetness (T7)
+// keeps its places wet in any weather. Every number of the response is a node: a terrain
+// material's are its layers' set uniforms blended by weight, an app material's its own. No
+// texture fetch (the patches are the caller's sample).
+import { cos, float, max, mix, normalWorldGeometry, smoothstep, vec2 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node } from 'three/webgpu';
 import type { SurfaceConditionNodes } from 'aekasha/surface';
@@ -31,6 +34,18 @@ const PORE_SHARE = 0.5;
 const MIN_PORE_STAGE = 0.1;
 /** The lowest drying speed the power takes: 0 would show any wetness as full */
 const MIN_DRYING_SPEED = 0.05;
+/**
+ * The roughness of a puddle's water surface, which a puddle falls to.
+ * @internal
+ */
+export const PUDDLE_ROUGHNESS = 0.02;
+/**
+ * How far a full puddle darkens the soaked albedo beneath it (the water's depth): capped low, so a
+ * puddle without nearby reflections (no SSR) doesn't read as a hole.
+ */
+const PUDDLE_DARKENING = 0.15;
+/** A relief's height where the surface gives none: neither peak nor hollow */
+const FLAT_HEIGHT = 0.5;
 const DEG_TO_RAD = Math.PI / 180;
 
 /**
@@ -41,6 +56,9 @@ export const SURFACE_WETNESS_DEFAULTS = {
   heightInfluence: 0.5,
   cavityInfluence: 0.5,
   shelter: [60, 120],
+  puddleMaxSlope: 15,
+  puddleEdge: 0.05,
+  puddlePatchAmount: 0.75,
 } as const satisfies Record<string, number | readonly [number, number]>;
 
 /** A number as a constant node, or the node given */
@@ -66,7 +84,8 @@ export type SurfaceWetResponse = {
   dryingSpeed?: Node<'float'> | number;
   /**
    * How readily water stands on the surface, 0..1 (default 1): how far a film forms over the full
-   * pores (0: none, a surface that sheds water; p307's puddles read it too).
+   * pores (0: none, a surface that sheds water) and how high its puddles fill (the puddle level ×
+   * this: sand's 0.3 puddles only in its lowest relief, a cliff's 0 never).
    */
   puddleResponse?: Node<'float'> | number;
 };
@@ -89,6 +108,12 @@ export type WetSurfaceInput = {
   height?: Node<'float'>;
   /** The cavity, 0 open to 1 enclosed (eg. 1 − the AO): wetter, and drier last (`'FULL'` only). */
   cavity?: Node<'float'>;
+  /**
+   * An authored wetness, 0..1 (a vertex attribute, a splat channel: riverbanks, swamps): the
+   * least wetness the surface shows and the least puddle level it fills to, in any weather and
+   * whatever its facing.
+   */
+  regional?: Node<'float'>;
   /** How the surface responds to water. */
   response: SurfaceWetResponse;
 };
@@ -123,6 +148,31 @@ export type ApplySurfaceWetnessOpts = {
    * (overhangs, undersides). A vec2 node of the two in degrees, or the numbers.
    */
   shelter?: Node<'vec2'> | readonly [number, number];
+  /**
+   * Puddles (`'FULL'` only): where the conditions' `puddleLevel` × the response's `puddleResponse`
+   * is over the surface's `height` (flat at 0.5 without one), on ground flatter than `maxSlope`.
+   * Left out: none.
+   */
+  puddles?: SurfacePuddleOpts;
+};
+
+/** {@link ApplySurfaceWetnessOpts}' puddles. */
+export type SurfacePuddleOpts = {
+  /**
+   * The steepest ground a puddle stands on, degrees from flat (default 15): full puddles up to
+   * half of it, none past it.
+   */
+  maxSlope?: Node<'float'> | number;
+  /** The relief height over which a puddle's rim fades in, above 0 (default 0.05). */
+  edge?: Node<'float'> | number;
+  /**
+   * Patches, 0..1 around 0.5 (eg. the macro noise's B at a large scale), where the puddles fill
+   * ahead (over 0.5) or behind (under): the waterline × `1 + (patches − 0.5) · 2 · patchAmount`.
+   * Left out: the same everywhere.
+   */
+  patches?: Node<'float'>;
+  /** How far the patches move the waterline, 0..1 (default 0.75): 1 keeps a 0 patch dry. */
+  patchAmount?: Node<'float'> | number;
 };
 
 /**
@@ -138,6 +188,8 @@ export type SurfaceWetnessMasks = {
   pores: Node<'float'>;
   /** The film's stage: how far the water film has formed over the full pores (× `puddleResponse`). */
   film: Node<'float'>;
+  /** The puddle: how far water stands over the surface (0 without `opts.puddles`). */
+  puddle: Node<'float'>;
 };
 
 /** The wet surface: the albedo, the roughness, the normal (when given) and the masks. */
@@ -157,8 +209,12 @@ export type WetSurface = {
  * pores (as far as water stands on it, `puddleResponse`), to water's (`WET_FILM_ROUGHNESS`, 0.05;
  * neither ever raises it), and flattens the detail normal under the film. A dense surface
  * (`porosity` 0) gets the film at once, a porous one (1) fills its pores over the first half of
- * its local wetness. Builds no texture fetch and no branch; at wetness 0 the surface is as given.
- * @param surface the dry surface, its relief, cavity and response
+ * its local wetness. With `opts.puddles` (T3), water stands where the conditions' `puddleLevel` ×
+ * `puddleResponse` (× the patches' share) is over the relief on flat ground: soaked, a little
+ * darker, water's roughness (`PUDDLE_ROUGHNESS`, 0.02) and the geometry's normal. A `regional`
+ * wetness (T7) is the least wetness and puddle level shown. Builds no texture fetch and no branch;
+ * at wetness and puddle level 0 without a regional wetness the surface is as given.
+ * @param surface the dry surface, its relief, cavity, regional wetness and response
  * @param conditions the surface conditions' uniforms (`getSurfaceConditionNodes()`)
  * @returns the wet surface and its masks
  * @example
@@ -171,7 +227,8 @@ export type WetSurface = {
  * if (conditions) {
  *   const wet = applySurfaceWetness(
  *     { albedo, roughness, height: sample.height, response: { porosity: 0.7, wetDarkening: 0.6, wetRoughness: 0.15 } },
- *     conditions
+ *     conditions,
+ *     { puddles: { maxSlope: 10 } }
  *   );
  *   material.colorNode = wet.albedo;
  *   material.roughnessNode = wet.roughness;
@@ -197,6 +254,8 @@ export const applySurfaceWetness = (
   const cosines = angles.mul(DEG_TO_RAD).cos() as Node<'vec2'>;
   const exposure = smoothstep(cosines.y, cosines.x, up) as unknown as Node<'float'>;
   let global = (conditions.wetness as unknown as Node<'float'>).mul(exposure) as Node<'float'>;
+  // T7: an authored wetness, whatever the weather and the facing
+  if (surface.regional) global = max(global, surface.regional) as unknown as Node<'float'>;
   // The surface's own drying: the wetness it shows, the overall one to its drying speed
   const { dryingSpeed } = surface.response;
   if (dryingSpeed !== undefined && dryingSpeed !== 1) {
@@ -231,19 +290,74 @@ export const applySurfaceWetness = (
       ? filmStage
       : filmStage.mul(toFloat(puddleResponse))
   ) as Node<'float'>;
-  const albedo = surface.albedo.mul(float(1).sub(darkening.mul(pores))) as Node<'vec3'>;
-  const pored = mix(surface.roughness, surface.roughness.min(wetRoughness), pores) as Node<'float'>;
+  // T3: a puddle soaks what's beneath it (its pores and film full)
+  const puddle = isFull && opts.puddles ? getPuddle(surface, conditions, up, opts.puddles) : null;
+  const soaked = puddle ? (max(pores, puddle) as unknown as Node<'float'>) : pores;
+  const filmed = puddle ? (max(film, puddle) as unknown as Node<'float'>) : film;
+  let albedo = surface.albedo.mul(float(1).sub(darkening.mul(soaked))) as Node<'vec3'>;
+  const pored = mix(
+    surface.roughness,
+    surface.roughness.min(wetRoughness),
+    soaked
+  ) as Node<'float'>;
   // A film is water's roughness, which never roughens a smoother surface (ice, polish)
-  const roughness = mix(pored, pored.min(WET_FILM_ROUGHNESS), film) as Node<'float'>;
+  let roughness = mix(pored, pored.min(WET_FILM_ROUGHNESS), filmed) as Node<'float'>;
   const geometryNormal = opts.geometryNormal ?? (normalWorldGeometry as unknown as Node<'vec3'>);
+  // A puddle's water is flat: the geometry's normal under a full one
+  const flatten = film.mul(FILM_FLATTEN) as Node<'float'>;
   const normal =
     surface.normal && isFull
-      ? (mix(surface.normal, geometryNormal, film.mul(FILM_FLATTEN)).normalize() as Node<'vec3'>)
+      ? (mix(
+          surface.normal,
+          geometryNormal,
+          puddle ? max(flatten, puddle) : flatten
+        ).normalize() as Node<'vec3'>)
       : surface.normal;
+  if (puddle) {
+    albedo = albedo.mul(float(1).sub(puddle.mul(PUDDLE_DARKENING))) as Node<'vec3'>;
+    roughness = mix(roughness, roughness.min(PUDDLE_ROUGHNESS), puddle) as Node<'float'>;
+  }
   return {
     albedo,
     roughness,
     ...(normal ? { normal } : {}),
-    masks: { exposure, wetness: local, pores, film },
+    masks: {
+      exposure,
+      wetness: local,
+      pores,
+      film,
+      puddle: puddle ?? (float(0) as unknown as Node<'float'>),
+    },
   };
+};
+
+/**
+ * The puddle mask (T3): the waterline (the puddle level, at least the regional wetness, ×
+ * `puddleResponse`, × the patches' share) over the relief, faded in over `edge`, on ground
+ * flatter than `maxSlope` (full up to half of it)
+ */
+const getPuddle = (
+  surface: WetSurfaceInput,
+  conditions: SurfaceConditionNodes,
+  up: Node<'float'>,
+  opts: SurfacePuddleOpts
+) => {
+  const defaults = SURFACE_WETNESS_DEFAULTS;
+  const puddleLevel = conditions.puddleLevel as unknown as Node<'float'>;
+  const level = (
+    surface.regional ? max(puddleLevel, surface.regional) : puddleLevel
+  ) as Node<'float'>;
+  const { puddleResponse } = surface.response;
+  let waterline =
+    puddleResponse === undefined ? level : (level.mul(toFloat(puddleResponse)) as Node<'float'>);
+  if (opts.patches) {
+    const amount = toFloat(opts.patchAmount ?? defaults.puddlePatchAmount);
+    const share = max(opts.patches.sub(0.5).mul(amount).mul(2).add(1), 0);
+    waterline = waterline.mul(share) as Node<'float'>;
+  }
+  const depth = waterline.sub(surface.height ?? FLAT_HEIGHT);
+  const rim = smoothstep(0, toFloat(opts.edge ?? defaults.puddleEdge), depth);
+  const maxSlope = toFloat(opts.maxSlope ?? defaults.puddleMaxSlope).mul(DEG_TO_RAD);
+  const flat = smoothstep(cos(maxSlope), cos(maxSlope.mul(0.5)), up);
+  return rim.mul(flat) as unknown as Node<'float'>;
 };

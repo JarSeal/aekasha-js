@@ -23350,6 +23350,7 @@
       ],
       "surfaceConditions": {
         "wetness": 0.6,
+        "puddleLevel": 0.6,
         "mode": "MANUAL"
       },
       "id": "terrainGallery",

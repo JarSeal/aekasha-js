@@ -156,7 +156,11 @@ const getIncomingWeights = (
   } else if (getPaintedSource(blend) === 'SPLAT_MAP') {
     painted = getSplatMapWeights(paintedCount, splatMaps);
   } else {
-    painted = { weights: [float(1) as unknown as Node<'float'>], vertexAo: null };
+    painted = {
+      weights: [float(1) as unknown as Node<'float'>],
+      vertexAo: null,
+      splatAlpha: null,
+    };
   }
   const rest = Array.from({ length: count - painted.weights.length }, () => zero);
   return { ...painted, weights: [...painted.weights, ...rest] };
@@ -253,7 +257,10 @@ const getAoNode = (
  * builds dry, warned) wets the blended surface where it faces the sky (`shelter`), the low points
  * and cavities first (`FULL`): the albedo darkens and the roughness falls as the pores fill, then
  * the roughness falls to water's and the detail normal flattens as a film forms, each layer by its
- * set's `porosity`, `wetDarkening` and `wetRoughness`, blended by weight. With `space: 'OBJECT'` all of it is in the mesh's own space (its
+ * set's `porosity`, `wetDarkening` and `wetRoughness`, blended by weight; with `wet.puddles` water
+ * stands where the puddle level × the sets' `puddleResponse` is over the blended relief on flat
+ * ground (its patches one fetch of the input `macro`), and `wet.regional` (a vertex attribute or
+ * the first splat map's A) keeps its places wet. With `space: 'OBJECT'` all of it is in the mesh's own space (its
  * position × scale, its normal: coordinates, projections, rules, macro), the shaded normal turned
  * into world space before the view; `WORLD` (default) the world's. A live layer (`source:
  * 'PROCEDURAL_LIVE'`) runs its procedural set's generator in place of sampling (its whole graph at
@@ -276,13 +283,14 @@ const getAoNode = (
  * `terrain_detailDistance` with a colour map's
  * `detailDistance`, `terrain_distanceFade` with `distance`, `terrain_farBlend` with a far mode, and
  * `terrain_wetShelter` with `wet` (`terrain_wetHeightInfluence` and `terrain_wetCavityInfluence`
- * with its `FULL` quality).
+ * with its `FULL` quality; `terrain_wetPuddleMaxSlope` and `terrain_wetPuddleEdge` with its
+ * puddles, `terrain_wetPuddlePatchScale` and `terrain_wetPuddlePatchAmount` with their patches).
  * A `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug env, once
  * {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the view. The
  * define as given is kept at `material.userData.terrainDefine`.
  * @param inputs the material's inputs: `layer<i>` bundles or the `layers` set array bundle (the
  * `textureSets()` feature's resolvers), with the splat map sources the splat maps `splat<i>` and
- * with `macro` or a rule's noise the macro texture `macro`, with `colorMap` the colour map
+ * with `macro`, a rule's noise or puddle patches the macro texture `macro`, with `colorMap` the colour map
  * `colorMap` (texture nodes: `{ "texture": id }`)
  * @param material the node material being built (a `STANDARDNODEMATERIAL`)
  * @param staticDefines the material's static defines, `terrain` among them
@@ -460,7 +468,15 @@ export const buildTerrainGraph = (
   const wet = applyTerrainWetness(
     material,
     define,
-    { albedo: surface.albedo, roughness, normal: shaded, ao, wet: surface.wet },
+    {
+      albedo: surface.albedo,
+      roughness,
+      normal: shaded,
+      ao,
+      wet: surface.wet,
+      macroTexture,
+      splatAlpha: raw?.splatAlpha ?? null,
+    },
     space
   );
   // In the material's space; into world space once, then view space

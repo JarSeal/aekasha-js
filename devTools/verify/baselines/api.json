@@ -5023,6 +5023,7 @@
       "TerrainLiveDefine": "TypeAlias",
       "TerrainMacroDefine": "TypeAlias",
       "TerrainProjectionDefine": "TypeAlias",
+      "TerrainPuddlesDefine": "TypeAlias",
       "TerrainRuleDefine": "TypeAlias",
       "TerrainRuleRangeDefine": "TypeAlias",
       "TerrainWetDefine": "TypeAlias"
@@ -5106,6 +5107,7 @@
       "TERRAIN_UV_MODES": "Variable",
       "TERRAIN_VERTEX_COLOR_LAYOUTS": "Variable",
       "TERRAIN_WET_QUALITIES": "Variable",
+      "TERRAIN_WET_SPLAT_CHANNELS": "Variable",
       "TerrainAntiTiling": "TypeAlias",
       "TerrainAntiTilingSchema": "Variable",
       "TerrainBlend": "TypeAlias",
@@ -5300,7 +5302,9 @@
     "src/toolkit/terrain/nodes/Wet.ts": {
       "applySurfaceWetness": "Function",
       "ApplySurfaceWetnessOpts": "TypeAlias",
+      "PUDDLE_ROUGHNESS": "Variable",
       "SURFACE_WETNESS_DEFAULTS": "Variable",
+      "SurfacePuddleOpts": "TypeAlias",
       "SurfaceWetnessMasks": "TypeAlias",
       "SurfaceWetResponse": "TypeAlias",
       "WET_FILM_ROUGHNESS": "Variable",

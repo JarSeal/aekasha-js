@@ -128,7 +128,20 @@ const PROJECTION_KEYS: Record<(typeof PROJECTION_MODES)[number], string[]> = {
 };
 const MACRO_KEYS = ['scale', 'brightness', 'hue', 'roughness'];
 const DISTANCE_KEYS = ['fade', 'far', 'farBlend'];
-const WET_KEYS = ['quality', 'heightInfluence', 'cavityInfluence', 'shelter'];
+const WET_KEYS = [
+  'quality',
+  'heightInfluence',
+  'cavityInfluence',
+  'shelter',
+  'puddles',
+  'regional',
+];
+const WET_PUDDLE_KEYS = ['maxSlope', 'edge', 'patches'];
+const WET_PATCH_KEYS = ['scale', 'amount'];
+const WET_SPLAT_CHANNELS = ['A'] as const;
+/** The vertex attribute a regional wetness reads by default: glTF's `_WETNESS` (GLTFLoader's
+ * lowercase name) */
+const WET_REGIONAL_ATTRIBUTE = '_wetness';
 const COLOR_MAP_KEYS: Record<(typeof COLOR_MAP_MODES)[number], string[]> = {
   DETAIL: ['mode', 'detailDistance'],
   FAR_ONLY: ['mode'],
@@ -280,6 +293,26 @@ export type TerrainWetDefine = {
   cavityInfluence: number;
   /** The angles from up over which the rain's reach fades out, degrees */
   shelter: [number, number];
+  /** The puddles (`FULL` only), or null for none */
+  puddles: TerrainPuddlesDefine | null;
+  /**
+   * The regional wetness's source: a float vertex attribute, or the first splat map's A (a splat
+   * source painting at most 4 layers); null for none
+   */
+  regional: { attribute: string } | { splatChannel: (typeof WET_SPLAT_CHANNELS)[number] } | null;
+};
+
+/** The wet response's puddles with their defaults filled in (p307 T3) */
+export type TerrainPuddlesDefine = {
+  /** The steepest ground a puddle stands on, degrees from flat */
+  maxSlope: number;
+  /** The relief height over which a puddle's rim fades in */
+  edge: number;
+  /**
+   * The macro texture's patches (B) at their own scale (one fetch of the input `macro`), or null
+   * for none
+   */
+  patches: { scale: number; amount: number } | null;
 };
 
 /** The colour map's settings with their defaults filled in */
@@ -350,6 +383,9 @@ export const TERRAIN_DEFINE_VALUES = {
   distanceKeys: DISTANCE_KEYS,
   wetKeys: WET_KEYS,
   wetQualities: WET_QUALITIES,
+  wetPuddleKeys: WET_PUDDLE_KEYS,
+  wetPatchKeys: WET_PATCH_KEYS,
+  wetSplatChannels: WET_SPLAT_CHANNELS,
   colorMapKeys: COLOR_MAP_KEYS,
   farModes: FAR_MODES,
   colorMapModes: COLOR_MAP_MODES,
@@ -1139,13 +1175,88 @@ const readWet = (value: unknown, path: string): TerrainWetDefine | null => {
     fail(`${path}.shelter`, `is [${from}, ${to}]: the first value is under the second.`);
   }
   const { heightInfluence, cavityInfluence } = SURFACE_WETNESS_DEFAULTS;
+  const quality = readEnum(wet, 'quality', WET_QUALITIES, path);
+  if (quality === 'SIMPLE' && wet.puddles !== undefined) {
+    fail(`${path}.puddles`, 'is for quality FULL: SIMPLE reads no relief to fill.');
+  }
   return {
-    quality: readEnum(wet, 'quality', WET_QUALITIES, path),
+    quality,
     heightInfluence: readNumber(wet, 'heightInfluence', heightInfluence, NON_NEGATIVE, path),
     cavityInfluence: readNumber(wet, 'cavityInfluence', cavityInfluence, NON_NEGATIVE, path),
     shelter: [from, to],
+    puddles: readPuddles(wet.puddles, `${path}.puddles`),
+    regional: readRegional(wet.regional, `${path}.regional`),
   };
 };
+
+/** The puddles' numbers (p307 T3), their defaults filled in; null without */
+const readPuddles = (value: unknown, path: string): TerrainPuddlesDefine | null => {
+  if (value === undefined) return null;
+  const puddles = readObject(value, path);
+  checkKeys(puddles, WET_PUDDLE_KEYS, path);
+  const { puddleMaxSlope, puddleEdge, puddlePatchAmount } = SURFACE_WETNESS_DEFAULTS;
+  const over0 = { min: { value: 0, isExclusive: true } };
+  const patches =
+    puddles.patches === undefined ? null : readObject(puddles.patches, `${path}.patches`);
+  if (patches) checkKeys(patches, WET_PATCH_KEYS, `${path}.patches`);
+  return {
+    maxSlope: readNumber(
+      puddles,
+      'maxSlope',
+      puddleMaxSlope,
+      { ...over0, max: { value: 45 } },
+      path
+    ),
+    edge: readNumber(puddles, 'edge', puddleEdge, { ...over0, max: { value: 1 } }, path),
+    patches: patches && {
+      scale: readNumber(patches, 'scale', undefined, over0, `${path}.patches`),
+      amount: readNumber(patches, 'amount', puddlePatchAmount, UNIT, `${path}.patches`),
+    },
+  };
+};
+
+/** The regional wetness's source (p307 T7): `{ attribute? }` or `{ splatChannel: 'A' }`; null without */
+const readRegional = (value: unknown, path: string): TerrainWetDefine['regional'] => {
+  if (value === undefined) return null;
+  const regional = readObject(value, path);
+  if (regional.splatChannel !== undefined) {
+    checkKeys(regional, ['splatChannel'], path);
+    return { splatChannel: readEnum(regional, 'splatChannel', WET_SPLAT_CHANNELS, path) };
+  }
+  checkKeys(regional, ['attribute'], path);
+  const { attribute = WET_REGIONAL_ATTRIBUTE } = regional;
+  if (typeof attribute !== 'string' || !attribute) {
+    fail(`${path}.attribute`, `is ${JSON.stringify(attribute)}: give a vertex attribute's name.`);
+  }
+  return { attribute: attribute as string };
+};
+
+/**
+ * A regional wetness from the splat maps reads the first map's A, which must weigh no layer: a
+ * splat source painting at most 4 layers (the base and R, G, B)
+ */
+const checkWetSplatChannel = (
+  wet: TerrainWetDefine | null,
+  blend: TerrainBlendDefine,
+  layerCount: number,
+  path: string
+) => {
+  if (!wet?.regional || !('splatChannel' in wet.regional)) return;
+  if (getPaintedSource(blend) === 'SPLAT_MAP' && getPaintedLayerCount(blend, layerCount) <= 4) {
+    return;
+  }
+  fail(
+    `${path}.regional.splatChannel`,
+    "is A: give blend.source SPLAT_MAP or SPLAT_MAP_AND_RULES painting at most 4 layers, so the first splat map's A weighs none."
+  );
+};
+
+/**
+ * Whether a wet response (the material's or a tier's, as given) has puddle patches, which read
+ * the input `macro`
+ */
+const hasPuddlePatches = (wet: unknown) =>
+  isRecord(wet) && isRecord(wet.puddles) && wet.puddles.patches !== undefined;
 
 /**
  * The `WETNESS` debug view against the wet response: the material's `wet` or a tier's must be
@@ -1272,6 +1383,8 @@ export const readTerrainDefine = (
   const distance = readDistance(fields.distance, colorMap, `${pathOf('distance')}.distance`);
   const debugView = readOptionalEnum(define, 'debugView', DEBUG_VIEWS, '');
   checkWetView(define, Object.values(quality));
+  const wet = readWet(fields.wet, `${pathOf('wet')}.wet`);
+  checkWetSplatChannel(wet, blend, layers.length, `${pathOf('wet')}.wet`);
   return {
     layers,
     space: readEnum(define, 'space', SPACES, ''),
@@ -1289,12 +1402,13 @@ export const readTerrainDefine = (
     macro: readMacro(define),
     takesMacroTexture:
       define.macro !== undefined ||
-      [define.blend, ...Object.values(quality).map((tier) => tier.blend)].some(hasRawRuleNoise),
+      [define.blend, ...Object.values(quality).map((tier) => tier.blend)].some(hasRawRuleNoise) ||
+      [define.wet, ...Object.values(quality).map((tier) => tier.wet)].some(hasPuddlePatches),
     reservedTextures: readReservedTextures(define),
     distanceFade: distance?.fade ?? null,
     far: distance?.far ?? null,
     colorMap,
-    wet: readWet(fields.wet, `${pathOf('wet')}.wet`),
+    wet,
     slotCount,
     qualityLevel,
     debugView,
