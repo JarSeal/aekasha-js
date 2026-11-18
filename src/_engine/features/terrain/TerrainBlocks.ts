@@ -34,7 +34,8 @@ export type TerrainBlock = {
   /** The collider's entity: the mesh entity, with a `FIXED` body. Undefined for a block with
    * `collider: { type: 'NONE' }`, or a geometry that gave no shape (logged). */
   physicsEntityId?: number;
-  /** The block's scatters' cell entities (its `scatter`'s, spawned on it; empty without) */
+  /** The block's scatters' entities (its `scatter`'s, spawned on it; empty without): each
+   * scatter's cells, then its colliders' physics entities */
   scatterIds: number[];
   /** The block's decal entities (p309; empty until then) */
   decalIds: number[];
@@ -284,7 +285,7 @@ export const spawnTerrainBlock = async (
         return null;
       }
       scatters.push(scatter);
-      scatterIds.push(...scatter.entityIds);
+      scatterIds.push(...scatter.entityIds, ...scatter.colliderIds);
     }
   }
   return { id, meshEntityId, physicsEntityId, scatterIds, decalIds: [], dispose };

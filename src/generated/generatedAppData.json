@@ -14178,7 +14178,8 @@
               "material": "scatterTestStone",
               "weight": 1,
               "castShadow": true,
-              "receiveShadow": true
+              "receiveShadow": true,
+              "collider": "NONE"
             }
           ],
           "source": {
@@ -14257,14 +14258,16 @@
               "material": "scatterTestStone",
               "weight": 1,
               "castShadow": true,
-              "receiveShadow": true
+              "receiveShadow": true,
+              "collider": "NONE"
             },
             {
               "geometry": "scatterTestGnGpu/RockB",
               "material": "scatterTestStone",
               "weight": 1,
               "castShadow": true,
-              "receiveShadow": true
+              "receiveShadow": true,
+              "collider": "NONE"
             }
           ],
           "source": {
@@ -14289,14 +14292,16 @@
               "material": "scatterTestStone",
               "weight": 1,
               "castShadow": true,
-              "receiveShadow": true
+              "receiveShadow": true,
+              "collider": "NONE"
             },
             {
               "geometry": "scatterTestGnPoints/RockB",
               "material": "scatterTestStone",
               "weight": 1,
               "castShadow": true,
-              "receiveShadow": true
+              "receiveShadow": true,
+              "collider": "NONE"
             }
           ],
           "source": {
@@ -14321,14 +14326,16 @@
               "material": "scatterTestStone",
               "weight": 3,
               "castShadow": false,
-              "receiveShadow": true
+              "receiveShadow": true,
+              "collider": "NONE"
             },
             {
               "geometry": "scatterTestPebbleB",
               "material": "scatterTestStone",
               "weight": 1,
               "castShadow": false,
-              "receiveShadow": true
+              "receiveShadow": true,
+              "collider": "NONE"
             }
           ],
           "source": {

@@ -28,6 +28,7 @@ const fns = vi.hoisted(() => ({
   spawnScatter: vi.fn(async (id: string) => ({
     id,
     entityIds: [id.length, id.length + 1],
+    colliderIds: [id.length * 10],
     count: 2,
     dispose: vi.fn(),
   })),
@@ -261,7 +262,7 @@ describe('spawnTerrainBlock', () => {
 });
 
 describe('spawnTerrainBlock: scatters (p308 D2)', () => {
-  test('spawns each scatter on the block, and its dispose deletes their cells too', async () => {
+  test('spawns each scatter on the block, and its dispose deletes their cells and colliders too', async () => {
     fns.scenes.scene.terrainBlocks = [block({ scatter: ['rocks', 'pebbles'] })];
     const spawned = await spawnTerrainBlock('coast');
     const target = {
@@ -274,7 +275,8 @@ describe('spawnTerrainBlock: scatters (p308 D2)', () => {
       ['rocks', { target, appId: 'terrainBlock/coast/scatter/rocks' }],
       ['pebbles', { target, appId: 'terrainBlock/coast/scatter/pebbles' }],
     ]);
-    expect(spawned?.scatterIds).toEqual([5, 6, 7, 8]);
+    // Each scatter's cells, then its colliders
+    expect(spawned?.scatterIds).toEqual([5, 6, 50, 7, 8, 70]);
     spawned?.dispose();
     for (const { value } of fns.spawnScatter.mock.results) {
       expect((await value).dispose).toHaveBeenCalledOnce();
@@ -298,7 +300,7 @@ describe('spawnTerrainBlock: scatters (p308 D2)', () => {
     fns.scenes.scene.terrainBlocks = [block({ scatter: ['rocks'], collider: { type: 'NONE' } })];
     fns.spawnScatter.mockImplementationOnce(async (id: string) => {
       exitHook?.();
-      return { id, entityIds: [1], count: 1, dispose: vi.fn() };
+      return { id, entityIds: [1], colliderIds: [], count: 1, dispose: vi.fn() };
     });
     expect(await spawnTerrainBlock('coast')).toBeNull();
     expect(fns.deleteEntity).toHaveBeenCalledWith(7);

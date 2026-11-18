@@ -29,8 +29,22 @@ vi.mock('aekasha/instancing', () => ({
 }));
 
 const ITEMS: ScatterItemDef[] = [
-  { geometry: 'box', material: 'stone', weight: 3, castShadow: false, receiveShadow: true },
-  { geometry: 'tall', material: 'stone', weight: 1, castShadow: false, receiveShadow: true },
+  {
+    geometry: 'box',
+    material: 'stone',
+    weight: 3,
+    castShadow: false,
+    receiveShadow: true,
+    collider: 'NONE',
+  },
+  {
+    geometry: 'tall',
+    material: 'stone',
+    weight: 1,
+    castShadow: false,
+    receiveShadow: true,
+    collider: 'NONE',
+  },
 ];
 
 /** A world whose one entity (1) is `mesh` */

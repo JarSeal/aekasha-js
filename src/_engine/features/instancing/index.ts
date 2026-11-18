@@ -36,6 +36,7 @@ export type {
   ScatterTarget,
 } from './ScatterGenerators';
 export type {
+  ScatterColliderType,
   ScatterDef,
   ScatterItemDef,
   ScatterPlacementDef,

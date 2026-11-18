@@ -7,9 +7,12 @@
  * `materials` when an asset JSON has the id, and an `IMPORTED` source's import to its
  * `importedAssets` (pass 1 fails on an import id no JSON has). Any other id is an import's piece
  * or one code registers: the spawn throws naming it when it isn't registered. A scene with scatters gets
- * `instancing` in its manifest from the part's `scatters` field.
+ * `instancing` in its manifest from the part's `scatters` field, and `physics` when an item has a
+ * collider (`getScatterFeatureIds`). Pass 1 warns on a `PLACEMENTS` source that can make over 200
+ * colliders (a procedural or imported source's count is the spawn's to warn on).
  */
 import {
+  SCATTER_COLLIDER_WARNING,
   SCATTER_DEFAULTS,
   ScatterAssetSchema,
   type ScatterAsset,
@@ -51,12 +54,27 @@ const toScatterDef = (scatter: ScatterAsset, id: string): ScatterDef => {
       weight: item.weight ?? SCATTER_DEFAULTS.weight,
       castShadow: item.castShadow ?? SCATTER_DEFAULTS.castShadow,
       receiveShadow: item.receiveShadow ?? SCATTER_DEFAULTS.receiveShadow,
+      collider: item.collider ?? SCATTER_DEFAULTS.collider,
     })),
     source: toSourceDef(source),
     cellSize: cellSize ?? SCATTER_DEFAULTS.cellSize,
     ...(lod ? { lod } : {}),
     ...(debugData ? { debugData } : {}),
   };
+};
+
+/**
+ * The colliders a `PLACEMENTS` source can make: its placements naming a collider item, and those
+ * naming none when an item has one (the spawn picks theirs by weight); 0 for the other sources,
+ * whose counts only the spawn knows (it warns then)
+ */
+const countPlacementColliders = ({ items, source }: ScatterAsset) => {
+  if (source.type !== 'PLACEMENTS') return 0;
+  const hasCollider = (index: number) => (items[index].collider ?? 'NONE') !== 'NONE';
+  const anyCollider = items.some((_, index) => hasCollider(index));
+  return source.placements.filter((placement) =>
+    placement.item === undefined ? anyCollider : hasCollider(placement.item)
+  ).length;
 };
 
 /** Pass 1's scatters (after the imports: an `IMPORTED` source names one; before the terrain
@@ -72,6 +90,12 @@ export const readScatters = (ctx: GatherContext, reg: Registries, taken: TakenId
     }
     const scatterId = scatterJSON.id || getIdFromFileName(file, 'scatter');
     if (!claimIds(ctx, taken.scatters, 'scatter', file, scatterId)) return;
+    const colliders = countPlacementColliders(scatterJSON);
+    if (colliders > SCATTER_COLLIDER_WARNING) {
+      ctx.log.warn(
+        `${file}: its placements make up to ${colliders} colliders, a FIXED body each (over ${SCATTER_COLLIDER_WARNING}): keep the colliders to the large pieces.`
+      );
+    }
     reg.scatters[scatterId] = { ...toScatterDef(scatterJSON, scatterId), __sourcePath: sourcePath };
   });
 
@@ -114,3 +138,16 @@ export const resolveScatters = ({ ctx, reg, scene, reportUnknownId }: SceneRun) 
   // The generated data's shape: the definitions in place of the ids
   scene.scatters = defs as unknown as string[];
 };
+
+/**
+ * The features a resolved scene's scatters need besides `instancing` (which its schema part gives):
+ * `physics` when an item has a collider, so `InitEngine`'s scene check names `physics()`.
+ */
+export const getScatterFeatureIds = (scene: { scatters?: unknown }): string[] =>
+  Array.isArray(scene.scatters) &&
+  (scene.scatters as (ScatterDef | string)[]).some(
+    (scatter) =>
+      typeof scatter === 'object' && scatter.items.some((item) => item.collider !== 'NONE')
+  )
+    ? ['physics']
+    : [];

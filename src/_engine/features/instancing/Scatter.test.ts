@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import * as THREE from 'three/webgpu';
-import { saveBufferGeometry, getGeometryRegistry } from '../../kernel/assets/Geometry';
+import { getGeometry, saveBufferGeometry, getGeometryRegistry } from '../../kernel/assets/Geometry';
 import { saveMaterial } from '../../kernel/assets/Material';
 import { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
@@ -37,6 +37,16 @@ vi.mock(import('../../kernel/assets/import/ImportRegistry'), async (importOrigin
   ...(await importOriginal()),
   getImportedAsset: (id: string) => fns.imports[id],
 }));
+// The colliders' physics entities: plain entities of the world the create names
+const physics = vi.hoisted(() => ({
+  create: vi.fn(
+    async (
+      _props: { colliders: unknown; body?: unknown },
+      opts: { world: { createEntity: () => number } }
+    ) => opts.world.createEntity()
+  ),
+}));
+vi.mock('../physics/PhysicsEntity', () => ({ createPhysicsEntity: physics.create }));
 vi.mock(import('../../kernel/scene/Scene'), async (importOriginal) => ({
   ...(await importOriginal()),
   getLoadingSceneId: () => fns.loadingSceneId,
@@ -63,6 +73,7 @@ const item = (geometry: string, weight = 1) => ({
   weight,
   castShadow: false,
   receiveShadow: true,
+  collider: 'NONE' as const,
 });
 
 const scatter = (fields: Partial<ScatterDef> = {}): ScatterDef => ({
@@ -105,7 +116,9 @@ beforeEach(() => {
     addSceneHooks: (hooks: SceneHooks) => {
       exitHook = hooks.exit as () => void;
     },
+    isInstalled: (id: string) => id === 'physics',
   } as unknown as FeatureContext);
+  physics.create.mockClear();
   registerScatterGenerator('grid', gridGenerator);
 });
 
@@ -433,5 +446,121 @@ describe("spawnScatter's IMPORTED source", () => {
       /item 1's geometry "coast\/Boulders" has quantized positions/
     );
     expect(getGeometryRegistry().pebble?.count).toBe(0);
+  });
+});
+
+describe("spawnScatter's colliders (p308 D2)", () => {
+  /** Hand-placed boulders (items 1 and 2) and a pebble (item 0, none) */
+  const boulders = (collider: 'CONVEXHULL' | 'BALL') =>
+    scatter({
+      items: [
+        item('pebble'),
+        { ...item('boulder'), collider },
+        { ...item('pebble'), collider: 'BALL' },
+      ],
+      source: {
+        type: 'PLACEMENTS',
+        placements: [
+          { position: [0, 1, 0], item: 1, scale: 2, yaw: Math.PI / 2 },
+          { position: [4, 0, 0], item: 0 },
+          { position: [8, 0, 0], item: 2, scale: 3 },
+        ],
+        seed: 0,
+      },
+    });
+  type CreateCall = {
+    colliders: { type: string; vertices?: Float32Array; radius?: number };
+    body: {
+      rigidType: string;
+      translation: { x: number; y: number; z: number };
+      rotation: { x: number; y: number; z: number; w: number };
+    };
+  };
+  const calls = () => physics.create.mock.calls.map(([props]) => props as unknown as CreateCall);
+
+  test('makes a FIXED body per instance of a collider item, in instance order, scaled and turned as it is', async () => {
+    fns.scenes.scene.scatters = [boulders('CONVEXHULL')];
+    const spawned = await spawnScatter('rocks', {
+      world,
+      target: { position: { x: 10, y: 0, z: 0 } },
+    });
+    expect(spawned?.colliderIds).toHaveLength(2);
+    const [hull, ball] = calls();
+    expect(hull.body.rigidType).toBe('FIXED');
+    expect(hull.body.translation).toEqual({ x: 10, y: 1, z: 0 });
+    expect(hull.body.rotation.y).toBeCloseTo(Math.SQRT1_2, 6);
+    expect(hull.body.rotation.w).toBeCloseTo(Math.SQRT1_2, 6);
+    // The sphere's points, each once, twice as far out
+    expect(hull.colliders.type).toBe('CONVEXHULL');
+    const sphere = getGeometry('boulder')!.getAttribute('position');
+    const unique = new Set(
+      Array.from(
+        { length: sphere.count },
+        (_, i) => `${sphere.getX(i)},${sphere.getY(i)},${sphere.getZ(i)}`
+      )
+    );
+    expect(hull.colliders.vertices).toHaveLength(unique.size * 3);
+    const radii = new Set<number>();
+    for (let i = 0; i < hull.colliders.vertices!.length; i += 3) {
+      const [x, y, z] = hull.colliders.vertices!.subarray(i, i + 3);
+      radii.add(Math.round(Math.hypot(x, y, z) * 1e4) / 1e4);
+    }
+    expect([...radii]).toEqual([2]);
+    // The pebble's ball: its box's bounding sphere at 3 times its size
+    expect(ball.body.translation).toEqual({ x: 18, y: 0, z: 0 });
+    expect(ball.colliders).toMatchObject({ type: 'BALL', translation: { x: 0, y: 0, z: 0 } });
+    expect(ball.colliders.radius).toBeCloseTo(Math.sqrt(0.75) * 3, 6);
+    for (const entityId of spawned!.colliderIds) expect(world.isAlive(entityId)).toBe(true);
+    spawned?.dispose();
+    for (const entityId of spawned!.colliderIds) expect(world.isAlive(entityId)).toBe(false);
+  });
+
+  test('warns and makes none without physics(), and warns past 200 colliders', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    scatterState.hasPhysics = false;
+    fns.scenes.scene.scatters = [boulders('BALL')];
+    const spawned = await spawnScatter('rocks', { world });
+    expect(spawned?.colliderIds).toEqual([]);
+    expect(spawned?.entityIds.length).toBeGreaterThan(0);
+    expect(physics.create).not.toHaveBeenCalled();
+    expect(warn.mock.calls.flat().join('\n')).toMatch(
+      /"rocks" has 2 instances of items with a collider, which need physics\(\)/
+    );
+    spawned?.dispose();
+
+    scatterState.hasPhysics = true;
+    warn.mockClear();
+    fns.scenes.scene.scatters = [
+      scatter({
+        items: [{ ...item('boulder'), collider: 'BALL' }],
+        source: { type: 'PROCEDURAL', generator: 'grid', params: { side: 15 }, seed: 1 },
+      }),
+    ];
+    const many = await spawnScatter('rocks', { world });
+    expect(many?.colliderIds).toHaveLength(225);
+    expect(warn.mock.calls.flat().join('\n')).toMatch(/makes 225 colliders on its target/);
+    many?.dispose();
+    warn.mockRestore();
+  });
+
+  test('deletes the cells and the colliders made when one fails, and when the scene is left meanwhile', async () => {
+    fns.scenes.scene.scatters = [boulders('BALL')];
+    const before = world.getEntityCount();
+    physics.create.mockImplementationOnce(async (_props, opts) => opts.world.createEntity());
+    physics.create.mockRejectedValueOnce(new Error('no shape'));
+    await expect(spawnScatter('rocks', { world })).rejects.toThrow(
+      /the scatter "rocks"'s colliders: no shape/
+    );
+    expect(getGeometryRegistry().pebble?.count).toBe(0);
+    expect(getGeometryRegistry().boulder?.count).toBe(0);
+    expect(world.getEntityCount()).toBe(before);
+
+    physics.create.mockImplementationOnce(async (_props, opts) => {
+      exitHook?.();
+      return opts.world.createEntity();
+    });
+    expect(await spawnScatter('rocks', { world })).toBeNull();
+    expect(getGeometryRegistry().pebble?.count).toBe(0);
+    expect(world.getEntityCount()).toBe(before);
   });
 });

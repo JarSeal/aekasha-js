@@ -10,6 +10,7 @@ import {
 } from '../../kernel/scene/Scene';
 import { existsOrThrow } from '../../utils/Assert';
 import { hashStringFNV1a } from '../../utils/Hash';
+import { lwarn } from '../../utils/Logger';
 import { getRandomSeed } from '../../utils/RandomStreams';
 import { createSeededRandom } from '../../utils/SeededRandom';
 import {
@@ -21,6 +22,7 @@ import {
   type ScatterGeneratorResult,
   type ScatterTarget,
 } from './ScatterGenerators';
+import { SCATTER_COLLIDER_WARNING } from './ScatterLimits';
 import type { ScatterDef, ScatterItemDef, ScatterPlacementDef } from './ScatterSchema';
 import { createStaticInstances } from './StaticInstances';
 
@@ -201,6 +203,41 @@ const selectItem = (
   return { itemMatrices, itemColors };
 };
 
+/**
+ * The colliders of the items that have one (`ScatterColliders.ts`, loaded with the first): none
+ * without such an item, or when the scene is left while its code loads; without `physics()` a
+ * warning and none. Warns past `SCATTER_COLLIDER_WARNING`.
+ */
+const createCollidersAsync = async (
+  scatter: ScatterDef,
+  matrices: Float32Array,
+  picked: Int16Array,
+  world: ECSWorld,
+  counts: Uint32Array
+): Promise<number[] | null> => {
+  let total = 0;
+  scatter.items.forEach((item, index) => {
+    if (item.collider !== 'NONE') total += counts[index];
+  });
+  if (!total) return null;
+  if (!scatterState.hasPhysics) {
+    lwarn(
+      `spawnScatter: the scatter "${scatter.id}" has ${total} instances of items with a collider, which need physics() listed before instancing() in InitEngine's features: they have none.`
+    );
+    return null;
+  }
+  if (total > SCATTER_COLLIDER_WARNING) {
+    lwarn(
+      `spawnScatter: the scatter "${scatter.id}" makes ${total} colliders on its target, a FIXED body each (over ${SCATTER_COLLIDER_WARNING}): keep the colliders to the large pieces.`
+    );
+  }
+  const visit = scatterState.sceneVisit;
+  const { createScatterCollidersAsync } = await import('./ScatterColliders');
+  // A scene left while the code loaded: no body into the next scene's world
+  if (visit !== scatterState.sceneVisit) return null;
+  return createScatterCollidersAsync(scatter.id, scatter.items, matrices, picked, world);
+};
+
 /** `spawnScatter`'s options. */
 export type SpawnScatterOpts = {
   /** Where it spawns: what `PLACEMENTS` and an `IMPORTED` source's file root are relative to, what
@@ -213,36 +250,45 @@ export type SpawnScatterOpts = {
   world?: ECSWorld;
 };
 
-/** A spawned scatter: its cells, owned by the scene that spawned it. */
+/** A spawned scatter: its cells and colliders, owned by the scene that spawned it. */
 export type SpawnedScatter = {
   /** The scatter's id (its `*.scatter.json`'s) */
   id: string;
   /** The cells' entities, each item's in order */
   entityIds: number[];
+  /** The colliders' physics entities (a `FIXED` body each, no visual), in instance order: one per
+   * instance of an item with a `collider` (empty without, or without `physics()`) */
+  colliderIds: number[];
   /** The instances in all its cells */
   count: number;
-  /** Deletes the cells now (the scene's exit deletes them anyway). Safe to call twice. */
+  /** Deletes the cells and the colliders now (the scene's exit deletes them anyway). Safe to call
+   * twice. */
   dispose: () => void;
 };
 
 /**
  * Spawns a scatter (p308 D2) that the scene has (its `scatters` lists it, or a terrain block's
  * `scatter` names it): its instances placed by its source on `target`, each item's split into
- * cells of `cellSize` (`createStaticInstances`), each cell with the scatter's `lod`. Its cells
- * belong to the spawning scene and go with its exit. A terrain block spawns its own.
+ * cells of `cellSize` (`createStaticInstances`), each cell with the scatter's `lod`, and a `FIXED`
+ * collider per instance of an item with a `collider` (with `physics()`; without it, a warning and
+ * none). Its cells and colliders belong to the spawning scene and go with its exit. A terrain block
+ * spawns its own. Call it from the scene's code: the load holds physics until the colliders exist.
  * @param id the scatter's id (its `*.scatter.json`'s)
- * @returns the scatter's cells and its `dispose()`, or `null` when its scene left meanwhile
+ * @returns the scatter's cells and colliders and its `dispose()`, or `null` when its scene left
+ * meanwhile
  * @throws when `instancing()` isn't installed, there's no scene, the scene doesn't have the
  * scatter, an item's geometry or material isn't registered or its geometry is quantized (an
  * import's default encode: give the import `"optimize": { "mesh": { "quantize": false } }`), its generator isn't registered or
- * returns instances that don't fit its items, or its import has no node it takes, a node of GPU
- * instances no item draws or a point's `_ITEM` past the items
+ * returns instances that don't fit its items, its import has no node it takes, a node of GPU
+ * instances no item draws or a point's `_ITEM` past the items, or a collider can't be made (the
+ * cells made are deleted first)
  * @remarks An `IMPORTED` source's node of GPU instances is drawn by the item whose `geometry` is
  * the node's (`<importId>/<node>`), or a plain node's of the same glTF mesh (Blender's export
  * copies a mesh for each instancing node: name the rock's own node, `<importId>/RockA`), a point
  * cloud's point by its `_ITEM` (else the weights pick).
  * Re-check your scene after the `await`: a load that leaves the scene while a generator runs (or
- * the `IMPORTED` source's code loads) gets `null`, and nothing is made.
+ * the `IMPORTED` source's code or the colliders load) gets `null`, and what it made is deleted.
+ * A collider item is for large pieces: past 200 colliders on a target the spawn warns.
  * @example
  * ```ts
  * import { spawnScatter } from 'aekasha/instancing';
@@ -331,12 +377,30 @@ export const spawnScatter = async (
     ];
   });
 
+  const colliderIds: number[] = [];
+  const dispose = () => {
+    for (const cell of cells) cell.dispose();
+    for (const entityId of colliderIds.splice(0)) world.deleteEntity(entityId);
+  };
+  const colliders = await createCollidersAsync(scatter, matrices, picked, world, counts).catch(
+    (err: unknown) => {
+      // Not half a scatter: its cells go, then the error
+      dispose();
+      throw err;
+    }
+  );
+  if (visit !== scatterState.sceneVisit) {
+    for (const entityId of colliders ?? []) world.deleteEntity(entityId);
+    dispose();
+    return null;
+  }
+  if (colliders) colliderIds.push(...colliders);
+
   return {
     id,
     entityIds: cells.flatMap((cell) => cell.entityIds),
+    colliderIds,
     count,
-    dispose: () => {
-      for (const cell of cells) cell.dispose();
-    },
+    dispose,
   };
 };

@@ -9,16 +9,21 @@ import type { ScatterItemDef } from './ScatterSchema';
 export const scatterState = {
   /** `instancing()` was installed */
   isInstalled: false,
+  /** `physics()` was installed before it: a scatter item's colliders can be made */
+  hasPhysics: false,
   /** Counts the scene exits: a spawn whose count changed while it awaited was left behind */
   sceneVisit: 0,
 };
 
 /**
- * Installs the scatters (`instancing()`'s install): their registry and the scene exit count.
+ * Installs the scatters (`instancing()`'s install): their registry, whether physics is there for
+ * their colliders, and the scene exit count.
  * @internal
  */
 export const installScatters = (ctx: FeatureContext) => {
   scatterState.isInstalled = true;
+  // Optional: only an item with a collider needs it (the gather's manifest names physics then)
+  scatterState.hasPhysics = ctx.isInstalled('physics');
   // A spawn that awaits across a scene exit deletes what it made
   ctx.addSceneHooks({
     exit: () => {

@@ -1734,6 +1734,7 @@ describe('p308 D2: scatters', () => {
             weight: 1,
             castShadow: false,
             receiveShadow: true,
+            collider: 'NONE',
           },
         ],
         source: { type: 'PROCEDURAL', generator: 'uniform', params: {}, seed: 0 },
@@ -1838,6 +1839,46 @@ describe('p308 D2: scatters', () => {
     };
     expect(gather({ ...imported({ nodes: [] }), ...coast }).isGathered).toBe(false);
     expect(gather({ ...imported({}), ...coast }).isGathered).toBe(true);
+  });
+
+  it('names physics in the manifest of a scene with a collider item, and warns past 200 placed colliders', () => {
+    const warn = vi.spyOn(console, 'warn');
+    warn.mockClear();
+    const placements = (count: number, item?: number) =>
+      Array.from({ length: count }, (_, i) => ({ position: [i, 0, 0], item }));
+    const colliderItems = [
+      { geometry: 'pebble', material: 'stone' },
+      { geometry: 'pebble', material: 'stone', collider: 'CONVEXHULL' },
+    ];
+    const { isGathered, scene: get } = gather(
+      files({
+        items: colliderItems,
+        source: { type: 'PLACEMENTS', placements: [...placements(150, 1), ...placements(60)] },
+      })
+    );
+    expect(isGathered).toBe(true);
+    expect(get('s')?.__features).toEqual(['instancing', 'physics']);
+    const [scatter] = get('s')?.scatters as { items: { collider: string }[] }[];
+    expect(scatter.items.map((entry) => entry.collider)).toEqual(['NONE', 'CONVEXHULL']);
+    // 150 name the collider item, 60 name none (the weights may pick it): up to 210
+    expect(warn.mock.calls.flat().join('\n')).toMatch(
+      /pebbles\.scatter\.json: its placements make up to 210 colliders/
+    );
+
+    warn.mockClear();
+    const few = gather(
+      files({
+        items: colliderItems,
+        source: { type: 'PLACEMENTS', placements: [...placements(150, 1), ...placements(60, 0)] },
+      })
+    );
+    expect(few.isGathered).toBe(true);
+    expect(warn.mock.calls.flat().join('\n')).not.toMatch(/colliders/);
+    // A collider type it doesn't know
+    expect(
+      gather(files({ items: [{ geometry: 'pebble', material: 'stone', collider: 'BOX' }] }))
+        .isGathered
+    ).toBe(false);
   });
 
   it('fails the gather on an unknown scatter, a placement past the items or with two rotations', () => {

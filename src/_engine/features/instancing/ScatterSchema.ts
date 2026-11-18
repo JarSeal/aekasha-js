@@ -10,6 +10,13 @@ import type { LodDef } from '../lod/LodTypes';
 // gatherer fills the defaults in and writes each scatter a scene lists (or a terrain block of it
 // names) into its data (`ScatterDef`), where `spawnScatter` reads it.
 
+/** A scatter item's colliders: `CONVEXHULL` (its geometry's points, each instance's scaled),
+ * `BALL` (its bounding sphere) or `NONE`. */
+export const SCATTER_COLLIDER_TYPES = ['CONVEXHULL', 'BALL', 'NONE'] as const;
+
+/** A scatter item's collider type: `CONVEXHULL`, `BALL` or `NONE`. */
+export type ScatterColliderType = (typeof SCATTER_COLLIDER_TYPES)[number];
+
 /** One kind of instance: its geometry and material, and its share of the instances. */
 const ScatterItemSchema = z
   .strictObject({
@@ -41,6 +48,15 @@ const ScatterItemSchema = z
     castShadow: z.boolean().optional().describe('Casts shadows. Default: false.'),
     /** Receives shadows. Default: true. */
     receiveShadow: z.boolean().optional().describe('Receives shadows. Default: true.'),
+    /** A `FIXED` collider per instance (needs `physics()`): `CONVEXHULL` (its geometry's points,
+     * scaled as the instance is), `BALL` (its bounding sphere) or `NONE` (default). Only for large
+     * pieces: past 200 a target, the gather and the spawn warn. */
+    collider: z
+      .enum(SCATTER_COLLIDER_TYPES)
+      .optional()
+      .describe(
+        "A FIXED collider per instance (needs physics()): CONVEXHULL (its geometry's points, scaled as the instance is), BALL (its bounding sphere) or NONE (default). Only for large pieces: past 200 a target, the gather and the spawn warn."
+      ),
   })
   .describe('One kind of instance: its geometry and material, and its share of the instances.');
 
@@ -170,6 +186,7 @@ export const SCATTER_DEFAULTS = {
   weight: 1,
   castShadow: false,
   receiveShadow: true,
+  collider: 'NONE',
   seed: 0,
 } as const;
 
@@ -253,6 +270,8 @@ export type ScatterItemDef = {
   castShadow: boolean;
   /** Receives shadows */
   receiveShadow: boolean;
+  /** A collider per instance, or `NONE` */
+  collider: ScatterColliderType;
 };
 
 /** A hand-placed instance, as a scene's data has it. */
