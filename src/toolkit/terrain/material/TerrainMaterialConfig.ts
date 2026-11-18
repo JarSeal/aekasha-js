@@ -983,6 +983,50 @@ const TerrainStreaksSchema = z
   );
 
 /**
+ * The shoreline (p307 T8): the ground along the surface conditions' water level, washed by the
+ * waves, saturated where they reach and damp above, arithmetic only.
+ */
+const TerrainShorelineSchema = z
+  .object({
+    /** The metres above the water level that stay damp, over 0. */
+    band: z.number().gt(0).describe('The metres above the water level that stay damp, over 0.'),
+    /** The metres the waterline wanders up and down along the shore, 0 or more (default 0.3). */
+    noise: z
+      .number()
+      .min(0)
+      .optional()
+      .describe(
+        'The metres the waterline wanders up and down along the shore, 0 or more (default 0.3).'
+      ),
+    /**
+     * Waves washing up the shore and back on the surface clock; default none (a still water
+     * line).
+     */
+    runUp: z
+      .object({
+        /** The metres the waves reach above the water level, over 0 (default 0.5). */
+        height: z
+          .number()
+          .gt(0)
+          .optional()
+          .describe('The metres the waves reach above the water level, over 0 (default 0.5).'),
+        /** The seconds between waves, over 0 (default 6). */
+        period: z
+          .number()
+          .gt(0)
+          .optional()
+          .describe('The seconds between waves, over 0 (default 6).'),
+      })
+      .strict()
+      .optional()
+      .describe('Waves washing up the shore and back on the surface clock; default none.'),
+  })
+  .strict()
+  .describe(
+    "The shoreline (p307 T8): along the surface conditions' waterLevel, the waves' wash (standing water), the saturated sand they reach (a film) and a damp band above (a regional wetness); full under the water, none without a water level. Arithmetic only, both qualities."
+  );
+
+/**
  * The regional wetness (p307 T7): an authored wetness, 0..1, the least the surface shows and the
  * least puddle level, in any weather: a float vertex attribute (default `_wetness`, glTF's
  * `_WETNESS`), or the first splat map's A.
@@ -1076,6 +1120,8 @@ const TerrainWetSchema = z
     ripples: TerrainRipplesSchema.optional(),
     /** The rain streaks; default none. */
     streaks: TerrainStreaksSchema.optional(),
+    /** The shoreline along the water level; default none. */
+    shoreline: TerrainShorelineSchema.optional(),
   })
   .strict()
   .superRefine((wet, ctx) => {

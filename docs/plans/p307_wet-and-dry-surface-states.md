@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: in progress | Phases 1-4 implemented
 Category: Materials, Terrain, Weather
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -320,7 +320,7 @@ type SurfaceConditions = {
   - `TAPS` on `mud02` from 5 m at puddle level 0.6: 3 fetches everywhere at rain 0 (its layer's 2 and the patches'), 5 at rain 1 where water stands, 3 on the ramp and the drier spots. Past 30 m (the row from 34 m) the same at rain 0 and 1.
   - From 1.5 m the rings read as rings on the puddles and the film, moving between frames 250 ms apart; from 5 m they're a few pixels, a sparkle on the water. On the rocks' gravel none show from 5 m (its puddles are specks between the stones); not looked at closer.
 
-### Phase 4 — Streaks, shoreline (T5, T8)
+### Phase 4 — Streaks, shoreline (T5, T8) — done
 
 1. Streaks (T5).
 2. Shoreline (T8).
@@ -351,6 +351,22 @@ type SurfaceConditions = {
 - **Seen** (2026-11-18, Windows Chrome on WebGPU, AMD RDNA 3; no shader errors):
   - `WETNESS` at wetness 0.6 and rain 1: four or five rivulets on the 8 m wall and on the boulder, top to bottom; the boulder's underside dry; no seam where its axes switch.
   - Shaded, the wall from 6 m: in rain, darker bands down its lower half; at wetness 0.2 without rain, the rivulets clearly darker than the drying face (and sheened); at 0.05 traces on the cliff (its darkening is 0.25).
+
+**As built (section 2):**
+
+- **The node:** `nodes/Shoreline.ts`' `getShoreline` (internal), called by `applySurfaceWetness` with `opts.shoreline: { band, noise?, runUp?: { height?, period? }, position? }` (`SurfaceShorelineOpts`). Arithmetic only (no fetch, no branch), both qualities. No mask of its own: its bands show in the others.
+  - The height above the water: the world position's Y − `waterLevel` − `noise` × the wander (two octaves of `valueNoise` at the world's XZ, 4 m and 1.1 m cells, the second at 0.35; −1..1). Without a water level its uniform (−1e9) makes every band 0. About 25 ALU and two value noises, over S2's ~8.
+  - The run-up's reach: `height × (0.5 + 0.5 sin(2π t / period + 4 × wander))` on the surface clock, 0 without `runUp`.
+  - Three bands, each 1 under the water: the **wash** below the reach (faded over 4 cm) is combined into the puddle mask (soaked, 0.02 rough, flat normal, 15 % darker; rings while it rains); the **saturated** sand below 15 cm over the higher of the reach now and 1.5 s ago (faded over 10 cm) is a floor on the film, not × `puddleResponse`; the **damp** band below `band` is a regional wetness (`max` with `regional`): the least wetness (before the drying power) and puddle level shown.
+  - The saturated band followed the run-up's full height at first, so the wash moved inside a band that stood still and shaded almost alike (0.02 against 0.05 roughness): a wave didn't show. Its top now follows the reach, receding 1.5 s behind it (a second `sin`).
+  - Defaults (`SURFACE_WETNESS_DEFAULTS`): `noise` 0.3 m, run-up 0.5 m every 6 s (`band` has none).
+- **The terrain `wet.shoreline`:** `{ band (over 0, required), noise? (≥ 0), runUp?: { height? (over 0), period? (over 0) } }`, both qualities; uniforms `terrain_wetShoreBand`, `terrain_wetShoreNoise`, with a run-up `terrain_wetShoreRunUp` (height, period). Always at the world's position (the water level is the world's), whatever the material's space. No input.
+- **The gallery:** the beach block has `shoreline: { band: 1.5, runUp: {} }`; a still water plane over it (12 m, `#1f4d5c` at 0.6 opacity, roughness 0.05) at the water level, hidden without one, follows it on the scene's looper (`createWetRow(sceneId)`). The scene's JSON starts `waterLevel: 0.15`; the tab has a Water level switch and a slider (−0.3 to 2.5 m).
+- **Seen** (2026-11-18, Windows Chrome on WebGPU, AMD RDNA 3; no shader errors):
+  - At 0.15 m most of the beach's flat is under the water, its islands washed; on the ramp (the rocks, past 22°) the bands in `WETNESS`: white (the wash), yellow (saturated) and a red damp band to 1.5 m, its top wandering. At 1 m they climb the ramp with the plane; off, the beach is dry.
+  - Shaded against dry (the same camera, mean luminance in 40 px strips): the ramp 6 % darker at the band's top to 23 % at the water (rocks01's 0.35 darkening less the film's gloss).
+  - The run-up: in `WETNESS` the wash and the saturated band move along the shore between frames 1.5 s apart; shaded, it's a moving gloss edge, a few levels in the lowest strips. A foam line would read better (left for a water material).
+  - `SIMPLE`: the bands without the flat normal; the wash still darkens and glosses.
 
 ### Phase 5 — Snow coverage and frost (T10, T11)
 

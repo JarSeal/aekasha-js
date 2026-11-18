@@ -198,4 +198,42 @@ describe('applySurfaceWetness', () => {
     }
     expect(collectNodes([plain.masks.streak]).has(conditions.rain)).toBe(false);
   });
+
+  it('wets a shoreline along the water level in either quality: a wash, a film, a damp band', () => {
+    const conditions = makeConditions();
+    const surface = makeSurface();
+    const reads = (root: unknown, node: unknown) => collectNodes([root]).has(node);
+    for (const quality of ['FULL', 'SIMPLE'] as const) {
+      const wet = applySurfaceWetness(surface, conditions, {
+        quality,
+        shoreline: { band: 1.5 },
+      });
+      // The wash is a puddle, the saturated sand a film, the damp band the wetness's floor
+      for (const mask of [wet.masks.puddle, wet.masks.film, wet.masks.wetness]) {
+        expect(reads(mask, conditions.waterLevel)).toBe(true);
+      }
+      expect(reads(wet.albedo, conditions.waterLevel)).toBe(true);
+      expect(reads(wet.roughness, conditions.waterLevel)).toBe(true);
+      // Still water: no clock
+      expect(reads(wet.masks.puddle, conditions.time)).toBe(false);
+    }
+    // SIMPLE leaves the normal alone; FULL flattens it under the wash
+    const simple = applySurfaceWetness(surface, conditions, {
+      quality: 'SIMPLE',
+      shoreline: { band: 1.5 },
+    });
+    expect(simple.normal).toBe(surface.normal);
+    const full = applySurfaceWetness(surface, conditions, { shoreline: { band: 1.5 } });
+    expect(reads(full.normal, conditions.waterLevel)).toBe(true);
+    // The run-up moves the wash on the clock; with puddles the damp band raises their level
+    const waves = applySurfaceWetness(surface, conditions, {
+      puddles: {},
+      shoreline: { band: 1.5, runUp: {} },
+    });
+    expect(reads(waves.masks.puddle, conditions.time)).toBe(true);
+    expect(reads(waves.masks.puddle, conditions.puddleLevel)).toBe(true);
+    // Without a shoreline nothing reads the water level
+    const plain = applySurfaceWetness(surface, conditions, { puddles: {} });
+    expect(reads(plain.albedo, conditions.waterLevel)).toBe(false);
+  });
 });

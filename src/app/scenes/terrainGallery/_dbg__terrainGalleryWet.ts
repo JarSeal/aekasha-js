@@ -2,7 +2,8 @@
 // puddle level and rain (a slider each, the first two with the exits' steps, 0, 0.3, 0.6 and 1:
 // the scene's JSON starts them `MANUAL`, so they hold; in `MANUAL` the rain only ripples and runs
 // down the streaks, it wets nothing; the Surface conditions tab's `SIMULATED` mode and Rain shower
-// show the streaks fade after), the row's quality (`FULL`, `SIMPLE`) and view (the shading, `WETNESS`, `TAPS`), and
+// show the streaks fade after), the water level the beach's shoreline follows (a switch and a
+// slider over the block's heights), the row's quality (`FULL`, `SIMPLE`) and view (the shading, `WETNESS`, `TAPS`), and
 // the blocks' list, a click flying the camera to the block. The "Surface conditions" tab has the
 // rest of the weather.
 import { debuggerListCMP, updateDebuggerTab, type DebuggerTabSection } from 'aekasha/debug';
@@ -13,6 +14,7 @@ import { flyToGalleryBlock } from './_dbg__terrainGalleryCamera';
 import {
   REGIONAL_WET_KEY,
   setWetRowView,
+  SHORE_WET_KEY,
   WET_BLOCKS,
   WET_PIECES,
   type WetBlock,
@@ -22,6 +24,11 @@ import {
 
 /** The wetness and puddle level steps the plan's exits judge each category at */
 const WETNESS_STEPS = [0, 0.3, 0.6, 1] as const;
+
+/** The water level the switch turns back on at (the last one shown), metres */
+let lastWaterLevel = 0.15;
+/** The water level slider's range: the beach's flat (under 0.4 m) to its ramp's top (about 2.1 m) */
+const WATER_LEVEL_RANGE = [-0.3, 2.5] as const;
 
 /** The row's view (bound by the fields); the selected block */
 const tabState: WetRowView = { quality: 'FULL', debugView: 'NONE' };
@@ -47,6 +54,21 @@ const conditions = {
   set rain(value: number) {
     setSurfaceConditions({ rain: value });
   },
+  get hasWaterLevel() {
+    return (getSurfaceConditions()?.waterLevel ?? null) !== null;
+  },
+  set hasWaterLevel(value: boolean) {
+    setSurfaceConditions({ waterLevel: value ? lastWaterLevel : null });
+  },
+  get waterLevel() {
+    const level = getSurfaceConditions()?.waterLevel ?? null;
+    if (level !== null) lastWaterLevel = level;
+    return lastWaterLevel;
+  },
+  set waterLevel(value: number) {
+    lastWaterLevel = value;
+    setSurfaceConditions({ waterLevel: value });
+  },
 };
 
 /** Applies the row's view, loading the debug views first for a debug view; the latest call wins */
@@ -64,6 +86,7 @@ const getBlockRow = (block: WetBlock) => {
   const notes = [
     ...(block.key === REGIONAL_WET_KEY ? ['regional wetness along its left edge'] : []),
     ...(piece ? [`${piece.title} that streaks`] : []),
+    ...(block.key === SHORE_WET_KEY ? ['a shoreline along the water level'] : []),
   ];
   return {
     itemId: block.key,
@@ -130,6 +153,21 @@ export const getWetSections = (tabId: string, onSelect: () => void): DebuggerTab
         max: 1,
         step: 0.01,
         hint: 'The surface conditions’ rain: rings ripple where water stands (puddles, a film on the flat) within 30 m, more drops the harder it rains, and water runs down the wall’s and the boulder’s streaks; at 0 the ripple atlas isn’t sampled (the TAPS view), nor the streaks’ noise on a dry face',
+      },
+      {
+        key: 'hasWaterLevel',
+        target: conditions,
+        label: 'Water level',
+        hint: 'The surface conditions’ water level: the beach’s shoreline follows it (waves washing up, the sand they reach saturated, a 1.5 m damp band above), a water plane over the block shows it',
+      },
+      {
+        key: 'waterLevel',
+        target: conditions,
+        label: 'Water level y',
+        min: WATER_LEVEL_RANGE[0],
+        max: WATER_LEVEL_RANGE[1],
+        step: 0.05,
+        disabled: () => !conditions.hasWaterLevel,
       },
       { type: 'separator' },
       {

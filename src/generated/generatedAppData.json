@@ -23375,6 +23375,7 @@
       "surfaceConditions": {
         "wetness": 0.6,
         "puddleLevel": 0.6,
+        "waterLevel": 0.15,
         "mode": "MANUAL"
       },
       "id": "terrainGallery",

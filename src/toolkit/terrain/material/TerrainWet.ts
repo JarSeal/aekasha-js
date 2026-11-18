@@ -5,7 +5,8 @@
 // `puddleResponse`, their patches one fetch of the macro texture at their own scale; its regional
 // wetness (T7) a vertex attribute or the first splat map's A; its rain ripples (T4) the input
 // `ripples`' atlas, faded out by the view distance; its rain streaks (T5) one fetch of the macro
-// texture's R stretched down steep faces, in both qualities. The conditions are the
+// texture's R stretched down steep faces, in both qualities; its shoreline (T8) along the water
+// level, arithmetic at the world's position, in both qualities. The conditions are the
 // `surfaceConditions()` feature's stable uniforms; without the feature the material builds dry,
 // warned once a page load.
 import { attribute, float, smoothstep, uniform } from 'three/tsl';
@@ -19,6 +20,7 @@ import {
   applySurfaceWetness,
   type SurfacePuddleOpts,
   type SurfaceRippleOpts,
+  type SurfaceShorelineOpts,
   type SurfaceStreakOpts,
   type SurfaceWetnessMasks,
 } from '../nodes/Wet';
@@ -131,6 +133,30 @@ const getStreakOpts = (
   };
 };
 
+/**
+ * The shoreline's options (uniforms `terrain_wetShoreBand`, `terrain_wetShoreNoise`, and with a
+ * run-up `terrain_wetShoreRunUp`: its height and period), at the world's position (the water level
+ * is the world's, whatever the material's space), or undefined without
+ */
+const getShorelineOpts = (
+  settings: TerrainWetDefine,
+  keep: Keep
+): SurfaceShorelineOpts | undefined => {
+  const { shoreline } = settings;
+  if (!shoreline) return undefined;
+  const opts: SurfaceShorelineOpts = {
+    band: keep('wetShoreBand', uniform(shoreline.band)),
+    noise: keep('wetShoreNoise', uniform(shoreline.noise)),
+  };
+  if (!shoreline.runUp) return opts;
+  const { height, period } = shoreline.runUp;
+  const runUp = keep<Node<'vec2'>>('wetShoreRunUp', uniform(new Vector2(height, period)));
+  return {
+    ...opts,
+    runUp: { height: runUp.x as Node<'float'>, period: runUp.y as Node<'float'> },
+  };
+};
+
 /** The regional wetness's node: the vertex attribute, or the first splat map's A; undefined without */
 const getRegional = (settings: TerrainWetDefine, surface: TerrainWetInput) => {
   const { regional } = settings;
@@ -143,7 +169,7 @@ const getRegional = (settings: TerrainWetDefine, surface: TerrainWetInput) => {
 
 /**
  * The surface wet by the surface conditions with the define's `wet` (uniforms
- * `terrain_wetShelter`, the streaks', and with `FULL` `terrain_wetHeightInfluence`,
+ * `terrain_wetShelter`, the streaks', the shoreline's, and with `FULL` `terrain_wetHeightInfluence`,
  * `terrain_wetCavityInfluence`, the puddles' and the ripples'), and its masks (the `WETNESS`
  * view's); as given, masks null, without `wet` or without the `surfaceConditions()` feature
  * (warned once a page load).
@@ -175,6 +201,7 @@ export const applyTerrainWetness = (
   const puddles = isFull ? getPuddleOpts(settings, surface, space, keep) : undefined;
   const ripples = isFull ? getRippleOpts(settings, surface, space, keep) : undefined;
   const streaks = getStreakOpts(settings, surface, space, keep);
+  const shoreline = getShorelineOpts(settings, keep);
   const wet = applySurfaceWetness(
     {
       albedo: surface.albedo,
@@ -205,6 +232,7 @@ export const applyTerrainWetness = (
       ...(puddles ? { puddles } : {}),
       ...(ripples ? { ripples } : {}),
       ...(streaks ? { streaks } : {}),
+      ...(shoreline ? { shoreline } : {}),
     }
   );
   return {

@@ -137,10 +137,13 @@ const WET_KEYS = [
   'regional',
   'ripples',
   'streaks',
+  'shoreline',
 ];
 const WET_PUDDLE_KEYS = ['maxSlope', 'edge', 'patches'];
 const WET_RIPPLE_KEYS = ['scale', 'lifetime', 'strength', 'distance'];
 const WET_STREAK_KEYS = ['minSlope', 'scale', 'length', 'speed'];
+const WET_SHORELINE_KEYS = ['band', 'noise', 'runUp'];
+const WET_RUN_UP_KEYS = ['height', 'period'];
 const WET_PATCH_KEYS = ['scale', 'amount'];
 const WET_SPLAT_CHANNELS = ['A'] as const;
 /** The vertex attribute a regional wetness reads by default: glTF's `_WETNESS` (GLTFLoader's
@@ -308,6 +311,18 @@ export type TerrainWetDefine = {
   ripples: TerrainRipplesDefine | null;
   /** The rain streaks (the input `macro`'s R), or null for none */
   streaks: TerrainStreaksDefine | null;
+  /** The shoreline along the water level, or null for none */
+  shoreline: TerrainShorelineDefine | null;
+};
+
+/** The wet response's shoreline with its defaults filled in (p307 T8) */
+export type TerrainShorelineDefine = {
+  /** The metres above the water level that stay damp */
+  band: number;
+  /** The metres the waterline wanders along the shore */
+  noise: number;
+  /** The waves' run-up (the metres they reach, the seconds between them), or null for none */
+  runUp: { height: number; period: number } | null;
 };
 
 /** The wet response's rain streaks with their defaults filled in (p307 T5) */
@@ -425,6 +440,8 @@ export const TERRAIN_DEFINE_VALUES = {
   wetPatchKeys: WET_PATCH_KEYS,
   wetRippleKeys: WET_RIPPLE_KEYS,
   wetStreakKeys: WET_STREAK_KEYS,
+  wetShorelineKeys: WET_SHORELINE_KEYS,
+  wetRunUpKeys: WET_RUN_UP_KEYS,
   wetSplatChannels: WET_SPLAT_CHANNELS,
   colorMapKeys: COLOR_MAP_KEYS,
   farModes: FAR_MODES,
@@ -1231,6 +1248,27 @@ const readWet = (value: unknown, path: string): TerrainWetDefine | null => {
     regional: readRegional(wet.regional, `${path}.regional`),
     ripples: readRipples(wet.ripples, `${path}.ripples`),
     streaks: readStreaks(wet.streaks, `${path}.streaks`),
+    shoreline: readShoreline(wet.shoreline, `${path}.shoreline`),
+  };
+};
+
+/** The shoreline's numbers (p307 T8), their defaults filled in (`band` required); null without */
+const readShoreline = (value: unknown, path: string): TerrainShorelineDefine | null => {
+  if (value === undefined) return null;
+  const shoreline = readObject(value, path);
+  checkKeys(shoreline, WET_SHORELINE_KEYS, path);
+  const { shoreNoise, shoreRunUpHeight, shoreRunUpPeriod } = SURFACE_WETNESS_DEFAULTS;
+  const over0 = { min: { value: 0, isExclusive: true } };
+  const runUpPath = `${path}.runUp`;
+  const runUp = shoreline.runUp === undefined ? null : readObject(shoreline.runUp, runUpPath);
+  if (runUp) checkKeys(runUp, WET_RUN_UP_KEYS, runUpPath);
+  return {
+    band: readNumber(shoreline, 'band', undefined, over0, path),
+    noise: readNumber(shoreline, 'noise', shoreNoise, NON_NEGATIVE, path),
+    runUp: runUp && {
+      height: readNumber(runUp, 'height', shoreRunUpHeight, over0, runUpPath),
+      period: readNumber(runUp, 'period', shoreRunUpPeriod, over0, runUpPath),
+    },
   };
 };
 

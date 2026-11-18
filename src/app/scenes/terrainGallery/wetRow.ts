@@ -11,7 +11,9 @@
 // wetness along its left edge (a riverbank: its `_wetness` vertex attribute). Phase 4: two steep
 // pieces with rain streaks (structure materials, `wet.streaks`), a concrete wall on the concrete
 // block and a cliff boulder on the cliff block (rounded, so the streaks' axis switch and its
-// overhang show). Code route materials (`createTerrainMaterial`) with a `LOW` tier whose wet is
+// overhang show). Phase 4 section 2: the beach's shoreline along the surface conditions' water
+// level, its waves washing up, and a still water plane over the beach at the level (hidden
+// without one), which follows it on the scene's looper. Code route materials (`createTerrainMaterial`) with a `LOW` tier whose wet is
 // `SIMPLE` (without the puddles and the ripples: a tier's variant shares the material's inputs,
 // which a variant without them would refuse): the quality (the tier) and the view are variants of
 // a block's or a piece's material.
@@ -19,7 +21,10 @@ import * as THREE from 'three/webgpu';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import {
   createMeshEntity,
+  createSceneMainLooper,
   existsOrThrow,
+  getECSWorld,
+  getEntityIdByAppId,
   getGeometry,
   getMaterial,
   getMaterialVariant,
@@ -32,6 +37,7 @@ import {
   createTerrainMaterial,
   type TerrainMaterialConfig,
 } from 'aekasha/toolkit/terrain';
+import { getSurfaceConditions } from 'aekasha/surface';
 import { BLOCK_GAP, BLOCK_PITCH, BLOCK_SIZE, getBlockGeometry, NO_SHADOWS } from './galleryBlocks';
 import { SPLATTING_ROW_BOUNDS } from './splattingRow';
 
@@ -92,6 +98,13 @@ const PUDDLE_PATCH_SCALE = 30;
  * left edge, metres, dry past the second */
 export const REGIONAL_WET_KEY: WetKey = 'GRASS';
 const REGIONAL_WET_BAND = [2, 5] as const;
+/** The block with a shoreline, and its damp band above the water, metres */
+export const SHORE_WET_KEY: WetKey = 'BEACH';
+const SHORE_BAND = 1.5;
+/** The water plane over the shore's block: its app id and look */
+const WATER_APP_ID = 'terrainGallery_wetWater';
+const WATER_COLOR = '#1f4d5c';
+const WATER_OPACITY = 0.6;
 /** The regional wetness's vertex attribute (the terrain material's default) */
 const REGIONAL_WET_ATTRIBUTE = '_wetness';
 
@@ -146,7 +159,8 @@ const withSimpleTier = (wet: NonNullable<TerrainMaterialConfig['wet']>) => {
 };
 
 /** A block's code route config: its sets, wet (`FULL`, puddles in patches, ripples; the grass
- * block's regional wetness) and its `SIMPLE` tier; the beach's rocks by slope */
+ * block's regional wetness, the beach's shoreline) and its `SIMPLE` tier; the beach's rocks by
+ * slope */
 const getBlockConfig = (block: WetBlock): TerrainMaterialConfig => ({
   id: `terrainGalleryWet_${block.key}`,
   layers: block.sets.map((set) => ({ set })),
@@ -162,6 +176,7 @@ const getBlockConfig = (block: WetBlock): TerrainMaterialConfig => ({
     puddles: { patches: { scale: PUDDLE_PATCH_SCALE } },
     ripples: {},
     ...(block.key === REGIONAL_WET_KEY ? { regional: {} } : {}),
+    ...(block.key === SHORE_WET_KEY ? { shoreline: { band: SHORE_BAND, runUp: {} } } : {}),
   }),
 });
 
@@ -282,9 +297,62 @@ const getPieceGeometry = (piece: WetPiece) =>
 const getPieceY = (piece: WetPiece) =>
   piece.key === 'WALL' ? WALL.height / 2 - WALL_SINK : BOULDER_RADII[1] * (1 - 2 * BOULDER_BURIED);
 
-/** Creates the row's blocks, each on the library's generated block with its own seed, and the
- * streaked pieces on theirs */
-export const createWetRow = () => {
+/** The block with the shoreline, which the water covers */
+const getShoreBlock = () =>
+  existsOrThrow(
+    WET_BLOCKS.find((block) => block.key === SHORE_WET_KEY),
+    `[terrainGallery] No wet block "${SHORE_WET_KEY}".`
+  );
+
+/**
+ * The water plane over the shore's block: at the surface conditions' water level, hidden without
+ * one, following it on the scene's looper (gone with the scene)
+ */
+const createWater = (sceneId: string) => {
+  const block = getShoreBlock();
+  createMeshEntity(
+    {
+      geo: getOrBuildGeometry('terrainGalleryWetWater', () =>
+        new THREE.PlaneGeometry(BLOCK_SIZE, BLOCK_SIZE).rotateX(-Math.PI / 2)
+      ),
+      mat: {
+        id: 'terrainGalleryWetWater',
+        type: 'STANDARD',
+        params: {
+          color: WATER_COLOR,
+          roughness: 0.05,
+          transparent: true,
+          opacity: WATER_OPACITY,
+          depthWrite: false,
+        },
+      },
+      position: { x: block.x, z: block.z },
+      ...NO_SHADOWS,
+    },
+    { appId: WATER_APP_ID, debugData: { name: 'Wet/dry: water' } }
+  );
+  const world = getECSWorld();
+  const id = getEntityIdByAppId(WATER_APP_ID, world);
+  const mesh = getMeshByAppId(WATER_APP_ID);
+  const pose = { pos: { x: block.x, y: 0, z: block.z } };
+  let shown: number | null | undefined;
+  createSceneMainLooper(() => {
+    const level = getSurfaceConditions()?.waterLevel ?? null;
+    if (level === shown) return;
+    shown = level;
+    if (mesh) mesh.visible = level !== null;
+    if (level === null || id === undefined) return;
+    pose.pos.y = level;
+    world.setTransform(id, pose);
+  }, sceneId);
+};
+
+/**
+ * Creates the row's blocks, each on the library's generated block with its own seed, the streaked
+ * pieces on theirs and the water over the shore
+ * @param sceneId the gallery's scene id (the water's looper's)
+ */
+export const createWetRow = (sceneId: string) => {
   for (const block of WET_BLOCKS) {
     const geometry = getBlockGeometry(block.seed);
     createMeshEntity(
@@ -312,4 +380,5 @@ export const createWetRow = () => {
       { appId: getPieceAppId(piece), debugData: { name: `Wet/dry: ${piece.title}` } }
     );
   }
+  createWater(sceneId);
 };

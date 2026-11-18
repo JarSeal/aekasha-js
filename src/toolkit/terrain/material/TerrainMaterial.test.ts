@@ -1549,6 +1549,27 @@ describe('setupTerrainMaterial: wet (p307)', () => {
     expect(calls(tiered.roughnessNode)).toBe(calls(plain.roughnessNode));
   });
 
+  it('wets a shoreline along the water level in either quality: its uniforms, no input', () => {
+    const material = build({
+      layers: [{}],
+      wet: { shoreline: { band: 1.5, runUp: { period: 4 } } },
+    });
+    const uniforms = getUniforms(material);
+    expect(uniforms.terrain_wetShoreBand.value).toBe(1.5);
+    expect(uniforms.terrain_wetShoreNoise.value).toBe(0.3);
+    expect(uniforms.terrain_wetShoreRunUp.value).toEqual(new Vector2(0.5, 4));
+    for (const socket of [material.colorNode, material.roughnessNode, material.normalNode]) {
+      expect(reaches(socket, conditions.waterLevel)).toBe(true);
+    }
+    const still = build({ layers: [{}], wet: { shoreline: { band: 1 } } });
+    expect(getUniforms(still).terrain_wetShoreRunUp).toBeUndefined();
+    const simple = build({ layers: [{}], wet: { quality: 'SIMPLE', shoreline: { band: 1 } } });
+    expect(reaches(simple.colorNode, conditions.waterLevel)).toBe(true);
+    expect(reaches(simple.normalNode, conditions.waterLevel)).toBe(false);
+    const dry = build({ layers: [{}], wet: {} });
+    expect(reaches(dry.colorNode, conditions.waterLevel)).toBe(false);
+  });
+
   it("counts the streaks' tap in TAPS where they run", async () => {
     expect(await loadTerrainDebugViewsAsync()).toBe(true);
     const material = build(

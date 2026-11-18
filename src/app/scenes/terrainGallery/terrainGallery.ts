@@ -260,7 +260,7 @@ export const scene = async () => {
   GALLERY_BLOCKS.forEach((block, i) => createBlock(block, SEED_BASE + i));
   createAntiTilingRow();
   createSplattingRow();
-  createWetRow();
+  createWetRow(TERRAIN_GALLERY_SCENE_ID);
   createRulesRow();
   createCliffsRow();
   await createColorMapRowAsync();

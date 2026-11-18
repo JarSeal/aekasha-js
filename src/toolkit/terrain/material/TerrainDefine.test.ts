@@ -334,6 +334,12 @@ const ACCEPTED: unknown[] = [
     quality: { LOW: { wet: { quality: 'SIMPLE' } } },
     qualityLevel: 'LOW',
   },
+  // Its shoreline, in either quality
+  { layers: [{}], wet: { shoreline: { band: 1.5 } } },
+  {
+    layers: [{}],
+    wet: { quality: 'SIMPLE', shoreline: { band: 0.5, noise: 0, runUp: { height: 1, period: 4 } } },
+  },
   // Its rain streaks, in either quality
   { layers: [{}], wet: { streaks: {} } },
   {
@@ -655,7 +661,7 @@ const REFUSED: unknown[] = [
   },
   // p307's wet response: its keys (a later phase's too), values and ranges; its view without it
   { layers: [{}], wet: { ripples: true } },
-  { layers: [{}], wet: { shoreline: { band: 1 } } },
+  { layers: [{}], wet: { snow: { set: 'snow01' } } },
   { layers: [{}], wet: { quality: 'NONE' } },
   { layers: [{}], wet: { heightInfluence: -1 } },
   { layers: [{}], wet: { cavityInfluence: '1' } },
@@ -683,6 +689,15 @@ const REFUSED: unknown[] = [
   { layers: [{}], wet: { ripples: { distance: [30, 10] } } },
   { layers: [{}], wet: { ripples: { distance: [10] } } },
   { layers: [{}], wet: { ripples: { density: 1 } } },
+  // Its shoreline: the band required, the ranges and keys
+  { layers: [{}], wet: { shoreline: {} } },
+  { layers: [{}], wet: { shoreline: { band: 0 } } },
+  { layers: [{}], wet: { shoreline: { band: 1, noise: -0.1 } } },
+  { layers: [{}], wet: { shoreline: { band: 1, runUp: { height: 0 } } } },
+  { layers: [{}], wet: { shoreline: { band: 1, runUp: { period: -6 } } } },
+  { layers: [{}], wet: { shoreline: { band: 1, runUp: true } } },
+  { layers: [{}], wet: { shoreline: { band: 1, runUp: { speed: 1 } } } },
+  { layers: [{}], wet: { shoreline: { band: 1, level: 2 } } },
   // Its rain streaks: their ranges and keys
   { layers: [{}], wet: { streaks: { minSlope: 0 } } },
   { layers: [{}], wet: { streaks: { minSlope: 95 } } },
@@ -758,7 +773,16 @@ describe('readTerrainDefine', () => {
       regional: null,
       ripples: null,
       streaks: null,
+      shoreline: null,
     });
+    expect(read({ layers: [{}], wet: { shoreline: { band: 1.5 } } }).wet?.shoreline).toEqual({
+      band: 1.5,
+      noise: 0.3,
+      runUp: null,
+    });
+    expect(
+      read({ layers: [{}], wet: { shoreline: { band: 1.5, runUp: {} } } }).wet?.shoreline?.runUp
+    ).toEqual({ height: 0.5, period: 6 });
     expect(read({ layers: [{}], wet: { streaks: {} } }).wet?.streaks).toEqual({
       minSlope: 60,
       scale: 4,
@@ -1082,6 +1106,11 @@ describe('readTerrainDefine', () => {
     );
     expect(values.wetStreakKeys.sort()).toEqual(
       Object.keys(wet.unwrap().shape.streaks.unwrap().shape).sort()
+    );
+    const shoreline = wet.unwrap().shape.shoreline.unwrap();
+    expect(values.wetShorelineKeys.sort()).toEqual(Object.keys(shoreline.shape).sort());
+    expect(values.wetRunUpKeys.sort()).toEqual(
+      Object.keys(shoreline.shape.runUp.unwrap().shape).sort()
     );
     const [byAttribute, bySplat] = wet.unwrap().shape.regional.unwrap().options;
     expect(Object.keys(byAttribute.shape)).toEqual(['attribute']);

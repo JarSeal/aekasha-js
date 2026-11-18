@@ -264,7 +264,9 @@ const getAoNode = (
  * the first splat map's A) keeps its places wet; with `wet.ripples` rain rings ripple where water
  * stands, two fetches of the input `ripples` (a ripple atlas) in a branch on the rain; with
  * `wet.streaks` rivulets run down steep faces while it rains and stay damp while it's wet, one
- * fetch of the input `macro` in a branch on the weather. With `space: 'OBJECT'` all of it is in the mesh's own space (its
+ * fetch of the input `macro` in a branch on the weather; with `wet.shoreline` the ground along the
+ * surface conditions' `waterLevel` is washed, saturated and damp above (arithmetic, at the world's
+ * position). With `space: 'OBJECT'` all of it is in the mesh's own space (its
  * position × scale, its normal: coordinates, projections, rules, macro), the shaded normal turned
  * into world space before the view; `WORLD` (default) the world's. A live layer (`source:
  * 'PROCEDURAL_LIVE'`) runs its procedural set's generator in place of sampling (its whole graph at
@@ -292,7 +294,8 @@ const getAoNode = (
  * `terrain_wetRippleScale`, `terrain_wetRippleLifetime`, `terrain_wetRippleStrength` and
  * `terrain_wetRippleDistance` with its ripples, `terrain_wetStreakMinSlope`,
  * `terrain_wetStreakScale`, `terrain_wetStreakLength` and `terrain_wetStreakSpeed` with its
- * streaks).
+ * streaks, `terrain_wetShoreBand` and `terrain_wetShoreNoise` with its shoreline,
+ * `terrain_wetShoreRunUp` with the shoreline's run-up).
  * A `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug env, once
  * {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the view. The
  * define as given is kept at `material.userData.terrainDefine`.

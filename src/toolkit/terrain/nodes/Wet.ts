@@ -8,7 +8,8 @@
 // a cliff face) gets little film or none. Puddles (T3) stand where the puddle level's waterline
 // is over the relief, on the flat, filling some patches first; an authored regional wetness (T7)
 // keeps its places wet in any weather; while it rains, rings ripple where water stands (T4); on
-// steep faces rivulets run down while it rains and stay damp after (T5). Every number of the
+// steep faces rivulets run down while it rains and stay damp after (T5); along the water level a
+// shoreline's bands wash, saturate and dampen the ground (T8). Every number of the
 // response is a node: a terrain material's are its layers' set uniforms blended by weight, an app
 // material's its own. The ripples' two fetches and the streaks' one are the only ones, each in a
 // branch on the weather (`Ripples.ts`, `Streaks.ts`; the patches are the caller's sample).
@@ -27,6 +28,7 @@ import {
 import type { Node, TextureNode } from 'three/webgpu';
 import type { SurfaceConditionNodes } from 'aekasha/surface';
 import { sampleRainRipples } from './Ripples';
+import { getShoreline } from './Shoreline';
 import { sampleRainStreaks } from './Streaks';
 
 /**
@@ -88,6 +90,9 @@ export const SURFACE_WETNESS_DEFAULTS = {
   streakScale: 4,
   streakLength: 8,
   streakSpeed: 1,
+  shoreNoise: 0.3,
+  shoreRunUpHeight: 0.5,
+  shoreRunUpPeriod: 6,
 } as const satisfies Record<string, number | readonly [number, number]>;
 
 /** A number as a constant node, or the node given */
@@ -196,6 +201,29 @@ export type ApplySurfaceWetnessOpts = {
    * film). Left out: none.
    */
   streaks?: SurfaceStreakOpts;
+  /**
+   * A shoreline along the conditions' `waterLevel` (none without one): the waves' wash (standing
+   * water), the saturated sand just above it (a film) and a damp band above (the least wetness and
+   * puddle level shown, as a regional wetness), all full under the water. Arithmetic only, both
+   * qualities (`'SIMPLE'` leaves the normal alone). Left out: none.
+   */
+  shoreline?: SurfaceShorelineOpts;
+};
+
+/** {@link ApplySurfaceWetnessOpts}' shoreline. */
+export type SurfaceShorelineOpts = {
+  /** The metres above the water level that stay damp, over 0. */
+  band: Node<'float'> | number;
+  /** The metres the waterline wanders up and down along the shore, 0 or more (default 0.3). */
+  noise?: Node<'float'> | number;
+  /**
+   * Waves washing up the shore and back: the metres they reach above the water level (default
+   * 0.5) and the seconds between them (default 6), on the surface clock. Left out: a still water
+   * line.
+   */
+  runUp?: { height?: Node<'float'> | number; period?: Node<'float'> | number };
+  /** The surface's world position: the water level is the world's (default `positionWorld`). */
+  position?: Node<'vec3'>;
 };
 
 /** {@link ApplySurfaceWetnessOpts}' rain streaks. */
@@ -270,9 +298,15 @@ export type SurfaceWetnessMasks = {
   wetness: Node<'float'>;
   /** The pores' stage: how full they are. */
   pores: Node<'float'>;
-  /** The film's stage: how far the water film has formed over the full pores (× `puddleResponse`). */
+  /**
+   * The film's stage: how far the water film has formed over the full pores (× `puddleResponse`),
+   * running water's and the shore's saturated sand's included.
+   */
   film: Node<'float'>;
-  /** The puddle: how far water stands over the surface (0 without `opts.puddles`). */
+  /**
+   * The puddle: how far water stands over the surface (a puddle, the shoreline's wash; 0 without
+   * `opts.puddles` and `opts.shoreline`).
+   */
   puddle: Node<'float'>;
   /**
    * The ripples' weight: standing water × the fade × the rain (0 without `opts.ripples`); where
@@ -310,8 +344,9 @@ export type WetSurface = {
  * wetness (T7) is the least wetness and puddle level shown. With `opts.ripples` (T4), rain rings
  * tilt the normal where water stands, the atlas's two fetches in a dynamic branch on the rain; with
  * `opts.streaks` (T5), rivulets run down steep faces while it rains (a film) and stay damp while
- * it's wet (the pores), one fetch in a dynamic branch on the weather; nothing else fetches or
- * branches. At wetness, puddle level and rain 0 without a regional
+ * it's wet (the pores), one fetch in a dynamic branch on the weather; with `opts.shoreline` (T8),
+ * the ground along the conditions' `waterLevel` is washed (a puddle), saturated (a film) and damp
+ * above (a regional wetness), arithmetic only; nothing else fetches or branches. At wetness, puddle level and rain 0 without a regional
  * wetness the surface is as given.
  * @param surface the dry surface, its relief, cavity, regional wetness and response
  * @param conditions the surface conditions' uniforms (`getSurfaceConditionNodes()`)
@@ -353,8 +388,14 @@ export const applySurfaceWetness = (
   const cosines = angles.mul(DEG_TO_RAD).cos() as Node<'vec2'>;
   const exposure = smoothstep(cosines.y, cosines.x, up) as unknown as Node<'float'>;
   let global = (conditions.wetness as unknown as Node<'float'>).mul(exposure) as Node<'float'>;
+  // T8: the shoreline's bands; its damp one a regional wetness
+  const shore = opts.shoreline ? getShore(conditions, opts.shoreline) : null;
+  const regional =
+    surface.regional && shore
+      ? (max(surface.regional, shore.damp) as unknown as Node<'float'>)
+      : surface.regional ?? shore?.damp;
   // T7: an authored wetness, whatever the weather and the facing
-  if (surface.regional) global = max(global, surface.regional) as unknown as Node<'float'>;
+  if (regional) global = max(global, regional) as unknown as Node<'float'>;
   // The surface's own drying: the wetness it shows, the overall one to its drying speed
   const { dryingSpeed } = surface.response;
   if (dryingSpeed !== undefined && dryingSpeed !== 1) {
@@ -396,11 +437,18 @@ export const applySurfaceWetness = (
       ? filmStage
       : filmStage.mul(toFloat(puddleResponse))
   ) as Node<'float'>;
-  // Running water is a film whether water stands on the surface or not
+  // Running water is a film whether water stands on the surface or not, and so is the shore's
+  // saturated sand
   if (streaks) film = max(film, streaks.running) as unknown as Node<'float'>;
-  // T3: a puddle soaks what's beneath it (its pores and film full)
+  if (shore) film = max(film, shore.saturated) as unknown as Node<'float'>;
+  // T3: a puddle soaks what's beneath it (its pores and film full); the shore's wash is one
   const flat = getFlatGate(up, opts.puddles?.maxSlope);
-  const puddle = isFull && opts.puddles ? getPuddle(surface, conditions, flat, opts.puddles) : null;
+  const pooled =
+    isFull && opts.puddles ? getPuddle(surface, regional, conditions, flat, opts.puddles) : null;
+  const puddle =
+    pooled && shore
+      ? (max(pooled, shore.wash) as unknown as Node<'float'>)
+      : pooled ?? shore?.wash ?? null;
   const soaked = puddle ? (max(pores, puddle) as unknown as Node<'float'>) : pores;
   const filmed = puddle ? (max(film, puddle) as unknown as Node<'float'>) : film;
   let albedo = surface.albedo.mul(float(1).sub(darkening.mul(soaked))) as Node<'vec3'>;
@@ -459,6 +507,25 @@ const getFlatGate = (up: Node<'float'>, maxSlopeDegrees: Node<'float'> | number 
     DEG_TO_RAD
   );
   return smoothstep(cos(maxSlope), cos(maxSlope.mul(0.5)), up) as unknown as Node<'float'>;
+};
+
+/** The shoreline's bands (`Shoreline.ts`) along the conditions' water level */
+const getShore = (conditions: SurfaceConditionNodes, opts: SurfaceShorelineOpts) => {
+  const defaults = SURFACE_WETNESS_DEFAULTS;
+  const { runUp } = opts;
+  return getShoreline({
+    waterLevel: conditions.waterLevel as unknown as Node<'float'>,
+    band: toFloat(opts.band),
+    noise: toFloat(opts.noise ?? defaults.shoreNoise),
+    runUp: runUp
+      ? {
+          height: toFloat(runUp.height ?? defaults.shoreRunUpHeight),
+          period: toFloat(runUp.period ?? defaults.shoreRunUpPeriod),
+        }
+      : null,
+    time: conditions.time as unknown as Node<'float'>,
+    ...(opts.position ? { position: opts.position } : {}),
+  });
 };
 
 /**
@@ -532,21 +599,21 @@ const applyRipples = (
 };
 
 /**
- * The puddle mask (T3): the waterline (the puddle level, at least the regional wetness, ×
+ * The puddle mask (T3): the waterline (the puddle level, at least the regional wetness and the
+ * shoreline's damp band, ×
  * `puddleResponse`, × the patches' share) over the relief, faded in over `edge`, on ground
  * flatter than `maxSlope` (full up to half of it)
  */
 const getPuddle = (
   surface: WetSurfaceInput,
+  regional: Node<'float'> | undefined,
   conditions: SurfaceConditionNodes,
   flat: Node<'float'>,
   opts: SurfacePuddleOpts
 ) => {
   const defaults = SURFACE_WETNESS_DEFAULTS;
   const puddleLevel = conditions.puddleLevel as unknown as Node<'float'>;
-  const level = (
-    surface.regional ? max(puddleLevel, surface.regional) : puddleLevel
-  ) as Node<'float'>;
+  const level = (regional ? max(puddleLevel, regional) : puddleLevel) as Node<'float'>;
   const { puddleResponse } = surface.response;
   let waterline =
     puddleResponse === undefined ? level : (level.mul(toFloat(puddleResponse)) as Node<'float'>);

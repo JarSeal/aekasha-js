@@ -5027,6 +5027,7 @@
       "TerrainRipplesDefine": "TypeAlias",
       "TerrainRuleDefine": "TypeAlias",
       "TerrainRuleRangeDefine": "TypeAlias",
+      "TerrainShorelineDefine": "TypeAlias",
       "TerrainStreaksDefine": "TypeAlias",
       "TerrainWetDefine": "TypeAlias"
     },
@@ -5273,6 +5274,10 @@
       "TextureSetSample": "TypeAlias",
       "transformTangentNormalToView": "Function"
     },
+    "src/toolkit/terrain/nodes/Shoreline.ts": {
+      "getShoreline": "Function",
+      "ShorelineInputs": "TypeAlias"
+    },
     "src/toolkit/terrain/nodes/SlopeGate.ts": {
       "getSlopeGateShare": "Function",
       "sampleSlopeGated": "Function"
@@ -5317,6 +5322,7 @@
       "SURFACE_WETNESS_DEFAULTS": "Variable",
       "SurfacePuddleOpts": "TypeAlias",
       "SurfaceRippleOpts": "TypeAlias",
+      "SurfaceShorelineOpts": "TypeAlias",
       "SurfaceStreakOpts": "TypeAlias",
       "SurfaceWetnessMasks": "TypeAlias",
       "SurfaceWetResponse": "TypeAlias",
@@ -6539,6 +6545,7 @@
       "SurfaceParamValues",
       "SurfacePuddleOpts",
       "SurfaceRippleOpts",
+      "SurfaceShorelineOpts",
       "SurfaceStreakOpts",
       "SurfaceToggleParam",
       "SurfaceWetResponse",
