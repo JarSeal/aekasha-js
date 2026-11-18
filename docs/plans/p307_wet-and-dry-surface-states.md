@@ -426,6 +426,27 @@ type SurfaceConditions = {
 
 **Exit:** the area under a concrete roof stays dry in rain; the cost measured and recorded.
 
+**Decided at the start:**
+
+- **A feature of its own**, `rainOcclusion(opts?)` on `aekasha/surface` (id `rainocclusion`, `requires: ['surfaceconditions']`, listed right after it; `physicsTiers()`'s precedent): an app without it carries none of the render. The template lists it (the gallery's row uses it).
+- **Occluders:** what casts shadows (`castShadow`), overridden per object by a boolean `userData.rainOccluder`. Roofs, trees and bridges usually cast shadows; sky, water planes and debug helpers usually don't.
+- **What the occlusion scales** (section 2), past S4's exposure alone: the exposure (so the wetness, the streaks and the frost's facing), the puddle level, the ripples' rain and the snow coverage. Not the regional wetness, the shoreline or the meltwater (not rain). Both qualities take `MAP` (one fetch). The rain falls straight down: tilting the map by the wind is a follow-up.
+- Sections: 1. the engine's map; 2. the toolkit's `wet.rainOcclusion`, the gallery's roof and the measurements.
+
+**As built (section 1):**
+
+- **Files** (`src/_engine/features/surface/`): `RainOcclusionModel.ts` (the options, their defaults and checks, the texel snap, when the map renders: plain functions), `RainOcclusion.ts` (the map, its render, `rainOcclusionSystem`, the node and the API), `RainOcclusionFeature.ts` (`rainOcclusion(opts?)`); tests `RainOcclusionModel.test.ts`, `RainOcclusion.test.ts` (a fake renderer: when it renders, the state put back, the matrix's orientation and depth).
+- **Options** (`RainOcclusionOpts`): `size` (texels a side, 16-4096, 512), `extent` (metres a side, 64), `height` (metres above and below the camera, 100), `updateFrames` (30; 0 only on a move or a request), `bias` (metres, 0.05). Out of range throws at the factory's call.
+- **API** (`aekasha/surface`): `getRainOcclusionNode({ position?, normal? })` (0 open to 1 sheltered; null without the feature), `setRainOcclusionEnabled(isEnabled)` (off: every node reads open sky, nothing renders; on again renders on the next frame), `requestRainOcclusionUpdate()`. The setters throw without the feature, naming it.
+- **The map:** a `RenderTarget` (an R8 colour the material doesn't write, a `DepthTexture` with a compare function and linear filters: hardware PCF, one fetch filtering 2 × 2 texels; `FloatType` and `GreaterEqualCompare` under a reversed depth buffer) and an `OrthographicCamera` looking straight down (its up the world's −z), `extent` wide, `2 × height` deep, its top `height` above the active camera, centred on it snapped to the texels.
+- **The render** (`rainOcclusionSystem`, MAIN, order 1, after `surfaceConditionsSystem` by install order; default world only): three's shadow pass's way (r187 `ShadowNode.updateShadow`): the renderer's and the scene's state reset and put back (`RendererUtils`, its scratch states kept), the root scene with an override material (depth only, both faces, single pass; three gives it each object's `positionNode`, alpha test and alpha map), a render object function drawing the occluders only, the active camera's layers. It renders while a material has made a node, the map is on and no scene loads: first, when asked, when the camera has moved an eighth of the extent across or of the height up or down from the centre, and every `updateFrames` frames. Allocates nothing.
+- **The node:** the world position moved out along the geometry normal by 1.5 texels (a wall's face and a slope look past their own top), through the shadow matrix (bias × projection × view, z kept in [0, 1] on WebGPU, mapped there on WebGL), v flipped (three's shadow coordinates), the depth moved toward the map's camera by `bias`; `1 − compare`, × the edge fade (open over the map's last tenth from each edge), × inside the depth range (above or below it: open), × a `strength` uniform (1 while on and rendered since the scene's start). A compare fetch needs uniform control flow: sample it outside an `If`.
+- **The scenes:** a scene's exit drops the map (strength 0, a render requested); the next scene's `worldCleared` makes the target and clears it once (outside any render, before its scene code can build a material: the destroyed-texture trap), the system's first frame the fallback. The target lives across scenes; `onUnmount` disposes it.
+- **Debug:** the surface tab's "Rain occlusion map" folder (with the feature): the switch, the frames between renders, the status (idle until a material reads it), the map's size, the renders, renders a second, CPU and GPU ms a render (`createBakeStats`, the hooks `_setRainOcclusionRenderHooks`) and the centre.
+- **Wiring:** `ENGINE_FEATURE_FACTORIES`, `src/index.ts`.
+- **SBP:** the feature is 1.8 KiB gzip in the app's first download (three modules, 2.3 KiB gzipped alone: `RainOcclusion.ts` 1.6, the model 0.5, the factory 0.2): the initial 402.7 KiB (402 → 403), `assets/index.js` 398.4 (398 → 399), the group `_engine/features/surface` 3.6 (2 → 4 KiB).
+- **Not yet seen on a GPU:** nothing reads the map before section 2, so its first render, its orientation on screen and its cost are section 2's.
+
 ### Phase 7 — Handbook, Hub and versioning
 
 1. **`docs/techniques/wet-dry-surfaces.md`** (page template):

@@ -57,11 +57,13 @@ const profiles: SbpProfile[] = [
     // KiB: 400 → 401 KiB (`assets/index.js`, 395.8 KiB, stays within 396). p307 Phase 1: the
     // `surfaceConditions()` feature (its state, simulation, uniforms and system, 1.7 KiB; the
     // template lists it) took the initial to 401.3 and `assets/index.js` to 397.1 KiB: 401 → 402
-    // and 396 → 398 KiB
+    // and 396 → 398 KiB. p307 Phase 6: the `rainOcclusion()` feature (the rain occlusion map,
+    // 1.8 KiB; the template lists it) took the initial to 402.7 and `assets/index.js` to 398.4
+    // KiB: 402 → 403 and 398 → 399 KiB
     budgets: {
-      initial: 402 * KIB,
+      initial: 403 * KIB,
       chunks: {
-        'assets/index.js': 398 * KIB,
+        'assets/index.js': 399 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
@@ -126,8 +128,10 @@ const profiles: SbpProfile[] = [
         // the generator registry and the collider load with the scenes that spawn blocks
         '_engine/features/terrain': 1 * KIB,
         // p307 Phase 1: the surface conditions' state, transitions, wet / dry simulation, stable
-        // uniforms and system (1.7 KiB gzip, three modules); its debug tab is a lazy chunk
-        '_engine/features/surface': 2 * KIB,
+        // uniforms and system (1.7 KiB gzip, three modules); its debug tab is a lazy chunk. p307
+        // Phase 6: the `rainOcclusion()` feature in the same folder (the map's render, its node,
+        // its options' checks; the template lists it) took it to 3.6 KiB: 2 → 4 KiB
+        '_engine/features/surface': 4 * KIB,
         '_engine/features/viewports': 3 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`). p302 (12 → 15
         // modules: the material code split up, the resolver registry, the input refs) took it to

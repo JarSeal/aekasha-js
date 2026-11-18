@@ -10,7 +10,7 @@ import { postFx } from 'aekasha/postfx';
 import { skyBox } from 'aekasha/skybox';
 import { spatial } from 'aekasha/spatial';
 import { streaming } from 'aekasha/streaming';
-import { surfaceConditions } from 'aekasha/surface';
+import { rainOcclusion, surfaceConditions } from 'aekasha/surface';
 import { terrain } from 'aekasha/terrain';
 import { textureSets } from 'aekasha/texturesets';
 import { viewports } from 'aekasha/viewports';
@@ -29,6 +29,7 @@ InitEngine({
     character(),
     skyBox(),
     surfaceConditions(),
+    rainOcclusion(),
     lod(),
     spatial(),
     instancing(),

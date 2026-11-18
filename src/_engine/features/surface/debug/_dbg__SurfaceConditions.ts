@@ -1,7 +1,15 @@
 // The surface conditions' debug tab (p307 D1): the live values as sliders and selects over the
 // public API (runtime only, like the sky box's day-night Transport: no overrides, no undo, no
-// LS), the weather buttons, and a readout of what the simulation steps with.
+// LS), the weather buttons, and a readout of what the simulation steps with; with the
+// `rainOcclusion()` feature, its map's switch, update interval and render stats (p307 Phase 6).
+import { createBakeStats } from '../../../debug/_dbg__BakeStats';
 import { createDebuggerTab, type DebuggerPaneItem } from '../../../debug/DebuggerGUI';
+import {
+  _setRainOcclusionRenderHooks,
+  getRainOcclusionDebugState,
+  setRainOcclusionEnabled,
+  setRainOcclusionUpdateFrames,
+} from '../RainOcclusion';
 import {
   getSurfaceConditions,
   getSurfaceSunFactorNow,
@@ -116,6 +124,42 @@ const readouts = {
 
 const isWaterLevelOff = () => read().waterLevel === null;
 
+/** The rain occlusion map's render stats (CPU and GPU ms a render; see _dbg__BakeStats.ts) */
+const rainMapStats = createBakeStats();
+_setRainOcclusionRenderHooks(rainMapStats.hooks);
+
+/** The rain occlusion map's fields: its switch and update interval, its state's readouts */
+const rainMap = {
+  get isEnabled() {
+    return getRainOcclusionDebugState()?.isEnabled ?? false;
+  },
+  set isEnabled(value: boolean) {
+    setRainOcclusionEnabled(value);
+  },
+  get updateFrames() {
+    return getRainOcclusionDebugState()?.opts.updateFrames ?? 0;
+  },
+  set updateFrames(value: number) {
+    setRainOcclusionUpdateFrames(value);
+  },
+  get status() {
+    const state = getRainOcclusionDebugState();
+    if (!state) return '-';
+    if (!state.hasConsumer) return 'idle (no material reads it)';
+    return state.isEnabled ? 'on' : 'off (open sky)';
+  },
+  get size() {
+    const opts = getRainOcclusionDebugState()?.opts;
+    return opts ? `${opts.size}², ${opts.extent} m, ±${opts.height} m` : '-';
+  },
+  get renders() {
+    return getRainOcclusionDebugState()?.renders ?? 0;
+  },
+  get centre() {
+    return getRainOcclusionDebugState()?.centre ?? '-';
+  },
+};
+
 const unitSlider = (key: keyof typeof values, label: string): DebuggerPaneItem => ({
   key,
   target: values,
@@ -204,6 +248,37 @@ const buildReadoutFolder = (): DebuggerPaneItem => ({
   ],
 });
 
+/** The rain occlusion map's folder (the `rainOcclusion()` feature's) */
+const buildRainOcclusionFolder = (): DebuggerPaneItem => ({
+  type: 'folder',
+  id: 'surfaceRainOcclusion',
+  title: 'Rain occlusion map',
+  content: [
+    { key: 'isEnabled', target: rainMap, label: 'Shelters' },
+    {
+      key: 'updateFrames',
+      target: rainMap,
+      label: 'Render every (frames, 0: on moves)',
+      min: 0,
+      max: 120,
+      step: 1,
+    },
+    { key: 'status', target: rainMap, label: 'Status', readonly: true, interval: 250 },
+    { key: 'size', target: rainMap, label: 'Map', readonly: true },
+    { key: 'renders', target: rainMap, label: 'Renders', readonly: true, interval: 250 },
+    {
+      key: 'bakesPerSec',
+      target: rainMapStats.view,
+      label: 'Renders / s',
+      readonly: true,
+      interval: 500,
+    },
+    { key: 'cpuMs', target: rainMapStats.view, label: 'CPU ms', readonly: true, interval: 500 },
+    { key: 'gpuMs', target: rainMapStats.view, label: 'GPU ms', readonly: true, interval: 500 },
+    { key: 'centre', target: rainMap, label: 'Centre', readonly: true, interval: 250 },
+  ],
+});
+
 /**
  * Creates the surface conditions' drawer tab (the `surfaceConditions()` feature's `onDebug`).
  * @internal
@@ -221,7 +296,12 @@ export const _createSurfaceConditionsDebugTab = () => {
     content: () => [
       {
         pane: true,
-        content: [buildWeatherFolder(), buildValuesFolder(), buildReadoutFolder()],
+        content: [
+          buildWeatherFolder(),
+          buildValuesFolder(),
+          buildReadoutFolder(),
+          ...(getRainOcclusionDebugState() ? [buildRainOcclusionFolder()] : []),
+        ],
       },
     ],
   });

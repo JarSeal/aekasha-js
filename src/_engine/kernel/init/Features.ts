@@ -227,6 +227,7 @@ export const ENGINE_FEATURE_FACTORIES: Record<string, string> = {
   character: "character() from 'aekasha/character'",
   skybox: "skyBox() from 'aekasha/skybox'",
   surfaceconditions: "surfaceConditions() from 'aekasha/surface'",
+  rainocclusion: "rainOcclusion() from 'aekasha/surface'",
   lod: "lod() from 'aekasha/lod'",
   spatial: "spatial() from 'aekasha/spatial'",
   instancing: "instancing() from 'aekasha/instancing'",
