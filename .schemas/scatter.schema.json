@@ -1,0 +1,637 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "$ref": "#/definitions/__schema0"
+    },
+    "id": {
+      "$ref": "#/definitions/__schema1"
+    },
+    "items": {
+      "$ref": "#/definitions/__schema3"
+    },
+    "source": {
+      "$ref": "#/definitions/__schema13"
+    },
+    "cellSize": {
+      "$ref": "#/definitions/__schema39"
+    },
+    "lod": {
+      "$ref": "#/definitions/__schema41"
+    },
+    "debugData": {
+      "$ref": "#/definitions/__schema60"
+    },
+    "__sourcePath": {
+      "$ref": "#/definitions/__schema71"
+    }
+  },
+  "required": [
+    "items",
+    "source"
+  ],
+  "additionalProperties": false,
+  "description": "A scatter: static instances of its items, placed by its source, drawn in cells.",
+  "definitions": {
+    "__schema0": {
+      "type": "string",
+      "description": "The JSON Schema in .schemas/ an editor validates this file with. The gatherer ignores it."
+    },
+    "__schema1": {
+      "description": "The id. Default: the file name without .scatter.json.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema2"
+        }
+      ]
+    },
+    "__schema2": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema3": {
+      "minItems": 1,
+      "maxItems": 256,
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema4"
+      },
+      "description": "The kinds of instance (at most 256): each a geometry and a material."
+    },
+    "__schema4": {
+      "type": "object",
+      "properties": {
+        "geometry": {
+          "$ref": "#/definitions/__schema5"
+        },
+        "material": {
+          "$ref": "#/definitions/__schema6"
+        },
+        "weight": {
+          "$ref": "#/definitions/__schema7"
+        },
+        "castShadow": {
+          "$ref": "#/definitions/__schema9"
+        },
+        "receiveShadow": {
+          "$ref": "#/definitions/__schema11"
+        }
+      },
+      "required": [
+        "geometry",
+        "material"
+      ],
+      "additionalProperties": false,
+      "description": "One kind of instance: its geometry and material, and its share of the instances."
+    },
+    "__schema5": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A registered geometry's id: a *.geometry.json's (the gather adds it to the scene), an import's <importId>/<node> or one code registers."
+    },
+    "__schema6": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A registered material's id: a *.material.json's (the gather adds it to the scene) or one code registers."
+    },
+    "__schema7": {
+      "description": "The item's share where a source doesn't pick it: its weight over the items' sum. Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema8"
+        }
+      ]
+    },
+    "__schema8": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "__schema9": {
+      "description": "Casts shadows. Default: false.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema10"
+        }
+      ]
+    },
+    "__schema10": {
+      "type": "boolean"
+    },
+    "__schema11": {
+      "description": "Receives shadows. Default: true.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema12"
+        }
+      ]
+    },
+    "__schema12": {
+      "type": "boolean"
+    },
+    "__schema13": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/__schema14"
+        },
+        {
+          "$ref": "#/definitions/__schema21"
+        }
+      ],
+      "description": "Where the instances go: PROCEDURAL (a registered generator) or PLACEMENTS (a list)."
+    },
+    "__schema14": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/__schema15"
+        },
+        "generator": {
+          "$ref": "#/definitions/__schema16"
+        },
+        "params": {
+          "$ref": "#/definitions/__schema17"
+        },
+        "seed": {
+          "$ref": "#/definitions/__schema19"
+        }
+      },
+      "required": [
+        "type",
+        "generator"
+      ],
+      "additionalProperties": false,
+      "description": "Instances placed by a registered generator when the scatter spawns."
+    },
+    "__schema15": {
+      "type": "string",
+      "const": "PROCEDURAL",
+      "description": "Places the instances by a generator."
+    },
+    "__schema16": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The generator's id (registerScatterGenerator)."
+    },
+    "__schema17": {
+      "description": "The generator's own params, checked by the generator. Default: {}.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema18"
+        }
+      ]
+    },
+    "__schema18": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema19": {
+      "description": "The seed (default 0), combined with the world seed, the target's grid place and the scatter's id, so every block gets its own placements and every visit the same.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema20"
+        }
+      ]
+    },
+    "__schema20": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "__schema21": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/__schema22"
+        },
+        "placements": {
+          "$ref": "#/definitions/__schema23"
+        },
+        "seed": {
+          "$ref": "#/definitions/__schema37"
+        }
+      },
+      "required": [
+        "type",
+        "placements"
+      ],
+      "additionalProperties": false,
+      "description": "Hand-placed instances (or a tool's)."
+    },
+    "__schema22": {
+      "type": "string",
+      "const": "PLACEMENTS",
+      "description": "Hand-placed instances (or a tool's)."
+    },
+    "__schema23": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema24"
+      },
+      "description": "The instances."
+    },
+    "__schema24": {
+      "type": "object",
+      "properties": {
+        "position": {
+          "$ref": "#/definitions/__schema25"
+        },
+        "yaw": {
+          "$ref": "#/definitions/__schema29"
+        },
+        "quaternion": {
+          "$ref": "#/definitions/__schema31"
+        },
+        "scale": {
+          "$ref": "#/definitions/__schema33"
+        },
+        "item": {
+          "$ref": "#/definitions/__schema35"
+        }
+      },
+      "required": [
+        "position"
+      ],
+      "additionalProperties": false,
+      "description": "One hand-placed instance, relative to the target position."
+    },
+    "__schema25": {
+      "type": "array",
+      "items": [
+        {
+          "$ref": "#/definitions/__schema26"
+        },
+        {
+          "$ref": "#/definitions/__schema27"
+        },
+        {
+          "$ref": "#/definitions/__schema28"
+        }
+      ],
+      "description": "[x, y, z] in metres, from the target's position (a terrain block's centre).",
+      "minItems": 3,
+      "maxItems": 3,
+      "additionalItems": false
+    },
+    "__schema26": {
+      "type": "number"
+    },
+    "__schema27": {
+      "type": "number"
+    },
+    "__schema28": {
+      "type": "number"
+    },
+    "__schema29": {
+      "description": "The rotation about +y, in radians. Default 0. Not with quaternion.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema30"
+        }
+      ]
+    },
+    "__schema30": {
+      "type": "number"
+    },
+    "__schema31": {
+      "description": "The rotation as a quaternion [x, y, z, w]. Not with yaw.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema32"
+        }
+      ]
+    },
+    "__schema32": {
+      "type": "array",
+      "items": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "minItems": 4,
+      "maxItems": 4,
+      "additionalItems": false
+    },
+    "__schema33": {
+      "description": "The scale, the same on every axis. Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema34"
+        }
+      ]
+    },
+    "__schema34": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "__schema35": {
+      "description": "The item's index in items. Default: one picked by the weights, from the seed.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema36"
+        }
+      ]
+    },
+    "__schema36": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "__schema37": {
+      "description": "The seed the items without item are picked from (default 0), combined as a generator's.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema38"
+        }
+      ]
+    },
+    "__schema38": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "__schema39": {
+      "description": "A cell's side in metres: each cell is one draw per item, culled and switched as a whole. Default 16.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema40"
+        }
+      ]
+    },
+    "__schema40": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "__schema41": {
+      "description": "Every cell's levels of detail; cullScreenSize hides a cell too small on screen. Default: none.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema42"
+        }
+      ]
+    },
+    "__schema42": {
+      "type": "object",
+      "properties": {
+        "levels": {
+          "$ref": "#/definitions/__schema43"
+        },
+        "cullScreenSize": {
+          "$ref": "#/definitions/__schema52"
+        },
+        "hysteresis": {
+          "$ref": "#/definitions/__schema54"
+        },
+        "bias": {
+          "$ref": "#/definitions/__schema56"
+        },
+        "fadeSeconds": {
+          "$ref": "#/definitions/__schema58"
+        }
+      },
+      "required": [
+        "levels"
+      ],
+      "additionalProperties": false,
+      "description": "Levels of detail (p348): each frame the mesh shows the level its screen size reaches, swapping its geometry, material and castShadow, cross-faded over fadeSeconds."
+    },
+    "__schema43": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema44"
+      },
+      "description": "Level 0 (the finest) first, screenSize descending."
+    },
+    "__schema44": {
+      "type": "object",
+      "properties": {
+        "screenSize": {
+          "$ref": "#/definitions/__schema45"
+        },
+        "geo": {
+          "$ref": "#/definitions/__schema46"
+        },
+        "mat": {
+          "$ref": "#/definitions/__schema48"
+        },
+        "castShadow": {
+          "$ref": "#/definitions/__schema50"
+        }
+      },
+      "required": [
+        "screenSize"
+      ],
+      "additionalProperties": false,
+      "description": "A level of detail."
+    },
+    "__schema45": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Smallest screen size (bounding-sphere diameter / viewport height) this level is used at. Coarser levels need smaller values. Moving to a coarser level waits for `hysteresis` below it."
+    },
+    "__schema46": {
+      "description": "Registered geometry id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema47"
+        }
+      ]
+    },
+    "__schema47": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema48": {
+      "description": "Registered material id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema49"
+        }
+      ]
+    },
+    "__schema49": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema50": {
+      "description": "Omitted = the previous level's (level 0: the mesh's own).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema51"
+        }
+      ]
+    },
+    "__schema51": {
+      "type": "boolean"
+    },
+    "__schema52": {
+      "description": "Below this screen size the mesh is hidden (with hysteresis, like the levels). 0 = never hidden. Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema53"
+        }
+      ]
+    },
+    "__schema53": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema54": {
+      "description": "Moving to a coarser level (or hiding) waits until the screen size is this fraction below the threshold, so a mesh on a boundary does not flip every frame. Default 0.1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema55"
+        }
+      ]
+    },
+    "__schema55": {
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMaximum": 1
+    },
+    "__schema56": {
+      "description": "Multiplies the screen size: >1 keeps detail longer. Default 1. The global bias (AppConfig.lod.bias, setLodBias) applies on top.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema57"
+        }
+      ]
+    },
+    "__schema57": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "__schema58": {
+      "description": "How long a level change (or hiding and showing) cross-fades with a dither, in seconds; 0 switches at once and leaves the level materials undithered. Default AppConfig.lod.fadeSeconds (0.25, setLodFadeSeconds).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema59"
+        }
+      ]
+    },
+    "__schema59": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema60": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/__schema61"
+        },
+        "description": {
+          "$ref": "#/definitions/__schema63"
+        },
+        "comments": {
+          "$ref": "#/definitions/__schema65"
+        },
+        "todo": {
+          "$ref": "#/definitions/__schema67"
+        },
+        "debugObj": {
+          "$ref": "#/definitions/__schema69"
+        }
+      },
+      "additionalProperties": false,
+      "description": "What the debug tools show for it. Production data has none."
+    },
+    "__schema61": {
+      "description": "The name the debug tools show.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema62"
+        }
+      ]
+    },
+    "__schema62": {
+      "type": "string"
+    },
+    "__schema63": {
+      "description": "A longer description for the debug tools.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema64"
+        }
+      ]
+    },
+    "__schema64": {
+      "type": "string"
+    },
+    "__schema65": {
+      "description": "Notes with their times.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema66"
+        }
+      ]
+    },
+    "__schema66": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "number",
+            "description": "Milliseconds since the UNIX epoch."
+          },
+          "comment": {
+            "type": "string",
+            "description": "The note."
+          }
+        },
+        "required": [
+          "timestamp",
+          "comment"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "__schema67": {
+      "description": "Open items, by key.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema68"
+        }
+      ]
+    },
+    "__schema68": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema69": {
+      "description": "Anything else a debug tool keeps for it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema70"
+        }
+      ]
+    },
+    "__schema70": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema71": {
+      "type": "string",
+      "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
+    }
+  }
+}

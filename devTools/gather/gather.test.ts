@@ -1693,7 +1693,126 @@ describe('p306 D2: terrain blocks', () => {
   });
 
   it('refuses a field the asset doesn’t have, and a resolution under 2', () => {
-    expect(gather(files({ scatter: ['rocks'] })).isGathered).toBe(false);
+    expect(gather(files({ decals: ['cracks'] })).isGathered).toBe(false);
     expect(gather(files({ grid: { size: 64, resolution: 1 } })).isGathered).toBe(false);
+  });
+});
+
+describe('p308 D2: scatters', () => {
+  const box = { type: 'BOX', params: { width: 1, height: 1, depth: 1 } };
+  const files = (
+    scatter: Record<string, unknown> = {},
+    sceneFields: Record<string, unknown> = { scatters: ['pebbles'] },
+    extra: Record<string, unknown> = {}
+  ) => ({
+    'app/scatter/pebble.geometry.json': { geoProps: { id: 'pebble', ...box } },
+    'app/scatter/stone.material.json': material('stone'),
+    'app/scatter/pebbles.scatter.json': {
+      items: [{ geometry: 'pebble', material: 'stone' }],
+      source: { type: 'PROCEDURAL', generator: 'uniform' },
+      ...scatter,
+    },
+    ...scene('s', sceneFields),
+    ...extra,
+  });
+  const ids = (list: unknown) =>
+    ((list ?? []) as ({ id?: string } | string)[]).map((entry) =>
+      typeof entry === 'string' ? entry : entry.id
+    );
+
+  it('writes a listed scatter with its defaults, and loads its geometry and material JSONs', () => {
+    const { isGathered, scene: get } = gather(files({ debugData: { name: 'Pebbles' } }));
+    expect(isGathered).toBe(true);
+    const out = get('s');
+    expect(out?.scatters).toEqual([
+      {
+        id: 'pebbles',
+        items: [
+          {
+            geometry: 'pebble',
+            material: 'stone',
+            weight: 1,
+            castShadow: false,
+            receiveShadow: true,
+          },
+        ],
+        source: { type: 'PROCEDURAL', generator: 'uniform', params: {}, seed: 0 },
+        cellSize: 16,
+        debugData: { name: 'Pebbles' },
+      },
+    ]);
+    expect(ids(out?.geometries)).toEqual(['pebble']);
+    expect(ids(out?.materials)).toEqual(['stone']);
+    expect(out?.__features).toEqual(['instancing']);
+  });
+
+  it('leaves an id no asset JSON has to the runtime, and the debug data out of a production build', () => {
+    const { isGathered, scene: get } = gather(
+      files(
+        {
+          items: [{ geometry: 'rockFromCode', material: 'stone' }],
+          source: { type: 'PLACEMENTS', placements: [{ position: [1, 0, 2], yaw: 1 }] },
+          lod: { levels: [{ screenSize: 0.1 }, { screenSize: 0, geo: 'pebble' }] },
+          debugData: { name: 'Pebbles' },
+        },
+        { scatters: ['pebbles', 'pebbles'] }
+      ),
+      { isProduction: true }
+    );
+    expect(isGathered).toBe(true);
+    const out = get('s');
+    const [scatter] = out?.scatters as Record<string, unknown>[];
+    expect(scatter).toMatchObject({
+      source: { type: 'PLACEMENTS', placements: [{ position: [1, 0, 2], yaw: 1 }], seed: 0 },
+    });
+    expect(scatter).not.toHaveProperty('debugData');
+    expect(out?.scatters).toHaveLength(1);
+    // The LOD level's geometry JSON loads; the code's geometry isn't one
+    expect(ids(out?.geometries)).toEqual(['pebble']);
+  });
+
+  it("adds a terrain block's scatters to its scene, which then needs instancing", () => {
+    const { isGathered, scene: get } = gather(
+      files(
+        {},
+        { terrainBlocks: ['coast'] },
+        {
+          'app/blocks/coast.terrainBlock.json': {
+            geometry: { generator: 'noiseTerrain' },
+            material: 'stone',
+            grid: { size: 64, resolution: 65 },
+            collider: { type: 'NONE' },
+            scatter: ['pebbles', 'pebbles'],
+          },
+        }
+      )
+    );
+    expect(isGathered).toBe(true);
+    const out = get('s');
+    const [block] = out?.terrainBlocks as Record<string, unknown>[];
+    expect(block.scatter).toEqual(['pebbles']);
+    expect(ids(out?.scatters)).toEqual(['pebbles']);
+    expect(ids(out?.geometries)).toEqual(['pebble']);
+    expect(out?.__features).toEqual(['terrain', 'instancing']);
+  });
+
+  it('fails the gather on an unknown scatter, a placement past the items or with two rotations', () => {
+    expect(gather(files({}, { scatters: ['nope'] })).isGathered).toBe(false);
+    const placements = (placement: Record<string, unknown>) =>
+      files({
+        source: { type: 'PLACEMENTS', placements: [{ position: [0, 0, 0], ...placement }] },
+      });
+    expect(gather(placements({ item: 1 })).isGathered).toBe(false);
+    expect(gather(placements({ yaw: 1, quaternion: [0, 0, 0, 1] })).isGathered).toBe(false);
+    expect(gather(placements({ item: 0 })).isGathered).toBe(true);
+    const block = {
+      'app/blocks/coast.terrainBlock.json': {
+        geometry: { generator: 'noiseTerrain' },
+        material: 'stone',
+        grid: { size: 64, resolution: 65 },
+        scatter: ['nope'],
+      },
+    };
+    expect(gather(files({}, { terrainBlocks: ['coast'] }, block)).isGathered).toBe(false);
   });
 });

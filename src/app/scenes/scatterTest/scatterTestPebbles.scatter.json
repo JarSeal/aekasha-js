@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../../.schemas/scatter.schema.json",
+  "items": [
+    { "geometry": "scatterTestPebbleA", "material": "scatterTestStone", "weight": 3 },
+    { "geometry": "scatterTestPebbleB", "material": "scatterTestStone", "weight": 1 }
+  ],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "scatterTestUniform",
+    "params": { "count": 20000, "scale": [0.6, 1.4], "tint": 0.25 },
+    "seed": 7
+  },
+  "cellSize": 16,
+  "lod": { "levels": [{ "screenSize": 0 }], "cullScreenSize": 0.5 },
+  "debugData": {
+    "name": "Test pebbles",
+    "description": "20,000 pebbles of two kinds (3:1 by weight) over the target's square, by the scene's test generator: 16 cells of 16 m on a 64 m block, each hidden below a screen size of 0.5."
+  }
+}

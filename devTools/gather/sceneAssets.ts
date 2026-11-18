@@ -21,6 +21,7 @@ import { resolveSceneMergeMaterials } from './mergeMaterials';
 import { getSaveEntry } from './saveEntries';
 import type { ShipChecks } from './shipChecks';
 import { getSourceFileSize, setGeneratedFields } from './sources';
+import { resolveScatters } from './scatters';
 import { resolveTerrainBlocks } from './terrainBlocks';
 import { addTextureClosure } from './textureClosure';
 import { declareTextureSetArrayMembers } from './textureSetArrays';
@@ -354,17 +355,19 @@ const resolvePostFx = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun) 
 };
 
 /** Resolves every list of a scene, in the scene pass's order (the terrain blocks before the
- * materials: they add their materials and imports, p306 D2; the impostors, the merge materials,
+ * scatters, geometries and materials: they add their scatters, materials and imports, p306 D2; the
+ * scatters before the geometries and materials: they add their items', p308 D2; the impostors, the merge materials,
  * the texture sets and the texture closure before the textures: they add their atlas and array
  * slots, the sets' default packings (p303 D1) and the textures the resolved materials, lights,
  * meshes and blocks name, p302 D6; the set arrays' members after them, p303 D4) */
 export const resolveSceneAssets = (run: SceneRun) => {
   resolveCameras(run);
   resolveLights(run);
+  resolveTerrainBlocks(run);
+  resolveScatters(run);
   resolveGeometries(run);
   resolveImpostors(run);
   resolveSceneMergeMaterials(run);
-  resolveTerrainBlocks(run);
   resolveMaterials(run);
   resolveMeshes(run);
   resolveTextureSets(run);

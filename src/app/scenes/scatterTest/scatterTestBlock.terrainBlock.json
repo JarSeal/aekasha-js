@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../../.schemas/terrainBlock.schema.json",
+  "geometry": {
+    "generator": "noiseTerrain",
+    "params": { "octaves": [[0.01, 0]] }
+  },
+  "material": "textureSetSurface",
+  "materialInputs": { "surface": { "textureSet": "sand01" } },
+  "grid": { "size": 64, "resolution": 33 },
+  "collider": { "type": "NONE" },
+  "scatter": ["scatterTestPebbles"],
+  "debugData": {
+    "name": "Flat scatter block",
+    "description": "A flat 64 m block (noiseTerrain with a zero amplitude) carrying the 20,000 pebbles of scatterTestPebbles."
+  }
+}

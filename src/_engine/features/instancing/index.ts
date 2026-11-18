@@ -22,3 +22,22 @@ export type {
   InstancedMeshEntityProps,
   StaticInstances,
 } from './StaticInstances';
+export { getScatter, spawnScatter } from './Scatter';
+export type { SpawnedScatter, SpawnScatterOpts } from './Scatter';
+export {
+  getScatterGenerator,
+  registerScatterGenerator,
+  unregisterScatterGenerator,
+} from './ScatterGenerators';
+export type {
+  ScatterGenerator,
+  ScatterGeneratorInput,
+  ScatterGeneratorResult,
+  ScatterTarget,
+} from './ScatterGenerators';
+export type {
+  ScatterDef,
+  ScatterItemDef,
+  ScatterPlacementDef,
+  ScatterSourceDef,
+} from './ScatterSchema';

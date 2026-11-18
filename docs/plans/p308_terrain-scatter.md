@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 step 1 implemented
+Status: in progress | Phase 1 implemented
 Category: Terrain, Rendering, Assets
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -191,7 +191,7 @@ Static scatter renders as **cell-chunked instanced meshes without per-instance e
 
 ## Phases
 
-### Phase 1 — Static instance chunks and the scatter asset (D1, D2)
+### Phase 1 — Static instance chunks and the scatter asset (D1, D2) — done
 
 1. `createInstancedMeshEntity` and `createStaticInstances` on `aekasha/instancing`, with tests (the refs given back on delete, a geometry another mesh shares kept); `lodShowcase`'s `instanceCell` lane on them (a lane module in `src/app/scenes/lodShowcase/lanes/`, the LOD showcase being the LOD plans' verification scene); close `docs/issues/no-public-instanced-mesh-entity.md`.
 2. The `*.scatter.json` schema, suffix and spawner in `instancing()`.
@@ -204,13 +204,28 @@ As built (step 1):
 - Tests: `StaticInstances.test.ts` (bounds and no spatial index; the refs given back with a geometry another mesh uses kept; matrices and colours copied; the refusals take nothing; a 64 m block into 16 cells, every instance back at its world position with its colour, the LOD on each cell, `dispose` releasing the assets; negative cells).
 - `lodShowcase`'s `instanceCell` lane makes each cell with `createInstancedMeshEntity` (the same matrices, ids and shadows); `docs/issues/no-public-instanced-mesh-entity.md` is `fixed`. `features/instancing/CLAUDE.md`'s `## Static instances` section and the LOD notes' line wait for Phase 5, as listed there.
 
+As built (step 2):
+
+- **Moved to later phases:** the `IMPORTED` source joins the schema with D3 (Phase 2), and item colliders (`collider`, the FIXED bodies through `physics()`, the gatherer's 200 warning) with Phase 3, whose exit tests them and whose boulders are the first items that need them. The strict schema refuses both until then.
+- **The asset** (`features/instancing/ScatterSchema.ts`, on `aekasha/schemas`): `items` (1-256: `geometry`, `material`, `weight` 1, `castShadow` false, `receiveShadow` true), `source` (`PROCEDURAL`: `generator`, `params` `{}`, `seed` 0; `PLACEMENTS`: `placements` of `{ position: [x, y, z], yaw? | quaternion?, scale?, item? }` relative to the target's position, `seed` 0 for the items they don't name), `cellSize` 16, `lod` (`LodDefSchema`), `debugData`. No `__saveData`; a placement's `item` past the items and `yaw` with `quaternion` are refused. "Or file list" isn't built: a tool writes the JSON's `placements`.
+- **The gather** (`devTools/gather/scatters.ts`, suffix `.scatter.json`, its own id space): pass 1 fills the defaults (`ScatterDef`, `SCATTER_DEFAULTS`) before the terrain blocks. The scene pass resolves the terrain blocks first now (moved before the geometries: they append their scatters), then the scatters: each written into the scene's `scatters` once, its items' and LOD levels' geometries and materials appended to `geometries` / `materials` when an asset JSON has the id; any other id (an import's piece, one code registers) is left to the spawn, which throws naming the item. The part `instancingSchemaPart` (`scatters` scene field) puts `instancing` in the manifest, a block's scatters included. The kernel's `SceneData.scatters` names the type only.
+- **The terrain block's `scatter`** (ids; the gather fails on one no scatter has, and adds them to the scene): `terrain()` records `ctx.isInstalled('instancing')` (`terrainState.hasInstancing`) and `spawnTerrainBlock` throws up front without it; after the collider it `import()`s `../instancing/Scatter` and spawns each with the target `{ position: the block's centre, grid, size, entityId: its mesh }` and app id `<blockAppId>/scatter/<id>`. `scatterIds` is every cell; `dispose()` deletes them first; a scatter that throws deletes the block first, and a scene left meanwhile resolves `null` with everything deleted.
+- **The spawn** (`Scatter.ts`): `spawnScatter(id, { target?, appId?, world? })` → `{ id, entityIds, count, dispose }` or `null` (the scene left while the generator ran: nothing made). `getScatter(id, sceneId?)` reads the data. The seed is `getScatterSeed`: FNV-1a over `id | grid.x | grid.z | seed` from a basis mixed with `getRandomSeed()` (`@internal`). Instances without an item get one by the weights from that seed. Each item's instances go to `createStaticInstances` (`<appId>/<item>`, so a cell is `<appId>/<item>/<cellX>,<cellZ>`).
+- **Generators** (`ScatterGenerators.ts`): `registerScatterGenerator` (throws without `instancing()` or on a taken id), `unregisterScatterGenerator`, `getScatterGenerator`. A generator gets `{ scatterId, params, seed, items, target (position and grid filled), world }` and returns `{ matrices (world space), items?: Uint8Array, colors? }`, checked (16 floats a matrix, one item and colour per instance, items in range). `instancing()`'s install counts the scene exits for the spawn's re-check.
+- Tests: `Scatter.test.ts` (8: the refusals, a generator's instances in cells per item by weight and the same again for the same seed and grid, the seed's inputs, a generator's items and colours, the placements' items, yaw and scale, a scene left meanwhile), `TerrainBlocks.test.ts` (3 more: the scatters' target and app ids, `dispose`, no `instancing()`, a throwing scatter, a scene left), `gather.test.ts` (4: the defaults and the appended assets, code ids left alone and production, a block's scatters and the manifest, the refusals).
+- **The verification scene** `scatterTest` (`src/app/scenes/scatterTest/`, a debug scene): a flat 64 m block (`noiseTerrain` with a zero amplitude) whose `scatterTestPebbles` places 20,000 pebbles of two kinds by a test generator the scene registers (`scatterTestUniform`: uniform, yaw, scale, grey tint), 32 cells (16 per kind), `cullScreenSize` 0.5; `scatterTestBoulders` (`PLACEMENTS`, 6, casting) by `spawnScatter`. The load logs an error unless the counts are right, and (a check it doesn't await: the load waits for the scene function, and the LOD selects after it) unless, once every pebble cell is selected, some are LOD-culled and some aren't.
+
 **Exit:** 20k pebbles on a 64 m block in 16 cells, culled per cell, released on scene exit; `PLACEMENTS` source works; `yarn verify:scenes --only lodShowcase` unchanged (or its baseline updated with the reason).
 
 ### Phase 2 — GPU instances import and the point-cloud fallback (D3)
 
+1. The import (D3), and the scatter's `IMPORTED` source in `ScatterSchema.ts`, the gather and `spawnScatter` (moved here from Phase 1).
+
 **Exit:** a Blender GN scatter exported both ways spawns identically, and the worker and main-thread import paths agree.
 
 ### Phase 3 — Procedural scatter v2 (D4)
+
+1. `terrainScatter` (D4), and the items' colliders (D2's `collider`, the FIXED bodies through `physics()` with the terrain feature's lazy pattern, the gatherer's warning past 200 a block; moved here from Phase 1).
 
 **Exit:** density follows the painted layers on a showcase block; the same seed and grid always give the same placements; boulder colliders work (p101 determinism holds; the probe is unchanged by scatter without colliders).
 

@@ -92,6 +92,7 @@ describe('getSceneFeatureIds (the scene manifest)', () => {
       'textureSetArrays',
       'terrainBlocks',
       'surfaceConditions',
+      'scatters',
     ]);
   });
 });

@@ -35,6 +35,7 @@ import { readTextureAssets } from './textures';
 import { readGenerators, readTextureSets } from './textureSets';
 import { checkMergedGeometryJsons } from './mergedGeometries';
 import { readMergeMaterials } from './mergeMaterials';
+import { readScatters } from './scatters';
 import { readTerrainBlocks } from './terrainBlocks';
 
 /** The material and PostFX ids the shipped scenes list: their TSL files get loaders (a
@@ -216,7 +217,8 @@ export const readRegistries = (ctx: GatherContext): Registries => {
   readImportedAssets(ctx, reg, taken);
   readSkyBoxes(ctx, reg, taken);
   readPostFx(ctx, reg, taken, shipped);
-  // After the materials and the imports: a block names one of each
+  readScatters(ctx, reg, taken);
+  // After the materials, the imports and the scatters: a block names them
   readTerrainBlocks(ctx, reg, taken);
   // After the imports: a MERGED geometry's parts can be their pieces
   checkMergedGeometryJsons(ctx, reg);

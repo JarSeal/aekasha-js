@@ -65,6 +65,19 @@ export { createSceneAssetSchema } from './SceneSchema';
 export type { SceneAsset } from './SceneSchema';
 export { spatialSchemaPart } from '../features/spatial/SpatialSchema';
 export {
+  instancingSchemaPart,
+  SCATTER_DEFAULTS,
+  SCATTER_SOURCE_TYPES,
+  ScatterAssetSchema,
+} from '../features/instancing/ScatterSchema';
+export type {
+  ScatterAsset,
+  ScatterDef,
+  ScatterItemDef,
+  ScatterPlacementDef,
+  ScatterSourceDef,
+} from '../features/instancing/ScatterSchema';
+export {
   TERRAIN_BLOCK_COLLIDER_TYPES,
   TERRAIN_BLOCK_DEFAULTS,
   TerrainBlockAssetSchema,

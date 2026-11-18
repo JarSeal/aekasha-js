@@ -163,12 +163,21 @@ export const TerrainBlockAssetSchema = z
       })
       .optional()
       .describe("The mesh's shadows. Default: both."),
+    /** The block's scatters (`*.scatter.json` ids), spawned with it on the block (their
+     * `target`: its centre, grid place and size) and owned by it. Needs `instancing()`; the gather
+     * adds them to a scene listing the block. */
+    scatter: z
+      .array(z.string().min(1))
+      .optional()
+      .describe(
+        "The block's scatters (*.scatter.json ids), spawned with it on the block and owned by it. Needs instancing(); the gather adds them to a scene listing the block."
+      ),
     /** The debug tools' name and description. */
     debugData: DebugDataSchema.optional(),
     /** Set by the gatherer. */
     __sourcePath: SourcePathSchema.optional(),
   })
-  .describe('A terrain block: its geometry, material, grid place, collider and shadows.');
+  .describe('A terrain block: its geometry, material, grid place, collider, shadows and scatters.');
 
 /** A terrain block's JSON (`*.terrainBlock.json`), as written. */
 export type TerrainBlockAsset = z.infer<typeof TerrainBlockAssetSchema>;
@@ -198,6 +207,8 @@ export type TerrainBlockDef = {
   collider: { type: TerrainBlockColliderType; friction?: number; restitution?: number };
   /** The mesh's shadows */
   shadows: { cast: boolean; receive: boolean };
+  /** The block's scatters' ids, when it has any */
+  scatter?: string[];
   /** The debug tools' name and description (not in a production build) */
   debugData?: DebugData;
 };

@@ -14122,6 +14122,367 @@
         "texturesets"
       ]
     },
+    "scatterTest": {
+      "isDebugScene": true,
+      "name": "Static scatter (p308)",
+      "description": "p308 Phase 1's verification scene: a flat 64 m terrain block whose scatter (scatterTestPebbles, its block's own) places 20,000 pebbles of two kinds by a test generator the scene registers, tinted per instance, in 16 m cells: one InstancedMesh entity per cell and kind, no entity per pebble. Each cell hides as a whole below its LOD's cullScreenSize (0.5): from the start camera the near half of the block shows and the far half is culled. Beside them, scatterTestBoulders places six hand-placed boulders (a PLACEMENTS source, spawnScatter on the block's centre), casting shadows. The load checks the counts and, a few frames in, that some cells are LOD-culled and some aren't, logging an error otherwise. window.__scatterTest holds the spawn results.",
+      "terrainBlocks": [
+        {
+          "id": "scatterTestBlock",
+          "geometry": {
+            "generator": "noiseTerrain",
+            "params": {
+              "octaves": [
+                [
+                  0.01,
+                  0
+                ]
+              ]
+            },
+            "seed": 0
+          },
+          "material": "textureSetSurface",
+          "materialInputs": {
+            "surface": {
+              "textureSet": "sand01"
+            }
+          },
+          "grid": {
+            "x": 0,
+            "z": 0,
+            "size": 64,
+            "resolution": 33
+          },
+          "collider": {
+            "type": "NONE"
+          },
+          "shadows": {
+            "cast": true,
+            "receive": true
+          },
+          "scatter": [
+            "scatterTestPebbles"
+          ],
+          "debugData": {
+            "name": "Flat scatter block",
+            "description": "A flat 64 m block (noiseTerrain with a zero amplitude) carrying the 20,000 pebbles of scatterTestPebbles."
+          }
+        }
+      ],
+      "scatters": [
+        {
+          "id": "scatterTestBoulders",
+          "items": [
+            {
+              "geometry": "scatterTestBoulder",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true
+            }
+          ],
+          "source": {
+            "type": "PLACEMENTS",
+            "placements": [
+              {
+                "position": [
+                  -6,
+                  0.3,
+                  20
+                ],
+                "yaw": 0.4,
+                "scale": 1.2
+              },
+              {
+                "position": [
+                  -3.5,
+                  0.2,
+                  22
+                ],
+                "scale": 0.7
+              },
+              {
+                "position": [
+                  5,
+                  0.4,
+                  18
+                ],
+                "yaw": 2.1,
+                "scale": 1.5
+              },
+              {
+                "position": [
+                  7,
+                  0.2,
+                  21
+                ],
+                "quaternion": [
+                  0,
+                  0.383,
+                  0,
+                  0.924
+                ],
+                "scale": 0.8
+              },
+              {
+                "position": [
+                  0,
+                  0.3,
+                  8
+                ],
+                "scale": 1.1
+              },
+              {
+                "position": [
+                  -20,
+                  0.3,
+                  -20
+                ],
+                "scale": 2
+              }
+            ],
+            "seed": 0
+          },
+          "cellSize": 16,
+          "debugData": {
+            "name": "Test boulders",
+            "description": "Six hand-placed boulders around the block's centre (a PLACEMENTS source): yaws, a quaternion and scales; they cast shadows."
+          }
+        },
+        {
+          "id": "scatterTestPebbles",
+          "items": [
+            {
+              "geometry": "scatterTestPebbleA",
+              "material": "scatterTestStone",
+              "weight": 3,
+              "castShadow": false,
+              "receiveShadow": true
+            },
+            {
+              "geometry": "scatterTestPebbleB",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true
+            }
+          ],
+          "source": {
+            "type": "PROCEDURAL",
+            "generator": "scatterTestUniform",
+            "params": {
+              "count": 20000,
+              "scale": [
+                0.6,
+                1.4
+              ],
+              "tint": 0.25
+            },
+            "seed": 7
+          },
+          "cellSize": 16,
+          "lod": {
+            "levels": [
+              {
+                "screenSize": 0
+              }
+            ],
+            "cullScreenSize": 0.5
+          },
+          "debugData": {
+            "name": "Test pebbles",
+            "description": "20,000 pebbles of two kinds (3:1 by weight) over the target's square, by the scene's test generator: 16 cells of 16 m on a 64 m block, each hidden below a screen size of 0.5."
+          }
+        }
+      ],
+      "id": "scatterTest",
+      "sceneFile": "./scenes/scatterTest/scatterTest.ts",
+      "cameras": [
+        {
+          "camProps": {
+            "type": "PERSPECTIVE",
+            "fov": 90,
+            "active": true
+          },
+          "entityOpts": {
+            "debugData": {
+              "name": "_camera",
+              "description": "Auto-generated camera for the scene"
+            }
+          }
+        }
+      ],
+      "materials": [
+        {
+          "id": "textureSetSurface",
+          "debugData": {
+            "name": "Texture set surface",
+            "description": "One texture set on a surface, any packing (p303 D7): the baseline of the terrain techniques, no anti-tiling or splat. Give a mesh its set with matOverrides.inputs.surface ({ textureSet, packing? }). Static defines: tiling (WORLD_XZ: the world's (x, -z) over physicalSize, for terrain; UV: the mesh's UV in metres, for walls and structures), minimalNormal (BUMP or FLAT)."
+          },
+          "tslFile": "materials/textureSetSurface/textureSetSurface.tsl.ts",
+          "staticDefines": {
+            "tiling": "WORLD_XZ",
+            "minimalNormal": "BUMP"
+          },
+          "inputs": {
+            "surface": {
+              "textureSet": "sand01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "scatterTestStone",
+          "params": {
+            "color": "#b9b1a4",
+            "roughness": 0.8,
+            "metalness": 0
+          },
+          "type": "STANDARD"
+        }
+      ],
+      "geometries": [
+        {
+          "id": "scatterTestBoulder",
+          "type": "SPHERE",
+          "params": {
+            "radius": 0.9,
+            "widthSegments": 9,
+            "heightSegments": 6
+          },
+          "debugData": {
+            "name": "Test boulder",
+            "description": "A 9 × 6 segment sphere, 0.9 m."
+          }
+        },
+        {
+          "id": "scatterTestPebbleA",
+          "type": "SPHERE",
+          "params": {
+            "radius": 0.07,
+            "widthSegments": 6,
+            "heightSegments": 4
+          },
+          "debugData": {
+            "name": "Test pebble A",
+            "description": "A 6 × 4 segment sphere, 7 cm."
+          }
+        },
+        {
+          "id": "scatterTestPebbleB",
+          "type": "SPHERE",
+          "params": {
+            "radius": 0.05,
+            "widthSegments": 5,
+            "heightSegments": 3
+          },
+          "debugData": {
+            "name": "Test pebble B",
+            "description": "A 5 × 3 segment sphere, 5 cm."
+          }
+        }
+      ],
+      "textureSets": [
+        {
+          "id": "sand01",
+          "category": "SAND",
+          "physicalSize": [
+            3,
+            3
+          ],
+          "heightScale": 0.057,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "sand01_albedoHeight",
+              "normal": "sand01_normal",
+              "orm": "sand01_orm"
+            },
+            "LITE": {
+              "albedoRough": "sand01_albedoRough",
+              "normalHeight": "sand01_normalHeight"
+            },
+            "MINIMAL": {
+              "albedoHeight": "sand01_albedoHeightAO"
+            }
+          },
+          "debugData": {
+            "name": "Sand 01 (dry dunes)",
+            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.85,
+            "wetDarkening": 0.55,
+            "wetRoughness": 0.4,
+            "puddleResponse": 0.3,
+            "dryingSpeed": 1.6
+          },
+          "averageColor": "#ab966b"
+        }
+      ],
+      "textures": [
+        {
+          "id": "sand01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "sand01 albedoRough (LITE)",
+            "description": "The texture set sand01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/sand01/sand01_albedoRough.pack.42c89ed4.ktx2",
+          "__bytes": {
+            "in": 9086447,
+            "out": 861827
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.4077,
+            0.303,
+            0.1458
+          ]
+        },
+        {
+          "id": "sand01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "sand01 normalHeight (LITE)",
+            "description": "The texture set sand01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/sand01/sand01_normalHeight.pack.448c5a53.ktx2",
+          "__bytes": {
+            "in": 7695457,
+            "out": 1166404
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        }
+      ],
+      "__features": [
+        "texturesets",
+        "terrain",
+        "instancing"
+      ]
+    },
     "scene01": {
       "name": "Scene 01 (basic physics demo)",
       "description": "Basic FIXED/DYNAMIC physics demo: a ground box, a bouncing box, a falling metal ball and cylinder, an imported GLB with a TRIMESH collider and CCD, a sensor collider without a mesh (it turns the wireframe sphere green while a body is in it), a group, shadows, four sky boxes and metal spheres reflecting the sky.",
@@ -27414,6 +27775,54 @@
       },
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseSphereLod2.geometry.json"
     },
+    "scatterTestBoulder": {
+      "geoProps": {
+        "debugData": {
+          "name": "Test boulder",
+          "description": "A 9 × 6 segment sphere, 0.9 m."
+        },
+        "type": "SPHERE",
+        "params": {
+          "radius": 0.9,
+          "widthSegments": 9,
+          "heightSegments": 6
+        },
+        "id": "scatterTestBoulder"
+      },
+      "__sourcePath": "src/app/scenes/scatterTest/scatterTestBoulder.geometry.json"
+    },
+    "scatterTestPebbleA": {
+      "geoProps": {
+        "debugData": {
+          "name": "Test pebble A",
+          "description": "A 6 × 4 segment sphere, 7 cm."
+        },
+        "type": "SPHERE",
+        "params": {
+          "radius": 0.07,
+          "widthSegments": 6,
+          "heightSegments": 4
+        },
+        "id": "scatterTestPebbleA"
+      },
+      "__sourcePath": "src/app/scenes/scatterTest/scatterTestPebbleA.geometry.json"
+    },
+    "scatterTestPebbleB": {
+      "geoProps": {
+        "debugData": {
+          "name": "Test pebble B",
+          "description": "A 5 × 3 segment sphere, 5 cm."
+        },
+        "type": "SPHERE",
+        "params": {
+          "radius": 0.05,
+          "widthSegments": 5,
+          "heightSegments": 3
+        },
+        "id": "scatterTestPebbleB"
+      },
+      "__sourcePath": "src/app/scenes/scatterTest/scatterTestPebbleB.geometry.json"
+    },
     "testSphere": {
       "geoProps": {
         "debugData": {
@@ -39396,6 +39805,16 @@
       },
       "type": "STANDARD",
       "__sourcePath": "src/app/scenes/mergeMaterials/ruinStone.material.json"
+    },
+    "scatterTestStone": {
+      "id": "scatterTestStone",
+      "params": {
+        "color": "#b9b1a4",
+        "roughness": 0.8,
+        "metalness": 0
+      },
+      "type": "STANDARD",
+      "__sourcePath": "src/app/scenes/scatterTest/scatterTestStone.material.json"
     },
     "testTslMat": {
       "id": "testTslMat",

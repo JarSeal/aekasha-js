@@ -83,6 +83,9 @@
     "surfaceConditions": {
       "$ref": "#/definitions/__schema624"
     },
+    "scatters": {
+      "$ref": "#/definitions/__schema643"
+    },
     "id": {
       "type": "string",
       "description": "The scene id: it keys the scene's save data, its saved state and ?startScene=."
@@ -102,7 +105,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema643"
+          "$ref": "#/definitions/__schema645"
         }
       ]
     }
@@ -8117,6 +8120,21 @@
       ]
     },
     "__schema643": {
+      "description": "Scatter ids (*.scatter.json) the scene's code spawns (spawnScatter): each one's geometry and material JSONs load with the scene. A terrain block's scatters are added for it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema644"
+        }
+      ]
+    },
+    "__schema644": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "__schema645": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -8213,6 +8231,9 @@
             },
             "surfaceConditions": {
               "$ref": "#/definitions/__schema624"
+            },
+            "scatters": {
+              "$ref": "#/definitions/__schema643"
             }
           },
           "additionalProperties": false
