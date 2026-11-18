@@ -163,6 +163,15 @@ describe('bakeTerrainColorMap', () => {
     await expect(bakeTerrainColorMap({ id: 'rippled', mesh, material })).resolves.toBeTruthy();
   });
 
+  it('drops the snow set input with the wet response', async () => {
+    const material = new MeshStandardNodeMaterial();
+    const terrain = { layers: [{}], wet: { snow: {} } };
+    setupTerrainMaterial({ layer0: makeBundle(), snow: makeBundle() }, material, { terrain });
+    material.userData.terrainDefine = terrain;
+    const { mesh } = makeBlock();
+    await expect(bakeTerrainColorMap({ id: 'snowed', mesh, material })).resolves.toBeTruthy();
+  });
+
   it("multiplies the material's AO in when asked", async () => {
     const { mesh } = makeBlock();
     await bakeTerrainColorMap({ id: 'plain', mesh });

@@ -1027,6 +1027,50 @@ const TerrainShorelineSchema = z
   );
 
 /**
+ * The snow cover (p307 T10): a texture set over the layers by the surface conditions' snow cover,
+ * sampled top-down in a dynamic branch.
+ */
+const TerrainSnowSchema = z
+  .object({
+    /** The steepest slope the snow rests on, degrees from flat, over 0 to 90 (default 55). */
+    maxSlope: z
+      .number()
+      .gt(0)
+      .max(90)
+      .optional()
+      .describe(
+        'The steepest slope the snow rests on, degrees from flat, over 0 to 90 (default 55).'
+      ),
+    /** The drift noise's cell, metres, over 0 (default 3): where the snow gathers first. */
+    noiseScale: z
+      .number()
+      .gt(0)
+      .optional()
+      .describe(
+        "The drift noise's cell, metres, over 0 (default 3): where the snow gathers first."
+      ),
+    /** The share of the cover over which the snow's edge fades in, over 0 to 1 (default 0.08). */
+    edge: z
+      .number()
+      .gt(0)
+      .max(1)
+      .optional()
+      .describe(
+        "The share of the cover over which the snow's edge fades in, over 0 to 1 (default 0.08)."
+      ),
+    /** The snow set's tiling, over 0 (default 1): its tile is its `physicalSize` × this. */
+    tiling: z
+      .number()
+      .gt(0)
+      .optional()
+      .describe("The snow set's tiling, over 0 (default 1): its tile is its physicalSize × this."),
+  })
+  .strict()
+  .describe(
+    "Snow cover (p307 T10): a texture set (the code route's snowSet, default snow01; the JSON route's input snow) over the layers by the surface conditions' snowCoverage, flat ground first, nothing past maxSlope; frozen dry below 0 °C, slush above, its meltwater wetting the ground around. Its packing's taps in a dynamic branch on the cover; past a far mode's band its average colour. Both qualities."
+  );
+
+/**
  * The regional wetness (p307 T7): an authored wetness, 0..1, the least the surface shows and the
  * least puddle level, in any weather: a float vertex attribute (default `_wetness`, glTF's
  * `_WETNESS`), or the first splat map's A.
@@ -1122,6 +1166,8 @@ const TerrainWetSchema = z
     streaks: TerrainStreaksSchema.optional(),
     /** The shoreline along the water level; default none. */
     shoreline: TerrainShorelineSchema.optional(),
+    /** The snow cover; default none. */
+    snow: TerrainSnowSchema.optional(),
   })
   .strict()
   .superRefine((wet, ctx) => {
@@ -1914,6 +1960,7 @@ const checkTextureIds = (
     macro?: unknown;
     noiseTexture?: string;
     rippleTexture?: string;
+    snowSet?: string;
     wet?: TerrainWet;
     quality?: Partial<Record<string, { blend?: TerrainBlend; wet?: TerrainWet } | undefined>>;
   },
@@ -1946,6 +1993,9 @@ const checkTextureIds = (
   const wets = [value.wet, ...Object.values(value.quality ?? {}).map((tier) => tier?.wet)];
   if (value.rippleTexture !== undefined && !wets.some((wet) => wet?.ripples)) {
     issue('rippleTexture', "is for rain ripples (wet.ripples, the material's or a tier's).");
+  }
+  if (value.snowSet !== undefined && !wets.some((wet) => wet?.snow)) {
+    issue('snowSet', "is for the snow cover (wet.snow, the material's or a tier's).");
   }
 };
 
@@ -2071,6 +2121,18 @@ export const TerrainMaterialConfigSchema = z
       .optional()
       .describe(
         "The ripple atlas the rain ripples read, for a material with wet.ripples (default rippleAtlas, or a bake's rippleAtlas.data)."
+      ),
+    /**
+     * The texture set the snow cover is (the input `snow`, in its default packing), for a material
+     * with `wet.snow` (its own or a tier's; default `snow01`, the toolkit's). With a far mode it
+     * needs an `averageColor`, the snow past the band.
+     */
+    snowSet: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        'The texture set the snow cover is, for a material with wet.snow (default snow01); with a far mode it needs an averageColor.'
       ),
     /**
      * How the layers' textures bind (default `AUTO`: `SEPARATE` while it fits the texture budget

@@ -5028,6 +5028,7 @@
       "TerrainRuleDefine": "TypeAlias",
       "TerrainRuleRangeDefine": "TypeAlias",
       "TerrainShorelineDefine": "TypeAlias",
+      "TerrainSnowDefine": "TypeAlias",
       "TerrainStreaksDefine": "TypeAlias",
       "TerrainWetDefine": "TypeAlias"
     },
@@ -5040,6 +5041,7 @@
       "getFarSurface": "Function"
     },
     "src/toolkit/terrain/material/TerrainInputs.ts": {
+      "getSnowBindings": "Function",
       "getTerrainDefine": "Function",
       "getTerrainInputs": "Function",
       "LayerParams": "TypeAlias",
@@ -5049,6 +5051,7 @@
       "readLayerSources": "Function",
       "readMacroTexture": "Function",
       "readRippleTexture": "Function",
+      "readSnowSet": "Function",
       "readSplatMaps": "Function"
     },
     "src/toolkit/terrain/material/TerrainLayers.ts": {
@@ -5282,6 +5285,11 @@
       "getSlopeGateShare": "Function",
       "sampleSlopeGated": "Function"
     },
+    "src/toolkit/terrain/nodes/Snow.ts": {
+      "sampleSnowCover": "Function",
+      "SnowCover": "TypeAlias",
+      "SnowCoverInputs": "TypeAlias"
+    },
     "src/toolkit/terrain/nodes/Sparse.ts": {
       "insertTopLayers": "Function",
       "KeptLayer": "TypeAlias",
@@ -5323,6 +5331,7 @@
       "SurfacePuddleOpts": "TypeAlias",
       "SurfaceRippleOpts": "TypeAlias",
       "SurfaceShorelineOpts": "TypeAlias",
+      "SurfaceSnowOpts": "TypeAlias",
       "SurfaceStreakOpts": "TypeAlias",
       "SurfaceWetnessMasks": "TypeAlias",
       "SurfaceWetResponse": "TypeAlias",
@@ -6546,6 +6555,7 @@
       "SurfacePuddleOpts",
       "SurfaceRippleOpts",
       "SurfaceShorelineOpts",
+      "SurfaceSnowOpts",
       "SurfaceStreakOpts",
       "SurfaceToggleParam",
       "SurfaceWetResponse",

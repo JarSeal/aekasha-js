@@ -340,6 +340,13 @@ const ACCEPTED: unknown[] = [
     layers: [{}],
     wet: { quality: 'SIMPLE', shoreline: { band: 0.5, noise: 0, runUp: { height: 1, period: 4 } } },
   },
+  // Its snow, in either quality
+  { layers: [{}], wet: { snow: {} } },
+  {
+    layers: [{}],
+    wet: { quality: 'SIMPLE', snow: { maxSlope: 90, noiseScale: 0.5, edge: 1, tiling: 2 } },
+  },
+  { layers: [{}], wet: {}, quality: { LOW: { wet: { snow: {} } } } },
   // Its rain streaks, in either quality
   { layers: [{}], wet: { streaks: {} } },
   {
@@ -661,7 +668,7 @@ const REFUSED: unknown[] = [
   },
   // p307's wet response: its keys (a later phase's too), values and ranges; its view without it
   { layers: [{}], wet: { ripples: true } },
-  { layers: [{}], wet: { snow: { set: 'snow01' } } },
+  { layers: [{}], wet: { rainOcclusion: 'MAP' } },
   { layers: [{}], wet: { quality: 'NONE' } },
   { layers: [{}], wet: { heightInfluence: -1 } },
   { layers: [{}], wet: { cavityInfluence: '1' } },
@@ -698,6 +705,15 @@ const REFUSED: unknown[] = [
   { layers: [{}], wet: { shoreline: { band: 1, runUp: true } } },
   { layers: [{}], wet: { shoreline: { band: 1, runUp: { speed: 1 } } } },
   { layers: [{}], wet: { shoreline: { band: 1, level: 2 } } },
+  // Its snow: its ranges and keys (the set is an input)
+  { layers: [{}], wet: { snow: { set: 'snow01' } } },
+  { layers: [{}], wet: { snow: { maxSlope: 0 } } },
+  { layers: [{}], wet: { snow: { maxSlope: 91 } } },
+  { layers: [{}], wet: { snow: { noiseScale: 0 } } },
+  { layers: [{}], wet: { snow: { edge: 0 } } },
+  { layers: [{}], wet: { snow: { edge: 1.5 } } },
+  { layers: [{}], wet: { snow: { tiling: -1 } } },
+  { layers: [{}], wet: { snow: true } },
   // Its rain streaks: their ranges and keys
   { layers: [{}], wet: { streaks: { minSlope: 0 } } },
   { layers: [{}], wet: { streaks: { minSlope: 95 } } },
@@ -756,6 +772,7 @@ describe('readTerrainDefine', () => {
       macro: null,
       takesMacroTexture: false,
       takesRippleTexture: false,
+      takesSnowSet: false,
       distanceFade: null,
       far: null,
       colorMap: null,
@@ -774,6 +791,13 @@ describe('readTerrainDefine', () => {
       ripples: null,
       streaks: null,
       shoreline: null,
+      snow: null,
+    });
+    expect(read({ layers: [{}], wet: { snow: {} } }).wet?.snow).toEqual({
+      maxSlope: 55,
+      noiseScale: 3,
+      edge: 0.08,
+      tiling: 1,
     });
     expect(read({ layers: [{}], wet: { shoreline: { band: 1.5 } } }).wet?.shoreline).toEqual({
       band: 1.5,
@@ -929,6 +953,14 @@ describe('readTerrainDefine', () => {
     const tiered = { layers: [{}], wet: {}, quality: { ULTRA: { wet: { ripples: {} } } } };
     expect(read(tiered).takesRippleTexture).toBe(true);
     expect(read({ ...tiered, qualityLevel: 'ULTRA' }).wet?.ripples).toBeTruthy();
+  });
+
+  it("takes the snow input with snow, a tier's included", () => {
+    expect(read({ layers: [{}], wet: {} }).takesSnowSet).toBe(false);
+    expect(read({ layers: [{}], wet: { snow: {} } }).takesSnowSet).toBe(true);
+    const tiered = { layers: [{}], wet: {}, quality: { LOW: { wet: { snow: {} } } } };
+    expect(read(tiered).takesSnowSet).toBe(true);
+    expect(read(tiered).wet?.snow).toBeNull();
   });
 
   it("gives a layer its own anti-tiling, else the material's (its tier's)", () => {
@@ -1111,6 +1143,9 @@ describe('readTerrainDefine', () => {
     expect(values.wetShorelineKeys.sort()).toEqual(Object.keys(shoreline.shape).sort());
     expect(values.wetRunUpKeys.sort()).toEqual(
       Object.keys(shoreline.shape.runUp.unwrap().shape).sort()
+    );
+    expect(values.wetSnowKeys.sort()).toEqual(
+      Object.keys(wet.unwrap().shape.snow.unwrap().shape).sort()
     );
     const [byAttribute, bySplat] = wet.unwrap().shape.regional.unwrap().options;
     expect(Object.keys(byAttribute.shape)).toEqual(['attribute']);

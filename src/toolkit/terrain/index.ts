@@ -87,6 +87,7 @@ export type {
   SurfacePuddleOpts,
   SurfaceRippleOpts,
   SurfaceShorelineOpts,
+  SurfaceSnowOpts,
   SurfaceStreakOpts,
   SurfaceWetnessMasks,
   SurfaceWetResponse,

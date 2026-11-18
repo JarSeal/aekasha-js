@@ -1,7 +1,8 @@
 // The terrain material's inputs (p305 D1, D9): what the setup reads of them, each checked against
 // the define (the layers' sets: a `{ textureSet }` bundle each, `layer<i>`, or one
 // `{ textureSetArray }` bundle, `layers`; the splat maps `splat<i>`; the macro texture `macro`, of
-// the macro variation and the rules' noise; the colour map `colorMap`),
+// the macro variation and the rules' noise; the colour map `colorMap`; the ripple atlas
+// `ripples` and the snow set `snow`, the wet response's),
 // and what the code route makes of its config. Inputs, not defines: the gather's texture closure
 // loads them (and builds the set arrays they name), and a block's variant swaps them without
 // another shader.
@@ -42,6 +43,10 @@ const COLOR_MAP_INPUT_KEY = 'colorMap';
 const RIPPLES_INPUT_KEY = 'ripples';
 /** The ripple atlas the code route's ripples read without a `rippleTexture` */
 const DEFAULT_RIPPLE_TEXTURE = 'rippleAtlas';
+/** The input the snow cover's texture set comes in (p307 T10) */
+const SNOW_INPUT_KEY = 'snow';
+/** The texture set the code route's snow cover is without a `snowSet` */
+const DEFAULT_SNOW_SET = 'snow01';
 /** The texture the code route's rule noise reads without a `macro` or a `noiseTexture` */
 const DEFAULT_NOISE_TEXTURE = 'macroNoise';
 /** The layers' set array's input key (`ARRAY` storage) */
@@ -319,6 +324,47 @@ export const readRippleTexture = (
 };
 
 /**
+ * The snow set's bundle when the define's wet response has snow, else null: a `{ textureSet }`
+ * bundle, with an `averageColor` when the define has a far mode (the snow past its band). The
+ * input is refused where nothing in the define (its tiers included) takes it.
+ * @internal
+ */
+export const readSnowSet = (
+  inputs: Record<string, unknown>,
+  define: ResolvedTerrainDefine
+): TextureSetInput | null => {
+  const input = inputs[SNOW_INPUT_KEY];
+  if (!define.takesSnowSet && input !== undefined) {
+    throw new Error(
+      `[terrain] Input "${SNOW_INPUT_KEY}" has no use: give staticDefines.terrain.wet.snow to use it.`
+    );
+  }
+  if (!define.wet?.snow) return null;
+  if (!input || typeof input !== 'object' || !('physicalSize' in input) || isArrayBundle(input)) {
+    throw new Error(
+      `[terrain] Missing input "${SNOW_INPUT_KEY}": the snow's texture set ({ "textureSet": id }, eg. snow01) that staticDefines.terrain.wet.snow reads.`
+    );
+  }
+  const bundle = input as TextureSetInput;
+  if (define.far && !bundle.averageColor) {
+    throw new Error(
+      `[terrain] Input "${SNOW_INPUT_KEY}": its texture set has no averageColor, which the snow past the far surface's band shows (a procedural set has none): give the set's JSON one, or encode its albedo (yarn assets).`
+    );
+  }
+  return bundle;
+};
+
+/**
+ * The snow set's binding in the budget (its packing's slots), or none without one.
+ * @internal
+ */
+export const getSnowBindings = (bundle: TextureSetInput | null): TerrainBinding[] => {
+  if (!bundle) return [];
+  const slots = getBundleSlots(bundle);
+  return [{ name: `${SNOW_INPUT_KEY} (${slots.join(', ')})`, count: slots.length }];
+};
+
+/**
  * The colour map's texture node when the define has a colour map, else null; the input is refused
  * without one.
  * @internal
@@ -416,8 +462,20 @@ const getRippleTextureId = (config: TerrainMaterialConfig) => {
 };
 
 /**
+ * The code route's snow set id: `snowSet` (default `snow01`) when the material's or a tier's wet
+ * response has snow; undefined for none
+ */
+const getSnowSetId = (config: TerrainMaterialConfig) => {
+  const tiers = Object.values(config.quality ?? {});
+  const hasSnow = [config.wet, ...tiers.map((tier) => tier?.wet)].some(
+    (wet) => wet?.snow !== undefined
+  );
+  return hasSnow ? config.snowSet ?? DEFAULT_SNOW_SET : undefined;
+};
+
+/**
  * The config's static define: no id, no packing, no layer sets, no storage, no splat maps and no
- * macro, noise, ripple or colour map texture (the inputs carry them)
+ * macro, noise, ripple or colour map texture or snow set (the inputs carry them)
  * @internal
  */
 export const getTerrainDefine = (config: TerrainMaterialConfig): TerrainMaterialDefine => {
@@ -427,6 +485,7 @@ export const getTerrainDefine = (config: TerrainMaterialConfig): TerrainMaterial
     splatMaps: _splatMaps,
     noiseTexture: _noiseTexture,
     rippleTexture: _rippleTexture,
+    snowSet: _snowSet,
     storage: _storage,
     layers,
     macro,
@@ -461,8 +520,8 @@ const takesSlots = (define: TerrainMaterialDefine) =>
 /**
  * The code route's storage: `AUTO` (the default) is `ARRAY` where the layers sample in slots (the
  * material's fields or a tier's), else `SEPARATE` while each layer's packing slots, the splat maps,
- * the macro texture, the ripple atlas and the colour map fit the budget (a set no data has counts as fitting: its input throws
- * then)
+ * the macro texture, the ripple atlas, the snow set and the colour map fit the budget (a set no
+ * data has counts as fitting: its input throws then)
  */
 const getStorage = (config: TerrainMaterialConfig, define: TerrainMaterialDefine) => {
   const storage = config.storage ?? 'AUTO';
@@ -474,10 +533,13 @@ const getStorage = (config: TerrainMaterialConfig, define: TerrainMaterialDefine
     const isLive = layer.source === 'PROCEDURAL_LIVE';
     return packing && !isLive ? TERRAIN_PACKING_SLOTS[packing].length : 0;
   });
+  const snowSet = getSnowSetId(config);
+  const snowPacking = snowSet && getTextureSet(snowSet)?.defaultPacking;
   const extra =
     (config.splatMaps?.length ?? 0) +
     (getMacroTextureId(config) ? 1 : 0) +
     (getRippleTextureId(config) ? 1 : 0) +
+    (snowPacking ? TERRAIN_PACKING_SLOTS[snowPacking].length : 0) +
     (config.colorMap ? 1 : 0);
   return chooseTerrainStorage(
     layerSlots,
@@ -524,8 +586,8 @@ const getArrayInputs = (config: TerrainMaterialConfig) => {
  * each; `ARRAY`: `layers`, `{ textureSetArray, packing }`, a procedural set's or a live layer
  * keeping its own `layer<i>`; `AUTO` choosing), the splat maps (`splat<i>`), the macro texture
  * (`macro`: the macro variation's, or the noise texture of the rules, the puddle patches and the
- * streaks), the ripple
- * atlas (`ripples`) and the colour map (`colorMap`)
+ * streaks), the ripple atlas (`ripples`), the snow set (`snow`, `{ textureSet }` in its default
+ * packing) and the colour map (`colorMap`)
  * @internal
  * @param define the config's static define (`getTerrainDefine`'s): `AUTO` reads its slots
  */
@@ -543,6 +605,8 @@ export const getTerrainInputs = (config: TerrainMaterialConfig, define: TerrainM
   if (macroTexture) inputs[MACRO_INPUT_KEY] = { texture: macroTexture };
   const rippleTexture = getRippleTextureId(config);
   if (rippleTexture) inputs[RIPPLES_INPUT_KEY] = { texture: rippleTexture };
+  const snowSet = getSnowSetId(config);
+  if (snowSet) inputs[SNOW_INPUT_KEY] = { textureSet: snowSet };
   if (config.colorMap) inputs[COLOR_MAP_INPUT_KEY] = { texture: config.colorMap.texture };
   return inputs;
 };

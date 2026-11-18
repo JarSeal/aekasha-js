@@ -1073,6 +1073,11 @@ describe('getTerrainMaterialProps', () => {
     expect(getTerrainMaterialProps(config(5, { packing: 'MINIMAL' })).inputs).toHaveProperty(
       'layer4'
     );
+    // p307's snow set counts its packing's slots: 4 LITE layers, a splat map and snow01's two
+    stubs.sets = { grass01: { defaultPacking: 'LITE' }, snow01: { defaultPacking: 'LITE' } };
+    expect(getTerrainMaterialProps(config(4, { wet: { snow: {} } })).inputs).toHaveProperty(
+      'layers'
+    );
   });
 
   it('chooses ARRAY for AUTO where the layers sample in slots, its own or a tier', () => {
@@ -1231,6 +1236,19 @@ describe('getTerrainMaterialProps', () => {
         rippleTexture: 'x',
       }).staticDefines
     ).toEqual({ terrain: { layers: [{}, {}], blend, wet: { ripples: {} } } });
+    // p307's snow: the snow set, snowSet else snow01, a tier's too; never in the define
+    expect(inputsOf({ blend, wet: { snow: {} } })).toHaveProperty('snow', { textureSet: 'snow01' });
+    expect(inputsOf({ blend, wet: { snow: {} }, snowSet: 'snow02' })).toHaveProperty('snow', {
+      textureSet: 'snow02',
+    });
+    expect(inputsOf({ blend, quality: { LOW: { wet: { snow: {} } } } })).toHaveProperty('snow', {
+      textureSet: 'snow01',
+    });
+    expect(inputsOf({ blend, wet: {} })).not.toHaveProperty('snow');
+    expect(
+      getTerrainMaterialProps({ id: 'ridge', layers, blend, wet: { snow: {} }, snowSet: 'x' })
+        .staticDefines
+    ).toEqual({ terrain: { layers: [{}, {}], blend, wet: { snow: {} } } });
   });
 });
 
@@ -1568,6 +1586,65 @@ describe('setupTerrainMaterial: wet (p307)', () => {
     expect(reaches(simple.normalNode, conditions.waterLevel)).toBe(false);
     const dry = build({ layers: [{}], wet: {} });
     expect(reaches(dry.colorNode, conditions.waterLevel)).toBe(false);
+  });
+
+  it('covers with snow in either quality: the snow input, its uniforms, its budget, its far colour', () => {
+    const snow = makeBundle('LITE', { averageColor: true });
+    const inputs = { layer0: makeBundle(), snow };
+    const material = build({ layers: [{}], wet: { snow: { maxSlope: 40 } } }, inputs);
+    const uniforms = getUniforms(material);
+    expect(uniforms.terrain_wetSnowMaxSlope.value).toBe(40);
+    expect(uniforms.terrain_wetSnowNoiseScale.value).toBe(3);
+    expect(uniforms.terrain_wetSnowEdge.value).toBe(0.08);
+    expect(uniforms.terrain_wetSnowTiling.value).toBe(1);
+    // Every socket takes the snow's branch (a Fn call; its body reads the coverage, Snow.test.ts)
+    // and its slush the temperature
+    const calls = (root: unknown) =>
+      collectNodesFrom([root]).filter((node) => (node as { shaderNode?: unknown }).shaderNode)
+        .length;
+    const plain = build({ layers: [{}], wet: {} });
+    for (const socket of ['colorNode', 'roughnessNode', 'normalNode'] as const) {
+      expect(calls(material[socket])).toBeGreaterThan(calls(plain[socket]));
+    }
+    expect(reaches(material.colorNode, conditions.temperature)).toBe(true);
+    expect(reaches(plain.colorNode, conditions.temperature)).toBe(false);
+    // SIMPLE snow too
+    const simple = build({ layers: [{}], wet: { quality: 'SIMPLE', snow: {} } }, inputs);
+    const simplePlain = build({ layers: [{}], wet: { quality: 'SIMPLE' } });
+    expect(calls(simple.colorNode)).toBeGreaterThan(calls(simplePlain.colorNode));
+    // The input: wanted with snow, refused without, a tier's taken without building it, counted
+    // in the budget (its two LITE slots)
+    expect(() => build({ layers: [{}], wet: { snow: {} } })).toThrow(/Missing input "snow"/);
+    expect(() => build({ layers: [{}], wet: {} }, inputs)).toThrow(/Input "snow" has no use/);
+    const tiered = build(
+      { layers: [{}], wet: {}, quality: { LOW: { wet: { snow: {} } } } },
+      inputs
+    );
+    expect(calls(tiered.colorNode)).toBe(calls(plain.colorNode));
+    expect(() => build({ layers: [{}], wet: { snow: {} }, reservedTextures: 13 }, inputs)).toThrow(
+      /snow \(albedoRough, normalHeight\): 2/
+    );
+    // A far mode shows its average colour past the band: a set without one is refused
+    const far = { layers: [{}], distance: { fade: [30, 90], far: 'AVERAGE_COLOR' } };
+    const farInputs = { layer0: makeBundle('LITE', { averageColor: true }) };
+    expect(() => build({ ...far, wet: { snow: {} } }, { ...farInputs, snow })).not.toThrow();
+    expect(() =>
+      build({ ...far, wet: { snow: {} } }, { ...farInputs, snow: makeBundle('LITE') })
+    ).toThrow(/Input "snow": its texture set has no averageColor/);
+  });
+
+  it("counts the snow set's taps in TAPS where it covers", async () => {
+    expect(await loadTerrainDebugViewsAsync()).toBe(true);
+    const material = build(
+      { layers: [{}], wet: { snow: {} }, debugView: 'TAPS' },
+      { layer0: makeBundle(), snow: makeBundle('FULL') }
+    );
+    const dry = build({ layers: [{}], wet: {}, debugView: 'TAPS' });
+    const calls = (root: unknown) =>
+      collectNodesFrom([root]).filter((node) => (node as { shaderNode?: unknown }).shaderNode)
+        .length;
+    // The gated taps' share is the snow's cover: its branch
+    expect(calls(material.emissiveNode)).toBeGreaterThan(calls(dry.emissiveNode));
   });
 
   it("counts the streaks' tap in TAPS where they run", async () => {

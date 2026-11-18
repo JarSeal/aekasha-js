@@ -6,7 +6,9 @@
 // wetness (T7) a vertex attribute or the first splat map's A; its rain ripples (T4) the input
 // `ripples`' atlas, faded out by the view distance; its rain streaks (T5) one fetch of the macro
 // texture's R stretched down steep faces, in both qualities; its shoreline (T8) along the water
-// level, arithmetic at the world's position, in both qualities. The conditions are the
+// level, arithmetic at the world's position, in both qualities; its snow (T10) the input `snow`'s
+// set sampled top-down in the material's space, its average colour past a far mode's band, in both
+// qualities. The conditions are the
 // `surfaceConditions()` feature's stable uniforms; without the feature the material builds dry,
 // warned once a page load.
 import { attribute, float, smoothstep, uniform } from 'three/tsl';
@@ -14,6 +16,7 @@ import { attribute, float, smoothstep, uniform } from 'three/tsl';
 import { Vector2, type Node, type NodeMaterial, type TextureNode } from 'three/webgpu';
 import { lwarn } from 'aekasha';
 import { getSurfaceConditionNodes } from 'aekasha/surface';
+import type { TextureSetInput } from 'aekasha/texturesets';
 import { sampleMacroTexture } from '../nodes/Macro';
 import type { SurfaceSpace } from '../nodes/SurfaceSpace';
 import {
@@ -21,6 +24,7 @@ import {
   type SurfacePuddleOpts,
   type SurfaceRippleOpts,
   type SurfaceShorelineOpts,
+  type SurfaceSnowOpts,
   type SurfaceStreakOpts,
   type SurfaceWetnessMasks,
 } from '../nodes/Wet';
@@ -33,8 +37,9 @@ let isMissingFeatureWarned = false;
 /**
  * The surface the wet response gets: the albedo, the roughness, the shaded normal in the
  * material's space, the AO (the material's `aoNode`, or null), what the layers' wet reads, the
- * macro texture (the puddle patches' and the streaks'), the ripple atlas, the first splat map's A (a regional
- * wetness's) and the view distance (the ripples' fade)
+ * macro texture (the puddle patches' and the streaks'), the ripple atlas, the snow set, the first
+ * splat map's A (a regional wetness's), the view distance (the ripples' fade) and a far mode's
+ * share (past which the snow isn't sampled), or null without one
  * @internal
  */
 export type TerrainWetInput = {
@@ -45,8 +50,10 @@ export type TerrainWetInput = {
   wet: LayerWet | null;
   macroTexture: TextureNode | null;
   rippleTexture: TextureNode | null;
+  snowSet: TextureSetInput | null;
   splatAlpha: Node<'float'> | null;
   viewDistance: Node<'float'>;
+  farShare: Node<'float'> | null;
 };
 
 type Keep = <T>(name: string, node: unknown) => T;
@@ -157,6 +164,31 @@ const getShorelineOpts = (
   };
 };
 
+/**
+ * The snow's options (uniforms `terrain_wetSnowMaxSlope`, `terrain_wetSnowNoiseScale`,
+ * `terrain_wetSnowEdge` and `terrain_wetSnowTiling`: the input `snow`'s set tiled at the
+ * material's position, its average colour past a far mode's band), or undefined without
+ */
+const getSnowOpts = (
+  settings: TerrainWetDefine,
+  surface: TerrainWetInput,
+  space: SurfaceSpace,
+  keep: Keep
+): SurfaceSnowOpts | undefined => {
+  const { snow } = settings;
+  if (!snow) return undefined;
+  return {
+    // The reader requires the snow input with snow (`takesSnowSet`)
+    set: surface.snowSet as TextureSetInput,
+    position: space.position,
+    maxSlope: keep('wetSnowMaxSlope', uniform(snow.maxSlope)),
+    noiseScale: keep('wetSnowNoiseScale', uniform(snow.noiseScale)),
+    edge: keep('wetSnowEdge', uniform(snow.edge)),
+    tiling: keep('wetSnowTiling', uniform(snow.tiling)),
+    ...(surface.farShare ? { far: surface.farShare } : {}),
+  };
+};
+
 /** The regional wetness's node: the vertex attribute, or the first splat map's A; undefined without */
 const getRegional = (settings: TerrainWetDefine, surface: TerrainWetInput) => {
   const { regional } = settings;
@@ -169,7 +201,7 @@ const getRegional = (settings: TerrainWetDefine, surface: TerrainWetInput) => {
 
 /**
  * The surface wet by the surface conditions with the define's `wet` (uniforms
- * `terrain_wetShelter`, the streaks', the shoreline's, and with `FULL` `terrain_wetHeightInfluence`,
+ * `terrain_wetShelter`, the streaks', the shoreline's, the snow's, and with `FULL` `terrain_wetHeightInfluence`,
  * `terrain_wetCavityInfluence`, the puddles' and the ripples'), and its masks (the `WETNESS`
  * view's); as given, masks null, without `wet` or without the `surfaceConditions()` feature
  * (warned once a page load).
@@ -202,6 +234,7 @@ export const applyTerrainWetness = (
   const ripples = isFull ? getRippleOpts(settings, surface, space, keep) : undefined;
   const streaks = getStreakOpts(settings, surface, space, keep);
   const shoreline = getShorelineOpts(settings, keep);
+  const snow = getSnowOpts(settings, surface, space, keep);
   const wet = applySurfaceWetness(
     {
       albedo: surface.albedo,
@@ -233,6 +266,7 @@ export const applyTerrainWetness = (
       ...(ripples ? { ripples } : {}),
       ...(streaks ? { streaks } : {}),
       ...(shoreline ? { shoreline } : {}),
+      ...(snow ? { snow } : {}),
     }
   );
   return {

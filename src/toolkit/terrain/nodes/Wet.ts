@@ -9,10 +9,12 @@
 // is over the relief, on the flat, filling some patches first; an authored regional wetness (T7)
 // keeps its places wet in any weather; while it rains, rings ripple where water stands (T4); on
 // steep faces rivulets run down while it rains and stay damp after (T5); along the water level a
-// shoreline's bands wash, saturate and dampen the ground (T8). Every number of the
-// response is a node: a terrain material's are its layers' set uniforms blended by weight, an app
-// material's its own. The ripples' two fetches and the streaks' one are the only ones, each in a
-// branch on the weather (`Ripples.ts`, `Streaks.ts`; the patches are the caller's sample).
+// shoreline's bands wash, saturate and dampen the ground (T8); snow covers it by the snow cover,
+// flat ground first, frozen dry below 0 °C and slush above, its meltwater wetting the ground around
+// (T10). Every number of the response is a node: a terrain material's are its layers' set uniforms
+// blended by weight, an app material's its own. The ripples' two fetches, the streaks' one and
+// the snow set's are the only ones, each in a branch on the weather (`Ripples.ts`, `Streaks.ts`,
+// `Snow.ts`; the patches are the caller's sample).
 import {
   cos,
   float,
@@ -23,12 +25,15 @@ import {
   positionWorld,
   smoothstep,
   vec2,
+  vec3,
 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node, TextureNode } from 'three/webgpu';
 import type { SurfaceConditionNodes } from 'aekasha/surface';
+import type { TextureSetInput } from 'aekasha/texturesets';
 import { sampleRainRipples } from './Ripples';
 import { getShoreline } from './Shoreline';
+import { sampleSnowCover } from './Snow';
 import { sampleRainStreaks } from './Streaks';
 
 /**
@@ -70,6 +75,12 @@ const FLAT_HEIGHT = 0.5;
 const DEG_TO_RAD = Math.PI / 180;
 /** The slope below the streaks' `minSlope` over which they fade in, radians */
 const STREAK_SLOPE_FADE = 10 * DEG_TO_RAD;
+/** The temperature over which snow turns to slush, °C from 0 */
+const SLUSH_TEMPERATURE = 3;
+/** Slush's albedo against the snow's (grey-blue: the water darkens it, the ice shows through) */
+const SLUSH_TINT = [0.72, 0.78, 0.86] as const;
+/** Slush's roughness against the snow's */
+const SLUSH_ROUGHNESS = 0.6;
 
 /**
  * The default `ApplySurfaceWetnessOpts`' numbers (the terrain material's `wet` defaults too).
@@ -93,6 +104,10 @@ export const SURFACE_WETNESS_DEFAULTS = {
   shoreNoise: 0.3,
   shoreRunUpHeight: 0.5,
   shoreRunUpPeriod: 6,
+  snowMaxSlope: 55,
+  snowNoiseScale: 3,
+  snowEdge: 0.08,
+  snowTiling: 1,
 } as const satisfies Record<string, number | readonly [number, number]>;
 
 /** A number as a constant node, or the node given */
@@ -208,6 +223,42 @@ export type ApplySurfaceWetnessOpts = {
    * qualities (`'SIMPLE'` leaves the normal alone). Left out: none.
    */
   shoreline?: SurfaceShorelineOpts;
+  /**
+   * Snow cover by the conditions' `snowCoverage`: a texture set over the surface, flat ground
+   * first, then the slopes and the high points (`'FULL'`: the relief counts), everything up to
+   * `maxSlope` at 1; frozen below 0 °C (the wetness doesn't show on it), slush above (grey-blue,
+   * smoother, wet by its set's response), its meltwater the least wetness of the ground around.
+   * The set's taps (its packing's slots) are in a dynamic branch on the cover, all of it in one on
+   * the coverage. Both qualities (`'SIMPLE'` reads no relief and leaves the normal). Left out: none.
+   */
+  snow?: SurfaceSnowOpts;
+};
+
+/** {@link ApplySurfaceWetnessOpts}' snow cover. */
+export type SurfaceSnowOpts = {
+  /**
+   * The snow's texture set, a `{ textureSet }` input's bundle (eg. the toolkit's `snow01`): its
+   * maps, tint and strengths, and its `surface` wet response, which the snow wets by.
+   */
+  set: TextureSetInput;
+  /**
+   * The surface's position, its `(x, −z)` the set's top-down tiling (in the shaded normal's space;
+   * default the world's).
+   */
+  position?: Node<'vec3'>;
+  /** The set's tiling, over 0 (default 1): its tile is its `physicalSize` × this. */
+  tiling?: Node<'float'> | number;
+  /** The steepest slope the snow rests on, degrees from flat (default 55). */
+  maxSlope?: Node<'float'> | number;
+  /** The drift noise's cell, metres, over 0 (default 3): where the snow gathers first. */
+  noiseScale?: Node<'float'> | number;
+  /** The share of the cover over which the snow's edge fades in, over 0 (default 0.08). */
+  edge?: Node<'float'> | number;
+  /**
+   * Where the snow is its set's average colour instead of a sample, 0..1 (eg. a far surface's
+   * share: 1 samples nothing). Needs the set's `averageColor`. Left out: sampled wherever it shows.
+   */
+  far?: Node<'float'>;
 };
 
 /** {@link ApplySurfaceWetnessOpts}' shoreline. */
@@ -319,6 +370,8 @@ export type SurfaceWetnessMasks = {
    * and `film` (running).
    */
   streak: Node<'float'>;
+  /** The snow's cover (0 without `opts.snow`); where it's over 0, the snow set is sampled. */
+  snow: Node<'float'>;
 };
 
 /** The wet surface: the albedo, the roughness, the normal (when given) and the masks. */
@@ -346,9 +399,12 @@ export type WetSurface = {
  * `opts.streaks` (T5), rivulets run down steep faces while it rains (a film) and stay damp while
  * it's wet (the pores), one fetch in a dynamic branch on the weather; with `opts.shoreline` (T8),
  * the ground along the conditions' `waterLevel` is washed (a puddle), saturated (a film) and damp
- * above (a regional wetness), arithmetic only; nothing else fetches or branches. At wetness, puddle level and rain 0 without a regional
- * wetness the surface is as given.
- * @param surface the dry surface, its relief, cavity, regional wetness and response
+ * above (a regional wetness), arithmetic only; with `opts.snow` (T10), a texture set covers the
+ * surface by the conditions' `snowCoverage` (flat ground first, nothing past `maxSlope`), frozen
+ * dry below 0 °C and slush above (its meltwater wetting the ground around), its taps in a dynamic
+ * branch on the cover; nothing else fetches or branches. At wetness, puddle level, rain and snow
+ * cover 0 without a regional wetness the surface is as given.
+ * @param input the dry surface, its relief, cavity, regional wetness and response
  * @param conditions the surface conditions' uniforms (`getSurfaceConditionNodes()`)
  * @returns the wet surface and its masks
  * @example
@@ -370,17 +426,23 @@ export type WetSurface = {
  * ```
  */
 export const applySurfaceWetness = (
-  surface: WetSurfaceInput,
+  input: WetSurfaceInput,
   conditions: SurfaceConditionNodes,
   opts: ApplySurfaceWetnessOpts = {}
 ): WetSurface => {
   const isFull = (opts.quality ?? 'FULL') === 'FULL';
+  const up = opts.up ?? ((normalWorldGeometry as unknown as Node<'vec3'>).y as Node<'float'>);
+  const geometryNormal = opts.geometryNormal ?? (normalWorldGeometry as unknown as Node<'vec3'>);
+  // T10: the snow over the dry surface, which the rest wets (slush)
+  const snow = opts.snow
+    ? coverWithSnow(input, { up, geometryNormal, isFull, conditions, opts: opts.snow })
+    : null;
+  const surface = snow?.surface ?? input;
   const porosity = toFloat(surface.response.porosity);
   const darkening = toFloat(surface.response.wetDarkening);
   const wetRoughness = toFloat(surface.response.wetRoughness);
 
   // T6: the rain's reach by the geometry's facing, the angles' cosines (n.y = cos of the angle)
-  const up = opts.up ?? ((normalWorldGeometry as unknown as Node<'vec3'>).y as Node<'float'>);
   const shelter = opts.shelter ?? SURFACE_WETNESS_DEFAULTS.shelter;
   const angles = ('isNode' in shelter
     ? shelter
@@ -388,12 +450,16 @@ export const applySurfaceWetness = (
   const cosines = angles.mul(DEG_TO_RAD).cos() as Node<'vec2'>;
   const exposure = smoothstep(cosines.y, cosines.x, up) as unknown as Node<'float'>;
   let global = (conditions.wetness as unknown as Node<'float'>).mul(exposure) as Node<'float'>;
-  // T8: the shoreline's bands; its damp one a regional wetness
+  // Frozen snow shows no wetness: only as far as it's slush
+  if (snow) global = global.mul(snow.wettable) as Node<'float'>;
+  // T8: the shoreline's bands; its damp one a regional wetness, hidden by frozen snow like the
+  // weather's, and the snow's meltwater one too
   const shore = opts.shoreline ? getShore(conditions, opts.shoreline) : null;
-  const regional =
-    surface.regional && shore
-      ? (max(surface.regional, shore.damp) as unknown as Node<'float'>)
-      : surface.regional ?? shore?.damp;
+  const authored = maxOf([surface.regional, shore?.damp]);
+  const regional = maxOf([
+    authored && snow ? (authored.mul(snow.wettable) as Node<'float'>) : authored,
+    snow?.meltwater,
+  ]);
   // T7: an authored wetness, whatever the weather and the facing
   if (regional) global = max(global, regional) as unknown as Node<'float'>;
   // The surface's own drying: the wetness it shows, the overall one to its drying speed
@@ -418,7 +484,6 @@ export const applySurfaceWetness = (
     local = local.add(cavity) as Node<'float'>;
   }
   local = local.saturate() as Node<'float'>;
-  const geometryNormal = opts.geometryNormal ?? (normalWorldGeometry as unknown as Node<'vec3'>);
   // T5: rivulets down a steep face, damp (the pores) while it's wet, running (a film) while it rains
   const streaks = opts.streaks
     ? getStreaks(up, exposure, geometryNormal, conditions, opts.streaks)
@@ -497,7 +562,90 @@ export const applySurfaceWetness = (
       puddle: puddle ?? (float(0) as unknown as Node<'float'>),
       ripple: ripple ?? (float(0) as unknown as Node<'float'>),
       streak: streaks?.weight ?? (float(0) as unknown as Node<'float'>),
+      snow: snow?.cover ?? (float(0) as unknown as Node<'float'>),
     },
+  };
+};
+
+/** The most of the nodes given, or undefined for none */
+const maxOf = (nodes: (Node<'float'> | undefined)[]) =>
+  nodes
+    .filter((node): node is Node<'float'> => node !== undefined)
+    .reduce<
+      Node<'float'> | undefined
+    >((most, node) => (most ? (max(most, node) as unknown as Node<'float'>) : node), undefined);
+
+/** What {@link coverWithSnow} reads beside the surface */
+type SnowContext = {
+  up: Node<'float'>;
+  geometryNormal: Node<'vec3'>;
+  isFull: boolean;
+  conditions: SurfaceConditionNodes;
+  opts: SurfaceSnowOpts;
+};
+
+/**
+ * The surface under the snow (`Snow.ts`): its albedo, roughness, normal (`'FULL'`), relief and
+ * response mixed toward the snow's by its cover, the snow's turning to slush above 0 °C; how far
+ * the wetness shows (the frozen snow none) and the snow's meltwater (its fringe while it melts)
+ */
+const coverWithSnow = (surface: WetSurfaceInput, ctx: SnowContext) => {
+  const { opts, conditions } = ctx;
+  const defaults = SURFACE_WETNESS_DEFAULTS;
+  const { set } = opts;
+  const height = ctx.isFull ? surface.height : undefined;
+  const snow = sampleSnowCover({
+    set,
+    position: opts.position ?? (positionWorld as unknown as Node<'vec3'>),
+    normal: ctx.geometryNormal,
+    up: ctx.up,
+    height: height ?? (float(FLAT_HEIGHT) as unknown as Node<'float'>),
+    coverage: conditions.snowCoverage as unknown as Node<'float'>,
+    maxSlope: toFloat(opts.maxSlope ?? defaults.snowMaxSlope).mul(DEG_TO_RAD) as Node<'float'>,
+    noiseScale: toFloat(opts.noiseScale ?? defaults.snowNoiseScale),
+    edge: toFloat(opts.edge ?? defaults.snowEdge),
+    tiling: toFloat(opts.tiling ?? defaults.snowTiling),
+    far: opts.far ?? null,
+  });
+  const { cover } = snow;
+  // Slush: above 0 °C the snow greys and smooths (and the wetness shows on it)
+  const melt = smoothstep(
+    0,
+    SLUSH_TEMPERATURE,
+    conditions.temperature as unknown as Node<'float'>
+  ) as unknown as Node<'float'>;
+  const albedo = snow.albedo.mul(mix(vec3(1), vec3(...SLUSH_TINT), melt)) as Node<'vec3'>;
+  const roughness = snow.roughness.mul(mix(float(1), float(SLUSH_ROUGHNESS), melt));
+  const toSnow = <T extends Node<'float'> | Node<'vec3'>>(ground: T, onSnow: T) =>
+    mix(ground, onSnow, cover) as unknown as T;
+  const { response } = surface;
+  const params = set as unknown as Record<keyof SurfaceWetResponse, Node<'float'>>;
+  const covered: WetSurfaceInput = {
+    ...surface,
+    albedo: toSnow(surface.albedo, albedo),
+    roughness: toSnow(surface.roughness, roughness as Node<'float'>),
+    ...(surface.normal
+      ? {
+          normal: ctx.isFull
+            ? (toSnow(surface.normal, snow.normal).normalize() as Node<'vec3'>)
+            : surface.normal,
+        }
+      : {}),
+    ...(height ? { height: toSnow(height, snow.height) } : {}),
+    response: {
+      porosity: toSnow(toFloat(response.porosity), params.porosity),
+      wetDarkening: toSnow(toFloat(response.wetDarkening), params.wetDarkening),
+      wetRoughness: toSnow(toFloat(response.wetRoughness), params.wetRoughness),
+      dryingSpeed: toSnow(toFloat(response.dryingSpeed ?? 1), params.dryingSpeed),
+      puddleResponse: toSnow(toFloat(response.puddleResponse ?? 1), params.puddleResponse),
+    },
+  };
+  return {
+    surface: covered,
+    cover,
+    // The wetness shows on the ground and on slush, not on frozen snow
+    wettable: float(1).sub(cover.mul(float(1).sub(melt))) as Node<'float'>,
+    meltwater: snow.fringe.mul(melt) as Node<'float'>,
   };
 };
 

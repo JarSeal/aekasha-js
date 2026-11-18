@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-4 implemented
+Status: in progress | Phases 1-4 implemented, Phase 5 section 1
 Category: Materials, Terrain, Weather
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -375,6 +375,35 @@ type SurfaceConditions = {
 - `snowCoverage` 0 → 1 covers upward faces first;
 - melting (temperature > 0) turns the snow to slush and wets the ground;
 - the ice layer frosts below −5 °C.
+
+1. Snow cover (T10) and slush.
+2. Frost (T11), its sparkle.
+
+**Decided at the start:**
+
+- D2's `snow: { set, minUpDot, noiseScale }` changed: sets are inputs, never define fields (the gather's texture closure reads `inputs`), so the snow set is the input `snow` (`{ textureSet }`), the code route's top-level `snowSet` (default `snow01`, as `rippleTexture` → `rippleAtlas`); `wet.snow` holds numbers, its slope in degrees (`maxSlope`, as the puddles' and streaks').
+- The engine needed nothing: `snowCoverage` and `temperature` had stable uniforms, the model melts snow into `wetness` above 0 °C (Phase 1), and the tab has Snowfall.
+- Frost (section 2) is per layer by `1 − porosity` (no new set data): ice fully, cliffs 0.8, rocks 0.6, concrete 0.5, grass 0.4, mud 0.3, sand 0.1. A per-set `surface.frostResponse` (a spare float of the layer params) stays the upgrade if grass's hoarfrost needs it.
+
+**As built (section 1):**
+
+- **The node:** `nodes/Snow.ts`' `sampleSnowCover` (internal), called by `applySurfaceWetness` with `opts.snow: { set, position?, tiling?, maxSlope?, noiseScale?, edge?, far? }` (`SurfaceSnowOpts`, on the entry); `masks.snow` is the cover (0 without). Both qualities. The snow covers the dry surface first, so the rest of the wet response wets the covered surface.
+  - The resistance: `0.5·slope + 0.25·relief + 0.25·drift`, and at least the slope itself; `slope` = (1 − up) / (1 − cos `maxSlope`), the relief the surface's height (`FULL`; 0.5 in `SIMPLE`), the drift two octaves of value noise (cells `noiseScale` and ÷ 3.7, the second at 0.35; ALU). The bound by the slope alone was added after a first build: the weighted sum let low, smooth ground take snow far past `maxSlope`.
+  - The cover: `smoothstep(r, r + edge, coverage·(1 + edge))`: 0 none, 1 everything up to `maxSlope`.
+  - The set sampled top-down at the position's `(x, −z)` over `physicalSize × tiling`, its normal (× its `normalStrength`) through the planar frame of the geometry normal; × its tint, its roughness × its `roughnessScale`. Mixed in by the cover: the albedo, the roughness, the normal (`FULL`), the relief and the set's wet response (porosity, darkening, wet roughness, drying speed, puddle response).
+  - Frozen and slush: `melt = smoothstep(0, 3 °C, temperature)`; the snow × mix(1, (0.72, 0.78, 0.86), melt) and its roughness × mix(1, 0.6, melt); the wetness shown (the weather's, and the regional and the shore's damp band) × `1 − cover·(1 − melt)`, so nothing shows wet on frozen snow; the meltwater (a fringe 0.15 wider than the cover × `melt`) a regional floor, so the ground around thawing snow is wet in `MANUAL` too.
+  - The branches (a `Fn` returning a struct var, the far branch's pattern): the whole of it in `If(coverage > 0)`, the taps in `If(cover > 0)` (and the far share under 1); the UV, its gradients, the up, height, normal, the cosine and the edge declared before; the taps `.grad()`. A snowless frame computes nothing.
+  - Past `far` (a far mode's share) the set's average colour × tint, roughness 0.8 × its scale, the geometry normal, no tap.
+  - Defaults (`SURFACE_WETNESS_DEFAULTS`): `maxSlope` 55°, `noiseScale` 3 m, `edge` 0.08, `tiling` 1.
+- **The terrain `wet.snow`:** `{ maxSlope? (over 0 to 90), noiseScale? (over 0), edge? (over 0 to 1), tiling? (over 0) }`, both qualities; uniforms `terrain_wetSnowMaxSlope`, `…NoiseScale`, `…Edge`, `…Tiling`. The input `snow` (`readSnowSet`, `takesSnowSet`: the material's or a tier's snow; refused without, wanted with; a far mode needs its `averageColor`); in the budget as `snow (<its slots>)` and in the code route's `AUTO` (its set's default packing's slots); the code route's `snowSet` refused without snow. At the material's position (`OBJECT` too: the snow tiles in the piece's space), the gate on the world's up.
+- **`TAPS`:** the snow set's slots gated by `masks.snow` (`TerrainDebugViewContext.snowTaps`). **`WETNESS`:** mixed toward pale blue (0.55, 0.8, 1) by 0.7 × the cover. The colour-map bake drops the `snow` input with `wet`.
+- **The gallery:** every row block and both pieces have `snow: {}` (their `LOW` tier keeps it); the tab has a Snow cover slider and steps (0, 0.3, 0.6, 1) and a Temperature slider (−15 to 15 °C) and steps (−10, −5, 0, 3, 8). The scene's JSON doesn't set a temperature (15 °C, the default): snow there is slush until the tab's steps cool it.
+- **Seen** (2026-11-18, Windows Chrome on WebGPU, AMD RDNA 3; no shader errors):
+  - At −5 °C, the row from 26 m up: at a cover of 0.3 the flats are half white in drifts, the 35° ramps bare; at 0.6 the ramps covered too, a few high spots and the ice's ridges out; at 1 all white. The boulder takes a cap on its top at 0.6 and keeps its sides bare at 1; the wall's top a strip. On concrete02 at 0.3 the drift breaks into small dark holes (its relief).
+  - `TAPS`: 3 fetches a block at cover 0 (its layer's 2, the patches'), 5 under snow at 0.6, the bare spots 3; the pieces unchanged.
+  - `SIMPLE` at 0.6: the same cover a little fuller (no relief).
+  - `WETNESS` at −5 °C: the grass block's regional band showed its wetness through the snow (a pink tint) on the first build, whose `wettable` scaled only the weather's wetness; the regional and the damp band are scaled too now (the band's snow from mean R − B −1.8 to −10.3, as blue as the rest; its bare drifts still orange).
+  - At 3 °C (cover 0.6): the snow grey-blue and glossy, the slush's pores filling in hard-edged blotches over snow01's relief (its porosity 0.5 fills the pores over a quarter of the wetness), the bare mud at the ramp's top darkened by the meltwater.
 
 ### Phase 6 (optional) — Rain occlusion map (T12)
 

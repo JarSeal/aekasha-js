@@ -34,6 +34,7 @@ const ctx: TerrainDebugViewContext = {
   normal: vec3(0, 1, 0) as unknown as Node<'vec3'>,
   define: readTerrainDefine({ terrain: { layers: [{}] } }),
   packing: 'LITE',
+  snowTaps: 0,
 };
 
 /** The nodes a view reaches, each once */
@@ -190,6 +191,13 @@ describe('applyTerrainDebugView', () => {
     expect(rippledEstimate.always).toBe(3 + 1 + 1 + 1);
     expect(rippledEstimate.gated).toEqual([{ share: ripple, fetches: 2 }]);
     expect(estimateTerrainFetches(rippled).gated).toEqual([]);
+    // The snow: its set's taps gated by its cover, none always (and none without the masks)
+    const snow = float(0.6) as unknown as Node<'float'>;
+    const snowed = { ...contextOf({ ...blended, wet: { snow: {} } }, 'MINIMAL'), snowTaps: 2 };
+    const snowEstimate = estimateTerrainFetches({ ...snowed, wet: { snow } as never });
+    expect(snowEstimate.always).toBe(3 + 1 + 1 + 1);
+    expect(snowEstimate.gated).toEqual([{ share: snow, fetches: 2 }]);
+    expect(estimateTerrainFetches(snowed).gated).toEqual([]);
   });
 
   it("counts only the far surface's fetches past a far mode's band", () => {
@@ -306,17 +314,16 @@ describe('applyTerrainDebugView', () => {
     expect(reaches(taps.emissiveNode, projection.slopeGate)).toBe(true);
   });
 
-  it("shows the wet response's pores, film and puddles, a dry grey without its masks", () => {
+  it("shows the wet response's pores, film, puddles and snow, a dry grey without its masks", () => {
     const pores = float(0.3) as unknown as Node<'float'>;
     const film = float(0.1) as unknown as Node<'float'>;
     const puddle = float(0.7) as unknown as Node<'float'>;
-    const wet = { exposure: float(1), wetness: float(0.4), pores, film, puddle } as never;
+    const snow = float(0.5) as unknown as Node<'float'>;
+    const wet = { exposure: float(1), wetness: float(0.4), pores, film, puddle, snow } as never;
     const view = new MeshStandardNodeMaterial();
     applyTerrainDebugView(view, 'WETNESS', { ...ctx, wet });
     const nodes = collect(view.emissiveNode);
-    expect(nodes.has(pores)).toBe(true);
-    expect(nodes.has(film)).toBe(true);
-    expect(nodes.has(puddle)).toBe(true);
+    for (const mask of [pores, film, puddle, snow]) expect(nodes.has(mask)).toBe(true);
     const dry = new MeshStandardNodeMaterial();
     applyTerrainDebugView(dry, 'WETNESS', ctx);
     expect(dry.emissiveNode).toBeTruthy();

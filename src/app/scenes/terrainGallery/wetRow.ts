@@ -13,7 +13,9 @@
 // block and a cliff boulder on the cliff block (rounded, so the streaks' axis switch and its
 // overhang show). Phase 4 section 2: the beach's shoreline along the surface conditions' water
 // level, its waves washing up, and a still water plane over the beach at the level (hidden
-// without one), which follows it on the scene's looper. Code route materials (`createTerrainMaterial`) with a `LOW` tier whose wet is
+// without one), which follows it on the scene's looper. Phase 5: snow over every block and both
+// pieces by the surface conditions' snow cover (the toolkit's `snow01`, the code route's default),
+// slush above 0 °C. Code route materials (`createTerrainMaterial`) with a `LOW` tier whose wet is
 // `SIMPLE` (without the puddles and the ripples: a tier's variant shares the material's inputs,
 // which a variant without them would refuse): the quality (the tier) and the view are variants of
 // a block's or a piece's material.
@@ -158,9 +160,9 @@ const withSimpleTier = (wet: NonNullable<TerrainMaterialConfig['wet']>) => {
   return { wet, quality: { [SIMPLE_TIER]: { wet: { ...simple, quality: 'SIMPLE' as const } } } };
 };
 
-/** A block's code route config: its sets, wet (`FULL`, puddles in patches, ripples; the grass
- * block's regional wetness, the beach's shoreline) and its `SIMPLE` tier; the beach's rocks by
- * slope */
+/** A block's code route config: its sets, wet (`FULL`, puddles in patches, ripples, snow; the
+ * grass block's regional wetness, the beach's shoreline) and its `SIMPLE` tier; the beach's rocks
+ * by slope */
 const getBlockConfig = (block: WetBlock): TerrainMaterialConfig => ({
   id: `terrainGalleryWet_${block.key}`,
   layers: block.sets.map((set) => ({ set })),
@@ -175,6 +177,7 @@ const getBlockConfig = (block: WetBlock): TerrainMaterialConfig => ({
   ...withSimpleTier({
     puddles: { patches: { scale: PUDDLE_PATCH_SCALE } },
     ripples: {},
+    snow: {},
     ...(block.key === REGIONAL_WET_KEY ? { regional: {} } : {}),
     ...(block.key === SHORE_WET_KEY ? { shoreline: { band: SHORE_BAND, runUp: {} } } : {}),
   }),
@@ -193,10 +196,10 @@ const getBlockMaterial = (block: WetBlock, view: WetRowView): THREE.Material => 
   return getViewMaterial(config.id, view);
 };
 
-/** A piece's material for the view: its structure material (streaks only), or its variant */
+/** A piece's material for the view: its structure material (streaks and snow), or its variant */
 const getPieceMaterial = (piece: WetPiece, view: WetRowView): THREE.Material => {
   const id = `terrainGalleryWet_${piece.key}`;
-  createStructureMaterial(piece.set, { id, ...withSimpleTier({ streaks: {} }) });
+  createStructureMaterial(piece.set, { id, ...withSimpleTier({ streaks: {}, snow: {} }) });
   return getViewMaterial(id, view);
 };
 

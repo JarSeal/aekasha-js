@@ -124,9 +124,9 @@ const getTerrainSource = (opts: BakeTerrainColorMapOpts) => {
 export const bakeTerrainColorMap = (opts: BakeTerrainColorMapOpts): Promise<BakedTexture> => {
   const { inputs, define } = getTerrainSource(opts);
   const bakeDefine = getBakeDefine(define);
-  // The colour map's input, the ripple atlas, and the macro texture's when only the wet response's
-  // puddle patches read it: the define without them refuses them
-  const { colorMap: _colorMap, ripples: _ripples, macro, ...rest } = inputs;
+  // The colour map's input, the ripple atlas, the snow set, and the macro texture's when only the
+  // wet response's puddle patches or streaks read it: the define without them refuses them
+  const { colorMap: _colorMap, ripples: _ripples, snow: _snow, macro, ...rest } = inputs;
   const takesMacro = readTerrainDefine({ terrain: bakeDefine }).takesMacroTexture;
   const bakeInputs = takesMacro && macro !== undefined ? { ...rest, macro } : rest;
   const graph = new MeshStandardNodeMaterial();

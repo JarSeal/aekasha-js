@@ -77,6 +77,13 @@ describe('TerrainMaterialConfigSchema', () => {
     expect(issuesOf(configOf(1, { wet: {}, rippleTexture: 'r' }))).toEqual(['rippleTexture']);
   });
 
+  it('takes a snowSet only with snow, its own or a tier', () => {
+    expect(issuesOf(configOf(1, { wet: { snow: {} }, snowSet: 's' }))).toEqual([]);
+    const tier = { quality: { LOW: { wet: { snow: {} } } }, snowSet: 's' };
+    expect(issuesOf(configOf(1, tier))).toEqual([]);
+    expect(issuesOf(configOf(1, { wet: {}, snowSet: 's' }))).toEqual(['snowSet']);
+  });
+
   it('refuses SEPARATE storage where the layers sample in slots, its own or a tier', () => {
     const painted = { blend: { source: 'VERTEX_COLOR' } };
     const sparse = { sparse: { maxLayers: 2 } };

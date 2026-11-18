@@ -37,12 +37,14 @@ import { getSurfaceSpace } from '../nodes/SurfaceSpace';
 import { bumpNormalWorld, transformWorldNormalToView } from '../nodes/TerrainNormals';
 import { getSplatMapWeights, getVertexColorWeights, type PaintedWeights } from '../nodes/Weights';
 import {
+  getSnowBindings,
   getTerrainDefine,
   getTerrainInputs,
   readLayerSources,
   readColorMapTexture,
   readMacroTexture,
   readRippleTexture,
+  readSnowSet,
   readSplatMaps,
   type LayerParams,
 } from './TerrainInputs';
@@ -266,14 +268,16 @@ const getAoNode = (
  * `wet.streaks` rivulets run down steep faces while it rains and stay damp while it's wet, one
  * fetch of the input `macro` in a branch on the weather; with `wet.shoreline` the ground along the
  * surface conditions' `waterLevel` is washed, saturated and damp above (arithmetic, at the world's
- * position). With `space: 'OBJECT'` all of it is in the mesh's own space (its
+ * position); with `wet.snow` the input `snow` (a texture set) covers the surface by the surface
+ * conditions' `snowCoverage`, flat ground first (its taps in a branch on the cover; past a far
+ * mode's band its average colour), frozen dry below 0 °C and slush above. With `space: 'OBJECT'` all of it is in the mesh's own space (its
  * position × scale, its normal: coordinates, projections, rules, macro), the shaded normal turned
  * into world space before the view; `WORLD` (default) the world's. A live layer (`source:
  * 'PROCEDURAL_LIVE'`) runs its procedural set's generator in place of sampling (its whole graph at
  * each point: its tiling's, each projected plane's), its normal its bump of its height, or
  * `live.normal: 'TAPS'` a bake's, and binds no texture; it takes no anti-tiling. Only what the
- * define enables is built. The textures it binds (the layers', the splat maps, the macro texture, the colour map)
- * must fit the budget: the renderer's sampled textures a stage (16) less `reservedTextures` (6).
+ * define enables is built. The textures it binds (the layers', the splat maps, the macro texture,
+ * the ripple atlas, the snow set's, the colour map) must fit the budget: the renderer's sampled textures a stage (16) less `reservedTextures` (6).
  * The tunables are uniforms in `material.userData.uniforms`: per layer `terrain_l<i>_<name>`
  * (`tiling`, `rotation` when given, `tint`, `normalStrength`, `roughnessScale`; `heightContrast`
  * and `heightOffset` with the height blend; `farScale` and `antiTilingDistance` with `DUAL_SCALE`
@@ -295,15 +299,16 @@ const getAoNode = (
  * `terrain_wetRippleDistance` with its ripples, `terrain_wetStreakMinSlope`,
  * `terrain_wetStreakScale`, `terrain_wetStreakLength` and `terrain_wetStreakSpeed` with its
  * streaks, `terrain_wetShoreBand` and `terrain_wetShoreNoise` with its shoreline,
- * `terrain_wetShoreRunUp` with the shoreline's run-up).
+ * `terrain_wetShoreRunUp` with the shoreline's run-up, `terrain_wetSnowMaxSlope`,
+ * `terrain_wetSnowNoiseScale`, `terrain_wetSnowEdge` and `terrain_wetSnowTiling` with its snow).
  * A `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug env, once
  * {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the view. The
  * define as given is kept at `material.userData.terrainDefine`.
  * @param inputs the material's inputs: `layer<i>` bundles or the `layers` set array bundle (the
  * `textureSets()` feature's resolvers), with the splat map sources the splat maps `splat<i>` and
  * with `macro`, a rule's noise, puddle patches or streaks the macro texture `macro`, with ripples the ripple
- * atlas `ripples`, with `colorMap` the colour map
- * `colorMap` (texture nodes: `{ "texture": id }`)
+ * atlas `ripples`, with `colorMap` the colour map `colorMap` (texture nodes: `{ "texture": id }`),
+ * with snow the snow's set `snow` (a `{ textureSet }` bundle)
  * @param material the node material being built (a `STANDARDNODEMATERIAL`)
  * @param staticDefines the material's static defines, `terrain` among them
  * @throws for a missing or wrong define field, a field it doesn't know, a layer count the blend
@@ -364,12 +369,16 @@ export const buildTerrainGraph = (
   const macroTexture = readMacroTexture(inputs, define);
   const colorMapTexture = readColorMapTexture(inputs, define);
   const rippleTexture = readRippleTexture(inputs, define);
+  const snowSet = readSnowSet(inputs, define);
   checkTextureBudget(
-    getBindings(sources.bindings, splatMaps, {
-      hasMacro: macroTexture !== null,
-      hasRipples: rippleTexture !== null,
-      hasColorMap: colorMapTexture !== null,
-    }),
+    [
+      ...getBindings(sources.bindings, splatMaps, {
+        hasMacro: macroTexture !== null,
+        hasRipples: rippleTexture !== null,
+        hasColorMap: colorMapTexture !== null,
+      }),
+      ...getSnowBindings(snowSet),
+    ],
     define.reservedTextures,
     sources.isArray
   );
@@ -493,8 +502,13 @@ export const buildTerrainGraph = (
       wet: surface.wet,
       macroTexture,
       rippleTexture,
+      snowSet,
       splatAlpha: raw?.splatAlpha ?? null,
       viewDistance,
+      farShare:
+        distance.fade && distance.farBlend
+          ? getFarShare(viewDistance, distance.fade.y, distance.farBlend)
+          : null,
     },
     space
   );
@@ -535,6 +549,7 @@ export const buildTerrainGraph = (
       normal,
       define,
       packing,
+      snowTaps: snowSet ? getSnowBindings(snowSet)[0].count : 0,
     });
   }
 };

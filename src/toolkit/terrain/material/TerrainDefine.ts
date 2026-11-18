@@ -138,12 +138,14 @@ const WET_KEYS = [
   'ripples',
   'streaks',
   'shoreline',
+  'snow',
 ];
 const WET_PUDDLE_KEYS = ['maxSlope', 'edge', 'patches'];
 const WET_RIPPLE_KEYS = ['scale', 'lifetime', 'strength', 'distance'];
 const WET_STREAK_KEYS = ['minSlope', 'scale', 'length', 'speed'];
 const WET_SHORELINE_KEYS = ['band', 'noise', 'runUp'];
 const WET_RUN_UP_KEYS = ['height', 'period'];
+const WET_SNOW_KEYS = ['maxSlope', 'noiseScale', 'edge', 'tiling'];
 const WET_PATCH_KEYS = ['scale', 'amount'];
 const WET_SPLAT_CHANNELS = ['A'] as const;
 /** The vertex attribute a regional wetness reads by default: glTF's `_WETNESS` (GLTFLoader's
@@ -313,6 +315,20 @@ export type TerrainWetDefine = {
   streaks: TerrainStreaksDefine | null;
   /** The shoreline along the water level, or null for none */
   shoreline: TerrainShorelineDefine | null;
+  /** The snow cover (the input `snow`, a texture set), or null for none */
+  snow: TerrainSnowDefine | null;
+};
+
+/** The wet response's snow cover with its defaults filled in (p307 T10) */
+export type TerrainSnowDefine = {
+  /** The steepest slope the snow rests on, degrees from flat */
+  maxSlope: number;
+  /** The drift noise's cell, metres */
+  noiseScale: number;
+  /** The share of the cover over which the snow's edge fades in */
+  edge: number;
+  /** The snow set's tiling */
+  tiling: number;
 };
 
 /** The wet response's shoreline with its defaults filled in (p307 T8) */
@@ -397,6 +413,11 @@ export type ResolvedTerrainDefine = {
    * has ripples
    */
   takesRippleTexture: boolean;
+  /**
+   * Whether the define takes the input `snow` (a texture set): its wet response or a tier's has
+   * snow
+   */
+  takesSnowSet: boolean;
   /** The detail normals' fade, view distances in metres, or null for none */
   distanceFade: [number, number] | null;
   /** The far surface past the fade's end (`distance.far`), or null for none (`NONE`) */
@@ -442,6 +463,7 @@ export const TERRAIN_DEFINE_VALUES = {
   wetStreakKeys: WET_STREAK_KEYS,
   wetShorelineKeys: WET_SHORELINE_KEYS,
   wetRunUpKeys: WET_RUN_UP_KEYS,
+  wetSnowKeys: WET_SNOW_KEYS,
   wetSplatChannels: WET_SPLAT_CHANNELS,
   colorMapKeys: COLOR_MAP_KEYS,
   farModes: FAR_MODES,
@@ -1249,6 +1271,22 @@ const readWet = (value: unknown, path: string): TerrainWetDefine | null => {
     ripples: readRipples(wet.ripples, `${path}.ripples`),
     streaks: readStreaks(wet.streaks, `${path}.streaks`),
     shoreline: readShoreline(wet.shoreline, `${path}.shoreline`),
+    snow: readSnow(wet.snow, `${path}.snow`),
+  };
+};
+
+/** The snow cover's numbers (p307 T10), their defaults filled in; null without */
+const readSnow = (value: unknown, path: string): TerrainSnowDefine | null => {
+  if (value === undefined) return null;
+  const snow = readObject(value, path);
+  checkKeys(snow, WET_SNOW_KEYS, path);
+  const { snowMaxSlope, snowNoiseScale, snowEdge, snowTiling } = SURFACE_WETNESS_DEFAULTS;
+  const over0 = { min: { value: 0, isExclusive: true } };
+  return {
+    maxSlope: readNumber(snow, 'maxSlope', snowMaxSlope, { ...over0, max: { value: 90 } }, path),
+    noiseScale: readNumber(snow, 'noiseScale', snowNoiseScale, over0, path),
+    edge: readNumber(snow, 'edge', snowEdge, { ...over0, max: { value: 1 } }, path),
+    tiling: readNumber(snow, 'tiling', snowTiling, over0, path),
   };
 };
 
@@ -1380,6 +1418,9 @@ const hasWetMacroNoise = (wet: unknown) =>
 
 /** Whether a wet response (the material's or a tier's, as given) has ripples: the input `ripples` */
 const hasRipples = (wet: unknown) => isRecord(wet) && wet.ripples !== undefined;
+
+/** Whether a wet response (the material's or a tier's, as given) has snow: the input `snow` */
+const hasSnow = (wet: unknown) => isRecord(wet) && wet.snow !== undefined;
 
 /**
  * The `WETNESS` debug view against the wet response: the material's `wet` or a tier's must be
@@ -1530,6 +1571,7 @@ export const readTerrainDefine = (
     takesRippleTexture: [define.wet, ...Object.values(quality).map((tier) => tier.wet)].some(
       hasRipples
     ),
+    takesSnowSet: [define.wet, ...Object.values(quality).map((tier) => tier.wet)].some(hasSnow),
     reservedTextures: readReservedTextures(define),
     distanceFade: distance?.fade ?? null,
     far: distance?.far ?? null,
