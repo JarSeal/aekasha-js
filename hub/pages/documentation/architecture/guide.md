@@ -2,7 +2,7 @@
 
 ```text noLineNumbers
 src/
-  _engine/    the kernel, fourteen opt-in features, the UI kit, the debugger
+  _engine/    the kernel, sixteen opt-in features, the UI kit, the debugger
   toolkit/    ready-made pieces: ECS effects and gameplay, geometry,
               materials, and assets (models, textures, sky boxes)
   app/        your game: its scenes, assets and code
@@ -23,9 +23,10 @@ src/
 
 The **kernel** is what every app runs: the ECS, the main loop, the configuration, scenes and the
 scene loader, assets, the renderer, cameras, lights, meshes and input. A **feature** is
-everything else, opt-in: `physics()`, `physicsTiers()`, `character()`, `skyBox()`, `lod()`,
-`spatial()`, `instancing()`, `lines()`, `postFx()`, `viewports()`, `streaming()`, `merging()` and `textureSets()`, each from its own entry
-(`physicsTiers()` shares `physics()`'s), and the app's own (`appECSPlugins`). `InitEngine` boots in this order:
+everything else, opt-in: `physics()`, `physicsTiers()`, `character()`, `skyBox()`,
+`surfaceConditions()`, `rainOcclusion()`, `lod()`, `spatial()`, `instancing()`, `lines()`,
+`postFx()`, `viewports()`, `streaming()`, `merging()`, `textureSets()` and `terrain()`, each from
+its own entry (`physicsTiers()` shares `physics()`'s, `rainOcclusion()` `surfaceConditions()`'), and the app's own (`appECSPlugins`). `InitEngine` boots in this order:
 
 ```text noLineNumbers
 InitEngine({ config, data, features, start })

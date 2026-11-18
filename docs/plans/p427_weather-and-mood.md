@@ -24,10 +24,22 @@ between weather presets.
 
 ## Grounding (2026-11-04)
 
-- **p307 already defines the materials' half:** an engine-level surface conditions state (wetness,
-  rain, puddle level, water level, snow coverage) with a drying model, and says a later weather plan
-  should drive that state rather than replace it. So this plan drives p307's state; it doesn't own
-  a second copy of wetness.
+- **p307 built the materials' half** (2026-11-18, `src/_engine/features/surface/CLAUDE.md`): the
+  `surfaceConditions()` feature on `aekasha/surface`, one global state (`wetness`, `rain`,
+  `puddleLevel`, `waterLevel`, `snowCoverage`, `temperature`, `dryingRate`, `wind`, `mode`) that
+  wet materials read through stable uniforms (`getSurfaceConditionNodes()`), simulated in
+  `SIMULATED` mode (rain wets, the sun and the wind dry, snow melts) or set by the app in `MANUAL`.
+  This plan drives it through the public API (`setSurfaceConditions(values, { transitionSec })`,
+  `startRain`, `stopRain`), most likely in `MANUAL` mode with its own presets; it doesn't own a
+  second copy of wetness. Its `wind` is the one vector open question 4 asks about, and
+  `rainOcclusion()` (a depth map from above, same entry) keeps the ground under roofs dry.
+- **The sun source:** the drying reads the sun's elevation through `setSurfaceSunSource(fn)`, which
+  the template's `appECSPlugins` points at the sky box's `getSunElevation()`. When this plan owns
+  the time of day, that one line points at the world clock's sun instead.
+- **A third clock:** the surface clock (`getSurfaceTime()`, the rain rings' and the streaks'
+  time and the simulation's) advances by `getElapsedTime()`'s change like the sky clock, stands
+  still while a scene loads and restarts at every scene. It's visual, so it can stay on frame
+  time; anything gameplay reads from the weather (wet friction, p307 T14) can't (open question 5).
 - No fog (`scene.fog` / fog nodes) and no audio in the engine.
 - PostFX passes are TSL files with `params` (`schemas/PostFxSchema.ts`, the `postFx()` feature);
   there is no colour grade or LUT pass. A mood drives a pass's params. three r187 adds a lens dirt
