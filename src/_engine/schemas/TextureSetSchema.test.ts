@@ -12,7 +12,14 @@ const valid = {
     FULL: { albedoHeight: 'sand01_albedoHeight', normal: 'sand01_normal', orm: 'sand01_orm' },
     MINIMAL: { albedoHeight: 'sand01_albedoHeightAO' },
   },
-  surface: { tint: '#ffffff', porosity: 0.85, wetDarkening: 0.55, wetRoughness: 0.4 },
+  surface: {
+    tint: '#ffffff',
+    porosity: 0.85,
+    wetDarkening: 0.55,
+    wetRoughness: 0.4,
+    puddleResponse: 0.3,
+    dryingSpeed: 1.6,
+  },
   debugData: { name: 'Sand 01', description: 'ambientCG Ground080, CC0' },
 };
 
@@ -60,6 +67,12 @@ describe('TextureSetAssetSchema', () => {
     ],
     ['an unknown surface field', { ...valid, surface: { shininess: 1 } }, 'surface'],
     ['a porosity over 1', { ...valid, surface: { porosity: 2 } }, 'surface.porosity'],
+    [
+      'a puddle response over 1',
+      { ...valid, surface: { puddleResponse: 1.5 } },
+      'surface.puddleResponse',
+    ],
+    ['a drying speed of 0', { ...valid, surface: { dryingSpeed: 0 } }, 'surface.dryingSpeed'],
   ])('fails on %s', (_name, value, path) => {
     expect(issuePaths(value)).toContain(path);
   });

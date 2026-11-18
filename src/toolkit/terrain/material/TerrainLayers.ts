@@ -3,7 +3,7 @@
 // surfaces blended by weight. The dense path builds one per layer at its own index
 // (`TerrainMaterial.ts`), the slot path one per slot at the layer weighing most there
 // (`TerrainSlots.ts`, sparse sampling and `DOMINANT`): the same code over picked uniforms.
-import { color, float, mix, uniform, uv as meshUv, vec2, vec3 } from 'three/tsl';
+import { color, float, mix, uniform, uv as meshUv, vec2, vec3, vec4 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import { Vector2, type Node, type NodeMaterial } from 'three/webgpu';
 import { existsOrThrow } from 'aekasha';
@@ -71,11 +71,28 @@ export type LayerUniforms = {
 };
 
 /**
- * What the wet response reads of a layer's surface (p307): its height, 0..1, and its set's
- * response, `porosity`, `wetDarkening` and `wetRoughness`; blended by weight like the rest
+ * What the wet response reads of a layer's surface (p307): its height, 0..1, its set's response,
+ * `porosity`, `wetDarkening`, `wetRoughness` and `dryingSpeed` (x, y, z, w), and its set's
+ * `puddleResponse`; blended by weight like the rest
  * @internal
  */
-export type LayerWet = { height: Node<'float'>; response: Node<'vec3'> };
+export type LayerWet = {
+  height: Node<'float'>;
+  response: Node<'vec4'>;
+  puddleResponse: Node<'float'>;
+};
+
+/**
+ * A set's wet response as one vec4 (`LayerWet`'s), from its params.
+ * @internal
+ */
+export const getWetResponse = (params: LayerParams) =>
+  vec4(
+    params.porosity,
+    params.wetDarkening,
+    params.wetRoughness,
+    params.dryingSpeed
+  ) as unknown as Node<'vec4'>;
 
 /**
  * A layer's surface, its normal in world space: what the layers blend (one, for `SINGLE`)
@@ -388,11 +405,8 @@ export const getLayerSurface = (
     wet: define.wet
       ? {
           height: sample.height,
-          response: vec3(
-            params.porosity,
-            params.wetDarkening,
-            params.wetRoughness
-          ) as unknown as Node<'vec3'>,
+          response: getWetResponse(params),
+          puddleResponse: params.puddleResponse,
         }
       : null,
   };
@@ -409,7 +423,9 @@ export const blendSurfaces = (
   bumpBlended = false,
   space: SurfaceSpace = getSurfaceSpace()
 ): LayerSurface => {
-  const sum = <T extends Node<'float'> | Node<'vec3'>>(pick: (surface: LayerSurface) => T) =>
+  const sum = <T extends Node<'float'> | Node<'vec3'> | Node<'vec4'>>(
+    pick: (surface: LayerSurface) => T
+  ) =>
     surfaces
       .map((surface, i) => pick(surface).mul(weights[i]) as unknown as T)
       .reduce((total, value) => total.add(value) as unknown as T);
@@ -429,6 +445,7 @@ export const blendSurfaces = (
       ? {
           height: sum((surface) => (surface.wet as LayerWet).height),
           response: sum((surface) => (surface.wet as LayerWet).response),
+          puddleResponse: sum((surface) => (surface.wet as LayerWet).puddleResponse),
         }
       : null,
   };

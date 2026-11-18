@@ -63,6 +63,46 @@ describe('applySurfaceWetness', () => {
     expect(collectNodes([wet.masks.film]).has(surface.response.porosity)).toBe(true);
   });
 
+  it("shows the overall wetness to the drying speed's power; 1 or none adds no power", () => {
+    const conditions = makeConditions();
+    const dryingSpeed = uniform(1.6) as unknown as Node<'float'>;
+    const surface = makeSurface();
+    const wet = applySurfaceWetness(
+      { ...surface, response: { ...surface.response, dryingSpeed } },
+      conditions
+    );
+    const countPow = (root: unknown) =>
+      [...collectNodes([root])].filter((node) => (node as { method?: string }).method === 'pow')
+        .length;
+    expect(collectNodes([wet.masks.wetness]).has(dryingSpeed)).toBe(true);
+    expect(countPow(wet.masks.wetness)).toBe(1);
+    const alike = applySurfaceWetness(
+      { ...surface, response: { ...surface.response, dryingSpeed: 1 } },
+      conditions
+    );
+    expect(countPow(alike.masks.wetness)).toBe(0);
+    expect(countPow(applySurfaceWetness(surface, conditions).masks.wetness)).toBe(0);
+  });
+
+  it('films as far as water stands on it, and darkens by wetDarkening alone', () => {
+    const conditions = makeConditions();
+    const puddleResponse = uniform(0.2) as unknown as Node<'float'>;
+    const surface = makeSurface();
+    const wet = applySurfaceWetness(
+      { ...surface, response: { ...surface.response, puddleResponse } },
+      conditions
+    );
+    expect(collectNodes([wet.masks.film]).has(puddleResponse)).toBe(true);
+    expect(collectNodes([wet.roughness]).has(puddleResponse)).toBe(true);
+    // The darkening's product: the pores' stage (by the porosity) × wetDarkening, no second porosity
+    const products = [...collectNodes([wet.albedo])].filter(
+      (node) =>
+        (node as { op?: string }).op === '*' &&
+        (node as { bNode?: unknown }).bNode === wet.masks.pores
+    );
+    expect(products).toHaveLength(1);
+  });
+
   it('SIMPLE reads no relief, no cavity and leaves the normal', () => {
     const conditions = makeConditions();
     const surface = makeSurface();

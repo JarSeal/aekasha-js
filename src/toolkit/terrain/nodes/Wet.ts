@@ -1,10 +1,11 @@
 // The wet response (p307 D2, T1 T2 T6): a surface under the surface conditions' wetness. Rain
 // reaches what faces the sky (the geometry normal's world Y: overhangs and undersides stay dry);
 // the local wetness rises first in the low points and cavities and last on the peaks; then two
-// stages: the pores fill (the albedo darkens by the porosity, the roughness falls a little toward
-// the response's), then a water film forms over them (the roughness falls to water's, the detail
-// normal flattens toward the geometry's). A porous surface fills its pores before any film; a
-// dense one gets the film at once. Every number of the response is a node: a terrain material's
+// stages: the pores fill (the albedo darkens by the response's darkening, the roughness falls a
+// little toward the response's), then a water film forms over them where water stands (the
+// roughness falls to water's, the detail normal flattens toward the geometry's). A porous surface
+// fills its pores before any film, a dense one gets the film at once; one that sheds water (grass,
+// a cliff face) gets little film or none. Every number of the response is a node: a terrain material's
 // are its layers' set uniforms blended by weight, an app material's its own. No texture fetch.
 import { float, max, mix, normalWorldGeometry, smoothstep, vec2 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
@@ -28,6 +29,8 @@ const FILM_FLATTEN = 0.6;
 const PORE_SHARE = 0.5;
 /** The pores' stage at its narrowest: a nearly dense surface glosses over a little wetness, not at once */
 const MIN_PORE_STAGE = 0.1;
+/** The lowest drying speed the power takes: 0 would show any wetness as full */
+const MIN_DRYING_SPEED = 0.05;
 const DEG_TO_RAD = Math.PI / 180;
 
 /**
@@ -51,10 +54,21 @@ const toFloat = (value: Node<'float'> | number) =>
 export type SurfaceWetResponse = {
   /** How much water the surface soaks up: 0 none (ice, metal: a film at once), 1 all (sand). */
   porosity: Node<'float'> | number;
-  /** How much the filled pores darken the albedo (× the porosity), 0 none, 1 black. */
+  /** How much the filled pores darken the albedo, 0 none, 1 black. */
   wetDarkening: Node<'float'> | number;
   /** The roughness with the pores full, before the film (never above the dry roughness). */
   wetRoughness: Node<'float'> | number;
+  /**
+   * How fast the surface dries against the overall wetness, over 0 (default 1): the wetness it
+   * shows is the overall one to this power, so under the same weather sand (1.6) shows less of it
+   * and mud (0.4) more; 0 and 1 stay as they are.
+   */
+  dryingSpeed?: Node<'float'> | number;
+  /**
+   * How readily water stands on the surface, 0..1 (default 1): how far a film forms over the full
+   * pores (0: none, a surface that sheds water; p307's puddles read it too).
+   */
+  puddleResponse?: Node<'float'> | number;
 };
 
 /** The surface {@link applySurfaceWetness} wets. */
@@ -122,7 +136,7 @@ export type SurfaceWetnessMasks = {
   wetness: Node<'float'>;
   /** The pores' stage: how full they are. */
   pores: Node<'float'>;
-  /** The film's stage: how far the water film has formed over the full pores. */
+  /** The film's stage: how far the water film has formed over the full pores (× `puddleResponse`). */
   film: Node<'float'>;
 };
 
@@ -137,10 +151,11 @@ export type WetSurface = {
 
 /**
  * Wets a surface by the surface conditions (p307 T1, T2, T6): the conditions' `wetness` where rain
- * reaches it (the geometry's facing, `shelter`), shifted by the relief (low points first, peaks
- * last) and the cavities, darkens the albedo as the pores fill (`wetDarkening` × `porosity`),
- * lowers the roughness to `wetRoughness` and then, as a film forms over the full pores, to water's
- * (`WET_FILM_ROUGHNESS`, 0.05), and flattens the detail normal under the film. A dense surface
+ * reaches it (the geometry's facing, `shelter`), to the power of its `dryingSpeed`, shifted by the
+ * relief (low points first, peaks last) and the cavities, darkens the albedo as the pores fill
+ * (`wetDarkening`), lowers the roughness to `wetRoughness` and then, as a film forms over the full
+ * pores (as far as water stands on it, `puddleResponse`), to water's (`WET_FILM_ROUGHNESS`, 0.05;
+ * neither ever raises it), and flattens the detail normal under the film. A dense surface
  * (`porosity` 0) gets the film at once, a porous one (1) fills its pores over the first half of
  * its local wetness. Builds no texture fetch and no branch; at wetness 0 the surface is as given.
  * @param surface the dry surface, its relief, cavity and response
@@ -181,7 +196,12 @@ export const applySurfaceWetness = (
     : vec2(shelter[0], shelter[1])) as unknown as Node<'vec2'>;
   const cosines = angles.mul(DEG_TO_RAD).cos() as Node<'vec2'>;
   const exposure = smoothstep(cosines.y, cosines.x, up) as unknown as Node<'float'>;
-  const global = (conditions.wetness as unknown as Node<'float'>).mul(exposure) as Node<'float'>;
+  let global = (conditions.wetness as unknown as Node<'float'>).mul(exposure) as Node<'float'>;
+  // The surface's own drying: the wetness it shows, the overall one to its drying speed
+  const { dryingSpeed } = surface.response;
+  if (dryingSpeed !== undefined && dryingSpeed !== 1) {
+    global = global.pow(max(toFloat(dryingSpeed), MIN_DRYING_SPEED)) as Node<'float'>;
+  }
 
   // T2: the low points ahead of the overall wetness, the peaks behind (w + k·(w − h): 0 stays dry,
   // 1 wets every height), the cavities wetter by their share of it
@@ -203,12 +223,18 @@ export const applySurfaceWetness = (
   // T1: the pores over the first share of the wetness (by the porosity), the film over the rest
   const split = porosity.mul(PORE_SHARE) as Node<'float'>;
   const pores = local.div(max(split, MIN_PORE_STAGE)).saturate() as Node<'float'>;
-  const film = local.sub(split).div(float(1).sub(split)).saturate() as Node<'float'>;
-  const albedo = surface.albedo.mul(
-    float(1).sub(darkening.mul(porosity).mul(pores))
-  ) as Node<'vec3'>;
+  // As far as water stands on it: a surface that sheds water films little or not at all
+  const { puddleResponse } = surface.response;
+  const filmStage = local.sub(split).div(float(1).sub(split)).saturate() as Node<'float'>;
+  const film = (
+    puddleResponse === undefined || puddleResponse === 1
+      ? filmStage
+      : filmStage.mul(toFloat(puddleResponse))
+  ) as Node<'float'>;
+  const albedo = surface.albedo.mul(float(1).sub(darkening.mul(pores))) as Node<'vec3'>;
   const pored = mix(surface.roughness, surface.roughness.min(wetRoughness), pores) as Node<'float'>;
-  const roughness = mix(pored, float(WET_FILM_ROUGHNESS), film) as Node<'float'>;
+  // A film is water's roughness, which never roughens a smoother surface (ice, polish)
+  const roughness = mix(pored, pored.min(WET_FILM_ROUGHNESS), film) as Node<'float'>;
   const geometryNormal = opts.geometryNormal ?? (normalWorldGeometry as unknown as Node<'vec3'>);
   const normal =
     surface.normal && isFull

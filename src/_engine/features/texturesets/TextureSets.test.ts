@@ -93,6 +93,8 @@ const SURFACE: TextureSetDef['surface'] = {
   porosity: 0.85,
   wetDarkening: 0.55,
   wetRoughness: 0.4,
+  puddleResponse: 0.3,
+  dryingSpeed: 1.6,
 };
 
 const makeSet = (id: string, extra: Partial<TextureSetDef> = {}): TextureSetDef => ({

@@ -3523,6 +3523,7 @@
       "TEXTURE_SET_PACKINGS": "Variable",
       "TEXTURE_SET_PROCEDURAL_DEFAULTS": "Variable",
       "TEXTURE_SET_SURFACE_DEFAULTS": "Variable",
+      "TEXTURE_SET_WET_RESPONSES": "Variable",
       "TextureSetArrayInputSchema": "Variable",
       "TextureSetAsset": "TypeAlias",
       "TextureSetAssetSchema": "Variable",
@@ -3533,7 +3534,8 @@
       "TextureSetProcedural": "TypeAlias",
       "TextureSetProceduralDef": "TypeAlias",
       "TextureSetSlot": "TypeAlias",
-      "TextureSetSurface": "TypeAlias"
+      "TextureSetSurface": "TypeAlias",
+      "TextureSetWetResponse": "TypeAlias"
     },
     "src/_engine/types/three-node-material-helpers.d.ts": {},
     "src/_engine/ui/components/Accordion.ts": {
@@ -5052,6 +5054,7 @@
       "getLayerCoords": "Function",
       "getLayerSurface": "Function",
       "getLayerUv": "Function",
+      "getWetResponse": "Function",
       "keepUniform": "Function",
       "LayerSurface": "TypeAlias",
       "LayerUniforms": "TypeAlias",
@@ -6192,6 +6195,7 @@
       "TEXTURE_SET_PACKING_PREFERENCE",
       "TEXTURE_SET_PROCEDURAL_DEFAULTS",
       "TEXTURE_SET_SURFACE_DEFAULTS",
+      "TEXTURE_SET_WET_RESPONSES",
       "TEXTURE_SLOTS",
       "TerrainBlockAsset",
       "TerrainBlockAssetSchema",
@@ -6223,6 +6227,7 @@
       "TextureSetProceduralDef",
       "TextureSetSlot",
       "TextureSetSurface",
+      "TextureSetWetResponse",
       "TextureSettings",
       "TextureSlot",
       "UnionToIntersection",

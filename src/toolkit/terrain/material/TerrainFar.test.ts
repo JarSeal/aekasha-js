@@ -67,6 +67,8 @@ const makeBundle = (packing: Packing) =>
     porosity: uniform(0.5),
     wetDarkening: uniform(0.5),
     wetRoughness: uniform(0.3),
+    puddleResponse: uniform(0.5),
+    dryingSpeed: uniform(1),
     averageColor: uniform(color(0.4, 0.3, 0.2)),
   }) as unknown as TextureSetInput;
 
@@ -74,7 +76,7 @@ const makeArrayBundle = (count: number) =>
   ({
     ...Object.fromEntries(PACKING_SLOTS.LITE.map((slot) => [slot, texture(new Texture())])),
     layerParams: uniformArray(
-      Array.from({ length: count * 4 }, () => new Vector4(3, 3, 0.05, 1)),
+      Array.from({ length: count * 5 }, () => new Vector4(3, 3, 0.05, 1)),
       'vec4'
     ),
     layerCount: int(count),
@@ -454,7 +456,7 @@ describe('the far branch', () => {
       (node) => node.structNode?.node?.shaderNode
     ) as unknown as { property: string }[];
     const names = [...new Set(members.map((member) => member.property))].sort();
-    expect(names).toEqual(['albedo', 'roughness', 'wetHeight', 'wetResponse']);
+    expect(names).toEqual(['albedo', 'roughness', 'wetHeight', 'wetPuddleResponse', 'wetResponse']);
     const { before, inBranch } = getBranch(material);
     const far = collectNodes(before);
     for (const bundle of [inputs.layer0, inputs.layer1]) {

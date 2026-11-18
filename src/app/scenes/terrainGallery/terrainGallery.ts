@@ -24,6 +24,7 @@ import { COLOR_MAP_ROW_BOUNDS, createColorMapRowAsync } from './colorMapRow';
 import { createStructuresRow, STRUCTURES_ROW_BOUNDS } from './structuresRow';
 import { createLiveBlock, LIVE_BLOCK_BOUNDS } from './liveBlock';
 import { createPatchRowAsync } from './patchRow';
+import { createWetRow, WET_ROW_BOUNDS } from './wetRow';
 import {
   createProceduralRowAsync,
   PROCEDURAL_ROW_DEPTH,
@@ -34,7 +35,7 @@ import {
  * The terrain gallery (p303 D8): the toolkit's 16 texture sets, one isolated generated block each,
  * drawn by the toolkit's terrain material (p305, its JSON route `terrain`) in the set's default
  * packing, and right of them the Procedural row (p304 Phase 6), the toolkit's ten surface
- * generators. Where p305 adds a row per technique, p307 the wet controls and p310 its camera
+ * generators. Where p305 adds a row per technique, p307 the Wet/dry row and p310 its camera
  * presets and measurements.
  *
  * - **The library:** 4 × 4 blocks of 12 × 12 m with 4 m gaps over a dark ground, a row per pair of
@@ -77,6 +78,11 @@ import {
  *   two segments in world space and a bunker's passage piece in object space, both worn by their
  *   vertex colour (clean, stained, grime, damage), and two pillars turning and rising in object
  *   space beside world space; the tab pauses them.
+ * - **The Wet/dry row** (`wetRow.ts`, p307 Phase 2): 3 × 3 library blocks left of the Splatting
+ *   row, a set of each category and a beach (sand, rocks on the ramp by slope), each the terrain
+ *   material with `wet` over the surface conditions' wetness, which the scene's JSON holds
+ *   (`MANUAL`, 0.6); the tab's slider and steps set it and switch the row's quality and the
+ *   `WETNESS` view.
  * - **The Procedural row** (`proceduralRow.ts`): five rows of two blocks 8 m right of the library,
  *   a generator each (`PROCEDURAL_BLOCKS`: sand, mud, rocks and strata, snow and ice, grass and
  *   concrete from the back), baked during the load (`bakeSurfaceGenerator`, 1024² `LITE`: the
@@ -204,13 +210,14 @@ export const scene = async () => {
     for (const cleanup of exitCleanups.splice(0)) cleanup();
   });
   // The ground under the library (centred on x = 0), the Procedural row right of it, the
-  // Splatting row left of it, the Anti-tiling row behind it, the Rules row in front, the Cliffs
+  // Splatting row left of it and the Wet/dry row left of that, the Anti-tiling row behind it, the Rules row in front, the Cliffs
   // row in front of that, the Colour map row in front of that and the Structures row in front of
   // that
   const left = Math.min(
     -(ROWS[0].length * BLOCK_PITCH) / 2 - BLOCK_GAP / 2,
     ANTI_TILING_ROW_BOUNDS.minX - BLOCK_GAP,
     SPLATTING_ROW_BOUNDS.minX - BLOCK_GAP,
+    WET_ROW_BOUNDS.minX - BLOCK_GAP,
     CLIFFS_ROW_BOUNDS.minX - BLOCK_GAP,
     COLOR_MAP_ROW_BOUNDS.minX - BLOCK_GAP,
     STRUCTURES_ROW_BOUNDS.minX - BLOCK_GAP
@@ -253,6 +260,7 @@ export const scene = async () => {
   GALLERY_BLOCKS.forEach((block, i) => createBlock(block, SEED_BASE + i));
   createAntiTilingRow();
   createSplattingRow();
+  createWetRow();
   createRulesRow();
   createCliffsRow();
   await createColorMapRowAsync();

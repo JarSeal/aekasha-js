@@ -49,6 +49,8 @@ const makeBundle = (packing: Packing = 'LITE', { averageColor = false } = {}) =>
     porosity: uniform(0.5),
     wetDarkening: uniform(0.5),
     wetRoughness: uniform(0.3),
+    puddleResponse: uniform(0.5),
+    dryingSpeed: uniform(1),
   }) as unknown as TextureSetInput;
 
 /** A `{ textureSetArray }` bundle of the packing's slot arrays, its params and layer count */
@@ -56,7 +58,7 @@ const makeArrayBundle = (count: number, packing: Packing = 'LITE') =>
   ({
     ...Object.fromEntries(PACKING_SLOTS[packing].map((slot) => [slot, texture(new Texture())])),
     layerParams: uniformArray(
-      Array.from({ length: count * 4 }, () => new Vector4(3, 3, 0.05, 1)),
+      Array.from({ length: count * 5 }, () => new Vector4(3, 3, 0.05, 1)),
       'vec4'
     ),
     layerCount: int(count),
@@ -1302,6 +1304,8 @@ describe('setupTerrainMaterial: wet (p307)', () => {
       expect(reaches(material.colorNode, bundle.porosity), key).toBe(true);
       expect(reaches(material.colorNode, bundle.wetDarkening), key).toBe(true);
       expect(reaches(material.roughnessNode, bundle.wetRoughness), key).toBe(true);
+      expect(reaches(material.colorNode, bundle.dryingSpeed), key).toBe(true);
+      expect(reaches(material.roughnessNode, bundle.puddleResponse), key).toBe(true);
     }
     const aoInfluence = getUniforms(material).terrain_aoTextureInfluence;
     expect(reaches(material.colorNode, aoInfluence)).toBe(true);

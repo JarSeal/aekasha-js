@@ -1,8 +1,9 @@
 // The terrain material's wet response (p307 D2): the blended surface wet by the surface conditions
 // (`nodes/Wet.ts`' `applySurfaceWetness`) after the layers, the far branch and the macro, its
-// relief the layers' blended height, its response their sets' `porosity`, `wetDarkening` and
-// `wetRoughness` by weight, its cavities the AO. The conditions are the `surfaceConditions()`
-// feature's stable uniforms; without the feature the material builds dry, warned once a page load.
+// relief the layers' blended height, its response their sets' `porosity`, `wetDarkening`,
+// `wetRoughness` and `dryingSpeed` by weight, its cavities the AO. The conditions are the
+// `surfaceConditions()` feature's stable uniforms; without the feature the material builds dry,
+// warned once a page load.
 import { float, uniform } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import { Vector2, type Node, type NodeMaterial } from 'three/webgpu';
@@ -57,7 +58,7 @@ export const applyTerrainWetness = (
   }
   const keep = <T>(name: string, node: unknown) => keepUniform(material, name, node) as T;
   const isFull = settings.quality === 'FULL';
-  const { height, response } = surface.wet;
+  const { height, response, puddleResponse } = surface.wet;
   const wet = applySurfaceWetness(
     {
       albedo: surface.albedo,
@@ -69,6 +70,8 @@ export const applyTerrainWetness = (
         porosity: response.x as Node<'float'>,
         wetDarkening: response.y as Node<'float'>,
         wetRoughness: response.z as Node<'float'>,
+        dryingSpeed: response.w as Node<'float'>,
+        puddleResponse,
       },
     },
     conditions,

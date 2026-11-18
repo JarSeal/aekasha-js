@@ -46,6 +46,8 @@ const makeBundle = () =>
     porosity: uniform(0.5),
     wetDarkening: uniform(0.5),
     wetRoughness: uniform(0.3),
+    puddleResponse: uniform(0.5),
+    dryingSpeed: uniform(1),
     averageColor: uniform(color(0.4, 0.3, 0.2)),
   }) as unknown as TextureSetInput;
 

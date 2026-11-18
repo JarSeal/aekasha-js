@@ -61,6 +61,10 @@ export type LayerParams = {
   wetDarkening: Node<'float'>;
   /** The roughness with the pores full */
   wetRoughness: Node<'float'>;
+  /** How fast the set dries against the overall wetness (its power) */
+  dryingSpeed: Node<'float'>;
+  /** How readily water stands on the set: its film over full pores, its puddles */
+  puddleResponse: Node<'float'>;
   /**
    * The set's average colour, linear: a set array's layer always has one (mid-grey for a set
    * without), a `{ textureSet }` bundle only when its set has one

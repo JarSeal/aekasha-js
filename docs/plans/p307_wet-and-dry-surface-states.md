@@ -257,6 +257,25 @@ type SurfaceConditions = {
 - **`WETNESS` view:** R the pores, G the film (B is left for Phase 3's puddles), over the faint checker, with a dark-grey floor. Both readers refuse it without `wet` (the material's or a tier's). `TAPS` doesn't change (no fetch).
 - **For section 2:** the set array's `layerParams` is full (4 vec4 a layer, all 16 floats used), so `puddleResponse` and `dryingSpeed` need a fifth vec4 (`PARAMS_PER_LAYER` 4 → 5, `writeLayerParams`, `getTextureSetLayerParams`). The category defaults change `TEXTURE_SET_SURFACE_DEFAULTS`' flat wet values into a per-category table, which the gatherer fills.
 
+**As built (section 2):**
+
+- **The data (engine):** `surface` gained `puddleResponse` (0..1) and `dryingSpeed` (over 0). `TEXTURE_SET_WET_RESPONSES` (`aekasha/schemas`, with the type `TextureSetWetResponse`) holds S3's five values per category, `OTHER` the flat defaults. The gatherer fills a set's missing fields from its category first, then from `TEXTURE_SET_SURFACE_DEFAULTS`. The library's sets give none of the five, so they're their categories'. The set array's `layerParams` is 5 vec4 a layer (`puddleResponse`, `dryingSpeed`, two spare).
+- **`dryingSpeed`** is a power: the wetness a surface shows is `(wetness × exposure)^dryingSpeed` (floored at 0.05), so 0 and 1 stay where they are, sand (1.6) shows less and mud (0.4) more.
+- **Two changes from S4, after the first look on WebGPU:**
+  - The darkening is `wetDarkening × pores`, no longer × the porosity too. S3's values already encode the material, and the product left cliffs at 5 % and snow at 12 %. The porosity sets only the stages.
+  - The film is × `puddleResponse` ("how readily water stands on it": the film and Phase 3's puddles). Every set filmed into a mirror before, grass included, which S3 says sheds water: now grass gets a fifth of the film and cliffs none (their pores' 0.15 roughness still glistens).
+  - Also: the film never raises the roughness (ice's 0.02 is under the film's 0.05).
+- **The graph:** `LayerWet` is `{ height, response (vec4: porosity, darkening, wetRoughness, dryingSpeed), puddleResponse }`; the far branch adds the `wetPuddleResponse` member.
+- **The gallery's Wet/dry row** (`src/app/scenes/terrainGallery/wetRow.ts`):
+  - Layout: 3 × 3 library blocks left of the Splatting row, x −142..−98: sand02, mud02, rocks01 / cliffs01, snow01, ice01 / grass01, concrete02 and a beach (sand02 with rocks01 on slopes past 22°, `RULES`, height-blended). Code route materials with `wet: {}`; the quality and the view are variants.
+  - The scene's JSON holds the conditions (`surfaceConditions: { mode: 'MANUAL', wetness: 0.6 }`), so nothing dries them.
+  - The tab's "Wet/dry row" section (`_dbg__terrainGalleryWet.ts`): the wetness slider, the exit's steps (0, 0.3, 0.6, 1), the row's quality, the `WETNESS` switch and the blocks' list, each block showing its set's response. The tab's own Debug view and Quality don't reach the row (`WETNESS` would throw on a material without `wet`).
+- **Measured** (2026-11-18, Windows Chrome on WebGPU, AMD RDNA 3; the row from 24 m up, the scene's 10:00 sky; no shader errors).
+  - Mean brightness against dry at wetness 1: mud 0.57, concrete 0.73, the beach's sand 0.77, sand 0.81, rocks 0.84, grass 0.85, cliffs 0.96, snow and ice 0.95.
+  - The bright and dense sets darken little on screen: their gloss reflects the bright sky back.
+  - Mud, grass and concrete are as dark at 0.3 as at 1 (their pores fill early); sand barely changes before 0.6.
+  - What this exit judges is the look against photos. The reference photos for the handbook page come with Phase 7's page.
+
 **Gallery row "Wet/dry"** (p310 completes it): one 12 m block per category plus a blended beach block, with a global wetness slider.
 
 **Exit:** each category reads as plausibly wet at 0.3 / 0.6 / 1.0 when judged side by side against reference photos (collect 1–2 photo references per category from CC0 sources into the handbook page).

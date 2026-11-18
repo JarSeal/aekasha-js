@@ -12,7 +12,7 @@
 // bump is the caller's, after the branch, of the height the branch leaves. With `wet` (p307) the
 // wet response's height and response are members too: the far side's response the layers' by
 // weight, its height the middle (the relief isn't sampled there).
-import { dFdx, dFdy, float, Fn, If, mix, struct, vec3 } from 'three/tsl';
+import { dFdx, dFdy, float, Fn, If, mix, struct } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node } from 'three/webgpu';
 import type { TextureSetPacking } from 'aekasha/texturesets';
@@ -25,6 +25,7 @@ import type { ResolvedTerrainDefine } from './TerrainDefine';
 import type { LayerParams } from './TerrainInputs';
 import {
   getLayerCoords,
+  getWetResponse,
   MINIMAL_ROUGHNESS,
   type LayerUniforms,
   type LayerWet,
@@ -99,14 +100,11 @@ export const getFarSurface = (
     ? {
         height: float(FAR_WET_HEIGHT) as unknown as Node<'float'>,
         response: sumByWeights(
-          layers.map(
-            ({ params }) =>
-              vec3(
-                params.porosity,
-                params.wetDarkening,
-                params.wetRoughness
-              ) as unknown as Node<'vec3'>
-          ),
+          layers.map(({ params }) => getWetResponse(params)),
+          weights
+        ),
+        puddleResponse: sumByWeights(
+          layers.map(({ params }) => params.puddleResponse),
           weights
         ),
       }
@@ -202,7 +200,7 @@ const getMembers = (packing: TextureSetPacking, hasWet: boolean) => ({
   roughness: 'float',
   ...(packing === 'MINIMAL' ? { bumpHeight: 'float' } : { normal: 'vec3' }),
   ...(packing === 'FULL' ? { ao: 'float' } : {}),
-  ...(hasWet ? { wetHeight: 'float', wetResponse: 'vec3' } : {}),
+  ...(hasWet ? { wetHeight: 'float', wetResponse: 'vec4', wetPuddleResponse: 'float' } : {}),
 });
 
 /** What {@link buildFarBranch} branches between */
@@ -250,6 +248,7 @@ export const buildFarBranch = (props: FarBranchProps): BranchSurface => {
       ao: float(1),
       wetHeight: far.wet?.height,
       wetResponse: far.wet?.response,
+      wetPuddleResponse: far.wet?.puddleResponse,
     };
     // Three's struct takes its members by name too (the typings list the positional forms only)
     const out = toVar(
@@ -267,8 +266,10 @@ export const buildFarBranch = (props: FarBranchProps): BranchSurface => {
       }
       if (near.wet && 'wetHeight' in members) {
         out.get('wetHeight').assign(mix(near.wet.height, out.get('wetHeight'), share));
-        const response = out.get('wetResponse') as unknown as Node<'vec3'>;
+        const response = out.get('wetResponse') as unknown as Node<'vec4'>;
         out.get('wetResponse').assign(mix(near.wet.response, response, share));
+        const puddle = out.get('wetPuddleResponse');
+        puddle.assign(mix(near.wet.puddleResponse, puddle, share));
       }
     });
     return out;
@@ -285,7 +286,8 @@ export const buildFarBranch = (props: FarBranchProps): BranchSurface => {
       'wetHeight' in members
         ? {
             height: get('wetHeight') as Node<'float'>,
-            response: get('wetResponse') as unknown as Node<'vec3'>,
+            response: get('wetResponse') as unknown as Node<'vec4'>,
+            puddleResponse: get('wetPuddleResponse') as Node<'float'>,
           }
         : null,
   };

@@ -96,6 +96,8 @@ const makeSet = (id: string, extra: Partial<TextureSetDef> = {}): TextureSetDef 
     porosity: 0.85,
     wetDarkening: 0.55,
     wetRoughness: 0.4,
+    puddleResponse: 0.25,
+    dryingSpeed: 1.5,
   },
   averageColor: '#ffffff',
   ...extra,
@@ -113,7 +115,7 @@ const addSets = (...sets: TextureSetDef[]) => {
 };
 
 const paramsOf = (values: unknown[], layer: number) =>
-  (values as THREE.Vector4[]).slice(layer * 4, layer * 4 + 4).map((v) => v.toArray());
+  (values as THREE.Vector4[]).slice(layer * 5, layer * 5 + 5).map((v) => v.toArray());
 
 beforeEach(() => {
   fns.registered.clear();
@@ -163,12 +165,13 @@ describe('buildTextureSetArray', () => {
     expect(getTextureSetArray(built.id)).toBe(built);
 
     const values = built.layerParams.array;
-    expect(values).toHaveLength(8);
+    expect(values).toHaveLength(10);
     expect(paramsOf(values, 0)).toEqual([
       [3, 2, 0.03, 1.5],
       [1, 1, 1, 1],
       [0.9, 1, 0.85, 0.55],
       [0.4, 1, 1, 1],
+      [0.25, 1.5, 0, 0],
     ]);
     // The tint and the average colour are linear
     expect(paramsOf(values, 1)[0]).toEqual([6, 6, 0.2, 1.5]);
@@ -373,6 +376,8 @@ describe('getTextureSetLayerParams', () => {
         'porosity',
         'wetDarkening',
         'wetRoughness',
+        'puddleResponse',
+        'dryingSpeed',
         'averageColor',
       ]);
       expect(Object.values(params).every((node) => (node as THREE.Node).isNode)).toBe(true);
@@ -434,7 +439,7 @@ describe('the { textureSetArray } resolver', () => {
     expect(bundle.normalHeight.value).toBe(standIn);
     expect(
       (
-        (bundle.layerParams as unknown as { array: THREE.Vector4[] }).array[4] as THREE.Vector4
+        (bundle.layerParams as unknown as { array: THREE.Vector4[] }).array[5] as THREE.Vector4
       ).toArray()
     ).toEqual([6, 6, 0.2, 1.5]);
     expect(env.warn).toHaveBeenCalledWith(
