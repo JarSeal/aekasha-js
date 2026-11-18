@@ -334,6 +334,12 @@ const ACCEPTED: unknown[] = [
     quality: { LOW: { wet: { quality: 'SIMPLE' } } },
     qualityLevel: 'LOW',
   },
+  // Its rain streaks, in either quality
+  { layers: [{}], wet: { streaks: {} } },
+  {
+    layers: [{}],
+    wet: { quality: 'SIMPLE', streaks: { minSlope: 90, scale: 2, length: 1, speed: 0 } },
+  },
 ];
 const REFUSED: unknown[] = [
   {},
@@ -649,6 +655,7 @@ const REFUSED: unknown[] = [
   },
   // p307's wet response: its keys (a later phase's too), values and ranges; its view without it
   { layers: [{}], wet: { ripples: true } },
+  { layers: [{}], wet: { shoreline: { band: 1 } } },
   { layers: [{}], wet: { quality: 'NONE' } },
   { layers: [{}], wet: { heightInfluence: -1 } },
   { layers: [{}], wet: { cavityInfluence: '1' } },
@@ -676,6 +683,14 @@ const REFUSED: unknown[] = [
   { layers: [{}], wet: { ripples: { distance: [30, 10] } } },
   { layers: [{}], wet: { ripples: { distance: [10] } } },
   { layers: [{}], wet: { ripples: { density: 1 } } },
+  // Its rain streaks: their ranges and keys
+  { layers: [{}], wet: { streaks: { minSlope: 0 } } },
+  { layers: [{}], wet: { streaks: { minSlope: 95 } } },
+  { layers: [{}], wet: { streaks: { scale: 0 } } },
+  { layers: [{}], wet: { streaks: { length: -1 } } },
+  { layers: [{}], wet: { streaks: { speed: -1 } } },
+  { layers: [{}], wet: { streaks: { wind: 1 } } },
+  { layers: [{}], wet: { streaks: true } },
   // Its regional wetness: an attribute's name, or the first splat map's A where it weighs no layer
   { layers: [{}], wet: { regional: { attribute: '' } } },
   { layers: [{}], wet: { regional: { splatChannel: 'R' } } },
@@ -742,6 +757,13 @@ describe('readTerrainDefine', () => {
       puddles: null,
       regional: null,
       ripples: null,
+      streaks: null,
+    });
+    expect(read({ layers: [{}], wet: { streaks: {} } }).wet?.streaks).toEqual({
+      minSlope: 60,
+      scale: 4,
+      length: 8,
+      speed: 1,
     });
     expect(read({ layers: [{}], wet: { ripples: {} } }).wet?.ripples).toEqual({
       scale: 1.5,
@@ -871,6 +893,10 @@ describe('readTerrainDefine', () => {
     expect(read({ layers: [{}], quality: { HIGH: { wet: patches } } }).takesMacroTexture).toBe(
       true
     );
+    // The streaks read it too, in either quality
+    const streaks = { quality: 'SIMPLE', streaks: {} };
+    expect(read({ layers: [{}], wet: streaks }).takesMacroTexture).toBe(true);
+    expect(read({ layers: [{}], quality: { LOW: { wet: streaks } } }).takesMacroTexture).toBe(true);
   });
 
   it("takes the ripples input with ripples, a tier's included", () => {
@@ -1053,6 +1079,9 @@ describe('readTerrainDefine', () => {
     );
     expect(values.wetRippleKeys.sort()).toEqual(
       Object.keys(wet.unwrap().shape.ripples.unwrap().shape).sort()
+    );
+    expect(values.wetStreakKeys.sort()).toEqual(
+      Object.keys(wet.unwrap().shape.streaks.unwrap().shape).sort()
     );
     const [byAttribute, bySplat] = wet.unwrap().shape.regional.unwrap().options;
     expect(Object.keys(byAttribute.shape)).toEqual(['attribute']);

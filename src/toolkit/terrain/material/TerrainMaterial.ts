@@ -262,7 +262,9 @@ const getAoNode = (
  * stands where the puddle level × the sets' `puddleResponse` is over the blended relief on flat
  * ground (its patches one fetch of the input `macro`), and `wet.regional` (a vertex attribute or
  * the first splat map's A) keeps its places wet; with `wet.ripples` rain rings ripple where water
- * stands, two fetches of the input `ripples` (a ripple atlas) in a branch on the rain. With `space: 'OBJECT'` all of it is in the mesh's own space (its
+ * stands, two fetches of the input `ripples` (a ripple atlas) in a branch on the rain; with
+ * `wet.streaks` rivulets run down steep faces while it rains and stay damp while it's wet, one
+ * fetch of the input `macro` in a branch on the weather. With `space: 'OBJECT'` all of it is in the mesh's own space (its
  * position × scale, its normal: coordinates, projections, rules, macro), the shaded normal turned
  * into world space before the view; `WORLD` (default) the world's. A live layer (`source:
  * 'PROCEDURAL_LIVE'`) runs its procedural set's generator in place of sampling (its whole graph at
@@ -288,13 +290,15 @@ const getAoNode = (
  * with its `FULL` quality; `terrain_wetPuddleMaxSlope` and `terrain_wetPuddleEdge` with its
  * puddles, `terrain_wetPuddlePatchScale` and `terrain_wetPuddlePatchAmount` with their patches,
  * `terrain_wetRippleScale`, `terrain_wetRippleLifetime`, `terrain_wetRippleStrength` and
- * `terrain_wetRippleDistance` with its ripples).
+ * `terrain_wetRippleDistance` with its ripples, `terrain_wetStreakMinSlope`,
+ * `terrain_wetStreakScale`, `terrain_wetStreakLength` and `terrain_wetStreakSpeed` with its
+ * streaks).
  * A `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug env, once
  * {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the view. The
  * define as given is kept at `material.userData.terrainDefine`.
  * @param inputs the material's inputs: `layer<i>` bundles or the `layers` set array bundle (the
  * `textureSets()` feature's resolvers), with the splat map sources the splat maps `splat<i>` and
- * with `macro`, a rule's noise or puddle patches the macro texture `macro`, with ripples the ripple
+ * with `macro`, a rule's noise, puddle patches or streaks the macro texture `macro`, with ripples the ripple
  * atlas `ripples`, with `colorMap` the colour map
  * `colorMap` (texture nodes: `{ "texture": id }`)
  * @param material the node material being built (a `STANDARDNODEMATERIAL`)
@@ -568,7 +572,8 @@ const terrainMaterialFns = { setup: setupTerrainMaterial } satisfies TslMaterial
  * `terrain` (without the id, the layers' sets, the splat maps, the macro texture and the colour
  * map), each layer's set as its input `layer<i>` (`{ textureSet, packing? }`), the splat maps as
  * the inputs `splat<i>`, the macro texture as the input `macro` (`{ texture }`: `macro.texture`,
- * else for rule noise `noiseTexture` or `macroNoise`) and the colour map as the input `colorMap`.
+ * else for rule noise, puddle patches or streaks `noiseTexture` or `macroNoise`), the ripple atlas
+ * as the input `ripples` and the colour map as the input `colorMap`.
  * Pass them to `ensureMaterialDependencies` to load the textures before creating the material, or
  * use them as a material JSON's fields.
  * @returns the props, for `createMaterial` or `ensureMaterialDependencies`

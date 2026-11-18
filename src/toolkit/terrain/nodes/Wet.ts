@@ -7,10 +7,11 @@
 // fills its pores before any film, a dense one gets the film at once; one that sheds water (grass,
 // a cliff face) gets little film or none. Puddles (T3) stand where the puddle level's waterline
 // is over the relief, on the flat, filling some patches first; an authored regional wetness (T7)
-// keeps its places wet in any weather; while it rains, rings ripple where water stands (T4). Every
-// number of the response is a node: a terrain material's are its layers' set uniforms blended by
-// weight, an app material's its own. The ripples' two fetches are the only ones, in a branch on
-// the rain (`Ripples.ts`; the patches are the caller's sample).
+// keeps its places wet in any weather; while it rains, rings ripple where water stands (T4); on
+// steep faces rivulets run down while it rains and stay damp after (T5). Every number of the
+// response is a node: a terrain material's are its layers' set uniforms blended by weight, an app
+// material's its own. The ripples' two fetches and the streaks' one are the only ones, each in a
+// branch on the weather (`Ripples.ts`, `Streaks.ts`; the patches are the caller's sample).
 import {
   cos,
   float,
@@ -26,6 +27,7 @@ import {
 import type { Node, TextureNode } from 'three/webgpu';
 import type { SurfaceConditionNodes } from 'aekasha/surface';
 import { sampleRainRipples } from './Ripples';
+import { sampleRainStreaks } from './Streaks';
 
 /**
  * The roughness of a water film (and of water's surface), which a soaked surface falls to.
@@ -56,9 +58,16 @@ export const PUDDLE_ROUGHNESS = 0.02;
  * puddle without nearby reflections (no SSR) doesn't read as a hole.
  */
 const PUDDLE_DARKENING = 0.15;
+/**
+ * How far running water darkens the soaked albedo beneath it: its depth, and on a face whose pores
+ * the rain has filled already the cue the streaks read by (a wall's gloss reflects the ground)
+ */
+const STREAK_DARKENING = 0.25;
 /** A relief's height where the surface gives none: neither peak nor hollow */
 const FLAT_HEIGHT = 0.5;
 const DEG_TO_RAD = Math.PI / 180;
+/** The slope below the streaks' `minSlope` over which they fade in, radians */
+const STREAK_SLOPE_FADE = 10 * DEG_TO_RAD;
 
 /**
  * The default `ApplySurfaceWetnessOpts`' numbers (the terrain material's `wet` defaults too).
@@ -75,6 +84,10 @@ export const SURFACE_WETNESS_DEFAULTS = {
   rippleLifetime: 0.7,
   rippleStrength: 0.5,
   rippleDistance: [10, 30],
+  streakMinSlope: 60,
+  streakScale: 4,
+  streakLength: 8,
+  streakSpeed: 1,
 } as const satisfies Record<string, number | readonly [number, number]>;
 
 /** A number as a constant node, or the node given */
@@ -176,6 +189,33 @@ export type ApplySurfaceWetnessOpts = {
    * 0, the atlas sampled twice in a dynamic branch. Left out: none.
    */
   ripples?: SurfaceRippleOpts;
+  /**
+   * Rain streaks: rivulets down faces steeper than `minSlope` that the rain reaches, damp while
+   * the conditions' `wetness` is over 0 (drying last) and running while their `rain` is, one
+   * fetch of a noise texture in a dynamic branch. Both qualities (they leave the normal to the
+   * film). Left out: none.
+   */
+  streaks?: SurfaceStreakOpts;
+};
+
+/** {@link ApplySurfaceWetnessOpts}' rain streaks. */
+export type SurfaceStreakOpts = {
+  /**
+   * A noise texture whose R is an fbm around 0.5, tiling (the toolkit's `macroNoise`, or
+   * `bakeMacroNoise`'s): its upper values are the rivulets.
+   */
+  texture: TextureNode;
+  /** The surface's position, its height the fall line (in the shaded normal's space; default the
+   * world's). */
+  position?: Node<'vec3'>;
+  /** The gentlest face that streaks, degrees from flat (default 60; faded in over 10° below it). */
+  minSlope?: Node<'float'> | number;
+  /** The metres one texture tile covers across the face, over 0 (default 4). */
+  scale?: Node<'float'> | number;
+  /** How many times longer a tile is down the face than across, over 0 (default 8). */
+  length?: Node<'float'> | number;
+  /** How fast the running water's pulses move down, metres a second (default 1). */
+  speed?: Node<'float'> | number;
 };
 
 /** {@link ApplySurfaceWetnessOpts}' rain ripples. */
@@ -239,6 +279,12 @@ export type SurfaceWetnessMasks = {
    * it's over 0, the atlas is sampled.
    */
   ripple: Node<'float'>;
+  /**
+   * The streaks' weight: a steep face the rain reaches × the rain or the wetness (0 without
+   * `opts.streaks`); where it's over 0, the texture is sampled. The rivulets show in `pores` (damp)
+   * and `film` (running).
+   */
+  streak: Node<'float'>;
 };
 
 /** The wet surface: the albedo, the roughness, the normal (when given) and the masks. */
@@ -262,8 +308,10 @@ export type WetSurface = {
  * `puddleResponse` (× the patches' share) is over the relief on flat ground: soaked, a little
  * darker, water's roughness (`PUDDLE_ROUGHNESS`, 0.02) and the geometry's normal. A `regional`
  * wetness (T7) is the least wetness and puddle level shown. With `opts.ripples` (T4), rain rings
- * tilt the normal where water stands, the atlas's two fetches in a dynamic branch on the rain;
- * nothing else fetches or branches. At wetness, puddle level and rain 0 without a regional
+ * tilt the normal where water stands, the atlas's two fetches in a dynamic branch on the rain; with
+ * `opts.streaks` (T5), rivulets run down steep faces while it rains (a film) and stay damp while
+ * it's wet (the pores), one fetch in a dynamic branch on the weather; nothing else fetches or
+ * branches. At wetness, puddle level and rain 0 without a regional
  * wetness the surface is as given.
  * @param surface the dry surface, its relief, cavity, regional wetness and response
  * @param conditions the surface conditions' uniforms (`getSurfaceConditionNodes()`)
@@ -329,18 +377,27 @@ export const applySurfaceWetness = (
     local = local.add(cavity) as Node<'float'>;
   }
   local = local.saturate() as Node<'float'>;
+  const geometryNormal = opts.geometryNormal ?? (normalWorldGeometry as unknown as Node<'vec3'>);
+  // T5: rivulets down a steep face, damp (the pores) while it's wet, running (a film) while it rains
+  const streaks = opts.streaks
+    ? getStreaks(up, exposure, geometryNormal, conditions, opts.streaks)
+    : null;
 
   // T1: the pores over the first share of the wetness (by the porosity), the film over the rest
   const split = porosity.mul(PORE_SHARE) as Node<'float'>;
-  const pores = local.div(max(split, MIN_PORE_STAGE)).saturate() as Node<'float'>;
+  let pores = local.div(max(split, MIN_PORE_STAGE)).saturate() as Node<'float'>;
+  // A damp rivulet fills the pores alone: no film forms without running water
+  if (streaks) pores = max(pores, streaks.damp) as unknown as Node<'float'>;
   // As far as water stands on it: a surface that sheds water films little or not at all
   const { puddleResponse } = surface.response;
   const filmStage = local.sub(split).div(float(1).sub(split)).saturate() as Node<'float'>;
-  const film = (
+  let film = (
     puddleResponse === undefined || puddleResponse === 1
       ? filmStage
       : filmStage.mul(toFloat(puddleResponse))
   ) as Node<'float'>;
+  // Running water is a film whether water stands on the surface or not
+  if (streaks) film = max(film, streaks.running) as unknown as Node<'float'>;
   // T3: a puddle soaks what's beneath it (its pores and film full)
   const flat = getFlatGate(up, opts.puddles?.maxSlope);
   const puddle = isFull && opts.puddles ? getPuddle(surface, conditions, flat, opts.puddles) : null;
@@ -354,7 +411,6 @@ export const applySurfaceWetness = (
   ) as Node<'float'>;
   // A film is water's roughness, which never roughens a smoother surface (ice, polish)
   let roughness = mix(pored, pored.min(WET_FILM_ROUGHNESS), filmed) as Node<'float'>;
-  const geometryNormal = opts.geometryNormal ?? (normalWorldGeometry as unknown as Node<'vec3'>);
   // A puddle's water is flat: the geometry's normal under a full one
   const flatten = film.mul(FILM_FLATTEN) as Node<'float'>;
   let normal =
@@ -374,6 +430,9 @@ export const applySurfaceWetness = (
     normal = rippled.normal;
     ripple = rippled.weight;
   }
+  if (streaks) {
+    albedo = albedo.mul(float(1).sub(streaks.running.mul(STREAK_DARKENING))) as Node<'vec3'>;
+  }
   if (puddle) {
     albedo = albedo.mul(float(1).sub(puddle.mul(PUDDLE_DARKENING))) as Node<'vec3'>;
     roughness = mix(roughness, roughness.min(PUDDLE_ROUGHNESS), puddle) as Node<'float'>;
@@ -389,6 +448,7 @@ export const applySurfaceWetness = (
       film,
       puddle: puddle ?? (float(0) as unknown as Node<'float'>),
       ripple: ripple ?? (float(0) as unknown as Node<'float'>),
+      streak: streaks?.weight ?? (float(0) as unknown as Node<'float'>),
     },
   };
 };
@@ -399,6 +459,43 @@ const getFlatGate = (up: Node<'float'>, maxSlopeDegrees: Node<'float'> | number 
     DEG_TO_RAD
   );
   return smoothstep(cos(maxSlope), cos(maxSlope.mul(0.5)), up) as unknown as Node<'float'>;
+};
+
+/**
+ * The rain streaks (`Streaks.ts`): their weight a face steeper than `minSlope` (faded in over 10°
+ * below it) × the rain's reach doubled (a vertical face's full, an underside's none); the damp and
+ * running rivulets, and the weight × the rain or wetness (the streak mask)
+ */
+const getStreaks = (
+  up: Node<'float'>,
+  exposure: Node<'float'>,
+  normal: Node<'vec3'>,
+  conditions: SurfaceConditionNodes,
+  opts: SurfaceStreakOpts
+) => {
+  const defaults = SURFACE_WETNESS_DEFAULTS;
+  const minSlope = toFloat(opts.minSlope ?? defaults.streakMinSlope).mul(DEG_TO_RAD);
+  const gentle = smoothstep(cos(minSlope), cos(max(minSlope.sub(STREAK_SLOPE_FADE), 0)), up);
+  const weight = float(1).sub(gentle).mul(exposure.mul(2).saturate()) as Node<'float'>;
+  const rain = conditions.rain as unknown as Node<'float'>;
+  const wetness = conditions.wetness as unknown as Node<'float'>;
+  const rivulets = sampleRainStreaks({
+    texture: opts.texture,
+    position: opts.position ?? (positionWorld as unknown as Node<'vec3'>),
+    normal,
+    scale: toFloat(opts.scale ?? defaults.streakScale),
+    length: toFloat(opts.length ?? defaults.streakLength),
+    speed: toFloat(opts.speed ?? defaults.streakSpeed),
+    rain,
+    wetness,
+    time: conditions.time as unknown as Node<'float'>,
+    weight,
+  });
+  return {
+    damp: rivulets.x as Node<'float'>,
+    running: rivulets.y as Node<'float'>,
+    weight: weight.mul(max(rain, wetness)) as Node<'float'>,
+  };
 };
 
 /**

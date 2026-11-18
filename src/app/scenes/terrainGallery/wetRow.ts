@@ -8,18 +8,30 @@
 // row's quality (`FULL`, `SIMPLE`) and its view (`WETNESS`, `TAPS`). Phase 3: every block has puddles
 // (filling by its set's `puddleResponse`, in `macroNoise` patches) and rain ripples where water
 // stands (the `rippleAtlas`, while the tab's rain is over 0), and the grass block a regional
-// wetness along its left edge (a riverbank: its `_wetness` vertex attribute). Code route materials
-// (`createTerrainMaterial`): the view and the quality are variants of a block's material.
+// wetness along its left edge (a riverbank: its `_wetness` vertex attribute). Phase 4: two steep
+// pieces with rain streaks (structure materials, `wet.streaks`), a concrete wall on the concrete
+// block and a cliff boulder on the cliff block (rounded, so the streaks' axis switch and its
+// overhang show). Code route materials (`createTerrainMaterial`) with a `LOW` tier whose wet is
+// `SIMPLE` (without the puddles and the ripples: a tier's variant shares the material's inputs,
+// which a variant without them would refuse): the quality (the tier) and the view are variants of
+// a block's or a piece's material.
 import * as THREE from 'three/webgpu';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import {
   createMeshEntity,
   existsOrThrow,
+  getGeometry,
   getMaterial,
   getMaterialVariant,
   getMeshByAppId,
+  saveBufferGeometry,
   setMeshMaterial,
 } from 'aekasha';
-import { createTerrainMaterial, type TerrainMaterialConfig } from 'aekasha/toolkit/terrain';
+import {
+  createStructureMaterial,
+  createTerrainMaterial,
+  type TerrainMaterialConfig,
+} from 'aekasha/toolkit/terrain';
 import { BLOCK_GAP, BLOCK_PITCH, BLOCK_SIZE, getBlockGeometry, NO_SHADOWS } from './galleryBlocks';
 import { SPLATTING_ROW_BOUNDS } from './splattingRow';
 
@@ -83,6 +95,24 @@ const REGIONAL_WET_BAND = [2, 5] as const;
 /** The regional wetness's vertex attribute (the terrain material's default) */
 const REGIONAL_WET_ATTRIBUTE = '_wetness';
 
+/** A steep piece with rain streaks, standing on a block: its set (a structure material's) */
+type WetPiece = { key: 'WALL' | 'BOULDER'; block: WetKey; set: string; title: string };
+
+/** The streaked pieces: a wall on the concrete block, a boulder on the cliff block */
+export const WET_PIECES: readonly WetPiece[] = [
+  { key: 'WALL', block: 'CONCRETE', set: 'concrete02', title: 'a concrete wall' },
+  { key: 'BOULDER', block: 'CLIFF', set: 'cliffs01', title: 'a cliff boulder' },
+];
+/** The wall's size, metres */
+const WALL = { width: 8, height: 4, depth: 0.6 } as const;
+/** The boulder's half extents, metres, and how much of its height is buried */
+const BOULDER_RADII = [3, 2.4, 2] as const;
+const BOULDER_BURIED = 0.35;
+/** The pieces stand this far behind their block's centre (−z): in front of the ramp's foot */
+const PIECE_Z = -1.5;
+/** How far the wall sinks into the block's noise, metres */
+const WALL_SINK = 0.3;
+
 /** The row's nine blocks, by row from the back and left to right */
 export const WET_BLOCKS: readonly WetBlock[] = GRID.flatMap((keys, row) =>
   keys.map((key, col) => ({
@@ -106,8 +136,17 @@ export const WET_ROW_BOUNDS = {
 /** A block's mesh entity's app id */
 export const getWetAppId = (key: WetKey) => `terrainGallery_wet_${key}`;
 
+/** The row's `SIMPLE` quality: the tier its materials switch to */
+const SIMPLE_TIER = 'LOW';
+
+/** A row material's wet with its `SIMPLE` tier: the same without what `FULL` alone takes */
+const withSimpleTier = (wet: NonNullable<TerrainMaterialConfig['wet']>) => {
+  const { puddles: _puddles, ripples: _ripples, ...simple } = wet;
+  return { wet, quality: { [SIMPLE_TIER]: { wet: { ...simple, quality: 'SIMPLE' as const } } } };
+};
+
 /** A block's code route config: its sets, wet (`FULL`, puddles in patches, ripples; the grass
- * block's regional wetness); the beach's rocks by slope */
+ * block's regional wetness) and its `SIMPLE` tier; the beach's rocks by slope */
 const getBlockConfig = (block: WetBlock): TerrainMaterialConfig => ({
   id: `terrainGalleryWet_${block.key}`,
   layers: block.sets.map((set) => ({ set })),
@@ -119,12 +158,15 @@ const getBlockConfig = (block: WetBlock): TerrainMaterialConfig => ({
         },
       }
     : {}),
-  wet: {
+  ...withSimpleTier({
     puddles: { patches: { scale: PUDDLE_PATCH_SCALE } },
     ripples: {},
     ...(block.key === REGIONAL_WET_KEY ? { regional: {} } : {}),
-  },
+  }),
 });
+
+/** A piece's mesh entity's app id */
+const getPieceAppId = (piece: WetPiece) => `terrainGallery_wetPiece_${piece.key}`;
 
 /**
  * A block's material for the view: its code route material, or that material's variant with the
@@ -133,23 +175,29 @@ const getBlockConfig = (block: WetBlock): TerrainMaterialConfig => ({
 const getBlockMaterial = (block: WetBlock, view: WetRowView): THREE.Material => {
   const config = getBlockConfig(block);
   createTerrainMaterial(config);
-  const base = existsOrThrow(
-    getMaterial(config.id),
-    `[terrainGallery] No material "${config.id}".`
-  );
+  return getViewMaterial(config.id, view);
+};
+
+/** A piece's material for the view: its structure material (streaks only), or its variant */
+const getPieceMaterial = (piece: WetPiece, view: WetRowView): THREE.Material => {
+  const id = `terrainGalleryWet_${piece.key}`;
+  createStructureMaterial(piece.set, { id, ...withSimpleTier({ streaks: {} }) });
+  return getViewMaterial(id, view);
+};
+
+/**
+ * A row material for the view: itself, or its variant with the quality (`SIMPLE` its tier) and
+ * the debug view
+ */
+const getViewMaterial = (id: string, view: WetRowView): THREE.Material => {
+  const base = existsOrThrow(getMaterial(id), `[terrainGallery] No material "${id}".`);
   if (view.quality === 'FULL' && view.debugView === 'NONE') return base;
-  const terrain = base.userData.terrainDefine as { wet?: { puddles?: object; ripples?: object } };
-  // SIMPLE has no puddles (no relief to fill) and no ripples (it leaves the normal alone)
-  const { puddles, ripples, ...wet } = terrain.wet ?? {};
-  return getMaterialVariant(config.id, {
+  const terrain = base.userData.terrainDefine as object;
+  return getMaterialVariant(id, {
     staticDefines: {
       terrain: {
         ...terrain,
-        wet: {
-          ...wet,
-          ...(view.quality === 'FULL' ? { puddles, ripples } : {}),
-          quality: view.quality,
-        },
+        ...(view.quality === 'SIMPLE' ? { qualityLevel: SIMPLE_TIER } : {}),
         ...(view.debugView === 'NONE' ? {} : { debugView: view.debugView }),
       },
     },
@@ -164,6 +212,10 @@ export const setWetRowView = (view: WetRowView) => {
   for (const block of WET_BLOCKS) {
     const mesh = getMeshByAppId(getWetAppId(block.key));
     if (mesh) setMeshMaterial(mesh, getBlockMaterial(block, view));
+  }
+  for (const piece of WET_PIECES) {
+    const mesh = getMeshByAppId(getPieceAppId(piece));
+    if (mesh) setMeshMaterial(mesh, getPieceMaterial(piece, view));
   }
 };
 
@@ -184,7 +236,54 @@ const withRegionalWetness = (geometry: THREE.BufferGeometry) => {
   return geometry;
 };
 
-/** Creates the row's blocks, each on the library's generated block with its own seed */
+/** A geometry made once and kept across visits */
+const getOrBuildGeometry = (id: string, build: () => THREE.BufferGeometry) =>
+  getGeometry(id) ?? saveBufferGeometry(build(), { id });
+
+/**
+ * The boulder: a sphere of smooth normals bulged by a few sines of the direction, stretched to its
+ * half extents
+ */
+const buildBoulderGeometry = () => {
+  const sphere = new THREE.IcosahedronGeometry(1, 8);
+  sphere.deleteAttribute('normal');
+  sphere.deleteAttribute('uv');
+  const geometry = mergeVertices(sphere);
+  sphere.dispose();
+  const positions = geometry.getAttribute('position');
+  const dir = new THREE.Vector3();
+  const [rx, ry, rz] = BOULDER_RADII;
+  for (let i = 0; i < positions.count; i++) {
+    dir.fromBufferAttribute(positions, i).normalize();
+    const bulge =
+      1 +
+      0.12 *
+        Math.sin(3.1 * dir.x + 1.3) *
+        Math.sin(2.7 * dir.y + 0.4) *
+        Math.sin(3.3 * dir.z + 2.1) +
+      0.05 * Math.sin(7.3 * dir.x + 5.9 * dir.z + 0.7) +
+      0.03 * Math.sin(11.1 * dir.y - 9.7 * dir.x);
+    positions.setXYZ(i, dir.x * bulge * rx, dir.y * bulge * ry, dir.z * bulge * rz);
+  }
+  geometry.computeVertexNormals();
+  return geometry;
+};
+
+/** A piece's geometry, its origin at its centre */
+const getPieceGeometry = (piece: WetPiece) =>
+  piece.key === 'WALL'
+    ? getOrBuildGeometry(
+        'terrainGalleryWetWall',
+        () => new THREE.BoxGeometry(WALL.width, WALL.height, WALL.depth)
+      )
+    : getOrBuildGeometry('terrainGalleryWetBoulder', buildBoulderGeometry);
+
+/** A piece's centre over its block's: the wall's foot sunk into the noise, the boulder buried */
+const getPieceY = (piece: WetPiece) =>
+  piece.key === 'WALL' ? WALL.height / 2 - WALL_SINK : BOULDER_RADII[1] * (1 - 2 * BOULDER_BURIED);
+
+/** Creates the row's blocks, each on the library's generated block with its own seed, and the
+ * streaked pieces on theirs */
 export const createWetRow = () => {
   for (const block of WET_BLOCKS) {
     const geometry = getBlockGeometry(block.seed);
@@ -196,6 +295,21 @@ export const createWetRow = () => {
         ...NO_SHADOWS,
       },
       { appId: getWetAppId(block.key), debugData: { name: `Wet/dry: ${block.title}` } }
+    );
+  }
+  for (const piece of WET_PIECES) {
+    const block = existsOrThrow(
+      WET_BLOCKS.find((candidate) => candidate.key === piece.block),
+      `[terrainGallery] No wet block "${piece.block}".`
+    );
+    createMeshEntity(
+      {
+        geo: getPieceGeometry(piece),
+        mat: getPieceMaterial(piece, { quality: 'FULL', debugView: 'NONE' }),
+        position: { x: block.x, y: getPieceY(piece), z: block.z + PIECE_Z },
+        ...NO_SHADOWS,
+      },
+      { appId: getPieceAppId(piece), debugData: { name: `Wet/dry: ${piece.title}` } }
     );
   }
 };

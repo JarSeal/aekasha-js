@@ -1205,6 +1205,10 @@ describe('getTerrainMaterialProps', () => {
       texture: 'macroNoise',
     });
     expect(inputsOf({ wet: { puddles: {} } })).not.toHaveProperty('macro');
+    // And the streaks, in either quality
+    expect(inputsOf({ wet: { quality: 'SIMPLE', streaks: {} } })).toHaveProperty('macro', {
+      texture: 'macroNoise',
+    });
     // p307's ripples: the ripple atlas, rippleTexture else rippleAtlas, a tier's too
     const blend = rules({ layer: 1, height: { min: 4 } });
     expect(inputsOf({ blend, wet: { ripples: {} } })).toHaveProperty('ripples', {
@@ -1511,6 +1515,50 @@ describe('setupTerrainMaterial: wet (p307)', () => {
     expect(() => build({ layers: [{}], wet: { quality: 'SIMPLE', ripples: {} } })).toThrow(
       /is for quality FULL/
     );
+  });
+
+  it('streaks steep faces in either quality: the macro input, its uniforms, one branch', () => {
+    const macroTexture = texture(new Texture());
+    const inputs = { layer0: makeBundle(), macro: macroTexture };
+    const material = build({ layers: [{}], wet: { streaks: { minSlope: 70 } } }, inputs);
+    const uniforms = getUniforms(material);
+    expect(uniforms.terrain_wetStreakMinSlope.value).toBe(70);
+    expect(uniforms.terrain_wetStreakScale.value).toBe(4);
+    expect(uniforms.terrain_wetStreakLength.value).toBe(8);
+    expect(uniforms.terrain_wetStreakSpeed.value).toBe(1);
+    // The rivulets darken (the pores) and gloss (the film, while it rains): the colour and the
+    // roughness add their branch (a Fn call; its body reads the rain and the clock,
+    // Streaks.test.ts)
+    const calls = (root: unknown) =>
+      collectNodesFrom([root]).filter((node) => (node as { shaderNode?: unknown }).shaderNode)
+        .length;
+    const plain = build({ layers: [{}], wet: {} });
+    for (const socket of ['colorNode', 'roughnessNode'] as const) {
+      expect(calls(material[socket])).toBe(calls(plain[socket]) + 1);
+    }
+    // SIMPLE streaks too
+    const simple = build({ layers: [{}], wet: { quality: 'SIMPLE', streaks: {} } }, inputs);
+    const simplePlain = build({ layers: [{}], wet: { quality: 'SIMPLE' } });
+    expect(calls(simple.roughnessNode)).toBe(calls(simplePlain.roughnessNode) + 1);
+    // The input: wanted with streaks, a tier's taken without building them
+    expect(() => build({ layers: [{}], wet: { streaks: {} } })).toThrow(/Missing input "macro"/);
+    const tiered = build(
+      { layers: [{}], wet: {}, quality: { LOW: { wet: { streaks: {} } } } },
+      inputs
+    );
+    expect(calls(tiered.roughnessNode)).toBe(calls(plain.roughnessNode));
+  });
+
+  it("counts the streaks' tap in TAPS where they run", async () => {
+    expect(await loadTerrainDebugViewsAsync()).toBe(true);
+    const material = build(
+      { layers: [{}], wet: { streaks: {} }, debugView: 'TAPS' },
+      { layer0: makeBundle(), macro: texture(new Texture()) }
+    );
+    // The gated tap's share is the streak mask: a steep face × the rain or the wetness
+    expect(reaches(material.emissiveNode, conditions.rain)).toBe(true);
+    const dry = build({ layers: [{}], wet: {}, debugView: 'TAPS' });
+    expect(reaches(dry.emissiveNode, conditions.rain)).toBe(false);
   });
 
   it("counts the ripples' two taps in TAPS where they run", async () => {

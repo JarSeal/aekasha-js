@@ -1,7 +1,8 @@
-// The terrain gallery tab's Wet/dry row sections (p307 Phases 2-3): the surface conditions' wetness,
+// The terrain gallery tab's Wet/dry row sections (p307 Phases 2-4): the surface conditions' wetness,
 // puddle level and rain (a slider each, the first two with the exits' steps, 0, 0.3, 0.6 and 1:
-// the scene's JSON starts them `MANUAL`, so they hold; in `MANUAL` the rain only ripples, it wets
-// nothing), the row's quality (`FULL`, `SIMPLE`) and view (the shading, `WETNESS`, `TAPS`), and
+// the scene's JSON starts them `MANUAL`, so they hold; in `MANUAL` the rain only ripples and runs
+// down the streaks, it wets nothing; the Surface conditions tab's `SIMULATED` mode and Rain shower
+// show the streaks fade after), the row's quality (`FULL`, `SIMPLE`) and view (the shading, `WETNESS`, `TAPS`), and
 // the blocks' list, a click flying the camera to the block. The "Surface conditions" tab has the
 // rest of the weather.
 import { debuggerListCMP, updateDebuggerTab, type DebuggerTabSection } from 'aekasha/debug';
@@ -13,6 +14,7 @@ import {
   REGIONAL_WET_KEY,
   setWetRowView,
   WET_BLOCKS,
+  WET_PIECES,
   type WetBlock,
   type WetKey,
   type WetRowView,
@@ -58,16 +60,18 @@ const applyViewAsync = async () => {
 
 const getBlockRow = (block: WetBlock) => {
   const surface = getTextureSet(block.sets[0])?.surface;
+  const piece = WET_PIECES.find((candidate) => candidate.block === block.key);
+  const notes = [
+    ...(block.key === REGIONAL_WET_KEY ? ['regional wetness along its left edge'] : []),
+    ...(piece ? [`${piece.title} that streaks`] : []),
+  ];
   return {
     itemId: block.key,
     title: block.title,
     subTitle: surface
       ? `porosity ${surface.porosity}, darkening ${surface.wetDarkening}, drying ${surface.dryingSpeed}, puddles ${surface.puddleResponse}`
       : 'not loaded',
-    description:
-      block.key === REGIONAL_WET_KEY
-        ? `${block.sets.join(', ')}; regional wetness along its left edge`
-        : block.sets.join(', '),
+    description: [block.sets.join(', '), ...notes].join('; '),
   };
 };
 
@@ -91,7 +95,7 @@ export const getWetSections = (tabId: string, onSelect: () => void): DebuggerTab
         min: 0,
         max: 1,
         step: 0.01,
-        hint: 'The surface conditions’ wetness (aekasha/surface), which every wet material reads; the scene holds it (MANUAL mode), the Surface conditions tab has the weather',
+        hint: 'The surface conditions’ wetness (aekasha/surface), which every wet material reads (and the streaks stay damp by, until it’s half dry); the scene holds it (MANUAL mode), the Surface conditions tab has the weather',
       },
       ...WETNESS_STEPS.map((wetness) => ({
         type: 'button' as const,
@@ -125,7 +129,7 @@ export const getWetSections = (tabId: string, onSelect: () => void): DebuggerTab
         min: 0,
         max: 1,
         step: 0.01,
-        hint: 'The surface conditions’ rain: rings ripple where water stands (puddles, a film on the flat) within 30 m, more drops the harder it rains; at 0 the ripple atlas isn’t sampled (the TAPS view)',
+        hint: 'The surface conditions’ rain: rings ripple where water stands (puddles, a film on the flat) within 30 m, more drops the harder it rains, and water runs down the wall’s and the boulder’s streaks; at 0 the ripple atlas isn’t sampled (the TAPS view), nor the streaks’ noise on a dry face',
       },
       { type: 'separator' },
       {
@@ -150,7 +154,7 @@ export const getWetSections = (tabId: string, onSelect: () => void): DebuggerTab
           { label: 'Wetness', value: 'WETNESS' },
           { label: 'Taps', value: 'TAPS' },
         ],
-        hint: 'The row’s terrain debug view. WETNESS: red the pores filling, yellow under a water film, the blue of a puddle over either (magenta to white), dark grey dry. TAPS: the texture fetches at the pixel, the ripples’ two only where it rains on standing water',
+        hint: 'The row’s terrain debug view. WETNESS: red the pores filling, yellow under a water film, the blue of a puddle over either (magenta to white), dark grey dry. TAPS: the texture fetches at the pixel, the ripples’ two only where it rains on standing water, the streaks’ one on a steep face while it’s wet or rains',
         onChange: () => void applyViewAsync(),
       },
     ],

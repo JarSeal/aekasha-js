@@ -322,7 +322,35 @@ type SurfaceConditions = {
 
 ### Phase 4 — Streaks, shoreline (T5, T8)
 
+1. Streaks (T5).
+2. Shoreline (T8).
+
 **Exit:** cliffs and concrete walls streak downward during rain and fade after; a beach block shows a wet band that follows `waterLevel`.
+
+**Decided at the start:**
+
+- D2's `streaks` gains `length` and `speed`; `shoreline.runUp` is `{ height?, period? }`, not a boolean (its numbers, like the other keys').
+- No streak bend by the wind (D1): running water follows gravity; the wind bends the falling rain, not the rivulets.
+- `SIMPLE` takes the streaks (they leave the normal alone) and the shoreline (like `regional`); the gallery gets a water plane over the beach (section 2).
+
+**As built (section 1):**
+
+- **The node:** `nodes/Streaks.ts`' `sampleRainStreaks` (internal), called by `applySurfaceWetness` with `opts.streaks: { texture, position?, minSlope?, scale?, length?, speed? }` (`SurfaceStreakOpts`); `masks.streak` is the branch's weight × `max(rain, wetness)` (0 without). Both qualities.
+  - The weight: a face steeper than `minSlope` (faded in over the 10° below it) × `saturate(2 × exposure)` (a vertical face's full, an underside's none).
+  - The pattern: the noise texture's R (the macro noise's fbm) over `scale` metres across and `scale × length` down, `smoothstep(0.55, 0.7, R)` the rivulets. The coordinate across is the space's x or z, whichever the face's normal turns from; the two cross-fade over about 40-50° (the normal's |x| share of |x| + |z| in 0.42..0.58), a second fetch in a nested branch there alone. A hard switch at 45° showed a seam on the boulder.
+  - Damp: `rivulet × saturate(wetness / 0.15)`, the raw wetness (water runs down from above), a floor on the pores alone (never the film: a damp rivulet isn't glossy; concrete's pore roughness 0.15 still sheens). It stays full until the surface is nearly dry, so it's the last to dry. A first try at a floor on the local wetness gave damp rivulets a film; at full below 0.5 they didn't stand out from a drying face.
+  - Running: `rivulet × rain × pulse`, a floor on the film (not × `puddleResponse`: running water is a film on a cliff too), and the albedo × (1 − 0.25 × running) (`STREAK_DARKENING`): during rain a vertical face's pores are full already and its gloss reflects the ground, so the darker water is the cue. The pulse is `0.8 + 0.2 sin(2π (y + t × speed) / 0.6 m + 12 R)`, moving down on the surface clock.
+  - The branch: `If(weight > 0 && rain + wetness > 0)`, the slope gate's pattern; the coordinates, their gradients (each axis's own, from `dFdx` / `dFdy` of the position) and the weather declared before it; both taps `.grad()`.
+  - Defaults (`SURFACE_WETNESS_DEFAULTS`): `minSlope` 60°, `scale` 4 m, `length` 8, `speed` 1 m/s.
+- **The terrain `wet.streaks`:** `{ minSlope? (over 0 to 90), scale? (over 0), length? (over 0), speed? (≥ 0) }`, in both qualities; uniforms `terrain_wetStreakMinSlope`, `…Scale`, `…Length`, `…Speed`. The texture is the input `macro`, taken like the puddle patches' (`takesMacroTexture`, the code route's `noiseTexture` else `macroNoise`; `noiseTexture` is accepted with streaks). The pattern is in the material's space (`OBJECT`: it sticks to the piece; a tilted piece would streak along its own −Y), the steep gate on the world's up.
+- **`TAPS`:** the one fetch gated by `masks.streak` (the band's second isn't counted). On the structure wall it doesn't show: its triplanar taps are in the 12-16 band wet or dry. The colour-map bake drops the macro input when only the stripped `wet` read it (as before).
+- **`WETNESS`:** unchanged; the rivulets show in R (damp) and G (running).
+- **The entry** also exports `SurfacePuddleOpts`, `SurfaceRippleOpts` and `SurfaceStreakOpts` (the first two were in `ApplySurfaceWetnessOpts` without an export).
+- **The gallery:** a concrete wall (`concrete02`, 8 × 4 × 0.6 m) on the concrete block and a cliff boulder (`cliffs01`, a bulged icosphere 6 × 4.8 × 4 m, a third buried, its overhang under the bulge) on the cliff block, structure materials with `wet: { streaks: {} }`; the tab's list names them, its hints the streaks.
+  - **A fix of Phase 3's:** the row's `SIMPLE` switch threw (its variant dropped the puddles' patches and the ripples, whose inputs a variant keeps: `Input "macro" has no use`). Every row material now has a `LOW` tier whose `wet` is the `SIMPLE` one, and the switch is `qualityLevel: 'LOW'` (a tier's variant shares the base's inputs).
+- **Seen** (2026-11-18, Windows Chrome on WebGPU, AMD RDNA 3; no shader errors):
+  - `WETNESS` at wetness 0.6 and rain 1: four or five rivulets on the 8 m wall and on the boulder, top to bottom; the boulder's underside dry; no seam where its axes switch.
+  - Shaded, the wall from 6 m: in rain, darker bands down its lower half; at wetness 0.2 without rain, the rivulets clearly darker than the drying face (and sheened); at 0.05 traces on the cliff (its darkening is 0.25).
 
 ### Phase 5 — Snow coverage and frost (T10, T11)
 

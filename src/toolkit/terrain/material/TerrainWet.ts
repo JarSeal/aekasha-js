@@ -4,7 +4,8 @@
 // `wetRoughness` and `dryingSpeed` by weight, its cavities the AO; its puddles (T3) by the sets'
 // `puddleResponse`, their patches one fetch of the macro texture at their own scale; its regional
 // wetness (T7) a vertex attribute or the first splat map's A; its rain ripples (T4) the input
-// `ripples`' atlas, faded out by the view distance. The conditions are the
+// `ripples`' atlas, faded out by the view distance; its rain streaks (T5) one fetch of the macro
+// texture's R stretched down steep faces, in both qualities. The conditions are the
 // `surfaceConditions()` feature's stable uniforms; without the feature the material builds dry,
 // warned once a page load.
 import { attribute, float, smoothstep, uniform } from 'three/tsl';
@@ -18,6 +19,7 @@ import {
   applySurfaceWetness,
   type SurfacePuddleOpts,
   type SurfaceRippleOpts,
+  type SurfaceStreakOpts,
   type SurfaceWetnessMasks,
 } from '../nodes/Wet';
 import type { ResolvedTerrainDefine, TerrainWetDefine } from './TerrainDefine';
@@ -29,7 +31,7 @@ let isMissingFeatureWarned = false;
 /**
  * The surface the wet response gets: the albedo, the roughness, the shaded normal in the
  * material's space, the AO (the material's `aoNode`, or null), what the layers' wet reads, the
- * macro texture (the puddle patches'), the ripple atlas, the first splat map's A (a regional
+ * macro texture (the puddle patches' and the streaks'), the ripple atlas, the first splat map's A (a regional
  * wetness's) and the view distance (the ripples' fade)
  * @internal
  */
@@ -105,6 +107,30 @@ const getRippleOpts = (
   };
 };
 
+/**
+ * The streaks' options (uniforms `terrain_wetStreakMinSlope`, `terrain_wetStreakScale`,
+ * `terrain_wetStreakLength` and `terrain_wetStreakSpeed`: one fetch of the macro texture's R at
+ * the material's position), or undefined without
+ */
+const getStreakOpts = (
+  settings: TerrainWetDefine,
+  surface: TerrainWetInput,
+  space: SurfaceSpace,
+  keep: Keep
+): SurfaceStreakOpts | undefined => {
+  const { streaks } = settings;
+  if (!streaks) return undefined;
+  return {
+    // The reader requires the macro input with streaks (`takesMacroTexture`)
+    texture: surface.macroTexture as TextureNode,
+    position: space.position,
+    minSlope: keep('wetStreakMinSlope', uniform(streaks.minSlope)),
+    scale: keep('wetStreakScale', uniform(streaks.scale)),
+    length: keep('wetStreakLength', uniform(streaks.length)),
+    speed: keep('wetStreakSpeed', uniform(streaks.speed)),
+  };
+};
+
 /** The regional wetness's node: the vertex attribute, or the first splat map's A; undefined without */
 const getRegional = (settings: TerrainWetDefine, surface: TerrainWetInput) => {
   const { regional } = settings;
@@ -117,9 +143,10 @@ const getRegional = (settings: TerrainWetDefine, surface: TerrainWetInput) => {
 
 /**
  * The surface wet by the surface conditions with the define's `wet` (uniforms
- * `terrain_wetShelter`, and with `FULL` `terrain_wetHeightInfluence`,
- * `terrain_wetCavityInfluence` and the puddles'), and its masks (the `WETNESS` view's); as given, masks null,
- * without `wet` or without the `surfaceConditions()` feature (warned once a page load).
+ * `terrain_wetShelter`, the streaks', and with `FULL` `terrain_wetHeightInfluence`,
+ * `terrain_wetCavityInfluence`, the puddles' and the ripples'), and its masks (the `WETNESS`
+ * view's); as given, masks null, without `wet` or without the `surfaceConditions()` feature
+ * (warned once a page load).
  * @internal
  */
 export const applyTerrainWetness = (
@@ -147,6 +174,7 @@ export const applyTerrainWetness = (
   const regional = getRegional(settings, surface);
   const puddles = isFull ? getPuddleOpts(settings, surface, space, keep) : undefined;
   const ripples = isFull ? getRippleOpts(settings, surface, space, keep) : undefined;
+  const streaks = getStreakOpts(settings, surface, space, keep);
   const wet = applySurfaceWetness(
     {
       albedo: surface.albedo,
@@ -176,6 +204,7 @@ export const applyTerrainWetness = (
         : {}),
       ...(puddles ? { puddles } : {}),
       ...(ripples ? { ripples } : {}),
+      ...(streaks ? { streaks } : {}),
     }
   );
   return {

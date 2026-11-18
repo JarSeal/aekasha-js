@@ -5027,6 +5027,7 @@
       "TerrainRipplesDefine": "TypeAlias",
       "TerrainRuleDefine": "TypeAlias",
       "TerrainRuleRangeDefine": "TypeAlias",
+      "TerrainStreaksDefine": "TypeAlias",
       "TerrainWetDefine": "TypeAlias"
     },
     "src/toolkit/terrain/material/TerrainFar.ts": {
@@ -5284,6 +5285,10 @@
       "spreadSlotWeights": "Function",
       "TopLayerOps": "TypeAlias"
     },
+    "src/toolkit/terrain/nodes/Streaks.ts": {
+      "RainStreakInputs": "TypeAlias",
+      "sampleRainStreaks": "Function"
+    },
     "src/toolkit/terrain/nodes/SurfaceSpace.ts": {
       "getSurfaceSpace": "Function",
       "SurfaceSpace": "TypeAlias",
@@ -5312,6 +5317,7 @@
       "SURFACE_WETNESS_DEFAULTS": "Variable",
       "SurfacePuddleOpts": "TypeAlias",
       "SurfaceRippleOpts": "TypeAlias",
+      "SurfaceStreakOpts": "TypeAlias",
       "SurfaceWetnessMasks": "TypeAlias",
       "SurfaceWetResponse": "TypeAlias",
       "WET_FILM_ROUGHNESS": "Variable",
@@ -6531,6 +6537,9 @@
       "SurfaceParamSpec",
       "SurfaceParamSpecs",
       "SurfaceParamValues",
+      "SurfacePuddleOpts",
+      "SurfaceRippleOpts",
+      "SurfaceStreakOpts",
       "SurfaceToggleParam",
       "SurfaceWetResponse",
       "SurfaceWetnessMasks",

@@ -84,6 +84,9 @@ export { loadTerrainDebugViewsAsync } from './material/TerrainDebugViews';
 export { applySurfaceWetness } from './nodes/Wet';
 export type {
   ApplySurfaceWetnessOpts,
+  SurfacePuddleOpts,
+  SurfaceRippleOpts,
+  SurfaceStreakOpts,
   SurfaceWetnessMasks,
   SurfaceWetResponse,
   WetSurface,

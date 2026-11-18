@@ -944,6 +944,45 @@ const TerrainRipplesSchema = z
   );
 
 /**
+ * The rain streaks (p307 T5): rivulets down steep faces, damp while it's wet and running while it
+ * rains, one fetch of the macro texture's R stretched down the face, in a dynamic branch.
+ */
+const TerrainStreaksSchema = z
+  .object({
+    /** The gentlest face that streaks, degrees from flat, over 0 to 90 (default 60). */
+    minSlope: z
+      .number()
+      .gt(0)
+      .max(90)
+      .optional()
+      .describe('The gentlest face that streaks, degrees from flat, over 0 to 90 (default 60).'),
+    /** The metres one macro texture tile covers across the face, over 0 (default 4). */
+    scale: z
+      .number()
+      .gt(0)
+      .optional()
+      .describe('The metres one macro texture tile covers across the face, over 0 (default 4).'),
+    /** How many times longer a tile is down the face than across, over 0 (default 8). */
+    length: z
+      .number()
+      .gt(0)
+      .optional()
+      .describe('How many times longer a tile is down the face than across, over 0 (default 8).'),
+    /** How fast the running water's pulses move down, metres a second, 0 or more (default 1). */
+    speed: z
+      .number()
+      .min(0)
+      .optional()
+      .describe(
+        "How fast the running water's pulses move down, metres a second, 0 or more (default 1)."
+      ),
+  })
+  .strict()
+  .describe(
+    "Rain streaks (p307 T5): rivulets down faces steeper than minSlope that the rain reaches, damp while the surface conditions' wetness is over 0 and running while their rain is, one fetch of the macro texture's R (the code route's macro.texture, else noiseTexture, default macroNoise; the JSON route's input macro) in a dynamic branch."
+  );
+
+/**
  * The regional wetness (p307 T7): an authored wetness, 0..1, the least the surface shows and the
  * least puddle level, in any weather: a float vertex attribute (default `_wetness`, glTF's
  * `_WETNESS`), or the first splat map's A.
@@ -1035,6 +1074,8 @@ const TerrainWetSchema = z
     regional: TerrainWetRegionalSchema.optional(),
     /** The rain ripples (`FULL` only); default none. */
     ripples: TerrainRipplesSchema.optional(),
+    /** The rain streaks; default none. */
+    streaks: TerrainStreaksSchema.optional(),
   })
   .strict()
   .superRefine((wet, ctx) => {
@@ -1401,13 +1442,16 @@ const getRules = (blend: TerrainBlend | undefined) =>
 
 type TerrainWet = z.infer<typeof TerrainWetSchema>;
 
-/** Whether the material's wet response or a tier's has puddle patches, which read the noise texture */
-const hasPuddlePatches = (value: {
+/**
+ * Whether the material's wet response or a tier's has puddle patches or streaks, which read the
+ * noise texture
+ */
+const hasWetNoise = (value: {
   wet?: TerrainWet;
   quality?: Partial<Record<string, { wet?: TerrainWet } | undefined>>;
 }) =>
   [value.wet, ...Object.values(value.quality ?? {}).map((tier) => tier?.wet)].some(
-    (wet) => wet?.puddles?.patches !== undefined
+    (wet) => wet?.puddles?.patches !== undefined || wet?.streaks !== undefined
   );
 
 /** Whether a rule of the material's blend or of a tier's reads the noise texture */
@@ -1842,15 +1886,15 @@ const checkTextureIds = (
       `${painted} painted layers take ${count} splat map${count === 1 ? '' : 's'}: give their texture ids.`
     );
   }
-  if (value.noiseTexture !== undefined && !hasRuleNoise(value) && !hasPuddlePatches(value)) {
+  if (value.noiseTexture !== undefined && !hasRuleNoise(value) && !hasWetNoise(value)) {
     issue(
       'noiseTexture',
-      "is for rules with noise (blend.rules[i].noise) or puddle patches (wet.puddles.patches), the material's or a tier's."
+      "is for rules with noise (blend.rules[i].noise), puddle patches (wet.puddles.patches) or streaks (wet.streaks), the material's or a tier's."
     );
   } else if (value.noiseTexture !== undefined && value.macro) {
     issue(
       'noiseTexture',
-      "is macro.texture's with a macro: the rules' noise and the puddle patches read it."
+      "is macro.texture's with a macro: the rules' noise, the puddle patches and the streaks read it."
     );
   }
   const wets = [value.wet, ...Object.values(value.quality ?? {}).map((tier) => tier?.wet)];
@@ -1959,16 +2003,16 @@ export const TerrainMaterialConfigSchema = z
         "With blend.source SPLAT_MAP or SPLAT_MAP_AND_RULES, the splat maps' texture ids: the first weighs layers 1-4, the second 5-8 (inputs splat0, splat1)."
       ),
     /**
-     * The macro noise texture the rules' noise and the puddle patches (`wet.puddles.patches`) read
-     * (the input `macro`), for a material with either and no `macro`, whose texture they read
-     * otherwise (default `macroNoise`, the toolkit's).
+     * The macro noise texture the rules' noise, the puddle patches (`wet.puddles.patches`) and the
+     * streaks (`wet.streaks`) read (the input `macro`), for a material with any of them and no
+     * `macro`, whose texture they read otherwise (default `macroNoise`, the toolkit's).
      */
     noiseTexture: z
       .string()
       .min(1)
       .optional()
       .describe(
-        "The macro noise texture the rules' noise and the puddle patches read, without a macro (whose texture they read otherwise; default macroNoise)."
+        "The macro noise texture the rules' noise, the puddle patches and the streaks read, without a macro (whose texture they read otherwise; default macroNoise)."
       ),
     /**
      * The ripple atlas the rain ripples read (the input `ripples`), for a material with

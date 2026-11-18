@@ -66,6 +66,8 @@ describe('TerrainMaterialConfigSchema', () => {
     expect(issuesOf(configOf(1, { wet: { puddles: {} }, noiseTexture: 'noise' }))).toEqual([
       'noiseTexture',
     ]);
+    // And the streaks
+    expect(issuesOf(configOf(1, { wet: { streaks: {} }, noiseTexture: 'noise' }))).toEqual([]);
   });
 
   it('takes a rippleTexture only with ripples, its own or a tier', () => {

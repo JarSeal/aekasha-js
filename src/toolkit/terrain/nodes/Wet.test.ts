@@ -170,4 +170,32 @@ describe('applySurfaceWetness', () => {
     const noNormal = applySurfaceWetness(unshaded, conditions, { ripples: { atlas } });
     expect(collectNodes([noNormal.masks.ripple]).has(conditions.rain)).toBe(false);
   });
+
+  it('streaks steep faces in either quality: the colour and roughness take the branch, the mask reads the weather', () => {
+    const conditions = makeConditions();
+    const surface = makeSurface();
+    const noise = texture(new Texture()) as unknown as TextureNode;
+    const up = uniform(0) as unknown as Node<'float'>;
+    const minSlope = uniform(70) as unknown as Node<'float'>;
+    const countCalls = (root: unknown) =>
+      [...collectNodes([root])].filter((node) => (node as { shaderNode?: unknown }).shaderNode)
+        .length;
+    const plain = applySurfaceWetness(surface, conditions, { up });
+    for (const quality of ['FULL', 'SIMPLE'] as const) {
+      const wet = applySurfaceWetness(surface, conditions, {
+        quality,
+        up,
+        streaks: { texture: noise, minSlope },
+      });
+      // Its weight: the face's steepness (the facing, the slope) × the rain or the wetness
+      const streak = collectNodes([wet.masks.streak]);
+      for (const node of [conditions.rain, conditions.wetness, up, minSlope]) {
+        expect(streak.has(node)).toBe(true);
+      }
+      // The rivulets darken (the pores) and gloss (the film): one Fn call more each
+      expect(countCalls(wet.albedo)).toBe(countCalls(plain.albedo) + 1);
+      expect(countCalls(wet.roughness)).toBe(countCalls(plain.roughness) + 1);
+    }
+    expect(collectNodes([plain.masks.streak]).has(conditions.rain)).toBe(false);
+  });
 });

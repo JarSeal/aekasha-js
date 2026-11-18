@@ -136,9 +136,11 @@ const WET_KEYS = [
   'puddles',
   'regional',
   'ripples',
+  'streaks',
 ];
 const WET_PUDDLE_KEYS = ['maxSlope', 'edge', 'patches'];
 const WET_RIPPLE_KEYS = ['scale', 'lifetime', 'strength', 'distance'];
+const WET_STREAK_KEYS = ['minSlope', 'scale', 'length', 'speed'];
 const WET_PATCH_KEYS = ['scale', 'amount'];
 const WET_SPLAT_CHANNELS = ['A'] as const;
 /** The vertex attribute a regional wetness reads by default: glTF's `_WETNESS` (GLTFLoader's
@@ -304,6 +306,20 @@ export type TerrainWetDefine = {
   regional: { attribute: string } | { splatChannel: (typeof WET_SPLAT_CHANNELS)[number] } | null;
   /** The rain ripples (`FULL` only; the input `ripples`, a ripple atlas), or null for none */
   ripples: TerrainRipplesDefine | null;
+  /** The rain streaks (the input `macro`'s R), or null for none */
+  streaks: TerrainStreaksDefine | null;
+};
+
+/** The wet response's rain streaks with their defaults filled in (p307 T5) */
+export type TerrainStreaksDefine = {
+  /** The gentlest face that streaks, degrees from flat */
+  minSlope: number;
+  /** The metres one macro texture tile covers across the face */
+  scale: number;
+  /** How many times longer a tile is down the face than across */
+  length: number;
+  /** How fast the running water's pulses move down, metres a second */
+  speed: number;
 };
 
 /** The wet response's rain ripples with their defaults filled in (p307 T4) */
@@ -356,8 +372,9 @@ export type ResolvedTerrainDefine = {
   /** The macro variation (its texture the input `macro`), or null for none */
   macro: TerrainMacroDefine | null;
   /**
-   * Whether the define takes the input `macro`: it has a macro, or a rule of its blend or of a
-   * tier's has noise (a tier's variant shares the material's inputs)
+   * Whether the define takes the input `macro`: it has a macro, a rule of its blend or of a
+   * tier's has noise, or its wet response or a tier's has puddle patches or streaks (a tier's
+   * variant shares the material's inputs)
    */
   takesMacroTexture: boolean;
   /**
@@ -407,6 +424,7 @@ export const TERRAIN_DEFINE_VALUES = {
   wetPuddleKeys: WET_PUDDLE_KEYS,
   wetPatchKeys: WET_PATCH_KEYS,
   wetRippleKeys: WET_RIPPLE_KEYS,
+  wetStreakKeys: WET_STREAK_KEYS,
   wetSplatChannels: WET_SPLAT_CHANNELS,
   colorMapKeys: COLOR_MAP_KEYS,
   farModes: FAR_MODES,
@@ -1212,6 +1230,28 @@ const readWet = (value: unknown, path: string): TerrainWetDefine | null => {
     puddles: readPuddles(wet.puddles, `${path}.puddles`),
     regional: readRegional(wet.regional, `${path}.regional`),
     ripples: readRipples(wet.ripples, `${path}.ripples`),
+    streaks: readStreaks(wet.streaks, `${path}.streaks`),
+  };
+};
+
+/** The rain streaks' numbers (p307 T5), their defaults filled in; null without */
+const readStreaks = (value: unknown, path: string): TerrainStreaksDefine | null => {
+  if (value === undefined) return null;
+  const streaks = readObject(value, path);
+  checkKeys(streaks, WET_STREAK_KEYS, path);
+  const { streakMinSlope, streakScale, streakLength, streakSpeed } = SURFACE_WETNESS_DEFAULTS;
+  const over0 = { min: { value: 0, isExclusive: true } };
+  return {
+    minSlope: readNumber(
+      streaks,
+      'minSlope',
+      streakMinSlope,
+      { ...over0, max: { value: 90 } },
+      path
+    ),
+    scale: readNumber(streaks, 'scale', streakScale, over0, path),
+    length: readNumber(streaks, 'length', streakLength, over0, path),
+    speed: readNumber(streaks, 'speed', streakSpeed, NON_NEGATIVE, path),
   };
 };
 
@@ -1293,11 +1333,12 @@ const checkWetSplatChannel = (
 };
 
 /**
- * Whether a wet response (the material's or a tier's, as given) has puddle patches, which read
- * the input `macro`
+ * Whether a wet response (the material's or a tier's, as given) reads the input `macro`: its
+ * puddle patches or its streaks
  */
-const hasPuddlePatches = (wet: unknown) =>
-  isRecord(wet) && isRecord(wet.puddles) && wet.puddles.patches !== undefined;
+const hasWetMacroNoise = (wet: unknown) =>
+  isRecord(wet) &&
+  ((isRecord(wet.puddles) && wet.puddles.patches !== undefined) || wet.streaks !== undefined);
 
 /** Whether a wet response (the material's or a tier's, as given) has ripples: the input `ripples` */
 const hasRipples = (wet: unknown) => isRecord(wet) && wet.ripples !== undefined;
@@ -1447,7 +1488,7 @@ export const readTerrainDefine = (
     takesMacroTexture:
       define.macro !== undefined ||
       [define.blend, ...Object.values(quality).map((tier) => tier.blend)].some(hasRawRuleNoise) ||
-      [define.wet, ...Object.values(quality).map((tier) => tier.wet)].some(hasPuddlePatches),
+      [define.wet, ...Object.values(quality).map((tier) => tier.wet)].some(hasWetMacroNoise),
     takesRippleTexture: [define.wet, ...Object.values(quality).map((tier) => tier.wet)].some(
       hasRipples
     ),
