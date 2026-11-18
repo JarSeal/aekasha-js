@@ -8,6 +8,7 @@ import { parseCustomProps } from './CustomProps';
 import {
   getImportInstancesSpawn,
   getImportPhysicsSpawn,
+  type ImportInstancesSpawn,
   warnMissingImportExtension,
 } from './ImportExtensions';
 import { getImportedAsset, retagImportedAsset } from './ImportRegistry';
@@ -124,8 +125,9 @@ const getMeshProps = (
  * GPU Instances) is drawn as static instances in 16 m cells (`createStaticInstances`, the
  * `instancing()` feature), each cell a mesh entity `<appId>/<node>/<cellX>,<cellZ>`: its
  * `meshProps` entry's geometry, material, shadows and `lod` apply to every cell, its transform
- * fields, `merge` and physics don't. Without `instancing()` it warns once and draws the geometry
- * once, at the node. A point cloud (`aekScatterPoints`) spawns nothing: it's a scatter's data.
+ * fields, `merge` and physics don't; its cells are made once their code has loaded (with the first
+ * such node), none when the scene was left meanwhile. Without `instancing()` it warns once and
+ * draws the geometry once, at the node. A point cloud (`aekScatterPoints`) spawns nothing: it's a scatter's data.
  * @param manifestOrId an import's manifest, or the id of an imported asset
  * @param params the root transform, the material, and the mesh and physics overrides
  * @returns the created entities (none, with an error logged, for an id that isn't imported)
@@ -187,6 +189,8 @@ export const spawnImportedAsset = async (
   const meshEntityIds: number[] = [];
   const spawnInstances = getImportInstancesSpawn();
   const instancedNodes = new Set<ImportSpawnNode>();
+  /** The GPU instances' spawns, each with its place in `meshEntityIds` */
+  const instanceSpawns: { at: number; spawn: ImportInstancesSpawn }[] = [];
   nodes.forEach((node) => {
     const index = manifest.geometries.indexOf(node.info);
     const meshProps = getMeshProps(params, node.info, index);
@@ -201,8 +205,9 @@ export const spawnImportedAsset = async (
         );
       }
       const { appId: _appId, ...entityOpts } = params.entityOpts ?? {};
-      meshEntityIds.push(
-        ...spawnInstances({
+      instanceSpawns.push({
+        at: meshEntityIds.length,
+        spawn: {
           // Generated app ids (a spawn whose prefix is taken) are unique, as a mesh's UUID
           id: appId ?? `${manifest.id}/${node.localName}/${THREE.MathUtils.generateUUID()}`,
           geometry: meshProps?.geo ?? node.info.geometryId,
@@ -213,8 +218,8 @@ export const spawnImportedAsset = async (
           receiveShadow: meshProps?.receiveShadow ?? params.receiveShadow,
           lod: meshProps?.lod,
           entityOpts,
-        })
-      );
+        },
+      });
       return;
     }
     if (instances) {
@@ -245,6 +250,13 @@ export const spawnImportedAsset = async (
     );
     meshEntityIds.push(node.entityId);
   });
+  if (spawnInstances && instanceSpawns.length) {
+    // Their code loads with the first: each node's cells go in at its place, the last first
+    const cells = await Promise.all(instanceSpawns.map(({ spawn }) => spawnInstances(spawn)));
+    for (let i = instanceSpawns.length - 1; i >= 0; i--) {
+      meshEntityIds.splice(instanceSpawns[i].at, 0, ...cells[i]);
+    }
+  }
 
   // The physics extension (`physics()`) spawns the bodies and colliders the nodes describe
   let physicsEntityIds: number[] = [];

@@ -198,6 +198,7 @@ describe('extractPrimitives: GPU instances', () => {
     expect(primitives).toHaveLength(1);
     const [{ geometry, info }] = primitives!;
     expect(info.geometryId).toBe('scatter/Rocks');
+    expect(info.meshName).toBe('rock');
     expect(info.transform.position).toEqual({ x: 10, y: 0, z: 0 });
     expectClose(info.instances!.matrices, expectedMatrices());
     expectClose(
@@ -250,6 +251,31 @@ describe('extractPrimitives: point clouds', () => {
     expect(cloud.customProps.warnings).toEqual([]);
     expectClose(cloud.instances.matrices, expectedMatrices());
     expect([...cloud.instances.items!]).toEqual(INSTANCES.map((i) => i.item));
+  });
+
+  test("Blender's layout: the points node under its object's node, which has the custom prop", async () => {
+    const doc = createDoc();
+    createScene(doc);
+    // Blender 5.3 writes a Geometry Nodes point cloud as a child `GN Instance` of its object
+    const points = addPointCloudNode(doc, 'GN Instance', {} as { aekScatterPoints: number });
+    const object = doc.createNode('ScatterPoints').setExtras({ aekScatterPoints: 1 });
+    const scene = doc.getRoot().getDefaultScene()!;
+    scene.removeChild(points);
+    object.addChild(points.setTranslation([0, 0, 0]));
+    // A mesh under it is no point cloud
+    object.addChild(doc.createNode('Rock').setMesh(createTriangleMesh(doc)));
+    scene.addChild(object.setTranslation(NODE_TRANSLATION));
+    // The rocks' own nodes are roots too (else the object is the unwrapped root)
+    scene.addChild(doc.createNode('RockA').setMesh(createTriangleMesh(doc)));
+    const { primitives, pointClouds } = await extractAsync(doc);
+    expect(primitives!.map(({ info }) => info.nodeName)).toEqual(['Rock', 'RockA']);
+    expect(pointClouds).toHaveLength(1);
+    expect(pointClouds![0]).toMatchObject({
+      nodeName: 'GN_Instance',
+      parentPath: ['ScatterPoints'],
+    });
+    expect(pointClouds![0].transform.position).toEqual({ x: 10, y: 0, z: 0 });
+    expectClose(pointClouds![0].instances.matrices, expectedMatrices());
   });
 
   test('without _ROT, _SCALE and _ITEM: unrotated, unscaled, no items', async () => {

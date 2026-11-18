@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../../.schemas/importedAsset.schema.json",
+  "id": "scatterTestGnGpu",
+  "fileName": "./scatterTestGnGpu.glb",
+  "optimize": { "mesh": { "quantize": false } },
+  "debugData": {
+    "name": "Blender scatter (Gpu)",
+    "description": "scatterTest's Geometry Nodes scatter (devTools/blender/buildScatterTest.py; p308 Phase 2) exported as GPU Instances: the node ScatterInstances, whose children hold the GPU instances (EXT_mesh_gpu_instancing) of RockA's and RockB's meshes, and the rocks' own nodes. Lossless: a scatter draws its items without their nodes, where a quantized encode puts its scale."
+  }
+}

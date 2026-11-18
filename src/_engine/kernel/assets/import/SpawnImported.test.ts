@@ -149,7 +149,7 @@ describe("spawnImportedAsset's GPU instances", () => {
     const physicsNodes: string[][] = [];
     registerImportExtension({
       id: 'instancing',
-      spawnInstances: (spawn) => {
+      spawnInstances: async (spawn) => {
         spawns.push(spawn);
         return [101, 102];
       },

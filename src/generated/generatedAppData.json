@@ -14125,7 +14125,7 @@
     "scatterTest": {
       "isDebugScene": true,
       "name": "Static scatter (p308)",
-      "description": "p308 Phase 1's verification scene: a flat 64 m terrain block whose scatter (scatterTestPebbles, its block's own) places 20,000 pebbles of two kinds by a test generator the scene registers, tinted per instance, in 16 m cells: one InstancedMesh entity per cell and kind, no entity per pebble. Each cell hides as a whole below its LOD's cullScreenSize (0.5): from the start camera the near half of the block shows and the far half is culled. Beside them, scatterTestBoulders places six hand-placed boulders (a PLACEMENTS source, spawnScatter on the block's centre), casting shadows. The load checks the counts and, a few frames in, that some cells are LOD-culled and some aren't, logging an error otherwise. window.__scatterTest holds the spawn results.",
+      "description": "p308 Phase 1's verification scene: a flat 64 m terrain block whose scatter (scatterTestPebbles, its block's own) places 20,000 pebbles of two kinds by a test generator the scene registers, tinted per instance, in 16 m cells: one InstancedMesh entity per cell and kind, no entity per pebble. Each cell hides as a whole below its LOD's cullScreenSize (0.5): from the start camera the near half of the block shows and the far half is culled. Beside them, scatterTestBoulders places six hand-placed boulders (a PLACEMENTS source, spawnScatter on the block's centre), casting shadows. In front, one Blender Geometry Nodes scatter of two rocks (devTools/blender/buildScatterTest.py) twice, from IMPORTED sources: exported with GPU Instances on the left (scatterTestGnGpu), as a point cloud on the right (scatterTestGnPoints); the load checks they place the same rocks the same way. The load checks the counts and, a few frames in, that some cells are LOD-culled and some aren't, logging an error otherwise. window.__scatterTest holds the spawn results.",
       "terrainBlocks": [
         {
           "id": "scatterTestBlock",
@@ -14247,6 +14247,70 @@
           "debugData": {
             "name": "Test boulders",
             "description": "Six hand-placed boulders around the block's centre (a PLACEMENTS source): yaws, a quaternion and scales; they cast shadows."
+          }
+        },
+        {
+          "id": "scatterTestGnGpu",
+          "items": [
+            {
+              "geometry": "scatterTestGnGpu/RockA",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true
+            },
+            {
+              "geometry": "scatterTestGnGpu/RockB",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true
+            }
+          ],
+          "source": {
+            "type": "IMPORTED",
+            "importedAsset": "scatterTestGnGpu",
+            "nodes": [
+              "ScatterInstances"
+            ],
+            "seed": 0
+          },
+          "cellSize": 16,
+          "debugData": {
+            "name": "Blender scatter (GPU Instances)",
+            "description": "The Geometry Nodes scatter's GPU instances: each instancing node's copy of a rock's mesh is drawn by the item naming that rock's own node."
+          }
+        },
+        {
+          "id": "scatterTestGnPoints",
+          "items": [
+            {
+              "geometry": "scatterTestGnPoints/RockA",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true
+            },
+            {
+              "geometry": "scatterTestGnPoints/RockB",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true
+            }
+          ],
+          "source": {
+            "type": "IMPORTED",
+            "importedAsset": "scatterTestGnPoints",
+            "nodes": [
+              "ScatterPoints"
+            ],
+            "seed": 0
+          },
+          "cellSize": 16,
+          "debugData": {
+            "name": "Blender scatter (point cloud)",
+            "description": "The same Geometry Nodes scatter as a point cloud: each point's _ITEM picks the rock (the collection's order: RockA, RockB)."
           }
         },
         {
@@ -14379,6 +14443,46 @@
           "debugData": {
             "name": "Test pebble B",
             "description": "A 5 × 3 segment sphere, 5 cm."
+          }
+        }
+      ],
+      "importedAssets": [
+        {
+          "id": "scatterTestGnGpu",
+          "fileName": "./scatterTestGnGpu.glb",
+          "debugData": {
+            "name": "Blender scatter (Gpu)",
+            "description": "scatterTest's Geometry Nodes scatter (devTools/blender/buildScatterTest.py; p308 Phase 2) exported as GPU Instances: the node ScatterInstances, whose children hold the GPU instances (EXT_mesh_gpu_instancing) of RockA's and RockB's meshes, and the rocks' own nodes. Lossless: a scatter draws its items without their nodes, where a quantized encode puts its scale."
+          },
+          "__fileSize": 15708,
+          "__sourceUrl": "/app/scenes/scatterTest/blenderScatter/scatterTestGnGpu.glb",
+          "__url": "/aek-assets/app/scenes/scatterTest/blenderScatter/scatterTestGnGpu.fa2289d8.glb",
+          "__bytes": {
+            "in": 15708,
+            "out": 16064
+          },
+          "__vramBytes": {
+            "in": 5568,
+            "out": 5568
+          }
+        },
+        {
+          "id": "scatterTestGnPoints",
+          "fileName": "./scatterTestGnPoints.glb",
+          "debugData": {
+            "name": "Blender scatter (Points)",
+            "description": "scatterTest's Geometry Nodes scatter (devTools/blender/buildScatterTest.py; p308 Phase 2) exported as a point cloud: the node ScatterPoints (custom prop aekScatterPoints) and its child, the points with _ROT, _SCALE and _ITEM, and the rocks' own nodes. Lossless: a scatter draws its items without their nodes, where a quantized encode puts its scale."
+          },
+          "__fileSize": 13084,
+          "__sourceUrl": "/app/scenes/scatterTest/blenderScatter/scatterTestGnPoints.glb",
+          "__url": "/aek-assets/app/scenes/scatterTest/blenderScatter/scatterTestGnPoints.f3d02d44.glb",
+          "__bytes": {
+            "in": 13084,
+            "out": 12288
+          },
+          "__vramBytes": {
+            "in": 10416,
+            "out": 10416
           }
         }
       ],
@@ -40510,6 +40614,56 @@
       "__vramBytes": {
         "in": 16800,
         "out": 21000
+      }
+    },
+    "scatterTestGnGpu": {
+      "id": "scatterTestGnGpu",
+      "fileName": "./scatterTestGnGpu.glb",
+      "debugData": {
+        "name": "Blender scatter (Gpu)",
+        "description": "scatterTest's Geometry Nodes scatter (devTools/blender/buildScatterTest.py; p308 Phase 2) exported as GPU Instances: the node ScatterInstances, whose children hold the GPU instances (EXT_mesh_gpu_instancing) of RockA's and RockB's meshes, and the rocks' own nodes. Lossless: a scatter draws its items without their nodes, where a quantized encode puts its scale."
+      },
+      "optimize": {
+        "mesh": {
+          "quantize": false
+        }
+      },
+      "__sourcePath": "src/app/scenes/scatterTest/blenderScatter/scatterTestGnGpu.importedAsset.json",
+      "__fileSize": 15708,
+      "__sourceUrl": "/app/scenes/scatterTest/blenderScatter/scatterTestGnGpu.glb",
+      "__url": "/aek-assets/app/scenes/scatterTest/blenderScatter/scatterTestGnGpu.fa2289d8.glb",
+      "__bytes": {
+        "in": 15708,
+        "out": 16064
+      },
+      "__vramBytes": {
+        "in": 5568,
+        "out": 5568
+      }
+    },
+    "scatterTestGnPoints": {
+      "id": "scatterTestGnPoints",
+      "fileName": "./scatterTestGnPoints.glb",
+      "debugData": {
+        "name": "Blender scatter (Points)",
+        "description": "scatterTest's Geometry Nodes scatter (devTools/blender/buildScatterTest.py; p308 Phase 2) exported as a point cloud: the node ScatterPoints (custom prop aekScatterPoints) and its child, the points with _ROT, _SCALE and _ITEM, and the rocks' own nodes. Lossless: a scatter draws its items without their nodes, where a quantized encode puts its scale."
+      },
+      "optimize": {
+        "mesh": {
+          "quantize": false
+        }
+      },
+      "__sourcePath": "src/app/scenes/scatterTest/blenderScatter/scatterTestGnPoints.importedAsset.json",
+      "__fileSize": 13084,
+      "__sourceUrl": "/app/scenes/scatterTest/blenderScatter/scatterTestGnPoints.glb",
+      "__url": "/aek-assets/app/scenes/scatterTest/blenderScatter/scatterTestGnPoints.f3d02d44.glb",
+      "__bytes": {
+        "in": 13084,
+        "out": 12288
+      },
+      "__vramBytes": {
+        "in": 10416,
+        "out": 10416
       }
     },
     "terrainBlockTestBlender": {

@@ -16,7 +16,7 @@ describe('import extensions', () => {
     expect(getImportLodChains()).toBeNull();
     expect(getImportInstancesSpawn()).toBeNull();
     const spawnPhysics: ImportExtension['spawnPhysics'] = async () => [];
-    const spawnInstances: ImportExtension['spawnInstances'] = () => [];
+    const spawnInstances: ImportExtension['spawnInstances'] = async () => [];
     registerImportExtension({ id: 'physics', spawnPhysics });
     registerImportExtension({ id: 'lod', lodChains });
     registerImportExtension({ id: 'instancing', spawnInstances });

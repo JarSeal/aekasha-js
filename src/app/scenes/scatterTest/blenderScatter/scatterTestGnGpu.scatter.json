@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../../../.schemas/scatter.schema.json",
+  "items": [
+    { "geometry": "scatterTestGnGpu/RockA", "material": "scatterTestStone", "castShadow": true },
+    { "geometry": "scatterTestGnGpu/RockB", "material": "scatterTestStone", "castShadow": true }
+  ],
+  "source": {
+    "type": "IMPORTED",
+    "importedAsset": "scatterTestGnGpu",
+    "nodes": ["ScatterInstances"]
+  },
+  "debugData": {
+    "name": "Blender scatter (GPU Instances)",
+    "description": "The Geometry Nodes scatter's GPU instances: each instancing node's copy of a rock's mesh is drawn by the item naming that rock's own node."
+  }
+}

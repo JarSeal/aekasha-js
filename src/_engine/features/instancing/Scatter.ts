@@ -102,18 +102,44 @@ const placementMatrices = (placements: readonly ScatterPlacementDef[], origin: T
   return matrices;
 };
 
-/** Throws naming the scatter and the item when an item's geometry or material isn't registered */
+/**
+ * Whether a geometry's positions are quantized (the asset pipeline's default meshopt encode of an
+ * import): their scale is in the import's node, which a scatter's cell doesn't draw.
+ * @internal
+ */
+export const hasQuantizedPositions = (geometry: THREE.BufferGeometry) => {
+  const position = geometry.getAttribute('position');
+  return Boolean(position) && (!(position.array instanceof Float32Array) || position.normalized);
+};
+
+/**
+ * The fix for an import's quantized geometry, named by the refusals.
+ * @internal
+ */
+export const LOSSLESS_IMPORT_FIX =
+  'Give its importedAsset JSON "optimize": { "mesh": { "quantize": false } }.';
+
+/** Throws naming the scatter and the item when an item's geometry or material isn't registered,
+ * or its geometry is quantized */
 const checkItemAssets = (scatter: ScatterDef) => {
   scatter.items.forEach((item, index) => {
-    const missing = !getGeometry(item.geometry)
+    const geometry = getGeometry(item.geometry);
+    const missing = !geometry
       ? `geometry "${item.geometry}"`
       : !getMaterial(item.material)
         ? `material "${item.material}"`
         : undefined;
-    if (!missing) return;
-    throw new Error(
-      `spawnScatter: the scatter "${scatter.id}"'s item ${index} names the ${missing}, which isn't registered (a *.geometry.json or *.material.json loads with a scene listing the scatter; register any other before the spawn).`
-    );
+    const where = `spawnScatter: the scatter "${scatter.id}"'s item ${index}`;
+    if (missing) {
+      throw new Error(
+        `${where} names the ${missing}, which isn't registered (a *.geometry.json or *.material.json loads with a scene listing the scatter; register any other before the spawn).`
+      );
+    }
+    if (geometry && hasQuantizedPositions(geometry)) {
+      throw new Error(
+        `${where}'s geometry "${item.geometry}" has quantized positions (an import's default meshopt encode), whose scale is in its node, which a scatter doesn't draw. ${LOSSLESS_IMPORT_FIX}`
+      );
+    }
   });
 };
 
@@ -207,12 +233,14 @@ export type SpawnedScatter = {
  * @param id the scatter's id (its `*.scatter.json`'s)
  * @returns the scatter's cells and its `dispose()`, or `null` when its scene left meanwhile
  * @throws when `instancing()` isn't installed, there's no scene, the scene doesn't have the
- * scatter, an item's geometry or material isn't registered, its generator isn't registered or
+ * scatter, an item's geometry or material isn't registered or its geometry is quantized (an
+ * import's default encode: give the import `"optimize": { "mesh": { "quantize": false } }`), its generator isn't registered or
  * returns instances that don't fit its items, or its import has no node it takes, a node of GPU
  * instances no item draws or a point's `_ITEM` past the items
  * @remarks An `IMPORTED` source's node of GPU instances is drawn by the item whose `geometry` is
- * the node's (`<importId>/<node>`), a point cloud's point by its `_ITEM` (else the weights
- * pick).
+ * the node's (`<importId>/<node>`), or a plain node's of the same glTF mesh (Blender's export
+ * copies a mesh for each instancing node: name the rock's own node, `<importId>/RockA`), a point
+ * cloud's point by its `_ITEM` (else the weights pick).
  * Re-check your scene after the `await`: a load that leaves the scene while a generator runs (or
  * the `IMPORTED` source's code loads) gets `null`, and nothing is made.
  * @example

@@ -80,9 +80,9 @@ export type ImportExtension = {
   spawnPhysics?: (spawn: ImportPhysicsSpawn) => Promise<number[]>;
   /** Reads, registers and generates LOD chains. */
   lodChains?: ImportLodChainsExtension;
-  /** Draws a node's GPU instances in cells of static instances, and returns the cells' entity
-   * ids. */
-  spawnInstances?: (spawn: ImportInstancesSpawn) => number[];
+  /** Draws a node's GPU instances in cells of static instances, and resolves the cells' entity
+   * ids (none when the scene was left while its code loaded). */
+  spawnInstances?: (spawn: ImportInstancesSpawn) => Promise<number[]>;
 };
 
 let physicsExtension: ImportExtension | null = null;

@@ -114,6 +114,9 @@ export type ImportedGeometryInfo = {
   transform: { position: Vector3Like; quaternion: QuatLike; scale: Vector3Like };
   /** The node's Blender custom props, parsed (physics, compound group, the app's own). */
   customProps: ParsedCustomProps;
+  /** The glTF mesh's name (Blender's mesh data name), when it has one. Blender's GPU Instances
+   * export copies a mesh for each instancing node, under the same name. */
+  meshName?: string;
   /** The primitive came from KHR_draco_mesh_compression (vertex order is not preserved). */
   isDracoCompressed: boolean;
   /** Only with importTextures: which registered texture filled which slot of this primitive's glTF
@@ -136,8 +139,8 @@ export type ImportedInstances = {
   items?: Int32Array;
 };
 
-/** A point cloud of an import (a node with the custom prop `aekScatterPoints`): its points as
- * instances, for a scatter's `IMPORTED` source. It registers no geometry and spawns nothing on its
+/** A point cloud of an import (a node with the custom prop `aekScatterPoints`, or a points node
+ * under one): its points as instances, for a scatter's `IMPORTED` source. It registers no geometry and spawns nothing on its
  * own. */
 export type ImportedPointCloudInfo = {
   /** The import it belongs to. */

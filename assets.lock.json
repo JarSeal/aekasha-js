@@ -116,6 +116,15 @@
       "ktxVersion": "4.4.2",
       "recipeKey": "252a354f8d0f55662c3065eb5b42013c2910cbb3a532cb89563f4d3e5eaa1c0d"
     },
+    "0a7eb62a29d0c53fc2c31a006ea88b36514565d86bd4bf7c5f4680c19487ceb6": {
+      "source": "src/app/scenes/scatterTest/blenderScatter/scatterTestGnGpu.glb",
+      "url": "/aek-assets/app/scenes/scatterTest/blenderScatter/scatterTestGnGpu.fa2289d8.glb",
+      "bytes": 16064,
+      "geometryBytes": {
+        "in": 5568,
+        "out": 5568
+      }
+    },
     "0ac6f830e69084ed8623b5ca09b726fb7e60ea25e9e64da3b39cf0310df00b3c": {
       "source": "src/app/scenes/textureSets/source/bricks/normalHeight.png",
       "url": "/aek-assets/app/scenes/textureSets/source/bricks/normalHeight.52000e3a.ktx2",
@@ -2114,6 +2123,15 @@
       "geometryBytes": {
         "in": 459264,
         "out": 459264
+      }
+    },
+    "f8617a1e09258907019def39723f949e37c6d6e632625eb54459462319889815": {
+      "source": "src/app/scenes/scatterTest/blenderScatter/scatterTestGnPoints.glb",
+      "url": "/aek-assets/app/scenes/scatterTest/blenderScatter/scatterTestGnPoints.f3d02d44.glb",
+      "bytes": 12288,
+      "geometryBytes": {
+        "in": 10416,
+        "out": 10416
       }
     },
     "fb41ebc4f545e25b21e99e93613ea2bafc9bd59f0e32a20a15709d51c885ad24": {

@@ -136,14 +136,15 @@ const ImportedSourceSchema = z
       .describe(
         "The *.importedAsset.json's id (the gather adds it to the scene). Its nodes of GPU instances (EXT_mesh_gpu_instancing) and its point clouds (aekScatterPoints) are the instances, placed from the target's position as they are from the file's root."
       ),
-    /** The nodes to take, by name, `*` matching any run of characters (`Rocks*`). Default: every
-     * node of GPU instances and every point cloud. */
+    /** The nodes to take, by their name or a parent's (Blender writes a Geometry Nodes output as
+     * children of its object's node), `*` matching any run of characters (`Rocks*`). Default:
+     * every node of GPU instances and every point cloud. */
     nodes: z
       .array(z.string().min(1))
       .min(1)
       .optional()
       .describe(
-        'The nodes to take, by name, * matching any run of characters (Rocks*). Default: every node of GPU instances and every point cloud.'
+        "The nodes to take, by their name or a parent's (Blender writes a Geometry Nodes output as children of its object's node), * matching any run of characters (Rocks*). Default: every node of GPU instances and every point cloud."
       ),
     /** The seed the points without an `_ITEM` are picked from (default 0), combined as a
      * generator's. */
@@ -156,7 +157,7 @@ const ImportedSourceSchema = z
       ),
   })
   .describe(
-    "An import's instances: a GPU-instanced node's item is the one whose geometry is the node's, a point's its _ITEM."
+    "An import's instances: a GPU-instanced node's item is the one whose geometry is the node's, or a plain node's of the same glTF mesh; a point's is its _ITEM."
   );
 
 /** The scatter sources: `PROCEDURAL` (a generator), `PLACEMENTS` (a list) and `IMPORTED` (an

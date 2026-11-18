@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Terrain, Rendering, Assets
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -10,7 +10,7 @@ GPU-instanced detail on terrain blocks: pebbles, rocks, boulders and leaf-litter
 
 Instances come from two sources:
 
-- **Blender**: Geometry Nodes, exported as GPU instances (`EXT_mesh_gpu_instancing`), which the importer doesn't handle yet.
+- **Blender**: Geometry Nodes, exported as GPU instances (`EXT_mesh_gpu_instancing`) or as a point cloud (Phase 2).
 - **The engine**: mask-driven procedural scatter from the block's splat weights and rules, seeded per block.
 
 Static scatter renders as **cell-chunked instanced meshes without per-instance entities**. Scatter assets are owned by their terrain block (p306), so they stream with it later.
@@ -102,12 +102,12 @@ Static scatter renders as **cell-chunked instanced meshes without per-instance e
 ### D3 — Blender GPU instances import (engine: `kernel/assets/import/*`)
 
 - **Extraction:** for nodes that three turned into `InstancedMesh` (`EXT_mesh_gpu_instancing`), store `instanceMatrices: Float32Array` (and `instanceColors` if present) in the manifest per node. Transfer them through the asset worker as transferable buffers (`GeometryTransfer.ts` gets an instance path).
-- **Spawn:** `spawnImportedAsset` and the `IMPORTED` scatter source spawn such nodes through `createStaticInstances` (D1), with the node's custom props for item settings (`aekScatterCollider`, `aekCastShadow`). The kernel imports no feature code, so `instancing()` registers a new import extension member (`spawnInstances`, next to physics' `spawnPhysics`); without `instancing()` such a node warns once and spawns its geometry as one plain mesh.
-- **Fallback when an exporter version mangles GPU instances:** a **point-cloud** mesh.
+- **Spawn:** `spawnImportedAsset` and the `IMPORTED` scatter source spawn such nodes through `createStaticInstances` (D1). The kernel imports no feature code, so `instancing()` registers a new import extension member (`spawnInstances`, next to physics' `spawnPhysics`); without `instancing()` such a node warns once and spawns its geometry as one plain mesh. (Built without the custom props `aekCastShadow` and `aekScatterCollider`: the spawn's and the items' shadows cover the first, Phase 3's colliders the second.)
+- **The point cloud**, the robust path when an exporter version mangles GPU instances:
   - The points' positions are the instance positions.
-  - Custom attributes `_ROT` (quaternion as vec4) and `_SCALE` (vec3) carry the rest, and `_ITEM` (int) picks the item.
-  - The importer turns any node with custom prop `aekScatterPoints: 1` into placements.
-  - It's documented as the robust path. Geometry Nodes writes those attributes with _Store Named Attribute_.
+  - Custom attributes `_ROT` (a Quaternion) and `_SCALE` (a Vector) carry the rest, and `_ITEM` (an Integer) picks the item; Geometry Nodes writes them with _Store Named Attribute_ on the _Distribute Points on Faces_ points, and Blender 5.3 exports them as they are (in its Z-up axes, a quaternion w first), which the importer turns.
+  - The importer takes any node with the custom prop `aekScatterPoints: 1`, or a points node under one: Blender 5.3 exports a Geometry Nodes point cloud (_Geometry Nodes Instances_, _Point Clouds_ and _Attributes_ on) as a child `GN Instance` of its object's node, no _Mesh to Points_ or conversion needed (Object → Convert → Point Cloud makes an empty one).
+  - Both ways need a lossless import (`"optimize": { "mesh": { "quantize": false } }`): a quantized one's scale is in its nodes, and in a GPU instance's matrix (Phase 2's As built).
 
 ### D4 — Procedural scatter v2 (toolkit: `src/toolkit/terrain/scatter/TerrainScatter.ts`, on `aekasha/toolkit/terrain`)
 
@@ -177,7 +177,7 @@ Static scatter renders as **cell-chunked instanced meshes without per-instance e
      - _Align Euler to Vector_ on the normal with a factor;
      - _Translate Instances_ down for sinking;
    - **don't** realize instances;
-   - export with _GPU Instances_ on (the exporter's scene-graph option), or the point-cloud fallback (D3: _Store Named Attribute_ `_ROT`, `_SCALE`, `_ITEM` on the points, then _Mesh to Points_ and export) when GPU instances don't come through;
+   - export with _GPU Instances_ and _Geometry Nodes Instances_ on (the exporter's scene-graph options), or the point-cloud path (D3: _Store Named Attribute_ `_ROT`, `_SCALE`, `_ITEM` on the points, the object's custom prop `aekScatterPoints`, export with _Geometry Nodes Instances_, _Point Clouds_ and _Attributes_ on) when GPU instances don't come through; the import lossless (`"quantize": false`); the items name the rocks' own nodes (`buildScatterTest.py` is the worked example);
    - pitfalls: unapplied rock scale, instances under the terrain, realize by accident (huge GLB).
 5. **Procedural in the engine:** a `*.scatter.json` example per material (pebbles on sand, boulders at cliff bases with a slope mask, leaf cards on forest floor), tuning density and spacing, deterministic seeds.
 6. **Variations, each with why and cost:**
@@ -217,7 +217,7 @@ As built (step 2):
 
 **Exit:** 20k pebbles on a 64 m block in 16 cells, culled per cell, released on scene exit; `PLACEMENTS` source works; `yarn verify:scenes --only lodShowcase` unchanged (or its baseline updated with the reason).
 
-### Phase 2 — GPU instances import and the point-cloud fallback (D3)
+### Phase 2 — GPU instances import and the point-cloud fallback (D3) — done
 
 1. The import (D3), and the scatter's `IMPORTED` source in `ScatterSchema.ts`, the gather and `spawnScatter` (moved here from Phase 1).
 
@@ -226,7 +226,7 @@ Found before building (three r187, gltf-transform 4.5.1, Blender 5.3's exporter)
 - three's `GLTFMeshGpuInstancing` swaps the node's mesh for an `InstancedMesh` it doesn't associate with the glTF mesh (no `meshes` / `primitives` association), and for custom instance attributes (all but TRS and `_COLOR_0`) puts them into its own copy of the geometry as `InstancedBufferAttribute`s.
 - A `POINTS` primitive is a `THREE.Points` (not `isMesh`); GLTFLoader lowercases attribute names it doesn't know (`_ROT` → `_rot`).
 - The asset pipeline's `quantize()` (in its default meshopt encode) folds the dequantization into each GPU instance's TRS (`transformBatch`), but would put a point cloud's onto its node, scaling every instance.
-- Blender 5.3 exports point clouds itself (the _Point Clouds_ option, on by default: `pointcloud.py`), positions turned to Y-up but `_`-prefixed custom attributes left in Blender's Z-up axes and order (a Quaternion attribute is w, x, y, z; an Integer one a float). So _Mesh to Points_ works there; D3's attributes are read in Blender's axes.
+- Blender 5.3 exports point clouds itself (the _Point Clouds_ option, on by default: `pointcloud.py`), positions turned to Y-up but `_`-prefixed custom attributes left in Blender's Z-up axes and order (a Quaternion attribute is w, x, y, z; an Integer one a float). D3's attributes are read in Blender's axes. (Section 3 found the export's real layout and needs: see its As built.)
 
 As built (section 1, the import):
 
@@ -243,6 +243,16 @@ As built (section 2, the `IMPORTED` source):
 - **The gather:** pass 1 (scatters are read after the imports) fails on an `importedAsset` no `*.importedAsset.json` has; the scene pass appends it to the scene's `importedAssets` (resolved later in the pass as a listed one), so it loads with the scene, before the scene code and the terrain blocks' spawn.
 - **The spawn:** its own module, `ScatterImported.ts` (`getImportedScatterInstances`), which `spawnScatter` `import()`s with the first such source (it reads the import registry, and so the glTF import path; the spawn re-checks the scene after it). The instances are each node's, through its `transform`, from the target's position. A GPU-instanced node's item is the one whose `geometry` is the node's geometry id (a multi-primitive node's primitives are separate items); a point's is its `_ITEM`, else the weights pick from the seed. Colours: a node's `_COLOR_0`, white for the others when any has them. It throws on an import not loaded, no node taken (naming the nodes it has, or how to export them), a node of GPU instances no item draws (naming the items' geometries) and an `_ITEM` past the items.
 - Tests: `Scatter.test.ts` (3: GPU instances and points from the target with their items and colours, the globs and the weights, the four refusals), `gather.test.ts` (2: the source's def and the import appended, the refusals).
+
+As built (section 3, the Blender scatter):
+
+- **The builder** `devTools/blender/buildScatterTest.py` (run in a background Blender ≥ 5.3, its header has the command; Blender 5.3 takes no Geometry Nodes modifier input as an ID property, so the point-cloud object uses a copy of the node group whose `Points` input defaults on): a 24 m ground, the `ScatterRocks` collection (`RockA` an icosphere, `RockB` a cube, 0.5 m, origin at the bottom), the group `AekScatter` (Poisson Disk points, `_ROT` / `_SCALE` / `_ITEM` stored on them, then _Instance on Points_ reading them back, or the points), into `src/app/scenes/scatterTest/blenderScatter/`: `scatterTestGnGpu.glb` (GPU Instances and Geometry Nodes Instances on: a node `ScatterInstances` whose children `ScatterInstances.0` / `.1` hold the instances of a copy of RockB's and RockA's mesh, in no fixed order), `scatterTestGnPoints.glb` (a node `ScatterPoints` with the custom prop and its child `GN Instance`, a `POINTS` primitive with `_ROT`, `_SCALE`, `_ITEM` and `_RADIUS`), both with the rocks' own nodes and without the ground, and `scatterTestGn.blend` to look at. 157 instances.
+- **Found in the real export, so changed:** a points node takes the prop from a parent (extraction); an `IMPORTED` source's `nodes` globs match a node's name or a parent's (`parentPath`); `ImportedGeometryInfo.meshName` (the glTF mesh's name), and a node of GPU instances is drawn by the item whose geometry is the node's, or a plain node's of the same mesh name and primitive (Blender copies the mesh per instancing node, so items name `<importId>/RockA` in both exports).
+- **Lossless imports:** a scatter item's geometry with quantized positions (an import's default meshopt encode: its scale is in its node, which a cell doesn't draw) throws, any source (`hasQuantizedPositions`, `Scatter.ts`), and so does an `IMPORTED` node of GPU instances whose own geometry is quantized (its matrices carry that geometry's dequantization), both naming `"optimize": { "mesh": { "quantize": false } }`. The two imports set it.
+- **Smallest build:** `spawnInstances` is async: `instancing()` registers a wrapper that `import()`s `StaticInstances.ts` with the first imported node of GPU instances (none when the scene was left meanwhile, `scatterState.sceneVisit`), and `spawnImportedAsset` puts each node's cells at its place in `meshEntityIds` after its plain meshes are made; registering it statically had put `StaticInstances.ts` (1.2 kB gzip) in the main chunk. `getGLTFPrimitiveKey` moved to its own module (`import/GLTFPrimitiveKey.ts`): `lod()`'s install reached `GLTFExtract.ts` through it, so the whole extraction was in the main chunk (on `main` too); the main chunk's `kernel/assets` is now 1.9 kB gzip under `main`'s, the extraction in the import's chunk. `yarn verify:baselines`: the bundle and API changes are this plan's (recorded in Phase 5), no debug code.
+- **The scene:** `scatterTest` spawns `scatterTestGnGpu` (x -14) and `scatterTestGnPoints` (x 14), z 16, and the load logs an error unless both have instances and every instance pairs with the other's (sorted by item and position: the same item, each matrix element within 1e-4 of the target-relative matrix). `window.__scatterTest.blender` has the counts.
+- Tests: `GLTFExtract.test.ts` (the Blender layout: the points under the object's node, a mesh there no cloud; the mesh name), `Scatter.test.ts` (a mesh copy drawn by its plain node's item, taken by its parent's name; the quantized refusals).
+- **Exit, verified:** `yarn verify:scenes --only scatterTest --config quick` loads with no error (its snapshot differs by the new rocks: record it with `--update`); a one-off script on the runner's server and Windows Chrome loaded the scene with the GLTF imports on the worker and on the main thread (`AEK_debugAssetsBoot`): 157 GPU instances and 157 points, 0 placed differently, each import loaded where asked, no errors, both times.
 
 **Exit:** a Blender GN scatter exported both ways spawns identically, and the worker and main-thread import paths agree.
 
@@ -274,5 +284,5 @@ As built (section 2, the `IMPORTED` source):
 | Blender's GPU-instances export option changes or drops custom attributes | Point-cloud fallback (D3); the add-on (p306) can gain an "Export Scatter" operator if needed                                                                                                                                                                                                                                                                                                               |
 | Too many cells means too many draw calls                                 | `cellSize` per scatter; for low-poly item types (pebbles, cards), bake all of a cell's instances of one material into one geometry with p371's `mergeGeometryParts` (one draw per material per cell instead of one per item type; costs vertices × instances of memory, so not for high-poly rocks). Geometry groups don't help: one draw per group (p370 §2.1). `BatchedMesh` is p375's spike-gated topic |
 | Per-instance colliders hurt physics                                      | Colliders only on flagged items; lint threshold; FIXED bodies only                                                                                                                                                                                                                                                                                                                                         |
-| A cell's light culling or bounds read one instance at the origin          | Cells aren't opted into ECS frustum culling or spatial indexing (D1); check that light culling's receiver test sees a cell (pools' case: `docs/issues/pool-instances-not-light-receivers.md`) in the gallery's Scatter row under an object-culled light |
+| A cell's light culling or bounds read one instance at the origin         | Cells aren't opted into ECS frustum culling or spatial indexing (D1); check that light culling's receiver test sees a cell (pools' case: `docs/issues/pool-instances-not-light-receivers.md`) in the gallery's Scatter row under an object-culled light                                                                                                                                                    |
 | Raycast placement on imported blocks is slow for large counts            | Use the grid height from the heightfield extraction (p306 D3) instead of raycasts when the block is a regular grid                                                                                                                                                                                                                                                                                         |

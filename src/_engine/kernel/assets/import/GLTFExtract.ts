@@ -3,6 +3,7 @@ import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { isOnlyObject3D } from '../../render/Object3DHelpers';
 import type { ExtractedLodChain, GLTFLodChains } from '../../../features/lod/LodChainGLTF';
 import { parseCustomProps } from './CustomProps';
+import { getGLTFPrimitiveKey } from './GLTFPrimitiveKey';
 import type {
   ImportedGeometryInfo,
   ImportedInstances,
@@ -14,7 +15,7 @@ type Association = { nodes?: number; meshes?: number; primitives?: number };
 
 type GLTFJson = {
   nodes?: { mesh?: number }[];
-  meshes?: { primitives: { extensions?: Record<string, unknown> }[] }[];
+  meshes?: { name?: string; primitives: { extensions?: Record<string, unknown> }[] }[];
 };
 
 type ImportTransform = ImportedGeometryInfo['transform'];
@@ -45,13 +46,6 @@ export type ExtractedPrimitive = {
 export type ExtractResult =
   | { primitives: ExtractedPrimitive[]; pointClouds: ImportedPointCloudInfo[]; error?: undefined }
   | { primitives?: undefined; pointClouds?: undefined; error: string };
-
-/**
- * A mesh primitive's key in a glTF file (its mesh index and primitive index): what prebuilt
- * per-primitive data, like the LOD chains (`GLTFLodChains`), is keyed by.
- * @internal
- */
-export const getGLTFPrimitiveKey = (mesh: number, primitive: number) => `${mesh}:${primitive}`;
 
 /** A Blender export often has a single empty Object3D as its only root: its children are then
  * the real pieces, and transforms are relative to it. */
@@ -163,13 +157,23 @@ const toTransform = (matrix: THREE.Matrix4): ImportTransform => {
   };
 };
 
+/** Whether a node or one of its parents (below the glTF scene) has the custom prop */
+const hasPropUp = (node: THREE.Object3D, scene: THREE.Object3D, prop: string) => {
+  for (let p: THREE.Object3D | null = node; p && p !== scene; p = p.parent) {
+    if (p.userData[prop]) return true;
+  }
+  return false;
+};
+
 /**
  * Walks a parsed glTF and describes every mesh primitive in it (or only in the node picked with
- * `meshIndex`): its geometry, glTF-root-relative transform, parsed custom props, whether it
- * was DRACO-compressed, its prebuilt LOD chain (`opts.lodChains`, readGLTFLodChains()) and its GPU
- * instances (`EXT_mesh_gpu_instancing`). A node with the custom prop `aekScatterPoints` is a point
- * cloud: its points are instances (positions, `_ROT`, `_SCALE`, `_ITEM`) and its geometry is
- * left out. Pure: nothing is registered, disposed or logged.
+ * `meshIndex`): its geometry, glTF-root-relative transform, parsed custom props, its glTF mesh's
+ * name, whether it was DRACO-compressed, its prebuilt LOD chain (`opts.lodChains`,
+ * readGLTFLodChains()) and its GPU instances (`EXT_mesh_gpu_instancing`). A node with the custom
+ * prop `aekScatterPoints`, or a points node under one (Blender writes a Geometry Nodes point cloud
+ * as a child `GN Instance` of its object's node), is a point cloud: its points are instances
+ * (positions, `_ROT`, `_SCALE`, `_ITEM`) and its geometry is left out. Pure: nothing is
+ * registered, disposed or logged.
  * @internal
  */
 export const extractPrimitives = (
@@ -218,7 +222,10 @@ export const extractPrimitives = (
     delete userData.gltfExtensions;
     const customProps: ParsedCustomProps = parseCustomProps(userData);
 
-    if (customProps.raw.aekScatterPoints) {
+    if (
+      customProps.raw.aekScatterPoints ||
+      (isPoints && hasPropUp(node, gltf.scene, 'aekScatterPoints'))
+    ) {
       const read = readPointCloud(mesh.geometry);
       if (read.error !== undefined) customProps.warnings.push(read.error);
       pointClouds.push({
@@ -272,6 +279,7 @@ export const extractPrimitives = (
         parentPath,
         transform,
         customProps,
+        ...(meshDef?.name ? { meshName: meshDef.name } : {}),
         isDracoCompressed: Boolean(primitiveDef?.extensions?.KHR_draco_mesh_compression),
         ...(instancedMesh ? { instances: readGPUInstances(instancedMesh) } : {}),
       },

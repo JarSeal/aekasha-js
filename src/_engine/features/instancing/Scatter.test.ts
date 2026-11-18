@@ -374,7 +374,32 @@ describe("spawnScatter's IMPORTED source", () => {
     spawned?.dispose();
   });
 
-  test('refuses an import not loaded, no node taken, a node no item draws and an _ITEM past the items', async () => {
+  test("draws Blender's per-node mesh copy with the item of a plain node of its mesh, taken by its parent's name", async () => {
+    // Blender's GPU Instances export: the instancer's child holds a copy of RockA's mesh
+    fns.imports.coast = {
+      id: 'coast',
+      fileName: 'coast.glb',
+      textureIds: [],
+      geometries: [
+        {
+          ...node('RockA', 'boulder', { matrices: translations() }),
+          instances: undefined,
+          meshName: 'RockA',
+        },
+        {
+          ...node('Scatter0', 'coast/Scatter0', { matrices: translations([1, 0, 0]) }),
+          parentPath: ['Scatter'],
+          meshName: 'RockA',
+        },
+      ],
+    };
+    fns.scenes.scene.scatters = [scatter({ source: imported(['Scatter']) })];
+    const spawned = await spawnScatter('rocks', { world });
+    expect(positionsOf(spawned!.entityIds)).toEqual(['boulder@3,0']);
+    spawned?.dispose();
+  });
+
+  test('refuses an import not loaded, an _ITEM past the items, no node taken, a node no item draws and quantized geometries', async () => {
     fns.scenes.scene.scatters = [scatter({ source: imported() })];
     await expect(spawnScatter('rocks', { world })).rejects.toThrow(
       /the import "coast", which isn't loaded/
@@ -389,7 +414,23 @@ describe("spawnScatter's IMPORTED source", () => {
     );
     fns.scenes.scene.scatters = [scatter({ items: [item('pebble')], source: imported() })];
     await expect(spawnScatter('rocks', { world })).rejects.toThrow(
-      /no item draws the geometry "boulder" of its node "Boulders"/
+      /no item draws its node "Boulders" of GPU instances: an item's geometry is the node's "boulder"/
+    );
+
+    // Quantized (an import's default encode): its scale is in a node the scatter doesn't draw
+    const quantized = new THREE.BufferGeometry().setAttribute(
+      'position',
+      new THREE.BufferAttribute(new Int16Array(9), 3, true)
+    );
+    saveBufferGeometry(quantized, { id: 'coast/Boulders', isPersistent: true });
+    fns.scenes.scene.scatters = [scatter({ source: imported() })];
+    fns.imports.coast.geometries[1].geometryId = 'coast/Boulders';
+    await expect(spawnScatter('rocks', { world })).rejects.toThrow(
+      /node "Boulders" of GPU instances has quantized positions.*"quantize": false/
+    );
+    fns.scenes.scene.scatters = [scatter({ items: [item('pebble'), item('coast/Boulders')] })];
+    await expect(spawnScatter('rocks', { world })).rejects.toThrow(
+      /item 1's geometry "coast\/Boulders" has quantized positions/
     );
     expect(getGeometryRegistry().pebble?.count).toBe(0);
   });

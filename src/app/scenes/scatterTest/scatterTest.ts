@@ -25,7 +25,11 @@ import { nextFrames } from '../../shared/verifyHarness';
  * entity per cell and kind, none per pebble. Each cell hides as a whole below its LOD's
  * `cullScreenSize`: from the start camera the near half of the block shows and the far half is
  * culled. `scatterTestBoulders` (a `PLACEMENTS` source) puts six hand-placed boulders on the
- * block's centre through `spawnScatter`.
+ * block's centre through `spawnScatter`. In front, p308 Phase 2's Blender scatter
+ * (`devTools/blender/buildScatterTest.py`: one Geometry Nodes scatter of two rocks) spawns twice from
+ * `IMPORTED` sources, exported with GPU Instances on the left (`scatterTestGnGpu`) and as a point
+ * cloud on the right (`scatterTestGnPoints`), and the load checks that both place the same rocks the
+ * same way.
  *
  * The load checks the counts, then, once the LOD has selected every pebble cell, that some are
  * LOD-culled and some aren't, and logs an error otherwise, which fails the scene runner. `window.__scatterTest` holds the spawn results and the culled cells.
@@ -37,6 +41,13 @@ const PEBBLES = 20000;
 /** 64 m in 16 m cells, for each of the two kinds */
 const PEBBLE_CELLS = 32;
 const BOULDERS = 6;
+/** The Blender scatter's two exports, each spawned on its own target, side by side in front */
+const BLENDER_SCATTERS = [
+  { id: 'scatterTestGnGpu', position: { x: -14, y: 0, z: 16 } },
+  { id: 'scatterTestGnPoints', position: { x: 14, y: 0, z: 16 } },
+] as const;
+/** How far apart the two exports' matrix elements may be */
+const BLENDER_TOLERANCE = 1e-4;
 /** Frames the check waits at most for the LOD's first selection of every cell */
 const MAX_CHECK_FRAMES = 120;
 
@@ -46,7 +57,16 @@ const state: {
   pebbles: number;
   boulders: number;
   culledCells: number;
-} = { pebbleCellIds: [], boulderCellIds: [], pebbles: 0, boulders: 0, culledCells: -1 };
+  /** Each Blender export's instances, and how many differ from the other's */
+  blender: { gpu: number; points: number; mismatches: number };
+} = {
+  pebbleCellIds: [],
+  boulderCellIds: [],
+  pebbles: 0,
+  boulders: 0,
+  culledCells: -1,
+  blender: { gpu: 0, points: 0, mismatches: -1 },
+};
 
 /** `params.count` instances uniform over the target's square, at its height, with a random yaw,
  * a scale in `params.scale` and a grey tint of `params.tint` */
@@ -105,6 +125,72 @@ const checkCulledCellsAsync = async (isCurrent: () => boolean) => {
   }
 };
 
+/** A spawned scatter's instances relative to its target, each with its item (from its cell's app
+ * id, `scatter/<id>/<item>/<cellX>,<cellZ>`), sorted by item and position */
+const readInstances = (
+  scatterId: string,
+  entityIds: readonly number[],
+  origin: { x: number; z: number }
+) => {
+  const world = getECSWorld();
+  const prefix = `scatter/${scatterId}/`;
+  const matrix = new THREE.Matrix4();
+  const instances: { item: number; elements: number[] }[] = [];
+  for (const entityId of entityIds) {
+    const appId = world.getComponent(entityId, ComponentType.APP_ID)?.id ?? '';
+    const item = Number(appId.slice(prefix.length).split('/')[0]);
+    const mesh = world.getComponent(entityId, ComponentType.OBJECT3D)?.value as THREE.InstancedMesh;
+    const cell = world.getComponent(entityId, ComponentType.TRANSFORM)!.position;
+    for (let i = 0; i < mesh.count; i++) {
+      const elements = [...mesh.getMatrixAt(i, matrix).elements];
+      elements[12] += cell.x - origin.x;
+      elements[13] += cell.y;
+      elements[14] += cell.z - origin.z;
+      instances.push({ item, elements });
+    }
+  }
+  return instances.sort(
+    (a, b) => a.item - b.item || a.elements[12] - b.elements[12] || a.elements[14] - b.elements[14]
+  );
+};
+
+/** The two exports' instances, pair by pair: how many differ (another item, or a matrix element
+ * past the tolerance), all of them when the counts differ */
+const countMismatches = (
+  gpu: ReturnType<typeof readInstances>,
+  points: ReturnType<typeof readInstances>
+) => {
+  if (gpu.length !== points.length) return Math.max(gpu.length, points.length);
+  return gpu.filter(
+    (a, i) =>
+      a.item !== points[i].item ||
+      a.elements.some((value, e) => Math.abs(value - points[i].elements[e]) > BLENDER_TOLERANCE)
+  ).length;
+};
+
+/** Spawns the Blender scatter's two exports and checks they agree; logs an error otherwise. Null
+ * when the scene was left meanwhile. */
+const spawnBlenderScattersAsync = async (isCurrent: () => boolean) => {
+  const read: ReturnType<typeof readInstances>[] = [];
+  for (const { id, position } of BLENDER_SCATTERS) {
+    const spawned = await spawnScatter(id, { target: { position } });
+    if (!spawned || !isCurrent()) return null;
+    read.push(readInstances(id, spawned.entityIds, position));
+  }
+  const [gpu, points] = read;
+  state.blender = {
+    gpu: gpu.length,
+    points: points.length,
+    mismatches: countMismatches(gpu, points),
+  };
+  if (!gpu.length || state.blender.mismatches) {
+    lerror(
+      `scatterTest: the Blender scatter's exports differ: ${gpu.length} GPU instances and ${points.length} points, ${state.blender.mismatches} of them placed differently.`
+    );
+  }
+  return state.blender;
+};
+
 export const scene = async () => {
   (window as unknown as { __scatterTest: typeof state }).__scatterTest = state;
   Object.assign(state, {
@@ -113,6 +199,7 @@ export const scene = async () => {
     pebbles: 0,
     boulders: 0,
     culledCells: -1,
+    blender: { gpu: 0, points: 0, mismatches: -1 },
   });
   let isLoaded = true;
   registerOnSceneExit(SCENE_ID, () => {
@@ -160,6 +247,7 @@ export const scene = async () => {
   if (!boulders || !isLoaded) return;
   state.boulderCellIds = boulders.entityIds;
   state.boulders = boulders.count;
+  if (!(await spawnBlenderScattersAsync(() => isLoaded))) return;
   const world = getECSWorld();
   state.pebbles = block.scatterIds.reduce((sum, id) => {
     const mesh = world.getComponent(id, ComponentType.OBJECT3D)?.value as THREE.InstancedMesh;

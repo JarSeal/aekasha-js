@@ -1,10 +1,12 @@
 import * as THREE from 'three/webgpu';
+import { getGeometry } from '../../kernel/assets/Geometry';
 import { getImportedAsset } from '../../kernel/assets/import/ImportRegistry';
 import type {
   ImportedAssetManifest,
   ImportedGeometryInfo,
   ImportedInstances,
 } from '../../kernel/assets/import/ImportTypes';
+import { hasQuantizedPositions, LOSSLESS_IMPORT_FIX } from './Scatter';
 import type { ScatterDef } from './ScatterSchema';
 
 // A scatter's `IMPORTED` source (docs/plans/p308_terrain-scatter.md D3): an import's nodes of GPU
@@ -17,15 +19,46 @@ const COLOR_SIZE = 3;
 type ImportedSource = Extract<ScatterDef['source'], { type: 'IMPORTED' }>;
 
 /** One node's instances and their item (`-1`: picked by the weights) */
-type Part = { name: string; instances: ImportedInstances; item: number; node: THREE.Matrix4 };
+type Part = { instances: ImportedInstances; item: number; node: THREE.Matrix4 };
 
-/** A test of a node's name against `nodes`' globs (`*` any run of characters), or every name */
+type ImportedNode = Pick<ImportedGeometryInfo, 'nodeName' | 'parentPath'>;
+
+/** A test of a node against `nodes`' globs (`*` any run of characters): its name or a parent's
+ * (Blender writes a Geometry Nodes output as children of its object's node), or every node */
 const toNodeTest = (nodes: readonly string[] | undefined) => {
   if (!nodes) return () => true;
   const patterns = nodes.map(
     (glob) => new RegExp(`^${glob.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`)
   );
-  return (name: string) => patterns.some((pattern) => pattern.test(name));
+  return ({ nodeName, parentPath }: ImportedNode) =>
+    [nodeName, ...parentPath].some((name) => patterns.some((pattern) => pattern.test(name)));
+};
+
+const formatNode = ({ nodeName, parentPath }: ImportedNode) =>
+  `"${[...parentPath, nodeName].join('/')}"`;
+
+/** The item drawing a node of GPU instances: the one whose geometry is the node's, else a plain
+ * node's of the same glTF mesh and primitive (Blender's GPU Instances export copies the mesh for
+ * each instancing node, under its name), or -1 */
+const findItem = (
+  scatter: ScatterDef,
+  manifest: ImportedAssetManifest,
+  info: ImportedGeometryInfo
+) => {
+  const item = scatter.items.findIndex(({ geometry }) => geometry === info.geometryId);
+  if (item >= 0 || !info.meshName) return item;
+  const primitive = info.geometryId.split('#')[1];
+  const twins = new Set(
+    manifest.geometries
+      .filter(
+        (other) =>
+          !other.instances &&
+          other.meshName === info.meshName &&
+          other.geometryId.split('#')[1] === primitive
+      )
+      .map((other) => other.geometryId)
+  );
+  return scatter.items.findIndex(({ geometry }) => twins.has(geometry));
 };
 
 const toNodeMatrix = ({
@@ -49,43 +82,51 @@ const collectParts = (
   const isTaken = toNodeTest(source.nodes);
   const parts: Part[] = [];
   for (const info of manifest.geometries) {
-    if (!info.instances || !isTaken(info.nodeName)) continue;
-    const item = scatter.items.findIndex(({ geometry }) => geometry === info.geometryId);
+    if (!info.instances || !isTaken(info)) continue;
+    // Quantized, its instances carry its dequantization (gltf-transform's `quantize()` folds it in)
+    const own = getGeometry(info.geometryId);
+    if (own && hasQuantizedPositions(own)) {
+      throw new Error(
+        `${where}: its node ${formatNode(info)} of GPU instances has quantized positions (the asset pipeline's default meshopt encode), whose scale is in each instance's matrix. ${LOSSLESS_IMPORT_FIX}`
+      );
+    }
+    const item = findItem(scatter, manifest, info);
     if (item < 0) {
       throw new Error(
-        `${where}: no item draws the geometry "${info.geometryId}" of its node "${info.nodeName}" of GPU instances (the items' geometries: ${scatter.items.map(({ geometry }) => `"${geometry}"`).join(', ')}).`
+        `${where}: no item draws its node ${formatNode(info)} of GPU instances: an item's geometry is the node's "${info.geometryId}"${info.meshName ? ` or a plain node's of its mesh "${info.meshName}"` : ''} (the items' geometries: ${scatter.items.map(({ geometry }) => `"${geometry}"`).join(', ')}).`
       );
     }
     parts.push({
-      name: info.nodeName,
       instances: info.instances,
       item,
       node: toNodeMatrix(info.transform),
     });
   }
   for (const cloud of manifest.pointClouds ?? []) {
-    if (!isTaken(cloud.nodeName)) continue;
+    if (!isTaken(cloud)) continue;
     const past = cloud.instances.items?.find((item) => item < 0 || item >= scatter.items.length);
     if (past !== undefined) {
       throw new Error(
-        `${where}: its point cloud "${cloud.nodeName}" has the _ITEM ${past}, not one of the ${scatter.items.length} items.`
+        `${where}: its point cloud ${formatNode(cloud)} has the _ITEM ${past}, not one of the ${scatter.items.length} items.`
       );
     }
     parts.push({
-      name: cloud.nodeName,
       instances: cloud.instances,
       item: -1,
       node: toNodeMatrix(cloud.transform),
     });
   }
   if (!parts.length) {
-    const instanced = manifest.geometries
-      .filter((info) => info.instances)
-      .map((info) => info.nodeName);
-    const clouds = (manifest.pointClouds ?? []).map((cloud) => cloud.nodeName);
-    const found = [...new Set([...instanced, ...clouds])];
+    const found = [
+      ...new Set(
+        [
+          ...manifest.geometries.filter((info) => info.instances),
+          ...(manifest.pointClouds ?? []),
+        ].map(formatNode)
+      ),
+    ];
     throw new Error(
-      `${where} has no node of GPU instances or point cloud${source.nodes ? ` matching ${source.nodes.map((n) => `"${n}"`).join(', ')}` : ''} (it has ${found.length ? found.map((n) => `"${n}"`).join(', ') : 'none: export Geometry Nodes instances with GPU Instances on, unrealized, or a point cloud with the custom prop aekScatterPoints'}).`
+      `${where} has no node of GPU instances or point cloud${source.nodes ? ` matching ${source.nodes.map((n) => `"${n}"`).join(', ')}` : ''} (it has ${found.length ? found.join(', ') : 'none: export Geometry Nodes instances with GPU Instances on, unrealized, or a point cloud with the custom prop aekScatterPoints'}).`
     );
   }
   return parts;
@@ -97,7 +138,7 @@ const collectParts = (
  * weights pick).
  * @internal
  * @throws when the import isn't loaded, has no node the source takes, a GPU-instanced node's
- * geometry is no item's, or a point's `_ITEM` is past the items
+ * geometry is quantized or no item's, or a point's `_ITEM` is past the items
  */
 export const getImportedScatterInstances = (
   scatter: ScatterDef,

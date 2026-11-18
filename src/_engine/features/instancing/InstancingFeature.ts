@@ -1,8 +1,16 @@
 import type { EngineFeature } from '../../kernel/init/Features';
 import { installInstancedMeshPools } from './InstancedMeshPool';
 import { installInstanceSets } from './InstanceSet';
-import { installScatters } from './ScatterGenerators';
-import { spawnImportedInstances } from './StaticInstances';
+import { installScatters, scatterState } from './ScatterGenerators';
+import type { ImportInstancesSpawn } from '../../kernel/assets/import/ImportExtensions';
+
+/** An imported node's GPU instances: the static instances' code loads with the first, and a scene
+ * left meanwhile gets none */
+const spawnImportedInstancesAsync = async (spawn: ImportInstancesSpawn) => {
+  const visit = scatterState.sceneVisit;
+  const { spawnImportedInstances } = await import('./StaticInstances');
+  return visit === scatterState.sceneVisit ? spawnImportedInstances(spawn) : [];
+};
 
 /**
  * The instancing feature: instanced mesh pools (`createInstancedMeshPool`,
@@ -31,6 +39,6 @@ export const instancing = (): EngineFeature => ({
     installInstanceSets(ctx);
     installScatters(ctx);
     // An imported node's GPU instances (`EXT_mesh_gpu_instancing`)
-    ctx.registerImportExtension({ id: 'instancing', spawnInstances: spawnImportedInstances });
+    ctx.registerImportExtension({ id: 'instancing', spawnInstances: spawnImportedInstancesAsync });
   },
 });
