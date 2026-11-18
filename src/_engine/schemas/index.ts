@@ -70,6 +70,11 @@ export {
   TerrainBlockAssetSchema,
   terrainSchemaPart,
 } from '../features/terrain/TerrainBlockSchema';
+export {
+  SceneSurfaceConditionsSchema,
+  surfaceConditionsSchemaPart,
+} from '../features/surface/SurfaceConditionsSchema';
+export type { SceneSurfaceConditions } from '../features/surface/SurfaceConditionsSchema';
 export type {
   TerrainBlockAsset,
   TerrainBlockColliderType,

@@ -80,6 +80,9 @@
     "terrainBlocks": {
       "$ref": "#/definitions/__schema622"
     },
+    "surfaceConditions": {
+      "$ref": "#/definitions/__schema624"
+    },
     "id": {
       "type": "string",
       "description": "The scene id: it keys the scene's save data, its saved state and ?startScene=."
@@ -99,7 +102,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema624"
+          "$ref": "#/definitions/__schema643"
         }
       ]
     }
@@ -7951,6 +7954,170 @@
     },
     "__schema624": {
       "type": "object",
+      "properties": {
+        "wetness": {
+          "$ref": "#/definitions/__schema625"
+        },
+        "rain": {
+          "$ref": "#/definitions/__schema627"
+        },
+        "puddleLevel": {
+          "$ref": "#/definitions/__schema629"
+        },
+        "waterLevel": {
+          "$ref": "#/definitions/__schema631"
+        },
+        "snowCoverage": {
+          "$ref": "#/definitions/__schema633"
+        },
+        "temperature": {
+          "$ref": "#/definitions/__schema635"
+        },
+        "dryingRate": {
+          "$ref": "#/definitions/__schema637"
+        },
+        "wind": {
+          "$ref": "#/definitions/__schema639"
+        },
+        "mode": {
+          "$ref": "#/definitions/__schema641"
+        }
+      },
+      "additionalProperties": false,
+      "description": "The scene's starting surface conditions (the surfaceConditions() feature), over the defaults."
+    },
+    "__schema625": {
+      "description": "How wet the surfaces start: 0 dry, 0.5 the pores full, 1 a water film. Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema626"
+        }
+      ]
+    },
+    "__schema626": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "__schema627": {
+      "description": "Rain intensity, 0 to 1. Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema628"
+        }
+      ]
+    },
+    "__schema628": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "__schema629": {
+      "description": "How full the puddles start, 0 to 1. Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema630"
+        }
+      ]
+    },
+    "__schema630": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "__schema631": {
+      "description": "The water surface's world Y for the shoreline's wet band, or null for none. Default null.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema632"
+        }
+      ]
+    },
+    "__schema632": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "__schema633": {
+      "description": "Snow cover, 0 to 1. Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema634"
+        }
+      ]
+    },
+    "__schema634": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "__schema635": {
+      "description": "The air temperature in °C (snow melts above 0). Default 15.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema636"
+        }
+      ]
+    },
+    "__schema636": {
+      "type": "number"
+    },
+    "__schema637": {
+      "description": "How much wetness dries per minute in full sun without wind. Default 0.1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema638"
+        }
+      ]
+    },
+    "__schema638": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema639": {
+      "description": "The wind's world x and z in m/s. Default [0, 0].",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema640"
+        }
+      ]
+    },
+    "__schema640": {
+      "type": "array",
+      "items": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2,
+      "additionalItems": false
+    },
+    "__schema641": {
+      "description": "SIMULATED (rain wets, sun and wind dry, snow melts) or MANUAL (only the app's calls change them). Default SIMULATED.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema642"
+        }
+      ]
+    },
+    "__schema642": {
+      "type": "string",
+      "enum": [
+        "SIMULATED",
+        "MANUAL"
+      ]
+    },
+    "__schema643": {
+      "type": "object",
       "propertyNames": {
         "type": "string"
       },
@@ -8043,6 +8210,9 @@
             },
             "terrainBlocks": {
               "$ref": "#/definitions/__schema622"
+            },
+            "surfaceConditions": {
+              "$ref": "#/definitions/__schema624"
             }
           },
           "additionalProperties": false
