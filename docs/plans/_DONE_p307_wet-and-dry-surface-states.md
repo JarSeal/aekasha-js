@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-6 implemented
+Status: implemented (Phases 1-7)
 Category: Materials, Terrain, Weather
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -462,7 +462,7 @@ type SurfaceConditions = {
   - Snow 0.6 at −5 °C: the floor under the canopy bare, the roof's top covered.
 - **The cost** (the gallery's 512² map over 64 m, three small occluders, rendering every frame for 6 s at about 88 a second): the render 0.26 ms CPU on average (0.88 the last: three's projection walks the whole scene, so it grows with the scene's objects, not the occluders), 0.005 ms GPU (the depth pass's timestamps); at the default 30 frames about 0.01 ms CPU a frame. The material's part: one compare fetch a pixel. Memory: the 512² depth texture (1 MiB) and its R8 colour (0.25 MiB).
 
-### Phase 7 — Handbook, Hub and versioning
+### Phase 7 — Handbook, Hub and versioning — done
 
 1. **`docs/techniques/wet-dry-surfaces.md`** (page template):
    - the S1 physics in plain words;
@@ -492,6 +492,17 @@ type SurfaceConditions = {
    - **p990:** its deferred "weather" bullet already points here (since 2026-10-02). When this plan lands, update that bullet to say the surface side is done;
    - **p427:** its grounding names the API that landed (`aekasha/surface`, the sun source it replaces when it owns the clock).
 4. **Versions:** engine minor, toolkit minor, app minor; `CHANGELOG.md`.
+
+**As built:**
+
+- **Section 1, the handbook** (`docs/techniques/wet-dry-surfaces.md`): step 1's list mapped onto the handbook's page template (What it is with S1 and the composition diagram, Best for, Performance, Maps, Blender, Export, Import, Set-up and parameters, Variations, Pitfalls, Template file). Its tables are the code's, not the study's: the fetches per part as built (S2's "0–2" for `W` was the ripples alone), every `wet` key with its default, S3's responses as `TEXTURE_SET_WET_RESPONSES` has them, the conditions, the simulation's rates and `rainOcclusion()`'s options. The code samples type-checked, the JSON route's define read by both the reader and the schema (a throwaway test).
+  - **The Blender route** for `_WETNESS`: a weight-painted vertex group copied into the attribute by a Geometry Nodes _Store Named Attribute_ (the add-on's export applies modifiers and exports `_`-prefixed attributes; gltf-transform quantizes a 0..1 attribute to normalized 16 bits), or the first splat map's free A. **Not seen yet:** no scene loads a `_WETNESS` from a GLB (the gallery's band is made in code): p310's Wetlands block is the first (its step says so).
+  - **No GPU frame time** for the wet response was measured in Phases 2-6 (the `TAPS` counts and the map's render only): the page leaves it to p310, as the other pages do.
+  - **Also corrected:** the handbook index's `W` term (now each part's fetches) and its row (Written), and `texture-sets.md`'s `surface` row (the five wet fields, their category's defaults).
+  - **The reference photos** (Phase 2's exit) weren't collected: they moved to p310's Phase 3 exit, where the rain shower is judged on every block.
+- **Section 2, the Hub:** `src/_engine/features/surface/CLAUDE.md` (sections Surface conditions, Rain occlusion map) came here from step 3, since the page's `aek:covers` names its sections (an unknown name fails the build); its line in the root's Architecture map with it. The page `hub/pages/features/surface-conditions/` (group World, order 52 after the sky box, a new Hub icon `droplet`: Lucide's, `lucide-static@1.53.0` like the others); its size from `{{sbp:app.group:_engine/features/surface}}`. The `::: scene terrainGallery` panel describes the Wet/dry row; its image is the whole gallery's (a scene has one Hub image). The terrain page: a "Wet and dry" techniques row, a `### Wet and dry surfaces` section (the anchor the surface page links), the Wet/dry row in Debugging, `applySurfaceWetness` in Key APIs, the handbook page in Read more, tags. The Smallest build page's per-feature table was left as it is (it lacks streaming, merging, texture sets and terrain too). The Hub's search index was 636 KiB gzipped before (over its 450 KiB warning already); the pages added 8.
+- **Section 3, the repo docs:** the counts went to sixteen in the root `CLAUDE.md` (Three-folder split, Bootstrap flow), `kernel/init/CLAUDE.md` and three Hub pages (the quick start, the Smallest build page, the architecture guide, whose feature list also lacked `terrain()`); the documentation intro gained the `aekasha/surface` row and the missing `aekasha/terrain` one. The root's toolkit catalogue lists the wet nodes. The readme: a Surface conditions feature, the terrain materials' wet response, the debug tab, and the project tree's feature folders (`merging`, `texturesets` and `terrain` were missing too). p990: the wind-tilted map (Terrain), the sky box's weather idea pointing at `aekasha/surface` and p427; p427's grounding: the API it drives, the sun source line it repoints, the surface clock as a third clock.
+- **Section 4, versions:** engine 6.17.0, toolkit 3.5.0, app 1.29.0 (minors, no codename change); `CHANGELOG.md`. The template's first download: `assets/index.js` 405,317 → 408,002 B gzip; every build, the banner's too, carries 38 B more (the kernel's feature names, `ENGINE_FEATURE_FACTORIES`). p310's wet configs were written against the draft API and are corrected (`runUp: {}`, `ripples: {}`, the snow set as an input, `regional: {}` with the default `_wetness`, which `_WETNESS` wouldn't have read), and its `yarn sbp` check no longer says the surface code is out of the first download; p309's soft block became a related line.
 
 ---
 

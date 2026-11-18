@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Weather, Rendering, Gameplay
-Related: p420_npc-simulation-tiers.md (The gameplay contracts: C7, weather and mood, the time-of-day clock), p307_wet-and-dry-surface-states.md (its surface conditions state is what this plan drives), `src/_engine/features/skybox/CLAUDE.md` (the sky box's day-night time and its sky clock, which read the world clock from here once it moves), p425_game-events-missions-and-save-games.md (the world state is saved), p990_follow-ups-from-done-plans.md (volumetric clouds and weather)
+Related: p420_npc-simulation-tiers.md (The gameplay contracts: C7, weather and mood, the time-of-day clock), \_DONE_p307_wet-and-dry-surface-states.md (its surface conditions state is what this plan drives), `src/_engine/features/skybox/CLAUDE.md` (the sky box's day-night time and its sky clock, which read the world clock from here once it moves), p425_game-events-missions-and-save-games.md (the world state is saved), p990_follow-ups-from-done-plans.md (volumetric clouds and weather)
 
 # Weather and Mood — Stub
 
