@@ -324,6 +324,7 @@ export const sceneFileObjects: {
 
 export const tslMaterialFileObjects = {
   bannerAether: () => import('../app/profiles/banner/bannerAether.tsl.ts'),
+  scatterTestRulesTerrain: () => import('../app/scenes/scatterTest/scatterTestTerrain.tsl.ts'),
   testTslMat: () => import('../app/scenes/sceneTestECS/testTslMat.tsl.ts'),
   terrainGalleryPatch: () => import('../app/scenes/terrainGallery/terrainGalleryPatch.tsl.ts'),
   p302ChannelMat: () => import('../app/scenes/testDebugScene/p302ChannelMat.tsl.ts'),

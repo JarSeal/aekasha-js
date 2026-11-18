@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Terrain, Rendering, Assets
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -165,6 +165,7 @@ Static scatter renders as **cell-chunked instanced meshes without per-instance e
    - vertex cost = instances × triangles;
    - card overdraw;
    - colliders (count limits);
+   - the generator's cost: about 4 µs a Poisson candidate on the main thread at load (a dense 64 m block at 0.4 m, 15.6k candidates: about 70 ms), so `minSpacing` is the knob;
    - measured gallery numbers;
    - the `cellSize` / `cullScreenSize` trade-off.
 4. **Blender, step by step** (`terrain_scatter.blend`):
@@ -256,7 +257,7 @@ As built (section 3, the Blender scatter):
 
 **Exit:** a Blender GN scatter exported both ways spawns identically, and the worker and main-thread import paths agree.
 
-### Phase 3 — Procedural scatter v2 (D4)
+### Phase 3 — Procedural scatter v2 (D4) — done
 
 1. `terrainScatter` (D4), and the items' colliders (D2's `collider`, the FIXED bodies through `physics()` with the terrain feature's lazy pattern, the gatherer's warning past 200 a block; moved here from Phase 1).
 
@@ -287,6 +288,15 @@ As built (section 2, the items' colliders):
 - **Dropped:** the custom prop `aekScatterCollider` (D3, moved here by Phase 2): an `IMPORTED` source's item names the node's geometry, so its `collider` covers the imported instances.
 - `features/terrain/CLAUDE.md`'s stale lines (no `scatter` field, `scatterIds` empty until p308) are current now.
 - Tests: `Scatter.test.ts` (3: the bodies per instance in order with the hull's and the ball's scale and the rotation, deleted by `dispose`; without physics and past 200; a failed create and a scene left meanwhile deleting the cells and colliders), `TerrainBlocks.test.ts` (the colliders in `scatterIds`), `gather.test.ts` (1: the manifest, the filled `collider`, the warning and a type it doesn't know).
+
+As built (section 3, the verification):
+
+- **The app** registers `terrainScatter` in `appECSPlugins` (`registerTerrainScatter()`, after `registerTerrainGenerators()`; the region the Hub's ECS example shows).
+- **`scatterTest`'s rules block** (`scatterTestRulesBlock`, grid (0, −1), behind the flat block): a 64 m / 65² `rulesTerrain` block, `maxHeight` 4, rock (layer 1, `rocks01`) from 22° of slope (37 % of its vertices: 6 m and 14° made it 85 %, too much for the layer check to mean anything), sand (layer 0, `sand01`) on the flats, its material `scatterTestRulesTerrain` (the terrain material's JSON route, `VERTEX_COLOR` `RGB_AO`, its own two-line TSL file), its `HEIGHTFIELD` collider. Its scatters: `scatterTestRulesPebbles` (the two pebbles, `minSpacing` 0.4, `density` 0.9, `layers { 1: 1 }`, a clustering noise, `alignToNormal` 0.6, `sink` 0.2, `tint` 0.25; `cullScreenSize` 0.05) and `scatterTestRulesSlabs` (`scatterTestSlab`, a 1.6 × 0.7 × 1.3 m box, upright, `minSpacing` 6, `layers { 0: 1 }`, `CONVEXHULL` colliders, casting).
+- **The checks** (`rulesScatter.ts`, the scene's own module, `window.__scatterTest.rules`), each logging an error that fails the runner: no pebble over a cell with no rock at any corner, and the pebbles' ground (the nearest grid point's R) at least 0.6 rock and 1.5 × the block's; a second `spawnScatter` of the pebbles on the same target (another app id) placing every matrix element the same, then disposed; a collider per slab; a 0.4 m box dropped 1.5 m over the first slab's top resting within 8 cm of it at step 110 (the probe freezes at 120). The generator is also timed alone on the block (`llog`).
+- **Measured** (Windows Chrome 157 on an AMD RDNA 3 GPU, the dev server, debug mode): 3,965 pebbles, their ground 0.88 rock against the block's 0.37, none off the rock, the repeat identical, 33 slabs with 33 colliders, the box 1 mm from the slab's top. The pebbles' generator: 68-69 ms (15.6k candidates, Bridson most of it, as section 1's Node figure).
+- **Exit, verified:** `yarn verify:scenes --only scatterTest` passes in `workerSab`, `workerMsg`, `mainThread` and `prodTest` after `--update` (the snapshot and the probe changed by the block and the box: the old hash was the empty one, no dynamic body), the probe `4aa46869` in all three physics targets, so the colliders' creation order holds on either thread. A scatter without a collider item makes no physics call (the colliders' module isn't loaded), so it can't move the probe. `yarn verify:baselines`: no debug code in the build or the embeds; the bundle and API changes are this plan's (recorded in Phase 5): `TerrainScatter.js` a chunk of its own (5.4 kB gzip, with `TerrainDefine.js` 8.1 kB and `TerrainRules.js` 0.9 kB split out of the block generators' chunk), the main chunk's instancing +0.3 kB (Phase 1's `ScatterGenerators`); no shipped scene spawns a scatter, so `Scatter.ts` and `ScatterColliders.ts` aren't in the production build.
+- **Decided (2026-11-18): the generator stays on the main thread.** About 4 µs a candidate (68-69 ms for a dense 64 m block at 0.4 m), once per block and scatter, during the scene's load; k stays 30. The worker path (p306 Phase 4's pattern: a toolkit module worker) waits until terrain blocks stream, where a load's cost turns into hitches; whoever plans that takes it up. Phase 5's handbook gives the cost per candidate.
 
 **Exit:** density follows the painted layers on a showcase block; the same seed and grid always give the same placements; boulder colliders work (p101 determinism holds; the probe is unchanged by scatter without colliders).
 

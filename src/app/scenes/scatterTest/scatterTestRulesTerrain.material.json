@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "scatterTestRulesTerrain",
+  "tslFile": "scenes/scatterTest/scatterTestTerrain.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "staticDefines": {
+    "terrain": {
+      "layers": [{}, {}],
+      "blend": { "source": "VERTEX_COLOR", "vertexColor": { "layout": "RGB_AO" } }
+    }
+  },
+  "inputs": {
+    "layer0": { "textureSet": "sand01" },
+    "layer1": { "textureSet": "rocks01" }
+  },
+  "debugData": {
+    "name": "Rules scatter terrain",
+    "description": "The rules scatter block's terrain material: sand (layer 0) and rock (layer 1) by the block's vertex colour (RGB_AO: R the rock), which the terrainScatter layer mask reads the same way."
+  }
+}

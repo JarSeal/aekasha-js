@@ -14125,7 +14125,7 @@
     "scatterTest": {
       "isDebugScene": true,
       "name": "Static scatter (p308)",
-      "description": "p308 Phase 1's verification scene: a flat 64 m terrain block whose scatter (scatterTestPebbles, its block's own) places 20,000 pebbles of two kinds by a test generator the scene registers, tinted per instance, in 16 m cells: one InstancedMesh entity per cell and kind, no entity per pebble. Each cell hides as a whole below its LOD's cullScreenSize (0.5): from the start camera the near half of the block shows and the far half is culled. Beside them, scatterTestBoulders places six hand-placed boulders (a PLACEMENTS source, spawnScatter on the block's centre), casting shadows. In front, one Blender Geometry Nodes scatter of two rocks (devTools/blender/buildScatterTest.py) twice, from IMPORTED sources: exported with GPU Instances on the left (scatterTestGnGpu), as a point cloud on the right (scatterTestGnPoints); the load checks they place the same rocks the same way. The load checks the counts and, a few frames in, that some cells are LOD-culled and some aren't, logging an error otherwise. window.__scatterTest holds the spawn results.",
+      "description": "p308 Phase 1's verification scene: a flat 64 m terrain block whose scatter (scatterTestPebbles, its block's own) places 20,000 pebbles of two kinds by a test generator the scene registers, tinted per instance, in 16 m cells: one InstancedMesh entity per cell and kind, no entity per pebble. Each cell hides as a whole below its LOD's cullScreenSize (0.5): from the start camera the near half of the block shows and the far half is culled. Beside them, scatterTestBoulders places six hand-placed boulders (a PLACEMENTS source, spawnScatter on the block's centre), casting shadows. In front, one Blender Geometry Nodes scatter of two rocks (devTools/blender/buildScatterTest.py) twice, from IMPORTED sources: exported with GPU Instances on the left (scatterTestGnGpu), as a point cloud on the right (scatterTestGnPoints); the load checks they place the same rocks the same way. The load checks the counts and, a few frames in, that some cells are LOD-culled and some aren't, logging an error otherwise. Behind it, p308 Phase 3's rules block (scatterTestRulesBlock, a rulesTerrain block: rock on its slopes, sand on its flats) carries two scatters by the toolkit's terrainScatter: pebbles masked to the rock layer and slabs on the sand with CONVEXHULL colliders; the load checks the pebbles follow the rock, that a second spawn places them the same, a collider per slab, and that a box dropped on a slab rests on its top. window.__scatterTest holds the spawn results.",
       "terrainBlocks": [
         {
           "id": "scatterTestBlock",
@@ -14166,6 +14166,57 @@
           "debugData": {
             "name": "Flat scatter block",
             "description": "A flat 64 m block (noiseTerrain with a zero amplitude) carrying the 20,000 pebbles of scatterTestPebbles."
+          }
+        },
+        {
+          "id": "scatterTestRulesBlock",
+          "geometry": {
+            "generator": "rulesTerrain",
+            "params": {
+              "maxHeight": 4,
+              "octaves": [
+                [
+                  0.03,
+                  1
+                ],
+                [
+                  0.09,
+                  0.3
+                ]
+              ],
+              "rules": [
+                {
+                  "layer": 1,
+                  "slope": {
+                    "min": 22,
+                    "softness": 4
+                  }
+                }
+              ]
+            },
+            "seed": 5
+          },
+          "material": "scatterTestRulesTerrain",
+          "grid": {
+            "x": 0,
+            "z": -1,
+            "size": 64,
+            "resolution": 65
+          },
+          "collider": {
+            "type": "HEIGHTFIELD"
+          },
+          "shadows": {
+            "cast": true,
+            "receive": true
+          },
+          "scatter": [
+            "scatterTestRulesPebbles",
+            "scatterTestRulesSlabs"
+          ],
+          "debugData": {
+            "name": "Rules scatter block",
+            "description": "p308 Phase 3's block: a 64 m rulesTerrain block behind the flat one, rock (layer 1) in its vertex colours from 22° of slope (about 37 % of it), sand (layer 0) on the flats, its HEIGHTFIELD collider from the generator. Its scatters are the toolkit's terrainScatter: pebbles on the rock, slabs with CONVEXHULL colliders on the sand."
           }
         }
       ],
@@ -14364,6 +14415,102 @@
             "name": "Test pebbles",
             "description": "20,000 pebbles of two kinds (3:1 by weight) over the target's square, by the scene's test generator: 16 cells of 16 m on a 64 m block, each hidden below a screen size of 0.5."
           }
+        },
+        {
+          "id": "scatterTestRulesPebbles",
+          "items": [
+            {
+              "geometry": "scatterTestPebbleA",
+              "material": "scatterTestStone",
+              "weight": 3,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "scatterTestPebbleB",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            }
+          ],
+          "source": {
+            "type": "PROCEDURAL",
+            "generator": "terrainScatter",
+            "params": {
+              "minSpacing": 0.4,
+              "density": 0.9,
+              "mask": {
+                "layers": {
+                  "1": 1
+                },
+                "noise": {
+                  "scale": 6,
+                  "amount": 0.5
+                }
+              },
+              "scale": [
+                0.6,
+                1.4
+              ],
+              "alignToNormal": 0.6,
+              "sink": 0.2,
+              "tint": 0.25
+            },
+            "seed": 3
+          },
+          "cellSize": 16,
+          "lod": {
+            "levels": [
+              {
+                "screenSize": 0
+              }
+            ],
+            "cullScreenSize": 0.05
+          },
+          "debugData": {
+            "name": "Rules block pebbles",
+            "description": "terrainScatter's pebbles on the rules block's rock layer (its vertex colour's R), 0.4 m apart, thinned in clusters by a noise, tilted toward the slope, sunk a fifth and tinted."
+          }
+        },
+        {
+          "id": "scatterTestRulesSlabs",
+          "items": [
+            {
+              "geometry": "scatterTestSlab",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true,
+              "collider": "CONVEXHULL"
+            }
+          ],
+          "source": {
+            "type": "PROCEDURAL",
+            "generator": "terrainScatter",
+            "params": {
+              "minSpacing": 6,
+              "density": 0.8,
+              "mask": {
+                "layers": {
+                  "0": 1
+                }
+              },
+              "scale": [
+                0.8,
+                1.3
+              ],
+              "sink": 0.15
+            },
+            "seed": 4
+          },
+          "cellSize": 32,
+          "debugData": {
+            "name": "Rules block slabs",
+            "description": "terrainScatter's upright slabs on the rules block's sand (layer 0), 6 m apart, each with a CONVEXHULL collider (a FIXED body): the scene drops a box on one."
+          }
         }
       ],
       "id": "scatterTest",
@@ -14398,6 +14545,37 @@
           "inputs": {
             "surface": {
               "textureSet": "sand01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "scatterTestRulesTerrain",
+          "debugData": {
+            "name": "Rules scatter terrain",
+            "description": "The rules scatter block's terrain material: sand (layer 0) and rock (layer 1) by the block's vertex colour (RGB_AO: R the rock), which the terrainScatter layer mask reads the same way."
+          },
+          "tslFile": "scenes/scatterTest/scatterTestTerrain.tsl.ts",
+          "staticDefines": {
+            "terrain": {
+              "layers": [
+                {},
+                {}
+              ],
+              "blend": {
+                "source": "VERTEX_COLOR",
+                "vertexColor": {
+                  "layout": "RGB_AO"
+                }
+              }
+            }
+          },
+          "inputs": {
+            "layer0": {
+              "textureSet": "sand01"
+            },
+            "layer1": {
+              "textureSet": "rocks01"
             }
           },
           "type": "STANDARDNODEMATERIAL"
@@ -14450,6 +14628,19 @@
           "debugData": {
             "name": "Test pebble B",
             "description": "A 5 × 3 segment sphere, 5 cm."
+          }
+        },
+        {
+          "id": "scatterTestSlab",
+          "type": "BOX",
+          "params": {
+            "width": 1.6,
+            "height": 0.7,
+            "depth": 1.3
+          },
+          "debugData": {
+            "name": "Test slab",
+            "description": "A 1.6 × 0.7 × 1.3 m box, centred: a flat-topped rock whose collider a dropped box rests on."
           }
         }
       ],
@@ -14534,6 +14725,39 @@
             "dryingSpeed": 1.6
           },
           "averageColor": "#ab966b"
+        },
+        {
+          "id": "rocks01",
+          "category": "ROCKS",
+          "physicalSize": [
+            2,
+            2
+          ],
+          "heightScale": 0.018,
+          "packings": {
+            "LITE": {
+              "albedoRough": "rocks01_albedoRough",
+              "normalHeight": "rocks01_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Rocks 01 (gravel)",
+            "description": "ambientCG Ground079S, CC0: gravel / rocky ground."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.4,
+            "wetDarkening": 0.35,
+            "wetRoughness": 0.2,
+            "puddleResponse": 0.6,
+            "dryingSpeed": 1
+          },
+          "averageColor": "#ad926e"
         }
       ],
       "textures": [
@@ -14586,12 +14810,63 @@
             "out": 1398128
           },
           "__codec": "uastc"
+        },
+        {
+          "id": "rocks01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "rocks01 albedoRough (LITE)",
+            "description": "The texture set rocks01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground079S's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/rocks01/rocks01_albedoRough.pack.c6a24dfc.ktx2",
+          "__bytes": {
+            "in": 12442144,
+            "out": 1227608
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.4165,
+            0.2873,
+            0.1564
+          ]
+        },
+        {
+          "id": "rocks01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "rocks01 normalHeight (LITE)",
+            "description": "The texture set rocks01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground079S's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/rocks01/rocks01_normalHeight.pack.e66b9742.ktx2",
+          "__bytes": {
+            "in": 11125458,
+            "out": 1288192
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
         }
       ],
       "__features": [
         "texturesets",
         "terrain",
-        "instancing"
+        "instancing",
+        "physics"
       ]
     },
     "scene01": {
@@ -27934,6 +28209,22 @@
       },
       "__sourcePath": "src/app/scenes/scatterTest/scatterTestPebbleB.geometry.json"
     },
+    "scatterTestSlab": {
+      "geoProps": {
+        "debugData": {
+          "name": "Test slab",
+          "description": "A 1.6 × 0.7 × 1.3 m box, centred: a flat-topped rock whose collider a dropped box rests on."
+        },
+        "type": "BOX",
+        "params": {
+          "width": 1.6,
+          "height": 0.7,
+          "depth": 1.3
+        },
+        "id": "scatterTestSlab"
+      },
+      "__sourcePath": "src/app/scenes/scatterTest/scatterTestSlab.geometry.json"
+    },
     "testSphere": {
       "geoProps": {
         "debugData": {
@@ -39916,6 +40207,38 @@
       },
       "type": "STANDARD",
       "__sourcePath": "src/app/scenes/mergeMaterials/ruinStone.material.json"
+    },
+    "scatterTestRulesTerrain": {
+      "id": "scatterTestRulesTerrain",
+      "debugData": {
+        "name": "Rules scatter terrain",
+        "description": "The rules scatter block's terrain material: sand (layer 0) and rock (layer 1) by the block's vertex colour (RGB_AO: R the rock), which the terrainScatter layer mask reads the same way."
+      },
+      "tslFile": "scenes/scatterTest/scatterTestTerrain.tsl.ts",
+      "staticDefines": {
+        "terrain": {
+          "layers": [
+            {},
+            {}
+          ],
+          "blend": {
+            "source": "VERTEX_COLOR",
+            "vertexColor": {
+              "layout": "RGB_AO"
+            }
+          }
+        }
+      },
+      "inputs": {
+        "layer0": {
+          "textureSet": "sand01"
+        },
+        "layer1": {
+          "textureSet": "rocks01"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/scatterTest/scatterTestRulesTerrain.material.json"
     },
     "scatterTestStone": {
       "id": "scatterTestStone",
