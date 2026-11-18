@@ -7,6 +7,8 @@ import {
   registerMovingPlatformSystem,
   registerFollowObjectCameraRigSystem,
 } from 'aekasha/toolkit/ecs';
+import { getSunElevation } from 'aekasha/skybox';
+import { setSurfaceSunSource } from 'aekasha/surface';
 import { registerTerrainGenerators } from 'aekasha/toolkit/terrain';
 import { registerSpinSystem } from './app/examples/ecs/SpinSystem';
 import { registerGymDummyBrain } from './app/scenes/thirdPersonGymScene/GymDummyBrain';
@@ -35,6 +37,8 @@ export const appECSPlugins: EngineFeature = {
     registerGymDummyBrain();
     // The toolkit's terrain block generators (`noiseTerrain`, `rulesTerrain`), which blocks name
     registerTerrainGenerators();
+    // Wet surfaces dry with the sky box's sun: fastest under a high sun, slowest at night
+    setSurfaceSunSource(() => getSunElevation());
   },
 };
 // #endregion ecs-register-plugin

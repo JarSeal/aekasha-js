@@ -4,6 +4,57 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-18 — p307_wet-and-dry-surface-states
+
+Wet and dry surface states (p307, part of the terrain texturing epic p301). A new `surfaceConditions()` feature holds the weather on the ground as one global state (wetness, rain, puddle level, a water level, snow cover, temperature, drying rate and wind), simulated or set by the game, and gives materials stable uniforms to read; a second feature, `rainOcclusion()`, renders a depth map from above so the ground under roofs, trees and bridges stays dry. The toolkit's wet response turns it into a look: each layer of a terrain or structure material darkens and glosses by its texture set's own response to water, with puddles and rain ripples, streaks down steep faces, a shoreline, snow turning to slush, and frost. Texture sets gain two wet fields and per-category defaults. The handbook gains its wet and dry page and the Hub a Surface conditions page. Nothing breaks.
+
+### Engine 6.17.0 (Sunset)
+
+**Added**
+
+- The `surfaceConditions({ timeSource? })` feature (`aekasha/surface`, `features/surface/`; the template lists it right after `skyBox()`): one global state of `wetness`, `rain`, `puddleLevel`, `snowCoverage` (0..1 each), `waterLevel` (a world Y, or `null`), `temperature` (°C), `dryingRate` (per minute), `wind` (`[x, z]` m/s) and `mode`. In `SIMULATED` mode rain wets, drying follows `dryingRate` × the sun × the wind, puddles fill and drain behind the wetness, and snow melts into it above 0 °C; in `MANUAL` only the app moves the values. It runs on a surface clock that stops with the app loop, stands still during a scene load and restarts at every scene; `timeSource: 'MAIN'` ignores the app loop's pause.
+- Its API: `getSurfaceConditions()`, `setSurfaceConditions(values, { transitionSec? })` (linear transitions per value), `startRain(intensity, { rampSec?, durationSec? })`, `stopRain({ rampSec? })`, `getSurfaceConditionNodes()` (the state as TSL uniforms made once, so a material binds them at build and never goes stale), `getSurfaceTime()`, `setSurfaceSunSource(fn)` (the drying's sun, the sky box's `getSunElevation` in the template) and `SURFACE_WATER_LEVEL_NONE`, with the types `SurfaceConditions`, `SurfaceConditionsInput`, `SurfaceConditionsMode`, `SurfaceConditionNodes`, `SurfaceSunSource`, `SurfaceTimeSource`, `SetSurfaceConditionsOpts`, `StartRainOpts`, `StopRainOpts` and `SurfaceConditionsFeatureOpts`. Without the feature the getters return `null` and the setters throw naming it.
+- A scene's `surfaceConditions` (its starting values, applied before its scene code on every visit), the feature's schema part on `aekasha/schemas` (`surfaceConditionsSchemaPart`, `SceneSurfaceConditionsSchema`, `SceneSurfaceConditions`): a scene that sets it names the feature in its manifest.
+- The `rainOcclusion(opts?)` feature (on `aekasha/surface`, requires `surfaceConditions()`; the template lists it right after): a depth map rendered straight down around the camera (`size` 512, `extent` 64 m, `height` 100 m, `updateFrames` 30, `bias` 0.05 m) of what casts shadows or has `userData.rainOccluder`, rendered only once a material reads it. `getRainOcclusionNode({ position?, normal? })` (0 open sky to 1 under cover), `setRainOcclusionEnabled`, `isRainOcclusionEnabled` and `requestRainOcclusionUpdate`; types `RainOcclusionOpts`, `RainOcclusionNodeOpts`. Measured on the gallery's 512² map: 0.26 ms CPU and 0.005 ms GPU a render, about 0.01 ms CPU a frame at the default rate, 1.25 MiB.
+- The debug drawer's Surface conditions tab (debug builds only): a rain shower, stop rain, dry now, soak and a snowfall; every value and the mode; the surface clock and the drying's sun and wind factors; with `rainOcclusion()`, the map's switch, update rate, status and its render's CPU and GPU time. Its icon is a new built-in, `droplet` (`aekasha/ui`'s `dropletIcon`, Bootstrap Icons' `droplet-fill`).
+- Texture sets' `surface` gains `puddleResponse` (how readily water stands on it) and `dryingSpeed` (how fast it dries against the overall wetness). `TEXTURE_SET_WET_RESPONSES` (`aekasha/schemas`, with `TextureSetWetResponse`) holds each category's five wet values, which the gatherer gives a set for each one it leaves out.
+
+**Changed**
+
+- A texture set's missing `porosity`, `wetDarkening` and `wetRoughness` come from its category (sand 0.9 / 0.55 / 0.45, mud 0.7 / 0.6 / 0.15, …), no longer the flat 0.5 / 0.5 / 0.3 (`OTHER` keeps those). No material read them before this release.
+- A texture set array's `layerParams` holds 5 vec4 a layer (was 4): the fifth has `puddleResponse` and `dryingSpeed`. `getTextureSetLayerParams` reads them by name; only code indexing the buffer itself changes.
+- The template's first download grows 2,685 B gzip (`assets/index.js` 405,317 → 408,002 B): the two features (the `_engine/features/surface` group, 3.6 KiB gzip on its own) and the kernel's feature names, which every build carries (38 B in the banner's).
+
+### Toolkit 3.5.0 (Gibbous)
+
+**Added**
+
+- `applySurfaceWetness(surface, conditions, opts?)` (`aekasha/toolkit/terrain`, `terrain/nodes/Wet.ts`): a dry surface (albedo, roughness, normal, relief, cavity, a regional wetness) wet by the surface conditions and its response to water (porosity, darkening, wet roughness, puddle response, drying speed): rain reaches what faces the sky, low points wet first and peaks dry first, the pores darken the albedo, a water film lowers the roughness and flattens the normal. Options: `quality` (`FULL`, `SIMPLE`), `shelter`, `heightInfluence`, `cavityInfluence`, `puddles` (in the low spots of flat ground, filling patches first), `ripples` (rain rings on standing water, two atlas taps in a branch on the rain), `streaks` (rivulets down steep faces, damp after the rain, one fetch in a branch), `shoreline` (the wash, saturated sand and a damp band along the water level, with waves), `snow` (a texture set over flat ground first, frozen or slush, its meltwater wetting the ground around; its taps in a branch on the cover), `frost` (below 0 °C, by 1 − the porosity, with a sparkle near the camera) and `rainOcclusion` (the map's node). It returns the surface and its masks. Types `ApplySurfaceWetnessOpts`, `SurfacePuddleOpts`, `SurfaceRippleOpts`, `SurfaceStreakOpts`, `SurfaceShorelineOpts`, `SurfaceSnowOpts`, `SurfaceFrostOpts`, `SurfaceSparkleOpts`, `SurfaceWetnessMasks`, `SurfaceWetResponse`, `WetSurface` and `WetSurfaceInput`.
+- The terrain material's `wet` key (both routes, and a quality tier's override; structure materials too): `quality`, `heightInfluence`, `cavityInfluence`, `shelter`, `puddles` (`maxSlope`, `edge`, `patches`), `regional` (a float vertex attribute, `_wetness` by default, or the first splat map's A), `ripples`, `streaks`, `shoreline`, `snow`, `frost` and `rainOcclusion` (`NORMAL_Y`, `MAP`). Each layer's response comes from its set and is blended by the layers' weights, the far surface's too. The inputs `ripples` (a ripple atlas) and `snow` (a `{ textureSet }`), and `macro` for the puddle patches and streaks; the code route's `rippleTexture` (default `rippleAtlas`), `snowSet` (default `snow01`) and `noiseTexture` (now also for the patches and streaks). Every part compiles only when its key is there, and its numbers are uniforms.
+- The `WETNESS` debug view (the pores, the film and the puddles over the checker, the snow in pale blue); `TAPS` counts the wet response's fetches, the gated ones where they happen; the texture budget counts the ripple atlas and the snow set; the colour-map bake leaves `wet` out.
+
+### App 1.29.0 (Preschooler)
+
+**Added**
+
+- `terrainGallery`'s Wet/dry row: a block of each library category and a beach (`sand02` with `rocks01` on slopes), every material with `wet` (puddles in patches, ripples, snow, frost, the map) and a `LOW` tier with `SIMPLE`; the grass block's regional riverbank band, the beach's shoreline under a water plane, a concrete wall and a cliff boulder that streak, and a concrete canopy over the mud as a rain occluder. The scene's JSON starts its conditions (`MANUAL`, wetness and puddle level 0.6, water at 0.15 m); its tab's "Wet/dry row" section has the wetness, rain, puddle level, snow, temperature and water level, the row's quality and view (shaded, `WETNESS`, `TAPS`), the map's switch and each block's response.
+- `src/index.ts` lists `surfaceConditions()` and `rainOcclusion()` after `skyBox()`; `appECSPlugins` ties the drying to the sky box's sun (`setSurfaceSunSource`).
+
+### Project
+
+**Added**
+
+- The handbook's `docs/techniques/wet-dry-surfaces.md`: what water does to a surface, each part's cost in fetches, the maps, painting a regional wetness in Blender, both material routes, every `wet` key, the sets' responses, the conditions and the map's options, the variations for each kind of game, and the pitfalls. The index's `W` term and the texture sets page's `surface` row follow it.
+- The Hub's Surface conditions page (`features/surface-conditions/`, group World) and the terrain page's wet and dry section; the documentation intro's `aekasha/surface` and `aekasha/terrain` rows; the Hub icon `droplet` (Lucide).
+- `src/_engine/features/surface/CLAUDE.md` (Surface conditions, Rain occlusion map); the root `CLAUDE.md`, `kernel/init/CLAUDE.md`, the readme and the Hub's quick start, architecture and smallest build pages count sixteen features.
+
+**Changed**
+
+- The `aekasha/surface` alias (`devTools/aliases.ts`, `tsconfig.json`); the gather writes the scene's `surfaceConditions` and fills the sets' wet responses (`.schemas/scene.schema.json`, `.schemas/textureSet.schema.json`).
+- `sbp.config.ts`: the app's initial budget 401 → 403 KiB and `assets/index.js` 396 → 399 KiB, the `_engine/features/surface` group at 4 KiB.
+- The baselines: `api.json` (the new exports), `docs.json`, and the bundles (above).
+- The plans: p990 gains the rain occlusion map tilted by the wind, and its weather idea points at `aekasha/surface`; p427's grounding names the API it drives.
+
 ## 2026-11-17 — p306_terrain-blocks-and-procedural-terrain-meshes
 
 Terrain blocks and procedural terrain meshes (p306, the geometry side of the terrain texturing epic p301). A terrain block is a square heightfield grid that a scene lists and spawns as one unit: its mesh, its terrain material with the block's own inputs, and its collider, from a `*.terrainBlock.json` of the new `terrain()` feature. Blocks come from Blender, through a new add-on and seven templates, or from generators: the toolkit's terrain generator now samples its noise at the world place, so neighbouring blocks continue each other in shape and light, lays the terrain material's rules into vertex colours on the CPU, bakes a horizon AO, reads raw heightmaps, returns its heightfield collider and runs on a worker. A `HEIGHTFIELD` collider's grid layout is now one tested conversion, and the import reads a heightfield by position, which fixes colliders that missed their mesh by up to 0.2 m. The handbook gains the block workflow and generated terrain, and the p305 pages their Blender sections. Nothing breaks.

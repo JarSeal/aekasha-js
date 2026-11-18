@@ -90,7 +90,8 @@ export const TERRAIN_QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as cons
  * `NORMALS` the shaded normal in world space, `WEIGHTS` each layer's false colour by its weight,
  * `PROJECTION` the planes' weights (X red, Y green, Z blue) with the slope gates' bands striped,
  * `TAPS` the material's own texture fetches at the pixel in bands, `LAYER_COUNT` how many layers
- * weigh in at the pixel, striped where sparse sampling drops one.
+ * weigh in at the pixel, striped where sparse sampling drops one, `WETNESS` the wet response's
+ * masks (R the pores, G the film; needs `wet`).
  */
 export const TERRAIN_DEBUG_VIEWS = [
   'TEXEL_DENSITY',
@@ -99,7 +100,24 @@ export const TERRAIN_DEBUG_VIEWS = [
   'PROJECTION',
   'TAPS',
   'LAYER_COUNT',
+  'WETNESS',
 ] as const;
+/**
+ * The wet response's quality (p307 D2): `FULL` the relief and the cavities shape the wetness and
+ * the film flattens the normal, `SIMPLE` the layers' response and the sky exposure only.
+ */
+export const TERRAIN_WET_QUALITIES = ['FULL', 'SIMPLE'] as const;
+/**
+ * What keeps the rain off a surface (p307 T6, T12): `NORMAL_Y` its facing alone (overhangs and
+ * undersides), `MAP` also the `rainOcclusion()` feature's map (roofs, trees, bridges).
+ */
+export const TERRAIN_WET_RAIN_OCCLUSIONS = ['NORMAL_Y', 'MAP'] as const;
+
+/**
+ * The splat channels a regional wetness reads (p307 T7): the first splat map's A.
+ * @internal
+ */
+export const TERRAIN_WET_SPLAT_CHANNELS = ['A'] as const;
 /**
  * What a far surface shows past `distance.fade`'s end, where the layers aren't sampled (p305 D7):
  * `NONE` (default) the layers at every distance, `AVERAGE_COLOR` each layer's set's average colour
@@ -830,6 +848,432 @@ const TerrainDistanceSchema = z
   .strict()
   .describe("The view distance's effects on the surface.");
 
+/**
+ * The puddles (p307 T3): water standing where the surface conditions' `puddleLevel` × the layers'
+ * `puddleResponse` is over their blended relief, on flat ground.
+ */
+const TerrainPuddlesSchema = z
+  .object({
+    /** The steepest ground a puddle stands on, degrees from flat, over 0 to 45 (default 15): full
+     * puddles up to half of it. */
+    maxSlope: z
+      .number()
+      .gt(0)
+      .max(45)
+      .optional()
+      .describe(
+        'The steepest ground a puddle stands on, degrees from flat, over 0 to 45 (default 15): full puddles up to half of it.'
+      ),
+    /** The relief height over which a puddle's rim fades in, over 0 to 1 (default 0.05). */
+    edge: z
+      .number()
+      .gt(0)
+      .max(1)
+      .optional()
+      .describe(
+        "The relief height over which a puddle's rim fades in, over 0 to 1 (default 0.05)."
+      ),
+    /**
+     * Patches where the puddles fill ahead or behind: the macro texture's B (its Worley patches,
+     * 5 a tile) at the world's XZ over `scale` metres a tile, one fetch of the macro texture (the
+     * code route's `macro.texture`, else `noiseTexture`, default `macroNoise`; the JSON route's
+     * input `macro`).
+     */
+    patches: z
+      .object({
+        /** The metres a macro texture tile covers here (a patch is a fifth of it). */
+        scale: z
+          .number()
+          .gt(0)
+          .describe('The metres a macro texture tile covers here (a patch is a fifth of it).'),
+        /** How far the patches move the waterline, 0..1 (default 0.75): 1 keeps the lowest dry. */
+        amount: z
+          .number()
+          .min(0)
+          .max(1)
+          .optional()
+          .describe(
+            'How far the patches move the waterline, 0..1 (default 0.75): 1 keeps the lowest patches dry.'
+          ),
+      })
+      .strict()
+      .optional()
+      .describe(
+        "Patches where the puddles fill ahead or behind: the macro texture's B at the world's XZ over scale metres a tile (one fetch)."
+      ),
+  })
+  .strict()
+  .describe(
+    "The puddles: water where the puddle level × the layers' puddleResponse is over their relief, on flat ground. FULL only."
+  );
+
+/**
+ * The rain ripples (p307 T4): rings where water stands while it rains, a ripple atlas sampled
+ * twice in a dynamic branch on the rain.
+ */
+const TerrainRipplesSchema = z
+  .object({
+    /** The metres one ripple atlas tile covers, over 0 (default 1.5: 16 drops in 1.5 m). */
+    scale: z
+      .number()
+      .gt(0)
+      .optional()
+      .describe('The metres one ripple atlas tile covers, over 0 (default 1.5).'),
+    /** The seconds a ring lives, over 0 (default 0.7). */
+    lifetime: z
+      .number()
+      .gt(0)
+      .optional()
+      .describe('The seconds a ring lives, over 0 (default 0.7).'),
+    /** How far the rings tilt the normal, 0 or more (default 0.5). */
+    strength: z
+      .number()
+      .min(0)
+      .optional()
+      .describe('How far the rings tilt the normal, 0 or more (default 0.5).'),
+    /**
+     * The view distances over which the ripples fade out, `[from, to]` metres (default
+     * `[10, 30]`): none sampled past `to` (the atlas is close-up detail).
+     */
+    distance: z
+      .tuple([z.number().min(0), z.number().min(0)])
+      .refine(([from, to]) => from < to, 'the first value under the second')
+      .optional()
+      .describe(
+        'The view distances over which the ripples fade out, [from, to] metres (default [10, 30]): none sampled past to.'
+      ),
+  })
+  .strict()
+  .describe(
+    "Rain ripples (p307 T4): rings where water stands (the puddles, a film on the flat) while the surface conditions' rain is over 0, two fetches of a ripple atlas (the code route's rippleTexture, default rippleAtlas; the JSON route's input ripples) in a dynamic branch. FULL only."
+  );
+
+/**
+ * The rain streaks (p307 T5): rivulets down steep faces, damp while it's wet and running while it
+ * rains, one fetch of the macro texture's R stretched down the face, in a dynamic branch.
+ */
+const TerrainStreaksSchema = z
+  .object({
+    /** The gentlest face that streaks, degrees from flat, over 0 to 90 (default 60). */
+    minSlope: z
+      .number()
+      .gt(0)
+      .max(90)
+      .optional()
+      .describe('The gentlest face that streaks, degrees from flat, over 0 to 90 (default 60).'),
+    /** The metres one macro texture tile covers across the face, over 0 (default 4). */
+    scale: z
+      .number()
+      .gt(0)
+      .optional()
+      .describe('The metres one macro texture tile covers across the face, over 0 (default 4).'),
+    /** How many times longer a tile is down the face than across, over 0 (default 8). */
+    length: z
+      .number()
+      .gt(0)
+      .optional()
+      .describe('How many times longer a tile is down the face than across, over 0 (default 8).'),
+    /** How fast the running water's pulses move down, metres a second, 0 or more (default 1). */
+    speed: z
+      .number()
+      .min(0)
+      .optional()
+      .describe(
+        "How fast the running water's pulses move down, metres a second, 0 or more (default 1)."
+      ),
+  })
+  .strict()
+  .describe(
+    "Rain streaks (p307 T5): rivulets down faces steeper than minSlope that the rain reaches, damp while the surface conditions' wetness is over 0 and running while their rain is, one fetch of the macro texture's R (the code route's macro.texture, else noiseTexture, default macroNoise; the JSON route's input macro) in a dynamic branch."
+  );
+
+/**
+ * The shoreline (p307 T8): the ground along the surface conditions' water level, washed by the
+ * waves, saturated where they reach and damp above, arithmetic only.
+ */
+const TerrainShorelineSchema = z
+  .object({
+    /** The metres above the water level that stay damp, over 0. */
+    band: z.number().gt(0).describe('The metres above the water level that stay damp, over 0.'),
+    /** The metres the waterline wanders up and down along the shore, 0 or more (default 0.3). */
+    noise: z
+      .number()
+      .min(0)
+      .optional()
+      .describe(
+        'The metres the waterline wanders up and down along the shore, 0 or more (default 0.3).'
+      ),
+    /**
+     * Waves washing up the shore and back on the surface clock; default none (a still water
+     * line).
+     */
+    runUp: z
+      .object({
+        /** The metres the waves reach above the water level, over 0 (default 0.5). */
+        height: z
+          .number()
+          .gt(0)
+          .optional()
+          .describe('The metres the waves reach above the water level, over 0 (default 0.5).'),
+        /** The seconds between waves, over 0 (default 6). */
+        period: z
+          .number()
+          .gt(0)
+          .optional()
+          .describe('The seconds between waves, over 0 (default 6).'),
+      })
+      .strict()
+      .optional()
+      .describe('Waves washing up the shore and back on the surface clock; default none.'),
+  })
+  .strict()
+  .describe(
+    "The shoreline (p307 T8): along the surface conditions' waterLevel, the waves' wash (standing water), the saturated sand they reach (a film) and a damp band above (a regional wetness); full under the water, none without a water level. Arithmetic only, both qualities."
+  );
+
+/**
+ * The snow cover (p307 T10): a texture set over the layers by the surface conditions' snow cover,
+ * sampled top-down in a dynamic branch.
+ */
+const TerrainSnowSchema = z
+  .object({
+    /** The steepest slope the snow rests on, degrees from flat, over 0 to 90 (default 55). */
+    maxSlope: z
+      .number()
+      .gt(0)
+      .max(90)
+      .optional()
+      .describe(
+        'The steepest slope the snow rests on, degrees from flat, over 0 to 90 (default 55).'
+      ),
+    /** The drift noise's cell, metres, over 0 (default 3): where the snow gathers first. */
+    noiseScale: z
+      .number()
+      .gt(0)
+      .optional()
+      .describe(
+        "The drift noise's cell, metres, over 0 (default 3): where the snow gathers first."
+      ),
+    /** The share of the cover over which the snow's edge fades in, over 0 to 1 (default 0.08). */
+    edge: z
+      .number()
+      .gt(0)
+      .max(1)
+      .optional()
+      .describe(
+        "The share of the cover over which the snow's edge fades in, over 0 to 1 (default 0.08)."
+      ),
+    /** The snow set's tiling, over 0 (default 1): its tile is its `physicalSize` × this. */
+    tiling: z
+      .number()
+      .gt(0)
+      .optional()
+      .describe("The snow set's tiling, over 0 (default 1): its tile is its physicalSize × this."),
+  })
+  .strict()
+  .describe(
+    "Snow cover (p307 T10): a texture set (the code route's snowSet, default snow01; the JSON route's input snow) over the layers by the surface conditions' snowCoverage, flat ground first, nothing past maxSlope; frozen dry below 0 °C, slush above, its meltwater wetting the ground around. Its packing's taps in a dynamic branch on the cover; past a far mode's band its average colour. Both qualities."
+  );
+
+/**
+ * The frost (p307 T11): below freezing the layers whiten a little and roughen, each by 1 − its
+ * set's porosity; its sparkle glints.
+ */
+const TerrainFrostSchema = z
+  .object({
+    /**
+     * The temperatures where frost starts and where it's full, °C, `[from, to]` with `from` the
+     * warmer (default `[0, -5]`).
+     */
+    temperature: z
+      .tuple([z.number(), z.number()])
+      .refine(([from, to]) => from > to, 'the first value over the second')
+      .optional()
+      .describe(
+        "The temperatures where frost starts and where it's full, °C, [from, to], from the warmer (default [0, -5])."
+      ),
+    /** The frost's strength, 0..1 (default 1). */
+    strength: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe("The frost's strength, 0..1 (default 1)."),
+    /** Ice crystals glinting toward the camera (`FULL` only); default none. */
+    sparkle: z
+      .object({
+        /** The crystals a metre, over 0 (default 50). */
+        density: z.number().gt(0).optional().describe('The crystals a metre, over 0 (default 50).'),
+        /** How bright a glint is, added to the albedo, 0 or more (default 3). */
+        strength: z
+          .number()
+          .min(0)
+          .optional()
+          .describe('How bright a glint is, added to the albedo, 0 or more (default 3).'),
+        /**
+         * The view distances over which the sparkle fades out, `[from, to]` metres (default
+         * `[4, 10]`): none computed past `to`.
+         */
+        distance: z
+          .tuple([z.number().min(0), z.number().min(0)])
+          .refine(([from, to]) => from < to, 'the first value under the second')
+          .optional()
+          .describe(
+            'The view distances over which the sparkle fades out, [from, to] metres (default [4, 10]).'
+          ),
+      })
+      .strict()
+      .optional()
+      .describe(
+        'Ice crystals glinting toward the camera on the frost and on frozen snow, in a dynamic branch. FULL only.'
+      ),
+  })
+  .strict()
+  .describe(
+    "Frost (p307 T11): below the surface conditions' temperature range the layers whiten a little and roughen (never smoother), each by 1 - its set's porosity, an underside half; after the wetness. Arithmetic, both qualities; its sparkle FULL only."
+  );
+
+/**
+ * The regional wetness (p307 T7): an authored wetness, 0..1, the least the surface shows and the
+ * least puddle level, in any weather: a float vertex attribute (default `_wetness`, glTF's
+ * `_WETNESS`), or the first splat map's A.
+ */
+const TerrainWetRegionalSchema = z
+  .union([
+    z
+      .object({
+        /** The float vertex attribute (default `_wetness`: glTF's `_WETNESS`, as GLTFLoader names
+         * it). A mesh without it reads 0, warned by three. */
+        attribute: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(
+            "The float vertex attribute (default _wetness: glTF's _WETNESS, as GLTFLoader names it)."
+          ),
+      })
+      .strict(),
+    z
+      .object({
+        /** The first splat map's A: a splat source painting at most 4 layers (so it weighs none). */
+        splatChannel: z
+          .enum(TERRAIN_WET_SPLAT_CHANNELS)
+          .describe(
+            "The first splat map's A: blend.source SPLAT_MAP or SPLAT_MAP_AND_RULES painting at most 4 layers."
+          ),
+      })
+      .strict(),
+  ])
+  .describe(
+    'The regional wetness: an authored 0..1, the least wetness and puddle level shown, from a float vertex attribute ({ attribute? }) or the first splat map\'s A ({ splatChannel: "A" }).'
+  );
+
+/**
+ * The wet response (p307 D2): the surface conditions' wetness (`aekasha/surface`) on the layers,
+ * each by its set's `porosity`, `wetDarkening` and `wetRoughness`, blended by weight.
+ */
+const TerrainWetSchema = z
+  .object({
+    /**
+     * `FULL` (default) the relief (the layers' blended height) and the cavities (the AO) shape the
+     * local wetness and the film flattens the detail normal; `SIMPLE` the response and the sky
+     * exposure only (a low tier).
+     */
+    quality: z
+      .enum(TERRAIN_WET_QUALITIES)
+      .optional()
+      .describe(
+        'FULL (default) the relief and the cavities shape the wetness and the film flattens the normal; SIMPLE the response and the sky exposure only.'
+      ),
+    /**
+     * How far the relief shifts the wetness, ≥ 0 (default 0.5): the low points wet that much ahead
+     * of the overall wetness, the peaks behind. `FULL` only.
+     */
+    heightInfluence: z
+      .number()
+      .min(0)
+      .optional()
+      .describe(
+        'How far the relief shifts the wetness, 0 or more (default 0.5): the low points wet ahead of the overall wetness, the peaks behind. FULL only.'
+      ),
+    /**
+     * How much wetter a full cavity (1 − the AO: a `FULL` layer's map, the vertex AO) is, ≥ 0
+     * (default 0.5), × the wetness. `FULL` only.
+     */
+    cavityInfluence: z
+      .number()
+      .min(0)
+      .optional()
+      .describe(
+        'How much wetter a full cavity (1 - the AO) is, 0 or more (default 0.5), × the wetness. FULL only.'
+      ),
+    /**
+     * The geometry's angles from straight up in degrees, `[from, to]` within 0..180 (default
+     * `[60, 120]`), over which the rain's reach fades out: fully wet up to `from`, dry past `to`
+     * (overhangs, undersides).
+     */
+    shelter: z
+      .tuple([z.number().min(0).max(180), z.number().min(0).max(180)])
+      .refine(([from, to]) => from < to, 'the first value under the second')
+      .optional()
+      .describe(
+        "The geometry's angles from straight up in degrees, [from, to] within 0..180 (default [60, 120]), over which the rain's reach fades out: wet up to from, dry past to."
+      ),
+    /** The puddles (`FULL` only); default none. */
+    puddles: TerrainPuddlesSchema.optional(),
+    /** The regional wetness's source; default none. */
+    regional: TerrainWetRegionalSchema.optional(),
+    /** The rain ripples (`FULL` only); default none. */
+    ripples: TerrainRipplesSchema.optional(),
+    /** The rain streaks; default none. */
+    streaks: TerrainStreaksSchema.optional(),
+    /** The shoreline along the water level; default none. */
+    shoreline: TerrainShorelineSchema.optional(),
+    /** The snow cover; default none. */
+    snow: TerrainSnowSchema.optional(),
+    /** The frost; default none. */
+    frost: TerrainFrostSchema.optional(),
+    /**
+     * What keeps the rain off the surface: `NORMAL_Y` (default) its facing alone; `MAP` also the
+     * rain occlusion map (`rainOcclusion()` from `aekasha/surface`: roofs, trees, bridges), one
+     * fetch, which keeps the wetness, the puddles, the ripples and the snow out from under them.
+     * Without the feature, `MAP` builds as `NORMAL_Y`, warned once.
+     */
+    rainOcclusion: z
+      .enum(TERRAIN_WET_RAIN_OCCLUSIONS)
+      .optional()
+      .describe(
+        "What keeps the rain off the surface: NORMAL_Y (default) its facing alone; MAP also the rain occlusion map (rainOcclusion() from 'aekasha/surface': roofs, trees, bridges), one fetch, keeping the wetness, puddles, ripples and snow out from under them."
+      ),
+  })
+  .strict()
+  .superRefine((wet, ctx) => {
+    if (wet.quality === 'SIMPLE' && wet.puddles) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['puddles'],
+        message: 'is for quality FULL: SIMPLE reads no relief to fill.',
+      });
+    }
+    if (wet.quality === 'SIMPLE' && wet.ripples) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ripples'],
+        message: 'is for quality FULL: SIMPLE leaves the normal alone.',
+      });
+    }
+    if (wet.quality === 'SIMPLE' && wet.frost?.sparkle) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['frost', 'sparkle'],
+        message: 'is for quality FULL: SIMPLE is the frost alone.',
+      });
+    }
+  })
+  .describe(
+    "The wet response: the surface conditions' wetness on the layers, each by its set's porosity, wetDarkening and wetRoughness."
+  );
+
 /** The colour map's settings of each mode, with its texture's id for the code route */
 const colorMapOptions = <T extends z.ZodRawShape>(texture: T) =>
   [
@@ -1020,6 +1464,11 @@ const sharedFields = {
   distance: TerrainDistanceSchema.optional(),
   /** Sparse sampling: only the layers weighing most at each pixel (default: every layer). */
   sparse: TerrainSparseSchema.optional(),
+  /**
+   * The wet response to the surface conditions (`aekasha/surface`'s `wetness`; needs the
+   * `surfaceConditions()` feature, else the material builds dry, warned). Default none: dry.
+   */
+  wet: TerrainWetSchema.optional(),
 };
 
 /** A quality tier's overrides of one layer's own settings */
@@ -1111,14 +1560,14 @@ const variantFields = {
     ),
   /**
    * A debug view in place of the surface (debug env only, ignored elsewhere; its code loads with
-   * `loadTerrainDebugViewsAsync`): `TEXEL_DENSITY`, `NORMALS`, `WEIGHTS`, `PROJECTION`, `TAPS`
-   * or `LAYER_COUNT`.
+   * `loadTerrainDebugViewsAsync`): `TEXEL_DENSITY`, `NORMALS`, `WEIGHTS`, `PROJECTION`, `TAPS`,
+   * `LAYER_COUNT` or `WETNESS` (with `wet`, the material's or a tier's).
    */
   debugView: z
     .enum(TERRAIN_DEBUG_VIEWS)
     .optional()
     .describe(
-      'A debug view in place of the surface (debug env only; its code loads with loadTerrainDebugViewsAsync): TEXEL_DENSITY, NORMALS, WEIGHTS, PROJECTION, TAPS or LAYER_COUNT.'
+      'A debug view in place of the surface (debug env only; its code loads with loadTerrainDebugViewsAsync): TEXEL_DENSITY, NORMALS, WEIGHTS, PROJECTION, TAPS, LAYER_COUNT or WETNESS (with wet).'
     ),
 };
 
@@ -1167,6 +1616,20 @@ const getSplatMapCount = (blend: TerrainBlend | undefined, layerCount: number) =
 const getRules = (blend: TerrainBlend | undefined) =>
   blend && 'rules' in blend ? blend.rules : [];
 
+type TerrainWet = z.infer<typeof TerrainWetSchema>;
+
+/**
+ * Whether the material's wet response or a tier's has puddle patches or streaks, which read the
+ * noise texture
+ */
+const hasWetNoise = (value: {
+  wet?: TerrainWet;
+  quality?: Partial<Record<string, { wet?: TerrainWet } | undefined>>;
+}) =>
+  [value.wet, ...Object.values(value.quality ?? {}).map((tier) => tier?.wet)].some(
+    (wet) => wet?.puddles?.patches !== undefined || wet?.streaks !== undefined
+  );
+
 /** Whether a rule of the material's blend or of a tier's reads the noise texture */
 const hasRuleNoise = (value: {
   blend?: TerrainBlend;
@@ -1176,7 +1639,11 @@ const hasRuleNoise = (value: {
     getRules(blend).some((rule) => rule.noise)
   );
 
-type BlendFields = { blend?: TerrainBlend; ao?: z.infer<typeof TerrainAoSchema> };
+type BlendFields = {
+  blend?: TerrainBlend;
+  ao?: z.infer<typeof TerrainAoSchema>;
+  wet?: TerrainWet;
+};
 
 /**
  * The rules' layers: each one of the material's, and each layer past the painted ones some rule's
@@ -1230,8 +1697,10 @@ const checkBlend = (
     path: ['quality', level],
     blend: tier?.blend ?? value.blend,
     ao: tier?.ao ?? value.ao,
+    wet: tier?.wet ?? value.wet,
   }));
-  for (const { path, blend, ao } of [{ path: [], blend: value.blend, ao: value.ao }, ...tiers]) {
+  const own = { path: [], blend: value.blend, ao: value.ao, wet: value.wet };
+  for (const { path, blend, ao, wet } of [own, ...tiers]) {
     const { counts, name } = getBlendLayerCounts(blend);
     const count = value.layers.length;
     const issue = (at: (string | number)[], message: string) => {
@@ -1251,6 +1720,17 @@ const checkBlend = (
       issue(
         [...path, 'ao', 'vertex'],
         'needs blend.source VERTEX_COLOR or VERTEX_COLOR_AND_RULES with the RGB_AO layout.'
+      );
+    }
+    const isSplat = blend?.source === 'SPLAT_MAP' || blend?.source === 'SPLAT_MAP_AND_RULES';
+    if (
+      wet?.regional &&
+      'splatChannel' in wet.regional &&
+      !(isSplat && getPaintedLayerCount(blend, count) <= 4)
+    ) {
+      issue(
+        [...path, 'wet', 'regional', 'splatChannel'],
+        "is A: give blend.source SPLAT_MAP or SPLAT_MAP_AND_RULES painting at most 4 layers, so the first splat map's A weighs none."
       );
     }
   }
@@ -1525,6 +2005,27 @@ const checkFar = (value: FarValue, ctx: z.RefinementCtx) => {
 };
 
 /**
+ * The `WETNESS` debug view shows the wet response: the material's `wet` or a tier's must be there
+ * (a tier's variant shares the material's define). The refinement both schemas share.
+ */
+const checkWetView = (
+  value: {
+    debugView?: string;
+    wet?: unknown;
+    quality?: Partial<Record<string, { wet?: unknown } | undefined>>;
+  },
+  ctx: z.RefinementCtx
+) => {
+  if (value.debugView !== 'WETNESS') return;
+  if (value.wet || Object.values(value.quality ?? {}).some((tier) => tier?.wet)) return;
+  ctx.addIssue({
+    code: 'custom',
+    path: ['debugView'],
+    message: "is WETNESS: give wet (the material's or a tier's), else there's nothing to show.",
+  });
+};
+
+/**
  * Whether the config (its own fields or a tier's) samples the layers in slots, which read the
  * layers at a per-pixel index: `ARRAY` storage
  */
@@ -1542,7 +2043,10 @@ const checkTextureIds = (
     splatMaps?: string[];
     macro?: unknown;
     noiseTexture?: string;
-    quality?: Partial<Record<string, { blend?: TerrainBlend } | undefined>>;
+    rippleTexture?: string;
+    snowSet?: string;
+    wet?: TerrainWet;
+    quality?: Partial<Record<string, { blend?: TerrainBlend; wet?: TerrainWet } | undefined>>;
   },
   ctx: z.RefinementCtx
 ) => {
@@ -1559,13 +2063,23 @@ const checkTextureIds = (
       `${painted} painted layers take ${count} splat map${count === 1 ? '' : 's'}: give their texture ids.`
     );
   }
-  if (value.noiseTexture !== undefined && !hasRuleNoise(value)) {
+  if (value.noiseTexture !== undefined && !hasRuleNoise(value) && !hasWetNoise(value)) {
     issue(
       'noiseTexture',
-      "is for rules with noise (blend.rules[i].noise, the material's or a tier's)."
+      "is for rules with noise (blend.rules[i].noise), puddle patches (wet.puddles.patches) or streaks (wet.streaks), the material's or a tier's."
     );
   } else if (value.noiseTexture !== undefined && value.macro) {
-    issue('noiseTexture', "is macro.texture's with a macro: the rules' noise reads it.");
+    issue(
+      'noiseTexture',
+      "is macro.texture's with a macro: the rules' noise, the puddle patches and the streaks read it."
+    );
+  }
+  const wets = [value.wet, ...Object.values(value.quality ?? {}).map((tier) => tier?.wet)];
+  if (value.rippleTexture !== undefined && !wets.some((wet) => wet?.ripples)) {
+    issue('rippleTexture', "is for rain ripples (wet.ripples, the material's or a tier's).");
+  }
+  if (value.snowSet !== undefined && !wets.some((wet) => wet?.snow)) {
+    issue('snowSet', "is for the snow cover (wet.snow, the material's or a tier's).");
   }
 };
 
@@ -1613,6 +2127,7 @@ export const TerrainMaterialDefineSchema = z
   .superRefine(checkSlots)
   .superRefine(checkLive)
   .superRefine(checkFar)
+  .superRefine(checkWetView)
   .describe("The terrain material's static define (staticDefines.terrain).");
 
 /**
@@ -1668,16 +2183,40 @@ export const TerrainMaterialConfigSchema = z
         "With blend.source SPLAT_MAP or SPLAT_MAP_AND_RULES, the splat maps' texture ids: the first weighs layers 1-4, the second 5-8 (inputs splat0, splat1)."
       ),
     /**
-     * The macro noise texture the rules' noise reads (the input `macro`), for a material with
-     * rule noise and no `macro`, whose texture they read otherwise (default `macroNoise`, the
-     * toolkit's).
+     * The macro noise texture the rules' noise, the puddle patches (`wet.puddles.patches`) and the
+     * streaks (`wet.streaks`) read (the input `macro`), for a material with any of them and no
+     * `macro`, whose texture they read otherwise (default `macroNoise`, the toolkit's).
      */
     noiseTexture: z
       .string()
       .min(1)
       .optional()
       .describe(
-        "The macro noise texture the rules' noise reads, without a macro (whose texture it reads otherwise; default macroNoise)."
+        "The macro noise texture the rules' noise, the puddle patches and the streaks read, without a macro (whose texture they read otherwise; default macroNoise)."
+      ),
+    /**
+     * The ripple atlas the rain ripples read (the input `ripples`), for a material with
+     * `wet.ripples` (its own or a tier's; default `rippleAtlas`, the toolkit's, or a bake's
+     * `rippleAtlas.data`).
+     */
+    rippleTexture: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "The ripple atlas the rain ripples read, for a material with wet.ripples (default rippleAtlas, or a bake's rippleAtlas.data)."
+      ),
+    /**
+     * The texture set the snow cover is (the input `snow`, in its default packing), for a material
+     * with `wet.snow` (its own or a tier's; default `snow01`, the toolkit's). With a far mode it
+     * needs an `averageColor`, the snow past the band.
+     */
+    snowSet: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        'The texture set the snow cover is, for a material with wet.snow (default snow01); with a far mode it needs an averageColor.'
       ),
     /**
      * How the layers' textures bind (default `AUTO`: `SEPARATE` while it fits the texture budget
@@ -1705,6 +2244,7 @@ export const TerrainMaterialConfigSchema = z
   .superRefine(checkSlots)
   .superRefine(checkLive)
   .superRefine(checkFar)
+  .superRefine(checkWetView)
   .superRefine(checkTextureIds)
   .superRefine(checkStorage)
   .describe("The terrain material's config (createTerrainMaterial).");

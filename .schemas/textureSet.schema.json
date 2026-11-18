@@ -30,13 +30,13 @@
       "$ref": "#/definitions/__schema31"
     },
     "averageColor": {
-      "$ref": "#/definitions/__schema50"
+      "$ref": "#/definitions/__schema54"
     },
     "debugData": {
-      "$ref": "#/definitions/__schema51"
+      "$ref": "#/definitions/__schema55"
     },
     "__sourcePath": {
-      "$ref": "#/definitions/__schema62"
+      "$ref": "#/definitions/__schema66"
     }
   },
   "required": [
@@ -363,6 +363,12 @@
         },
         "wetRoughness": {
           "$ref": "#/definitions/__schema48"
+        },
+        "puddleResponse": {
+          "$ref": "#/definitions/__schema50"
+        },
+        "dryingSpeed": {
+          "$ref": "#/definitions/__schema52"
         }
       },
       "additionalProperties": false,
@@ -463,7 +469,7 @@
       "minimum": 0
     },
     "__schema44": {
-      "description": "How much water the surface soaks up (0 none, 1 all). Default 0.5.",
+      "description": "How much water the surface soaks up (0 none: a film at once, 1 all). Default: its category's.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema45"
@@ -476,7 +482,7 @@
       "maximum": 1
     },
     "__schema46": {
-      "description": "How much wetness darkens the albedo (0 none, 1 black). Default 0.5.",
+      "description": "How much the filled pores darken the albedo (0 none, 1 black). Default: its category's.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema47"
@@ -489,7 +495,7 @@
       "maximum": 1
     },
     "__schema48": {
-      "description": "The roughness of the fully wet surface. Default 0.3.",
+      "description": "The roughness with the pores full, before a water film forms. Default: its category's.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema49"
@@ -502,37 +508,20 @@
       "maximum": 1
     },
     "__schema50": {
-      "description": "The albedo's average colour (sRGB). Default: the one the asset pipeline measures.",
+      "description": "How readily water stands on it (0 none: it sheds water, 1 a film and puddles in every low point): its film over full pores, and its puddles. Default: its category's.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema33"
+          "$ref": "#/definitions/__schema51"
         }
       ]
     },
     "__schema51": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "$ref": "#/definitions/__schema52"
-        },
-        "description": {
-          "$ref": "#/definitions/__schema54"
-        },
-        "comments": {
-          "$ref": "#/definitions/__schema56"
-        },
-        "todo": {
-          "$ref": "#/definitions/__schema58"
-        },
-        "debugObj": {
-          "$ref": "#/definitions/__schema60"
-        }
-      },
-      "additionalProperties": false,
-      "description": "What the debug tools show for it. Production data has none."
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
     },
     "__schema52": {
-      "description": "The name the debug tools show.",
+      "description": "How fast it dries against the overall wetness, over 0 (1 alike, 2 sand-fast, 0.4 mud-slow): the overall wetness to this power. Default: its category's.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema53"
@@ -540,21 +529,41 @@
       ]
     },
     "__schema53": {
-      "type": "string"
+      "type": "number",
+      "exclusiveMinimum": 0
     },
     "__schema54": {
-      "description": "A longer description for the debug tools.",
+      "description": "The albedo's average colour (sRGB). Default: the one the asset pipeline measures.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema55"
+          "$ref": "#/definitions/__schema33"
         }
       ]
     },
     "__schema55": {
-      "type": "string"
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/__schema56"
+        },
+        "description": {
+          "$ref": "#/definitions/__schema58"
+        },
+        "comments": {
+          "$ref": "#/definitions/__schema60"
+        },
+        "todo": {
+          "$ref": "#/definitions/__schema62"
+        },
+        "debugObj": {
+          "$ref": "#/definitions/__schema64"
+        }
+      },
+      "additionalProperties": false,
+      "description": "What the debug tools show for it. Production data has none."
     },
     "__schema56": {
-      "description": "Notes with their times.",
+      "description": "The name the debug tools show.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema57"
@@ -562,6 +571,28 @@
       ]
     },
     "__schema57": {
+      "type": "string"
+    },
+    "__schema58": {
+      "description": "A longer description for the debug tools.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema59"
+        }
+      ]
+    },
+    "__schema59": {
+      "type": "string"
+    },
+    "__schema60": {
+      "description": "Notes with their times.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema61"
+        }
+      ]
+    },
+    "__schema61": {
       "type": "array",
       "items": {
         "type": "object",
@@ -582,37 +613,37 @@
         "additionalProperties": false
       }
     },
-    "__schema58": {
+    "__schema62": {
       "description": "Open items, by key.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema59"
+          "$ref": "#/definitions/__schema63"
         }
       ]
     },
-    "__schema59": {
+    "__schema63": {
       "type": "object",
       "propertyNames": {
         "type": "string"
       },
       "additionalProperties": {}
     },
-    "__schema60": {
+    "__schema64": {
       "description": "Anything else a debug tool keeps for it.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema61"
+          "$ref": "#/definitions/__schema65"
         }
       ]
     },
-    "__schema61": {
+    "__schema65": {
       "type": "object",
       "propertyNames": {
         "type": "string"
       },
       "additionalProperties": {}
     },
-    "__schema62": {
+    "__schema66": {
       "type": "string",
       "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
     }

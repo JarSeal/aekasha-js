@@ -23,6 +23,8 @@ const makeBundle = (slots: Slot[]) => {
     porosity: uniform(0.5),
     wetDarkening: uniform(0.5),
     wetRoughness: uniform(0.3),
+    puddleResponse: uniform(0.5),
+    dryingSpeed: uniform(1),
   } as unknown as TextureSetInput;
   return { bundle, textures };
 };

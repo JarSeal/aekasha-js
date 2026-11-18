@@ -37,11 +37,14 @@ import { getSurfaceSpace } from '../nodes/SurfaceSpace';
 import { bumpNormalWorld, transformWorldNormalToView } from '../nodes/TerrainNormals';
 import { getSplatMapWeights, getVertexColorWeights, type PaintedWeights } from '../nodes/Weights';
 import {
+  getSnowBindings,
   getTerrainDefine,
   getTerrainInputs,
   readLayerSources,
   readColorMapTexture,
   readMacroTexture,
+  readRippleTexture,
+  readSnowSet,
   readSplatMaps,
   type LayerParams,
 } from './TerrainInputs';
@@ -59,6 +62,7 @@ import {
 } from './TerrainLayers';
 import { createLiveLayer } from './TerrainLive';
 import { checkTextureBudget, type TerrainBinding } from './TerrainStorage';
+import { applyTerrainWetness } from './TerrainWet';
 import {
   buildNearSurface,
   createSurfaceUniforms,
@@ -127,13 +131,13 @@ const createDistanceUniforms = (material: NodeMaterial, define: ResolvedTerrainD
 const getBindings = (
   layerBindings: TerrainBinding[],
   splatMaps: TextureNode[],
-  hasMacro: boolean,
-  hasColorMap: boolean
+  extra: { hasMacro: boolean; hasRipples: boolean; hasColorMap: boolean }
 ): TerrainBinding[] => [
   ...layerBindings,
   ...(splatMaps.length ? [{ name: 'splat maps', count: splatMaps.length }] : []),
-  ...(hasMacro ? [{ name: 'macro', count: 1 }] : []),
-  ...(hasColorMap ? [{ name: 'colour map', count: 1 }] : []),
+  ...(extra.hasMacro ? [{ name: 'macro', count: 1 }] : []),
+  ...(extra.hasRipples ? [{ name: 'ripple atlas', count: 1 }] : []),
+  ...(extra.hasColorMap ? [{ name: 'colour map', count: 1 }] : []),
 ];
 
 /**
@@ -155,7 +159,11 @@ const getIncomingWeights = (
   } else if (getPaintedSource(blend) === 'SPLAT_MAP') {
     painted = getSplatMapWeights(paintedCount, splatMaps);
   } else {
-    painted = { weights: [float(1) as unknown as Node<'float'>], vertexAo: null };
+    painted = {
+      weights: [float(1) as unknown as Node<'float'>],
+      vertexAo: null,
+      splatAlpha: null,
+    };
   }
   const rest = Array.from({ length: count - painted.weights.length }, () => zero);
   return { ...painted, weights: [...painted.weights, ...rest] };
@@ -247,14 +255,31 @@ const getAoNode = (
  * its `fade` range, and with a `far` mode the layers aren't sampled past it (a dynamic branch): the
  * far surface is the sets' average colours by the weights (`AVERAGE_COLOR`) or the colour map
  * (`COLOR_MAP`), mixed in over `farBlend` metres, its normal the geometry's (a `debugView` shows
- * the near surface everywhere). With `space: 'OBJECT'` all of it is in the mesh's own space (its
+ * the near surface everywhere). With `wet` (p307), the surface conditions' wetness (the
+ * `surfaceConditions()` feature's uniforms, `aekasha/surface`; without the feature the material
+ * builds dry, warned) wets the blended surface where it faces the sky (`shelter`), the low points
+ * and cavities first (`FULL`): the albedo darkens and the roughness falls as the pores fill, then
+ * the roughness falls to water's and the detail normal flattens as a film forms, each layer by its
+ * set's `porosity`, `wetDarkening` and `wetRoughness`, blended by weight; with `wet.puddles` water
+ * stands where the puddle level × the sets' `puddleResponse` is over the blended relief on flat
+ * ground (its patches one fetch of the input `macro`), and `wet.regional` (a vertex attribute or
+ * the first splat map's A) keeps its places wet; with `wet.ripples` rain rings ripple where water
+ * stands, two fetches of the input `ripples` (a ripple atlas) in a branch on the rain; with
+ * `wet.streaks` rivulets run down steep faces while it rains and stay damp while it's wet, one
+ * fetch of the input `macro` in a branch on the weather; with `wet.shoreline` the ground along the
+ * surface conditions' `waterLevel` is washed, saturated and damp above (arithmetic, at the world's
+ * position); with `wet.snow` the input `snow` (a texture set) covers the surface by the surface
+ * conditions' `snowCoverage`, flat ground first (its taps in a branch on the cover; past a far
+ * mode's band its average colour), frozen dry below 0 °C and slush above; with `wet.frost` the
+ * surface whitens a little and roughens below freezing by its sets' porosity, its `sparkle`
+ * glinting (`FULL`). With `space: 'OBJECT'` all of it is in the mesh's own space (its
  * position × scale, its normal: coordinates, projections, rules, macro), the shaded normal turned
  * into world space before the view; `WORLD` (default) the world's. A live layer (`source:
  * 'PROCEDURAL_LIVE'`) runs its procedural set's generator in place of sampling (its whole graph at
  * each point: its tiling's, each projected plane's), its normal its bump of its height, or
  * `live.normal: 'TAPS'` a bake's, and binds no texture; it takes no anti-tiling. Only what the
- * define enables is built. The textures it binds (the layers', the splat maps, the macro texture, the colour map)
- * must fit the budget: the renderer's sampled textures a stage (16) less `reservedTextures` (6).
+ * define enables is built. The textures it binds (the layers', the splat maps, the macro texture,
+ * the ripple atlas, the snow set's, the colour map) must fit the budget: the renderer's sampled textures a stage (16) less `reservedTextures` (6).
  * The tunables are uniforms in `material.userData.uniforms`: per layer `terrain_l<i>_<name>`
  * (`tiling`, `rotation` when given, `tint`, `normalStrength`, `roughnessScale`; `heightContrast`
  * and `heightOffset` with the height blend; `farScale` and `antiTilingDistance` with `DUAL_SCALE`
@@ -268,14 +293,27 @@ const getAoNode = (
  * `terrain_macroRoughness` with `macro`, a live layer's generator's numbers and colours
  * `terrain_l<i>_live_<param>` and its seed `terrain_l<i>_live_seed` (the set's values to start),
  * `terrain_detailDistance` with a colour map's
- * `detailDistance`, `terrain_distanceFade` with `distance`, and `terrain_farBlend` with a far mode.
+ * `detailDistance`, `terrain_distanceFade` with `distance`, `terrain_farBlend` with a far mode, and
+ * `terrain_wetShelter` with `wet` (`terrain_wetHeightInfluence` and `terrain_wetCavityInfluence`
+ * with its `FULL` quality; `terrain_wetPuddleMaxSlope` and `terrain_wetPuddleEdge` with its
+ * puddles, `terrain_wetPuddlePatchScale` and `terrain_wetPuddlePatchAmount` with their patches,
+ * `terrain_wetRippleScale`, `terrain_wetRippleLifetime`, `terrain_wetRippleStrength` and
+ * `terrain_wetRippleDistance` with its ripples, `terrain_wetStreakMinSlope`,
+ * `terrain_wetStreakScale`, `terrain_wetStreakLength` and `terrain_wetStreakSpeed` with its
+ * streaks, `terrain_wetShoreBand` and `terrain_wetShoreNoise` with its shoreline,
+ * `terrain_wetShoreRunUp` with the shoreline's run-up, `terrain_wetSnowMaxSlope`,
+ * `terrain_wetSnowNoiseScale`, `terrain_wetSnowEdge` and `terrain_wetSnowTiling` with its snow,
+ * `terrain_wetFrostTemperature` and `terrain_wetFrostStrength` with its frost,
+ * `terrain_wetSparkleDensity`, `terrain_wetSparkleStrength` and `terrain_wetSparkleDistance` with
+ * the frost's sparkle).
  * A `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug env, once
  * {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the view. The
  * define as given is kept at `material.userData.terrainDefine`.
  * @param inputs the material's inputs: `layer<i>` bundles or the `layers` set array bundle (the
  * `textureSets()` feature's resolvers), with the splat map sources the splat maps `splat<i>` and
- * with `macro` or a rule's noise the macro texture `macro`, with `colorMap` the colour map
- * `colorMap` (texture nodes: `{ "texture": id }`)
+ * with `macro`, a rule's noise, puddle patches or streaks the macro texture `macro`, with ripples the ripple
+ * atlas `ripples`, with `colorMap` the colour map `colorMap` (texture nodes: `{ "texture": id }`),
+ * with snow the snow's set `snow` (a `{ textureSet }` bundle)
  * @param material the node material being built (a `STANDARDNODEMATERIAL`)
  * @param staticDefines the material's static defines, `terrain` among them
  * @throws for a missing or wrong define field, a field it doesn't know, a layer count the blend
@@ -335,8 +373,17 @@ export const buildTerrainGraph = (
   const splatMaps = readSplatMaps(inputs, define);
   const macroTexture = readMacroTexture(inputs, define);
   const colorMapTexture = readColorMapTexture(inputs, define);
+  const rippleTexture = readRippleTexture(inputs, define);
+  const snowSet = readSnowSet(inputs, define);
   checkTextureBudget(
-    getBindings(sources.bindings, splatMaps, macroTexture !== null, colorMapTexture !== null),
+    [
+      ...getBindings(sources.bindings, splatMaps, {
+        hasMacro: macroTexture !== null,
+        hasRipples: rippleTexture !== null,
+        hasColorMap: colorMapTexture !== null,
+      }),
+      ...getSnowBindings(snowSet),
+    ],
     define.reservedTextures,
     sources.isArray
   );
@@ -382,6 +429,7 @@ export const buildTerrainGraph = (
     const layers = sources.layers.map(({ params }, i) => ({ params, uniforms: uniforms[i] }));
     surface = buildFarBranch({
       packing,
+      hasWet: define.wet !== null,
       from: distance.fade.y,
       blend: distance.farBlend,
       inputs: {
@@ -437,7 +485,6 @@ export const buildTerrainGraph = (
   }
 
   // The material-wide effects over the blended surface, the normal into view space once
-  const { albedo } = surface;
   const roughness = macro
     ? varyRoughness(surface.roughness, macro.sample, macro.nodes)
     : surface.roughness;
@@ -447,15 +494,37 @@ export const buildTerrainGraph = (
       existsOrThrow(surface.bumpHeight, 'A surface without a normal has a bump.'),
       space
     );
+  const ao = getAoNode(material, define, surface.ao, raw, packing !== 'FULL');
+  // p307's wet response over it all (its cavities the AO), before the detail normals' fade
+  const wet = applyTerrainWetness(
+    material,
+    define,
+    {
+      albedo: surface.albedo,
+      roughness,
+      normal: shaded,
+      ao,
+      wet: surface.wet,
+      macroTexture,
+      rippleTexture,
+      snowSet,
+      splatAlpha: raw?.splatAlpha ?? null,
+      viewDistance,
+      farShare:
+        distance.fade && distance.farBlend
+          ? getFarShare(viewDistance, distance.fade.y, distance.farBlend)
+          : null,
+    },
+    space
+  );
   // In the material's space; into world space once, then view space
   const normal = distance.fade
-    ? fadeDetailNormal(shaded, viewDistance, distance.fade, space.normal)
-    : shaded;
-  standard.colorNode = albedo;
+    ? fadeDetailNormal(wet.normal, viewDistance, distance.fade, space.normal)
+    : wet.normal;
+  standard.colorNode = wet.albedo;
   standard.normalNode = transformWorldNormalToView(space.toWorld(normal));
-  standard.roughnessNode = roughness;
+  standard.roughnessNode = wet.roughness;
   standard.metalnessNode = float(0);
-  const ao = getAoNode(material, define, surface.ao, raw, packing !== 'FULL');
   if (ao) standard.aoNode = ao;
 
   if (IS_DEBUG_ENV && define.debugView && near) {
@@ -481,9 +550,11 @@ export const buildTerrainGraph = (
         distance.fade && distance.farBlend
           ? { share: getFarShare(viewDistance, distance.fade.y, distance.farBlend) }
           : null,
+      wet: wet.masks,
       normal,
       define,
       packing,
+      snowTaps: snowSet ? getSnowBindings(snowSet)[0].count : 0,
     });
   }
 };
@@ -524,7 +595,8 @@ const terrainMaterialFns = { setup: setupTerrainMaterial } satisfies TslMaterial
  * `terrain` (without the id, the layers' sets, the splat maps, the macro texture and the colour
  * map), each layer's set as its input `layer<i>` (`{ textureSet, packing? }`), the splat maps as
  * the inputs `splat<i>`, the macro texture as the input `macro` (`{ texture }`: `macro.texture`,
- * else for rule noise `noiseTexture` or `macroNoise`) and the colour map as the input `colorMap`.
+ * else for rule noise, puddle patches or streaks `noiseTexture` or `macroNoise`), the ripple atlas
+ * as the input `ripples` and the colour map as the input `colorMap`.
  * Pass them to `ensureMaterialDependencies` to load the textures before creating the material, or
  * use them as a material JSON's fields.
  * @returns the props, for `createMaterial` or `ensureMaterialDependencies`

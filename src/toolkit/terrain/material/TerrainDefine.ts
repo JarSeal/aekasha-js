@@ -5,6 +5,7 @@
 // in step: the same keys, values and refusals. Over 800 lines: one reader mirrors the whole
 // schema field by field, so a field and its refusals sit next to its neighbours'.
 import { TERRAIN_RULE_DEFAULTS, TERRAIN_RULE_NOISE_CHANNELS } from 'aekasha/toolkit/geometry';
+import { SURFACE_WETNESS_DEFAULTS } from '../nodes/Wet';
 
 const LAYER_SOURCES = ['TEXTURE', 'PROCEDURAL_LIVE'] as const;
 const LIVE_NORMALS = ['BUMP', 'TAPS'] as const;
@@ -49,10 +50,22 @@ const DEBUG_VIEWS = [
   'PROJECTION',
   'TAPS',
   'LAYER_COUNT',
+  'WETNESS',
 ] as const;
+const WET_QUALITIES = ['FULL', 'SIMPLE'] as const;
+const WET_RAIN_OCCLUSIONS = ['NORMAL_Y', 'MAP'] as const;
 
 /** The keys each object of the define takes (the schema's) */
-const OVERRIDE_KEYS = ['uv', 'blend', 'ao', 'antiTiling', 'projection', 'distance', 'sparse'];
+const OVERRIDE_KEYS = [
+  'uv',
+  'blend',
+  'ao',
+  'antiTiling',
+  'projection',
+  'distance',
+  'sparse',
+  'wet',
+];
 /** A tier's keys: the material-wide ones and its layers' overrides */
 const TIER_KEYS = [...OVERRIDE_KEYS, 'layers'];
 const LAYER_OVERRIDE_KEYS = ['source', 'antiTiling', 'projection'];
@@ -116,6 +129,33 @@ const PROJECTION_KEYS: Record<(typeof PROJECTION_MODES)[number], string[]> = {
 };
 const MACRO_KEYS = ['scale', 'brightness', 'hue', 'roughness'];
 const DISTANCE_KEYS = ['fade', 'far', 'farBlend'];
+const WET_KEYS = [
+  'quality',
+  'heightInfluence',
+  'cavityInfluence',
+  'shelter',
+  'puddles',
+  'regional',
+  'ripples',
+  'streaks',
+  'shoreline',
+  'snow',
+  'frost',
+  'rainOcclusion',
+];
+const WET_PUDDLE_KEYS = ['maxSlope', 'edge', 'patches'];
+const WET_RIPPLE_KEYS = ['scale', 'lifetime', 'strength', 'distance'];
+const WET_STREAK_KEYS = ['minSlope', 'scale', 'length', 'speed'];
+const WET_SHORELINE_KEYS = ['band', 'noise', 'runUp'];
+const WET_RUN_UP_KEYS = ['height', 'period'];
+const WET_SNOW_KEYS = ['maxSlope', 'noiseScale', 'edge', 'tiling'];
+const WET_FROST_KEYS = ['temperature', 'strength', 'sparkle'];
+const WET_SPARKLE_KEYS = ['density', 'strength', 'distance'];
+const WET_PATCH_KEYS = ['scale', 'amount'];
+const WET_SPLAT_CHANNELS = ['A'] as const;
+/** The vertex attribute a regional wetness reads by default: glTF's `_WETNESS` (GLTFLoader's
+ * lowercase name) */
+const WET_REGIONAL_ATTRIBUTE = '_wetness';
 const COLOR_MAP_KEYS: Record<(typeof COLOR_MAP_MODES)[number], string[]> = {
   DETAIL: ['mode', 'detailDistance'],
   FAR_ONLY: ['mode'],
@@ -260,6 +300,106 @@ export type TerrainFarDefine = {
   blend: number;
 };
 
+/** The wet response's settings with their defaults filled in (p307 D2) */
+export type TerrainWetDefine = {
+  quality: (typeof WET_QUALITIES)[number];
+  heightInfluence: number;
+  cavityInfluence: number;
+  /** The angles from up over which the rain's reach fades out, degrees */
+  shelter: [number, number];
+  /** The puddles (`FULL` only), or null for none */
+  puddles: TerrainPuddlesDefine | null;
+  /**
+   * The regional wetness's source: a float vertex attribute, or the first splat map's A (a splat
+   * source painting at most 4 layers); null for none
+   */
+  regional: { attribute: string } | { splatChannel: (typeof WET_SPLAT_CHANNELS)[number] } | null;
+  /** The rain ripples (`FULL` only; the input `ripples`, a ripple atlas), or null for none */
+  ripples: TerrainRipplesDefine | null;
+  /** The rain streaks (the input `macro`'s R), or null for none */
+  streaks: TerrainStreaksDefine | null;
+  /** The shoreline along the water level, or null for none */
+  shoreline: TerrainShorelineDefine | null;
+  /** The snow cover (the input `snow`, a texture set), or null for none */
+  snow: TerrainSnowDefine | null;
+  /** The frost, or null for none */
+  frost: TerrainFrostDefine | null;
+  /** What keeps the rain off: the facing alone, or the rain occlusion map too */
+  rainOcclusion: (typeof WET_RAIN_OCCLUSIONS)[number];
+};
+
+/** The wet response's frost with its defaults filled in (p307 T11) */
+export type TerrainFrostDefine = {
+  /** Where frost starts and where it's full, °C, the first the warmer */
+  temperature: [number, number];
+  /** The frost's strength, 0..1 */
+  strength: number;
+  /**
+   * The sparkle (`FULL` only): the crystals a metre, a glint's brightness and the view distances
+   * it fades out over, metres; or null for none
+   */
+  sparkle: { density: number; strength: number; distance: [number, number] } | null;
+};
+
+/** The wet response's snow cover with its defaults filled in (p307 T10) */
+export type TerrainSnowDefine = {
+  /** The steepest slope the snow rests on, degrees from flat */
+  maxSlope: number;
+  /** The drift noise's cell, metres */
+  noiseScale: number;
+  /** The share of the cover over which the snow's edge fades in */
+  edge: number;
+  /** The snow set's tiling */
+  tiling: number;
+};
+
+/** The wet response's shoreline with its defaults filled in (p307 T8) */
+export type TerrainShorelineDefine = {
+  /** The metres above the water level that stay damp */
+  band: number;
+  /** The metres the waterline wanders along the shore */
+  noise: number;
+  /** The waves' run-up (the metres they reach, the seconds between them), or null for none */
+  runUp: { height: number; period: number } | null;
+};
+
+/** The wet response's rain streaks with their defaults filled in (p307 T5) */
+export type TerrainStreaksDefine = {
+  /** The gentlest face that streaks, degrees from flat */
+  minSlope: number;
+  /** The metres one macro texture tile covers across the face */
+  scale: number;
+  /** How many times longer a tile is down the face than across */
+  length: number;
+  /** How fast the running water's pulses move down, metres a second */
+  speed: number;
+};
+
+/** The wet response's rain ripples with their defaults filled in (p307 T4) */
+export type TerrainRipplesDefine = {
+  /** The metres one atlas tile covers */
+  scale: number;
+  /** The seconds a ring lives */
+  lifetime: number;
+  /** How far the rings tilt the normal */
+  strength: number;
+  /** The view distances over which the ripples fade out, metres: none sampled past the second */
+  distance: [number, number];
+};
+
+/** The wet response's puddles with their defaults filled in (p307 T3) */
+export type TerrainPuddlesDefine = {
+  /** The steepest ground a puddle stands on, degrees from flat */
+  maxSlope: number;
+  /** The relief height over which a puddle's rim fades in */
+  edge: number;
+  /**
+   * The macro texture's patches (B) at their own scale (one fetch of the input `macro`), or null
+   * for none
+   */
+  patches: { scale: number; amount: number } | null;
+};
+
 /** The colour map's settings with their defaults filled in */
 export type TerrainColorMapDefine = {
   mode: (typeof COLOR_MAP_MODES)[number];
@@ -285,16 +425,29 @@ export type ResolvedTerrainDefine = {
   /** The macro variation (its texture the input `macro`), or null for none */
   macro: TerrainMacroDefine | null;
   /**
-   * Whether the define takes the input `macro`: it has a macro, or a rule of its blend or of a
-   * tier's has noise (a tier's variant shares the material's inputs)
+   * Whether the define takes the input `macro`: it has a macro, a rule of its blend or of a
+   * tier's has noise, or its wet response or a tier's has puddle patches or streaks (a tier's
+   * variant shares the material's inputs)
    */
   takesMacroTexture: boolean;
+  /**
+   * Whether the define takes the input `ripples` (a ripple atlas): its wet response or a tier's
+   * has ripples
+   */
+  takesRippleTexture: boolean;
+  /**
+   * Whether the define takes the input `snow` (a texture set): its wet response or a tier's has
+   * snow
+   */
+  takesSnowSet: boolean;
   /** The detail normals' fade, view distances in metres, or null for none */
   distanceFade: [number, number] | null;
   /** The far surface past the fade's end (`distance.far`), or null for none (`NONE`) */
   far: TerrainFarDefine | null;
   /** The colour map (its texture the input `colorMap`), or null for none */
   colorMap: TerrainColorMapDefine | null;
+  /** The wet response (p307), or null for none: dry */
+  wet: TerrainWetDefine | null;
   /**
    * The layers sampled at a pixel in slots sorted by weight there (p305 D6: sparse sampling's kept
    * layers, or every layer for `HEX`'s `DOMINANT`; `ARRAY` storage, each read at a per-pixel
@@ -324,6 +477,19 @@ export const TERRAIN_DEFINE_VALUES = {
   projectionKeys: PROJECTION_KEYS,
   macroKeys: MACRO_KEYS,
   distanceKeys: DISTANCE_KEYS,
+  wetKeys: WET_KEYS,
+  wetQualities: WET_QUALITIES,
+  wetRainOcclusions: WET_RAIN_OCCLUSIONS,
+  wetPuddleKeys: WET_PUDDLE_KEYS,
+  wetPatchKeys: WET_PATCH_KEYS,
+  wetRippleKeys: WET_RIPPLE_KEYS,
+  wetStreakKeys: WET_STREAK_KEYS,
+  wetShorelineKeys: WET_SHORELINE_KEYS,
+  wetRunUpKeys: WET_RUN_UP_KEYS,
+  wetSnowKeys: WET_SNOW_KEYS,
+  wetFrostKeys: WET_FROST_KEYS,
+  wetSparkleKeys: WET_SPARKLE_KEYS,
+  wetSplatChannels: WET_SPLAT_CHANNELS,
   colorMapKeys: COLOR_MAP_KEYS,
   farModes: FAR_MODES,
   colorMapModes: COLOR_MAP_MODES,
@@ -1092,6 +1258,255 @@ const checkFarOnly = (
   );
 };
 
+/**
+ * The wet response (`wet`, the tier's when it gives one), its defaults filled in; null without:
+ * the shelter's angles within 0..180, the first under the second
+ */
+const readWet = (value: unknown, path: string): TerrainWetDefine | null => {
+  if (value === undefined) return null;
+  const wet = readObject(value, path);
+  checkKeys(wet, WET_KEYS, path);
+  const shelter = wet.shelter ?? SURFACE_WETNESS_DEFAULTS.shelter;
+  const isPair =
+    Array.isArray(shelter) &&
+    shelter.length === 2 &&
+    shelter.every((n) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 180);
+  if (!isPair) {
+    fail(`${path}.shelter`, `is ${JSON.stringify(shelter)}: give [from, to], degrees 0 to 180.`);
+  }
+  const [from, to] = shelter as [number, number];
+  if (from >= to) {
+    fail(`${path}.shelter`, `is [${from}, ${to}]: the first value is under the second.`);
+  }
+  const { heightInfluence, cavityInfluence } = SURFACE_WETNESS_DEFAULTS;
+  const quality = readEnum(wet, 'quality', WET_QUALITIES, path);
+  if (quality === 'SIMPLE' && wet.puddles !== undefined) {
+    fail(`${path}.puddles`, 'is for quality FULL: SIMPLE reads no relief to fill.');
+  }
+  if (quality === 'SIMPLE' && wet.ripples !== undefined) {
+    fail(`${path}.ripples`, 'is for quality FULL: SIMPLE leaves the normal alone.');
+  }
+  if (quality === 'SIMPLE' && isRecord(wet.frost) && wet.frost.sparkle !== undefined) {
+    fail(`${path}.frost.sparkle`, 'is for quality FULL: SIMPLE is the frost alone.');
+  }
+  return {
+    quality,
+    heightInfluence: readNumber(wet, 'heightInfluence', heightInfluence, NON_NEGATIVE, path),
+    cavityInfluence: readNumber(wet, 'cavityInfluence', cavityInfluence, NON_NEGATIVE, path),
+    shelter: [from, to],
+    puddles: readPuddles(wet.puddles, `${path}.puddles`),
+    regional: readRegional(wet.regional, `${path}.regional`),
+    ripples: readRipples(wet.ripples, `${path}.ripples`),
+    streaks: readStreaks(wet.streaks, `${path}.streaks`),
+    shoreline: readShoreline(wet.shoreline, `${path}.shoreline`),
+    snow: readSnow(wet.snow, `${path}.snow`),
+    frost: readFrost(wet.frost, `${path}.frost`),
+    rainOcclusion: readEnum(wet, 'rainOcclusion', WET_RAIN_OCCLUSIONS, path),
+  };
+};
+
+/**
+ * The frost's numbers (p307 T11), their defaults filled in; null without: the temperatures two
+ * finite numbers, the first the warmer
+ */
+const readFrost = (value: unknown, path: string): TerrainFrostDefine | null => {
+  if (value === undefined) return null;
+  const frost = readObject(value, path);
+  checkKeys(frost, WET_FROST_KEYS, path);
+  const { frostTemperature, frostStrength } = SURFACE_WETNESS_DEFAULTS;
+  const temperature = frost.temperature ?? frostTemperature;
+  const isPair =
+    Array.isArray(temperature) &&
+    temperature.length === 2 &&
+    temperature.every((n) => typeof n === 'number' && Number.isFinite(n));
+  if (!isPair) {
+    fail(`${path}.temperature`, `is ${JSON.stringify(temperature)}: give [from, to], °C.`);
+  }
+  const [from, to] = temperature as [number, number];
+  if (from <= to) {
+    fail(`${path}.temperature`, `is [${from}, ${to}]: the first value is over the second.`);
+  }
+  return {
+    temperature: [from, to],
+    strength: readNumber(frost, 'strength', frostStrength, UNIT, path),
+    sparkle: readSparkle(frost.sparkle, `${path}.sparkle`),
+  };
+};
+
+/** The sparkle's numbers (p307 T11), their defaults filled in; null without */
+const readSparkle = (value: unknown, path: string): TerrainFrostDefine['sparkle'] => {
+  if (value === undefined) return null;
+  const sparkle = readObject(value, path);
+  checkKeys(sparkle, WET_SPARKLE_KEYS, path);
+  const { sparkleDensity, sparkleStrength, sparkleDistance } = SURFACE_WETNESS_DEFAULTS;
+  const over0 = { min: { value: 0, isExclusive: true } };
+  return {
+    density: readNumber(sparkle, 'density', sparkleDensity, over0, path),
+    strength: readNumber(sparkle, 'strength', sparkleStrength, NON_NEGATIVE, path),
+    distance: readMetreRange(sparkle, 'distance', [...sparkleDistance], path),
+  };
+};
+
+/** The snow cover's numbers (p307 T10), their defaults filled in; null without */
+const readSnow = (value: unknown, path: string): TerrainSnowDefine | null => {
+  if (value === undefined) return null;
+  const snow = readObject(value, path);
+  checkKeys(snow, WET_SNOW_KEYS, path);
+  const { snowMaxSlope, snowNoiseScale, snowEdge, snowTiling } = SURFACE_WETNESS_DEFAULTS;
+  const over0 = { min: { value: 0, isExclusive: true } };
+  return {
+    maxSlope: readNumber(snow, 'maxSlope', snowMaxSlope, { ...over0, max: { value: 90 } }, path),
+    noiseScale: readNumber(snow, 'noiseScale', snowNoiseScale, over0, path),
+    edge: readNumber(snow, 'edge', snowEdge, { ...over0, max: { value: 1 } }, path),
+    tiling: readNumber(snow, 'tiling', snowTiling, over0, path),
+  };
+};
+
+/** The shoreline's numbers (p307 T8), their defaults filled in (`band` required); null without */
+const readShoreline = (value: unknown, path: string): TerrainShorelineDefine | null => {
+  if (value === undefined) return null;
+  const shoreline = readObject(value, path);
+  checkKeys(shoreline, WET_SHORELINE_KEYS, path);
+  const { shoreNoise, shoreRunUpHeight, shoreRunUpPeriod } = SURFACE_WETNESS_DEFAULTS;
+  const over0 = { min: { value: 0, isExclusive: true } };
+  const runUpPath = `${path}.runUp`;
+  const runUp = shoreline.runUp === undefined ? null : readObject(shoreline.runUp, runUpPath);
+  if (runUp) checkKeys(runUp, WET_RUN_UP_KEYS, runUpPath);
+  return {
+    band: readNumber(shoreline, 'band', undefined, over0, path),
+    noise: readNumber(shoreline, 'noise', shoreNoise, NON_NEGATIVE, path),
+    runUp: runUp && {
+      height: readNumber(runUp, 'height', shoreRunUpHeight, over0, runUpPath),
+      period: readNumber(runUp, 'period', shoreRunUpPeriod, over0, runUpPath),
+    },
+  };
+};
+
+/** The rain streaks' numbers (p307 T5), their defaults filled in; null without */
+const readStreaks = (value: unknown, path: string): TerrainStreaksDefine | null => {
+  if (value === undefined) return null;
+  const streaks = readObject(value, path);
+  checkKeys(streaks, WET_STREAK_KEYS, path);
+  const { streakMinSlope, streakScale, streakLength, streakSpeed } = SURFACE_WETNESS_DEFAULTS;
+  const over0 = { min: { value: 0, isExclusive: true } };
+  return {
+    minSlope: readNumber(
+      streaks,
+      'minSlope',
+      streakMinSlope,
+      { ...over0, max: { value: 90 } },
+      path
+    ),
+    scale: readNumber(streaks, 'scale', streakScale, over0, path),
+    length: readNumber(streaks, 'length', streakLength, over0, path),
+    speed: readNumber(streaks, 'speed', streakSpeed, NON_NEGATIVE, path),
+  };
+};
+
+/** The rain ripples' numbers (p307 T4), their defaults filled in; null without */
+const readRipples = (value: unknown, path: string): TerrainRipplesDefine | null => {
+  if (value === undefined) return null;
+  const ripples = readObject(value, path);
+  checkKeys(ripples, WET_RIPPLE_KEYS, path);
+  const { rippleScale, rippleLifetime, rippleStrength, rippleDistance } = SURFACE_WETNESS_DEFAULTS;
+  const over0 = { min: { value: 0, isExclusive: true } };
+  return {
+    scale: readNumber(ripples, 'scale', rippleScale, over0, path),
+    lifetime: readNumber(ripples, 'lifetime', rippleLifetime, over0, path),
+    strength: readNumber(ripples, 'strength', rippleStrength, NON_NEGATIVE, path),
+    distance: readMetreRange(ripples, 'distance', [...rippleDistance], path),
+  };
+};
+
+/** The puddles' numbers (p307 T3), their defaults filled in; null without */
+const readPuddles = (value: unknown, path: string): TerrainPuddlesDefine | null => {
+  if (value === undefined) return null;
+  const puddles = readObject(value, path);
+  checkKeys(puddles, WET_PUDDLE_KEYS, path);
+  const { puddleMaxSlope, puddleEdge, puddlePatchAmount } = SURFACE_WETNESS_DEFAULTS;
+  const over0 = { min: { value: 0, isExclusive: true } };
+  const patches =
+    puddles.patches === undefined ? null : readObject(puddles.patches, `${path}.patches`);
+  if (patches) checkKeys(patches, WET_PATCH_KEYS, `${path}.patches`);
+  return {
+    maxSlope: readNumber(
+      puddles,
+      'maxSlope',
+      puddleMaxSlope,
+      { ...over0, max: { value: 45 } },
+      path
+    ),
+    edge: readNumber(puddles, 'edge', puddleEdge, { ...over0, max: { value: 1 } }, path),
+    patches: patches && {
+      scale: readNumber(patches, 'scale', undefined, over0, `${path}.patches`),
+      amount: readNumber(patches, 'amount', puddlePatchAmount, UNIT, `${path}.patches`),
+    },
+  };
+};
+
+/** The regional wetness's source (p307 T7): `{ attribute? }` or `{ splatChannel: 'A' }`; null without */
+const readRegional = (value: unknown, path: string): TerrainWetDefine['regional'] => {
+  if (value === undefined) return null;
+  const regional = readObject(value, path);
+  if (regional.splatChannel !== undefined) {
+    checkKeys(regional, ['splatChannel'], path);
+    return { splatChannel: readEnum(regional, 'splatChannel', WET_SPLAT_CHANNELS, path) };
+  }
+  checkKeys(regional, ['attribute'], path);
+  const { attribute = WET_REGIONAL_ATTRIBUTE } = regional;
+  if (typeof attribute !== 'string' || !attribute) {
+    fail(`${path}.attribute`, `is ${JSON.stringify(attribute)}: give a vertex attribute's name.`);
+  }
+  return { attribute: attribute as string };
+};
+
+/**
+ * A regional wetness from the splat maps reads the first map's A, which must weigh no layer: a
+ * splat source painting at most 4 layers (the base and R, G, B)
+ */
+const checkWetSplatChannel = (
+  wet: TerrainWetDefine | null,
+  blend: TerrainBlendDefine,
+  layerCount: number,
+  path: string
+) => {
+  if (!wet?.regional || !('splatChannel' in wet.regional)) return;
+  if (getPaintedSource(blend) === 'SPLAT_MAP' && getPaintedLayerCount(blend, layerCount) <= 4) {
+    return;
+  }
+  fail(
+    `${path}.regional.splatChannel`,
+    "is A: give blend.source SPLAT_MAP or SPLAT_MAP_AND_RULES painting at most 4 layers, so the first splat map's A weighs none."
+  );
+};
+
+/**
+ * Whether a wet response (the material's or a tier's, as given) reads the input `macro`: its
+ * puddle patches or its streaks
+ */
+const hasWetMacroNoise = (wet: unknown) =>
+  isRecord(wet) &&
+  ((isRecord(wet.puddles) && wet.puddles.patches !== undefined) || wet.streaks !== undefined);
+
+/** Whether a wet response (the material's or a tier's, as given) has ripples: the input `ripples` */
+const hasRipples = (wet: unknown) => isRecord(wet) && wet.ripples !== undefined;
+
+/** Whether a wet response (the material's or a tier's, as given) has snow: the input `snow` */
+const hasSnow = (wet: unknown) => isRecord(wet) && wet.snow !== undefined;
+
+/**
+ * The `WETNESS` debug view against the wet response: the material's `wet` or a tier's must be
+ * there (a tier's variant shares the material's define)
+ */
+const checkWetView = (define: Record<string, unknown>, tiers: Record<string, unknown>[]) => {
+  if (define.debugView !== 'WETNESS') return;
+  if ([define, ...tiers].some((fields) => fields.wet !== undefined)) return;
+  fail(
+    '.debugView',
+    "is WETNESS: give wet (the material's or a tier's), else there's nothing to show."
+  );
+};
+
 /** The texture budget's reserve: a whole number 0..15 */
 const readReservedTextures = (define: Record<string, unknown>) => {
   const bounds = { min: { value: 0 }, max: { value: 15 } };
@@ -1202,6 +1617,10 @@ export const readTerrainDefine = (
   const colorMap = readColorMap(define);
   checkFarOnly(colorMap, define, Object.values(quality));
   const distance = readDistance(fields.distance, colorMap, `${pathOf('distance')}.distance`);
+  const debugView = readOptionalEnum(define, 'debugView', DEBUG_VIEWS, '');
+  checkWetView(define, Object.values(quality));
+  const wet = readWet(fields.wet, `${pathOf('wet')}.wet`);
+  checkWetSplatChannel(wet, blend, layers.length, `${pathOf('wet')}.wet`);
   return {
     layers,
     space: readEnum(define, 'space', SPACES, ''),
@@ -1219,13 +1638,19 @@ export const readTerrainDefine = (
     macro: readMacro(define),
     takesMacroTexture:
       define.macro !== undefined ||
-      [define.blend, ...Object.values(quality).map((tier) => tier.blend)].some(hasRawRuleNoise),
+      [define.blend, ...Object.values(quality).map((tier) => tier.blend)].some(hasRawRuleNoise) ||
+      [define.wet, ...Object.values(quality).map((tier) => tier.wet)].some(hasWetMacroNoise),
+    takesRippleTexture: [define.wet, ...Object.values(quality).map((tier) => tier.wet)].some(
+      hasRipples
+    ),
+    takesSnowSet: [define.wet, ...Object.values(quality).map((tier) => tier.wet)].some(hasSnow),
     reservedTextures: readReservedTextures(define),
     distanceFade: distance?.fade ?? null,
     far: distance?.far ?? null,
     colorMap,
+    wet,
     slotCount,
     qualityLevel,
-    debugView: readOptionalEnum(define, 'debugView', DEBUG_VIEWS, ''),
+    debugView,
   };
 };

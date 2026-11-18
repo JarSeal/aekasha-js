@@ -20,6 +20,7 @@ import {
   TEXTURE_SET_PACKINGS,
   TEXTURE_SET_PROCEDURAL_DEFAULTS,
   TEXTURE_SET_SURFACE_DEFAULTS,
+  TEXTURE_SET_WET_RESPONSES,
   TextureSetAssetSchema,
   type TextureSetAsset,
   type TextureSetDef,
@@ -171,7 +172,12 @@ const toTextureSetDef = (
     ...(procedural?.procedural ? { procedural: procedural.procedural } : {}),
     ...more,
     defaultPacking: procedural?.procedural?.packing ?? defaultPacking ?? getPackings(set)[0],
-    surface: { ...TEXTURE_SET_SURFACE_DEFAULTS, ...surface },
+    // The category's wet response over the flat defaults (p307 S3), the set's own over both
+    surface: {
+      ...TEXTURE_SET_SURFACE_DEFAULTS,
+      ...TEXTURE_SET_WET_RESPONSES[category],
+      ...surface,
+    },
   };
 };
 

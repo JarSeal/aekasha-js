@@ -21,6 +21,7 @@ export type BuiltInIconName =
   | 'circleCheckCutout'
   | 'cloudSun'
   | 'databaseX'
+  | 'droplet'
   | 'easel'
   | 'ecs'
   | 'eraser'
@@ -75,6 +76,7 @@ const BUILT_IN_ICONS = {
   circleCheckCutout: builtIn.circleCheckCutoutIcon,
   cloudSun: builtIn.cloudSunIcon,
   databaseX: builtIn.databaseXIcon,
+  droplet: builtIn.dropletIcon,
   easel: builtIn.easelIcon,
   ecs: builtIn.ecsIcon,
   eraser: builtIn.eraserIcon,

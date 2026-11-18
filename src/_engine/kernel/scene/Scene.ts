@@ -26,6 +26,7 @@ import type { SceneAutoMergeEntry, SceneMergeGroupEntry } from '../../features/m
 import type { SceneMergeMaterial } from '../../features/merging/MergeMaterialSchema';
 import type { SceneTextureSetArrayEntry, TextureSetDef } from '../../schemas/TextureSetSchema';
 import type { TerrainBlockDef } from '../../features/terrain/TerrainBlockSchema';
+import type { SceneSurfaceConditions } from '../../features/surface/SurfaceConditionsSchema';
 
 /** A scene looper: called once per frame with the frame's delta (seconds). */
 export type Looper = (delta: number) => void;
@@ -106,6 +107,9 @@ export type SceneData = {
    * are in `importedAssets` and `materials`, their inputs' textures in `textures`; the `terrain()`
    * feature's `spawnTerrainBlock` reads them). */
   terrainBlocks?: TerrainBlockDef[];
+  /** The scene's starting surface conditions, over the defaults (the `surfaceConditions()`
+   * feature applies them before the scene code runs). */
+  surfaceConditions?: SceneSurfaceConditions;
   /** The features this scene's data needs (the gatherer's manifest, p607 D10): `InitEngine`
    * fails when its `features` doesn't list one. */
   __features?: string[];

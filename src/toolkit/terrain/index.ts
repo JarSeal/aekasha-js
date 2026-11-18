@@ -81,6 +81,21 @@ export type { StructureMaterialOpts } from './material/StructureMaterial';
 export { getTerrainQualityPreset } from './material/TerrainQualityPreset';
 export type { TerrainQualityPresetOpts } from './material/TerrainQualityPreset';
 export { loadTerrainDebugViewsAsync } from './material/TerrainDebugViews';
+export { applySurfaceWetness } from './nodes/Wet';
+export type {
+  ApplySurfaceWetnessOpts,
+  SurfacePuddleOpts,
+  SurfaceRippleOpts,
+  SurfaceFrostOpts,
+  SurfaceShorelineOpts,
+  SurfaceSnowOpts,
+  SurfaceSparkleOpts,
+  SurfaceStreakOpts,
+  SurfaceWetnessMasks,
+  SurfaceWetResponse,
+  WetSurface,
+  WetSurfaceInput,
+} from './nodes/Wet';
 export {
   TerrainAntiTilingSchema,
   TerrainBlendSchema,

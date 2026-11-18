@@ -2163,6 +2163,90 @@
       "STREAMING_MIN_CELL_SIZE": "Variable",
       "STREAMING_NEARBY_PHYSICS_TIERS": "Variable"
     },
+    "src/_engine/features/surface/RainOcclusion.ts": {
+      "_setRainOcclusionRenderHooks": "Function",
+      "getRainOcclusionDebugState": "Function",
+      "getRainOcclusionNode": "Function",
+      "installRainOcclusion": "Function",
+      "isRainOccluder": "Function",
+      "isRainOcclusionEnabled": "Function",
+      "RainOcclusionNodeOpts": "TypeAlias",
+      "RainOcclusionRenderHooks": "TypeAlias",
+      "rainOcclusionSceneHooks": "Variable",
+      "requestRainOcclusionUpdate": "Function",
+      "setRainOcclusionEnabled": "Function",
+      "setRainOcclusionUpdateFrames": "Function",
+      "stopRainOcclusion": "Function"
+    },
+    "src/_engine/features/surface/RainOcclusionFeature.ts": {
+      "rainOcclusion": "Function"
+    },
+    "src/_engine/features/surface/RainOcclusionModel.ts": {
+      "createRainMapRenderState": "Function",
+      "RAIN_MAP_EDGE_FADE": "Variable",
+      "RAIN_MAP_NORMAL_OFFSET_TEXELS": "Variable",
+      "RAIN_MAP_RECENTRE_SHARE": "Variable",
+      "RAIN_OCCLUSION_DEFAULTS": "Variable",
+      "RainMapRenderState": "TypeAlias",
+      "RainOcclusionOpts": "TypeAlias",
+      "ResolvedRainOcclusionOpts": "TypeAlias",
+      "resolveRainOcclusionOpts": "Function",
+      "shouldRenderRainMap": "Function",
+      "snapRainMapCoordinate": "Function"
+    },
+    "src/_engine/features/surface/SurfaceConditions.ts": {
+      "applySceneSurfaceConditions": "Function",
+      "getSurfaceConditionNodes": "Function",
+      "getSurfaceConditions": "Function",
+      "getSurfaceSunFactorNow": "Function",
+      "getSurfaceTime": "Function",
+      "installSurfaceConditions": "Function",
+      "resetSurfaceConditionsForScene": "Function",
+      "setSurfaceConditions": "Function",
+      "SetSurfaceConditionsOpts": "TypeAlias",
+      "setSurfaceSunSource": "Function",
+      "startRain": "Function",
+      "StartRainOpts": "TypeAlias",
+      "stopRain": "Function",
+      "StopRainOpts": "TypeAlias",
+      "SURFACE_WATER_LEVEL_NONE": "Variable",
+      "SurfaceConditionNodes": "TypeAlias",
+      "SurfaceSunSource": "TypeAlias",
+      "SurfaceTimeSource": "TypeAlias"
+    },
+    "src/_engine/features/surface/SurfaceConditionsFeature.ts": {
+      "surfaceConditions": "Function",
+      "SurfaceConditionsFeatureOpts": "TypeAlias",
+      "surfaceConditionsSceneHooks": "Variable"
+    },
+    "src/_engine/features/surface/SurfaceConditionsModel.ts": {
+      "applySurfaceConditions": "Function",
+      "createSurfaceConditionsState": "Function",
+      "createSurfaceDynamics": "Function",
+      "getSurfaceSunFactor": "Function",
+      "getSurfaceWindFactor": "Function",
+      "resetSurfaceConditions": "Function",
+      "startSurfaceRain": "Function",
+      "stepSurfaceDynamics": "Function",
+      "stepSurfaceSimulation": "Function",
+      "stopSurfaceRain": "Function",
+      "SURFACE_CONDITIONS_DEFAULTS": "Variable",
+      "SURFACE_MAX_DRYING_WIND": "Variable",
+      "SURFACE_MIN_SUN_FACTOR": "Variable",
+      "SURFACE_PUDDLE_DRAIN_SCALE": "Variable",
+      "SURFACE_PUDDLE_FILL_PER_MIN": "Variable",
+      "SURFACE_SNOW_MELT_PER_DEG_MIN": "Variable",
+      "SURFACE_WETTING_PER_MIN": "Variable",
+      "SurfaceConditions": "TypeAlias",
+      "SurfaceConditionsInput": "TypeAlias",
+      "SurfaceConditionsMode": "TypeAlias",
+      "SurfaceDynamics": "TypeAlias"
+    },
+    "src/_engine/features/surface/SurfaceConditionsSchema.ts": {
+      "SceneSurfaceConditions": "TypeAlias",
+      "SceneSurfaceConditionsSchema": "Variable",
+      "surfaceConditionsSchemaPart": "Variable"
+    },
     "src/_engine/features/terrain/TerrainBlocks.ts": {
       "getTerrainBlock": "Function",
       "spawnTerrainBlock": "Function",
@@ -3470,6 +3554,7 @@
       "TEXTURE_SET_PACKINGS": "Variable",
       "TEXTURE_SET_PROCEDURAL_DEFAULTS": "Variable",
       "TEXTURE_SET_SURFACE_DEFAULTS": "Variable",
+      "TEXTURE_SET_WET_RESPONSES": "Variable",
       "TextureSetArrayInputSchema": "Variable",
       "TextureSetAsset": "TypeAlias",
       "TextureSetAssetSchema": "Variable",
@@ -3480,7 +3565,8 @@
       "TextureSetProcedural": "TypeAlias",
       "TextureSetProceduralDef": "TypeAlias",
       "TextureSetSlot": "TypeAlias",
-      "TextureSetSurface": "TypeAlias"
+      "TextureSetSurface": "TypeAlias",
+      "TextureSetWetResponse": "TypeAlias"
     },
     "src/_engine/types/three-node-material-helpers.d.ts": {},
     "src/_engine/ui/components/Accordion.ts": {
@@ -3654,6 +3740,7 @@
       "circleCheckCutoutIcon": "Reference",
       "cloudSunIcon": "Reference",
       "databaseXIcon": "Reference",
+      "dropletIcon": "Reference",
       "easelIcon": "Reference",
       "ecsIcon": "Reference",
       "eraserIcon": "Reference",
@@ -4963,12 +5050,19 @@
       "TerrainColorMapDefine": "TypeAlias",
       "TerrainDualScaleDefine": "TypeAlias",
       "TerrainFarDefine": "TypeAlias",
+      "TerrainFrostDefine": "TypeAlias",
       "TerrainLayerDefine": "TypeAlias",
       "TerrainLiveDefine": "TypeAlias",
       "TerrainMacroDefine": "TypeAlias",
       "TerrainProjectionDefine": "TypeAlias",
+      "TerrainPuddlesDefine": "TypeAlias",
+      "TerrainRipplesDefine": "TypeAlias",
       "TerrainRuleDefine": "TypeAlias",
-      "TerrainRuleRangeDefine": "TypeAlias"
+      "TerrainRuleRangeDefine": "TypeAlias",
+      "TerrainShorelineDefine": "TypeAlias",
+      "TerrainSnowDefine": "TypeAlias",
+      "TerrainStreaksDefine": "TypeAlias",
+      "TerrainWetDefine": "TypeAlias"
     },
     "src/toolkit/terrain/material/TerrainFar.ts": {
       "BranchSurface": "TypeAlias",
@@ -4979,6 +5073,7 @@
       "getFarSurface": "Function"
     },
     "src/toolkit/terrain/material/TerrainInputs.ts": {
+      "getSnowBindings": "Function",
       "getTerrainDefine": "Function",
       "getTerrainInputs": "Function",
       "LayerParams": "TypeAlias",
@@ -4987,6 +5082,8 @@
       "readColorMapTexture": "Function",
       "readLayerSources": "Function",
       "readMacroTexture": "Function",
+      "readRippleTexture": "Function",
+      "readSnowSet": "Function",
       "readSplatMaps": "Function"
     },
     "src/toolkit/terrain/material/TerrainLayers.ts": {
@@ -4997,10 +5094,12 @@
       "getLayerCoords": "Function",
       "getLayerSurface": "Function",
       "getLayerUv": "Function",
+      "getWetResponse": "Function",
       "keepUniform": "Function",
       "LayerSurface": "TypeAlias",
       "LayerUniforms": "TypeAlias",
       "LayerUv": "TypeAlias",
+      "LayerWet": "TypeAlias",
       "MINIMAL_ROUGHNESS": "Variable",
       "sampleLayer": "Function",
       "SharedCoords": "TypeAlias"
@@ -5046,6 +5145,9 @@
       "TERRAIN_STORAGES": "Variable",
       "TERRAIN_UV_MODES": "Variable",
       "TERRAIN_VERTEX_COLOR_LAYOUTS": "Variable",
+      "TERRAIN_WET_QUALITIES": "Variable",
+      "TERRAIN_WET_RAIN_OCCLUSIONS": "Variable",
+      "TERRAIN_WET_SPLAT_CHANNELS": "Variable",
       "TerrainAntiTiling": "TypeAlias",
       "TerrainAntiTilingSchema": "Variable",
       "TerrainBlend": "TypeAlias",
@@ -5098,6 +5200,10 @@
       "NearSurface": "TypeAlias",
       "SurfaceUniforms": "TypeAlias"
     },
+    "src/toolkit/terrain/material/TerrainWet.ts": {
+      "applyTerrainWetness": "Function",
+      "TerrainWetInput": "TypeAlias"
+    },
     "src/toolkit/terrain/nodes/AntiTiling.ts": {
       "AntiTilingContext": "TypeAlias",
       "AntiTilingNodes": "TypeAlias",
@@ -5120,6 +5226,13 @@
       "fadeDetailNormal": "Function",
       "getFarShare": "Function",
       "sumByWeights": "Function"
+    },
+    "src/toolkit/terrain/nodes/Frost.ts": {
+      "applyFrost": "Function",
+      "FrostInputs": "TypeAlias",
+      "getFrost": "Function",
+      "getSparkle": "Function",
+      "SparkleInputs": "TypeAlias"
     },
     "src/toolkit/terrain/nodes/HeightBlend.ts": {
       "blendWeightsByHeight": "Function",
@@ -5184,6 +5297,10 @@
       "ProjectionTiling": "TypeAlias",
       "sampleProjected": "Function"
     },
+    "src/toolkit/terrain/nodes/Ripples.ts": {
+      "RainRippleInputs": "TypeAlias",
+      "sampleRainRipples": "Function"
+    },
     "src/toolkit/terrain/nodes/Rules.ts": {
       "applyRules": "Function",
       "createRuleContext": "Function",
@@ -5200,9 +5317,18 @@
       "TextureSetSample": "TypeAlias",
       "transformTangentNormalToView": "Function"
     },
+    "src/toolkit/terrain/nodes/Shoreline.ts": {
+      "getShoreline": "Function",
+      "ShorelineInputs": "TypeAlias"
+    },
     "src/toolkit/terrain/nodes/SlopeGate.ts": {
       "getSlopeGateShare": "Function",
       "sampleSlopeGated": "Function"
+    },
+    "src/toolkit/terrain/nodes/Snow.ts": {
+      "sampleSnowCover": "Function",
+      "SnowCover": "TypeAlias",
+      "SnowCoverInputs": "TypeAlias"
     },
     "src/toolkit/terrain/nodes/Sparse.ts": {
       "insertTopLayers": "Function",
@@ -5211,6 +5337,10 @@
       "selectTopLayers": "Function",
       "spreadSlotWeights": "Function",
       "TopLayerOps": "TypeAlias"
+    },
+    "src/toolkit/terrain/nodes/Streaks.ts": {
+      "RainStreakInputs": "TypeAlias",
+      "sampleRainStreaks": "Function"
     },
     "src/toolkit/terrain/nodes/SurfaceSpace.ts": {
       "getSurfaceSpace": "Function",
@@ -5232,6 +5362,24 @@
       "getVertexColorWeights": "Function",
       "PaintedWeights": "TypeAlias",
       "VertexColorLayout": "TypeAlias"
+    },
+    "src/toolkit/terrain/nodes/Wet.ts": {
+      "applySurfaceWetness": "Function",
+      "ApplySurfaceWetnessOpts": "TypeAlias",
+      "PUDDLE_ROUGHNESS": "Variable",
+      "SURFACE_WETNESS_DEFAULTS": "Variable",
+      "SurfaceFrostOpts": "TypeAlias",
+      "SurfacePuddleOpts": "TypeAlias",
+      "SurfaceRippleOpts": "TypeAlias",
+      "SurfaceShorelineOpts": "TypeAlias",
+      "SurfaceSnowOpts": "TypeAlias",
+      "SurfaceSparkleOpts": "TypeAlias",
+      "SurfaceStreakOpts": "TypeAlias",
+      "SurfaceWetnessMasks": "TypeAlias",
+      "SurfaceWetResponse": "TypeAlias",
+      "WET_FILM_ROUGHNESS": "Variable",
+      "WetSurface": "TypeAlias",
+      "WetSurfaceInput": "TypeAlias"
     },
     "src/toolkit/terrain/procedural/BakeSurface.ts": {
       "BakedSurface": "TypeAlias",
@@ -6100,6 +6248,8 @@
       "SceneMergeMaterial",
       "SceneSpatialDomainEntry",
       "SceneStreamingSchema",
+      "SceneSurfaceConditions",
+      "SceneSurfaceConditionsSchema",
       "SceneTextureSetArrayEntry",
       "SceneTextureSetArraySchema",
       "ShadowQuality",
@@ -6119,6 +6269,7 @@
       "TEXTURE_SET_PACKING_PREFERENCE",
       "TEXTURE_SET_PROCEDURAL_DEFAULTS",
       "TEXTURE_SET_SURFACE_DEFAULTS",
+      "TEXTURE_SET_WET_RESPONSES",
       "TEXTURE_SLOTS",
       "TerrainBlockAsset",
       "TerrainBlockAssetSchema",
@@ -6150,6 +6301,7 @@
       "TextureSetProceduralDef",
       "TextureSetSlot",
       "TextureSetSurface",
+      "TextureSetWetResponse",
       "TextureSettings",
       "TextureSlot",
       "UnionToIntersection",
@@ -6168,6 +6320,7 @@
       "skyBoxSchemaPart",
       "spatialSchemaPart",
       "streamingSchemaPart",
+      "surfaceConditionsSchemaPart",
       "terrainSchemaPart",
       "textureSetsSchemaPart"
     ],
@@ -6249,6 +6402,35 @@
       "setStreamingFocus",
       "streaming",
       "unregisterStreamingCellContent"
+    ],
+    "aekasha/surface": [
+      "RainOcclusionNodeOpts",
+      "RainOcclusionOpts",
+      "SURFACE_WATER_LEVEL_NONE",
+      "SceneSurfaceConditions",
+      "SetSurfaceConditionsOpts",
+      "StartRainOpts",
+      "StopRainOpts",
+      "SurfaceConditionNodes",
+      "SurfaceConditions",
+      "SurfaceConditionsFeatureOpts",
+      "SurfaceConditionsInput",
+      "SurfaceConditionsMode",
+      "SurfaceSunSource",
+      "SurfaceTimeSource",
+      "getRainOcclusionNode",
+      "getSurfaceConditionNodes",
+      "getSurfaceConditions",
+      "getSurfaceTime",
+      "isRainOcclusionEnabled",
+      "rainOcclusion",
+      "requestRainOcclusionUpdate",
+      "setRainOcclusionEnabled",
+      "setSurfaceConditions",
+      "setSurfaceSunSource",
+      "startRain",
+      "stopRain",
+      "surfaceConditions"
     ],
     "aekasha/terrain": [
       "SpawnTerrainBlockOpts",
@@ -6384,6 +6566,7 @@
       "triplanarProjection"
     ],
     "aekasha/toolkit/terrain": [
+      "ApplySurfaceWetnessOpts",
       "BakeMacroNoiseOpts",
       "BakeRippleAtlasOpts",
       "BakeSurfaceGeneratorOpts",
@@ -6409,6 +6592,7 @@
       "SurfaceCellCount",
       "SurfaceCells",
       "SurfaceColorParam",
+      "SurfaceFrostOpts",
       "SurfaceGenerator",
       "SurfaceGeneratorDef",
       "SurfaceNumberParam",
@@ -6418,7 +6602,15 @@
       "SurfaceParamSpec",
       "SurfaceParamSpecs",
       "SurfaceParamValues",
+      "SurfacePuddleOpts",
+      "SurfaceRippleOpts",
+      "SurfaceShorelineOpts",
+      "SurfaceSnowOpts",
+      "SurfaceSparkleOpts",
+      "SurfaceStreakOpts",
       "SurfaceToggleParam",
+      "SurfaceWetResponse",
+      "SurfaceWetnessMasks",
       "TERRAIN_TSL_MATERIAL_ID",
       "TerrainAntiTiling",
       "TerrainAntiTilingSchema",
@@ -6449,8 +6641,11 @@
       "TerrainQualityOverridesSchema",
       "TerrainQualityPresetOpts",
       "TextureSetSample",
+      "WetSurface",
+      "WetSurfaceInput",
       "WorleyOptions",
       "WorleySample",
+      "applySurfaceWetness",
       "bakeMacroNoise",
       "bakeRippleAtlas",
       "bakeSurfaceGenerator",
@@ -6912,6 +7107,7 @@
       "createVirtualRows",
       "createWorldAnchorLayer",
       "databaseXIcon",
+      "dropletIcon",
       "easelIcon",
       "ecsIcon",
       "eraserIcon",

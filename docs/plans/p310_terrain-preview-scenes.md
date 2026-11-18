@@ -1,8 +1,8 @@
 Status: draft | not-implemented
 Category: App, Terrain, Docs
-Blocked by: p307_wet-and-dry-surface-states.md, p308_terrain-scatter.md, p309_terrain-decals.md
+Blocked by: p308_terrain-scatter.md, p309_terrain-decals.md
 Epic: p301_terrain-texturing-epic.md
-Related: \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (merged dressing and modular kit terrain, for the matrix and the measurements)
+Related: \_DONE_p307_wet-and-dry-surface-states.md (the surface conditions and the wet response this plan's scenes show: its As built lists have the API that landed, the gallery's Wet/dry row and the measurements; the handbook's `wet-dry-surfaces.md`), \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (merged dressing and modular kit terrain, for the matrix and the measurements)
 
 # Terrain Preview Scenes (gallery + showcase) and the Final Handbook Pass
 
@@ -173,7 +173,7 @@ These follow `docs/techniques/terrain-blocks-blender.md` (p306). Summary:
    - DUAL_SCALE, HEX on DOMINANT;
    - cliffs layer `projection: TRIPLANAR` with `slopeGate: [35, 50]`;
    - macro on;
-   - `wet: { shoreline: { band: 1.5, noise: 0.5, runUp: true }, puddles: {}, ripples: true }`.
+   - `wet: { shoreline: { band: 1.5, noise: 0.5, runUp: {} }, puddles: {}, ripples: {} }`.
 9. **Scene:** `waterLevel: 0.5`, plus a flat sea plane (a simple dark material). Water rendering is out of scope; the plane only shows the shoreline.
 
 ### 3.4 `showcaseAlpine`: step by step
@@ -214,7 +214,7 @@ These follow `docs/techniques/terrain-blocks-blender.md` (p306). Summary:
    - rule: `cliffs02` above 45° slope;
    - `storage: ARRAY`, `sparse: { maxLayers: 3 }`;
    - TRIPLANAR slope-gated on `cliffs02`;
-   - `wet: { snow: { set: 'snow01' } }`, so `snowCoverage` (p307) adds snow everywhere.
+   - `wet: { snow: {} }` with the input `snow: { textureSet: 'snow01' }` (the code route's `snowSet`, default `snow01`), so `snowCoverage` (p307) adds snow everywhere.
 
 ### 3.5 `showcaseWetlands`: step by step
 
@@ -239,7 +239,7 @@ These follow `docs/techniques/terrain-blocks-blender.md` (p306). Summary:
 6. **Scatter:** procedural `showcaseWetlands_litter.scatter.json` (leaf cards on `grass02` and `mud02`) and `_rocks.scatter.json` (small rocks along the path).
 7. **Material** `terrainWetlands.material.json`:
    - `VERTEX_COLOR` `RGB_AO`, HEIGHT blend, DUAL_SCALE;
-   - `wet: { puddles: { maxSlope: 8 }, ripples: true, regional: { attribute: '_WETNESS' } }`.
+   - `wet: { puddles: { maxSlope: 8 }, ripples: {}, regional: {} }`: the attribute is `_wetness`, the default (three's GLTFLoader lowercases glTF's `_WETNESS`, so naming it `_WETNESS` would read nothing). This block is the first `_WETNESS` loaded from a GLB (the gallery's band is made in code): check it in the `WETNESS` view.
 
 ### 3.6 `showcaseBunker`: step by step (structure)
 
@@ -332,12 +332,12 @@ If p372 has landed, the matrix gets a "Static dressing" note (merge a block's pr
 
 1. `showcaseProcedural`; Rain shower, Dry and Snowfall scenarios; day-night playing.
 
-**Exit:** a full rain shower cycle (dry → soaked → puddles → drying) reads plausibly on every block, and the GPU cost of the wettest state is recorded.
+**Exit:** a full rain shower cycle (dry → soaked → puddles → drying) reads plausibly on every block, and the GPU cost of the wettest state is recorded. Each category's look at wetness 0.3, 0.6 and 1 is judged against 1–2 CC0 reference photos (p307 Phase 2's exit, left to here), linked from the handbook's `wet-dry-surfaces.md`.
 
 ### Phase 4 — Measurements, the handbook and the Hub (§4)
 
 1. §4's steps 1-3 and 6 (the Hub), the Hub images saved.
-2. `yarn sbp`: no terrain, scatter or surface code in the app's first download, and the banner's feature groups at 0.
+2. `yarn sbp`: in the app's first download only the features' installs and runtime state (`terrain()`'s factory, `surfaceConditions()` and `rainOcclusion()`, which the template lists), no terrain material, wet response or scatter code, and the banner's feature groups at 0.
 
 **Exit:** no handbook page has a placeholder left; the README matrix has numbers; `yarn hub:build` passes.
 

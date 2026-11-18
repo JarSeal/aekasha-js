@@ -70,6 +70,11 @@ export {
   TerrainBlockAssetSchema,
   terrainSchemaPart,
 } from '../features/terrain/TerrainBlockSchema';
+export {
+  SceneSurfaceConditionsSchema,
+  surfaceConditionsSchemaPart,
+} from '../features/surface/SurfaceConditionsSchema';
+export type { SceneSurfaceConditions } from '../features/surface/SurfaceConditionsSchema';
 export type {
   TerrainBlockAsset,
   TerrainBlockColliderType,
@@ -119,6 +124,7 @@ export {
   TEXTURE_SET_PACKINGS,
   TEXTURE_SET_PROCEDURAL_DEFAULTS,
   TEXTURE_SET_SURFACE_DEFAULTS,
+  TEXTURE_SET_WET_RESPONSES,
   SceneTextureSetArraySchema,
   TextureSetArrayInputSchema,
   TextureSetAssetSchema,
@@ -135,6 +141,7 @@ export type {
   TextureSetProceduralDef,
   TextureSetSlot,
   TextureSetSurface,
+  TextureSetWetResponse,
 } from './TextureSetSchema';
 export { TextureAssetSchema } from './TextureSchema';
 export type { TextureAsset } from './TextureSchema';

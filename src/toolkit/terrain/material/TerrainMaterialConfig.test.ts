@@ -46,7 +46,7 @@ describe('TerrainMaterialConfigSchema', () => {
     expect(issuesOf(configOf(5, { blend: painted, splatMaps: ['a', 'b'] }))).toEqual(['splatMaps']);
   });
 
-  it('takes a noiseTexture only for rule noise without a macro', () => {
+  it('takes a noiseTexture only for rule noise or puddle patches without a macro', () => {
     const blend = { source: 'RULES', rules: [noisyRule] };
     expect(issuesOf(configOf(2, { blend, noiseTexture: 'noise' }))).toEqual([]);
     expect(issuesOf(configOf(1, { noiseTexture: 'noise' }))).toEqual(['noiseTexture']);
@@ -60,6 +60,28 @@ describe('TerrainMaterialConfigSchema', () => {
       noiseTexture: 'noise',
     };
     expect(issuesOf(configOf(2, tierNoise))).toEqual([]);
+    // p307's puddle patches read it too
+    const patches = { puddles: { patches: { scale: 30 } } };
+    expect(issuesOf(configOf(1, { wet: patches, noiseTexture: 'noise' }))).toEqual([]);
+    expect(issuesOf(configOf(1, { wet: { puddles: {} }, noiseTexture: 'noise' }))).toEqual([
+      'noiseTexture',
+    ]);
+    // And the streaks
+    expect(issuesOf(configOf(1, { wet: { streaks: {} }, noiseTexture: 'noise' }))).toEqual([]);
+  });
+
+  it('takes a rippleTexture only with ripples, its own or a tier', () => {
+    expect(issuesOf(configOf(1, { wet: { ripples: {} }, rippleTexture: 'r' }))).toEqual([]);
+    const tier = { quality: { HIGH: { wet: { ripples: {} } } }, rippleTexture: 'r' };
+    expect(issuesOf(configOf(1, tier))).toEqual([]);
+    expect(issuesOf(configOf(1, { wet: {}, rippleTexture: 'r' }))).toEqual(['rippleTexture']);
+  });
+
+  it('takes a snowSet only with snow, its own or a tier', () => {
+    expect(issuesOf(configOf(1, { wet: { snow: {} }, snowSet: 's' }))).toEqual([]);
+    const tier = { quality: { LOW: { wet: { snow: {} } } }, snowSet: 's' };
+    expect(issuesOf(configOf(1, tier))).toEqual([]);
+    expect(issuesOf(configOf(1, { wet: {}, snowSet: 's' }))).toEqual(['snowSet']);
   });
 
   it('refuses SEPARATE storage where the layers sample in slots, its own or a tier', () => {

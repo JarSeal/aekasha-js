@@ -365,6 +365,7 @@ export {
   circleCheckCutoutIcon,
   cloudSunIcon,
   databaseXIcon,
+  dropletIcon,
   easelIcon,
   ecsIcon,
   eraserIcon,

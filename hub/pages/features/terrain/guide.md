@@ -28,7 +28,8 @@ facts. The toolkit's `sand01`:
   samples one; `defaultPacking` (else `LITE`) is the one a scene listing the set loads.
 - **`surface`** holds the defaults a material copies into uniforms: `tint` (sRGB, multiplied into
   the albedo, so it can only darken), `normalStrength`, `roughnessScale`, `aoStrength`,
-  `heightContrast` and the wet response (`porosity`, `wetDarkening`, `wetRoughness`).
+  `heightContrast` and the wet response (`porosity`, `wetDarkening`, `wetRoughness`,
+  `puddleResponse`, `dryingSpeed`; the set's category's when not given).
 - **`category`** (`SAND`, `MUD`, `ROCKS`, `CLIFF`, `SNOW`, `ICE`, `GRASS`, `CONCRETE`, `OTHER`)
   is for the terrain tools' defaults and grouping.
 - **`averageColor`** is measured by the [asset pipeline](hub:features/asset-optimization) from the
@@ -317,20 +318,21 @@ first). The handbook has a page per technique, linked from each part below.
 
 ### The techniques
 
-| Part         | Config                                                                                           | What it does                                                                                                                                        | Handbook                                                                                                                    |
-| ------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| A layer      | `layers[i]`: `set`, `tiling`, `rotation`, `tint`, `normalStrength`, `roughnessScale`             | One texture set, tiled at the world's `(x, −z)` over its `physicalSize` (or the mesh's UVs in metres, `uv: 'MESH_UV'`); each number × the set's own | [Single layer](repo:docs/techniques/terrain-single-layer.md)                                                                |
-| Anti-tiling  | `antiTiling`: `NONE`, `DUAL_SCALE`, `HEX`                                                        | A second tap at another scale and angle (2 taps), or Mikkelsen's hex tiling (3 taps, no mip seams)                                                  | [Single layer](repo:docs/techniques/terrain-single-layer.md#variations)                                                     |
-| Macro        | `macro`: `{ texture, scale }`                                                                    | One fetch of `macroNoise` at the world's XZ: brightness, hue and roughness over tens of metres, for every layer                                     | [Single layer](repo:docs/techniques/terrain-single-layer.md#variations)                                                     |
-| Paint        | `blend.source`: `VERTEX_COLOR` (`RGB_AO`, `RGBA`), `SPLAT_MAP`                                   | Weights from the vertex colour (up to 5 layers, no fetch) or one or two splat maps (up to 9)                                                        | [Vertex colour](repo:docs/techniques/terrain-vertex-color-splat.md), [splat map](repo:docs/techniques/terrain-splat-map.md) |
-| Height blend | `blend.mode: 'HEIGHT'` (default), `heightBlendDepth`; a layer's `heightContrast`, `heightOffset` | Borders that follow the surfaces' relief instead of the weights' gradient                                                                           | [Vertex colour](repo:docs/techniques/terrain-vertex-color-splat.md#set-up-and-parameters)                                   |
-| Rules        | `blend.source`: `RULES`, `VERTEX_COLOR_AND_RULES`, `SPLAT_MAP_AND_RULES`; `rules`                | Layers by slope, height and facing, broken up by a noise channel, composited in order over layer 0 or the paint                                     | [Procedural rules](repo:docs/techniques/terrain-procedural-rules.md)                                                        |
-| Projection   | `projection`: `PLANAR`, `BIPLANAR`, `TRIPLANAR`; `slopeGate`, `normalBlend`                      | Steep faces without streaks: the planes the surface faces, gated by slope so flat ground pays one tap                                               | [Triplanar cliffs](repo:docs/techniques/terrain-triplanar-cliffs.md)                                                        |
-| Sparse       | `sparse: { maxLayers }` (2–4)                                                                    | Only the layers weighing most at a pixel are sampled, from a set array                                                                              | [Splat map](repo:docs/techniques/terrain-splat-map.md#sparse-sampling)                                                      |
-| Colour map   | `colorMap`: `DETAIL`, `FAR_ONLY`                                                                 | A block's own colour at its UVs under the layers' grey detail, or only far away                                                                     | [Colour map + detail](repo:docs/techniques/terrain-colormap-detail.md)                                                      |
-| Distance     | `distance`: `fade`, `far` (`AVERAGE_COLOR`, `COLOR_MAP`), `farBlend`                             | The detail normals fade out; past the fade the layers aren't sampled at all                                                                         | [Colour map + detail](repo:docs/techniques/terrain-colormap-detail.md#set-up-and-parameters)                                |
-| Space        | `space`: `WORLD`, `OBJECT`                                                                       | Object space for pieces that move or turn                                                                                                           | [Structures](repo:docs/techniques/structure-materials.md)                                                                   |
-| Live layers  | a layer's `source: 'PROCEDURAL_LIVE'`, `live`                                                    | Its procedural set's generator in the material: never repeats, no texture memory                                                                    | [Procedural textures](repo:docs/techniques/procedural-textures.md#live-layers-in-a-terrain-material)                        |
+| Part         | Config                                                                                                       | What it does                                                                                                                                        | Handbook                                                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| A layer      | `layers[i]`: `set`, `tiling`, `rotation`, `tint`, `normalStrength`, `roughnessScale`                         | One texture set, tiled at the world's `(x, −z)` over its `physicalSize` (or the mesh's UVs in metres, `uv: 'MESH_UV'`); each number × the set's own | [Single layer](repo:docs/techniques/terrain-single-layer.md)                                                                |
+| Anti-tiling  | `antiTiling`: `NONE`, `DUAL_SCALE`, `HEX`                                                                    | A second tap at another scale and angle (2 taps), or Mikkelsen's hex tiling (3 taps, no mip seams)                                                  | [Single layer](repo:docs/techniques/terrain-single-layer.md#variations)                                                     |
+| Macro        | `macro`: `{ texture, scale }`                                                                                | One fetch of `macroNoise` at the world's XZ: brightness, hue and roughness over tens of metres, for every layer                                     | [Single layer](repo:docs/techniques/terrain-single-layer.md#variations)                                                     |
+| Paint        | `blend.source`: `VERTEX_COLOR` (`RGB_AO`, `RGBA`), `SPLAT_MAP`                                               | Weights from the vertex colour (up to 5 layers, no fetch) or one or two splat maps (up to 9)                                                        | [Vertex colour](repo:docs/techniques/terrain-vertex-color-splat.md), [splat map](repo:docs/techniques/terrain-splat-map.md) |
+| Height blend | `blend.mode: 'HEIGHT'` (default), `heightBlendDepth`; a layer's `heightContrast`, `heightOffset`             | Borders that follow the surfaces' relief instead of the weights' gradient                                                                           | [Vertex colour](repo:docs/techniques/terrain-vertex-color-splat.md#set-up-and-parameters)                                   |
+| Rules        | `blend.source`: `RULES`, `VERTEX_COLOR_AND_RULES`, `SPLAT_MAP_AND_RULES`; `rules`                            | Layers by slope, height and facing, broken up by a noise channel, composited in order over layer 0 or the paint                                     | [Procedural rules](repo:docs/techniques/terrain-procedural-rules.md)                                                        |
+| Projection   | `projection`: `PLANAR`, `BIPLANAR`, `TRIPLANAR`; `slopeGate`, `normalBlend`                                  | Steep faces without streaks: the planes the surface faces, gated by slope so flat ground pays one tap                                               | [Triplanar cliffs](repo:docs/techniques/terrain-triplanar-cliffs.md)                                                        |
+| Sparse       | `sparse: { maxLayers }` (2–4)                                                                                | Only the layers weighing most at a pixel are sampled, from a set array                                                                              | [Splat map](repo:docs/techniques/terrain-splat-map.md#sparse-sampling)                                                      |
+| Colour map   | `colorMap`: `DETAIL`, `FAR_ONLY`                                                                             | A block's own colour at its UVs under the layers' grey detail, or only far away                                                                     | [Colour map + detail](repo:docs/techniques/terrain-colormap-detail.md)                                                      |
+| Distance     | `distance`: `fade`, `far` (`AVERAGE_COLOR`, `COLOR_MAP`), `farBlend`                                         | The detail normals fade out; past the fade the layers aren't sampled at all                                                                         | [Colour map + detail](repo:docs/techniques/terrain-colormap-detail.md#set-up-and-parameters)                                |
+| Space        | `space`: `WORLD`, `OBJECT`                                                                                   | Object space for pieces that move or turn                                                                                                           | [Structures](repo:docs/techniques/structure-materials.md)                                                                   |
+| Live layers  | a layer's `source: 'PROCEDURAL_LIVE'`, `live`                                                                | Its procedural set's generator in the material: never repeats, no texture memory                                                                    | [Procedural textures](repo:docs/techniques/procedural-textures.md#live-layers-in-a-terrain-material)                        |
+| Wet and dry  | `wet`: `quality`, `puddles`, `regional`, `ripples`, `streaks`, `shoreline`, `snow`, `frost`, `rainOcclusion` | The surface conditions on the layers: darker and glossier in the rain, puddles with rings, streaks, a shore, snow and frost                         | [Wet and dry surfaces](repo:docs/techniques/wet-dry-surfaces.md)                                                            |
 
 ### The JSON route
 
@@ -393,6 +395,47 @@ inputs, so a mesh's variant swaps a block's sets or splat maps without another s
   `MEDIUM`, `HIGH` about a fifth more than `MEDIUM` (1.7 ms for the whole frame) and `ULTRA` 1.7–2.6
   × `HIGH`. A tier reaches a layer's own anti-tiling, projection and source through its `layers`
   entries; its material-wide fields replace the material's.
+
+### Wet and dry surfaces
+
+A material with `wet` follows the weather of the
+[surface conditions](hub:features/surface-conditions) feature: the rain darkens the layers as
+their pores fill and glosses them as a water film forms, puddles stand in the low spots with rings
+while it rains, rivulets run down steep faces, a shoreline washes along the water level, snow
+covers the flat ground and frost the stones. Each layer responds by its texture set's `surface`
+(`porosity`, `wetDarkening`, `wetRoughness`, `puddleResponse`, `dryingSpeed`, from its category
+unless the set gives its own), blended by the layers' weights, so sand soaks and dries fast, mud
+glosses and holds puddles, and a cliff only streaks.
+
+```ts
+import { createTerrainMaterial } from 'aekasha/toolkit/terrain';
+
+createTerrainMaterial({
+  id: 'valleyGround',
+  layers: [{ set: 'mud02' }, { set: 'rocks01' }],
+  blend: { source: 'RULES', rules: [{ layer: 1, slope: { min: 22, softness: 8 } }] },
+  wet: {
+    puddles: { patches: { scale: 30 } }, // puddles fill some places first
+    ripples: {}, // rain rings on standing water
+    snow: {}, // the toolkit's snow01 over the flats
+    frost: { sparkle: {} },
+    rainOcclusion: 'MAP', // dry under roofs (the rainOcclusion() feature)
+  },
+});
+```
+
+- **Every part compiles only when its key is there,** and the fetches sit in branches on the
+  weather: the ripples' two only where it rains on standing water, the streaks' one on steep faces
+  while it's wet, the snow set's under the snow. The wetness itself fetches nothing.
+- **`quality: 'SIMPLE'`** (a low tier's) keeps the darkening, the gloss, streaks, snow, frost and
+  the shoreline, without the relief, the flattened normal, puddles or ripples.
+- **A regional wetness** (`regional`) keeps riverbanks and swamps wet in any weather: a float
+  vertex attribute painted in Blender (`_WETNESS`) or a splat map's alpha.
+- **A TSL material of your own** gets the same response from
+  [`applySurfaceWetness`](api:applySurfaceWetness).
+
+The handbook's [Wet and dry surfaces](repo:docs/techniques/wet-dry-surfaces.md) has each key, what
+each part costs, the sets' responses, the Blender side and the variations for each kind of game.
 
 ### Colour maps, structures and live layers
 
@@ -535,15 +578,20 @@ meshes](repo:docs/techniques/terrain-procedural-meshes.md).
   `DUAL_SCALE`, `HEX`, the macro), Splatting (vertex colours and splat maps, `LINEAR` beside
   `HEIGHT`, 9 layers in a set array), Rules (rules alone, a splat map combo, the 8-layer terrain),
   Cliffs (each projection and the slope gate), Colour map (`DETAIL` and both far surfaces, each
-  block's map baked at load), Structures (world and object space, wear, moving pillars) and the
-  Live block (a procedural layer live or baked). The tab's Quality select switches every terrain
+  block's map baked at load), Structures (world and object space, wear, moving pillars), the
+  Live block (a procedural layer live or baked) and Wet/dry (a block of each category and a beach
+  under the [surface conditions](hub:features/surface-conditions), with streaking pieces and a
+  canopy). The tab's Quality select switches every terrain
   block to a tier, and its Debug view select to a view.
 - **The debug views** (a config's `debugView`, debug builds only; from code, after
   [`loadTerrainDebugViewsAsync`](api:loadTerrainDebugViewsAsync)): `TEXEL_DENSITY` (texels a metre
   in colour bands over a 1 m checker), `NORMALS`, `WEIGHTS` (each layer's false colour),
   `PROJECTION` (the planes' weights and the slope gate's band), `TAPS` (the texture fetches at the
-  pixel, heat-mapped) and `LAYER_COUNT` (striped where sparse sampling drops a layer). Their code is
-  a debug chunk, so a production build has none.
+  pixel, heat-mapped; the wet response's rain ripples count only where it rains on standing
+  water, its streaks only on a steep face while it's wet or rains), `LAYER_COUNT` (striped where sparse sampling drops a layer) and `WETNESS`
+  (the wet response's stages: red the pores filling, yellow under a film, the blue of a puddle
+  over either; needs `wet`). Their code
+  is a debug chunk, so a production build has none.
 - **The uniforms** are in a terrain material's `userData.uniforms` (`terrain_l<i>_tiling`,
   `terrain_r<i>_slopeMin`, `terrain_macroScale`, …): set a uniform's `value` from code, as the
   gallery's sliders do.
@@ -599,6 +647,7 @@ meshes](repo:docs/techniques/terrain-procedural-meshes.md).
 - [`getTerrainQualityPreset`](api:getTerrainQualityPreset): the tiers;
   [`bakeTerrainColorMap`](api:bakeTerrainColorMap): a block's colour map;
   [`createStructureMaterial`](api:createStructureMaterial): structures;
+  [`applySurfaceWetness`](api:applySurfaceWetness): the wet response;
   [`loadTerrainDebugViewsAsync`](api:loadTerrainDebugViewsAsync): the debug views.
 
 ## Related issues
@@ -623,7 +672,8 @@ meshes](repo:docs/techniques/terrain-procedural-meshes.md).
   [procedural rules](repo:docs/techniques/terrain-procedural-rules.md),
   [triplanar cliffs](repo:docs/techniques/terrain-triplanar-cliffs.md),
   [colour map + detail](repo:docs/techniques/terrain-colormap-detail.md) and
-  [structure materials](repo:docs/techniques/structure-materials.md)), the geometry
+  [structure materials](repo:docs/techniques/structure-materials.md)), the weather
+  ([wet and dry surfaces](repo:docs/techniques/wet-dry-surfaces.md)), the geometry
   ([terrain blocks from Blender](repo:docs/techniques/terrain-blocks-blender.md) and
   [procedural terrain meshes](repo:docs/techniques/terrain-procedural-meshes.md)) and the
   [techniques index](repo:docs/techniques/README.md) (which technique for which game).

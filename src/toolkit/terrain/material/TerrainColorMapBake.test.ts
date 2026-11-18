@@ -24,6 +24,29 @@ vi.mock('aekasha', async (importOriginal) => ({
   },
 }));
 
+// The surface conditions' uniforms: the block's material is wet (p307), its bake isn't
+const surface = vi.hoisted(() => ({
+  wetness: null as unknown,
+  puddleLevel: null as unknown,
+  rain: null as unknown,
+  time: null as unknown,
+}));
+vi.mock('aekasha/surface', async () => {
+  const tsl = await import('three/tsl');
+  surface.wetness = tsl.uniform(0.5);
+  surface.puddleLevel = tsl.uniform(0.5);
+  surface.rain = tsl.uniform(0.5);
+  surface.time = tsl.uniform(0);
+  return {
+    getSurfaceConditionNodes: () => ({
+      wetness: surface.wetness,
+      puddleLevel: surface.puddleLevel,
+      rain: surface.rain,
+      time: surface.time,
+    }),
+  };
+});
+
 const makeBundle = () =>
   ({
     albedoRough: texture(new Texture()),
@@ -35,6 +58,11 @@ const makeBundle = () =>
     roughnessScale: uniform(1),
     aoStrength: uniform(1),
     heightContrast: uniform(1),
+    porosity: uniform(0.5),
+    wetDarkening: uniform(0.5),
+    wetRoughness: uniform(0.3),
+    puddleResponse: uniform(0.5),
+    dryingSpeed: uniform(1),
     averageColor: uniform(color(0.4, 0.3, 0.2)),
   }) as unknown as TextureSetInput;
 
@@ -51,7 +79,7 @@ const collectNodes = (root: unknown) => {
   return [...nodes];
 };
 
-/** A block whose terrain material has a far mode, a DETAIL colour map and the vertex AO */
+/** A block whose terrain material has a far mode, a DETAIL colour map, the vertex AO and wet */
 const makeBlock = () => {
   const material = new MeshStandardNodeMaterial();
   material.name = 'blockTerrain';
@@ -61,7 +89,8 @@ const makeBlock = () => {
     ao: { vertex: true },
     colorMap: { mode: 'DETAIL' },
     distance: { fade: [30, 90], far: 'COLOR_MAP' },
-    quality: { LOW: { distance: { fade: [10, 40], far: 'COLOR_MAP' } } },
+    wet: {},
+    quality: { LOW: { distance: { fade: [10, 40], far: 'COLOR_MAP' }, wet: {} } },
   };
   const colorMap = texture(new Texture());
   setupTerrainMaterial({ layer0: makeBundle(), layer1: makeBundle(), colorMap }, material, {
@@ -93,14 +122,54 @@ describe('bakeTerrainColorMap', () => {
     expect(opts.mesh?.matrixWorld?.elements[12]).toBe(40);
   });
 
-  it('leaves out the colour map, the far surface and the camera: the near look', async () => {
-    const { mesh, colorMap } = makeBlock();
+  it('leaves out the colour map, the far surface, the wetness and the camera: the near look', async () => {
+    const { mesh, colorMap, material } = makeBlock();
+    expect(collectNodes(material.colorNode)).toContain(surface.wetness);
     await bakeTerrainColorMap({ id: 'block', mesh });
     const nodes = collectNodes(bakes.opts[0].outputs[0].node);
     // The bake's colour has no colour map, no camera and no far branch (a struct of the share)
     expect(nodes.some((n) => (n as { value?: unknown }).value === colorMap.value)).toBe(false);
     expect(nodes).not.toContain(positionView);
     expect(nodes.some((n) => (n as { structNode?: unknown }).structNode)).toBe(false);
+    expect(nodes).not.toContain(surface.wetness);
+  });
+
+  it("drops the macro input that only the puddle patches read, and keeps a macro's", async () => {
+    const macro = texture(new Texture());
+    const bakeWith = async (terrain: Record<string, unknown>) => {
+      const material = new MeshStandardNodeMaterial();
+      setupTerrainMaterial({ layer0: makeBundle(), macro }, material, { terrain });
+      material.userData.terrainDefine = terrain;
+      const { mesh } = makeBlock();
+      bakes.opts.length = 0;
+      await bakeTerrainColorMap({ id: 'patched', mesh, material });
+      return collectNodes(bakes.opts[0].outputs[0].node).some(
+        (n) => (n as { value?: unknown }).value === macro.value && n !== (macro as unknown as Node)
+      );
+    };
+    const patches = { puddles: { patches: { scale: 30 } } };
+    expect(await bakeWith({ layers: [{}], wet: patches })).toBe(false);
+    expect(await bakeWith({ layers: [{}], macro: { scale: 90 }, wet: patches })).toBe(true);
+  });
+
+  it('drops the ripple atlas input with the wet response', async () => {
+    const material = new MeshStandardNodeMaterial();
+    const terrain = { layers: [{}], wet: { ripples: {} } };
+    setupTerrainMaterial({ layer0: makeBundle(), ripples: texture(new Texture()) }, material, {
+      terrain,
+    });
+    material.userData.terrainDefine = terrain;
+    const { mesh } = makeBlock();
+    await expect(bakeTerrainColorMap({ id: 'rippled', mesh, material })).resolves.toBeTruthy();
+  });
+
+  it('drops the snow set input with the wet response', async () => {
+    const material = new MeshStandardNodeMaterial();
+    const terrain = { layers: [{}], wet: { snow: {} } };
+    setupTerrainMaterial({ layer0: makeBundle(), snow: makeBundle() }, material, { terrain });
+    material.userData.terrainDefine = terrain;
+    const { mesh } = makeBlock();
+    await expect(bakeTerrainColorMap({ id: 'snowed', mesh, material })).resolves.toBeTruthy();
   });
 
   it("multiplies the material's AO in when asked", async () => {

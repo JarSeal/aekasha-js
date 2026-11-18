@@ -38,8 +38,8 @@ import {
 } from './TextureSetRefs';
 import { getTextureSet } from './TextureSets';
 
-/** The vec4s each layer takes in a set array's `layerParams`. */
-const PARAMS_PER_LAYER = 4;
+/** The vec4s each layer takes in a set array's `layerParams` (the fifth p307's wet response's). */
+const PARAMS_PER_LAYER = 5;
 
 /**
  * A packing's slots mapped to a value each (the arrays of a {@link TextureSetArray}).
@@ -192,6 +192,8 @@ const writeLayerParams = (values: THREE.Vector4[], layer: number, set: TextureSe
     surface.wetDarkening
   );
   values[base + 3].set(surface.wetRoughness, average.r, average.g, average.b);
+  // Two spare: p307's later phases
+  values[base + 4].set(surface.puddleResponse, surface.dryingSpeed, 0, 0);
 };
 
 const createLayerParams = (sets: TextureSetDef[]) => {
@@ -587,6 +589,7 @@ export const getTextureSetLayerParams = (
   const tintNormal = at(1);
   const roughAoWet = at(2);
   const wetAverage = at(3);
+  const wetMore = at(4);
   return {
     physicalSize: vec2(sizeHeight.x, sizeHeight.y),
     heightScale: sizeHeight.z,
@@ -598,6 +601,8 @@ export const getTextureSetLayerParams = (
     porosity: roughAoWet.z,
     wetDarkening: roughAoWet.w,
     wetRoughness: wetAverage.x,
+    puddleResponse: wetMore.x,
+    dryingSpeed: wetMore.y,
     averageColor: vec3(wetAverage.y, wetAverage.z, wetAverage.w),
   };
 };

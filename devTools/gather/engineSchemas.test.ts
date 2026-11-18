@@ -91,6 +91,7 @@ describe('getSceneFeatureIds (the scene manifest)', () => {
       'textureSets',
       'textureSetArrays',
       'terrainBlocks',
+      'surfaceConditions',
     ]);
   });
 });

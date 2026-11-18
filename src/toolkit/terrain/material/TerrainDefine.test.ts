@@ -23,6 +23,9 @@ import {
   TERRAIN_SPARSE_MAX_LAYERS,
   TERRAIN_UV_MODES,
   TERRAIN_VERTEX_COLOR_LAYOUTS,
+  TERRAIN_WET_QUALITIES,
+  TERRAIN_WET_RAIN_OCCLUSIONS,
+  TERRAIN_WET_SPLAT_CHANNELS,
   TerrainAntiTilingSchema,
   TerrainBlendSchema,
   TerrainColorMapSettingsSchema,
@@ -284,6 +287,84 @@ const ACCEPTED: unknown[] = [
     quality: { ULTRA: { layers: [{}, { source: 'PROCEDURAL_LIVE' }] } },
     qualityLevel: 'ULTRA',
   }),
+  // p307's wet response, its view; a tier's own (SIMPLE), or a tier's view of it
+  { layers: [{}], wet: {} },
+  {
+    layers: [{}],
+    wet: { quality: 'FULL', heightInfluence: 0, cavityInfluence: 2, shelter: [0, 180] },
+    debugView: 'WETNESS',
+  },
+  { layers: [{}], wet: {}, quality: { LOW: { wet: { quality: 'SIMPLE' } } }, qualityLevel: 'LOW' },
+  { layers: [{}], quality: { HIGH: { wet: {} } }, debugView: 'WETNESS' },
+  // Its puddles (a SIMPLE tier's own wet without them) and regional wetness
+  { layers: [{}], wet: { puddles: {} } },
+  {
+    layers: [{}],
+    wet: { puddles: { maxSlope: 45, edge: 1, patches: { scale: 30, amount: 0 } } },
+  },
+  {
+    layers: [{}],
+    wet: { puddles: {} },
+    quality: { LOW: { wet: { quality: 'SIMPLE' } } },
+    qualityLevel: 'LOW',
+  },
+  { layers: [{}], wet: { regional: {} } },
+  { layers: [{}], wet: { quality: 'SIMPLE', regional: { attribute: 'swamp' } } },
+  { layers: layersOf(4), blend: { source: 'SPLAT_MAP' }, wet: { regional: { splatChannel: 'A' } } },
+  {
+    layers: layersOf(6),
+    blend: {
+      source: 'SPLAT_MAP_AND_RULES',
+      paintedLayers: 4,
+      rules: [
+        { layer: 4, slope: { min: 30 } },
+        { layer: 5, slope: { min: 50 } },
+      ],
+    },
+    wet: { regional: { splatChannel: 'A' } },
+  },
+  // Its rain ripples (a SIMPLE tier's own wet without them)
+  { layers: [{}], wet: { ripples: {} } },
+  {
+    layers: [{}],
+    wet: { puddles: {}, ripples: { scale: 2, lifetime: 1, strength: 0, distance: [0, 5] } },
+  },
+  {
+    layers: [{}],
+    wet: { ripples: {} },
+    quality: { LOW: { wet: { quality: 'SIMPLE' } } },
+    qualityLevel: 'LOW',
+  },
+  // Its shoreline, in either quality
+  { layers: [{}], wet: { shoreline: { band: 1.5 } } },
+  {
+    layers: [{}],
+    wet: { quality: 'SIMPLE', shoreline: { band: 0.5, noise: 0, runUp: { height: 1, period: 4 } } },
+  },
+  // Its snow, in either quality
+  { layers: [{}], wet: { snow: {} } },
+  {
+    layers: [{}],
+    wet: { quality: 'SIMPLE', snow: { maxSlope: 90, noiseScale: 0.5, edge: 1, tiling: 2 } },
+  },
+  { layers: [{}], wet: {}, quality: { LOW: { wet: { snow: {} } } } },
+  // Its frost, in either quality, its sparkle FULL's
+  { layers: [{}], wet: { frost: {} } },
+  { layers: [{}], wet: { quality: 'SIMPLE', frost: { temperature: [2, -10], strength: 0 } } },
+  {
+    layers: [{}],
+    wet: { frost: { sparkle: { density: 40, strength: 0, distance: [0, 6] } } },
+  },
+  // Its rain streaks, in either quality
+  { layers: [{}], wet: { streaks: {} } },
+  {
+    layers: [{}],
+    wet: { quality: 'SIMPLE', streaks: { minSlope: 90, scale: 2, length: 1, speed: 0 } },
+  },
+  // Its rain occlusion, in either quality
+  { layers: [{}], wet: { rainOcclusion: 'MAP' } },
+  { layers: [{}], wet: { quality: 'SIMPLE', rainOcclusion: 'NORMAL_Y' } },
+  { layers: [{}], wet: {}, quality: { LOW: { wet: { quality: 'SIMPLE', rainOcclusion: 'MAP' } } } },
 ];
 const REFUSED: unknown[] = [
   {},
@@ -597,6 +678,94 @@ const REFUSED: unknown[] = [
     quality: { HIGH: { blend: { source: 'RULES', rules: [{ layer: 2, slope: { min: 9 } }] } } },
     qualityLevel: 'HIGH',
   },
+  // p307's wet response: its keys (a later phase's too), values and ranges; its view without it
+  { layers: [{}], wet: { ripples: true } },
+  { layers: [{}], wet: { rainOcclusion: 'SHADOW' } },
+  { layers: [{}], wet: { quality: 'NONE' } },
+  { layers: [{}], wet: { heightInfluence: -1 } },
+  { layers: [{}], wet: { cavityInfluence: '1' } },
+  { layers: [{}], wet: { shelter: [120, 60] } },
+  { layers: [{}], wet: { shelter: [60, 200] } },
+  { layers: [{}], wet: { shelter: [60] } },
+  { layers: [{}], wet: true },
+  { layers: [{}], debugView: 'WETNESS' },
+  { layers: [{}], wet: {}, quality: { LOW: { wet: { shelter: [90, 90] } } }, qualityLevel: 'LOW' },
+  // Its puddles: FULL only, their ranges and keys
+  { layers: [{}], wet: { quality: 'SIMPLE', puddles: {} } },
+  { layers: [{}], wet: { puddles: { maxSlope: 0 } } },
+  { layers: [{}], wet: { puddles: { maxSlope: 50 } } },
+  { layers: [{}], wet: { puddles: { edge: 0 } } },
+  { layers: [{}], wet: { puddles: { depth: 1 } } },
+  { layers: [{}], wet: { puddles: true } },
+  { layers: [{}], wet: { puddles: { patches: {} } } },
+  { layers: [{}], wet: { puddles: { patches: { scale: 0 } } } },
+  { layers: [{}], wet: { puddles: { patches: { scale: 30, amount: 2 } } } },
+  // Its rain ripples: FULL only, their ranges and keys
+  { layers: [{}], wet: { quality: 'SIMPLE', ripples: {} } },
+  { layers: [{}], wet: { ripples: { scale: 0 } } },
+  { layers: [{}], wet: { ripples: { lifetime: -1 } } },
+  { layers: [{}], wet: { ripples: { strength: -0.5 } } },
+  { layers: [{}], wet: { ripples: { distance: [30, 10] } } },
+  { layers: [{}], wet: { ripples: { distance: [10] } } },
+  { layers: [{}], wet: { ripples: { density: 1 } } },
+  // Its shoreline: the band required, the ranges and keys
+  { layers: [{}], wet: { shoreline: {} } },
+  { layers: [{}], wet: { shoreline: { band: 0 } } },
+  { layers: [{}], wet: { shoreline: { band: 1, noise: -0.1 } } },
+  { layers: [{}], wet: { shoreline: { band: 1, runUp: { height: 0 } } } },
+  { layers: [{}], wet: { shoreline: { band: 1, runUp: { period: -6 } } } },
+  { layers: [{}], wet: { shoreline: { band: 1, runUp: true } } },
+  { layers: [{}], wet: { shoreline: { band: 1, runUp: { speed: 1 } } } },
+  { layers: [{}], wet: { shoreline: { band: 1, level: 2 } } },
+  // Its snow: its ranges and keys (the set is an input)
+  { layers: [{}], wet: { snow: { set: 'snow01' } } },
+  { layers: [{}], wet: { snow: { maxSlope: 0 } } },
+  { layers: [{}], wet: { snow: { maxSlope: 91 } } },
+  { layers: [{}], wet: { snow: { noiseScale: 0 } } },
+  { layers: [{}], wet: { snow: { edge: 0 } } },
+  { layers: [{}], wet: { snow: { edge: 1.5 } } },
+  { layers: [{}], wet: { snow: { tiling: -1 } } },
+  { layers: [{}], wet: { snow: true } },
+  // Its frost: its ranges and keys, its sparkle FULL's
+  { layers: [{}], wet: { frost: { temperature: [-5, 0] } } },
+  { layers: [{}], wet: { frost: { temperature: [0, 0] } } },
+  { layers: [{}], wet: { frost: { temperature: [0] } } },
+  { layers: [{}], wet: { frost: { strength: 1.5 } } },
+  { layers: [{}], wet: { frost: { below: -5 } } },
+  { layers: [{}], wet: { frost: true } },
+  { layers: [{}], wet: { quality: 'SIMPLE', frost: { sparkle: {} } } },
+  { layers: [{}], wet: { frost: { sparkle: { density: 0 } } } },
+  { layers: [{}], wet: { frost: { sparkle: { strength: -1 } } } },
+  { layers: [{}], wet: { frost: { sparkle: { distance: [10, 4] } } } },
+  { layers: [{}], wet: { frost: { sparkle: { size: 1 } } } },
+  // Its rain streaks: their ranges and keys
+  { layers: [{}], wet: { streaks: { minSlope: 0 } } },
+  { layers: [{}], wet: { streaks: { minSlope: 95 } } },
+  { layers: [{}], wet: { streaks: { scale: 0 } } },
+  { layers: [{}], wet: { streaks: { length: -1 } } },
+  { layers: [{}], wet: { streaks: { speed: -1 } } },
+  { layers: [{}], wet: { streaks: { wind: 1 } } },
+  { layers: [{}], wet: { streaks: true } },
+  // Its regional wetness: an attribute's name, or the first splat map's A where it weighs no layer
+  { layers: [{}], wet: { regional: { attribute: '' } } },
+  { layers: [{}], wet: { regional: { splatChannel: 'R' } } },
+  { layers: [{}], wet: { regional: { attribute: 'swamp', splatChannel: 'A' } } },
+  { layers: [{}], wet: { regional: { splatChannel: 'A' } } },
+  { layers: layersOf(5), blend: { source: 'SPLAT_MAP' }, wet: { regional: { splatChannel: 'A' } } },
+  {
+    layers: layersOf(2),
+    blend: { source: 'VERTEX_COLOR' },
+    wet: { regional: { splatChannel: 'A' } },
+  },
+  {
+    layers: layersOf(2),
+    blend: { source: 'SPLAT_MAP' },
+    wet: {},
+    quality: {
+      LOW: { blend: { source: 'VERTEX_COLOR' }, wet: { regional: { splatChannel: 'A' } } },
+    },
+    qualityLevel: 'LOW',
+  },
 ];
 
 describe('readTerrainDefine', () => {
@@ -626,13 +795,83 @@ describe('readTerrainDefine', () => {
       reservedTextures: 6,
       macro: null,
       takesMacroTexture: false,
+      takesRippleTexture: false,
+      takesSnowSet: false,
       distanceFade: null,
       far: null,
       colorMap: null,
+      wet: null,
       slotCount: null,
       qualityLevel: null,
       debugView: null,
     });
+    expect(read({ layers: [{}], wet: {} }).wet).toEqual({
+      quality: 'FULL',
+      heightInfluence: 0.5,
+      cavityInfluence: 0.5,
+      shelter: [60, 120],
+      puddles: null,
+      regional: null,
+      ripples: null,
+      streaks: null,
+      shoreline: null,
+      snow: null,
+      frost: null,
+      rainOcclusion: 'NORMAL_Y',
+    });
+    expect(read({ layers: [{}], wet: { rainOcclusion: 'MAP' } }).wet?.rainOcclusion).toBe('MAP');
+    expect(read({ layers: [{}], wet: { frost: {} } }).wet?.frost).toEqual({
+      temperature: [0, -5],
+      strength: 1,
+      sparkle: null,
+    });
+    expect(read({ layers: [{}], wet: { frost: { sparkle: {} } } }).wet?.frost?.sparkle).toEqual({
+      density: 50,
+      strength: 3,
+      distance: [4, 10],
+    });
+    expect(read({ layers: [{}], wet: { snow: {} } }).wet?.snow).toEqual({
+      maxSlope: 55,
+      noiseScale: 3,
+      edge: 0.08,
+      tiling: 1,
+    });
+    expect(read({ layers: [{}], wet: { shoreline: { band: 1.5 } } }).wet?.shoreline).toEqual({
+      band: 1.5,
+      noise: 0.3,
+      runUp: null,
+    });
+    expect(
+      read({ layers: [{}], wet: { shoreline: { band: 1.5, runUp: {} } } }).wet?.shoreline?.runUp
+    ).toEqual({ height: 0.5, period: 6 });
+    expect(read({ layers: [{}], wet: { streaks: {} } }).wet?.streaks).toEqual({
+      minSlope: 60,
+      scale: 4,
+      length: 8,
+      speed: 1,
+    });
+    expect(read({ layers: [{}], wet: { ripples: {} } }).wet?.ripples).toEqual({
+      scale: 1.5,
+      lifetime: 0.7,
+      strength: 0.5,
+      distance: [10, 30],
+    });
+    expect(read({ layers: [{}], wet: { puddles: {}, regional: {} } }).wet).toMatchObject({
+      puddles: { maxSlope: 15, edge: 0.05, patches: null },
+      regional: { attribute: '_wetness' },
+    });
+    expect(
+      read({ layers: [{}], wet: { puddles: { patches: { scale: 30 } } } }).wet?.puddles?.patches
+    ).toEqual({ scale: 30, amount: 0.75 });
+    // A tier's wet replaces the material's whole
+    expect(
+      read({
+        layers: [{}],
+        wet: { heightInfluence: 1 },
+        quality: { LOW: { wet: { quality: 'SIMPLE' } } },
+        qualityLevel: 'LOW',
+      }).wet
+    ).toMatchObject({ quality: 'SIMPLE', heightInfluence: 0.5 });
     expect(read({ layers: [{ rotation: 0 }] }).layers[0].rotation).toBe(0);
     expect(read({ layers: [{}], antiTiling: { mode: 'DUAL_SCALE' } }).layers[0].antiTiling).toEqual(
       { mode: 'DUAL_SCALE', farScale: 0.23, distance: [6, 40] }
@@ -721,7 +960,7 @@ describe('readTerrainDefine', () => {
     expect(combo.blend).toMatchObject({ layout: 'RGB_AO', heightBlend: null });
   });
 
-  it("takes the macro input with a macro or rule noise, a tier's included", () => {
+  it("takes the macro input with a macro, rule noise or puddle patches, a tier's included", () => {
     const noisy = { layer: 1, noise: { scale: 50, amount: 0.3 } };
     expect(read(rulesOf(2, { layer: 1, slope: { min: 9 } })).takesMacroTexture).toBe(false);
     expect(read(rulesOf(2, noisy)).takesMacroTexture).toBe(true);
@@ -733,6 +972,32 @@ describe('readTerrainDefine', () => {
     };
     expect(read(tierNoise).takesMacroTexture).toBe(true);
     expect(read({ ...tierNoise, qualityLevel: 'LOW' }).takesMacroTexture).toBe(true);
+    const patches = { puddles: { patches: { scale: 30 } } };
+    expect(read({ layers: [{}], wet: { puddles: {} } }).takesMacroTexture).toBe(false);
+    expect(read({ layers: [{}], wet: patches }).takesMacroTexture).toBe(true);
+    expect(read({ layers: [{}], quality: { HIGH: { wet: patches } } }).takesMacroTexture).toBe(
+      true
+    );
+    // The streaks read it too, in either quality
+    const streaks = { quality: 'SIMPLE', streaks: {} };
+    expect(read({ layers: [{}], wet: streaks }).takesMacroTexture).toBe(true);
+    expect(read({ layers: [{}], quality: { LOW: { wet: streaks } } }).takesMacroTexture).toBe(true);
+  });
+
+  it("takes the ripples input with ripples, a tier's included", () => {
+    expect(read({ layers: [{}], wet: {} }).takesRippleTexture).toBe(false);
+    expect(read({ layers: [{}], wet: { ripples: {} } }).takesRippleTexture).toBe(true);
+    const tiered = { layers: [{}], wet: {}, quality: { ULTRA: { wet: { ripples: {} } } } };
+    expect(read(tiered).takesRippleTexture).toBe(true);
+    expect(read({ ...tiered, qualityLevel: 'ULTRA' }).wet?.ripples).toBeTruthy();
+  });
+
+  it("takes the snow input with snow, a tier's included", () => {
+    expect(read({ layers: [{}], wet: {} }).takesSnowSet).toBe(false);
+    expect(read({ layers: [{}], wet: { snow: {} } }).takesSnowSet).toBe(true);
+    const tiered = { layers: [{}], wet: {}, quality: { LOW: { wet: { snow: {} } } } };
+    expect(read(tiered).takesSnowSet).toBe(true);
+    expect(read(tiered).wet?.snow).toBeNull();
   });
 
   it("gives a layer its own anti-tiling, else the material's (its tier's)", () => {
@@ -896,6 +1161,43 @@ describe('readTerrainDefine', () => {
     expect(values.vertexColorLayouts).toEqual(TERRAIN_VERTEX_COLOR_LAYOUTS);
     expect(values.blendLayerCounts).toEqual(TERRAIN_BLEND_LAYER_COUNTS);
     expect(values.distanceKeys.sort()).toEqual(Object.keys(distance.unwrap().shape).sort());
+    const { wet } = TerrainMaterialDefineSchema.shape;
+    expect(values.wetKeys.sort()).toEqual(Object.keys(wet.unwrap().shape).sort());
+    expect(values.wetQualities).toEqual(TERRAIN_WET_QUALITIES);
+    expect(wet.unwrap().shape.quality.unwrap().options).toEqual([...TERRAIN_WET_QUALITIES]);
+    expect(values.wetRainOcclusions).toEqual(TERRAIN_WET_RAIN_OCCLUSIONS);
+    expect(wet.unwrap().shape.rainOcclusion.unwrap().options).toEqual([
+      ...TERRAIN_WET_RAIN_OCCLUSIONS,
+    ]);
+    const puddles = wet.unwrap().shape.puddles.unwrap();
+    expect(values.wetPuddleKeys.sort()).toEqual(Object.keys(puddles.shape).sort());
+    expect(values.wetPatchKeys.sort()).toEqual(
+      Object.keys(puddles.shape.patches.unwrap().shape).sort()
+    );
+    expect(values.wetRippleKeys.sort()).toEqual(
+      Object.keys(wet.unwrap().shape.ripples.unwrap().shape).sort()
+    );
+    expect(values.wetStreakKeys.sort()).toEqual(
+      Object.keys(wet.unwrap().shape.streaks.unwrap().shape).sort()
+    );
+    const shoreline = wet.unwrap().shape.shoreline.unwrap();
+    expect(values.wetShorelineKeys.sort()).toEqual(Object.keys(shoreline.shape).sort());
+    expect(values.wetRunUpKeys.sort()).toEqual(
+      Object.keys(shoreline.shape.runUp.unwrap().shape).sort()
+    );
+    expect(values.wetSnowKeys.sort()).toEqual(
+      Object.keys(wet.unwrap().shape.snow.unwrap().shape).sort()
+    );
+    const frost = wet.unwrap().shape.frost.unwrap();
+    expect(values.wetFrostKeys.sort()).toEqual(Object.keys(frost.shape).sort());
+    expect(values.wetSparkleKeys.sort()).toEqual(
+      Object.keys(frost.shape.sparkle.unwrap().shape).sort()
+    );
+    const [byAttribute, bySplat] = wet.unwrap().shape.regional.unwrap().options;
+    expect(Object.keys(byAttribute.shape)).toEqual(['attribute']);
+    expect(Object.keys(bySplat.shape)).toEqual(['splatChannel']);
+    expect(values.wetSplatChannels).toEqual(TERRAIN_WET_SPLAT_CHANNELS);
+    expect(bySplat.shape.splatChannel.options).toEqual([...TERRAIN_WET_SPLAT_CHANNELS]);
     expect(values.macroKeys.sort()).toEqual(Object.keys(TerrainMacroSettingsSchema.shape).sort());
     for (const option of TerrainColorMapSettingsSchema.options) {
       const mode = option.shape.mode.value;

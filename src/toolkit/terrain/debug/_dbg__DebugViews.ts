@@ -27,6 +27,7 @@ import { TERRAIN_PACKING_SLOTS } from '../material/TerrainStorage';
 import type { AntiTilingNodes } from '../nodes/AntiTiling';
 import { getProjectionWeights, getSlope, type ProjectionNodes } from '../nodes/Projection';
 import { getSlopeGateShare } from '../nodes/SlopeGate';
+import type { SurfaceWetnessMasks } from '../nodes/Wet';
 
 /** The debug views this module builds */
 export type TerrainDebugView =
@@ -35,7 +36,8 @@ export type TerrainDebugView =
   | 'WEIGHTS'
   | 'PROJECTION'
   | 'TAPS'
-  | 'LAYER_COUNT';
+  | 'LAYER_COUNT'
+  | 'WETNESS';
 
 /** A layer as the texel density reads it */
 export type TerrainDebugViewLayer = {
@@ -79,12 +81,19 @@ export type TerrainDebugViewContext = {
    * layer: `TAPS` counts the far surface's fetches there), else null
    */
   far: { share: Node<'float'> } | null;
+  /**
+   * The wet response's masks (`WETNESS`), or null: no `wet`, or the surface conditions feature
+   * isn't installed (the material is dry)
+   */
+  wet: SurfaceWetnessMasks | null;
   /** The shaded normal in world space */
   normal: Node<'vec3'>;
   /** The define as read (its tier's), for the fetches `TAPS` counts */
   define: ResolvedTerrainDefine;
   /** The packing the layers sample */
   packing: TextureSetPacking;
+  /** The snow set's taps where the snow covers (its packing's slots; p307 T10), 0 without snow */
+  snowTaps: number;
 };
 
 /**
@@ -223,6 +232,11 @@ const buildProjection = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
   return mix(color, vec3(1), band.mul(stripes).mul(BAND_LIGHTEN)) as unknown as Node<'vec3'>;
 };
 
+/** The rain ripples' taps (p307 T4): two samples of the atlas */
+const RIPPLE_TAPS = 2;
+/** The rain streaks' tap (p307 T5): one sample of the macro texture */
+const STREAK_TAPS = 1;
+
 /** The anti-tiling modes' taps (p305 D3) */
 const ANTI_TILING_TAPS = { NONE: 1, DUAL_SCALE: 2, HEX: 3 } as const;
 
@@ -242,8 +256,9 @@ const getSampledFetches = (ctx: TerrainDebugViewContext, sampled: TerrainDebugVi
 
 /**
  * The material's own texture fetches beside the layers': the splat maps, the macro variation's
- * one, each rule's noise and the colour map's one (`DETAIL`, or the far `COLOR_MAP`: sampled
- * outside the far branch); three's lighting, shadows and environment not counted
+ * one, each rule's noise, the colour map's one (`DETAIL`, or the far `COLOR_MAP`: sampled
+ * outside the far branch), the puddle patches' one and the rain occlusion map's one (p307);
+ * three's lighting, shadows and environment not counted
  */
 const getMaterialFetches = ({ define }: TerrainDebugViewContext) => {
   const rules = define.blend.source === 'SINGLE' ? [] : define.blend.rules;
@@ -251,15 +266,19 @@ const getMaterialFetches = ({ define }: TerrainDebugViewContext) => {
     getSplatMapCount(define.blend, define.layers.length) +
     (define.macro ? 1 : 0) +
     rules.filter((rule) => rule.noise).length +
-    (define.colorMap?.mode === 'DETAIL' || define.far?.mode === 'COLOR_MAP' ? 1 : 0)
+    (define.colorMap?.mode === 'DETAIL' || define.far?.mode === 'COLOR_MAP' ? 1 : 0) +
+    (define.wet?.puddles?.patches ? 1 : 0) +
+    (define.wet?.rainOcclusion === 'MAP' ? 1 : 0)
   );
 };
 
 /**
  * The material's own texture fetches at a pixel, as `TAPS` counts them: those every pixel makes
  * (each sampled layer's or slot's taps, its packing slots × its anti-tiling's taps × its planes;
- * the splat maps, the macro, the rules' noise, the colour map), each slope gate's branch's, made where its
- * share is over 0 (a slot's: the kept layer's gate).
+ * the splat maps, the macro, the rules' noise, the colour map, the puddle patches, the rain
+ * occlusion map), each slope gate's branch's, made where its
+ * share is over 0 (a slot's: the kept layer's gate), the rain ripples' two and the streaks' one
+ * where they run, and the snow set's where the snow covers.
  * @internal
  */
 export const estimateTerrainFetches = (ctx: TerrainDebugViewContext) => {
@@ -272,6 +291,16 @@ export const estimateTerrainFetches = (ctx: TerrainDebugViewContext) => {
     const share = getGateShare(sampled);
     if (share && fetches.gated) gated.push({ share, fetches: fetches.gated });
   }
+  // p307's rain ripples: the atlas's two taps where they run (rain and standing water)
+  if (ctx.define.wet?.ripples && ctx.wet) {
+    gated.push({ share: ctx.wet.ripple, fetches: RIPPLE_TAPS });
+  }
+  // p307's rain streaks: the macro texture's tap where they run (a steep face, wet or in rain)
+  if (ctx.define.wet?.streaks && ctx.wet) {
+    gated.push({ share: ctx.wet.streak, fetches: STREAK_TAPS });
+  }
+  // p307's snow: the snow set's taps where it covers (past a far mode's band, none: the far count)
+  if (ctx.snowTaps && ctx.wet) gated.push({ share: ctx.wet.snow, fetches: ctx.snowTaps });
   return { always, gated, material };
 };
 
@@ -294,8 +323,10 @@ const TAP_COLORS = [
 /**
  * `TAPS`: the material's own texture fetches at the pixel (p301 §6's estimate made visible): every
  * sampled layer's or slot's taps (its packing slots × its anti-tiling's taps × its planes), its
- * slope gate's branch's where the share is over 0, the splat maps, the macro, the rules' noise and
- * the colour map; past a far mode's band, those last alone (the far surface samples no layer). In
+ * slope gate's branch's where the share is over 0, the splat maps, the macro, the rules' noise,
+ * the colour map, the puddle patches, the rain ripples' two where it rains on standing water and
+ * the streaks' one on a steep face while it's wet or rains, the snow set's where snow covers; past
+ * a far mode's band, those last alone (the far surface samples no layer). In
  * bands (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more magenta)
  * over the faint 1 m checker. A layer at its own index is sampled whatever its weight; sparse
  * sampling samples its slots alone.
@@ -365,6 +396,27 @@ const buildLayerCount = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
   return mix(shaded, vec3(1), dropped.mul(stripes).mul(DROP_LIGHTEN)) as unknown as Node<'vec3'>;
 };
 
+/** `WETNESS`' floor: a dry pixel's grey, so the checker still reads */
+const DRY_SHADE = 0.06;
+/** `WETNESS`' snow: the pale blue a full cover mixes to, and how far */
+const SNOW_SHADE = [0.55, 0.8, 1] as const;
+const SNOW_MIX = 0.7;
+
+/**
+ * `WETNESS`: the wet response's stages, R how full the pores are, G how far the film has formed,
+ * B the puddles (red: pores filling, yellow: under a film, the blue of a puddle over either:
+ * magenta to white), over
+ * the faint 1 m checker, mixed toward pale blue by the snow's cover; dark grey where it's dry
+ * (and everywhere when the surface conditions feature isn't installed)
+ */
+const buildWetness = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
+  const stages = ctx.wet ? vec3(ctx.wet.pores, ctx.wet.film, ctx.wet.puddle) : vec3(0);
+  const shown = ctx.wet
+    ? mix(stages.max(DRY_SHADE), vec3(...SNOW_SHADE), ctx.wet.snow.mul(SNOW_MIX))
+    : stages.max(DRY_SHADE);
+  return shown.mul(mix(0.8, 1, getChecker(ctx))) as unknown as Node<'vec3'>;
+};
+
 /** Each view's builder */
 const VIEW_BUILDERS: Record<TerrainDebugView, (ctx: TerrainDebugViewContext) => Node<'vec3'>> = {
   TEXEL_DENSITY: buildTexelDensity,
@@ -373,6 +425,7 @@ const VIEW_BUILDERS: Record<TerrainDebugView, (ctx: TerrainDebugViewContext) => 
   PROJECTION: buildProjection,
   TAPS: buildTaps,
   LAYER_COUNT: buildLayerCount,
+  WETNESS: buildWetness,
 };
 
 /**

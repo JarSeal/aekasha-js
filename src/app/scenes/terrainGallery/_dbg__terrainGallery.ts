@@ -50,6 +50,7 @@ import {
   startStructuresTab,
 } from './_dbg__terrainGalleryStructures';
 import { getPatchSections, startPatchTab } from './_dbg__terrainGalleryPatch';
+import { clearWetSelection, getWetSections, startWetTab } from './_dbg__terrainGalleryWet';
 import { getLiveSections, startLiveTab, type LiveSectionOpts } from './_dbg__terrainGalleryLive';
 import {
   clearGeneratorSelection,
@@ -406,6 +407,7 @@ const SELECTION_CLEARERS = {
   cliffs: clearCliffsSelection,
   colorMap: clearColorMapSelection,
   structures: clearStructuresSelection,
+  wet: clearWetSelection,
 };
 
 /** Drops every list's selection but the row's (its block was picked) */
@@ -466,6 +468,7 @@ export const createTerrainGalleryTab = () => {
   startCliffsTab();
   startColorMapTab();
   startStructuresTab();
+  startWetTab();
   startPatchTab();
   const endProceduralTab = startProceduralTab(proceduralOpts);
   const endLiveTab = startLiveTab(liveOpts);
@@ -568,6 +571,9 @@ export const createTerrainGalleryTab = () => {
       ) as DebuggerTabSection<GalleryTabState>[]),
       ...(getStructuresSections(TAB_ID, () =>
         clearSelectionsBut('structures')
+      ) as DebuggerTabSection<GalleryTabState>[]),
+      ...(getWetSections(TAB_ID, () =>
+        clearSelectionsBut('wet')
       ) as DebuggerTabSection<GalleryTabState>[]),
       ...(getPatchSections(TAB_ID) as DebuggerTabSection<GalleryTabState>[]),
       // Its fields bind their own targets, none of this tab's state keys

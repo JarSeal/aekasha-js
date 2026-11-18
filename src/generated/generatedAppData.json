@@ -13959,9 +13959,11 @@
             "roughnessScale": 1,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0.9,
+            "wetDarkening": 0.55,
+            "wetRoughness": 0.45,
+            "puddleResponse": 0.3,
+            "dryingSpeed": 1.6
           }
         },
         {
@@ -13997,9 +13999,11 @@
             "roughnessScale": 1,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0.7,
+            "wetDarkening": 0.6,
+            "wetRoughness": 0.15,
+            "puddleResponse": 1,
+            "dryingSpeed": 0.4
           }
         },
         {
@@ -14037,7 +14041,9 @@
             "heightContrast": 1,
             "porosity": 0.85,
             "wetDarkening": 0.55,
-            "wetRoughness": 0.4
+            "wetRoughness": 0.4,
+            "puddleResponse": 0.3,
+            "dryingSpeed": 1.6
           },
           "averageColor": "#ab966b"
         }
@@ -20427,7 +20433,9 @@
             "heightContrast": 1,
             "porosity": 0.85,
             "wetDarkening": 0.55,
-            "wetRoughness": 0.4
+            "wetRoughness": 0.4,
+            "puddleResponse": 0.3,
+            "dryingSpeed": 1.6
           },
           "averageColor": "#ab966b"
         },
@@ -20464,9 +20472,11 @@
             "roughnessScale": 2.5,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0.6,
+            "wetDarkening": 0.35,
+            "wetRoughness": 0.35,
+            "puddleResponse": 0.2,
+            "dryingSpeed": 0.8
           },
           "averageColor": "#5c6730"
         },
@@ -20496,8 +20506,10 @@
             "aoStrength": 1,
             "heightContrast": 1,
             "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "wetDarkening": 0.25,
+            "wetRoughness": 0.3,
+            "puddleResponse": 0.5,
+            "dryingSpeed": 0.6
           },
           "averageColor": "#dbebf8"
         },
@@ -20526,9 +20538,11 @@
             "roughnessScale": 1,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0.7,
+            "wetDarkening": 0.6,
+            "wetRoughness": 0.15,
+            "puddleResponse": 1,
+            "dryingSpeed": 0.4
           },
           "averageColor": "#484034"
         },
@@ -20557,9 +20571,11 @@
             "roughnessScale": 1,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0.4,
+            "wetDarkening": 0.35,
+            "wetRoughness": 0.2,
+            "puddleResponse": 0.6,
+            "dryingSpeed": 1
           },
           "averageColor": "#ad926e"
         }
@@ -20848,8 +20864,8 @@
     },
     "terrainGallery": {
       "isDebugScene": true,
-      "name": "Terrain gallery (p303, p304, p305, p306)",
-      "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the toolkit's terrain material (p305, its JSON route; one layer, world tiling) in the set's default packing, which the debug tab switches to the code route or to the baseline textureSetSurface (they look the same). Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). Behind the library, the Anti-tiling row (p305): three flat 48 × 48 m grass01 blocks with the terrain material's anti-tiling NONE, DUAL_SCALE and HEX, the macro variation (macroNoise) on, which the debug tab switches and tunes. Left of the library, the Splatting row (p305): six 24 × 24 m generated blocks blending several sets by weights painted in code, the vertex colour (RGBA, 5 layers) and a splat map (5 layers) each LINEAR beside HEIGHT, RGB_AO with the vertex AO (4 layers), and 9 layers with two splat maps (code route materials, storage AUTO: the splat blocks bind one texture too many for SEPARATE, so each takes a set array the scene lists), which the debug tab tunes. In front of the library, the Rules row (p305): two 64 × 64 m blocks on one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces, macroNoise breaking the borders), the rules alone beside a splat map's sandy path and mud under the same rules (its six sets a set array the scene lists), which the debug tab tunes. In front of the Cliffs row, the Colour map row (p305): the Rules row's 8-layer material on four 64 × 64 m blocks of its terrain, then with a DETAIL colour map (baked at the load from the source on the block's own mesh), with the far COLOR_MAP surface and with the far AVERAGE_COLOR one, which the debug tab tunes and bakes again. In front of that, the Structures row (p305): structure materials (createStructureMaterial: triplanar, dual-scale anti-tiling, a 12 m macro) on pieces made in code, a wall of two segments in world space and a bunker's passage piece in object space worn by their vertex colour (RGBA: clean and stained concrete, grime, damage), and two pillars turning and rising, concrete02 in object space beside world space, which the debug tab pauses. Right of the library, the Procedural row (p304): the toolkit's ten surface generators on a block each (five rows of two), baked at the load (1024² LITE), which the debug tab switches between the bake, the generator live in the material and an imported set of its category, with each generator's params, its export and a GPU measurement. Right of that, the Live block (p305): a 48 × 48 m generated terrain, grass, rocks by slope and snow on the tops by rules, sand ripples in the hollows from the gallery's procedural set terrainGalleryLiveDunes (sandRipples, baked at the load) run live in the terrain material or sampled baked (the imported sets in a set array, the procedural set beside it), which the debug tab switches, tunes and measures. Behind the Anti-tiling row, past the ground, the Blocks patch (p306): 3 × 3 terrain blocks of 32 m (*.terrainBlock.json) of the toolkit's rulesTerrain, one world-continuous noise with HEIGHT_FN normals, the rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces) laid into the vertex colours on the CPU with the horizon AO in their A, which the debug tab switches to the same rules in the shader (RULES) on the same blocks. The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
+      "name": "Terrain gallery (p303, p304, p305, p306, p307)",
+      "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the toolkit's terrain material (p305, its JSON route; one layer, world tiling) in the set's default packing, which the debug tab switches to the code route or to the baseline textureSetSurface (they look the same). Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). Behind the library, the Anti-tiling row (p305): three flat 48 × 48 m grass01 blocks with the terrain material's anti-tiling NONE, DUAL_SCALE and HEX, the macro variation (macroNoise) on, which the debug tab switches and tunes. Left of the library, the Splatting row (p305): six 24 × 24 m generated blocks blending several sets by weights painted in code, the vertex colour (RGBA, 5 layers) and a splat map (5 layers) each LINEAR beside HEIGHT, RGB_AO with the vertex AO (4 layers), and 9 layers with two splat maps (code route materials, storage AUTO: the splat blocks bind one texture too many for SEPARATE, so each takes a set array the scene lists), which the debug tab tunes. In front of the library, the Rules row (p305): two 64 × 64 m blocks on one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces, macroNoise breaking the borders), the rules alone beside a splat map's sandy path and mud under the same rules (its six sets a set array the scene lists), which the debug tab tunes. In front of the Cliffs row, the Colour map row (p305): the Rules row's 8-layer material on four 64 × 64 m blocks of its terrain, then with a DETAIL colour map (baked at the load from the source on the block's own mesh), with the far COLOR_MAP surface and with the far AVERAGE_COLOR one, which the debug tab tunes and bakes again. In front of that, the Structures row (p305): structure materials (createStructureMaterial: triplanar, dual-scale anti-tiling, a 12 m macro) on pieces made in code, a wall of two segments in world space and a bunker's passage piece in object space worn by their vertex colour (RGBA: clean and stained concrete, grime, damage), and two pillars turning and rising, concrete02 in object space beside world space, which the debug tab pauses. Left of the Splatting row, the Wet/dry row (p307): 3 × 3 library blocks, a set of each category (sand02, mud02, rocks01, cliffs01, snow01, ice01, grass01, concrete02) and a beach (sand02 with rocks01 on the ramp by slope), each the terrain material with wet over the surface conditions' wetness, which the scene holds (MANUAL, 0.6) and the debug tab sets, with puddles, rain ripples, streaks on a concrete wall and a cliff boulder, a shoreline on the beach, and snow (snow01) by the snow cover, slush above 0 °C, which the debug tab sets too, with the row's quality (FULL, SIMPLE) and the WETNESS and TAPS views. Right of the library, the Procedural row (p304): the toolkit's ten surface generators on a block each (five rows of two), baked at the load (1024² LITE), which the debug tab switches between the bake, the generator live in the material and an imported set of its category, with each generator's params, its export and a GPU measurement. Right of that, the Live block (p305): a 48 × 48 m generated terrain, grass, rocks by slope and snow on the tops by rules, sand ripples in the hollows from the gallery's procedural set terrainGalleryLiveDunes (sandRipples, baked at the load) run live in the terrain material or sampled baked (the imported sets in a set array, the procedural set beside it), which the debug tab switches, tunes and measures. Behind the Anti-tiling row, past the ground, the Blocks patch (p306): 3 × 3 terrain blocks of 32 m (*.terrainBlock.json) of the toolkit's rulesTerrain, one world-continuous noise with HEIGHT_FN normals, the rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces) laid into the vertex colours on the CPU with the horizon AO in their A, which the debug tab switches to the same rules in the shader (RULES) on the same blocks. The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
       "cameras": [
         {
           "camProps": {
@@ -20901,6 +20917,30 @@
           "__vramBytes": {
             "in": 1398100,
             "out": 349552
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "rippleAtlas",
+          "fileName": "./source/rippleAtlas.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "debugData": {
+            "name": "Rain ripple atlas (shared, tileable)",
+            "description": "4 × 4 rain drops for a wet surface's rings: RG the direction away from the texel's drop (× 0.5 + 0.5), B 1 at the drop falling to 0 at the ring's largest radius, A the cell's time offset. Decoded by the toolkit's decodeRippleAtlas(). Linear data, UASTC without RDO. The toolkit's bakeRippleAtlas() with its defaults (256², 4 cells, seed 0), exported on WebGPU from the noiseLibrary scene's tab (exportBakedTexture, p304 D4-D5): the same texture without a bake at load."
+          },
+          "__fileSize": 42233,
+          "__sourceUrl": "/toolkit/textures/rippleAtlas/source/rippleAtlas.png",
+          "__url": "/aek-assets/toolkit/textures/rippleAtlas/source/rippleAtlas.5c747ea3.ktx2",
+          "__bytes": {
+            "in": 42233,
+            "out": 34899
+          },
+          "__vramBytes": {
+            "in": 349524,
+            "out": 87408
           },
           "__codec": "uastc"
         },
@@ -21875,7 +21915,9 @@
             "heightContrast": 1,
             "porosity": 0.85,
             "wetDarkening": 0.55,
-            "wetRoughness": 0.4
+            "wetRoughness": 0.4,
+            "puddleResponse": 0.3,
+            "dryingSpeed": 1.6
           },
           "averageColor": "#ab966b"
         },
@@ -21904,9 +21946,11 @@
             "roughnessScale": 1,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0.9,
+            "wetDarkening": 0.55,
+            "wetRoughness": 0.45,
+            "puddleResponse": 0.3,
+            "dryingSpeed": 1.6
           },
           "averageColor": "#cab792"
         },
@@ -21935,9 +21979,11 @@
             "roughnessScale": 1,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0.7,
+            "wetDarkening": 0.6,
+            "wetRoughness": 0.15,
+            "puddleResponse": 1,
+            "dryingSpeed": 0.4
           },
           "averageColor": "#484034"
         },
@@ -21966,9 +22012,11 @@
             "roughnessScale": 1,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0.7,
+            "wetDarkening": 0.6,
+            "wetRoughness": 0.15,
+            "puddleResponse": 1,
+            "dryingSpeed": 0.4
           },
           "averageColor": "#7e6448"
         },
@@ -21997,9 +22045,11 @@
             "roughnessScale": 1,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0.4,
+            "wetDarkening": 0.35,
+            "wetRoughness": 0.2,
+            "puddleResponse": 0.6,
+            "dryingSpeed": 1
           },
           "averageColor": "#ad926e"
         },
@@ -22028,9 +22078,11 @@
             "roughnessScale": 1,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0.4,
+            "wetDarkening": 0.35,
+            "wetRoughness": 0.2,
+            "puddleResponse": 0.6,
+            "dryingSpeed": 1
           },
           "averageColor": "#574d3d"
         },
@@ -22067,9 +22119,11 @@
             "roughnessScale": 1,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0.2,
+            "wetDarkening": 0.25,
+            "wetRoughness": 0.15,
+            "puddleResponse": 0,
+            "dryingSpeed": 1.2
           },
           "averageColor": "#737063"
         },
@@ -22098,9 +22152,11 @@
             "roughnessScale": 1,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0.2,
+            "wetDarkening": 0.25,
+            "wetRoughness": 0.15,
+            "puddleResponse": 0,
+            "dryingSpeed": 1.2
           },
           "averageColor": "#4c5258"
         },
@@ -22130,8 +22186,10 @@
             "aoStrength": 1,
             "heightContrast": 1,
             "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "wetDarkening": 0.25,
+            "wetRoughness": 0.3,
+            "puddleResponse": 0.5,
+            "dryingSpeed": 0.6
           },
           "averageColor": "#dbebf8"
         },
@@ -22161,8 +22219,10 @@
             "aoStrength": 1,
             "heightContrast": 1,
             "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "wetDarkening": 0.25,
+            "wetRoughness": 0.3,
+            "puddleResponse": 0.5,
+            "dryingSpeed": 0.6
           },
           "averageColor": "#dae9f7"
         },
@@ -22191,9 +22251,11 @@
             "roughnessScale": 1,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0,
+            "wetDarkening": 0.1,
+            "wetRoughness": 0.02,
+            "puddleResponse": 1,
+            "dryingSpeed": 1
           },
           "averageColor": "#667d73"
         },
@@ -22222,9 +22284,11 @@
             "roughnessScale": 1,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0,
+            "wetDarkening": 0.1,
+            "wetRoughness": 0.02,
+            "puddleResponse": 1,
+            "dryingSpeed": 1
           },
           "averageColor": "#4d5b5c"
         },
@@ -22261,9 +22325,11 @@
             "roughnessScale": 2.5,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0.6,
+            "wetDarkening": 0.35,
+            "wetRoughness": 0.35,
+            "puddleResponse": 0.2,
+            "dryingSpeed": 0.8
           },
           "averageColor": "#5c6730"
         },
@@ -22292,9 +22358,11 @@
             "roughnessScale": 1,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0.6,
+            "wetDarkening": 0.35,
+            "wetRoughness": 0.35,
+            "puddleResponse": 0.2,
+            "dryingSpeed": 0.8
           },
           "averageColor": "#9c975f"
         },
@@ -22324,8 +22392,10 @@
             "aoStrength": 1,
             "heightContrast": 1,
             "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "wetDarkening": 0.45,
+            "wetRoughness": 0.15,
+            "puddleResponse": 0.7,
+            "dryingSpeed": 0.9
           },
           "averageColor": "#b7b7b7"
         },
@@ -22355,8 +22425,10 @@
             "aoStrength": 1,
             "heightContrast": 1,
             "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "wetDarkening": 0.45,
+            "wetRoughness": 0.15,
+            "puddleResponse": 0.7,
+            "dryingSpeed": 0.9
           },
           "averageColor": "#635e58"
         },
@@ -22395,9 +22467,11 @@
             "roughnessScale": 1,
             "aoStrength": 1,
             "heightContrast": 1,
-            "porosity": 0.5,
-            "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "porosity": 0.9,
+            "wetDarkening": 0.55,
+            "wetRoughness": 0.45,
+            "puddleResponse": 0.3,
+            "dryingSpeed": 1.6
           }
         }
       ],
@@ -23298,12 +23372,19 @@
           }
         }
       ],
+      "surfaceConditions": {
+        "wetness": 0.6,
+        "puddleLevel": 0.6,
+        "waterLevel": 0.15,
+        "mode": "MANUAL"
+      },
       "id": "terrainGallery",
       "sceneFile": "./scenes/terrainGallery/terrainGallery.ts",
       "__features": [
         "skybox",
         "texturesets",
-        "terrain"
+        "terrain",
+        "surfaceconditions"
       ]
     },
     "testDebugScene": {
@@ -24487,7 +24568,9 @@
             "heightContrast": 1,
             "porosity": 0.5,
             "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "wetRoughness": 0.3,
+            "puddleResponse": 0.5,
+            "dryingSpeed": 1
           }
         },
         {
@@ -24517,7 +24600,9 @@
             "heightContrast": 1,
             "porosity": 0.5,
             "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "wetRoughness": 0.3,
+            "puddleResponse": 0.5,
+            "dryingSpeed": 1
           }
         },
         {
@@ -24547,7 +24632,9 @@
             "heightContrast": 1,
             "porosity": 0.5,
             "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "wetRoughness": 0.3,
+            "puddleResponse": 0.5,
+            "dryingSpeed": 1
           }
         },
         {
@@ -24577,7 +24664,9 @@
             "heightContrast": 1,
             "porosity": 0.5,
             "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "wetRoughness": 0.3,
+            "puddleResponse": 0.5,
+            "dryingSpeed": 1
           }
         },
         {
@@ -24607,7 +24696,9 @@
             "heightContrast": 1,
             "porosity": 0.5,
             "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "wetRoughness": 0.3,
+            "puddleResponse": 0.5,
+            "dryingSpeed": 1
           },
           "averageColor": "#959497"
         },
@@ -24638,7 +24729,9 @@
             "heightContrast": 1,
             "porosity": 0.5,
             "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "wetRoughness": 0.3,
+            "puddleResponse": 0.5,
+            "dryingSpeed": 1
           },
           "averageColor": "#a86d58"
         },
@@ -24669,7 +24762,9 @@
             "heightContrast": 1,
             "porosity": 0.5,
             "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "wetRoughness": 0.3,
+            "puddleResponse": 0.5,
+            "dryingSpeed": 1
           },
           "averageColor": "#769c5f"
         },
@@ -24700,7 +24795,9 @@
             "heightContrast": 1,
             "porosity": 0.5,
             "wetDarkening": 0.5,
-            "wetRoughness": 0.3
+            "wetRoughness": 0.3,
+            "puddleResponse": 0.5,
+            "dryingSpeed": 1
           },
           "averageColor": "#b8a98d"
         }
@@ -38266,9 +38363,11 @@
         "roughnessScale": 1,
         "aoStrength": 1,
         "heightContrast": 1,
-        "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "porosity": 0.7,
+        "wetDarkening": 0.6,
+        "wetRoughness": 0.15,
+        "puddleResponse": 1,
+        "dryingSpeed": 0.4
       },
       "__sourcePath": "src/app/scenes/proceduralSurfaces/p304ProcCracks.textureSet.json"
     },
@@ -38308,9 +38407,11 @@
         "roughnessScale": 1,
         "aoStrength": 1,
         "heightContrast": 1,
-        "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "porosity": 0.9,
+        "wetDarkening": 0.55,
+        "wetRoughness": 0.45,
+        "puddleResponse": 0.3,
+        "dryingSpeed": 1.6
       },
       "__sourcePath": "src/app/scenes/proceduralSurfaces/p304ProcRipples.textureSet.json"
     },
@@ -38349,9 +38450,11 @@
         "roughnessScale": 1,
         "aoStrength": 1,
         "heightContrast": 1,
-        "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "porosity": 0.9,
+        "wetDarkening": 0.55,
+        "wetRoughness": 0.45,
+        "puddleResponse": 0.3,
+        "dryingSpeed": 1.6
       },
       "__sourcePath": "src/app/scenes/terrainGallery/terrainGalleryLiveDunes.textureSet.json"
     },
@@ -38390,7 +38493,9 @@
         "heightContrast": 1,
         "porosity": 0.5,
         "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "wetRoughness": 0.3,
+        "puddleResponse": 0.5,
+        "dryingSpeed": 1
       },
       "__sourcePath": "src/app/scenes/textureSets/p303TestSet.textureSet.json"
     },
@@ -38427,9 +38532,11 @@
         "roughnessScale": 1,
         "aoStrength": 1,
         "heightContrast": 1,
-        "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "porosity": 0.2,
+        "wetDarkening": 0.25,
+        "wetRoughness": 0.15,
+        "puddleResponse": 0,
+        "dryingSpeed": 1.2
       },
       "averageColor": "#737063",
       "__sourcePath": "src/toolkit/textures/cliffs01/cliffs01.textureSet.json"
@@ -38459,9 +38566,11 @@
         "roughnessScale": 1,
         "aoStrength": 1,
         "heightContrast": 1,
-        "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "porosity": 0.2,
+        "wetDarkening": 0.25,
+        "wetRoughness": 0.15,
+        "puddleResponse": 0,
+        "dryingSpeed": 1.2
       },
       "averageColor": "#4c5258",
       "__sourcePath": "src/toolkit/textures/cliffs02/cliffs02.textureSet.json"
@@ -38492,8 +38601,10 @@
         "aoStrength": 1,
         "heightContrast": 1,
         "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "wetDarkening": 0.45,
+        "wetRoughness": 0.15,
+        "puddleResponse": 0.7,
+        "dryingSpeed": 0.9
       },
       "averageColor": "#b7b7b7",
       "__sourcePath": "src/toolkit/textures/concrete01/concrete01.textureSet.json"
@@ -38524,8 +38635,10 @@
         "aoStrength": 1,
         "heightContrast": 1,
         "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "wetDarkening": 0.45,
+        "wetRoughness": 0.15,
+        "puddleResponse": 0.7,
+        "dryingSpeed": 0.9
       },
       "averageColor": "#635e58",
       "__sourcePath": "src/toolkit/textures/concrete02/concrete02.textureSet.json"
@@ -38563,9 +38676,11 @@
         "roughnessScale": 2.5,
         "aoStrength": 1,
         "heightContrast": 1,
-        "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "porosity": 0.6,
+        "wetDarkening": 0.35,
+        "wetRoughness": 0.35,
+        "puddleResponse": 0.2,
+        "dryingSpeed": 0.8
       },
       "averageColor": "#5c6730",
       "__sourcePath": "src/toolkit/textures/grass01/grass01.textureSet.json"
@@ -38595,9 +38710,11 @@
         "roughnessScale": 1,
         "aoStrength": 1,
         "heightContrast": 1,
-        "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "porosity": 0.6,
+        "wetDarkening": 0.35,
+        "wetRoughness": 0.35,
+        "puddleResponse": 0.2,
+        "dryingSpeed": 0.8
       },
       "averageColor": "#9c975f",
       "__sourcePath": "src/toolkit/textures/grass02/grass02.textureSet.json"
@@ -38627,9 +38744,11 @@
         "roughnessScale": 1,
         "aoStrength": 1,
         "heightContrast": 1,
-        "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "porosity": 0,
+        "wetDarkening": 0.1,
+        "wetRoughness": 0.02,
+        "puddleResponse": 1,
+        "dryingSpeed": 1
       },
       "averageColor": "#667d73",
       "__sourcePath": "src/toolkit/textures/ice01/ice01.textureSet.json"
@@ -38659,9 +38778,11 @@
         "roughnessScale": 1,
         "aoStrength": 1,
         "heightContrast": 1,
-        "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "porosity": 0,
+        "wetDarkening": 0.1,
+        "wetRoughness": 0.02,
+        "puddleResponse": 1,
+        "dryingSpeed": 1
       },
       "averageColor": "#4d5b5c",
       "__sourcePath": "src/toolkit/textures/ice02/ice02.textureSet.json"
@@ -38691,9 +38812,11 @@
         "roughnessScale": 1,
         "aoStrength": 1,
         "heightContrast": 1,
-        "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "porosity": 0.7,
+        "wetDarkening": 0.6,
+        "wetRoughness": 0.15,
+        "puddleResponse": 1,
+        "dryingSpeed": 0.4
       },
       "averageColor": "#484034",
       "__sourcePath": "src/toolkit/textures/mud01/mud01.textureSet.json"
@@ -38723,9 +38846,11 @@
         "roughnessScale": 1,
         "aoStrength": 1,
         "heightContrast": 1,
-        "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "porosity": 0.7,
+        "wetDarkening": 0.6,
+        "wetRoughness": 0.15,
+        "puddleResponse": 1,
+        "dryingSpeed": 0.4
       },
       "averageColor": "#7e6448",
       "__sourcePath": "src/toolkit/textures/mud02/mud02.textureSet.json"
@@ -38755,9 +38880,11 @@
         "roughnessScale": 1,
         "aoStrength": 1,
         "heightContrast": 1,
-        "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "porosity": 0.4,
+        "wetDarkening": 0.35,
+        "wetRoughness": 0.2,
+        "puddleResponse": 0.6,
+        "dryingSpeed": 1
       },
       "averageColor": "#ad926e",
       "__sourcePath": "src/toolkit/textures/rocks01/rocks01.textureSet.json"
@@ -38787,9 +38914,11 @@
         "roughnessScale": 1,
         "aoStrength": 1,
         "heightContrast": 1,
-        "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "porosity": 0.4,
+        "wetDarkening": 0.35,
+        "wetRoughness": 0.2,
+        "puddleResponse": 0.6,
+        "dryingSpeed": 1
       },
       "averageColor": "#574d3d",
       "__sourcePath": "src/toolkit/textures/rocks02/rocks02.textureSet.json"
@@ -38829,7 +38958,9 @@
         "heightContrast": 1,
         "porosity": 0.85,
         "wetDarkening": 0.55,
-        "wetRoughness": 0.4
+        "wetRoughness": 0.4,
+        "puddleResponse": 0.3,
+        "dryingSpeed": 1.6
       },
       "averageColor": "#ab966b",
       "__sourcePath": "src/toolkit/textures/sand01/sand01.textureSet.json"
@@ -38859,9 +38990,11 @@
         "roughnessScale": 1,
         "aoStrength": 1,
         "heightContrast": 1,
-        "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "porosity": 0.9,
+        "wetDarkening": 0.55,
+        "wetRoughness": 0.45,
+        "puddleResponse": 0.3,
+        "dryingSpeed": 1.6
       },
       "averageColor": "#cab792",
       "__sourcePath": "src/toolkit/textures/sand02/sand02.textureSet.json"
@@ -38892,8 +39025,10 @@
         "aoStrength": 1,
         "heightContrast": 1,
         "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "wetDarkening": 0.25,
+        "wetRoughness": 0.3,
+        "puddleResponse": 0.5,
+        "dryingSpeed": 0.6
       },
       "averageColor": "#dbebf8",
       "__sourcePath": "src/toolkit/textures/snow01/snow01.textureSet.json"
@@ -38924,8 +39059,10 @@
         "aoStrength": 1,
         "heightContrast": 1,
         "porosity": 0.5,
-        "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "wetDarkening": 0.25,
+        "wetRoughness": 0.3,
+        "puddleResponse": 0.5,
+        "dryingSpeed": 0.6
       },
       "averageColor": "#dae9f7",
       "__sourcePath": "src/toolkit/textures/snow02/snow02.textureSet.json"
@@ -38957,7 +39094,9 @@
         "heightContrast": 1,
         "porosity": 0.5,
         "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "wetRoughness": 0.3,
+        "puddleResponse": 0.5,
+        "dryingSpeed": 1
       },
       "__sourcePath": "src/app/scenes/textureSets/arraySets/p303BrickSet.textureSet.json"
     },
@@ -38988,7 +39127,9 @@
         "heightContrast": 1,
         "porosity": 0.5,
         "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "wetRoughness": 0.3,
+        "puddleResponse": 0.5,
+        "dryingSpeed": 1
       },
       "averageColor": "#a86d58",
       "__sourcePath": "src/app/scenes/textureSets/arraySets/p303BrickSetKtx.textureSet.json"
@@ -39020,7 +39161,9 @@
         "heightContrast": 1,
         "porosity": 0.5,
         "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "wetRoughness": 0.3,
+        "puddleResponse": 0.5,
+        "dryingSpeed": 1
       },
       "__sourcePath": "src/app/scenes/textureSets/arraySets/p303DotSet.textureSet.json"
     },
@@ -39051,7 +39194,9 @@
         "heightContrast": 1,
         "porosity": 0.5,
         "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "wetRoughness": 0.3,
+        "puddleResponse": 0.5,
+        "dryingSpeed": 1
       },
       "averageColor": "#b8a98d",
       "__sourcePath": "src/app/scenes/textureSets/arraySets/p303DotSetKtx.textureSet.json"
@@ -39083,7 +39228,9 @@
         "heightContrast": 1,
         "porosity": 0.5,
         "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "wetRoughness": 0.3,
+        "puddleResponse": 0.5,
+        "dryingSpeed": 1
       },
       "__sourcePath": "src/app/scenes/textureSets/arraySets/p303RidgeSet.textureSet.json"
     },
@@ -39114,7 +39261,9 @@
         "heightContrast": 1,
         "porosity": 0.5,
         "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "wetRoughness": 0.3,
+        "puddleResponse": 0.5,
+        "dryingSpeed": 1
       },
       "averageColor": "#769c5f",
       "__sourcePath": "src/app/scenes/textureSets/arraySets/p303RidgeSetKtx.textureSet.json"
@@ -39146,7 +39295,9 @@
         "heightContrast": 1,
         "porosity": 0.5,
         "wetDarkening": 0.5,
-        "wetRoughness": 0.3
+        "wetRoughness": 0.3,
+        "puddleResponse": 0.5,
+        "dryingSpeed": 1
       },
       "averageColor": "#959497",
       "__sourcePath": "src/app/scenes/textureSets/arraySets/p303TestSetKtx.textureSet.json"

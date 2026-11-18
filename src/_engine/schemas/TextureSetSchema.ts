@@ -91,9 +91,11 @@ const MinimalPackingSchema = z
   .strict()
   .describe('One texture: albedo × AO + height; the normal from height derivatives, or flat.');
 
-/** The default of each `surface` field: what the gatherer writes for one a set doesn't give. The
- * wet response's (`porosity`, `wetDarkening`, `wetRoughness`) are provisional (p307 sets them per
- * category). */
+/**
+ * The default of each `surface` field: what the gatherer writes for one a set doesn't give. The
+ * wet response's (`porosity`, `wetDarkening`, `wetRoughness`, `puddleResponse`, `dryingSpeed`)
+ * are its category's first ({@link TEXTURE_SET_WET_RESPONSES}); these are `OTHER`'s.
+ */
 export const TEXTURE_SET_SURFACE_DEFAULTS = {
   tint: '#ffffff',
   normalStrength: 1,
@@ -103,7 +105,80 @@ export const TEXTURE_SET_SURFACE_DEFAULTS = {
   porosity: 0.5,
   wetDarkening: 0.5,
   wetRoughness: 0.3,
+  puddleResponse: 0.5,
+  dryingSpeed: 1,
 } as const satisfies Record<string, ColorJSON | number>;
+
+/** A texture set's wet response: the `surface` fields a category gives its defaults. */
+export type TextureSetWetResponse = Pick<
+  { -readonly [K in keyof typeof TEXTURE_SET_SURFACE_DEFAULTS]: number },
+  'porosity' | 'wetDarkening' | 'wetRoughness' | 'puddleResponse' | 'dryingSpeed'
+>;
+
+/**
+ * Each category's wet response (p307 S3): what the gatherer writes for a field the set's
+ * `surface` doesn't give. Sand darkens strongly and dries fast, mud glosses quickly and dries
+ * slowly, ice films at once; `OTHER` is {@link TEXTURE_SET_SURFACE_DEFAULTS}'.
+ */
+export const TEXTURE_SET_WET_RESPONSES = {
+  SAND: {
+    porosity: 0.9,
+    wetDarkening: 0.55,
+    wetRoughness: 0.45,
+    puddleResponse: 0.3,
+    dryingSpeed: 1.6,
+  },
+  MUD: {
+    porosity: 0.7,
+    wetDarkening: 0.6,
+    wetRoughness: 0.15,
+    puddleResponse: 1,
+    dryingSpeed: 0.4,
+  },
+  ROCKS: {
+    porosity: 0.4,
+    wetDarkening: 0.35,
+    wetRoughness: 0.2,
+    puddleResponse: 0.6,
+    dryingSpeed: 1,
+  },
+  CLIFF: {
+    porosity: 0.2,
+    wetDarkening: 0.25,
+    wetRoughness: 0.15,
+    puddleResponse: 0,
+    dryingSpeed: 1.2,
+  },
+  SNOW: {
+    porosity: 0.5,
+    wetDarkening: 0.25,
+    wetRoughness: 0.3,
+    puddleResponse: 0.5,
+    dryingSpeed: 0.6,
+  },
+  ICE: { porosity: 0, wetDarkening: 0.1, wetRoughness: 0.02, puddleResponse: 1, dryingSpeed: 1 },
+  GRASS: {
+    porosity: 0.6,
+    wetDarkening: 0.35,
+    wetRoughness: 0.35,
+    puddleResponse: 0.2,
+    dryingSpeed: 0.8,
+  },
+  CONCRETE: {
+    porosity: 0.5,
+    wetDarkening: 0.45,
+    wetRoughness: 0.15,
+    puddleResponse: 0.7,
+    dryingSpeed: 0.9,
+  },
+  OTHER: {
+    porosity: TEXTURE_SET_SURFACE_DEFAULTS.porosity,
+    wetDarkening: TEXTURE_SET_SURFACE_DEFAULTS.wetDarkening,
+    wetRoughness: TEXTURE_SET_SURFACE_DEFAULTS.wetRoughness,
+    puddleResponse: TEXTURE_SET_SURFACE_DEFAULTS.puddleResponse,
+    dryingSpeed: TEXTURE_SET_SURFACE_DEFAULTS.dryingSpeed,
+  },
+} as const satisfies Record<TextureSetCategory, TextureSetWetResponse>;
 
 /** A procedural set's defaults (p304 D3): what the gatherer writes for a `procedural` field the
  * JSON doesn't give. */
@@ -198,12 +273,36 @@ const TextureSetSurfaceSchema = z
     heightContrast: nonNegative(
       'Sharpens (> 1) or softens (< 1) the height for height blending. Default 1.'
     ),
-    /** How much water the surface soaks up (0 none, 1 all). Default 0.5. */
-    porosity: unit('How much water the surface soaks up (0 none, 1 all). Default 0.5.'),
-    /** How much wetness darkens the albedo (0 none, 1 black). Default 0.5. */
-    wetDarkening: unit('How much wetness darkens the albedo (0 none, 1 black). Default 0.5.'),
-    /** The roughness of the fully wet surface. Default 0.3. */
-    wetRoughness: unit('The roughness of the fully wet surface. Default 0.3.'),
+    /** How much water the surface soaks up (0 none: a film at once, 1 all). Default: its category's. */
+    porosity: unit(
+      "How much water the surface soaks up (0 none: a film at once, 1 all). Default: its category's."
+    ),
+    /** How much the filled pores darken the albedo (0 none, 1 black). Default: its category's. */
+    wetDarkening: unit(
+      "How much the filled pores darken the albedo (0 none, 1 black). Default: its category's."
+    ),
+    /** The roughness with the pores full, before a water film forms. Default: its category's. */
+    wetRoughness: unit(
+      "The roughness with the pores full, before a water film forms. Default: its category's."
+    ),
+    /**
+     * How readily water stands on it (0 none: it sheds water, 1 a film and puddles in every low
+     * point): how far a film forms over its full pores, and its puddles. Default: its category's.
+     */
+    puddleResponse: unit(
+      "How readily water stands on it (0 none: it sheds water, 1 a film and puddles in every low point): its film over full pores, and its puddles. Default: its category's."
+    ),
+    /**
+     * How fast it dries against the overall wetness, over 0 (1 alike, 2 sand-fast, 0.4 mud-slow):
+     * the wetness it shows is the overall one to this power. Default: its category's.
+     */
+    dryingSpeed: z
+      .number()
+      .positive()
+      .optional()
+      .describe(
+        "How fast it dries against the overall wetness, over 0 (1 alike, 2 sand-fast, 0.4 mud-slow): the overall wetness to this power. Default: its category's."
+      ),
   })
   .strict()
   .describe(

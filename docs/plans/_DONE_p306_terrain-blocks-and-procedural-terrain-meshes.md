@@ -1,6 +1,6 @@
 Status: implemented (Phases 1-6)
 Category: Terrain, Assets, Physics, Toolkit
-Blocks: p307_wet-and-dry-surface-states.md, p308_terrain-scatter.md, p309_terrain-decals.md, p310_terrain-preview-scenes.md
+Blocks: \_DONE_p307_wet-and-dry-surface-states.md, p308_terrain-scatter.md, p309_terrain-decals.md, p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
 Related: \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (merging a block's static dressing, modular kit terrain, HLOD far blocks: its §10)
 

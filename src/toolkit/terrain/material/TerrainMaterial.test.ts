@@ -49,6 +49,8 @@ const makeBundle = (packing: Packing = 'LITE', { averageColor = false } = {}) =>
     porosity: uniform(0.5),
     wetDarkening: uniform(0.5),
     wetRoughness: uniform(0.3),
+    puddleResponse: uniform(0.5),
+    dryingSpeed: uniform(1),
   }) as unknown as TextureSetInput;
 
 /** A `{ textureSetArray }` bundle of the packing's slot arrays, its params and layer count */
@@ -56,7 +58,7 @@ const makeArrayBundle = (count: number, packing: Packing = 'LITE') =>
   ({
     ...Object.fromEntries(PACKING_SLOTS[packing].map((slot) => [slot, texture(new Texture())])),
     layerParams: uniformArray(
-      Array.from({ length: count * 4 }, () => new Vector4(3, 3, 0.05, 1)),
+      Array.from({ length: count * 5 }, () => new Vector4(3, 3, 0.05, 1)),
       'vec4'
     ),
     layerCount: int(count),
@@ -75,6 +77,15 @@ const stubs = vi.hoisted(() => ({
   // A live layer's bundle's set, and the loaded generators (p305 Phase 8)
   setsOfInputs: new Map<object, unknown>(),
   generators: new Map<string, unknown>(),
+  // The surface conditions' uniforms (p307), null without the feature
+  conditions: null as unknown,
+  // The rain occlusion map's node (p307 T12), null without its feature
+  rainOcclusion: null as unknown,
+}));
+
+vi.mock('aekasha/surface', () => ({
+  getSurfaceConditionNodes: () => stubs.conditions,
+  getRainOcclusionNode: () => stubs.rainOcclusion,
 }));
 
 vi.mock('aekasha/texturesets', async (importOriginal) => ({
@@ -376,7 +387,7 @@ describe('setupTerrainMaterial', () => {
     expect(() => build({ layers: [{}] }, { layer0: makeBundle(), layer1: makeBundle() })).toThrow(
       /Input "layer1" has no layer/
     );
-    expect(() => build({ layers: [{}], wet: {} })).toThrow(/has no field "wet"/);
+    expect(() => build({ layers: [{}], weather: {} })).toThrow(/has no field "weather"/);
     expect(() => build(undefined)).toThrow(/Missing static define "terrain"/);
   });
 });
@@ -1065,6 +1076,11 @@ describe('getTerrainMaterialProps', () => {
     expect(getTerrainMaterialProps(config(5, { packing: 'MINIMAL' })).inputs).toHaveProperty(
       'layer4'
     );
+    // p307's snow set counts its packing's slots: 4 LITE layers, a splat map and snow01's two
+    stubs.sets = { grass01: { defaultPacking: 'LITE' }, snow01: { defaultPacking: 'LITE' } };
+    expect(getTerrainMaterialProps(config(4, { wet: { snow: {} } })).inputs).toHaveProperty(
+      'layers'
+    );
   });
 
   it('chooses ARRAY for AUTO where the layers sample in slots, its own or a tier', () => {
@@ -1187,6 +1203,55 @@ describe('getTerrainMaterialProps', () => {
       getTerrainMaterialProps({ id: 'ridge', layers, blend: rules(noisy), noiseTexture: 'x' })
         .staticDefines
     ).toEqual({ terrain: { layers: [{}, {}], blend: rules(noisy) } });
+    // p307's puddle patches read it the same way, a tier's too
+    const patches = { puddles: { patches: { scale: 30 } } };
+    expect(inputsOf({ wet: patches })).toHaveProperty('macro', { texture: 'macroNoise' });
+    expect(inputsOf({ wet: patches, noiseTexture: 'ridge.noise' })).toHaveProperty('macro', {
+      texture: 'ridge.noise',
+    });
+    expect(inputsOf({ quality: { HIGH: { wet: patches } } })).toHaveProperty('macro', {
+      texture: 'macroNoise',
+    });
+    expect(inputsOf({ wet: { puddles: {} } })).not.toHaveProperty('macro');
+    // And the streaks, in either quality
+    expect(inputsOf({ wet: { quality: 'SIMPLE', streaks: {} } })).toHaveProperty('macro', {
+      texture: 'macroNoise',
+    });
+    // p307's ripples: the ripple atlas, rippleTexture else rippleAtlas, a tier's too
+    const blend = rules({ layer: 1, height: { min: 4 } });
+    expect(inputsOf({ blend, wet: { ripples: {} } })).toHaveProperty('ripples', {
+      texture: 'rippleAtlas',
+    });
+    expect(
+      inputsOf({ blend, wet: { ripples: {} }, rippleTexture: 'rippleAtlas.data' })
+    ).toHaveProperty('ripples', { texture: 'rippleAtlas.data' });
+    expect(inputsOf({ blend, quality: { ULTRA: { wet: { ripples: {} } } } })).toHaveProperty(
+      'ripples',
+      { texture: 'rippleAtlas' }
+    );
+    expect(inputsOf({ blend, wet: {} })).not.toHaveProperty('ripples');
+    expect(
+      getTerrainMaterialProps({
+        id: 'ridge',
+        layers,
+        blend,
+        wet: { ripples: {} },
+        rippleTexture: 'x',
+      }).staticDefines
+    ).toEqual({ terrain: { layers: [{}, {}], blend, wet: { ripples: {} } } });
+    // p307's snow: the snow set, snowSet else snow01, a tier's too; never in the define
+    expect(inputsOf({ blend, wet: { snow: {} } })).toHaveProperty('snow', { textureSet: 'snow01' });
+    expect(inputsOf({ blend, wet: { snow: {} }, snowSet: 'snow02' })).toHaveProperty('snow', {
+      textureSet: 'snow02',
+    });
+    expect(inputsOf({ blend, quality: { LOW: { wet: { snow: {} } } } })).toHaveProperty('snow', {
+      textureSet: 'snow01',
+    });
+    expect(inputsOf({ blend, wet: {} })).not.toHaveProperty('snow');
+    expect(
+      getTerrainMaterialProps({ id: 'ridge', layers, blend, wet: { snow: {} }, snowSet: 'x' })
+        .staticDefines
+    ).toEqual({ terrain: { layers: [{}, {}], blend, wet: { snow: {} } } });
   });
 });
 
@@ -1235,6 +1300,436 @@ describe('debug views', () => {
     );
     expect(arrayWeights.emissiveNode).toBeTruthy();
     expect(build({ layers: [{}] }).emissiveNode).toBeNull();
+  });
+});
+
+describe('setupTerrainMaterial: wet (p307)', () => {
+  /** The surface conditions' uniforms, as `getSurfaceConditionNodes()` makes them */
+  const makeConditions = () => ({
+    wetness: uniform(0.5),
+    rain: uniform(0),
+    puddleLevel: uniform(0),
+    waterLevel: uniform(-1e9),
+    snowCoverage: uniform(0),
+    temperature: uniform(10),
+    wind: uniform(new Vector2()),
+    time: uniform(0),
+  });
+  let conditions = makeConditions();
+
+  beforeEach(() => {
+    conditions = makeConditions();
+    stubs.conditions = conditions;
+  });
+
+  const reaches = (root: unknown, target: unknown) =>
+    collectNodesFrom([root]).includes(target as Node);
+  const WET_UNIFORMS = [
+    'terrain_wetCavityInfluence',
+    'terrain_wetHeightInfluence',
+    'terrain_wetShelter',
+  ];
+
+  it('builds dry without wet: no wet uniform, nothing reads the conditions', () => {
+    const material = build({ layers: [{}] });
+    expect(getUniformKeys(material)).toEqual(LAYER_UNIFORMS);
+    expect(reaches(material.colorNode, conditions.wetness)).toBe(false);
+  });
+
+  it("wets the albedo, the roughness and (FULL) the normal by the conditions' wetness", () => {
+    const material = build({ layers: [{}], wet: {} });
+    expect(getUniformKeys(material)).toEqual([...LAYER_UNIFORMS, ...WET_UNIFORMS].sort());
+    expect(getUniforms(material).terrain_wetShelter.value).toEqual(new Vector2(60, 120));
+    for (const socket of [material.colorNode, material.roughnessNode, material.normalNode]) {
+      expect(reaches(socket, conditions.wetness)).toBe(true);
+    }
+    // A tier's SIMPLE: the response and the exposure, no relief and no normal
+    const simple = build({ layers: [{}], wet: { quality: 'SIMPLE' } });
+    expect(getUniformKeys(simple)).toEqual([...LAYER_UNIFORMS, 'terrain_wetShelter'].sort());
+    expect(reaches(simple.colorNode, conditions.wetness)).toBe(true);
+    expect(reaches(simple.normalNode, conditions.wetness)).toBe(false);
+  });
+
+  it("reads each layer's response, blended, and FULL's cavities from the AO", () => {
+    const inputs = layerInputs(2, 'FULL');
+    const material = build(
+      { layers: layersOf(2), blend: { source: 'VERTEX_COLOR' }, wet: {} },
+      inputs
+    );
+    for (const key of ['layer0', 'layer1']) {
+      const bundle = inputs[key as 'layer0'] as unknown as Record<string, unknown>;
+      expect(reaches(material.colorNode, bundle.porosity), key).toBe(true);
+      expect(reaches(material.colorNode, bundle.wetDarkening), key).toBe(true);
+      expect(reaches(material.roughnessNode, bundle.wetRoughness), key).toBe(true);
+      expect(reaches(material.colorNode, bundle.dryingSpeed), key).toBe(true);
+      expect(reaches(material.roughnessNode, bundle.puddleResponse), key).toBe(true);
+    }
+    const aoInfluence = getUniforms(material).terrain_aoTextureInfluence;
+    expect(reaches(material.colorNode, aoInfluence)).toBe(true);
+    const simple = build(
+      { layers: layersOf(2), blend: { source: 'VERTEX_COLOR' }, wet: { quality: 'SIMPLE' } },
+      layerInputs(2, 'FULL')
+    );
+    const simpleAo = getUniforms(simple).terrain_aoTextureInfluence;
+    expect(reaches(simple.colorNode, simpleAo)).toBe(false);
+    // A set array's layers: their params
+    const array = build(
+      { layers: layersOf(2), blend: { source: 'VERTEX_COLOR' }, wet: {} },
+      { layers: makeArrayBundle(2) }
+    );
+    expect(reaches(array.colorNode, conditions.wetness)).toBe(true);
+  });
+
+  it('wets past a far mode too', () => {
+    const define = {
+      layers: layersOf(2),
+      blend: { source: 'VERTEX_COLOR' },
+      distance: { fade: [30, 90], far: 'AVERAGE_COLOR' },
+      wet: {},
+    };
+    const inputs = {
+      layer0: makeBundle('LITE', { averageColor: true }),
+      layer1: makeBundle('LITE', { averageColor: true }),
+    };
+    const material = build(define, inputs);
+    expect(reaches(material.colorNode, conditions.wetness)).toBe(true);
+    // (the branch's members: TerrainFar.test.ts) MINIMAL bumps after the branch: the film flattens its bump
+    const minimal = build(
+      { ...define, distance: { fade: [30, 90], far: 'AVERAGE_COLOR' } },
+      {
+        layer0: makeBundle('MINIMAL', { averageColor: true }),
+        layer1: makeBundle('MINIMAL', { averageColor: true }),
+      }
+    );
+    expect(reaches(minimal.normalNode, conditions.wetness)).toBe(true);
+  });
+
+  it('builds dry without the surface conditions feature, warned once a page load', () => {
+    stubs.conditions = null;
+    stubs.warnings.length = 0;
+    const material = build({ layers: [{}], wet: {} });
+    build({ layers: [{}], wet: {} });
+    expect(getUniformKeys(material)).toEqual(LAYER_UNIFORMS);
+    const warned = stubs.warnings.filter((message) => /builds dry/.test(message));
+    expect(warned).toHaveLength(1);
+    expect(warned[0]).toMatch(/surfaceConditions\(\)/);
+  });
+
+  it("keeps the rain off under cover with MAP (the rain occlusion map's node), in either quality", () => {
+    const occlusion = uniform(0.5);
+    stubs.rainOcclusion = occlusion;
+    try {
+      for (const quality of ['FULL', 'SIMPLE'] as const) {
+        const mapped = build({ layers: [{}], wet: { quality, rainOcclusion: 'MAP' } });
+        expect(reaches(mapped.colorNode, occlusion), quality).toBe(true);
+        // No uniform of its own: the map's are the feature's
+        const faced = build({ layers: [{}], wet: { quality } });
+        expect(getUniformKeys(mapped)).toEqual(getUniformKeys(faced));
+        expect(reaches(faced.colorNode, occlusion), quality).toBe(false);
+      }
+    } finally {
+      stubs.rainOcclusion = null;
+    }
+    // Without the feature: the facing alone, warned once a page load
+    stubs.warnings.length = 0;
+    const material = build({ layers: [{}], wet: { rainOcclusion: 'MAP' } });
+    build({ layers: [{}], wet: { rainOcclusion: 'MAP' } });
+    expect(reaches(material.colorNode, conditions.wetness)).toBe(true);
+    const warned = stubs.warnings.filter((message) => /rain occlusion/.test(message));
+    expect(warned).toHaveLength(1);
+    expect(warned[0]).toMatch(/rainOcclusion\(\)/);
+  });
+
+  it('stands puddles on the relief by the puddle level, their patches one fetch of the macro input', () => {
+    const material = build({ layers: [{}], wet: { puddles: { maxSlope: 10 } } });
+    const PUDDLE_UNIFORMS = ['terrain_wetPuddleEdge', 'terrain_wetPuddleMaxSlope'];
+    expect(getUniformKeys(material)).toEqual(
+      [...LAYER_UNIFORMS, ...WET_UNIFORMS, ...PUDDLE_UNIFORMS].sort()
+    );
+    expect(getUniforms(material).terrain_wetPuddleMaxSlope.value).toBe(10);
+    expect(getUniforms(material).terrain_wetPuddleEdge.value).toBe(0.05);
+    for (const socket of [material.colorNode, material.roughnessNode, material.normalNode]) {
+      expect(reaches(socket, conditions.puddleLevel)).toBe(true);
+    }
+    const dry = build({ layers: [{}], wet: {} });
+    expect(reaches(dry.colorNode, conditions.puddleLevel)).toBe(false);
+    // Patches: the macro texture sampled once at their own scale, beside the macro variation's
+    const macroTexture = texture(new Texture());
+    const isSampleOfMacro = (node: Node) =>
+      (node as unknown as { isTextureNode?: boolean }).isTextureNode &&
+      (node as unknown as { value: unknown }).value === macroTexture.value &&
+      node !== (macroTexture as unknown as Node);
+    const patches = { puddles: { patches: { scale: 30 } } };
+    const patched = build(
+      { layers: [{}], wet: patches },
+      { layer0: makeBundle(), macro: macroTexture }
+    );
+    expect(getUniforms(patched).terrain_wetPuddlePatchScale.value).toBe(30);
+    expect(getUniforms(patched).terrain_wetPuddlePatchAmount.value).toBe(0.75);
+    expect(collectNodes(patched).filter(isSampleOfMacro)).toHaveLength(1);
+    expect(collectNodesFrom([patched.colorNode]).some(isSampleOfMacro)).toBe(true);
+    const both = build(
+      { layers: [{}], macro: { scale: 120 }, wet: patches },
+      { layer0: makeBundle(), macro: macroTexture }
+    );
+    expect(collectNodes(both).filter(isSampleOfMacro)).toHaveLength(2);
+    expect(() => build({ layers: [{}], wet: patches })).toThrow(/Missing input "macro"/);
+    // A tier's patches: the base takes the input, without fetching it
+    const tiered = build(
+      { layers: [{}], wet: {}, quality: { HIGH: { wet: patches } } },
+      { layer0: makeBundle(), macro: macroTexture }
+    );
+    expect(collectNodes(tiered).filter(isSampleOfMacro)).toHaveLength(0);
+    // SIMPLE has none (the reader refuses puddles there)
+    expect(() => build({ layers: [{}], wet: { quality: 'SIMPLE', puddles: {} } })).toThrow(
+      /is for quality FULL/
+    );
+  });
+
+  it("keeps a regional wetness: a vertex attribute, or the first splat map's A", () => {
+    const attributeOf = (material: MeshStandardNodeMaterial) =>
+      collectNodes(material)
+        .map((node) => (node as unknown as { _attributeName?: string })._attributeName)
+        .filter((name) => name !== undefined && name !== 'color');
+    expect(attributeOf(build({ layers: [{}], wet: { regional: {} } }))).toContain('_wetness');
+    const named = build({ layers: [{}], wet: { regional: { attribute: 'swamp' } } });
+    expect(attributeOf(named)).toContain('swamp');
+    expect(attributeOf(build({ layers: [{}], wet: {} }))).not.toContain('_wetness');
+    // With puddles, it raises their level too
+    const puddled = build({ layers: [{}], wet: { regional: {}, puddles: {} } });
+    expect(attributeOf(puddled).filter((name) => name === '_wetness').length).toBeGreaterThan(0);
+    // The splat map's A: a channel of the one splat sample
+    const splat = texture(new Texture());
+    const material = build(
+      {
+        layers: layersOf(4),
+        blend: { source: 'SPLAT_MAP' },
+        wet: { regional: { splatChannel: 'A' } },
+      },
+      layerInputs(4, 'LITE', { splat0: splat })
+    );
+    const isSplatSample = (node: Node) =>
+      (node as unknown as { isTextureNode?: boolean }).isTextureNode &&
+      (node as unknown as { value: unknown }).value === splat.value &&
+      node !== (splat as unknown as Node);
+    expect(collectNodes(material).filter(isSplatSample)).toHaveLength(1);
+    const alpha = collectNodes(material).find(
+      (node) =>
+        (node as unknown as { components?: string }).components === 'w' &&
+        isSplatSample((node as unknown as { node: Node }).node)
+    );
+    expect(alpha).toBeTruthy();
+    expect(reaches(material.colorNode, alpha)).toBe(true);
+  });
+
+  it('ripples where water stands while it rains: the ripples input, its uniforms, its budget', () => {
+    const atlas = texture(new Texture());
+    const material = build(
+      { layers: [{}], wet: { puddles: {}, ripples: { scale: 2, distance: [5, 20] } } },
+      { layer0: makeBundle(), ripples: atlas }
+    );
+    const uniforms = getUniforms(material);
+    expect(uniforms.terrain_wetRippleScale.value).toBe(2);
+    expect(uniforms.terrain_wetRippleLifetime.value).toBe(0.7);
+    expect(uniforms.terrain_wetRippleStrength.value).toBe(0.5);
+    expect(uniforms.terrain_wetRippleDistance.value).toEqual(new Vector2(5, 20));
+    // The roughness and the colour don't read the ripples; the normal adds their branch (a Fn
+    // call, Ripples.test.ts), which the mask's weight gates by the rain
+    const calls = (root: unknown) =>
+      collectNodesFrom([root]).filter((node) => (node as { shaderNode?: unknown }).shaderNode)
+        .length;
+    const unrippled = build({ layers: [{}], wet: { puddles: {} } });
+    expect(calls(material.normalNode)).toBe(calls(unrippled.normalNode) + 1);
+    expect(reaches(material.roughnessNode, conditions.rain)).toBe(false);
+    // The input: wanted with ripples, refused without, and counted in the budget
+    expect(() => build({ layers: [{}], wet: { ripples: {} } })).toThrow(/Missing input "ripples"/);
+    expect(() =>
+      build({ layers: [{}], wet: {} }, { layer0: makeBundle(), ripples: atlas })
+    ).toThrow(/Input "ripples" has no use/);
+    expect(() =>
+      build(
+        { layers: [{}], wet: {}, quality: { HIGH: { wet: { ripples: {} } } } },
+        { layer0: makeBundle(), ripples: atlas }
+      )
+    ).not.toThrow();
+    expect(() =>
+      build(
+        { layers: [{}], wet: { ripples: {} }, reservedTextures: 14 },
+        { layer0: makeBundle(), ripples: atlas }
+      )
+    ).toThrow(/ripple atlas: 1/);
+    expect(() => build({ layers: [{}], wet: { quality: 'SIMPLE', ripples: {} } })).toThrow(
+      /is for quality FULL/
+    );
+  });
+
+  it('streaks steep faces in either quality: the macro input, its uniforms, one branch', () => {
+    const macroTexture = texture(new Texture());
+    const inputs = { layer0: makeBundle(), macro: macroTexture };
+    const material = build({ layers: [{}], wet: { streaks: { minSlope: 70 } } }, inputs);
+    const uniforms = getUniforms(material);
+    expect(uniforms.terrain_wetStreakMinSlope.value).toBe(70);
+    expect(uniforms.terrain_wetStreakScale.value).toBe(4);
+    expect(uniforms.terrain_wetStreakLength.value).toBe(8);
+    expect(uniforms.terrain_wetStreakSpeed.value).toBe(1);
+    // The rivulets darken (the pores) and gloss (the film, while it rains): the colour and the
+    // roughness add their branch (a Fn call; its body reads the rain and the clock,
+    // Streaks.test.ts)
+    const calls = (root: unknown) =>
+      collectNodesFrom([root]).filter((node) => (node as { shaderNode?: unknown }).shaderNode)
+        .length;
+    const plain = build({ layers: [{}], wet: {} });
+    for (const socket of ['colorNode', 'roughnessNode'] as const) {
+      expect(calls(material[socket])).toBe(calls(plain[socket]) + 1);
+    }
+    // SIMPLE streaks too
+    const simple = build({ layers: [{}], wet: { quality: 'SIMPLE', streaks: {} } }, inputs);
+    const simplePlain = build({ layers: [{}], wet: { quality: 'SIMPLE' } });
+    expect(calls(simple.roughnessNode)).toBe(calls(simplePlain.roughnessNode) + 1);
+    // The input: wanted with streaks, a tier's taken without building them
+    expect(() => build({ layers: [{}], wet: { streaks: {} } })).toThrow(/Missing input "macro"/);
+    const tiered = build(
+      { layers: [{}], wet: {}, quality: { LOW: { wet: { streaks: {} } } } },
+      inputs
+    );
+    expect(calls(tiered.roughnessNode)).toBe(calls(plain.roughnessNode));
+  });
+
+  it('wets a shoreline along the water level in either quality: its uniforms, no input', () => {
+    const material = build({
+      layers: [{}],
+      wet: { shoreline: { band: 1.5, runUp: { period: 4 } } },
+    });
+    const uniforms = getUniforms(material);
+    expect(uniforms.terrain_wetShoreBand.value).toBe(1.5);
+    expect(uniforms.terrain_wetShoreNoise.value).toBe(0.3);
+    expect(uniforms.terrain_wetShoreRunUp.value).toEqual(new Vector2(0.5, 4));
+    for (const socket of [material.colorNode, material.roughnessNode, material.normalNode]) {
+      expect(reaches(socket, conditions.waterLevel)).toBe(true);
+    }
+    const still = build({ layers: [{}], wet: { shoreline: { band: 1 } } });
+    expect(getUniforms(still).terrain_wetShoreRunUp).toBeUndefined();
+    const simple = build({ layers: [{}], wet: { quality: 'SIMPLE', shoreline: { band: 1 } } });
+    expect(reaches(simple.colorNode, conditions.waterLevel)).toBe(true);
+    expect(reaches(simple.normalNode, conditions.waterLevel)).toBe(false);
+    const dry = build({ layers: [{}], wet: {} });
+    expect(reaches(dry.colorNode, conditions.waterLevel)).toBe(false);
+  });
+
+  it('covers with snow in either quality: the snow input, its uniforms, its budget, its far colour', () => {
+    const snow = makeBundle('LITE', { averageColor: true });
+    const inputs = { layer0: makeBundle(), snow };
+    const material = build({ layers: [{}], wet: { snow: { maxSlope: 40 } } }, inputs);
+    const uniforms = getUniforms(material);
+    expect(uniforms.terrain_wetSnowMaxSlope.value).toBe(40);
+    expect(uniforms.terrain_wetSnowNoiseScale.value).toBe(3);
+    expect(uniforms.terrain_wetSnowEdge.value).toBe(0.08);
+    expect(uniforms.terrain_wetSnowTiling.value).toBe(1);
+    // Every socket takes the snow's branch (a Fn call; its body reads the coverage, Snow.test.ts)
+    // and its slush the temperature
+    const calls = (root: unknown) =>
+      collectNodesFrom([root]).filter((node) => (node as { shaderNode?: unknown }).shaderNode)
+        .length;
+    const plain = build({ layers: [{}], wet: {} });
+    for (const socket of ['colorNode', 'roughnessNode', 'normalNode'] as const) {
+      expect(calls(material[socket])).toBeGreaterThan(calls(plain[socket]));
+    }
+    expect(reaches(material.colorNode, conditions.temperature)).toBe(true);
+    expect(reaches(plain.colorNode, conditions.temperature)).toBe(false);
+    // SIMPLE snow too
+    const simple = build({ layers: [{}], wet: { quality: 'SIMPLE', snow: {} } }, inputs);
+    const simplePlain = build({ layers: [{}], wet: { quality: 'SIMPLE' } });
+    expect(calls(simple.colorNode)).toBeGreaterThan(calls(simplePlain.colorNode));
+    // The input: wanted with snow, refused without, a tier's taken without building it, counted
+    // in the budget (its two LITE slots)
+    expect(() => build({ layers: [{}], wet: { snow: {} } })).toThrow(/Missing input "snow"/);
+    expect(() => build({ layers: [{}], wet: {} }, inputs)).toThrow(/Input "snow" has no use/);
+    const tiered = build(
+      { layers: [{}], wet: {}, quality: { LOW: { wet: { snow: {} } } } },
+      inputs
+    );
+    expect(calls(tiered.colorNode)).toBe(calls(plain.colorNode));
+    expect(() => build({ layers: [{}], wet: { snow: {} }, reservedTextures: 13 }, inputs)).toThrow(
+      /snow \(albedoRough, normalHeight\): 2/
+    );
+    // A far mode shows its average colour past the band: a set without one is refused
+    const far = { layers: [{}], distance: { fade: [30, 90], far: 'AVERAGE_COLOR' } };
+    const farInputs = { layer0: makeBundle('LITE', { averageColor: true }) };
+    expect(() => build({ ...far, wet: { snow: {} } }, { ...farInputs, snow })).not.toThrow();
+    expect(() =>
+      build({ ...far, wet: { snow: {} } }, { ...farInputs, snow: makeBundle('LITE') })
+    ).toThrow(/Input "snow": its texture set has no averageColor/);
+  });
+
+  it('frosts in either quality by its uniforms, its sparkle FULL only', () => {
+    const material = build({
+      layers: [{}],
+      wet: { frost: { temperature: [1, -8], sparkle: { distance: [2, 8] } } },
+    });
+    const uniforms = getUniforms(material);
+    expect(uniforms.terrain_wetFrostTemperature.value).toEqual(new Vector2(1, -8));
+    expect(uniforms.terrain_wetFrostStrength.value).toBe(1);
+    expect(uniforms.terrain_wetSparkleDensity.value).toBe(50);
+    expect(uniforms.terrain_wetSparkleStrength.value).toBe(3);
+    expect(uniforms.terrain_wetSparkleDistance.value).toEqual(new Vector2(2, 8));
+    for (const socket of [material.colorNode, material.roughnessNode]) {
+      expect(reaches(socket, conditions.temperature)).toBe(true);
+      expect(reaches(socket, uniforms.terrain_wetFrostTemperature)).toBe(true);
+    }
+    const simple = build({ layers: [{}], wet: { quality: 'SIMPLE', frost: {} } });
+    expect(reaches(simple.roughnessNode, conditions.temperature)).toBe(true);
+    expect(getUniforms(simple).terrain_wetSparkleDensity).toBeUndefined();
+    expect(() =>
+      build({ layers: [{}], wet: { quality: 'SIMPLE', frost: { sparkle: {} } } })
+    ).toThrow(/is for quality FULL/);
+    const dry = build({ layers: [{}], wet: {} });
+    expect(reaches(dry.roughnessNode, conditions.temperature)).toBe(false);
+  });
+
+  it("counts the snow set's taps in TAPS where it covers", async () => {
+    expect(await loadTerrainDebugViewsAsync()).toBe(true);
+    const material = build(
+      { layers: [{}], wet: { snow: {} }, debugView: 'TAPS' },
+      { layer0: makeBundle(), snow: makeBundle('FULL') }
+    );
+    const dry = build({ layers: [{}], wet: {}, debugView: 'TAPS' });
+    const calls = (root: unknown) =>
+      collectNodesFrom([root]).filter((node) => (node as { shaderNode?: unknown }).shaderNode)
+        .length;
+    // The gated taps' share is the snow's cover: its branch
+    expect(calls(material.emissiveNode)).toBeGreaterThan(calls(dry.emissiveNode));
+  });
+
+  it("counts the streaks' tap in TAPS where they run", async () => {
+    expect(await loadTerrainDebugViewsAsync()).toBe(true);
+    const material = build(
+      { layers: [{}], wet: { streaks: {} }, debugView: 'TAPS' },
+      { layer0: makeBundle(), macro: texture(new Texture()) }
+    );
+    // The gated tap's share is the streak mask: a steep face × the rain or the wetness
+    expect(reaches(material.emissiveNode, conditions.rain)).toBe(true);
+    const dry = build({ layers: [{}], wet: {}, debugView: 'TAPS' });
+    expect(reaches(dry.emissiveNode, conditions.rain)).toBe(false);
+  });
+
+  it("counts the ripples' two taps in TAPS where they run", async () => {
+    expect(await loadTerrainDebugViewsAsync()).toBe(true);
+    const material = build(
+      { layers: [{}], wet: { ripples: {} }, debugView: 'TAPS' },
+      { layer0: makeBundle(), ripples: texture(new Texture()) }
+    );
+    expect(material.emissiveNode).toBeTruthy();
+    // The gated taps' share is the ripple mask: the rain × the standing water × the fade
+    expect(reaches(material.emissiveNode, conditions.rain)).toBe(true);
+    const dry = build({ layers: [{}], wet: {}, debugView: 'TAPS' });
+    expect(reaches(dry.emissiveNode, conditions.rain)).toBe(false);
+  });
+
+  it('shows the masks in the WETNESS view', async () => {
+    expect(await loadTerrainDebugViewsAsync()).toBe(true);
+    const material = build({ layers: [{}], wet: {}, debugView: 'WETNESS' });
+    expect(reaches(material.emissiveNode, conditions.wetness)).toBe(true);
+    expect(() => build({ layers: [{}], debugView: 'WETNESS' })).toThrow(/is WETNESS: give wet/);
   });
 });
 

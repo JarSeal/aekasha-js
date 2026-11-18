@@ -26,6 +26,8 @@ const makeBundle = (packing: keyof typeof PACKINGS) =>
     porosity: uniform(0.5),
     wetDarkening: uniform(0.5),
     wetRoughness: uniform(0.3),
+    puddleResponse: uniform(0.5),
+    dryingSpeed: uniform(1),
   }) as unknown as TextureSetInput;
 
 const build = (packing: keyof typeof PACKINGS, defines?: Record<string, unknown>) => {

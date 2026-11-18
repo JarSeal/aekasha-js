@@ -5,7 +5,8 @@
 // for any UV layout (a generated block's planar one, an authored block's). The colour is the
 // material's own graph built again from the inputs it was built from, without what depends on the
 // camera or would read the bake itself: no distance effects (the far surface, the normals' fade),
-// no colour map, no debug view, and the view distance 0 (the anti-tiling's near look).
+// no colour map, no debug view, no wet response (p307: the dry surface), and the view distance 0
+// (the anti-tiling's near look).
 import { float, vec4 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import {
@@ -16,6 +17,7 @@ import {
   type NodeMaterial,
 } from 'three/webgpu';
 import { bakeTexture, type BakedTexture } from 'aekasha';
+import { readTerrainDefine } from './TerrainDefine';
 import { buildTerrainGraph, getTerrainMaterialInputs } from './TerrainMaterial';
 
 /** The bake's default size, texels */
@@ -43,20 +45,25 @@ export type BakeTerrainColorMapOpts = {
   isPersistent?: boolean;
 };
 
-/** A define without what the bake can't take: the distance effects, the colour map, a debug view */
+/**
+ * A define without what the bake can't take: the distance effects, the colour map, a debug view,
+ * and the wet response (the bake is of the dry surface: the weather at the bake's moment would
+ * stay in the colour)
+ */
 const getBakeDefine = (define: Record<string, unknown>) => {
   const {
     distance: _distance,
     colorMap: _colorMap,
     debugView: _debugView,
+    wet: _wet,
     quality,
     ...rest
   } = define;
   if (!quality) return rest;
-  // A tier's distance would bring the far surface back
+  // A tier's distance would bring the far surface back, its wet the weather
   const tiers = Object.entries(quality as Record<string, Record<string, unknown> | undefined>).map(
     ([level, tier]) => {
-      const { distance: _tierDistance, ...fields } = tier ?? {};
+      const { distance: _tierDistance, wet: _tierWet, ...fields } = tier ?? {};
       return [level, fields];
     }
   );
@@ -88,9 +95,9 @@ const getTerrainSource = (opts: BakeTerrainColorMapOpts) => {
  * `<id>.color` (sRGB, mipmapped, clamped at the edges), owned by the scene loading or current
  * unless `isPersistent`; export it with `exportBakedTexture({ id, output: 'color', dir })` (debug
  * env), then encode and commit it per block. The colour is the material's graph without its
- * distance effects, colour map and debug view, at its near look (the view distance 0), its tier
- * the material's; its uniforms are copies taken now, so `rebake()` doesn't follow the material's
- * later edits (bake again). The mesh's triangles are drawn at their UVs: a texel no triangle covers
+ * distance effects, colour map, debug view and wetness (the dry surface), at its near look (the
+ * view distance 0), its tier the material's; its uniforms are copies taken now, so `rebake()`
+ * doesn't follow the material's later edits (bake again). The mesh's triangles are drawn at their UVs: a texel no triangle covers
  * stays transparent black.
  * @param opts the bake's id, the block mesh, the material, the size and whether to bake the AO in
  * @returns the bake (`bakeTexture`'s), once rendered
@@ -116,13 +123,17 @@ const getTerrainSource = (opts: BakeTerrainColorMapOpts) => {
  */
 export const bakeTerrainColorMap = (opts: BakeTerrainColorMapOpts): Promise<BakedTexture> => {
   const { inputs, define } = getTerrainSource(opts);
-  // The colour map's input: the define without one refuses it
-  const { colorMap: _colorMap, ...bakeInputs } = inputs;
+  const bakeDefine = getBakeDefine(define);
+  // The colour map's input, the ripple atlas, the snow set, and the macro texture's when only the
+  // wet response's puddle patches or streaks read it: the define without them refuses them
+  const { colorMap: _colorMap, ripples: _ripples, snow: _snow, macro, ...rest } = inputs;
+  const takesMacro = readTerrainDefine({ terrain: bakeDefine }).takesMacroTexture;
+  const bakeInputs = takesMacro && macro !== undefined ? { ...rest, macro } : rest;
   const graph = new MeshStandardNodeMaterial();
   buildTerrainGraph(
     bakeInputs,
     graph,
-    { terrain: getBakeDefine(define) },
+    { terrain: bakeDefine },
     { viewDistance: float(0) as unknown as Node<'float'> }
   );
   const albedo = graph.colorNode as unknown as Node<'vec3'>;

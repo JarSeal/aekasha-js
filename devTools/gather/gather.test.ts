@@ -935,6 +935,31 @@ describe('p303 D1: texture sets', () => {
     return logs;
   };
 
+  it("fills a set's wet response from its category, the flat defaults for OTHER (p307 S3)", () => {
+    const surfaceOf = (category: string) => {
+      const out = gather({
+        ...textures,
+        ...set({ category, surface: {} }),
+        ...scene('a', { textureSets: ['sand'] }),
+      }).scene('a');
+      return ((out?.textureSets ?? []) as { surface: object }[])[0]?.surface;
+    };
+    expect(surfaceOf('MUD')).toMatchObject({
+      porosity: 0.7,
+      wetDarkening: 0.6,
+      wetRoughness: 0.15,
+      puddleResponse: 1,
+      dryingSpeed: 0.4,
+    });
+    expect(surfaceOf('OTHER')).toMatchObject({
+      porosity: 0.5,
+      wetDarkening: 0.5,
+      wetRoughness: 0.3,
+      puddleResponse: 0.5,
+      dryingSpeed: 1,
+    });
+  });
+
   it('writes a listed set inline, its defaults filled, and appends its default packing', () => {
     const { isGathered, scene: get } = gather({
       ...textures,
@@ -960,9 +985,12 @@ describe('p303 D1: texture sets', () => {
           roughnessScale: 1,
           aoStrength: 1,
           heightContrast: 1,
+          // The set's own, else its category's wet response (p307 S3)
           porosity: 0.85,
-          wetDarkening: 0.5,
-          wetRoughness: 0.3,
+          wetDarkening: 0.55,
+          wetRoughness: 0.45,
+          puddleResponse: 0.3,
+          dryingSpeed: 1.6,
         },
         debugData: { name: 'Sand' },
       },

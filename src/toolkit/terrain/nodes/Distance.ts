@@ -47,7 +47,7 @@ export const getFarShare = (
  * Values summed by the weights (which sum to 1): the far surface's per-layer colours or roughness
  * @internal
  */
-export const sumByWeights = <T extends Node<'float'> | Node<'vec3'>>(
+export const sumByWeights = <T extends Node<'float'> | Node<'vec3'> | Node<'vec4'>>(
   values: T[],
   weights: Node<'float'>[]
 ): T =>

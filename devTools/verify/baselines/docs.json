@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 4030,
-      "total": 4030
+      "documented": 4149,
+      "total": 4149
     },
     "members": {
       "documented": 1118,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3617,
-        "total": 3617
+        "documented": 3689,
+        "total": 3689
       },
       "members": {
         "documented": 953,
@@ -23,8 +23,8 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 413,
-        "total": 413
+        "documented": 460,
+        "total": 460
       },
       "members": {
         "documented": 165,
@@ -397,6 +397,20 @@
         "members": []
       }
     },
+    "engine/features/surface": {
+      "exports": {
+        "documented": 70,
+        "total": 70
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
     "engine/features/terrain": {
       "exports": {
         "documented": 23,
@@ -623,8 +637,8 @@
     },
     "engine/schemas": {
       "exports": {
-        "documented": 117,
-        "total": 117
+        "documented": 119,
+        "total": 119
       },
       "members": {
         "documented": 0,
@@ -1113,8 +1127,8 @@
     },
     "toolkit/terrain/material": {
       "exports": {
-        "documented": 134,
-        "total": 134
+        "documented": 151,
+        "total": 151
       },
       "members": {
         "documented": 0,
@@ -1127,8 +1141,8 @@
     },
     "toolkit/terrain/nodes": {
       "exports": {
-        "documented": 68,
-        "total": 68
+        "documented": 98,
+        "total": 98
       },
       "members": {
         "documented": 0,

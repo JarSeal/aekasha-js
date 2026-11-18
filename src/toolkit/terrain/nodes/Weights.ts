@@ -9,11 +9,19 @@ import type { Node, TextureNode } from 'three/webgpu';
 /** The vertex colour's channel layouts (p301 §4.4) */
 export type VertexColorLayout = 'RGB_AO' | 'RGBA';
 
-/** Painted weights, one per layer from the base, and the vertex colour's baked AO when it has one */
+/**
+ * Painted weights, one per layer from the base, the vertex colour's baked AO when it has one, and
+ * the first splat map's A
+ */
 export type PaintedWeights = {
   weights: Node<'float'>[];
   /** `RGB_AO`'s A, 0..1; null for `RGBA` and splat maps */
   vertexAo: Node<'float'> | null;
+  /**
+   * The first splat map's A (a layer's weight, or with at most 4 painted layers free: p307's
+   * regional wetness); null for the vertex colour
+   */
+  splatAlpha: Node<'float'> | null;
 };
 
 /** The channels' layers with the base in front: `max(0, 1 − Σ channels)` */
@@ -43,6 +51,7 @@ export const getVertexColorWeights = (
   return {
     weights: withBase(channels),
     vertexAo: layout === 'RGB_AO' ? (color.a as unknown as Node<'float'>) : null,
+    splatAlpha: null,
   };
 };
 
@@ -58,8 +67,10 @@ export const getSplatMapWeights = (
   splatMaps: TextureNode[]
 ): PaintedWeights => {
   const meshUv = uv() as unknown as Node<'vec2'>;
-  const channels = splatMaps
-    .flatMap((map) => toChannels(map.sample(meshUv) as unknown as Node<'vec4'>))
-    .slice(0, layerCount - 1);
-  return { weights: withBase(channels), vertexAo: null };
+  const all = splatMaps.flatMap((map) => toChannels(map.sample(meshUv) as unknown as Node<'vec4'>));
+  return {
+    weights: withBase(all.slice(0, layerCount - 1)),
+    vertexAo: null,
+    splatAlpha: all[3] ?? null,
+  };
 };
