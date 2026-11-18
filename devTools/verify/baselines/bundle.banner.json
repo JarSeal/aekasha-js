@@ -30,16 +30,16 @@
       "gzip": 1987
     },
     "assets/banner.embed.js": {
-      "bytes": 974877,
-      "gzip": 272678
+      "bytes": 974940,
+      "gzip": 272701
     },
     "assets/banner.js": {
       "bytes": 483,
-      "gzip": 336
+      "gzip": 337
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
-      "gzip": 283
+      "gzip": 284
     },
     "assets/basis_transcoder.js": {
       "bytes": 57529,
@@ -75,15 +75,15 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7637,
-      "gzip": 3096
+      "gzip": 3098
     },
     "assets/GeometryMerge.js": {
       "bytes": 8248,
-      "gzip": 3423
+      "gzip": 3427
     },
     "assets/GeometryTransfer.js": {
       "bytes": 1933,
-      "gzip": 867
+      "gzip": 871
     },
     "assets/GeometryTransfer.js@AssetsWorker": {
       "bytes": 1939,
@@ -91,19 +91,19 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 47088,
-      "gzip": 14023
+      "gzip": 14027
     },
     "assets/HDRLoader.js": {
       "bytes": 3407,
-      "gzip": 1631
+      "gzip": 1635
     },
     "assets/ImportRegistry.js": {
       "bytes": 15737,
-      "gzip": 6377
+      "gzip": 6380
     },
     "assets/KTX2Loader.js": {
       "bytes": 60312,
-      "gzip": 24498
+      "gzip": 24499
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2210,
@@ -123,7 +123,7 @@
     },
     "assets/TextureInputResolvers.js": {
       "bytes": 3306,
-      "gzip": 1364
+      "gzip": 1367
     },
     "assets/three.core.js": {
       "bytes": 199218,
@@ -131,7 +131,7 @@
     },
     "assets/three.module.js": {
       "bytes": 220,
-      "gzip": 181
+      "gzip": 183
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -139,14 +139,14 @@
     },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 207
+      "gzip": 211
     }
   },
   "main": {
     "chunk": "assets/banner.embed.js",
     "modules": 68,
-    "minified": 999092,
-    "gzip": 278946
+    "minified": 999155,
+    "gzip": 278972
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -171,8 +171,8 @@
     },
     "_engine/kernel/init": {
       "modules": 5,
-      "minified": 7490,
-      "gzip": 3187
+      "minified": 7553,
+      "gzip": 3213
     },
     "_engine/kernel/input": {
       "modules": 1,

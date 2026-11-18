@@ -20,6 +20,7 @@ export const DEFAULT_DEBUG_DRAWER_TAB_ORDER = [
   'statsControls',
   'loopControls',
   'skyBoxControls',
+  'surfaceConditionsControls',
   'debugToolsControls',
   'physicsApiControls',
   'rendererControls',

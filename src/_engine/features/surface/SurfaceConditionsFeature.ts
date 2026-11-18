@@ -1,3 +1,5 @@
+import { IS_DEBUG_ENV } from '../../kernel/config/Config';
+import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
 import type { EngineFeature } from '../../kernel/init/Features';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
 import {
@@ -16,6 +18,12 @@ import {
 export const surfaceConditionsSceneHooks: SceneHooks = {
   exit: () => resetSurfaceConditionsForScene(),
   worldCleared: (_world, _prevSceneId, nextSceneData) => applySceneSurfaceConditions(nextSceneData),
+};
+
+/** Loads and creates the debug tab (the feature's `onDebug`). */
+const createSurfaceConditionsDebugTabAsync = async () => {
+  const debug = await loadDebugModuleAsync(() => import('./debug/_dbg__SurfaceConditions'));
+  useDebug(debug)?._createSurfaceConditionsDebugTab();
 };
 
 /** Options of {@link surfaceConditions}. */
@@ -46,5 +54,7 @@ export const surfaceConditions = (opts?: SurfaceConditionsFeatureOpts): EngineFe
   install: (ctx) => {
     installSurfaceConditions(ctx, opts?.timeSource ?? 'APP');
     ctx.addSceneHooks(surfaceConditionsSceneHooks);
+    // Gated like every debug hook: a production build drops the call and the tab's chunk
+    if (IS_DEBUG_ENV) ctx.onDebug(createSurfaceConditionsDebugTabAsync);
   },
 });
