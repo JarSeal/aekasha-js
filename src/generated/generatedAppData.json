@@ -43913,6 +43913,130 @@
       "type": "STANDARDNODEMATERIAL",
       "__sourcePath": "src/toolkit/materials/asteroid/asteroid.material.json"
     },
+    "decalsGround_blend": {
+      "id": "decalsGround_blend",
+      "debugData": {
+        "name": "Ground decals, BLEND",
+        "description": "Decals (p309 D2) of the decalsGround atlas (tyre tracks, cracks, stains, footprints) in its DECAL packing: the mesh's UV in the atlas's space, its second UV set 0..1 over the decal for the edge fade (edgeFade UV1: a mesh without it draws nothing). BLEND: alpha-blended in the transparent pass, no depth writes (soft decals); polygon offset -1, -4 (params). Wet by the surface conditions (FULL: puddles fill the puddle mask first, rain ripples from rippleAtlas) with frost. Static defines: mode (BLEND, CUTOUT), edgeFade (UV1, NONE), wet (FULL, SIMPLE, NONE), frost, rainOcclusion (NORMAL_Y, MAP). Numbers and colours (optional inputs): tint, opacity, normalStrength, roughnessScale, edgeFade, puddleDepth, porosity, wetDarkening, wetRoughness, puddleResponse; optional snow ({ textureSet }). Draw it after the surface (the mesh's renderOrder, eg. 10), castShadow false, receiveShadow true."
+      },
+      "params": {
+        "polygonOffsetFactor": -1,
+        "polygonOffsetUnits": -4
+      },
+      "tslFile": "materials/decal/decal.tsl.ts",
+      "staticDefines": {
+        "mode": "BLEND",
+        "edgeFade": "UV1",
+        "wet": "FULL",
+        "frost": true,
+        "rainOcclusion": "NORMAL_Y"
+      },
+      "inputs": {
+        "albedoAlpha": {
+          "texture": "decalsGround.albedoAlpha"
+        },
+        "normalRough": {
+          "texture": "decalsGround.normalRough"
+        },
+        "ripples": {
+          "texture": "rippleAtlas"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/toolkit/materials/decal/decalsGround_blend.material.json"
+    },
+    "decalsGround_cutout": {
+      "id": "decalsGround_cutout",
+      "debugData": {
+        "name": "Ground decals, CUTOUT",
+        "description": "Decals (p309 D2) of the decalsGround atlas (tyre tracks, cracks, stains, footprints) in its DECAL packing: the mesh's UV in the atlas's space, its second UV set 0..1 over the decal for the edge fade (edgeFade UV1: a mesh without it draws nothing). CUTOUT: alpha-tested at 0.5 with alphaToCoverage under MSAA, in the opaque pass; polygon offset -1, -4 (params). Wet by the surface conditions (FULL: puddles fill the puddle mask first, rain ripples from rippleAtlas) with frost. Static defines: mode (BLEND, CUTOUT), edgeFade (UV1, NONE), wet (FULL, SIMPLE, NONE), frost, rainOcclusion (NORMAL_Y, MAP). Numbers and colours (optional inputs): tint, opacity, normalStrength, roughnessScale, edgeFade, puddleDepth, porosity, wetDarkening, wetRoughness, puddleResponse; optional snow ({ textureSet }). Draw it after the surface (the mesh's renderOrder, eg. 10), castShadow false, receiveShadow true."
+      },
+      "params": {
+        "polygonOffsetFactor": -1,
+        "polygonOffsetUnits": -4,
+        "alphaTest": 0.5
+      },
+      "tslFile": "materials/decal/decal.tsl.ts",
+      "staticDefines": {
+        "mode": "CUTOUT",
+        "edgeFade": "UV1",
+        "wet": "FULL",
+        "frost": true,
+        "rainOcclusion": "NORMAL_Y"
+      },
+      "inputs": {
+        "albedoAlpha": {
+          "texture": "decalsGround.albedoAlpha"
+        },
+        "normalRough": {
+          "texture": "decalsGround.normalRough"
+        },
+        "ripples": {
+          "texture": "rippleAtlas"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/toolkit/materials/decal/decalsGround_cutout.material.json"
+    },
+    "decalsStructure_blend": {
+      "id": "decalsStructure_blend",
+      "debugData": {
+        "name": "Structure decals, BLEND",
+        "description": "Decals (p309 D2) of the decalsStructure atlas (leaks, cracks, stains on concrete and cliffs) in its DECAL packing: the mesh's UV in the atlas's space, its second UV set 0..1 over the decal for the edge fade (edgeFade UV1: a mesh without it draws nothing). BLEND: alpha-blended in the transparent pass, no depth writes (soft decals); polygon offset -1, -4 (params). Wet by the surface conditions (FULL: puddles fill the puddle mask first) with frost. Static defines: mode (BLEND, CUTOUT), edgeFade (UV1, NONE), wet (FULL, SIMPLE, NONE), frost, rainOcclusion (NORMAL_Y, MAP). Numbers and colours (optional inputs): tint, opacity, normalStrength, roughnessScale, edgeFade, puddleDepth, porosity, wetDarkening, wetRoughness, puddleResponse; optional snow ({ textureSet }). Draw it after the surface (the mesh's renderOrder, eg. 10), castShadow false, receiveShadow true."
+      },
+      "params": {
+        "polygonOffsetFactor": -1,
+        "polygonOffsetUnits": -4
+      },
+      "tslFile": "materials/decal/decal.tsl.ts",
+      "staticDefines": {
+        "mode": "BLEND",
+        "edgeFade": "UV1",
+        "wet": "FULL",
+        "frost": true,
+        "rainOcclusion": "NORMAL_Y"
+      },
+      "inputs": {
+        "albedoAlpha": {
+          "texture": "decalsStructure.albedoAlpha"
+        },
+        "normalRough": {
+          "texture": "decalsStructure.normalRough"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/toolkit/materials/decal/decalsStructure_blend.material.json"
+    },
+    "decalsStructure_cutout": {
+      "id": "decalsStructure_cutout",
+      "debugData": {
+        "name": "Structure decals, CUTOUT",
+        "description": "Decals (p309 D2) of the decalsStructure atlas (leaks, cracks, stains on concrete and cliffs) in its DECAL packing: the mesh's UV in the atlas's space, its second UV set 0..1 over the decal for the edge fade (edgeFade UV1: a mesh without it draws nothing). CUTOUT: alpha-tested at 0.5 with alphaToCoverage under MSAA, in the opaque pass; polygon offset -1, -4 (params). Wet by the surface conditions (FULL: puddles fill the puddle mask first) with frost. Static defines: mode (BLEND, CUTOUT), edgeFade (UV1, NONE), wet (FULL, SIMPLE, NONE), frost, rainOcclusion (NORMAL_Y, MAP). Numbers and colours (optional inputs): tint, opacity, normalStrength, roughnessScale, edgeFade, puddleDepth, porosity, wetDarkening, wetRoughness, puddleResponse; optional snow ({ textureSet }). Draw it after the surface (the mesh's renderOrder, eg. 10), castShadow false, receiveShadow true."
+      },
+      "params": {
+        "polygonOffsetFactor": -1,
+        "polygonOffsetUnits": -4,
+        "alphaTest": 0.5
+      },
+      "tslFile": "materials/decal/decal.tsl.ts",
+      "staticDefines": {
+        "mode": "CUTOUT",
+        "edgeFade": "UV1",
+        "wet": "FULL",
+        "frost": true,
+        "rainOcclusion": "NORMAL_Y"
+      },
+      "inputs": {
+        "albedoAlpha": {
+          "texture": "decalsStructure.albedoAlpha"
+        },
+        "normalRough": {
+          "texture": "decalsStructure.normalRough"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/toolkit/materials/decal/decalsStructure_cutout.material.json"
+    },
     "leafLitter": {
       "id": "leafLitter",
       "debugData": {
