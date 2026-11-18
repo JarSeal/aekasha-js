@@ -73,8 +73,8 @@ export type FeatureContext = {
   addAfterRender: (hook: AfterRenderHook) => () => void;
   /**
    * Adds the feature's part of `importAssetAsync` and `spawnImportedAsset`
-   * (`ImportExtension`): physics' bodies, LOD's chains. Each member has one provider, and a
-   * second throws, so only those two engine features call it: not public API.
+   * (`ImportExtension`): physics' bodies, LOD's chains, instancing's GPU instances. Each member
+   * has one provider, and a second throws, so only those engine features call it: not public API.
    * @internal
    */
   registerImportExtension: (extension: ImportExtension) => void;

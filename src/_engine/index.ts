@@ -89,6 +89,8 @@ export type {
   ImportAssetParams,
   ImportedAssetManifest,
   ImportedGeometryInfo,
+  ImportedInstances,
+  ImportedPointCloudInfo,
   ImportPhysicsParams,
   ParsedCustomProps,
   QuatLike,

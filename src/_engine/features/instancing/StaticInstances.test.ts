@@ -7,7 +7,11 @@ import { getGeometryRegistry, saveBufferGeometry } from '../../kernel/assets/Geo
 import { getMaterialRegistry, saveMaterial } from '../../kernel/assets/Material';
 import { createMeshEntity, installMeshes } from '../../kernel/mesh/Mesh';
 import { createRootScene, getRootScene } from '../../kernel/scene/Scene';
-import { createInstancedMeshEntity, createStaticInstances } from './StaticInstances';
+import {
+  createInstancedMeshEntity,
+  createStaticInstances,
+  spawnImportedInstances,
+} from './StaticInstances';
 
 let world: ECSWorld;
 beforeAll(() => {
@@ -228,5 +232,28 @@ describe('createStaticInstances', () => {
         world,
       })
     ).toThrow("isn't positive");
+  });
+});
+
+describe('spawnImportedInstances', () => {
+  test("an import's instances in 16 m cells named by its id, in the default world", () => {
+    saveAssets('siImportGeo', 'siImportMat');
+    const matrices = new Float32Array(32);
+    new THREE.Matrix4().makeTranslation(1, 0, 1).toArray(matrices, 0);
+    new THREE.Matrix4().makeTranslation(20, 0, 1).toArray(matrices, 16);
+    const entityIds = spawnImportedInstances({
+      id: 'grove/rocks',
+      geometry: 'siImportGeo',
+      material: 'siImportMat',
+      matrices,
+      colors: new Float32Array([1, 0, 0, 0, 1, 0]),
+      castShadow: true,
+    });
+    expect(
+      entityIds.map((entityId) => world.getComponent(entityId, ComponentType.APP_ID)?.id)
+    ).toEqual(['grove/rocks/0,0', 'grove/rocks/1,0']);
+    const mesh = getMesh(entityIds[1]);
+    expect(mesh.castShadow).toBe(true);
+    expect([...mesh.instanceColor!.array]).toEqual([0, 1, 0]);
   });
 });

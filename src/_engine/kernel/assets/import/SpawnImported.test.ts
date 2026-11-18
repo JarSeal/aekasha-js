@@ -1,3 +1,4 @@
+import { Matrix4, Vector3 } from 'three/webgpu';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { ECSWorld } from '../../ecs/ECS';
 import { createGeometry } from '../Geometry';
@@ -5,6 +6,7 @@ import { createMaterial } from '../Material';
 import { setMeshMergeHandler } from '../../mesh/Mesh';
 import { createRootScene } from '../../scene/Scene';
 import { parseCustomProps } from './CustomProps';
+import { type ImportInstancesSpawn, registerImportExtension } from './ImportExtensions';
 import type { ImportedAssetManifest, ImportedGeometryInfo } from './ImportTypes';
 import { spawnImportedAsset } from './SpawnImported';
 
@@ -102,5 +104,101 @@ describe("spawnImportedAsset's merge", () => {
   test('no merge, no handler call', async () => {
     await spawnImportedAsset(createManifest({ wall: {} }), { material: 'spawnTestMat' });
     expect(fns.merge).not.toHaveBeenCalled();
+  });
+});
+
+describe("spawnImportedAsset's GPU instances", () => {
+  /** A `rocks` node of two instances, at x 1, turned 90° about y and scaled 2, and a point cloud */
+  const createInstancedManifest = (raw: Record<string, unknown> = {}) => {
+    const manifest = createManifest({ wall: {}, rocks: raw });
+    const half = Math.SQRT1_2;
+    manifest.geometries[1].transform = {
+      position: { x: 1, y: 0, z: 0 },
+      quaternion: { x: 0, y: half, z: 0, w: half },
+      scale: { x: 2, y: 2, z: 2 },
+    };
+    const matrices = new Float32Array(32);
+    new Matrix4().makeTranslation(1, 0, 0).toArray(matrices, 0);
+    new Matrix4().makeTranslation(0, 1, 0).toArray(matrices, 16);
+    manifest.geometries[1].instances = { matrices, colors: new Float32Array([1, 0, 0, 0, 1, 0]) };
+    manifest.pointClouds = [
+      {
+        importId: 'spawnTest',
+        nodeName: 'points',
+        parentPath: [],
+        transform: manifest.geometries[0].transform,
+        customProps: parseCustomProps({}),
+        instances: { matrices: new Float32Array(16) },
+      },
+    ];
+    return manifest;
+  };
+
+  test('without instancing(): warns once and draws the geometry once, at the node', async () => {
+    fns.lwarn.mockClear();
+    const { meshEntityIds } = await spawnImportedAsset(createInstancedManifest(), {
+      material: 'spawnTestMat',
+    });
+    // The wall and the rocks' one mesh: the point cloud spawns nothing
+    expect(meshEntityIds).toHaveLength(2);
+    expect(fns.lwarn).toHaveBeenCalledWith(expect.stringMatching(/GPU instances.*'instancing'/));
+  });
+
+  test("with instancing(): the instances in world space, the node's meshProps, no physics or merge", async () => {
+    const spawns: ImportInstancesSpawn[] = [];
+    const physicsNodes: string[][] = [];
+    registerImportExtension({
+      id: 'instancing',
+      spawnInstances: (spawn) => {
+        spawns.push(spawn);
+        return [101, 102];
+      },
+    });
+    registerImportExtension({
+      id: 'physics',
+      spawnPhysics: async ({ nodes }) => {
+        physicsNodes.push(nodes.map((node) => node.info.nodeName));
+        return [];
+      },
+    });
+    fns.lwarn.mockClear();
+    const physics = { isPhysObj: true, keepMesh: true, colliderType: 'BOX', merge: 'rocks' };
+    const manifest = createInstancedManifest(physics);
+    manifest.geometries[0].customProps = parseCustomProps(physics);
+    const { meshEntityIds } = await spawnImportedAsset(manifest, {
+      material: 'spawnTestMat',
+      transform: { position: { x: 0, y: 0, z: 5 } },
+      castShadow: true,
+      meshProps: {
+        'spawnTest/piece': { receiveShadow: true, lod: { levels: [{ screenSize: 0 }] } },
+      },
+      entityOpts: { appId: 'grove', persistent: true },
+    });
+
+    expect(meshEntityIds.slice(1)).toEqual([101, 102]);
+    expect(spawns).toHaveLength(1);
+    const [spawn] = spawns;
+    expect(spawn).toMatchObject({
+      id: 'grove/rocks',
+      geometry: 'spawnTest/piece',
+      castShadow: true,
+      receiveShadow: true,
+      lod: { levels: [{ screenSize: 0 }] },
+      entityOpts: { persistent: true },
+    });
+    expect(spawn.entityOpts).not.toHaveProperty('appId');
+    expect([...spawn.colors!]).toEqual([1, 0, 0, 0, 1, 0]);
+    // (1, 0, 0) turned to (0, 0, -1), scaled 2, at x 1, then the root's z 5; (0, 1, 0) to y 2
+    const positions = [0, 1].map((i) =>
+      new Vector3().setFromMatrixPosition(new Matrix4().fromArray(spawn.matrices, i * 16)).toArray()
+    );
+    expect(positions[0].map((v) => Number(v.toFixed(5)))).toEqual([1, 0, 3]);
+    expect(positions[1].map((v) => Number(v.toFixed(5)))).toEqual([1, 2, 5]);
+
+    // The wall's physics only; the rocks' props warn
+    expect(physicsNodes).toEqual([['wall']]);
+    expect(fns.lwarn).toHaveBeenCalledWith(
+      expect.stringMatching(/"rocks" .* GPU instances, which get no physics or merge/)
+    );
   });
 });

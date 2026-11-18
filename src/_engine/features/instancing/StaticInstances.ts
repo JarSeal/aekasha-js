@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../../kernel/ecs/ECS';
 import { getECSWorld } from '../../kernel/ecs/ECS';
 import type { CreateEntityOpts } from '../../kernel/ecs/ECSHelpers';
+import type { ImportInstancesSpawn } from '../../kernel/assets/import/ImportExtensions';
 import { addMeshEntity, resolveMeshAssets, type MeshProps } from '../../kernel/mesh/Mesh';
 import { existsOrThrow } from '../../utils/Assert';
 import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
@@ -262,3 +263,21 @@ export const createStaticInstances = (opts: CreateStaticInstancesOptions): Stati
     },
   };
 };
+
+/**
+ * `instancing()`'s import extension member (`spawnInstances`): an imported node's GPU instances as
+ * static instances in cells (`spawnImportedAsset`).
+ * @internal
+ */
+export const spawnImportedInstances = (spawn: ImportInstancesSpawn): number[] =>
+  createStaticInstances({
+    id: spawn.id,
+    geometry: spawn.geometry,
+    material: spawn.material,
+    instances: spawn.matrices,
+    colors: spawn.colors,
+    castShadow: spawn.castShadow,
+    receiveShadow: spawn.receiveShadow,
+    lod: spawn.lod,
+    entityOpts: spawn.entityOpts,
+  }).entityIds.slice();

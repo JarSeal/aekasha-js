@@ -2,7 +2,7 @@
 // Used on both sides of the assets worker hop (worker: serialize, main thread: rebuild), so keep
 // it free of imports that touch `window`/`document`.
 import * as THREE from 'three/webgpu';
-import type { Vector3Like } from './ImportTypes';
+import type { ImportedInstances, Vector3Like } from './ImportTypes';
 
 /** A BufferAttribute as structured-clone-safe data (an interleaved one copied out of its
  * buffer). */
@@ -117,6 +117,24 @@ export const serializeGeometry = (
       : null,
     userData: geometry.userData,
   };
+};
+
+/**
+ * Adds an import's instances' buffers (a GPU instanced node's or a point cloud's, plain typed
+ * arrays the manifest carries as they are) to the transfer list: detached on the sender after the
+ * transfer, so the manifest's copy on the other side is the only one.
+ * @internal
+ * @param instances the instances, if any
+ * @param transfer collects the ArrayBuffers to pass as the postMessage transfer list
+ */
+export const addInstancesToTransfer = (
+  instances: ImportedInstances | undefined,
+  transfer: Set<ArrayBuffer>
+) => {
+  if (!instances) return;
+  transfer.add(instances.matrices.buffer as ArrayBuffer);
+  if (instances.colors) transfer.add(instances.colors.buffer as ArrayBuffer);
+  if (instances.items) transfer.add(instances.items.buffer as ArrayBuffer);
 };
 
 /**
