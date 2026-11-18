@@ -224,6 +224,25 @@ Later phases build on this: a Blender decal (Phase 3: the template) and a runtim
 
 **Exit:** tyre tracks along a curve on a showcase block conform without floating or clipping.
 
+Found when it started (2026-11-18), and decided:
+
+- **No showcase block exists:** p310 makes them, and p310 waits on this plan. The exit's block is a Blender block with relief in `terrainBlockTest` (the terrain blocks' verification scene, beside its `blenderBlock/`), its tyre tracks a decal set exported from the same file, both made by a script (`devTools/blender/buildDecalTest.py`, like `buildScatterTest.py`) so they can be made again.
+- **`terrain_decals.blend` is in Phase 3 and Phase 6:** Phase 3 makes it (the exit's tracks are its workflow), from `buildTerrainTemplates.py` like the other templates; Phase 6's step is the handbook page, which its README text mirrors.
+- **The decal set's JSON** is D3's (`importedAsset`, `material`, `renderOrder`) with `renderOrder` defaulting to 10 (the bands) and `receiveShadow` (default true); decals never cast. No `merge` field: a node's `merge` custom prop already reaches `spawnImportedAsset` (`CUTOUT` into a `BAKED` group, `BLEND` into a `BATCHED` one).
+- **Every node of a decal set needs `uv1`** (Phase 2): the spawn warns naming the node when it has none. A node with physics custom props or GPU instances isn't a decal: the spawn skips it with a warning (an instance cell would draw at render order 0).
+- **The import keeps `uv1`:** the extraction moves every attribute, and three names `TEXCOORD_1` `uv1`. The default mesh encode (meshopt, quantized) stores texcoords in [0, 1] as 12-bit normalized integers (a quarter texel at 2K) and positions at 14 bits (2 mm on a 32 m set); section 3 checks it on the exit's tracks before choosing the default or the `terrainBlock` profile.
+
+Sections:
+
+1. The engine and the gather: `DecalSetSchema.ts` (the asset, its defaults, `DecalSetDef`, the `decalSets` scene field in `terrainSchemaPart`), a block's `decals`, `DecalSets.ts` (`spawnDecalSet`, `getDecalSet` on `aekasha/terrain`), `spawnTerrainBlock` spawning its decal sets at its grid place (`decalIds`); the gather's `decalSets.ts` (the suffix, pass 1 after the imports and materials, the scene pass after the blocks), the JSON Schema; tests; the terrain and gather `CLAUDE.md`s — done. As built:
+   - `DecalSetSchema.ts` (`DecalSetAssetSchema`, `DECAL_SET_DEFAULTS`, `DecalSetAsset`, `DecalSetDef` on `aekasha/schemas`; `DecalSetDef` on `aekasha/terrain` too): `id?`, `importedAsset`, `material`, `renderOrder` (int, default 10), `receiveShadow` (default true), `debugData`; strict, no `__saveData`. `terrainSchemaPart.scene.decalSets` (the manifest's `terrain`); `TerrainBlockAssetSchema.decals`; `SceneData.decalSets` (`import type`, as the blocks').
+   - `spawnDecalSet(id, { transform?, appId? })` → `DecalSet { id, meshEntityIds, dispose }` or `null` (the scene left): throws on no feature, no scene, a set the scene doesn't list, its import or material not loaded; `spawnImportedAsset` with the set's material, `castShadow: false`, its `receiveShadow`, `meshProps` of its render order for every node, app ids `decalSet/<id>/<node>`, a `filter` skipping (warned) a node with `isPhysObj` or GPU instances and warning of one without `uv1`.
+   - `spawnTerrainBlock` spawns the block's `decals` last, root transform its grid place, app ids `<appId>/decals/<id>`; a throw or a scene left deletes the block (and what it made); `dispose()` deletes them.
+   - The gather: `decalSet` in `GATHERED_SUFFIXES` (no save data), the `decalSets` id space and registry, `readDecalSets` before `readTerrainBlocks` (a block's unknown decal set id fails it), `resolveDecalSets` after `resolveScatters` (the import and material appended), `.schemas/decalSet.schema.json`.
+   - Tests: `DecalSets.test.ts` (5), `TerrainBlocks.test.ts`'s decal sets (2), `gather.test.ts`'s `p309 D3: decal sets` (4); `engineSchemas.test.ts`' field list. The API baseline (`yarn verify:baselines --update`) isn't recorded: Phase 6, with the versions.
+2. Blender: the add-on's decal tools (a decal set's export: its GLB, its import and decal set JSON stubs; the second UV set over a strip whose Array modifier repeats its cell) and the template `terrain_decals.blend` (a quad per cell UV'd from the atlas JSONs, a strip along a curve, a block to shrinkwrap onto); `yarn verify:blender` covers the export.
+3. The check: `buildDecalTest.py`'s block and tracks in `terrainBlockTest`, spawned with the block, looked at on WebGPU from above and low along the tracks.
+
 ### Phase 4 — Runtime decals (D4)
 
 1. Pool (a `BATCHED` merge group, D4), terrain patch projection, `DecalGeometry` for meshes (lazy), ribbons, fades; `perf-auditor` on the per-frame code.

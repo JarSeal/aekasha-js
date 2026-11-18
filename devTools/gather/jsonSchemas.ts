@@ -8,6 +8,7 @@ import z from 'zod';
 import {
   AssetsConfigSchema,
   CameraAssetSchema,
+  DecalSetAssetSchema,
   GeoAssetSchema,
   ImportedAssetSchema,
   ImpostorAssetSchema,
@@ -121,6 +122,7 @@ export const writeJsonSchemas = () => {
     { name: 'impostor.schema.json', schema: ImpostorAssetSchema },
     { name: 'terrainBlock.schema.json', schema: TerrainBlockAssetSchema },
     { name: 'scatter.schema.json', schema: ScatterAssetSchema },
+    { name: 'decalSet.schema.json', schema: DecalSetAssetSchema },
     { name: 'assetsConfig.schema.json', schema: AssetsConfigSchema },
   ];
 

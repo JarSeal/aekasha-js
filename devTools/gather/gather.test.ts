@@ -1759,7 +1759,7 @@ describe('p306 D2: terrain blocks', () => {
   });
 
   it('refuses a field the asset doesn’t have, and a resolution under 2', () => {
-    expect(gather(files({ decals: ['cracks'] })).isGathered).toBe(false);
+    expect(gather(files({ heightmap: 'coast' })).isGathered).toBe(false);
     expect(gather(files({ grid: { size: 64, resolution: 1 } })).isGathered).toBe(false);
   });
 });
@@ -1965,5 +1965,103 @@ describe('p308 D2: scatters', () => {
       },
     };
     expect(gather(files({}, { terrainBlocks: ['coast'] }, block)).isGathered).toBe(false);
+  });
+});
+
+describe('p309 D3: decal sets', () => {
+  const files = (
+    decalSet: Record<string, unknown> = {},
+    sceneFields: Record<string, unknown> = { decalSets: ['tracks'] },
+    extra: Record<string, unknown> = {}
+  ) => ({
+    'app/decals/tracksMesh.importedAsset.json': {
+      id: 'tracksMesh',
+      fileName: '/debugger/assets/testModels/box01.glb',
+    },
+    'app/decals/decalMat.material.json': material('decalMat'),
+    'app/decals/tracks.decalSet.json': {
+      importedAsset: 'tracksMesh',
+      material: 'decalMat',
+      ...decalSet,
+    },
+    ...scene('s', sceneFields),
+    ...extra,
+  });
+  const ids = (list: unknown) =>
+    ((list ?? []) as ({ id?: string } | string)[]).map((entry) =>
+      typeof entry === 'string' ? entry : entry.id
+    );
+  const block = (fields: Record<string, unknown> = {}) => ({
+    'app/blocks/coast.terrainBlock.json': {
+      geometry: { generator: 'noiseTerrain' },
+      material: 'decalMat',
+      grid: { size: 64, resolution: 65 },
+      collider: { type: 'NONE' },
+      ...fields,
+    },
+  });
+
+  it('writes a listed set with its defaults, and loads its import and material', () => {
+    const { isGathered, scene: get } = gather(files({ debugData: { name: 'Tracks' } }));
+    expect(isGathered).toBe(true);
+    const out = get('s');
+    expect(out?.decalSets).toEqual([
+      {
+        id: 'tracks',
+        importedAsset: 'tracksMesh',
+        material: 'decalMat',
+        renderOrder: 10,
+        receiveShadow: true,
+        debugData: { name: 'Tracks' },
+      },
+    ]);
+    expect(ids(out?.importedAssets)).toEqual(['tracksMesh']);
+    expect(ids(out?.materials)).toEqual(['decalMat']);
+    expect(out?.__features).toEqual(['terrain']);
+  });
+
+  it('keeps its own render order and shadows, a set listed twice once, without debug data in production', () => {
+    const { scene: get } = gather(
+      files(
+        { renderOrder: 12, receiveShadow: false, debugData: { name: 'Tracks' } },
+        { decalSets: ['tracks', 'tracks'], materials: ['decalMat'] }
+      ),
+      { isProduction: true }
+    );
+    const out = get('s');
+    expect(out?.decalSets).toEqual([
+      {
+        id: 'tracks',
+        importedAsset: 'tracksMesh',
+        material: 'decalMat',
+        renderOrder: 12,
+        receiveShadow: false,
+      },
+    ]);
+    expect(ids(out?.materials)).toEqual(['decalMat']);
+  });
+
+  it("adds a terrain block's decal sets to its scene", () => {
+    const { isGathered, scene: get } = gather(
+      files({}, { terrainBlocks: ['coast'] }, block({ decals: ['tracks', 'tracks'] }))
+    );
+    expect(isGathered).toBe(true);
+    const out = get('s');
+    const [def] = out?.terrainBlocks as Record<string, unknown>[];
+    expect(def.decals).toEqual(['tracks']);
+    expect(ids(out?.decalSets)).toEqual(['tracks']);
+    expect(ids(out?.importedAssets)).toEqual(['tracksMesh']);
+    expect(out?.__features).toEqual(['terrain']);
+  });
+
+  it('fails the gather on an unknown import, material or set, a fractional render order and a field it lacks', () => {
+    expect(gather(files({ importedAsset: 'nope' })).isGathered).toBe(false);
+    expect(gather(files({ material: 'nope' })).isGathered).toBe(false);
+    expect(gather(files({}, { decalSets: ['nope'] })).isGathered).toBe(false);
+    expect(
+      gather(files({}, { terrainBlocks: ['coast'] }, block({ decals: ['nope'] }))).isGathered
+    ).toBe(false);
+    expect(gather(files({ renderOrder: 1.5 })).isGathered).toBe(false);
+    expect(gather(files({ castShadow: true })).isGathered).toBe(false);
   });
 });

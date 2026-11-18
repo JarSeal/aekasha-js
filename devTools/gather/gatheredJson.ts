@@ -6,6 +6,7 @@ import path from 'path';
 import type z from 'zod';
 import {
   CameraAssetSchema,
+  DecalSetAssetSchema,
   GeoAssetSchema,
   ImportedAssetSchema,
   ImpostorAssetSchema,
@@ -42,6 +43,7 @@ export const GATHERED_SUFFIXES = {
   postFx: '.postFx.json',
   terrainBlock: '.terrainBlock.json',
   scatter: '.scatter.json',
+  decalSet: '.decalSet.json',
 } as const;
 
 /** A gathered JSON's type, by its suffix */
@@ -68,6 +70,7 @@ const GATHERED_SCHEMAS: Record<GatheredJsonType, z.ZodType> = {
   postFx: PostFxAssetSchema,
   terrainBlock: TerrainBlockAssetSchema,
   scatter: ScatterAssetSchema,
+  decalSet: DecalSetAssetSchema,
 };
 
 // The gathered types without per-scene `__saveData`
@@ -79,6 +82,7 @@ const TYPES_WITHOUT_SAVE_DATA = new Set<GatheredJsonType>([
   'mergeMaterial',
   'terrainBlock',
   'scatter',
+  'decalSet',
 ]);
 
 /** A file's gathered type by its name, or undefined when it isn't one */

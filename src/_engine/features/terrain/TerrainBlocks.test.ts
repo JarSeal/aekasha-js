@@ -32,6 +32,11 @@ const fns = vi.hoisted(() => ({
     count: 2,
     dispose: vi.fn(),
   })),
+  spawnDecalSet: vi.fn(async (id: string) => ({
+    id,
+    meshEntityIds: [id.length * 100, id.length * 100 + 1],
+    dispose: vi.fn(),
+  })),
 }));
 vi.mock(import('../../kernel/scene/Scene'), () => ({
   getLoadingSceneId: () => fns.loadingSceneId,
@@ -54,6 +59,7 @@ vi.mock(import('./TerrainCollider'), () => ({
   createTerrainBlockColliderAsync: fns.createCollider as never,
 }));
 vi.mock(import('../instancing/Scatter'), () => ({ spawnScatter: fns.spawnScatter as never }));
+vi.mock(import('./DecalSets'), () => ({ spawnDecalSet: fns.spawnDecalSet as never }));
 
 const block = (fields: Partial<TerrainBlockDef> = {}): TerrainBlockDef => ({
   id: 'coast',
@@ -305,5 +311,39 @@ describe('spawnTerrainBlock: scatters (p308 D2)', () => {
     expect(await spawnTerrainBlock('coast')).toBeNull();
     expect(fns.deleteEntity).toHaveBeenCalledWith(7);
     expect((await fns.spawnScatter.mock.results[0].value).dispose).toHaveBeenCalledOnce();
+  });
+});
+
+describe('spawnTerrainBlock: decal sets (p309 D3)', () => {
+  test('spawns each decal set at the block’s grid place, and its dispose deletes them too', async () => {
+    fns.scenes.scene.terrainBlocks = [block({ decals: ['tracks', 'cracks1'] })];
+    const spawned = await spawnTerrainBlock('coast');
+    const transform = { position: { x: 64, y: 0, z: -128 } };
+    expect(fns.spawnDecalSet.mock.calls).toEqual([
+      ['tracks', { transform, appId: 'terrainBlock/coast/decals/tracks' }],
+      ['cracks1', { transform, appId: 'terrainBlock/coast/decals/cracks1' }],
+    ]);
+    expect(spawned?.decalIds).toEqual([600, 601, 700, 701]);
+    spawned?.dispose();
+    for (const { value } of fns.spawnDecalSet.mock.results) {
+      expect((await value).dispose).toHaveBeenCalledOnce();
+    }
+    expect(fns.deleteEntity).toHaveBeenCalledWith(7);
+  });
+
+  test('deletes the block when a decal set throws, or the scene is left while one spawns', async () => {
+    fns.scenes.scene.terrainBlocks = [block({ decals: ['tracks'], collider: { type: 'NONE' } })];
+    fns.spawnDecalSet.mockRejectedValueOnce(new Error('no material'));
+    await expect(spawnTerrainBlock('coast')).rejects.toThrow('no material');
+    expect(fns.deleteEntity).toHaveBeenCalledWith(7);
+
+    fns.deleteEntity.mockClear();
+    fns.spawnDecalSet.mockImplementationOnce(async (id: string) => {
+      exitHook?.();
+      return { id, meshEntityIds: [1], dispose: vi.fn() };
+    });
+    expect(await spawnTerrainBlock('coast')).toBeNull();
+    expect(fns.deleteEntity).toHaveBeenCalledWith(7);
+    expect((await fns.spawnDecalSet.mock.results[1].value).dispose).toHaveBeenCalledOnce();
   });
 });

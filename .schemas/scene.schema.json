@@ -80,11 +80,14 @@
     "terrainBlocks": {
       "$ref": "#/definitions/__schema624"
     },
-    "surfaceConditions": {
+    "decalSets": {
       "$ref": "#/definitions/__schema626"
     },
+    "surfaceConditions": {
+      "$ref": "#/definitions/__schema628"
+    },
     "scatters": {
-      "$ref": "#/definitions/__schema645"
+      "$ref": "#/definitions/__schema647"
     },
     "id": {
       "type": "string",
@@ -105,7 +108,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema647"
+          "$ref": "#/definitions/__schema649"
         }
       ]
     }
@@ -7970,54 +7973,56 @@
       }
     },
     "__schema626": {
+      "description": "Decal set ids (*.decalSet.json) the scene's code spawns (spawnDecalSet): each one's import and material load with the scene. A terrain block's decal sets are added for it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema627"
+        }
+      ]
+    },
+    "__schema627": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "__schema628": {
       "type": "object",
       "properties": {
         "wetness": {
-          "$ref": "#/definitions/__schema627"
-        },
-        "rain": {
           "$ref": "#/definitions/__schema629"
         },
-        "puddleLevel": {
+        "rain": {
           "$ref": "#/definitions/__schema631"
         },
-        "waterLevel": {
+        "puddleLevel": {
           "$ref": "#/definitions/__schema633"
         },
-        "snowCoverage": {
+        "waterLevel": {
           "$ref": "#/definitions/__schema635"
         },
-        "temperature": {
+        "snowCoverage": {
           "$ref": "#/definitions/__schema637"
         },
-        "dryingRate": {
+        "temperature": {
           "$ref": "#/definitions/__schema639"
         },
-        "wind": {
+        "dryingRate": {
           "$ref": "#/definitions/__schema641"
         },
-        "mode": {
+        "wind": {
           "$ref": "#/definitions/__schema643"
+        },
+        "mode": {
+          "$ref": "#/definitions/__schema645"
         }
       },
       "additionalProperties": false,
       "description": "The scene's starting surface conditions (the surfaceConditions() feature), over the defaults."
     },
-    "__schema627": {
-      "description": "How wet the surfaces start: 0 dry, 0.5 the pores full, 1 a water film. Default 0.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema628"
-        }
-      ]
-    },
-    "__schema628": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 1
-    },
     "__schema629": {
-      "description": "Rain intensity, 0 to 1. Default 0.",
+      "description": "How wet the surfaces start: 0 dry, 0.5 the pores full, 1 a water film. Default 0.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema630"
@@ -8030,7 +8035,7 @@
       "maximum": 1
     },
     "__schema631": {
-      "description": "How full the puddles start, 0 to 1. Default 0.",
+      "description": "Rain intensity, 0 to 1. Default 0.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema632"
@@ -8043,7 +8048,7 @@
       "maximum": 1
     },
     "__schema633": {
-      "description": "The water surface's world Y for the shoreline's wet band, or null for none. Default null.",
+      "description": "How full the puddles start, 0 to 1. Default 0.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema634"
@@ -8051,6 +8056,19 @@
       ]
     },
     "__schema634": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "__schema635": {
+      "description": "The water surface's world Y for the shoreline's wet band, or null for none. Default null.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema636"
+        }
+      ]
+    },
+    "__schema636": {
       "anyOf": [
         {
           "type": "number"
@@ -8060,21 +8078,8 @@
         }
       ]
     },
-    "__schema635": {
-      "description": "Snow cover, 0 to 1. Default 0.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema636"
-        }
-      ]
-    },
-    "__schema636": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 1
-    },
     "__schema637": {
-      "description": "The air temperature in °C (snow melts above 0). Default 15.",
+      "description": "Snow cover, 0 to 1. Default 0.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema638"
@@ -8082,10 +8087,12 @@
       ]
     },
     "__schema638": {
-      "type": "number"
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
     },
     "__schema639": {
-      "description": "How much wetness dries per minute in full sun without wind. Default 0.1.",
+      "description": "The air temperature in °C (snow melts above 0). Default 15.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema640"
@@ -8093,11 +8100,10 @@
       ]
     },
     "__schema640": {
-      "type": "number",
-      "minimum": 0
+      "type": "number"
     },
     "__schema641": {
-      "description": "The wind's world x and z in m/s. Default [0, 0].",
+      "description": "How much wetness dries per minute in full sun without wind. Default 0.1.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema642"
@@ -8105,6 +8111,18 @@
       ]
     },
     "__schema642": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema643": {
+      "description": "The wind's world x and z in m/s. Default [0, 0].",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema644"
+        }
+      ]
+    },
+    "__schema644": {
       "type": "array",
       "items": [
         {
@@ -8118,23 +8136,8 @@
       "maxItems": 2,
       "additionalItems": false
     },
-    "__schema643": {
-      "description": "SIMULATED (rain wets, sun and wind dry, snow melts) or MANUAL (only the app's calls change them). Default SIMULATED.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema644"
-        }
-      ]
-    },
-    "__schema644": {
-      "type": "string",
-      "enum": [
-        "SIMULATED",
-        "MANUAL"
-      ]
-    },
     "__schema645": {
-      "description": "Scatter ids (*.scatter.json) the scene's code spawns (spawnScatter): each one's geometry and material JSONs load with the scene. A terrain block's scatters are added for it.",
+      "description": "SIMULATED (rain wets, sun and wind dry, snow melts) or MANUAL (only the app's calls change them). Default SIMULATED.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema646"
@@ -8142,13 +8145,28 @@
       ]
     },
     "__schema646": {
+      "type": "string",
+      "enum": [
+        "SIMULATED",
+        "MANUAL"
+      ]
+    },
+    "__schema647": {
+      "description": "Scatter ids (*.scatter.json) the scene's code spawns (spawnScatter): each one's geometry and material JSONs load with the scene. A terrain block's scatters are added for it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema648"
+        }
+      ]
+    },
+    "__schema648": {
       "type": "array",
       "items": {
         "type": "string",
         "minLength": 1
       }
     },
-    "__schema647": {
+    "__schema649": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -8243,11 +8261,14 @@
             "terrainBlocks": {
               "$ref": "#/definitions/__schema624"
             },
-            "surfaceConditions": {
+            "decalSets": {
               "$ref": "#/definitions/__schema626"
             },
+            "surfaceConditions": {
+              "$ref": "#/definitions/__schema628"
+            },
             "scatters": {
-              "$ref": "#/definitions/__schema645"
+              "$ref": "#/definitions/__schema647"
             }
           },
           "additionalProperties": false
