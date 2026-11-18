@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "leafLitter",
+  "tslFile": "materials/leafLitter/leafLitter.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "params": { "alphaTest": 0.5, "alphaToCoverage": true },
+  "staticDefines": { "wet": "SIMPLE" },
+  "inputs": {
+    "albedo": { "texture": "leafLitter.albedo" }
+  },
+  "debugData": {
+    "name": "Leaf litter",
+    "description": "Leaf litter cards (p308 D5) on generateLeafCard's quads: input albedo the leaf atlas's slot (leafLitter.albedo, ambientCG LeafSet024), a leaf cell per instance by a hash of its instanceIndex (one material and one draw a scatter cell), fitted at its aspect; a share of the leaves (autumn, 0.6) turned toward autumnColor; × tint and the instance's colour; alpha-tested at 0.5 (the atlas's alpha coverage), alphaToCoverage under MSAA. Static define wet (SIMPLE, NONE): wet by the surface conditions by porosity, wetDarkening, wetRoughness. Numbers and colours (optional inputs): autumn, autumnColor, tint, roughness, porosity, wetDarkening, wetRoughness."
+  }
+}

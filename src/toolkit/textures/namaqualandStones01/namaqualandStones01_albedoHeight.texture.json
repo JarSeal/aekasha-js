@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "namaqualandStones01_albedoHeight",
+  "pack": {
+    "channels": {
+      "rgb": {
+        "src": "./source/raw/color.jpg"
+      },
+      "a": {
+        "src": "./source/raw/height.jpg",
+        "channel": "r",
+        "remap": "auto"
+      }
+    }
+  },
+  "optimize": {
+    "profile": "prop",
+    "slot": "baseColor"
+  },
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "colorSpace": "srgb",
+    "anisotropy": "MAX"
+  },
+  "debugData": {
+    "name": "namaqualandStones01 albedoHeight (FULL)",
+    "description": "The texture set namaqualandStones01's FULL albedoHeight: RGB albedo (sRGB), A height. Packed from polyHaven namaqualand_stones_01's maps (yarn fetchTextureSources)."
+  }
+}

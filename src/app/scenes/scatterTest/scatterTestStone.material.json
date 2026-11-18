@@ -1,0 +1,6 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "scatterTestStone",
+  "type": "STANDARD",
+  "params": { "color": "#b9b1a4", "roughness": 0.8, "metalness": 0 }
+}

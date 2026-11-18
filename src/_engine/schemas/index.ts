@@ -65,6 +65,22 @@ export { createSceneAssetSchema } from './SceneSchema';
 export type { SceneAsset } from './SceneSchema';
 export { spatialSchemaPart } from '../features/spatial/SpatialSchema';
 export {
+  instancingSchemaPart,
+  SCATTER_COLLIDER_TYPES,
+  SCATTER_DEFAULTS,
+  SCATTER_SOURCE_TYPES,
+  ScatterAssetSchema,
+} from '../features/instancing/ScatterSchema';
+export { SCATTER_COLLIDER_WARNING } from '../features/instancing/ScatterLimits';
+export type {
+  ScatterAsset,
+  ScatterColliderType,
+  ScatterDef,
+  ScatterItemDef,
+  ScatterPlacementDef,
+  ScatterSourceDef,
+} from '../features/instancing/ScatterSchema';
+export {
   TERRAIN_BLOCK_COLLIDER_TYPES,
   TERRAIN_BLOCK_DEFAULTS,
   TerrainBlockAssetSchema,

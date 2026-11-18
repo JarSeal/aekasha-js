@@ -200,6 +200,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  scatterTest: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/scatterTest/scatterTest.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   scene01: async ({ sceneData, assets }) => {
     const module = await import('../app/./scenes/scene01/scene01.ts');
     await (
@@ -316,6 +324,7 @@ export const sceneFileObjects: {
 
 export const tslMaterialFileObjects = {
   bannerAether: () => import('../app/profiles/banner/bannerAether.tsl.ts'),
+  scatterTestRulesTerrain: () => import('../app/scenes/scatterTest/scatterTestTerrain.tsl.ts'),
   testTslMat: () => import('../app/scenes/sceneTestECS/testTslMat.tsl.ts'),
   terrainGalleryPatch: () => import('../app/scenes/terrainGallery/terrainGalleryPatch.tsl.ts'),
   p302ChannelMat: () => import('../app/scenes/testDebugScene/p302ChannelMat.tsl.ts'),
@@ -327,12 +336,16 @@ export const tslMaterialFileObjects = {
   p303SetLiteMat: () => import('../app/scenes/textureSets/p303TextureSetMat.tsl.ts'),
   p303SetMinimalMat: () => import('../app/scenes/textureSets/p303TextureSetMat.tsl.ts'),
   asteroid: () => import('../toolkit/materials/asteroid/asteroid.tsl.ts'),
+  leafLitter: () => import('../toolkit/materials/leafLitter/leafLitter.tsl.ts'),
+  rockScatter: () => import('../toolkit/materials/rockScatter/rockScatter.tsl.ts'),
   terrain: () => import('../toolkit/materials/terrain/terrain.tsl.ts'),
   textureSetSurface: () => import('../toolkit/materials/textureSetSurface/textureSetSurface.tsl.ts'),
   triplanarCheckerboard: () => import('../toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts'),
   triplanarGrid: () => import('../toolkit/materials/triplanarGrid/triplanarGrid.tsl.ts'),
   terrainBlockTestBlenderSplat: () => import('../app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts'),
   terrainBlockTestBlenderVertex: () => import('../app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts'),
+  rockScatterNamaqualandBoulder02: () => import('../toolkit/materials/rockScatter/rockScatter.tsl.ts'),
+  rockScatterNamaqualandStones01: () => import('../toolkit/materials/rockScatter/rockScatter.tsl.ts'),
 };
 
 export const postFxFileObjects = {

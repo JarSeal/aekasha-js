@@ -114,11 +114,49 @@ export type ImportedGeometryInfo = {
   transform: { position: Vector3Like; quaternion: QuatLike; scale: Vector3Like };
   /** The node's Blender custom props, parsed (physics, compound group, the app's own). */
   customProps: ParsedCustomProps;
+  /** The glTF mesh's name (Blender's mesh data name), when it has one. Blender's GPU Instances
+   * export copies a mesh for each instancing node, under the same name. */
+  meshName?: string;
   /** The primitive came from KHR_draco_mesh_compression (vertex order is not preserved). */
   isDracoCompressed: boolean;
   /** Only with importTextures: which registered texture filled which slot of this primitive's glTF
    * material, so an engine material can be given the same maps. */
   textureSlots?: Partial<Record<TextureMapKeys, string>>;
+  /** The node's GPU instances (`EXT_mesh_gpu_instancing`, eg. Blender's Geometry Nodes exported
+   * with GPU Instances): `spawnImportedAsset` draws one of the geometry per instance. */
+  instances?: ImportedInstances;
+};
+
+/** An imported node's instances as plain typed arrays (structured-clone safe; transferred across
+ * the assets worker hop). */
+export type ImportedInstances = {
+  /** 16 floats an instance (column major, three's `Matrix4.elements`), in the node's space: its
+   * `transform` places them. */
+  matrices: Float32Array;
+  /** A colour per instance, linear RGB (3 floats each), from the `_COLOR_0` instance attribute. */
+  colors?: Float32Array;
+  /** Each instance's item (a scatter's `items` index), from a point cloud's `_ITEM` attribute. */
+  items?: Int32Array;
+};
+
+/** A point cloud of an import (a node with the custom prop `aekScatterPoints`, or a points node
+ * under one): its points as instances, for a scatter's `IMPORTED` source. It registers no geometry and spawns nothing on its
+ * own. */
+export type ImportedPointCloudInfo = {
+  /** The import it belongs to. */
+  importId: string;
+  /** The node's name as GLTFLoader names it. */
+  nodeName: string;
+  /** Node names from the glTF root down to (not including) this node. */
+  parentPath: string[];
+  /** Relative to the glTF root (after the empty-wrapper unwrap): places the instances. */
+  transform: { position: Vector3Like; quaternion: QuatLike; scale: Vector3Like };
+  /** The node's Blender custom props, parsed; a point cloud the import refused has its reason in
+   * `warnings` and no instances. */
+  customProps: ParsedCustomProps;
+  /** A point per instance: its position, the `_ROT` quaternion and `_SCALE` (both in Blender's
+   * Z-up axes, as its exporter leaves custom attributes), and `_ITEM`. */
+  instances: ImportedInstances;
 };
 
 /**
@@ -134,6 +172,8 @@ export type ImportedAssetManifest = {
   fileName: string;
   /** One per imported mesh primitive, in node order. */
   geometries: ImportedGeometryInfo[];
+  /** The point clouds (`aekScatterPoints` nodes), in node order. Absent when the file has none. */
+  pointClouds?: ImportedPointCloudInfo[];
   /** The registered textures' ids, with `importTextures` (empty without it). */
   textureIds: string[];
 };
@@ -176,7 +216,8 @@ export type SpawnImportedParams = {
 
 /** The entities `spawnImportedAsset` created, by the role they have. */
 export type SpawnImportedResult = {
-  /** Mesh entities, in manifest order (collider-only nodes get none). */
+  /** Mesh entities, in manifest order (collider-only nodes get none; a node of GPU instances gets
+   * its cells, several). */
   meshEntityIds: number[];
   /** Entities carrying rigid bodies: a mesh entity (anchor) or a headless physics entity. */
   physicsEntityIds: number[];

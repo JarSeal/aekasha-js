@@ -8,6 +8,7 @@ import {
   type FeatureSchemaPart,
   createMeshAssetSchema,
   createSceneAssetSchema,
+  instancingSchemaPart,
   lodSchemaPart,
   mergingSchemaPart,
   postFxSchemaPart,
@@ -32,6 +33,7 @@ export const ENGINE_SCHEMA_PARTS = [
   textureSetsSchemaPart,
   terrainSchemaPart,
   surfaceConditionsSchemaPart,
+  instancingSchemaPart,
 ] as const;
 
 /** The scene schema with every engine feature's fields */

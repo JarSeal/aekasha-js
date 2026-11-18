@@ -8,6 +8,9 @@ they can be made again (a template changed by hand drifts from this script: chan
 - terrain_splatMap.blend: a block with a 1K splat map (5 layers, RGBA), splatMap_splat0.png beside;
 - terrain_triplanarCliff.blend: a heightfield cliff band, and a trimesh block with an overhang;
 - terrain_colormapDetail.blend: a painted block ready for Bake Colour Map;
+- terrain_scatter.blend: a painted block, three rocks and a Geometry Nodes scatter of them masked by
+  the block's Splat, exportable as GPU instances or a point cloud (p308; the builder exports both
+  into <renders dir> as a check);
 - structure_concrete.blend: two wall segments and a bunker passage worn by a vertex colour.
 
 Each has a README text block (shown in the Layout workspace) mirroring its handbook page, metric
@@ -457,6 +460,312 @@ def build_colormap_detail():
     return path, (0, 0, 3), 85
 
 
+# --- The scatter template (p308) ----------------------------------------------------------------
+
+SCATTER_LAYERS = ["sand01", "rocks01"]
+#: The rocks' place in the file, off the block (Collection Info's Reset Children ignores it)
+SCATTER_ROCKS_X = -40
+SCATTER_SEED = 308
+
+
+def add_scatter_rocks():
+    """The `ScatterRocks` collection: three lumpy rocks of about 0.5 m, 320 triangles each, their
+    scale and rotation applied and their origin at their base's centre"""
+    rocks = bpy.data.collections.new("ScatterRocks")
+    bpy.context.scene.collection.children.link(rocks)
+    preview = bpy.data.materials.new("AEK Rock Preview")
+    preview.diffuse_color = (0.42, 0.40, 0.37, 1.0)
+    preview.use_nodes = True
+    preview.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (
+        0.42, 0.40, 0.37, 1.0)
+    for index, name in enumerate(("RockA", "RockB", "RockC")):
+        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=3, radius=0.28)
+        rock = bpy.context.active_object
+        rock.name = name
+        rock.data.name = name
+        texture = bpy.data.textures.new(f"{name} lumps", "VORONOI")
+        texture.noise_scale = 0.16
+        displace = rock.modifiers.new("Lumps", "DISPLACE")
+        displace.texture = texture
+        displace.texture_coords = "GLOBAL"
+        displace.mid_level = 0.6
+        displace.strength = 0.2
+        # A seed per rock: the lumps sampled at another place
+        rock.location = (index * 7.3, index * 3.1, 0)
+        bpy.ops.object.modifier_apply(modifier=displace.name)
+        bpy.data.textures.remove(texture)
+        rock.scale = (1.0 + 0.25 * index, 0.9, 0.55)
+        rock.location = (0, 0, 0)
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+        # The origin at the base's centre: x and y centred, the lowest point at z 0
+        co = np.empty(len(rock.data.vertices) * 3)
+        rock.data.vertices.foreach_get("co", co)
+        co = co.reshape(-1, 3)
+        co[:, 0] -= (co[:, 0].min() + co[:, 0].max()) / 2
+        co[:, 1] -= (co[:, 1].min() + co[:, 1].max()) / 2
+        co[:, 2] -= co[:, 2].min()
+        rock.data.vertices.foreach_set("co", co.ravel())
+        rock.data.update()
+        bpy.ops.object.shade_smooth()
+        rock.data.materials.append(preview)
+        rock.location = (SCATTER_ROCKS_X, -3 + 3 * index, 0)
+        for collection in rock.users_collection:
+            collection.objects.unlink(rock)
+        rocks.objects.link(rock)
+    return rocks
+
+
+class ScatterTree:
+    """Builds the `AekTerrainScatter` node group: the group's input sockets and its nodes"""
+
+    def __init__(self, block, rocks):
+        self.tree = bpy.data.node_groups.new("AekTerrainScatter", "GeometryNodeTree")
+        self.inputs = {}
+        self.socket("Geometry", "NodeSocketGeometry", in_out="OUTPUT")
+        self.socket("Block", "NodeSocketObject", block,
+                    "The terrain block the points go on: its faces and its Splat")
+        self.socket("Rocks", "NodeSocketCollection", rocks,
+                    "The items: each child one, in the collection's order (the item index)")
+        self.socket("Distance Min", "NodeSocketFloat", 1.2,
+                    "Metres between any two instances (the engine's minSpacing)", 0.01)
+        self.socket("Density Max", "NodeSocketFloat", 0.6,
+                    "Points per square metre where the mask is 1", 0.0)
+        self.socket("Base", "NodeSocketFloat", 0.0,
+                    "The base layer's factor in the mask (what R, G and B leave)", 0.0, 1.0)
+        self.socket("Layer R", "NodeSocketFloat", 1.0, "Layer 1's factor (Splat R)", 0.0, 1.0)
+        self.socket("Layer G", "NodeSocketFloat", 0.0, "Layer 2's factor (Splat G)", 0.0, 1.0)
+        self.socket("Layer B", "NodeSocketFloat", 0.0, "Layer 3's factor (Splat B)", 0.0, 1.0)
+        self.socket("Scale Min", "NodeSocketFloat", 0.6, "The smallest instance's scale", 0.01)
+        self.socket("Scale Max", "NodeSocketFloat", 1.5, "The largest instance's scale", 0.01)
+        self.socket("Align", "NodeSocketFloat", 0.6,
+                    "0 upright, 1 along the block's normal", 0.0, 1.0)
+        self.socket("Sink", "NodeSocketFloat", 0.06,
+                    "Metres an instance goes under the surface (× its scale), along its up", 0.0)
+        self.socket("Seed", "NodeSocketInt", SCATTER_SEED, "The placements' seed")
+        self.socket("Points", "NodeSocketBool", False,
+                    "Output the points with _ROT, _SCALE and _ITEM (the point-cloud export) "
+                    "instead of the instances")
+
+    def socket(self, name, socket_type, default=None, description="", minimum=None, maximum=None,
+               in_out="INPUT"):
+        socket = self.tree.interface.new_socket(name, in_out=in_out, socket_type=socket_type,
+                                                description=description)
+        if default is not None:
+            socket.default_value = default
+        if minimum is not None:
+            socket.min_value = minimum
+        if maximum is not None:
+            socket.max_value = maximum
+        if in_out == "INPUT":
+            self.inputs[name] = socket
+
+    def node(self, kind, location, **props):
+        node = self.tree.nodes.new(kind)
+        node.location = location
+        for key, value in props.items():
+            setattr(node, key, value)
+        return node
+
+    def link(self, from_socket, to_socket):
+        self.tree.links.new(from_socket, to_socket)
+
+    def math(self, operation, a, b, location):
+        node = self.node("ShaderNodeMath", location, operation=operation)
+        for socket, value in ((node.inputs[0], a), (node.inputs[1], b)):
+            if isinstance(value, (int, float)):
+                socket.default_value = value
+            else:
+                self.link(value, socket)
+        return node.outputs[0]
+
+    def random(self, data_type, minimum, maximum, seed_offset, location, group_in):
+        node = self.node("FunctionNodeRandomValue", location, data_type=data_type)
+        enabled = [s for s in node.inputs if s.enabled]
+        for socket, value in ((enabled[0], minimum), (enabled[1], maximum)):
+            if isinstance(value, (int, float, tuple)):
+                socket.default_value = value
+            else:
+                self.link(value, socket)
+        seed = self.node("FunctionNodeInputInt", (location[0] - 200, location[1] - 160),
+                         integer=seed_offset)
+        self.link(self.math("ADD", group_in.outputs["Seed"], seed.outputs[0],
+                            (location[0] - 20, location[1] - 160)), node.inputs["Seed"])
+        return next(s for s in node.outputs if s.enabled)
+
+    def named(self, name, data_type, location):
+        node = self.node("GeometryNodeInputNamedAttribute", location, data_type=data_type)
+        node.inputs["Name"].default_value = name
+        return next(s for s in node.outputs if s.enabled and s.name == "Attribute")
+
+    def store(self, geometry, name, data_type, value, location):
+        node = self.node("GeometryNodeStoreNamedAttribute", location, data_type=data_type,
+                         domain="POINT")
+        node.inputs["Name"].default_value = name
+        self.link(geometry, node.inputs["Geometry"])
+        self.link(value, next(s for s in node.inputs if s.enabled and s.name == "Value"))
+        return node.outputs["Geometry"]
+
+    def build(self):
+        """The graph: Poisson points masked by Splat, each one's rotation, scale and item stored
+        on it (_ROT, _SCALE, _ITEM), then either the collection's instances on them (the GPU
+        instances export) or the points (the point-cloud export)"""
+        group_in = self.node("NodeGroupInput", (-1400, 0))
+        group_out = self.node("NodeGroupOutput", (1400, 0))
+
+        block = self.node("GeometryNodeObjectInfo", (-1150, 300), transform_space="RELATIVE")
+        self.link(group_in.outputs["Block"], block.inputs["Object"])
+
+        # The mask: Splat's channels × their factors, the base what R + G + B leave
+        splat = self.node("FunctionNodeSeparateColor", (-1150, -50))
+        self.link(self.named("Splat", "FLOAT_COLOR", (-1350, -250)), splat.inputs["Color"])
+        weighted = [self.math("MULTIPLY", splat.outputs[channel], group_in.outputs[factor],
+                              (-950, 50 - 100 * i))
+                    for i, (channel, factor) in enumerate(
+                        (("Red", "Layer R"), ("Green", "Layer G"), ("Blue", "Layer B")))]
+        painted = self.math("ADD", self.math("ADD", splat.outputs["Red"], splat.outputs["Green"],
+                                             (-950, -300)), splat.outputs["Blue"], (-800, -300))
+        base = self.math("MULTIPLY", self.math("SUBTRACT", 1.0, painted, (-650, -300)),
+                         group_in.outputs["Base"], (-500, -300))
+        mask = self.math("ADD", self.math("ADD", weighted[0], weighted[1], (-800, 0)),
+                         self.math("ADD", weighted[2], base, (-650, -150)), (-500, 0))
+
+        distribute = self.node("GeometryNodeDistributePointsOnFaces", (-300, 250),
+                               distribute_method="POISSON")
+        self.link(block.outputs["Geometry"], distribute.inputs["Mesh"])
+        self.link(group_in.outputs["Distance Min"], distribute.inputs["Distance Min"])
+        self.link(group_in.outputs["Density Max"], distribute.inputs["Density Max"])
+        self.link(mask, distribute.inputs["Density Factor"])
+        self.link(group_in.outputs["Seed"], distribute.inputs["Seed"])
+
+        # The rotation: up turned toward the normal by Align, then a random yaw about that up
+        align = self.node("FunctionNodeAlignRotationToVector", (-300, -150), axis="Z")
+        self.link(group_in.outputs["Align"], align.inputs["Factor"])
+        self.link(distribute.outputs["Normal"], align.inputs["Vector"])
+        yaw = self.random("FLOAT", 0.0, 2 * math.pi, 1, (-500, -550), group_in)
+        yaw_euler = self.node("ShaderNodeCombineXYZ", (-300, -450))
+        self.link(yaw, yaw_euler.inputs["Z"])
+        yaw_rotation = self.node("FunctionNodeEulerToRotation", (-150, -450))
+        self.link(yaw_euler.outputs[0], yaw_rotation.inputs["Euler"])
+        rotation = self.node("FunctionNodeRotateRotation", (0, -200), rotation_space="LOCAL")
+        self.link(align.outputs["Rotation"], rotation.inputs["Rotation"])
+        self.link(yaw_rotation.outputs["Rotation"], rotation.inputs["Rotate By"])
+
+        # The scale, uniform, and the item: an index into the collection's children
+        scale = self.random("FLOAT", group_in.outputs["Scale Min"], group_in.outputs["Scale Max"],
+                            2, (-500, -800), group_in)
+        scale_vector = self.node("ShaderNodeCombineXYZ", (-300, -800))
+        for axis in "XYZ":
+            self.link(scale, scale_vector.inputs[axis])
+        rocks = self.node("GeometryNodeCollectionInfo", (-1150, -700))
+        self.link(group_in.outputs["Rocks"], rocks.inputs["Collection"])
+        rocks.inputs["Separate Children"].default_value = True
+        rocks.inputs["Reset Children"].default_value = True
+        count = self.node("GeometryNodeAttributeDomainSize", (-950, -900), component="INSTANCES")
+        self.link(rocks.outputs["Instances"], count.inputs["Geometry"])
+        item = self.random("INT", 0, self.math("SUBTRACT", count.outputs["Instance Count"], 1,
+                                                (-700, -1000)),
+                           3, (-500, -1050), group_in)
+
+        # Sink: each point moved down its own up by Sink × its scale, so both exports carry it
+        sink = self.node("ShaderNodeCombineXYZ", (-150, -650))
+        self.link(self.math("MULTIPLY", self.math("MULTIPLY", group_in.outputs["Sink"], -1.0,
+                                                  (-450, -650)), scale, (-300, -650)),
+                  sink.inputs["Z"])
+        offset = self.node("FunctionNodeRotateVector", (100, -500))
+        self.link(sink.outputs[0], offset.inputs["Vector"])
+        self.link(rotation.outputs["Rotation"], offset.inputs["Rotation"])
+        moved = self.node("GeometryNodeSetPosition", (100, 250))
+        self.link(distribute.outputs["Points"], moved.inputs["Geometry"])
+        self.link(offset.outputs[0], moved.inputs["Offset"])
+
+        stored = self.store(moved.outputs["Geometry"], "_ROT", "QUATERNION",
+                            rotation.outputs["Rotation"], (300, 250))
+        stored = self.store(stored, "_SCALE", "FLOAT_VECTOR", scale_vector.outputs[0], (500, 250))
+        stored = self.store(stored, "_ITEM", "INT", item, (700, 250))
+
+        instance = self.node("GeometryNodeInstanceOnPoints", (950, 100))
+        self.link(stored, instance.inputs["Points"])
+        self.link(rocks.outputs["Instances"], instance.inputs["Instance"])
+        instance.inputs["Pick Instance"].default_value = True
+        self.link(self.named("_ITEM", "INT", (700, -100)), instance.inputs["Instance Index"])
+        self.link(self.named("_ROT", "QUATERNION", (700, -250)), instance.inputs["Rotation"])
+        self.link(self.named("_SCALE", "FLOAT_VECTOR", (700, -400)), instance.inputs["Scale"])
+
+        switch = self.node("GeometryNodeSwitch", (1200, 0), input_type="GEOMETRY")
+        self.link(group_in.outputs["Points"], switch.inputs["Switch"])
+        self.link(instance.outputs["Instances"], switch.inputs["False"])
+        self.link(stored, switch.inputs["True"])
+        self.link(switch.outputs["Output"], group_out.inputs["Geometry"])
+        return self.tree
+
+
+def add_scatter_object(name, tree):
+    """An empty mesh object at the origin drawing the group (the block stays a plain block)"""
+    obj = bpy.data.objects.new(name, bpy.data.meshes.new(name))
+    bpy.context.scene.collection.objects.link(obj)
+    obj.modifiers.new("AekTerrainScatter", "NODES").node_group = tree
+    return obj
+
+
+def export_scatter_checks(scatter, rocks, tree):
+    """Exports the scatter both ways into the renders dir (not the repo), as the README says, so
+    the template is checked to export: GPU instances, then the points (a copy of the group whose
+    Points defaults on: Blender 5.3 takes no modifier input from Python)"""
+    def export(file_name, objects, **options):
+        for other in bpy.context.selected_objects:
+            other.select_set(False)
+        for obj in objects:
+            obj.select_set(True)
+        bpy.context.view_layer.objects.active = objects[0]
+        path = os.path.join(RENDERS, file_name)
+        bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True,
+                                  export_extras=True, export_apply=True,
+                                  export_materials="NONE", **options)
+        progress(f"exported {path}: {os.path.getsize(path) / 1e3:.0f} kB")
+
+    rock_objects = list(rocks.objects)
+    export("terrain_scatter_gpu.glb", [scatter, *rock_objects], export_gpu_instances=True,
+           export_gn_mesh=True)
+    points_tree = tree.copy()
+    points_tree.name = "AekTerrainScatterPoints"
+    next(i for i in points_tree.interface.items_tree if i.name == "Points").default_value = True
+    points = add_scatter_object("terrainScatterRocksPoints", points_tree)
+    points["aekScatterPoints"] = 1
+    bpy.context.view_layer.update()
+    export("terrain_scatter_points.glb", [points, *rock_objects], export_gn_mesh=True,
+           export_pointclouds=True, export_attributes=True)
+    bpy.data.objects.remove(points)
+    bpy.data.node_groups.remove(points_tree)
+
+
+def build_scatter():
+    path = new_file("terrain_scatter")
+    grid = add_block("scatterBlock")
+    heights = hills(grid, 81, 6.0) + 0.4 * fbm(grid.world_x, grid.world_z, 5.0, 3, 82)
+    grid.set_heights(heights)
+    # rocks01 (R) in patches and on the steeper faces, sand01 the base
+    patches = smoothstep(0.5, 0.62, fbm(grid.world_x, grid.world_z, 14.0, 4, 83))
+    steep = smoothstep(*np.percentile(grid.slope(), [80, 92]), grid.slope())
+    grid.set_splat(np.stack([np.maximum(patches, steep)], axis=1), "RGB_AO")
+    set_preview(SCATTER_LAYERS)
+    select(grid.obj)
+    bpy.ops.aek.bake_ao_to_splat(samples=64, distance=12.0)
+    validate(grid.obj)
+    rocks = add_scatter_rocks()
+    tree = ScatterTree(grid.obj, rocks).build()
+    scatter = add_scatter_object("scatterBlockRocks", tree)
+    bpy.context.view_layer.update()
+    evaluated = scatter.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    instances = sum(1 for i in bpy.context.evaluated_depsgraph_get().object_instances
+                    if i.is_instance and i.parent and i.parent.original == scatter)
+    progress(f"scatter: {instances} instances ({evaluated.name})")
+    if instances < 100:
+        raise RuntimeError(f"The scatter made {instances} instances")
+    export_scatter_checks(scatter, rocks, tree)
+    set_up_views((0, 0, 3), 90, README_SCATTER)
+    return path, (0, 0, 3), 70
+
+
 # --- The structure template ---------------------------------------------------------------------
 
 STRUCTURE_LAYERS = ["concrete01", "concrete02", "mud01", "rocks02"]
@@ -748,6 +1057,35 @@ The bake
 - Export Block saves it as a PNG with its texture JSON (sRGB, flipY false); in the engine's material: "colorMap": { "mode": "DETAIL" } (the map tinting greyscale detail up close) or "FAR_ONLY" (the map past the detail distance), and "materialInputs": { "colorMap": { "texture": "<id>_colorMap" } }.
 """
 
+README_SCATTER = """
+ÆKASHA TERRAIN SCATTER
+The handbook: docs/techniques/terrain-scatter.md; the block workflow: docs/techniques/terrain-blocks-blender.md.
+
+What's here
+- scatterBlock: a 64 m / 129 block of low hills, rocks01 (R) painted in patches and on the steeper faces, sand01 the base; AO baked.
+- ScatterRocks: the items, three rocks (RockA-C) of about 0.5 m and 320 triangles, at x -40: their rotation and scale applied, each one's origin at its base's centre (it stands on the point it's put on). The engine draws them in its own material: the grey here is only a preview.
+- scatterBlockRocks: an empty mesh at the origin whose Geometry Nodes modifier (the group AekTerrainScatter) scatters the rocks on the block. Its inputs are in the modifier panel: Block, Rocks, Distance Min and Density Max (Poisson Disk), the mask's factors (Base, Layer R, G, B: Splat's channels, as the engine's mask.layers), Scale Min / Max, Align (to the normal), Sink, Seed, and Points (below).
+- The scatter is an object of its own, not a modifier on the block: Export Block writes the block as it is, and one block takes several scatters (pebbles, rocks, boulders), each its own object.
+""" + COMMON_SETUP + """
+The graph (Geometry Nodes workspace)
+- Object Info (the block, Relative) > Distribute Points on Faces (Poisson Disk; Density Factor = the mask from Named Attribute "Splat").
+- Rotation: Align Rotation to Vector (Z to the point's normal by Align), then Rotate Rotation (Local) by a random yaw.
+- Scale: Random Value between Scale Min and Max; item: Random Value up to the collection's child count (Domain Size).
+- Sink: Set Position moves each point down its own up by Sink x its scale (so both exports carry it).
+- Store Named Attribute _ROT (Quaternion), _SCALE (Vector), _ITEM (Integer) on the points, then Instance on Points (Pick Instance) reads them back. Never Realize Instances: every rock becomes mesh data, a huge GLB and no instancing.
+
+Export (File > Export > glTF 2.0)
+- Select the scatter object and the rocks (the items name the rocks' own nodes: <importId>/RockA). Include: Selected Objects, Custom Properties. Transform: +Y Up. Mesh: Apply Modifiers. Materials: No Export. Compression off.
+- GPU instances: Data > Scene Graph > GPU Instances and Geometry Nodes Instances (Experimental) on. The node scatterBlockRocks gets children (scatterBlockRocks.0, .1, .2) holding each rock's instances (EXT_mesh_gpu_instancing).
+- The point cloud, when GPU instances don't come through: the modifier's Points on, the object's custom prop aekScatterPoints = 1 (Object Properties > Custom Properties), then Geometry Nodes Instances, Data > Point Clouds and Data > Mesh > Attributes on. The points carry _ROT, _SCALE and _ITEM; the engine turns Blender's axes.
+- The scatter object at the world origin with the block at grid (0, 0): the engine places the file's root at the block's centre. A block at another grid place: move the block, the scatter object and the rocks to the origin for the export, then back.
+
+Into Ækasha
+- <id>.importedAsset.json with "optimize": { "mesh": { "quantize": false } } (a quantized import's scale is in its nodes, which a scatter doesn't draw), yarn assets --only <id>.
+- <id>.scatter.json: "source": { "type": "IMPORTED", "importedAsset": "<id>", "nodes": ["scatterBlockRocks"] }, an item per rock ("geometry": "<id>/RockA", a material such as rockScatter), and the block's <id>.terrainBlock.json "scatter": ["<scatterId>"].
+- Or skip the export: the engine's terrainScatter generator does the same from the block's paint, seeded per block (the handbook's Procedural in the engine).
+"""
+
 README_STRUCTURE = """
 ÆKASHA STRUCTURE MATERIALS: CONCRETE
 The handbook: docs/techniques/structure-materials.md.
@@ -774,6 +1112,7 @@ TEMPLATES = {
     "terrain_splatMap": build_splat_map,
     "terrain_triplanarCliff": build_triplanar_cliff,
     "terrain_colormapDetail": build_colormap_detail,
+    "terrain_scatter": build_scatter,
     "structure_concrete": build_structure,
 }
 

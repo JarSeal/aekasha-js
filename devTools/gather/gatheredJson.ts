@@ -17,6 +17,7 @@ import {
   TextureArrayAssetSchema,
   TextureAssetSchema,
   TextureAtlasAssetSchema,
+  ScatterAssetSchema,
   TerrainBlockAssetSchema,
   TextureSetAssetSchema,
 } from '../../src/_engine/schemas';
@@ -40,6 +41,7 @@ export const GATHERED_SUFFIXES = {
   skybox: '.skybox.json',
   postFx: '.postFx.json',
   terrainBlock: '.terrainBlock.json',
+  scatter: '.scatter.json',
 } as const;
 
 /** A gathered JSON's type, by its suffix */
@@ -65,6 +67,7 @@ const GATHERED_SCHEMAS: Record<GatheredJsonType, z.ZodType> = {
   skybox: SkyBoxAssetSchema,
   postFx: PostFxAssetSchema,
   terrainBlock: TerrainBlockAssetSchema,
+  scatter: ScatterAssetSchema,
 };
 
 // The gathered types without per-scene `__saveData`
@@ -75,6 +78,7 @@ const TYPES_WITHOUT_SAVE_DATA = new Set<GatheredJsonType>([
   'impostor',
   'mergeMaterial',
   'terrainBlock',
+  'scatter',
 ]);
 
 /** A file's gathered type by its name, or undefined when it isn't one */

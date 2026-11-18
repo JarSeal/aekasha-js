@@ -7,12 +7,16 @@ import type {
   GLTFLodChains,
   TransferableLodChain,
 } from '../../../features/lod/LodChainGLTF';
+import type { MeshLodDef } from '../../../features/lod/LodTypes';
+import type { CoreEntityOpts } from '../../../schemas/_HelperSchemas';
+import type { MeshProps } from '../../mesh/Mesh';
 import type { ImportedAssetManifest, ImportSpawnNode, SpawnImportedParams } from './ImportTypes';
 
 // The import seam (p607 D5): what features add to `importAssetAsync` and `spawnImportedAsset`.
 // Physics spawns the bodies the nodes' custom props describe, LOD reads the prebuilt LOD chains a
-// file carries and starts the ones an import asks for. The kernel's import calls them here and
-// imports neither feature; an import that needs a missing one warns once, naming the feature.
+// file carries and starts the ones an import asks for, instancing draws a node's GPU instances
+// (p308 D3). The kernel's import calls them here and imports none of these features; an import
+// that needs a missing one warns once, naming the feature.
 
 /** What `spawnImportedAsset` hands the physics extension: the spawned nodes (the visible ones
  * with their mesh entity) and the spawn's params. */
@@ -21,6 +25,28 @@ export type ImportPhysicsSpawn = {
   params: SpawnImportedParams;
   /** The appId prefix of the spawn's entities, or undefined when they get generated appIds. */
   appIdPrefix: string | undefined;
+};
+
+/** What `spawnImportedAsset` hands the instancing extension for one node of GPU instances: what
+ * `createStaticInstances` draws them with. */
+export type ImportInstancesSpawn = {
+  /** Names the cells: each cell's app id is `<id>/<cellX>,<cellZ>`. */
+  id: string;
+  /** The node's geometry (or its `meshProps` entry's). */
+  geometry: MeshProps['geo'];
+  /** The node's material. */
+  material: MeshProps['mat'];
+  /** The instances in world space (the spawn's root and the node's transform applied), 16 floats
+   * each. */
+  matrices: Float32Array;
+  /** A colour per instance, linear RGB. */
+  colors?: Float32Array;
+  castShadow?: boolean;
+  receiveShadow?: boolean;
+  /** Every cell's levels of detail. */
+  lod?: MeshLodDef;
+  /** The cells' entity options, without an `appId` (`id` names them). */
+  entityOpts?: CoreEntityOpts;
 };
 
 /** The LOD extension's part of an import (see {@link ImportExtension}). */
@@ -43,7 +69,8 @@ export type ImportLodChainsExtension = {
 /**
  * A feature's part of the imports (`FeatureContext.registerImportExtension`): each member is
  * optional, and each one has one provider (a second throws). Engine features only so far:
- * `physics()` spawns the bodies, `lod()` handles the LOD chains.
+ * `physics()` spawns the bodies, `lod()` handles the LOD chains, `instancing()` draws the GPU
+ * instances.
  */
 export type ImportExtension = {
   /** The feature's id, named by the warning of an import that needs the missing extension. */
@@ -53,10 +80,14 @@ export type ImportExtension = {
   spawnPhysics?: (spawn: ImportPhysicsSpawn) => Promise<number[]>;
   /** Reads, registers and generates LOD chains. */
   lodChains?: ImportLodChainsExtension;
+  /** Draws a node's GPU instances in cells of static instances, and resolves the cells' entity
+   * ids (none when the scene was left while its code loaded). */
+  spawnInstances?: (spawn: ImportInstancesSpawn) => Promise<number[]>;
 };
 
 let physicsExtension: ImportExtension | null = null;
 let lodChainsExtension: ImportExtension | null = null;
+let instancesExtension: ImportExtension | null = null;
 const warnedMissing = new Set<string>();
 
 /**
@@ -73,8 +104,10 @@ export const registerImportExtension = (extension: ImportExtension) => {
   };
   if (extension.spawnPhysics) taken(physicsExtension, 'spawnPhysics');
   if (extension.lodChains) taken(lodChainsExtension, 'lodChains');
+  if (extension.spawnInstances) taken(instancesExtension, 'spawnInstances');
   if (extension.spawnPhysics) physicsExtension = extension;
   if (extension.lodChains) lodChainsExtension = extension;
+  if (extension.spawnInstances) instancesExtension = extension;
 };
 
 /**
@@ -90,9 +123,15 @@ export const getImportPhysicsSpawn = () => physicsExtension?.spawnPhysics ?? nul
 export const getImportLodChains = () => lodChainsExtension?.lodChains ?? null;
 
 /**
+ * The GPU instances' spawn of the registered extensions, if any.
+ * @internal
+ */
+export const getImportInstancesSpawn = () => instancesExtension?.spawnInstances ?? null;
+
+/**
  * Warns once per feature and use that an import needs a feature that isn't installed.
  * @internal
- * @param featureId the missing feature's id (`'physics'`, `'lod'`)
+ * @param featureId the missing feature's id (`'physics'`, `'lod'`, `'instancing'`)
  * @param use what needed it, the subject of the warning, eg. "spawnImportedAsset (a node with
  *   physics custom props)"
  */

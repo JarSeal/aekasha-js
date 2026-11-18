@@ -34,12 +34,14 @@ export type TerrainBlock = {
   /** The collider's entity: the mesh entity, with a `FIXED` body. Undefined for a block with
    * `collider: { type: 'NONE' }`, or a geometry that gave no shape (logged). */
   physicsEntityId?: number;
-  /** The block's scatter entities (p308; empty until then) */
+  /** The block's scatters' entities (its `scatter`'s, spawned on it; empty without): each
+   * scatter's cells, then its colliders' physics entities */
   scatterIds: number[];
   /** The block's decal entities (p309; empty until then) */
   decalIds: number[];
-  /** Deletes the block's entities now (its scene's exit deletes them anyway). Its generated
-   * geometry goes with its last mesh, a material variant with its last user. Safe to call twice. */
+  /** Deletes the block's entities now, its scatters' cells too (its scene's exit deletes them
+   * anyway). Its generated geometry goes with its last mesh, a material variant with its last
+   * user. Safe to call twice. */
   dispose: () => void;
 };
 
@@ -143,19 +145,22 @@ const getBlockMaterial = (block: TerrainBlockDef) =>
 /**
  * Spawns a terrain block (p306 D2) that the scene lists in its `terrainBlocks`: its mesh at
  * `(grid.x · size, 0, grid.z · size)` from its imported node's geometry or its generator's, with
- * its material (a variant when it has `materialInputs`) and shadows, and its collider on the mesh
+ * its material (a variant when it has `materialInputs`) and shadows, its collider on the mesh
  * entity (a `FIXED` body; `HEIGHTFIELD` or `TRIMESH`, read from the geometry or the generator's
- * heightfield). Its entities belong to the spawning scene and go with its exit. Call it from the
+ * heightfield) and its scatters on it (`spawnScatter` from `aekasha/instancing`, their cells'
+ * app ids starting `<appId>/scatter/<scatterId>`). Its entities belong to the spawning scene and go with its exit. Call it from the
  * scene's code: the scene's load holds physics until the collider exists, so the block's
  * simulation is deterministic.
  * @param id the block's id (its `*.terrainBlock.json`'s)
  * @param opts the mesh entity's app id
  * @returns the block's entities and its `dispose()`, or `null` when its scene left meanwhile
  * @throws when `terrain()` isn't installed, there's no scene, the scene doesn't list the block,
- * its import isn't loaded or has no such single node, its generator isn't registered or its
- * collider needs `physics()`, which isn't installed
+ * its import isn't loaded or has no such single node, its generator isn't registered, its
+ * collider needs `physics()` or its scatters `instancing()`, which isn't installed, or a scatter's
+ * spawn throws
  * @remarks Re-check your scene after the `await`: a load that leaves the scene while the block
- * spawns (a generator's or the collider's await) gets `null`, and what the spawn made is deleted.
+ * spawns (a generator's, the collider's or a scatter's await) gets `null`, and what the spawn made
+ * is deleted.
  * @example
  * ```ts
  * import { spawnTerrainBlock } from 'aekasha/terrain';
@@ -189,6 +194,11 @@ export const spawnTerrainBlock = async (
       `spawnTerrainBlock: the terrain block "${id}" has a ${block.collider.type} collider, which needs physics() listed before terrain() in InitEngine's features (or give the block collider: { type: 'NONE' }).`
     );
   }
+  if (block.scatter?.length && !terrainState.hasInstancing) {
+    throw new Error(
+      `spawnTerrainBlock: the terrain block "${id}" has scatters, which need instancing() listed before terrain() in InitEngine's features.`
+    );
+  }
   const visit = terrainState.sceneVisit;
   const isLeft = () => visit !== terrainState.sceneVisit;
 
@@ -211,15 +221,20 @@ export const spawnTerrainBlock = async (
   }
 
   const { size, x, z } = block.grid;
+  const appId = opts.appId ?? `terrainBlock/${id}`;
   const meshEntityId = createMeshEntity({
     geo: geometry,
     mat: getBlockMaterial(block),
     castShadow: block.shadows.cast,
     receiveShadow: block.shadows.receive,
     position: { x: x * size, y: 0, z: z * size },
-    appId: opts.appId ?? `terrainBlock/${id}`,
+    appId,
   });
-  const dispose = () => deleteEntity(meshEntityId);
+  const scatters: { dispose: () => void }[] = [];
+  const dispose = () => {
+    for (const scatter of scatters) scatter.dispose();
+    deleteEntity(meshEntityId);
+  };
 
   let physicsEntityId: number | undefined;
   if (needsCollider) {
@@ -240,5 +255,38 @@ export const spawnTerrainBlock = async (
       return null;
     }
   }
-  return { id, meshEntityId, physicsEntityId, scatterIds: [], decalIds: [], dispose };
+
+  const scatterIds: number[] = [];
+  if (block.scatter?.length) {
+    const { spawnScatter } = await import('../instancing/Scatter');
+    if (isLeft()) {
+      dispose();
+      return null;
+    }
+    // On the block: its centre, grid place (in each scatter's seed) and size, and its mesh
+    const target = {
+      position: { x: x * size, y: 0, z: z * size },
+      grid: { x, z },
+      size,
+      entityId: meshEntityId,
+    };
+    for (const scatterId of block.scatter) {
+      const scatter = await spawnScatter(scatterId, {
+        target,
+        appId: `${appId}/scatter/${scatterId}`,
+      }).catch((err: unknown) => {
+        // Not half a block: what it made goes, then the error
+        dispose();
+        throw err;
+      });
+      if (!scatter || isLeft()) {
+        scatter?.dispose();
+        dispose();
+        return null;
+      }
+      scatters.push(scatter);
+      scatterIds.push(...scatter.entityIds, ...scatter.colliderIds);
+    }
+  }
+  return { id, meshEntityId, physicsEntityId, scatterIds, decalIds: [], dispose };
 };

@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../../.schemas/geometry.schema.json",
+  "geoProps": {
+    "type": "SPHERE",
+    "params": { "radius": 0.07, "widthSegments": 6, "heightSegments": 4 },
+    "debugData": { "name": "Test pebble A", "description": "A 6 × 4 segment sphere, 7 cm." }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../../.schemas/scatter.schema.json",
+  "items": [
+    {
+      "geometry": "scatterTestSlab",
+      "material": "scatterTestStone",
+      "castShadow": true,
+      "collider": "CONVEXHULL"
+    }
+  ],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "terrainScatter",
+    "params": {
+      "minSpacing": 6,
+      "density": 0.8,
+      "mask": { "layers": { "0": 1 } },
+      "scale": [0.8, 1.3],
+      "sink": 0.15
+    },
+    "seed": 4
+  },
+  "cellSize": 32,
+  "debugData": {
+    "name": "Rules block slabs",
+    "description": "terrainScatter's upright slabs on the rules block's sand (layer 0), 6 m apart, each with a CONVEXHULL collider (a FIXED body): the scene drops a box on one."
+  }
+}

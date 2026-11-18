@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../../../.schemas/scatter.schema.json",
+  "items": [
+    { "geometry": "scatterTestGnPoints/RockA", "material": "scatterTestStone", "castShadow": true },
+    { "geometry": "scatterTestGnPoints/RockB", "material": "scatterTestStone", "castShadow": true }
+  ],
+  "source": {
+    "type": "IMPORTED",
+    "importedAsset": "scatterTestGnPoints",
+    "nodes": ["ScatterPoints"]
+  },
+  "debugData": {
+    "name": "Blender scatter (point cloud)",
+    "description": "The same Geometry Nodes scatter as a point cloud: each point's _ITEM picks the rock (the collection's order: RockA, RockB)."
+  }
+}

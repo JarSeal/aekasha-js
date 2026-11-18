@@ -11,7 +11,7 @@ src/toolkit/
                             WorldAnchorSync
     gameplay/               FollowObjectCameraRig, movingPlatform/
   geometry/                 aekasha/toolkit/geometry
-    generate/               Asteroid, Foliage, Terrain
+    generate/               Asteroid, Foliage, LeafCard, Rock, Terrain
     scatter/                ScatterOnSurface
   materials/                aekasha/toolkit/materials
     <id>/                   <id>.material.json and <id>.tsl.ts
@@ -21,10 +21,12 @@ src/toolkit/
     nodes/                  SampleTextureSet, the material's techniques; noise/: the noise library
     debug/                  the terrain material's debug views (debug builds only)
     procedural/             the surface generators' API; <id>/<id>.generator.ts, ten of them
+    scatter/                terrainScatter: the terrain scatter generator
     textures/               MacroNoise, RippleAtlas: the shared textures' bakes
   models/<category>/<id>/   the model next to its *.importedAsset.json
   textures/<setId>/         a texture set: its JSON, recipes and source.json; CREDITS.md
-  textures/<id>/            macroNoise, rippleAtlas: a texture JSON over its committed PNG
+  textures/<id>/            macroNoise, rippleAtlas: a texture JSON over its committed PNG;
+                            leafLitter: a texture atlas
 ```
 
 A piece that grows a second file gets a folder of its own inside its kind, as the moving
@@ -113,6 +115,17 @@ any material:
   roughness and a bump from the same noise. Every input is on its `colorNode`, and a mesh gives it
   a `seed` of its own (`matOverrides: { nodes: { colorNode: { seed: 7 } } }`) for a different rock.
   The `octaves` define sets the mottling's detail.
+- **`rockScatter`**: scatter rocks ([`setupRockMaterial`](api:setupRockMaterial), over the
+  terrain category's nodes). It draws a texture set, the ground's own for the procedural rocks (no
+  texture memory of their own), triplanar in each rock's own space so every instance of a cell
+  keeps its texture, anti-tiled, with a macro tint by world position, dust toward the set's
+  average colour on the faces turned up, and the surface conditions' wetness and frost. `tiling:
+"UV"` draws an imported rock's own maps at its UV (`rockScatterNamaqualandStones01`,
+  `rockScatterNamaqualandBoulder02`). A rock on another ground set takes a material JSON of its
+  own over that set.
+- **`leafLitter`**: leaf cards. A leaf of the `leafLitter` atlas per instance (one material and
+  one draw a scatter cell), fitted at its aspect, a share of them turned brown (`autumn`),
+  alpha-tested with `alphaToCoverage`, wet by the surface conditions.
 
 The [material editor](hub:features/debug-suite#editor-views) edits their inputs live. Writing
 one of your own is [below](hub:features/toolkit#writing-a-tsl-material).
@@ -152,6 +165,15 @@ true` returns the `HEIGHTFIELD` collider's params (`heightfield`, the mesh's cel
   returns `hullVertices` for a `CONVEXHULL` collider and `hullVolume`, the volume the physics
   engine gives that collider, so a gravity mass of density × `hullVolume` matches the simulated
   body. The `asteroid` material dresses it.
+- [`generateRock`](api:generateRock): a scatter rock, an asteroid without craters, squashed,
+  stretched and cut flat at its base, its origin at the base's centre so it stands where it's
+  placed. Its `kind` sets the size and detail within [`ROCK_TRIANGLE_BUDGETS`](api:ROCK_TRIANGLE_BUDGETS):
+  `PEBBLE` (about 13 cm, 80 triangles), `ROCK` (55 cm, 320), `BOULDER` (2.4 m, 1,280).
+  [`saveRockGeometries`](api:saveRockGeometries) registers eight variants for a scene
+  (`rockPebble_a..c`, `rockSmall_a..c`, `boulder_a..b`), which a scatter's items name.
+- [`generateLeafCard`](api:generateLeafCard): a leaf litter card, a square folded along its
+  midrib (4 triangles); [`saveLeafCardGeometry`](api:saveLeafCardGeometry) registers it as
+  `leafCard`.
 
 The generators draw from the engine's
 [`createSeededRandom`](api:utils/SeededRandom.createSeededRandom) (on `aekasha`), which an app
@@ -172,16 +194,24 @@ The surfaces and the TSL pieces terrain materials are built from (the
 - **Terrain blocks** (`blocks/`, `blender/`): the block generators `noiseTerrain` and
   `rulesTerrain`, which [`registerTerrainGenerators`](api:registerTerrainGenerators) registers
   for the [`terrain()`](hub:features/terrain#terrain-blocks) feature's JSON blocks (from an
-  install); and the Blender add-on `aekasha_terrain_tools.py` with seven templates, which make
+  install); and the Blender add-on `aekasha_terrain_tools.py` with eight templates, which make
   blocks by the conventions and export them ([the
-  workflow](repo:docs/techniques/terrain-blocks-blender.md)).
+  workflow](repo:docs/techniques/terrain-blocks-blender.md)), and scatter rocks on them.
+- **Terrain scatter** (`scatter/`): the generator `terrainScatter`, which
+  [`registerTerrainScatter`](api:registerTerrainScatter) registers (from an install) for the
+  `instancing()` feature's `*.scatter.json`s: Poisson-disk points on a block, kept by its painted
+  layers, slope, height and a clustering noise, each placed on the mesh, seeded per block
+  ([Terrain scatter](hub:features/terrain#terrain-scatter),
+  [the handbook](repo:docs/techniques/terrain-scatter.md)).
   [`readTextureTexelsAsync`](api:readTextureTexelsAsync) reads a texture's texels back to the CPU
   (the rules' noise on generated blocks).
 - **The texture library** (`textures/<setId>/`): 16 CC0 texture sets, two each of sand, mud,
   rocks, cliffs, snow, ice and grass ground, and two concretes, packed `LITE` (`sand01`,
   `grass01` and `cliffs01` also `FULL` and `MINIMAL`) and compressed to KTX2. A scene or a
   material names one by id (`{ "textureSet": "snow02" }`); they need the `textureSets()` feature.
-  `yarn fetchTextureSources` downloads their source maps, which only re-encoding needs.
+  `yarn fetchTextureSources` downloads their source maps, which only re-encoding needs. Beside
+  them, the two nature models' own maps as sets (`namaqualandStones01`, `namaqualandBoulder02`)
+  and the leaf litter atlas `leafLitter` (ambientCG LeafSet024's nine leaves).
 - [`sampleTextureSet`](api:sampleTextureSet) decodes a set (or a set array's layer) at a UV into
   albedo, normal, roughness, AO and height, whatever its packing;
   [`transformTangentNormalToView`](api:transformTangentNormalToView) shades its normal in that
@@ -206,7 +236,11 @@ The surfaces and the TSL pieces terrain materials are built from (the
 
 By category, in `models/<category>/<id>/`. The Ækasha symbol (`brand/aekashaSymbol/`): the Æ
 glyph extruded with a small bevel, a Draco GLB with its `*.importedAsset.json`, ready for a
-scene's `importedAssets`.
+scene's `importedAssets`. Scatter rocks (`nature/`, Poly Haven, CC0), decimated to the scatter's
+budgets by `devTools/toolkit/buildNatureRocks.ts` and imported lossless, each piece a node a
+scatter's item names: `namaqualandStones01` (five pebbles `StoneA`-`E` of 7-14 cm at 80
+triangles, and three scaled into rocks `RockA`-`C` at 400) and `namaqualandBoulder02` (`Boulder`,
+2.5 m, 1,500), each with its `rockScatter` material over its own maps.
 
 ## Writing a TSL material
 
@@ -373,8 +407,9 @@ in place of `../TriplanarProjection`.
 
 - The [toolkit example](hub:examples/toolkit): the model, two materials and `HoverEffect`.
 - The app's `terrainGallery` scene: every set of the texture library on its own block, a row per
-  technique of the terrain material with its measurements, and the procedural surfaces, baked or
-  live (see [Terrain](hub:features/terrain)). Open it with
+  technique of the terrain material with its measurements, the procedural surfaces, baked or
+  live, and the Scatter row: the procedural and imported rocks on one block, and leaf litter (see
+  [Terrain](hub:features/terrain)). Open it with
   `?isDebug=true&startScene=terrainGallery`.
 - The app's `proceduralSurfaces` and `noiseLibrary` scenes: the generators and the noise, each
   checked as it loads.

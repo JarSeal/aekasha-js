@@ -16,3 +16,29 @@ export type {
   InstanceSetStats,
 } from './InstanceSetTypes';
 export { instancing } from './InstancingFeature';
+export { createInstancedMeshEntity, createStaticInstances } from './StaticInstances';
+export type {
+  CreateStaticInstancesOptions,
+  InstancedMeshEntityProps,
+  StaticInstances,
+} from './StaticInstances';
+export { getScatter, spawnScatter } from './Scatter';
+export type { SpawnedScatter, SpawnScatterOpts } from './Scatter';
+export {
+  getScatterGenerator,
+  registerScatterGenerator,
+  unregisterScatterGenerator,
+} from './ScatterGenerators';
+export type {
+  ScatterGenerator,
+  ScatterGeneratorInput,
+  ScatterGeneratorResult,
+  ScatterTarget,
+} from './ScatterGenerators';
+export type {
+  ScatterColliderType,
+  ScatterDef,
+  ScatterItemDef,
+  ScatterPlacementDef,
+  ScatterSourceDef,
+} from './ScatterSchema';

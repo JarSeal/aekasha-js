@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../../.schemas/importedAsset.schema.json",
+  "id": "scatterTestGnPoints",
+  "fileName": "./scatterTestGnPoints.glb",
+  "optimize": { "mesh": { "quantize": false } },
+  "debugData": {
+    "name": "Blender scatter (Points)",
+    "description": "scatterTest's Geometry Nodes scatter (devTools/blender/buildScatterTest.py; p308 Phase 2) exported as a point cloud: the node ScatterPoints (custom prop aekScatterPoints) and its child, the points with _ROT, _SCALE and _ITEM, and the rocks' own nodes. Lossless: a scatter draws its items without their nodes, where a quantized encode puts its scale."
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../../../.schemas/scatter.schema.json",
+  "items": [
+    { "geometry": "rockSmall_a", "material": "rockScatter" },
+    { "geometry": "rockSmall_b", "material": "rockScatter" },
+    { "geometry": "rockSmall_c", "material": "rockScatter" }
+  ],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "terrainScatter",
+    "params": {
+      "minSpacing": 1.2,
+      "density": 0.7,
+      "mask": { "layers": { "1": 1 } },
+      "scale": [0.6, 1.6],
+      "alignToNormal": 0.5,
+      "sink": 0.2,
+      "tint": 0.15
+    },
+    "seed": 2
+  },
+  "lod": { "levels": [{ "screenSize": 0 }], "cullScreenSize": 0.02 },
+  "debugData": {
+    "name": "Scatter row: rocks",
+    "description": "The toolkit's procedural rocks (generateRock's ROCK, rockSmall_a..c) on the Scatter row's procedural half (layer 1, rocks01), 1.2 m apart, in the rocks01 rockScatter material."
+  }
+}

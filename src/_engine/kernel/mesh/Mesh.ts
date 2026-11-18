@@ -238,17 +238,35 @@ export const preWarmObjectsAsync = (objects: readonly THREE.Object3D[], label: s
  * ```
  */
 export const createMeshEntity = (props: MeshProps, opts?: CreateEntityOpts): number => {
-  const { world: ecsWorld, ...entityOpts } = opts ?? {};
   const world =
-    ecsWorld || existsOrThrow(getECSWorld(), 'Could not get ECS world in createMeshEntity.');
+    opts?.world || existsOrThrow(getECSWorld(), 'Could not get ECS world in createMeshEntity.');
+  const { geo, mat } = resolveMeshAssets(props, opts?.appId, 'createMeshEntity');
+  const entityId = addMeshEntity(new THREE.Mesh(geo, mat), props, { ...opts, world });
+  if (props.merge !== undefined) queueMeshMerge(entityId, props.merge, world);
+  return entityId;
+};
 
+/**
+ * A mesh's geometry and material as {@link createMeshEntity} resolves them: an object as it is, a
+ * registered id looked up, props created (or returned, for a registered id), and `matOverrides`
+ * applied to a registered material.
+ * @internal
+ * @param entityAppId the entity options' app id, naming the mesh in the errors
+ * @param caller names the function in the errors
+ * @throws for a geometry or material id that isn't registered
+ */
+export const resolveMeshAssets = (
+  props: Pick<MeshProps, 'geo' | 'mat' | 'matOverrides' | 'appId'>,
+  entityAppId: string | undefined,
+  caller: string
+) => {
   let geo;
   if (props.geo instanceof THREE.BufferGeometry) {
     geo = props.geo;
   } else if (typeof props.geo === 'string') {
     geo = existsOrThrow(
       getGeometry(props.geo),
-      `Could not find geometry with id "${props.geo}" in createMeshEntity (mesh appId "${props.appId || entityOpts?.appId}").`
+      `Could not find geometry with id "${props.geo}" in ${caller} (mesh appId "${props.appId || entityAppId}").`
     );
   } else {
     geo = createGeometry(props.geo);
@@ -260,7 +278,7 @@ export const createMeshEntity = (props: MeshProps, opts?: CreateEntityOpts): num
   } else if (typeof props.mat === 'string') {
     mat = existsOrThrow(
       getMaterial(props.mat),
-      `Could not find material with id "${props.mat}" in createMeshEntity (mesh appId "${props.appId || entityOpts?.appId}").`
+      `Could not find material with id "${props.mat}" in ${caller} (mesh appId "${props.appId || entityAppId}").`
     );
   } else {
     mat = createMaterial(props.mat);
@@ -272,12 +290,40 @@ export const createMeshEntity = (props: MeshProps, opts?: CreateEntityOpts): num
       mat = getMaterialVariant(baseMatId, props.matOverrides);
     } else {
       lwarn(
-        `Mesh "${props.appId || entityOpts?.appId}" has matOverrides but its material is not registered, ignoring the overrides.`
+        `Mesh "${props.appId || entityAppId}" has matOverrides but its material is not registered, ignoring the overrides.`
       );
     }
   }
+  return { geo, mat };
+};
 
-  const mesh = new THREE.Mesh(geo, mat);
+/**
+ * The props {@link addMeshEntity} reads: a mesh's, without its assets and `merge`.
+ * @internal
+ */
+export type MeshEntityProps = Omit<MeshProps, 'geo' | 'mat' | 'matOverrides' | 'merge'>;
+
+/**
+ * Makes an entity of a mesh whose geometry and material are set, as {@link createMeshEntity} does
+ * (it and `createInstancedMeshEntity` share it, so their steps can't drift apart): the shadow and
+ * culling flags, the refs on its registered geometry and material, the entity with `OBJECT3D` and
+ * `TAG_IS_MESH` (whose delete hook gives the refs back), the root scene, the transform, the spatial
+ * index and ECS frustum culling as `opts` say, the pre-warm, and the LOD last (an `InstancedMesh`'s
+ * matrices are written by then).
+ * @internal
+ * @param opts the entity's options and its world (default: the default world)
+ * @returns the mesh's entity id
+ */
+export const addMeshEntity = (
+  mesh: THREE.Mesh,
+  props: MeshEntityProps,
+  opts?: CreateEntityOpts
+): number => {
+  const { world: ecsWorld, ...entityOpts } = opts ?? {};
+  const world =
+    ecsWorld || existsOrThrow(getECSWorld(), 'Could not get ECS world in createMeshEntity.');
+  const geo = mesh.geometry;
+  const mat = mesh.material;
   const appId = props.appId || entityOpts?.appId || mesh.uuid;
   mesh.castShadow = props.castShadow ?? false;
   mesh.receiveShadow = props.receiveShadow ?? false;
@@ -286,7 +332,7 @@ export const createMeshEntity = (props: MeshProps, opts?: CreateEntityOpts): num
 
   warnIfUnregistered(appId, geo, mat);
   if (geo.userData.id) incGeometryRef(geo.userData.id);
-  if (mat.userData.id) incMaterialRef(mat.userData.id);
+  forEachMaterialId(mat, incMaterialRef);
 
   const rootScene = existsOrThrow(getRootScene(), 'Could not find root scene in createMeshEntity.');
 
@@ -342,7 +388,6 @@ export const createMeshEntity = (props: MeshProps, opts?: CreateEntityOpts): num
   // Last: the LOD's level 0 is the mesh as created, and its add hook pre-warms the other levels
   // when the mesh has preWarm
   if (props.lod) setMeshLod(entityId, props.lod, world);
-  if (props.merge !== undefined) queueMeshMerge(entityId, props.merge, world);
 
   return entityId;
 };

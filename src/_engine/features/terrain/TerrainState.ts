@@ -7,6 +7,8 @@ export const terrainState = {
   isInstalled: false,
   /** `physics()` was installed before it: a block's collider can be made */
   hasPhysics: false,
+  /** `instancing()` was installed before it: a block's scatters can be spawned */
+  hasInstancing: false,
   /** Counts the scene exits: a spawn whose count changed while it awaited was left behind */
   sceneVisit: 0,
 };

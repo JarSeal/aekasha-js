@@ -25,6 +25,13 @@ const fns = vi.hoisted(() => ({
   createMeshEntity: vi.fn(() => 7),
   deleteEntity: vi.fn(),
   createCollider: vi.fn(async () => 7 as number | undefined),
+  spawnScatter: vi.fn(async (id: string) => ({
+    id,
+    entityIds: [id.length, id.length + 1],
+    colliderIds: [id.length * 10],
+    count: 2,
+    dispose: vi.fn(),
+  })),
 }));
 vi.mock(import('../../kernel/scene/Scene'), () => ({
   getLoadingSceneId: () => fns.loadingSceneId,
@@ -46,6 +53,7 @@ vi.mock(import('../../kernel/ecs/ECSHelpers'), () => ({ deleteEntity: fns.delete
 vi.mock(import('./TerrainCollider'), () => ({
   createTerrainBlockColliderAsync: fns.createCollider as never,
 }));
+vi.mock(import('../instancing/Scatter'), () => ({ spawnScatter: fns.spawnScatter as never }));
 
 const block = (fields: Partial<TerrainBlockDef> = {}): TerrainBlockDef => ({
   id: 'coast',
@@ -72,10 +80,12 @@ const nodeInfo = (nodeName: string, transform?: Partial<ImportedGeometryInfo['tr
 
 let exitHook: (() => void) | undefined;
 
-/** Installs the feature with a stand-in context (`physics()` before it or not) */
-const install = (hasPhysics = true) => {
+/** Installs the feature with a stand-in context (`physics()` and `instancing()` before it or
+ * not) */
+const install = (hasPhysics = true, hasInstancing = true) => {
   const ctx = {
-    isInstalled: (id: string) => hasPhysics && id === 'physics',
+    isInstalled: (id: string) =>
+      (hasPhysics && id === 'physics') || (hasInstancing && id === 'instancing'),
     addSceneHooks: (hooks: SceneHooks) => {
       exitHook = hooks.exit as () => void;
     },
@@ -95,7 +105,7 @@ beforeEach(() => {
 
 afterEach(() => {
   for (const id of getTerrainGeneratorIds()) unregisterTerrainGenerator(id);
-  Object.assign(terrainState, { isInstalled: false, hasPhysics: false });
+  Object.assign(terrainState, { isInstalled: false, hasPhysics: false, hasInstancing: false });
 });
 
 describe('getTerrainBlock', () => {
@@ -248,5 +258,52 @@ describe('spawnTerrainBlock', () => {
     });
     await expect(spawnTerrainBlock('coast')).resolves.toBeNull();
     expect(fns.deleteEntity).toHaveBeenCalledWith(7);
+  });
+});
+
+describe('spawnTerrainBlock: scatters (p308 D2)', () => {
+  test('spawns each scatter on the block, and its dispose deletes their cells and colliders too', async () => {
+    fns.scenes.scene.terrainBlocks = [block({ scatter: ['rocks', 'pebbles'] })];
+    const spawned = await spawnTerrainBlock('coast');
+    const target = {
+      position: { x: 64, y: 0, z: -128 },
+      grid: { x: 1, z: -2 },
+      size: 64,
+      entityId: 7,
+    };
+    expect(fns.spawnScatter.mock.calls).toEqual([
+      ['rocks', { target, appId: 'terrainBlock/coast/scatter/rocks' }],
+      ['pebbles', { target, appId: 'terrainBlock/coast/scatter/pebbles' }],
+    ]);
+    // Each scatter's cells, then its colliders
+    expect(spawned?.scatterIds).toEqual([5, 6, 50, 7, 8, 70]);
+    spawned?.dispose();
+    for (const { value } of fns.spawnScatter.mock.results) {
+      expect((await value).dispose).toHaveBeenCalledOnce();
+    }
+    expect(fns.deleteEntity).toHaveBeenCalledWith(7);
+  });
+
+  test('throws without instancing(), and deletes the block when a scatter throws', async () => {
+    fns.scenes.scene.terrainBlocks = [block({ scatter: ['rocks'] })];
+    install(true, false);
+    await expect(spawnTerrainBlock('coast')).rejects.toThrow(/need instancing\(\) listed before/);
+    expect(fns.createMeshEntity).not.toHaveBeenCalled();
+
+    install();
+    fns.spawnScatter.mockRejectedValueOnce(new Error('no generator'));
+    await expect(spawnTerrainBlock('coast')).rejects.toThrow('no generator');
+    expect(fns.deleteEntity).toHaveBeenCalledWith(7);
+  });
+
+  test('deletes the block and resolves null when the scene is left while a scatter spawns', async () => {
+    fns.scenes.scene.terrainBlocks = [block({ scatter: ['rocks'], collider: { type: 'NONE' } })];
+    fns.spawnScatter.mockImplementationOnce(async (id: string) => {
+      exitHook?.();
+      return { id, entityIds: [1], colliderIds: [], count: 1, dispose: vi.fn() };
+    });
+    expect(await spawnTerrainBlock('coast')).toBeNull();
+    expect(fns.deleteEntity).toHaveBeenCalledWith(7);
+    expect((await fns.spawnScatter.mock.results[0].value).dispose).toHaveBeenCalledOnce();
   });
 });

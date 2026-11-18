@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "namaqualandBoulder02",
+  "category": "ROCKS",
+  "physicalSize": [1, 1],
+  "heightScale": 0.01,
+  "defaultPacking": "FULL",
+  "packings": {
+    "FULL": {
+      "albedoHeight": "namaqualandBoulder02_albedoHeight",
+      "normal": "namaqualandBoulder02_normal",
+      "orm": "namaqualandBoulder02_orm"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Namaqualand Boulder 02 (model maps)",
+    "description": "Poly Haven namaqualand_boulder_02's own 1k maps, CC0: a sandstone boulder, laid out on the model's UV (physicalSize 1: the UV's 0..1), for the toolkit's imported scatter rocks (models/nature/namaqualandBoulder02/, rockScatter at tiling UV; p308 D5)."
+  }
+}

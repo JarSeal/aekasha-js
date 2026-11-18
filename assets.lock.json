@@ -116,6 +116,15 @@
       "ktxVersion": "4.4.2",
       "recipeKey": "252a354f8d0f55662c3065eb5b42013c2910cbb3a532cb89563f4d3e5eaa1c0d"
     },
+    "0a7eb62a29d0c53fc2c31a006ea88b36514565d86bd4bf7c5f4680c19487ceb6": {
+      "source": "src/app/scenes/scatterTest/blenderScatter/scatterTestGnGpu.glb",
+      "url": "/aek-assets/app/scenes/scatterTest/blenderScatter/scatterTestGnGpu.fa2289d8.glb",
+      "bytes": 16064,
+      "geometryBytes": {
+        "in": 5568,
+        "out": 5568
+      }
+    },
     "0ac6f830e69084ed8623b5ca09b726fb7e60ea25e9e64da3b39cf0310df00b3c": {
       "source": "src/app/scenes/textureSets/source/bricks/normalHeight.png",
       "url": "/aek-assets/app/scenes/textureSets/source/bricks/normalHeight.52000e3a.ktx2",
@@ -443,6 +452,30 @@
         }
       ],
       "ktxVersion": "4.4.2"
+    },
+    "3576d23dd41abfee6fd1470f283f4caa37fcf34b9e385ac48ccb6cbb764673d3": {
+      "source": "src/toolkit/textures/namaqualandBoulder02/namaqualandBoulder02_normal.texture.json",
+      "url": "/aek-assets/toolkit/textures/namaqualandBoulder02/namaqualandBoulder02_normal.pack.3f13aa0e.ktx2",
+      "bytes": 1201452,
+      "textures": [
+        {
+          "slot": "normal",
+          "bytes": 1201452,
+          "source": {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1031460
+          },
+          "codec": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "2ff996be76da6c4a4147d06e2e2fbdbc47a43c77f345fb17a2db9a490c7b9dbd"
     },
     "3612e3cc3ccbf312801a83b2ba884d62c90ee20a63eeaa6b7a9a7790723665bf": {
       "source": "src/app/scenes/textureAtlases/p299TestAtlasImage.textureAtlas.json",
@@ -957,6 +990,35 @@
       "ktxVersion": "4.4.2",
       "recipeKey": "1c6566c9dd4f1215e1cbc9ce94e47e97a9bc3e567bc28b3746d3317ae444bf63"
     },
+    "6c3f86a1c26a4c0d7e3ef3a2a1f41ea3e9a5d8f6c2dd6a1455786a05785c597d": {
+      "source": "src/toolkit/textures/namaqualandStones01/namaqualandStones01_albedoHeight.texture.json",
+      "url": "/aek-assets/toolkit/textures/namaqualandStones01/namaqualandStones01_albedoHeight.pack.9e62a1d3.ktx2",
+      "bytes": 1090806,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 1090806,
+          "source": {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1030362
+          },
+          "codec": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false,
+          "averageColor": [
+            0.264,
+            0.1894,
+            0.129
+          ]
+        }
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "f6c9823bc7c5e6298d19261ea348044992dccac994497a37feeefbf5f3bb3b73"
+    },
     "6da369ee6918ad94f0a04754bd72980c3a0f9f338a3947130e5e061e2974c12f": {
       "source": "src/toolkit/textures/mud02/mud02_albedoRough.texture.json",
       "url": "/aek-assets/toolkit/textures/mud02/mud02_albedoRough.pack.ab7a7152.ktx2",
@@ -1036,6 +1098,33 @@
         }
       }
     },
+    "787cf48c46c4912a1269621f982a977d34cd98cf50bd28d05f4f0bbf49b9041f": {
+      "source": "src/toolkit/textures/leafLitter/leafLitter.textureAtlas.json",
+      "url": "/aek-assets/toolkit/textures/leafLitter/leafLitter.atlas.albedo.59baa69c.ktx2",
+      "bytes": 794226,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 794226,
+          "source": {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1366219
+          },
+          "codec": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false,
+          "levels": 11
+        }
+      ],
+      "warnings": [
+        "slots.albedo.optimize.alphaCoverage: the texture has no alpha channel, so there is no coverage to keep"
+      ],
+      "ktxVersion": "4.4.2"
+    },
     "79bca03d150cdca5824a55606ca1c3ec9f673d10738a91bf7e6467e652140d52": {
       "source": "src/toolkit/textures/sand01/sand01_albedoHeightAO.texture.json",
       "url": "/aek-assets/toolkit/textures/sand01/sand01_albedoHeightAO.pack.cf7576ed.ktx2",
@@ -1085,6 +1174,30 @@
           "mipmaps": true,
           "normalMode": false,
           "levels": 8
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
+    "7fb912d0430d62a9870ec6b93fe9adb3515ac3a992ca9471f1062cbd1c762efa": {
+      "source": "src/toolkit/textures/leafLitter/leafLitter.textureAtlas.json",
+      "url": "/aek-assets/toolkit/textures/leafLitter/leafLitter.atlas.albedo.7e2bc84c.ktx2",
+      "bytes": 744339,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 744339,
+          "source": {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1508316
+          },
+          "codec": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false,
+          "levels": 11
         }
       ],
       "ktxVersion": "4.4.2"
@@ -1159,6 +1272,30 @@
       ],
       "ktxVersion": "4.4.2"
     },
+    "898edfa0ddb2cb16cdd86ce236281392f00ee362ec04a1a57dc7d487da2c76bd": {
+      "source": "src/toolkit/textures/namaqualandStones01/namaqualandStones01_orm.texture.json",
+      "url": "/aek-assets/toolkit/textures/namaqualandStones01/namaqualandStones01_orm.pack.acfa0be1.ktx2",
+      "bytes": 952634,
+      "textures": [
+        {
+          "slot": "orm",
+          "bytes": 952634,
+          "source": {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1074465
+          },
+          "codec": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "37cf1bdbd6171b7702c148467401576cffbfea2515095f1343204140dff679ba"
+    },
     "8a780d106d038be8ae5b3fe25e83ca62e9d6c8b3d82a7fb23908824a7de3304b": {
       "source": "src/app/scenes/textureSets/source/bricks/albedoRough.png",
       "url": "/aek-assets/app/scenes/textureSets/source/bricks/albedoRough.fc3c8c2e.ktx2",
@@ -1186,6 +1323,15 @@
         }
       ],
       "ktxVersion": "4.4.2"
+    },
+    "8fe7e3418eb01ed5f6f40ed093a77cf7a902f686d43981be9ccb7c61dd643e23": {
+      "source": "src/toolkit/models/nature/namaqualandBoulder02/namaqualandBoulder02.glb",
+      "url": "/aek-assets/toolkit/models/nature/namaqualandBoulder02/namaqualandBoulder02.ad91c8fa.glb",
+      "bytes": 44052,
+      "geometryBytes": {
+        "in": 61584,
+        "out": 61584
+      }
     },
     "93fc15a820c28569c92237eb7f4226cd4b7fb10b3123c2dba7c2e6f7beeb8584": {
       "source": "src/app/scenes/textureSets/source/normalHeight.png",
@@ -1262,6 +1408,30 @@
       ],
       "ktxVersion": "4.4.2",
       "recipeKey": "2a97b34301e338e913018c4d3f40b32bba354a0078c6843e0e34d852e929299c"
+    },
+    "96d3ae05e704b5a5220d2843608e765d4af0143938084d254a01e29d379ca0d7": {
+      "source": "src/toolkit/textures/namaqualandStones01/namaqualandStones01_normal.texture.json",
+      "url": "/aek-assets/toolkit/textures/namaqualandStones01/namaqualandStones01_normal.pack.588d6202.ktx2",
+      "bytes": 1194972,
+      "textures": [
+        {
+          "slot": "normal",
+          "bytes": 1194972,
+          "source": {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1091306
+          },
+          "codec": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "a8232b5fac2ab931ea9d8d12b09a59284e5c7fec54546bfda46e0756585780d9"
     },
     "973c47a5fc0637c3ef92dd2f8f17b986116e2f0dc1378fec4b90d0bc3e46d51b": {
       "source": "src/app/scenes/textureArrays/p299TestArray1.textureArray.json",
@@ -1569,6 +1739,30 @@
       "ktxVersion": "4.4.2",
       "recipeKey": "04098098aa73b3b182b0cd2315e4f0d3cd04236c413a69c2abfcb808c664d321"
     },
+    "b0cd4699dfae59825dc09bfb77367508fb1a40d147b12eeaaab322b12aab4f19": {
+      "source": "src/toolkit/textures/namaqualandBoulder02/namaqualandBoulder02_orm.texture.json",
+      "url": "/aek-assets/toolkit/textures/namaqualandBoulder02/namaqualandBoulder02_orm.pack.0b244654.ktx2",
+      "bytes": 1047727,
+      "textures": [
+        {
+          "slot": "orm",
+          "bytes": 1047727,
+          "source": {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1239519
+          },
+          "codec": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false
+        }
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "c04e9002a271b14d5e284dbffafe9346f653e345f341d73caa273d48b920c332"
+    },
     "b1cf3283c1d9c14ddbb7950fb5188af25267168402c3267083fe0921a7062f20": {
       "source": "src/app/scenes/textureSets/source/ridges/albedoRough.png",
       "url": "/aek-assets/app/scenes/textureSets/source/ridges/albedoRough.daa92da9.ktx2",
@@ -1648,6 +1842,15 @@
         }
       ],
       "ktxVersion": "4.4.2"
+    },
+    "b94447121662d670d7edb08bdf0428a8507e20f022f8b84aa01dfb296f205c6b": {
+      "source": "src/toolkit/models/nature/namaqualandStones01/namaqualandStones01.glb",
+      "url": "/aek-assets/toolkit/models/nature/namaqualandStones01/namaqualandStones01.fc9326c2.glb",
+      "bytes": 49412,
+      "geometryBytes": {
+        "in": 56480,
+        "out": 56480
+      }
     },
     "bb41509e55e41c15158e076d861356eed3de426d22937c669ec6c46688d5362c": {
       "source": "src/public/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg",
@@ -1823,6 +2026,35 @@
       ],
       "ktxVersion": "4.4.2",
       "recipeKey": "a0e12eaa03ce0aaeecbfbbc4322bbf1c22c3002171ec2cd1a0773083c0eac483"
+    },
+    "d3a4be112a4d93f1354668bc819b63f4197d930359273c7ee075976317eae5b4": {
+      "source": "src/toolkit/textures/namaqualandBoulder02/namaqualandBoulder02_albedoHeight.texture.json",
+      "url": "/aek-assets/toolkit/textures/namaqualandBoulder02/namaqualandBoulder02_albedoHeight.pack.0c090401.ktx2",
+      "bytes": 1154852,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 1154852,
+          "source": {
+            "width": 1024,
+            "height": 1024,
+            "bytes": 1310398
+          },
+          "codec": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false,
+          "averageColor": [
+            0.1549,
+            0.0908,
+            0.0489
+          ]
+        }
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "51f657ec4b2e6ca12778c622bd42d9a9511917986521745313ef4530c403080b"
     },
     "d45f993420816ec6a40844729694661a9535c36da8736599eb88b00bbd189509": {
       "source": "src/toolkit/textures/rocks01/rocks01_normalHeight.texture.json",
@@ -2114,6 +2346,15 @@
       "geometryBytes": {
         "in": 459264,
         "out": 459264
+      }
+    },
+    "f8617a1e09258907019def39723f949e37c6d6e632625eb54459462319889815": {
+      "source": "src/app/scenes/scatterTest/blenderScatter/scatterTestGnPoints.glb",
+      "url": "/aek-assets/app/scenes/scatterTest/blenderScatter/scatterTestGnPoints.f3d02d44.glb",
+      "bytes": 12288,
+      "geometryBytes": {
+        "in": 10416,
+        "out": 10416
       }
     },
     "fb41ebc4f545e25b21e99e93613ea2bafc9bd59f0e32a20a15709d51c885ad24": {

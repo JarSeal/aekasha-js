@@ -20,7 +20,7 @@ import {
 } from '../import/GLTFExtensions';
 import { collectGLTFTextures } from '../import/GLTFTextureCollect';
 import type { TransferableGeometry } from '../import/GeometryTransfer';
-import { serializeGeometry } from '../import/GeometryTransfer';
+import { addInstancesToTransfer, serializeGeometry } from '../import/GeometryTransfer';
 import type { TransferableLodChain } from '../../../features/lod/LodChainGLTF';
 import type { TransferableImage } from '../import/TextureTransfer';
 import { collectImageTransferables, serializeTexture } from '../import/TextureTransfer';
@@ -116,6 +116,7 @@ export const assetsSwitchGLTF = async (
       error: extracted.error,
       geometries: [],
       primitives: [],
+      pointClouds: [],
       lodChains: [],
       images: [],
       textures: [],
@@ -129,6 +130,7 @@ export const assetsSwitchGLTF = async (
   const lodChains: { geometryIndex: number; chain: TransferableLodChain }[] = [];
   const keepGeometries = new Set<THREE.BufferGeometry>();
   const primitives = extracted.primitives.map(({ geometry, info, lodChain }) => {
+    addInstancesToTransfer(info.instances, transfer);
     let geometryIndex = indexByGeometry.get(geometry);
     if (geometryIndex === undefined) {
       geometryIndex = geometries.push(serializeGeometry(geometry, transfer)) - 1;
@@ -145,6 +147,8 @@ export const assetsSwitchGLTF = async (
     }
     return { geometryIndex, info };
   });
+  for (const pointCloud of extracted.pointClouds)
+    addInstancesToTransfer(pointCloud.instances, transfer);
 
   // The same texture collection the main-thread import runs; registering happens there
   const images: TransferableImage[] = [];
@@ -170,6 +174,7 @@ export const assetsSwitchGLTF = async (
       requestId,
       geometries,
       primitives,
+      pointClouds: extracted.pointClouds,
       lodChains,
       images,
       textures,

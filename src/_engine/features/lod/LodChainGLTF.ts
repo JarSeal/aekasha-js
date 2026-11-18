@@ -12,7 +12,7 @@ import {
   serializeGeometry,
   type TransferableAttribute,
 } from '../../kernel/assets/import/GeometryTransfer';
-import { getGLTFPrimitiveKey } from '../../kernel/assets/import/GLTFExtract';
+import { getGLTFPrimitiveKey } from '../../kernel/assets/import/GLTFPrimitiveKey';
 import {
   GLTF_LOD_EXTRAS_KEY,
   GLTF_LOD_FORMAT_VERSION,
@@ -37,7 +37,7 @@ export type ExtractedLodChain = {
 };
 
 /**
- * A file's prebuilt chains, by `getGLTFPrimitiveKey` (kernel/assets/import/GLTFExtract.ts) of their base.
+ * A file's prebuilt chains, by `getGLTFPrimitiveKey` (kernel/assets/import/GLTFPrimitiveKey.ts) of their base.
  * What the LOD import extension hands the kernel's glTF extraction.
  * @internal
  */

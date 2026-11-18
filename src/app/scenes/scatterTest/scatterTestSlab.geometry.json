@@ -1,0 +1,11 @@
+{
+  "$schema": "../../../../.schemas/geometry.schema.json",
+  "geoProps": {
+    "type": "BOX",
+    "params": { "width": 1.6, "height": 0.7, "depth": 1.3 },
+    "debugData": {
+      "name": "Test slab",
+      "description": "A 1.6 × 0.7 × 1.3 m box, centred: a flat-topped rock whose collider a dropped box rests on."
+    }
+  }
+}

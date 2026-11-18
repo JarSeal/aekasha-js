@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../../.schemas/importedAsset.schema.json",
+  "id": "namaqualandBoulder02",
+  "fileName": "./namaqualandBoulder02.glb",
+  "optimize": {
+    "mesh": {
+      "quantize": false
+    }
+  },
+  "debugData": {
+    "name": "Namaqualand boulder 02 (scatter rocks)",
+    "description": "Poly Haven namaqualand_boulder_02 (CC0, polyhaven.com/a/namaqualand_boulder_02), decimated by devTools/toolkit/buildNatureRocks.ts for the scatter (p308 D5): a sandstone boulder, 2.48 \u00d7 0.87 \u00d7 1.23 m, at 1,500 triangles (namaqualandBoulder02/Boulder), its base centre at its origin; positions, normals and UVs, no material (its texture set namaqualandBoulder02 through rockScatterNamaqualandBoulder02). Lossless: a scatter draws its items without their nodes, where a quantized encode puts its scale."
+  }
+}

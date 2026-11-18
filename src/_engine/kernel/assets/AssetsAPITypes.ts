@@ -7,7 +7,7 @@ import type { TransferableGeometry } from './import/GeometryTransfer';
 import type { ResolvedLodChainOptions } from '../../features/lod/LodChainOptions';
 import type { SimplifiedLodChain } from '../../features/lod/LodSimplify';
 import type { TransferableLodChain } from '../../features/lod/LodChainGLTF';
-import type { ImportedGeometryInfo } from './import/ImportTypes';
+import type { ImportedGeometryInfo, ImportedPointCloudInfo } from './import/ImportTypes';
 import type { TransferableImage, TransferableTexture } from './import/TextureTransfer';
 import type { TextureMapKeys } from './Material';
 import type { MergeGeometryOptions } from './GeometryMergeCore';
@@ -326,7 +326,10 @@ export type AssetsLoadGLTFResponse = {
   /** extractPrimitives()'s error (eg. no node at meshIndex): the file loaded, the import fails. */
   error?: string;
   geometries: TransferableGeometry[];
+  /** Each primitive's geometry and info (its `instances`' buffers transferred). */
   primitives: { geometryIndex: number; info: ImportedGeometryInfo }[];
+  /** The point clouds (their `instances`' buffers transferred). */
+  pointClouds: ImportedPointCloudInfo[];
   /** The asset pipeline's prebuilt LOD chains (p347 Phase 3), one per base in `geometries`. */
   lodChains: { geometryIndex: number; chain: TransferableLodChain }[];
   /** Empty without importTextures. ImageBitmaps, or KTX2 textures' compressed mip levels. */

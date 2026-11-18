@@ -28,7 +28,12 @@ import {
 } from './TextureTransfer';
 import type { ExtractedLodChain } from '../../../features/lod/LodChainGLTF';
 import { getImportLodChains, warnMissingImportExtension } from './ImportExtensions';
-import type { ImportAssetParams, ImportedAssetManifest, ImportedGeometryInfo } from './ImportTypes';
+import type {
+  ImportAssetParams,
+  ImportedAssetManifest,
+  ImportedGeometryInfo,
+  ImportedPointCloudInfo,
+} from './ImportTypes';
 
 type ImportRecord = {
   manifest: ImportedAssetManifest;
@@ -71,6 +76,10 @@ const resolveGeometryId = (info: ImportedGeometryInfo) => {
   }
 };
 
+/** A geometry's `userData.importInfo`: its info without the node's instances (a geometry's
+ * userData goes along wherever it's serialized, eg. to the worker for a LOD chain) */
+const toGeometryImportInfo = ({ instances: _instances, ...info }: ImportedGeometryInfo) => info;
+
 const isManifestValid = (manifest: ImportedAssetManifest) =>
   manifest.geometries.every((info) => doesGeoExist(info.geometryId)) &&
   manifest.textureIds.every((textureId) => doesTextureExist(textureId));
@@ -91,7 +100,7 @@ const retagImportOwner = (record: ImportRecord) => {
 };
 
 const logWarnings = (manifest: ImportedAssetManifest) => {
-  for (const info of manifest.geometries) {
+  for (const info of [...manifest.geometries, ...(manifest.pointClouds ?? [])]) {
     for (const warning of info.customProps.warnings) {
       lwarn(`Import "${manifest.id}" (${manifest.fileName}), node "${info.nodeName}": ${warning}`);
     }
@@ -108,6 +117,7 @@ type LoadOutcome =
         info: ImportedGeometryInfo;
         lodChain?: ExtractedLodChain;
       }[];
+      pointClouds: ImportedPointCloudInfo[];
       textures: RegisteredGLTFTextures | null;
       /** Disposes everything the load created except the kept (registered) geometries and the
        * registered textures. */
@@ -162,6 +172,7 @@ const loadOnMainThread = async (
 
   return {
     primitives: extracted.primitives,
+    pointClouds: extracted.pointClouds,
     textures,
     disposeLeftovers: (keepGeometries) =>
       disposeGLTFLeftovers(gltf, { geometries: keepGeometries, textures: textures?.keep }),
@@ -226,6 +237,7 @@ const loadInWorker = async (
 
   return {
     primitives,
+    pointClouds: response.pointClouds,
     textures,
     disposeLeftovers: (keepGeometries) => {
       for (const geometry of geometries) if (!keepGeometries.has(geometry)) geometry.dispose();
@@ -282,7 +294,7 @@ const runImport = async (
     return fail(LOAD_ERROR_MESSAGE, err);
   }
   if (loaded.error !== undefined) return fail(loaded.error, loaded.cause);
-  const { primitives, textures } = loaded;
+  const { primitives, pointClouds, textures } = loaded;
 
   const keepGeometries = new Set<THREE.BufferGeometry>();
   /** Nodes sharing one glTF mesh share one BufferGeometry: register it once. */
@@ -310,7 +322,7 @@ const runImport = async (
         // slots), the freshly parsed one is disposed
         const reusedInfo = { ...info, geometryId };
         const reused = getGeometryRegistry()[geometryId].resource;
-        reused.userData.importInfo = reusedInfo;
+        reused.userData.importInfo = toGeometryImportInfo(reusedInfo);
         retagAssetOwner(reused);
         geometries.push(reusedInfo);
         continue;
@@ -322,7 +334,7 @@ const runImport = async (
       }
 
       const registeredInfo = { ...info, geometryId };
-      geometry.userData.importInfo = registeredInfo;
+      geometry.userData.importInfo = toGeometryImportInfo(registeredInfo);
       saveBufferGeometry(geometry, {
         id: geometryId,
         isImported: true,
@@ -351,6 +363,7 @@ const runImport = async (
     id,
     fileName,
     geometries,
+    ...(pointClouds.length ? { pointClouds } : {}),
     textureIds: textures?.textureIds || [],
   };
   imports[id] = {

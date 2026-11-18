@@ -135,8 +135,10 @@ const profiles: SbpProfile[] = [
         '_engine/features/viewports': 3 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`). p302 (12 → 15
         // modules: the material code split up, the resolver registry, the input refs) took it to
-        // 13.5 KiB, p299 Phase 5's input forms and fallback to 13.7 KiB: 13 → 14 KiB
-        '_engine/kernel/assets': 14 * KIB,
+        // 13.5 KiB, p299 Phase 5's input forms and fallback to 13.7 KiB: 13 → 14 KiB. p308 Phase 2
+        // moved the glTF extraction out of the main chunk (`lod()` reached it through
+        // `getGLTFPrimitiveKey`), 11.8 KiB: 14 → 13 KiB
+        '_engine/kernel/assets': 13 * KIB,
         '_engine/kernel/ecs': 9 * KIB,
         '_engine/kernel/input': 9 * KIB,
         '_engine/kernel/scene': 6 * KIB,
@@ -189,8 +191,9 @@ const profiles: SbpProfile[] = [
       // Set from p619's report (the modules minified, as the app's)
       groups: {
         three: 241 * KIB,
-        // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`)
-        '_engine/kernel/assets': 11 * KIB,
+        // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`). p308's import
+        // extension member for GPU instances (`spawnInstances`) took it 22 B past 11 KiB: 11 → 12 KiB
+        '_engine/kernel/assets': 12 * KIB,
         '_engine/kernel/ecs': 8 * KIB,
         '_engine/kernel/scene': 5 * KIB,
         // p613 D5: the draggable windows load only where they're used
@@ -273,7 +276,8 @@ const profiles: SbpProfile[] = [
       },
       groups: {
         three: 240 * KIB,
-        '_engine/kernel/assets': 11 * KIB,
+        // p308's import extension member for GPU instances, as the banner's: 11 → 12 KiB
+        '_engine/kernel/assets': 12 * KIB,
         '_engine/kernel/ecs': 8 * KIB,
         '_engine/kernel/scene': 5 * KIB,
         // The HUD root and CMP only: the components load with the scene

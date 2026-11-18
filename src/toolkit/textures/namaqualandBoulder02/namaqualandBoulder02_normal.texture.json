@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "namaqualandBoulder02_normal",
+  "pack": {
+    "channels": {
+      "rgb": {
+        "src": "./source/raw/normal.jpg",
+        "normal": true
+      }
+    }
+  },
+  "optimize": {
+    "profile": "prop",
+    "slot": "normal"
+  },
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "anisotropy": "MAX"
+  },
+  "debugData": {
+    "name": "namaqualandBoulder02 normal (FULL)",
+    "description": "The texture set namaqualandBoulder02's FULL normal: RGB the normal (OpenGL). Packed from polyHaven namaqualand_boulder_02's maps (yarn fetchTextureSources)."
+  }
+}

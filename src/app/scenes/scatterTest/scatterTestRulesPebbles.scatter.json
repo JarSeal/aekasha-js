@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../../.schemas/scatter.schema.json",
+  "items": [
+    { "geometry": "scatterTestPebbleA", "material": "scatterTestStone", "weight": 3 },
+    { "geometry": "scatterTestPebbleB", "material": "scatterTestStone" }
+  ],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "terrainScatter",
+    "params": {
+      "minSpacing": 0.4,
+      "density": 0.9,
+      "mask": { "layers": { "1": 1 }, "noise": { "scale": 6, "amount": 0.5 } },
+      "scale": [0.6, 1.4],
+      "alignToNormal": 0.6,
+      "sink": 0.2,
+      "tint": 0.25
+    },
+    "seed": 3
+  },
+  "cellSize": 16,
+  "lod": { "levels": [{ "screenSize": 0 }], "cullScreenSize": 0.05 },
+  "debugData": {
+    "name": "Rules block pebbles",
+    "description": "terrainScatter's pebbles on the rules block's rock layer (its vertex colour's R), 0.4 m apart, thinned in clusters by a noise, tilted toward the slope, sunk a fifth and tinted."
+  }
+}

@@ -1,6 +1,6 @@
 **Title:** No public way to make an entity of an `InstancedMesh` with static instances
 
-Status: open | for an instancing or mesh plan
+Status: fixed | 2026-11-18, p308 (D1, Phase 1)
 Category: Instancing, ECS, API
 Found: 2026-10-22, p620 §1.4 N2 (W5: `testDebugScene` and the LOD showcase built one by hand)
 Our workaround: build it by hand, as `src/app/scenes/lodShowcase/lanes/instanceCell.ts` does
@@ -32,3 +32,15 @@ An `instances` option on `createMeshEntity`'s props (a count and the matrices, o
 writing them), building an `InstancedMesh` through the same path as a mesh: the refs, the
 components, the scene, `castShadow` and the rest. Or a `createInstancedMeshEntity` next to the
 pools in `aekasha/instancing`. Either way the lane becomes one call, and its LOD keeps working.
+
+## Fix
+
+p308 D1 took the second way out: `createInstancedMeshEntity(props, opts?)` on `aekasha/instancing`
+(`features/instancing/StaticInstances.ts`), its props `createMeshEntity`'s without `merge`, plus the
+`instances` (placements or matrices) and their `colors`. Both calls make the entity through one
+kernel helper (`addMeshEntity`, `kernel/mesh/Mesh.ts`, `@internal`), so a step can't be left out
+of one: the refs, the entity and `userData.entityId`, `OBJECT3D` and `TAG_IS_MESH`, the root scene,
+the shadows, the transform, `preWarm` and the LOD, set after the matrices and bounds are written.
+It joins neither the spatial index nor ECS frustum culling (both read one instance at the origin).
+`createStaticInstances` splits many instances into a grid of such cells. The showcase's
+`instanceCell` lane is one call per cell now.

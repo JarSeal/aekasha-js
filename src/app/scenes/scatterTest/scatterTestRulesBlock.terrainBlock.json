@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../../.schemas/terrainBlock.schema.json",
+  "geometry": {
+    "generator": "rulesTerrain",
+    "params": {
+      "maxHeight": 4,
+      "octaves": [
+        [0.03, 1],
+        [0.09, 0.3]
+      ],
+      "rules": [{ "layer": 1, "slope": { "min": 22, "softness": 4 } }]
+    },
+    "seed": 5
+  },
+  "material": "scatterTestRulesTerrain",
+  "grid": { "x": 0, "z": -1, "size": 64, "resolution": 65 },
+  "scatter": ["scatterTestRulesPebbles", "scatterTestRulesSlabs"],
+  "debugData": {
+    "name": "Rules scatter block",
+    "description": "p308 Phase 3's block: a 64 m rulesTerrain block behind the flat one, rock (layer 1) in its vertex colours from 22° of slope (about 37 % of it), sand (layer 0) on the flats, its HEIGHTFIELD collider from the generator. Its scatters are the toolkit's terrainScatter: pebbles on the rock, slabs with CONVEXHULL colliders on the sand."
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../../.schemas/textureSet.schema.json",
+  "id": "namaqualandStones01",
+  "category": "ROCKS",
+  "physicalSize": [1, 1],
+  "heightScale": 0.01,
+  "defaultPacking": "FULL",
+  "packings": {
+    "FULL": {
+      "albedoHeight": "namaqualandStones01_albedoHeight",
+      "normal": "namaqualandStones01_normal",
+      "orm": "namaqualandStones01_orm"
+    }
+  },
+  "surface": {
+    "tint": "#ffffff",
+    "normalStrength": 1,
+    "roughnessScale": 1,
+    "aoStrength": 1,
+    "heightContrast": 1
+  },
+  "debugData": {
+    "name": "Namaqualand Stones 01 (model maps)",
+    "description": "Poly Haven namaqualand_stones_01's own 1k maps, CC0: small sandstone pebbles, laid out on the model's UV (physicalSize 1: the UV's 0..1), for the toolkit's imported scatter rocks (models/nature/namaqualandStones01/, rockScatter at tiling UV; p308 D5)."
+  }
+}

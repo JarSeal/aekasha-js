@@ -14122,6 +14122,753 @@
         "texturesets"
       ]
     },
+    "scatterTest": {
+      "isDebugScene": true,
+      "name": "Static scatter (p308)",
+      "description": "p308 Phase 1's verification scene: a flat 64 m terrain block whose scatter (scatterTestPebbles, its block's own) places 20,000 pebbles of two kinds by a test generator the scene registers, tinted per instance, in 16 m cells: one InstancedMesh entity per cell and kind, no entity per pebble. Each cell hides as a whole below its LOD's cullScreenSize (0.5): from the start camera the near half of the block shows and the far half is culled. Beside them, scatterTestBoulders places six hand-placed boulders (a PLACEMENTS source, spawnScatter on the block's centre), casting shadows. In front, one Blender Geometry Nodes scatter of two rocks (devTools/blender/buildScatterTest.py) twice, from IMPORTED sources: exported with GPU Instances on the left (scatterTestGnGpu), as a point cloud on the right (scatterTestGnPoints); the load checks they place the same rocks the same way. The load checks the counts and, a few frames in, that some cells are LOD-culled and some aren't, logging an error otherwise. Behind it, p308 Phase 3's rules block (scatterTestRulesBlock, a rulesTerrain block: rock on its slopes, sand on its flats) carries two scatters by the toolkit's terrainScatter: pebbles masked to the rock layer and slabs on the sand with CONVEXHULL colliders; the load checks the pebbles follow the rock, that a second spawn places them the same, a collider per slab, and that a box dropped on a slab rests on its top. window.__scatterTest holds the spawn results.",
+      "terrainBlocks": [
+        {
+          "id": "scatterTestBlock",
+          "geometry": {
+            "generator": "noiseTerrain",
+            "params": {
+              "octaves": [
+                [
+                  0.01,
+                  0
+                ]
+              ]
+            },
+            "seed": 0
+          },
+          "material": "textureSetSurface",
+          "materialInputs": {
+            "surface": {
+              "textureSet": "sand01"
+            }
+          },
+          "grid": {
+            "x": 0,
+            "z": 0,
+            "size": 64,
+            "resolution": 33
+          },
+          "collider": {
+            "type": "NONE"
+          },
+          "shadows": {
+            "cast": true,
+            "receive": true
+          },
+          "scatter": [
+            "scatterTestPebbles"
+          ],
+          "debugData": {
+            "name": "Flat scatter block",
+            "description": "A flat 64 m block (noiseTerrain with a zero amplitude) carrying the 20,000 pebbles of scatterTestPebbles."
+          }
+        },
+        {
+          "id": "scatterTestRulesBlock",
+          "geometry": {
+            "generator": "rulesTerrain",
+            "params": {
+              "maxHeight": 4,
+              "octaves": [
+                [
+                  0.03,
+                  1
+                ],
+                [
+                  0.09,
+                  0.3
+                ]
+              ],
+              "rules": [
+                {
+                  "layer": 1,
+                  "slope": {
+                    "min": 22,
+                    "softness": 4
+                  }
+                }
+              ]
+            },
+            "seed": 5
+          },
+          "material": "scatterTestRulesTerrain",
+          "grid": {
+            "x": 0,
+            "z": -1,
+            "size": 64,
+            "resolution": 65
+          },
+          "collider": {
+            "type": "HEIGHTFIELD"
+          },
+          "shadows": {
+            "cast": true,
+            "receive": true
+          },
+          "scatter": [
+            "scatterTestRulesPebbles",
+            "scatterTestRulesSlabs"
+          ],
+          "debugData": {
+            "name": "Rules scatter block",
+            "description": "p308 Phase 3's block: a 64 m rulesTerrain block behind the flat one, rock (layer 1) in its vertex colours from 22° of slope (about 37 % of it), sand (layer 0) on the flats, its HEIGHTFIELD collider from the generator. Its scatters are the toolkit's terrainScatter: pebbles on the rock, slabs with CONVEXHULL colliders on the sand."
+          }
+        }
+      ],
+      "scatters": [
+        {
+          "id": "scatterTestBoulders",
+          "items": [
+            {
+              "geometry": "scatterTestBoulder",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true,
+              "collider": "NONE"
+            }
+          ],
+          "source": {
+            "type": "PLACEMENTS",
+            "placements": [
+              {
+                "position": [
+                  -6,
+                  0.3,
+                  20
+                ],
+                "yaw": 0.4,
+                "scale": 1.2
+              },
+              {
+                "position": [
+                  -3.5,
+                  0.2,
+                  22
+                ],
+                "scale": 0.7
+              },
+              {
+                "position": [
+                  5,
+                  0.4,
+                  18
+                ],
+                "yaw": 2.1,
+                "scale": 1.5
+              },
+              {
+                "position": [
+                  7,
+                  0.2,
+                  21
+                ],
+                "quaternion": [
+                  0,
+                  0.383,
+                  0,
+                  0.924
+                ],
+                "scale": 0.8
+              },
+              {
+                "position": [
+                  0,
+                  0.3,
+                  8
+                ],
+                "scale": 1.1
+              },
+              {
+                "position": [
+                  -20,
+                  0.3,
+                  -20
+                ],
+                "scale": 2
+              }
+            ],
+            "seed": 0
+          },
+          "cellSize": 16,
+          "debugData": {
+            "name": "Test boulders",
+            "description": "Six hand-placed boulders around the block's centre (a PLACEMENTS source): yaws, a quaternion and scales; they cast shadows."
+          }
+        },
+        {
+          "id": "scatterTestGnGpu",
+          "items": [
+            {
+              "geometry": "scatterTestGnGpu/RockA",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "scatterTestGnGpu/RockB",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true,
+              "collider": "NONE"
+            }
+          ],
+          "source": {
+            "type": "IMPORTED",
+            "importedAsset": "scatterTestGnGpu",
+            "nodes": [
+              "ScatterInstances"
+            ],
+            "seed": 0
+          },
+          "cellSize": 16,
+          "debugData": {
+            "name": "Blender scatter (GPU Instances)",
+            "description": "The Geometry Nodes scatter's GPU instances: each instancing node's copy of a rock's mesh is drawn by the item naming that rock's own node."
+          }
+        },
+        {
+          "id": "scatterTestGnPoints",
+          "items": [
+            {
+              "geometry": "scatterTestGnPoints/RockA",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "scatterTestGnPoints/RockB",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true,
+              "collider": "NONE"
+            }
+          ],
+          "source": {
+            "type": "IMPORTED",
+            "importedAsset": "scatterTestGnPoints",
+            "nodes": [
+              "ScatterPoints"
+            ],
+            "seed": 0
+          },
+          "cellSize": 16,
+          "debugData": {
+            "name": "Blender scatter (point cloud)",
+            "description": "The same Geometry Nodes scatter as a point cloud: each point's _ITEM picks the rock (the collection's order: RockA, RockB)."
+          }
+        },
+        {
+          "id": "scatterTestPebbles",
+          "items": [
+            {
+              "geometry": "scatterTestPebbleA",
+              "material": "scatterTestStone",
+              "weight": 3,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "scatterTestPebbleB",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            }
+          ],
+          "source": {
+            "type": "PROCEDURAL",
+            "generator": "scatterTestUniform",
+            "params": {
+              "count": 20000,
+              "scale": [
+                0.6,
+                1.4
+              ],
+              "tint": 0.25
+            },
+            "seed": 7
+          },
+          "cellSize": 16,
+          "lod": {
+            "levels": [
+              {
+                "screenSize": 0
+              }
+            ],
+            "cullScreenSize": 0.5
+          },
+          "debugData": {
+            "name": "Test pebbles",
+            "description": "20,000 pebbles of two kinds (3:1 by weight) over the target's square, by the scene's test generator: 16 cells of 16 m on a 64 m block, each hidden below a screen size of 0.5."
+          }
+        },
+        {
+          "id": "scatterTestRulesPebbles",
+          "items": [
+            {
+              "geometry": "scatterTestPebbleA",
+              "material": "scatterTestStone",
+              "weight": 3,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "scatterTestPebbleB",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            }
+          ],
+          "source": {
+            "type": "PROCEDURAL",
+            "generator": "terrainScatter",
+            "params": {
+              "minSpacing": 0.4,
+              "density": 0.9,
+              "mask": {
+                "layers": {
+                  "1": 1
+                },
+                "noise": {
+                  "scale": 6,
+                  "amount": 0.5
+                }
+              },
+              "scale": [
+                0.6,
+                1.4
+              ],
+              "alignToNormal": 0.6,
+              "sink": 0.2,
+              "tint": 0.25
+            },
+            "seed": 3
+          },
+          "cellSize": 16,
+          "lod": {
+            "levels": [
+              {
+                "screenSize": 0
+              }
+            ],
+            "cullScreenSize": 0.05
+          },
+          "debugData": {
+            "name": "Rules block pebbles",
+            "description": "terrainScatter's pebbles on the rules block's rock layer (its vertex colour's R), 0.4 m apart, thinned in clusters by a noise, tilted toward the slope, sunk a fifth and tinted."
+          }
+        },
+        {
+          "id": "scatterTestRulesSlabs",
+          "items": [
+            {
+              "geometry": "scatterTestSlab",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true,
+              "collider": "CONVEXHULL"
+            }
+          ],
+          "source": {
+            "type": "PROCEDURAL",
+            "generator": "terrainScatter",
+            "params": {
+              "minSpacing": 6,
+              "density": 0.8,
+              "mask": {
+                "layers": {
+                  "0": 1
+                }
+              },
+              "scale": [
+                0.8,
+                1.3
+              ],
+              "sink": 0.15
+            },
+            "seed": 4
+          },
+          "cellSize": 32,
+          "debugData": {
+            "name": "Rules block slabs",
+            "description": "terrainScatter's upright slabs on the rules block's sand (layer 0), 6 m apart, each with a CONVEXHULL collider (a FIXED body): the scene drops a box on one."
+          }
+        }
+      ],
+      "id": "scatterTest",
+      "sceneFile": "./scenes/scatterTest/scatterTest.ts",
+      "cameras": [
+        {
+          "camProps": {
+            "type": "PERSPECTIVE",
+            "fov": 90,
+            "active": true
+          },
+          "entityOpts": {
+            "debugData": {
+              "name": "_camera",
+              "description": "Auto-generated camera for the scene"
+            }
+          }
+        }
+      ],
+      "materials": [
+        {
+          "id": "textureSetSurface",
+          "debugData": {
+            "name": "Texture set surface",
+            "description": "One texture set on a surface, any packing (p303 D7): the baseline of the terrain techniques, no anti-tiling or splat. Give a mesh its set with matOverrides.inputs.surface ({ textureSet, packing? }). Static defines: tiling (WORLD_XZ: the world's (x, -z) over physicalSize, for terrain; UV: the mesh's UV in metres, for walls and structures), minimalNormal (BUMP or FLAT)."
+          },
+          "tslFile": "materials/textureSetSurface/textureSetSurface.tsl.ts",
+          "staticDefines": {
+            "tiling": "WORLD_XZ",
+            "minimalNormal": "BUMP"
+          },
+          "inputs": {
+            "surface": {
+              "textureSet": "sand01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "scatterTestRulesTerrain",
+          "debugData": {
+            "name": "Rules scatter terrain",
+            "description": "The rules scatter block's terrain material: sand (layer 0) and rock (layer 1) by the block's vertex colour (RGB_AO: R the rock), which the terrainScatter layer mask reads the same way."
+          },
+          "tslFile": "scenes/scatterTest/scatterTestTerrain.tsl.ts",
+          "staticDefines": {
+            "terrain": {
+              "layers": [
+                {},
+                {}
+              ],
+              "blend": {
+                "source": "VERTEX_COLOR",
+                "vertexColor": {
+                  "layout": "RGB_AO"
+                }
+              }
+            }
+          },
+          "inputs": {
+            "layer0": {
+              "textureSet": "sand01"
+            },
+            "layer1": {
+              "textureSet": "rocks01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "scatterTestStone",
+          "params": {
+            "color": "#b9b1a4",
+            "roughness": 0.8,
+            "metalness": 0
+          },
+          "type": "STANDARD"
+        }
+      ],
+      "geometries": [
+        {
+          "id": "scatterTestBoulder",
+          "type": "SPHERE",
+          "params": {
+            "radius": 0.9,
+            "widthSegments": 9,
+            "heightSegments": 6
+          },
+          "debugData": {
+            "name": "Test boulder",
+            "description": "A 9 × 6 segment sphere, 0.9 m."
+          }
+        },
+        {
+          "id": "scatterTestPebbleA",
+          "type": "SPHERE",
+          "params": {
+            "radius": 0.07,
+            "widthSegments": 6,
+            "heightSegments": 4
+          },
+          "debugData": {
+            "name": "Test pebble A",
+            "description": "A 6 × 4 segment sphere, 7 cm."
+          }
+        },
+        {
+          "id": "scatterTestPebbleB",
+          "type": "SPHERE",
+          "params": {
+            "radius": 0.05,
+            "widthSegments": 5,
+            "heightSegments": 3
+          },
+          "debugData": {
+            "name": "Test pebble B",
+            "description": "A 5 × 3 segment sphere, 5 cm."
+          }
+        },
+        {
+          "id": "scatterTestSlab",
+          "type": "BOX",
+          "params": {
+            "width": 1.6,
+            "height": 0.7,
+            "depth": 1.3
+          },
+          "debugData": {
+            "name": "Test slab",
+            "description": "A 1.6 × 0.7 × 1.3 m box, centred: a flat-topped rock whose collider a dropped box rests on."
+          }
+        }
+      ],
+      "importedAssets": [
+        {
+          "id": "scatterTestGnGpu",
+          "fileName": "./scatterTestGnGpu.glb",
+          "debugData": {
+            "name": "Blender scatter (Gpu)",
+            "description": "scatterTest's Geometry Nodes scatter (devTools/blender/buildScatterTest.py; p308 Phase 2) exported as GPU Instances: the node ScatterInstances, whose children hold the GPU instances (EXT_mesh_gpu_instancing) of RockA's and RockB's meshes, and the rocks' own nodes. Lossless: a scatter draws its items without their nodes, where a quantized encode puts its scale."
+          },
+          "__fileSize": 15708,
+          "__sourceUrl": "/app/scenes/scatterTest/blenderScatter/scatterTestGnGpu.glb",
+          "__url": "/aek-assets/app/scenes/scatterTest/blenderScatter/scatterTestGnGpu.fa2289d8.glb",
+          "__bytes": {
+            "in": 15708,
+            "out": 16064
+          },
+          "__vramBytes": {
+            "in": 5568,
+            "out": 5568
+          }
+        },
+        {
+          "id": "scatterTestGnPoints",
+          "fileName": "./scatterTestGnPoints.glb",
+          "debugData": {
+            "name": "Blender scatter (Points)",
+            "description": "scatterTest's Geometry Nodes scatter (devTools/blender/buildScatterTest.py; p308 Phase 2) exported as a point cloud: the node ScatterPoints (custom prop aekScatterPoints) and its child, the points with _ROT, _SCALE and _ITEM, and the rocks' own nodes. Lossless: a scatter draws its items without their nodes, where a quantized encode puts its scale."
+          },
+          "__fileSize": 13084,
+          "__sourceUrl": "/app/scenes/scatterTest/blenderScatter/scatterTestGnPoints.glb",
+          "__url": "/aek-assets/app/scenes/scatterTest/blenderScatter/scatterTestGnPoints.f3d02d44.glb",
+          "__bytes": {
+            "in": 13084,
+            "out": 12288
+          },
+          "__vramBytes": {
+            "in": 10416,
+            "out": 10416
+          }
+        }
+      ],
+      "textureSets": [
+        {
+          "id": "sand01",
+          "category": "SAND",
+          "physicalSize": [
+            3,
+            3
+          ],
+          "heightScale": 0.057,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "sand01_albedoHeight",
+              "normal": "sand01_normal",
+              "orm": "sand01_orm"
+            },
+            "LITE": {
+              "albedoRough": "sand01_albedoRough",
+              "normalHeight": "sand01_normalHeight"
+            },
+            "MINIMAL": {
+              "albedoHeight": "sand01_albedoHeightAO"
+            }
+          },
+          "debugData": {
+            "name": "Sand 01 (dry dunes)",
+            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.85,
+            "wetDarkening": 0.55,
+            "wetRoughness": 0.4,
+            "puddleResponse": 0.3,
+            "dryingSpeed": 1.6
+          },
+          "averageColor": "#ab966b"
+        },
+        {
+          "id": "rocks01",
+          "category": "ROCKS",
+          "physicalSize": [
+            2,
+            2
+          ],
+          "heightScale": 0.018,
+          "packings": {
+            "LITE": {
+              "albedoRough": "rocks01_albedoRough",
+              "normalHeight": "rocks01_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Rocks 01 (gravel)",
+            "description": "ambientCG Ground079S, CC0: gravel / rocky ground."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.4,
+            "wetDarkening": 0.35,
+            "wetRoughness": 0.2,
+            "puddleResponse": 0.6,
+            "dryingSpeed": 1
+          },
+          "averageColor": "#ad926e"
+        }
+      ],
+      "textures": [
+        {
+          "id": "sand01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "sand01 albedoRough (LITE)",
+            "description": "The texture set sand01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/sand01/sand01_albedoRough.pack.42c89ed4.ktx2",
+          "__bytes": {
+            "in": 9086447,
+            "out": 861827
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.4077,
+            0.303,
+            0.1458
+          ]
+        },
+        {
+          "id": "sand01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "sand01 normalHeight (LITE)",
+            "description": "The texture set sand01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/sand01/sand01_normalHeight.pack.448c5a53.ktx2",
+          "__bytes": {
+            "in": 7695457,
+            "out": 1166404
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "rocks01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "rocks01 albedoRough (LITE)",
+            "description": "The texture set rocks01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground079S's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/rocks01/rocks01_albedoRough.pack.c6a24dfc.ktx2",
+          "__bytes": {
+            "in": 12442144,
+            "out": 1227608
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.4165,
+            0.2873,
+            0.1564
+          ]
+        },
+        {
+          "id": "rocks01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "rocks01 normalHeight (LITE)",
+            "description": "The texture set rocks01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground079S's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/rocks01/rocks01_normalHeight.pack.e66b9742.ktx2",
+          "__bytes": {
+            "in": 11125458,
+            "out": 1288192
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        }
+      ],
+      "__features": [
+        "texturesets",
+        "terrain",
+        "instancing",
+        "physics"
+      ]
+    },
     "scene01": {
       "name": "Scene 01 (basic physics demo)",
       "description": "Basic FIXED/DYNAMIC physics demo: a ground box, a bouncing box, a falling metal ball and cylinder, an imported GLB with a TRIMESH collider and CCD, a sensor collider without a mesh (it turns the wireframe sphere green while a body is in it), a group, shadows, four sky boxes and metal spheres reflecting the sky.",
@@ -20865,7 +21612,7 @@
     "terrainGallery": {
       "isDebugScene": true,
       "name": "Terrain gallery (p303, p304, p305, p306, p307)",
-      "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the toolkit's terrain material (p305, its JSON route; one layer, world tiling) in the set's default packing, which the debug tab switches to the code route or to the baseline textureSetSurface (they look the same). Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). Behind the library, the Anti-tiling row (p305): three flat 48 × 48 m grass01 blocks with the terrain material's anti-tiling NONE, DUAL_SCALE and HEX, the macro variation (macroNoise) on, which the debug tab switches and tunes. Left of the library, the Splatting row (p305): six 24 × 24 m generated blocks blending several sets by weights painted in code, the vertex colour (RGBA, 5 layers) and a splat map (5 layers) each LINEAR beside HEIGHT, RGB_AO with the vertex AO (4 layers), and 9 layers with two splat maps (code route materials, storage AUTO: the splat blocks bind one texture too many for SEPARATE, so each takes a set array the scene lists), which the debug tab tunes. In front of the library, the Rules row (p305): two 64 × 64 m blocks on one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces, macroNoise breaking the borders), the rules alone beside a splat map's sandy path and mud under the same rules (its six sets a set array the scene lists), which the debug tab tunes. In front of the Cliffs row, the Colour map row (p305): the Rules row's 8-layer material on four 64 × 64 m blocks of its terrain, then with a DETAIL colour map (baked at the load from the source on the block's own mesh), with the far COLOR_MAP surface and with the far AVERAGE_COLOR one, which the debug tab tunes and bakes again. In front of that, the Structures row (p305): structure materials (createStructureMaterial: triplanar, dual-scale anti-tiling, a 12 m macro) on pieces made in code, a wall of two segments in world space and a bunker's passage piece in object space worn by their vertex colour (RGBA: clean and stained concrete, grime, damage), and two pillars turning and rising, concrete02 in object space beside world space, which the debug tab pauses. Left of the Splatting row, the Wet/dry row (p307): 3 × 3 library blocks, a set of each category (sand02, mud02, rocks01, cliffs01, snow01, ice01, grass01, concrete02) and a beach (sand02 with rocks01 on the ramp by slope), each the terrain material with wet over the surface conditions' wetness, which the scene holds (MANUAL, 0.6) and the debug tab sets, with puddles, rain ripples, streaks on a concrete wall and a cliff boulder, a shoreline on the beach, and snow (snow01) by the snow cover, slush above 0 °C, which the debug tab sets too, with the row's quality (FULL, SIMPLE) and the WETNESS and TAPS views. Right of the library, the Procedural row (p304): the toolkit's ten surface generators on a block each (five rows of two), baked at the load (1024² LITE), which the debug tab switches between the bake, the generator live in the material and an imported set of its category, with each generator's params, its export and a GPU measurement. Right of that, the Live block (p305): a 48 × 48 m generated terrain, grass, rocks by slope and snow on the tops by rules, sand ripples in the hollows from the gallery's procedural set terrainGalleryLiveDunes (sandRipples, baked at the load) run live in the terrain material or sampled baked (the imported sets in a set array, the procedural set beside it), which the debug tab switches, tunes and measures. Behind the Anti-tiling row, past the ground, the Blocks patch (p306): 3 × 3 terrain blocks of 32 m (*.terrainBlock.json) of the toolkit's rulesTerrain, one world-continuous noise with HEIGHT_FN normals, the rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces) laid into the vertex colours on the CPU with the horizon AO in their A, which the debug tab switches to the same rules in the shader (RULES) on the same blocks. The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
+      "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the toolkit's terrain material (p305, its JSON route; one layer, world tiling) in the set's default packing, which the debug tab switches to the code route or to the baseline textureSetSurface (they look the same). Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). Behind the library, the Anti-tiling row (p305): three flat 48 × 48 m grass01 blocks with the terrain material's anti-tiling NONE, DUAL_SCALE and HEX, the macro variation (macroNoise) on, which the debug tab switches and tunes. Left of the library, the Splatting row (p305): six 24 × 24 m generated blocks blending several sets by weights painted in code, the vertex colour (RGBA, 5 layers) and a splat map (5 layers) each LINEAR beside HEIGHT, RGB_AO with the vertex AO (4 layers), and 9 layers with two splat maps (code route materials, storage AUTO: the splat blocks bind one texture too many for SEPARATE, so each takes a set array the scene lists), which the debug tab tunes. In front of the library, the Rules row (p305): two 64 × 64 m blocks on one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces, macroNoise breaking the borders), the rules alone beside a splat map's sandy path and mud under the same rules (its six sets a set array the scene lists), which the debug tab tunes. In front of the Cliffs row, the Colour map row (p305): the Rules row's 8-layer material on four 64 × 64 m blocks of its terrain, then with a DETAIL colour map (baked at the load from the source on the block's own mesh), with the far COLOR_MAP surface and with the far AVERAGE_COLOR one, which the debug tab tunes and bakes again. In front of that, the Structures row (p305): structure materials (createStructureMaterial: triplanar, dual-scale anti-tiling, a 12 m macro) on pieces made in code, a wall of two segments in world space and a bunker's passage piece in object space worn by their vertex colour (RGBA: clean and stained concrete, grime, damage), and two pillars turning and rising, concrete02 in object space beside world space, which the debug tab pauses. Left of the Splatting row, the Wet/dry row (p307): 3 × 3 library blocks, a set of each category (sand02, mud02, rocks01, cliffs01, snow01, ice01, grass01, concrete02) and a beach (sand02 with rocks01 on the ramp by slope), each the terrain material with wet over the surface conditions' wetness, which the scene holds (MANUAL, 0.6) and the debug tab sets, with puddles, rain ripples, streaks on a concrete wall and a cliff boulder, a shoreline on the beach, and snow (snow01) by the snow cover, slush above 0 °C, which the debug tab sets too, with the row's quality (FULL, SIMPLE) and the WETNESS and TAPS views. Right of the library, the Procedural row (p304): the toolkit's ten surface generators on a block each (five rows of two), baked at the load (1024² LITE), which the debug tab switches between the bake, the generator live in the material and an imported set of its category, with each generator's params, its export and a GPU measurement. Right of that, the Live block (p305): a 48 × 48 m generated terrain, grass, rocks by slope and snow on the tops by rules, sand ripples in the hollows from the gallery's procedural set terrainGalleryLiveDunes (sandRipples, baked at the load) run live in the terrain material or sampled baked (the imported sets in a set array, the procedural set beside it), which the debug tab switches, tunes and measures. Behind the Anti-tiling row, past the ground, the Blocks patch (p306): 3 × 3 terrain blocks of 32 m (*.terrainBlock.json) of the toolkit's rulesTerrain, one world-continuous noise with HEIGHT_FN normals, the rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces) laid into the vertex colours on the CPU with the horizon AO in their A, which the debug tab switches to the same rules in the shader (RULES) on the same blocks. In front of the Wet/dry row, the Scatter row (p308): one 24 m block, rocks01 patches over sand02 split down the middle (the vertex colour), the toolkit's procedural pebbles, rocks and boulders (generateRock) scattered on the left half's rock by terrainScatter in the rockScatter material over rocks01, and the toolkit's imported ones (Poly Haven namaqualand_stones_01 and namaqualand_boulder_02, decimated; models/nature/) on the right half's with the same params in rockScatter at their own maps' UV, and right of it a 12 m grass02 and mud02 patch under the toolkit's leaf litter cards (generateLeafCard, the leafLitter material over its LeafSet024 atlas), all wet with the ground by the surface conditions, which the debug tab switches between dry and wet. The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
       "cameras": [
         {
           "camProps": {
@@ -21743,6 +22490,292 @@
             "out": 1398128
           },
           "__codec": "uastc"
+        },
+        {
+          "id": "namaqualandStones01_albedoHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "namaqualandStones01 albedoHeight (FULL)",
+            "description": "The texture set namaqualandStones01's FULL albedoHeight: RGB albedo (sRGB), A height. Packed from polyHaven namaqualand_stones_01's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/namaqualandStones01/namaqualandStones01_albedoHeight.pack.9e62a1d3.ktx2",
+          "__bytes": {
+            "in": 1030362,
+            "out": 1090806
+          },
+          "__vramBytes": {
+            "in": 5592404,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.264,
+            0.1894,
+            0.129
+          ]
+        },
+        {
+          "id": "namaqualandStones01_normal",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "namaqualandStones01 normal (FULL)",
+            "description": "The texture set namaqualandStones01's FULL normal: RGB the normal (OpenGL). Packed from polyHaven namaqualand_stones_01's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/namaqualandStones01/namaqualandStones01_normal.pack.588d6202.ktx2",
+          "__bytes": {
+            "in": 1091306,
+            "out": 1194972
+          },
+          "__vramBytes": {
+            "in": 5592404,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "namaqualandStones01_orm",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "namaqualandStones01 orm (FULL)",
+            "description": "The texture set namaqualandStones01's FULL orm: R AO, G roughness, B metalness 0. Packed from polyHaven namaqualand_stones_01's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/namaqualandStones01/namaqualandStones01_orm.pack.acfa0be1.ktx2",
+          "__bytes": {
+            "in": 1074465,
+            "out": 952634
+          },
+          "__vramBytes": {
+            "in": 5592404,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "namaqualandBoulder02_albedoHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "namaqualandBoulder02 albedoHeight (FULL)",
+            "description": "The texture set namaqualandBoulder02's FULL albedoHeight: RGB albedo (sRGB), A height. Packed from polyHaven namaqualand_boulder_02's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/namaqualandBoulder02/namaqualandBoulder02_albedoHeight.pack.0c090401.ktx2",
+          "__bytes": {
+            "in": 1310398,
+            "out": 1154852
+          },
+          "__vramBytes": {
+            "in": 5592404,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.1549,
+            0.0908,
+            0.0489
+          ]
+        },
+        {
+          "id": "namaqualandBoulder02_normal",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "namaqualandBoulder02 normal (FULL)",
+            "description": "The texture set namaqualandBoulder02's FULL normal: RGB the normal (OpenGL). Packed from polyHaven namaqualand_boulder_02's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/namaqualandBoulder02/namaqualandBoulder02_normal.pack.3f13aa0e.ktx2",
+          "__bytes": {
+            "in": 1031460,
+            "out": 1201452
+          },
+          "__vramBytes": {
+            "in": 5592404,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "namaqualandBoulder02_orm",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "namaqualandBoulder02 orm (FULL)",
+            "description": "The texture set namaqualandBoulder02's FULL orm: R AO, G roughness, B metalness 0. Packed from polyHaven namaqualand_boulder_02's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/namaqualandBoulder02/namaqualandBoulder02_orm.pack.0b244654.ktx2",
+          "__bytes": {
+            "in": 1239519,
+            "out": 1047727
+          },
+          "__vramBytes": {
+            "in": 5592404,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "leafLitter.albedo",
+          "texOpts": {
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "Leaf litter",
+            "description": "ambientCG LeafSet024 (CC0, ambientcg.com/view?id=LeafSet024): nine beech leaves, its colour with its opacity as A (source/leafLitter_albedo.png, devTools/toolkit/buildLeafLitter.ts), a cell each (leaf0-leaf8, the 3 × 3 grid cut at 340 and 684 px). Alpha coverage kept at 0.5 down the mips (the leafLitter material's alphaTest), so distant cards don't thin out; FULL mip chain: past the levels the 4 px padding keeps apart, the leaves' transparent surroundings mix. For the toolkit's leaf cards (p308 D5)."
+          },
+          "__atlas": {
+            "id": "leafLitter",
+            "slot": "albedo",
+            "size": [
+              1024,
+              1024
+            ],
+            "padding": 4,
+            "levels": 1,
+            "mipChain": "FULL",
+            "fromImage": true,
+            "cells": {
+              "leaf0": {
+                "uv": [
+                  0.00390625,
+                  0.671875,
+                  0.328125,
+                  0.99609375
+                ],
+                "size": [
+                  332,
+                  332
+                ]
+              },
+              "leaf1": {
+                "uv": [
+                  0.3359375,
+                  0.671875,
+                  0.6640625,
+                  0.99609375
+                ],
+                "size": [
+                  336,
+                  332
+                ]
+              },
+              "leaf2": {
+                "uv": [
+                  0.671875,
+                  0.671875,
+                  0.99609375,
+                  0.99609375
+                ],
+                "size": [
+                  332,
+                  332
+                ]
+              },
+              "leaf3": {
+                "uv": [
+                  0.00390625,
+                  0.3359375,
+                  0.328125,
+                  0.6640625
+                ],
+                "size": [
+                  332,
+                  336
+                ]
+              },
+              "leaf4": {
+                "uv": [
+                  0.3359375,
+                  0.3359375,
+                  0.6640625,
+                  0.6640625
+                ],
+                "size": [
+                  336,
+                  336
+                ]
+              },
+              "leaf5": {
+                "uv": [
+                  0.671875,
+                  0.3359375,
+                  0.99609375,
+                  0.6640625
+                ],
+                "size": [
+                  332,
+                  336
+                ]
+              },
+              "leaf6": {
+                "uv": [
+                  0.00390625,
+                  0.00390625,
+                  0.328125,
+                  0.328125
+                ],
+                "size": [
+                  332,
+                  332
+                ]
+              },
+              "leaf7": {
+                "uv": [
+                  0.3359375,
+                  0.00390625,
+                  0.6640625,
+                  0.328125
+                ],
+                "size": [
+                  336,
+                  332
+                ]
+              },
+              "leaf8": {
+                "uv": [
+                  0.671875,
+                  0.00390625,
+                  0.99609375,
+                  0.328125
+                ],
+                "size": [
+                  332,
+                  332
+                ]
+              }
+            }
+          },
+          "__url": "/aek-assets/toolkit/textures/leafLitter/leafLitter.atlas.albedo.7e2bc84c.ktx2",
+          "__bytes": {
+            "in": 1508316,
+            "out": 744339
+          },
+          "__vramBytes": {
+            "in": 5592404,
+            "out": 1398128
+          },
+          "__codec": "uastc"
         }
       ],
       "materials": [
@@ -21834,6 +22867,137 @@
             }
           },
           "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "rockScatter",
+          "debugData": {
+            "name": "Rock scatter",
+            "description": "Scatter rocks (p308 D5; generateRock's, or an imported rock's own maps): input surface the texture set ({ textureSet }), the ground's for the procedural rocks (no texture memory of their own), triplanar in the rock's own space (each instance of an InstancedMesh keeps its texture), DUAL_SCALE anti-tiled; macro a macro texture (the tint at the world's position); dustColor (default the set's averageColor) on the faces turned up; wet by the surface conditions with frost. Numbers (optional inputs): sharpness, farScale, antiTilingDistance, macroScale, macroBrightness, macroHue, macroRoughness, dustAmount, dustFacing. Static defines: tiling (TRIPLANAR, or UV: an imported rock's own maps at its UV), antiTiling (DUAL_SCALE, NONE), wet (FULL, SIMPLE, NONE), frost (boolean), rainOcclusion (NORMAL_Y, MAP). Rocks on another ground set: a material JSON of its own over that set (and a two-line TSL file: export const setup = setupRockMaterial)."
+          },
+          "tslFile": "materials/rockScatter/rockScatter.tsl.ts",
+          "staticDefines": {
+            "tiling": "TRIPLANAR",
+            "antiTiling": "DUAL_SCALE",
+            "wet": "FULL",
+            "frost": true,
+            "rainOcclusion": "NORMAL_Y"
+          },
+          "inputs": {
+            "surface": {
+              "textureSet": "rocks01"
+            },
+            "macro": {
+              "texture": "macroNoise"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "rockScatterNamaqualandStones01",
+          "debugData": {
+            "name": "Rock scatter: Namaqualand stones 01",
+            "description": "The toolkit's rockScatter material (p308 D5) on the imported pebbles and rocks namaqualandStones01: its own maps (the texture set namaqualandStones01) at the mesh's UV, the macro tint at the world's position, dust on the faces turned up toward the set's average colour, wet by the surface conditions with frost."
+          },
+          "tslFile": "materials/rockScatter/rockScatter.tsl.ts",
+          "staticDefines": {
+            "tiling": "UV",
+            "wet": "FULL",
+            "frost": true,
+            "rainOcclusion": "NORMAL_Y"
+          },
+          "inputs": {
+            "surface": {
+              "textureSet": "namaqualandStones01"
+            },
+            "macro": {
+              "texture": "macroNoise"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "rockScatterNamaqualandBoulder02",
+          "debugData": {
+            "name": "Rock scatter: Namaqualand boulder 02",
+            "description": "The toolkit's rockScatter material (p308 D5) on the imported boulder namaqualandBoulder02: its own maps (the texture set namaqualandBoulder02) at the mesh's UV, the macro tint at the world's position, dust on the faces turned up toward the set's average colour, wet by the surface conditions with frost."
+          },
+          "tslFile": "materials/rockScatter/rockScatter.tsl.ts",
+          "staticDefines": {
+            "tiling": "UV",
+            "wet": "FULL",
+            "frost": true,
+            "rainOcclusion": "NORMAL_Y"
+          },
+          "inputs": {
+            "surface": {
+              "textureSet": "namaqualandBoulder02"
+            },
+            "macro": {
+              "texture": "macroNoise"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "leafLitter",
+          "debugData": {
+            "name": "Leaf litter",
+            "description": "Leaf litter cards (p308 D5) on generateLeafCard's quads: input albedo the leaf atlas's slot (leafLitter.albedo, ambientCG LeafSet024), a leaf cell per instance by a hash of its instanceIndex (one material and one draw a scatter cell), fitted at its aspect; a share of the leaves (autumn, 0.6) turned toward autumnColor; × tint and the instance's colour; alpha-tested at 0.5 (the atlas's alpha coverage), alphaToCoverage under MSAA. Static define wet (SIMPLE, NONE): wet by the surface conditions by porosity, wetDarkening, wetRoughness. Numbers and colours (optional inputs): autumn, autumnColor, tint, roughness, porosity, wetDarkening, wetRoughness."
+          },
+          "params": {
+            "alphaTest": 0.5,
+            "alphaToCoverage": true
+          },
+          "tslFile": "materials/leafLitter/leafLitter.tsl.ts",
+          "staticDefines": {
+            "wet": "SIMPLE"
+          },
+          "inputs": {
+            "albedo": {
+              "texture": "leafLitter.albedo"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        }
+      ],
+      "importedAssets": [
+        {
+          "id": "namaqualandStones01",
+          "fileName": "./namaqualandStones01.glb",
+          "debugData": {
+            "name": "Namaqualand stones 01 (scatter rocks)",
+            "description": "Poly Haven namaqualand_stones_01 (CC0, polyhaven.com/a/namaqualand_stones_01), decimated by devTools/toolkit/buildNatureRocks.ts for the scatter (p308 D5): five sandstone pebbles of 7-14 cm at 80 triangles each (StoneA-E: namaqualandStones01/StoneA, …), and three of them scaled ×4 into rocks of 41-59 cm at 400 triangles (RockA-C), each piece's base centre at its origin; positions, normals and UVs, no material (its texture set namaqualandStones01 through rockScatterNamaqualandStones01). Lossless: a scatter draws its items without their nodes, where a quantized encode puts its scale."
+          },
+          "__fileSize": 62236,
+          "__sourceUrl": "/toolkit/models/nature/namaqualandStones01/namaqualandStones01.glb",
+          "__url": "/aek-assets/toolkit/models/nature/namaqualandStones01/namaqualandStones01.fc9326c2.glb",
+          "__bytes": {
+            "in": 62236,
+            "out": 49412
+          },
+          "__vramBytes": {
+            "in": 56480,
+            "out": 56480
+          }
+        },
+        {
+          "id": "namaqualandBoulder02",
+          "fileName": "./namaqualandBoulder02.glb",
+          "debugData": {
+            "name": "Namaqualand boulder 02 (scatter rocks)",
+            "description": "Poly Haven namaqualand_boulder_02 (CC0, polyhaven.com/a/namaqualand_boulder_02), decimated by devTools/toolkit/buildNatureRocks.ts for the scatter (p308 D5): a sandstone boulder, 2.48 × 0.87 × 1.23 m, at 1,500 triangles (namaqualandBoulder02/Boulder), its base centre at its origin; positions, normals and UVs, no material (its texture set namaqualandBoulder02 through rockScatterNamaqualandBoulder02). Lossless: a scatter draws its items without their nodes, where a quantized encode puts its scale."
+          },
+          "__fileSize": 62560,
+          "__sourceUrl": "/toolkit/models/nature/namaqualandBoulder02/namaqualandBoulder02.glb",
+          "__url": "/aek-assets/toolkit/models/nature/namaqualandBoulder02/namaqualandBoulder02.ad91c8fa.glb",
+          "__bytes": {
+            "in": 62560,
+            "out": 44052
+          },
+          "__vramBytes": {
+            "in": 61584,
+            "out": 61584
+          }
         }
       ],
       "skyboxes": [
@@ -22473,6 +23637,74 @@
             "puddleResponse": 0.3,
             "dryingSpeed": 1.6
           }
+        },
+        {
+          "id": "namaqualandStones01",
+          "category": "ROCKS",
+          "physicalSize": [
+            1,
+            1
+          ],
+          "heightScale": 0.01,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "namaqualandStones01_albedoHeight",
+              "normal": "namaqualandStones01_normal",
+              "orm": "namaqualandStones01_orm"
+            }
+          },
+          "debugData": {
+            "name": "Namaqualand Stones 01 (model maps)",
+            "description": "Poly Haven namaqualand_stones_01's own 1k maps, CC0: small sandstone pebbles, laid out on the model's UV (physicalSize 1: the UV's 0..1), for the toolkit's imported scatter rocks (models/nature/namaqualandStones01/, rockScatter at tiling UV; p308 D5)."
+          },
+          "defaultPacking": "FULL",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.4,
+            "wetDarkening": 0.35,
+            "wetRoughness": 0.2,
+            "puddleResponse": 0.6,
+            "dryingSpeed": 1
+          },
+          "averageColor": "#8c7865"
+        },
+        {
+          "id": "namaqualandBoulder02",
+          "category": "ROCKS",
+          "physicalSize": [
+            1,
+            1
+          ],
+          "heightScale": 0.01,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "namaqualandBoulder02_albedoHeight",
+              "normal": "namaqualandBoulder02_normal",
+              "orm": "namaqualandBoulder02_orm"
+            }
+          },
+          "debugData": {
+            "name": "Namaqualand Boulder 02 (model maps)",
+            "description": "Poly Haven namaqualand_boulder_02's own 1k maps, CC0: a sandstone boulder, laid out on the model's UV (physicalSize 1: the UV's 0..1), for the toolkit's imported scatter rocks (models/nature/namaqualandBoulder02/, rockScatter at tiling UV; p308 D5)."
+          },
+          "defaultPacking": "FULL",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.4,
+            "wetDarkening": 0.35,
+            "wetRoughness": 0.2,
+            "puddleResponse": 0.6,
+            "dryingSpeed": 1
+          },
+          "averageColor": "#6e553e"
         }
       ],
       "textureSetArrays": [
@@ -23378,13 +24610,421 @@
         "waterLevel": 0.15,
         "mode": "MANUAL"
       },
+      "scatters": [
+        {
+          "id": "terrainGalleryScatterPebbles",
+          "items": [
+            {
+              "geometry": "rockPebble_a",
+              "material": "rockScatter",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "rockPebble_b",
+              "material": "rockScatter",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "rockPebble_c",
+              "material": "rockScatter",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            }
+          ],
+          "source": {
+            "type": "PROCEDURAL",
+            "generator": "terrainScatter",
+            "params": {
+              "minSpacing": 0.3,
+              "density": 0.7,
+              "mask": {
+                "layers": {
+                  "1": 1
+                }
+              },
+              "scale": [
+                0.7,
+                1.5
+              ],
+              "alignToNormal": 0.8,
+              "sink": 0.25,
+              "tint": 0.2
+            },
+            "seed": 1
+          },
+          "cellSize": 16,
+          "lod": {
+            "levels": [
+              {
+                "screenSize": 0
+              }
+            ],
+            "cullScreenSize": 0.05
+          },
+          "debugData": {
+            "name": "Scatter row: pebbles",
+            "description": "The toolkit's procedural pebbles (generateRock's PEBBLE, rockPebble_a..c) on the Scatter row's procedural half (layer 1, rocks01), 0.3 m apart, in the rocks01 rockScatter material."
+          }
+        },
+        {
+          "id": "terrainGalleryScatterRocks",
+          "items": [
+            {
+              "geometry": "rockSmall_a",
+              "material": "rockScatter",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "rockSmall_b",
+              "material": "rockScatter",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "rockSmall_c",
+              "material": "rockScatter",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            }
+          ],
+          "source": {
+            "type": "PROCEDURAL",
+            "generator": "terrainScatter",
+            "params": {
+              "minSpacing": 1.2,
+              "density": 0.7,
+              "mask": {
+                "layers": {
+                  "1": 1
+                }
+              },
+              "scale": [
+                0.6,
+                1.6
+              ],
+              "alignToNormal": 0.5,
+              "sink": 0.2,
+              "tint": 0.15
+            },
+            "seed": 2
+          },
+          "cellSize": 16,
+          "lod": {
+            "levels": [
+              {
+                "screenSize": 0
+              }
+            ],
+            "cullScreenSize": 0.02
+          },
+          "debugData": {
+            "name": "Scatter row: rocks",
+            "description": "The toolkit's procedural rocks (generateRock's ROCK, rockSmall_a..c) on the Scatter row's procedural half (layer 1, rocks01), 1.2 m apart, in the rocks01 rockScatter material."
+          }
+        },
+        {
+          "id": "terrainGalleryScatterBoulders",
+          "items": [
+            {
+              "geometry": "boulder_a",
+              "material": "rockScatter",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "boulder_b",
+              "material": "rockScatter",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            }
+          ],
+          "source": {
+            "type": "PROCEDURAL",
+            "generator": "terrainScatter",
+            "params": {
+              "minSpacing": 3.5,
+              "density": 1,
+              "mask": {
+                "layers": {
+                  "1": 1
+                }
+              },
+              "scale": [
+                0.6,
+                1
+              ],
+              "alignToNormal": 0.2,
+              "sink": 0.25,
+              "tint": 0.1
+            },
+            "seed": 3
+          },
+          "cellSize": 16,
+          "debugData": {
+            "name": "Scatter row: boulders",
+            "description": "The toolkit's procedural boulders (generateRock's BOULDER, boulder_a..b) on the Scatter row's procedural half (layer 1, rocks01), 3.5 m apart, in the rocks01 rockScatter material."
+          }
+        },
+        {
+          "id": "terrainGalleryScatterImportedPebbles",
+          "items": [
+            {
+              "geometry": "namaqualandStones01/StoneA",
+              "material": "rockScatterNamaqualandStones01",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "namaqualandStones01/StoneB",
+              "material": "rockScatterNamaqualandStones01",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "namaqualandStones01/StoneC",
+              "material": "rockScatterNamaqualandStones01",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "namaqualandStones01/StoneD",
+              "material": "rockScatterNamaqualandStones01",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "namaqualandStones01/StoneE",
+              "material": "rockScatterNamaqualandStones01",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            }
+          ],
+          "source": {
+            "type": "PROCEDURAL",
+            "generator": "terrainScatter",
+            "params": {
+              "minSpacing": 0.3,
+              "density": 0.7,
+              "mask": {
+                "layers": {
+                  "2": 1
+                }
+              },
+              "scale": [
+                0.7,
+                1.5
+              ],
+              "alignToNormal": 0.8,
+              "sink": 0.25,
+              "tint": 0.2
+            },
+            "seed": 11
+          },
+          "cellSize": 16,
+          "lod": {
+            "levels": [
+              {
+                "screenSize": 0
+              }
+            ],
+            "cullScreenSize": 0.05
+          },
+          "debugData": {
+            "name": "Scatter row: imported pebbles",
+            "description": "The toolkit's imported pebbles (Poly Haven namaqualand_stones_01's five pebbles (80 triangles each), models/nature/) on the Scatter row's imported half (layer 2), as the procedural pebbles on the other half, in their own maps' rockScatter material (tiling UV)."
+          }
+        },
+        {
+          "id": "terrainGalleryScatterImportedRocks",
+          "items": [
+            {
+              "geometry": "namaqualandStones01/RockA",
+              "material": "rockScatterNamaqualandStones01",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "namaqualandStones01/RockB",
+              "material": "rockScatterNamaqualandStones01",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "namaqualandStones01/RockC",
+              "material": "rockScatterNamaqualandStones01",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            }
+          ],
+          "source": {
+            "type": "PROCEDURAL",
+            "generator": "terrainScatter",
+            "params": {
+              "minSpacing": 1.2,
+              "density": 0.7,
+              "mask": {
+                "layers": {
+                  "2": 1
+                }
+              },
+              "scale": [
+                0.6,
+                1.6
+              ],
+              "alignToNormal": 0.5,
+              "sink": 0.2,
+              "tint": 0.15
+            },
+            "seed": 12
+          },
+          "cellSize": 16,
+          "lod": {
+            "levels": [
+              {
+                "screenSize": 0
+              }
+            ],
+            "cullScreenSize": 0.02
+          },
+          "debugData": {
+            "name": "Scatter row: imported rocks",
+            "description": "The toolkit's imported rocks (Poly Haven namaqualand_stones_01's stones scaled into rocks (400 triangles each), models/nature/) on the Scatter row's imported half (layer 2), as the procedural rocks on the other half, in their own maps' rockScatter material (tiling UV)."
+          }
+        },
+        {
+          "id": "terrainGalleryScatterImportedBoulders",
+          "items": [
+            {
+              "geometry": "namaqualandBoulder02/Boulder",
+              "material": "rockScatterNamaqualandBoulder02",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            }
+          ],
+          "source": {
+            "type": "PROCEDURAL",
+            "generator": "terrainScatter",
+            "params": {
+              "minSpacing": 3.5,
+              "density": 1,
+              "mask": {
+                "layers": {
+                  "2": 1
+                }
+              },
+              "scale": [
+                0.6,
+                1
+              ],
+              "alignToNormal": 0.2,
+              "sink": 0.25,
+              "tint": 0.1
+            },
+            "seed": 13
+          },
+          "cellSize": 16,
+          "debugData": {
+            "name": "Scatter row: imported boulders",
+            "description": "The toolkit's imported boulders (Poly Haven namaqualand_boulder_02 (1,500 triangles), models/nature/) on the Scatter row's imported half (layer 2), as the procedural boulders on the other half, in their own maps' rockScatter material (tiling UV)."
+          }
+        },
+        {
+          "id": "terrainGalleryScatterLeaves",
+          "items": [
+            {
+              "geometry": "leafCard",
+              "material": "leafLitter",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            }
+          ],
+          "source": {
+            "type": "PROCEDURAL",
+            "generator": "terrainScatter",
+            "params": {
+              "minSpacing": 0.12,
+              "density": 0.8,
+              "mask": {
+                "layers": {
+                  "0": 1,
+                  "1": 0.6
+                },
+                "noise": {
+                  "scale": 3,
+                  "amount": 0.7
+                }
+              },
+              "scale": [
+                0.7,
+                1.3
+              ],
+              "alignToNormal": 1,
+              "tint": 0.15
+            },
+            "seed": 5
+          },
+          "cellSize": 8,
+          "lod": {
+            "levels": [
+              {
+                "screenSize": 0
+              }
+            ],
+            "cullScreenSize": 0.05
+          },
+          "debugData": {
+            "name": "Scatter row: leaf litter",
+            "description": "The toolkit's leaf litter cards (generateLeafCard's leafCard, the leafLitter material: a leaf of its atlas per card, a share turned brown) on the leaf block's grass02 and, thinner, its mud02, 12 cm apart, thinned in clusters, lying along the ground, no shadows; 8 m cells."
+          }
+        }
+      ],
       "id": "terrainGallery",
       "sceneFile": "./scenes/terrainGallery/terrainGallery.ts",
       "__features": [
         "skybox",
         "texturesets",
         "terrain",
-        "surfaceconditions"
+        "surfaceconditions",
+        "instancing"
       ]
     },
     "testDebugScene": {
@@ -27414,6 +29054,70 @@
       },
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseSphereLod2.geometry.json"
     },
+    "scatterTestBoulder": {
+      "geoProps": {
+        "debugData": {
+          "name": "Test boulder",
+          "description": "A 9 × 6 segment sphere, 0.9 m."
+        },
+        "type": "SPHERE",
+        "params": {
+          "radius": 0.9,
+          "widthSegments": 9,
+          "heightSegments": 6
+        },
+        "id": "scatterTestBoulder"
+      },
+      "__sourcePath": "src/app/scenes/scatterTest/scatterTestBoulder.geometry.json"
+    },
+    "scatterTestPebbleA": {
+      "geoProps": {
+        "debugData": {
+          "name": "Test pebble A",
+          "description": "A 6 × 4 segment sphere, 7 cm."
+        },
+        "type": "SPHERE",
+        "params": {
+          "radius": 0.07,
+          "widthSegments": 6,
+          "heightSegments": 4
+        },
+        "id": "scatterTestPebbleA"
+      },
+      "__sourcePath": "src/app/scenes/scatterTest/scatterTestPebbleA.geometry.json"
+    },
+    "scatterTestPebbleB": {
+      "geoProps": {
+        "debugData": {
+          "name": "Test pebble B",
+          "description": "A 5 × 3 segment sphere, 5 cm."
+        },
+        "type": "SPHERE",
+        "params": {
+          "radius": 0.05,
+          "widthSegments": 5,
+          "heightSegments": 3
+        },
+        "id": "scatterTestPebbleB"
+      },
+      "__sourcePath": "src/app/scenes/scatterTest/scatterTestPebbleB.geometry.json"
+    },
+    "scatterTestSlab": {
+      "geoProps": {
+        "debugData": {
+          "name": "Test slab",
+          "description": "A 1.6 × 0.7 × 1.3 m box, centred: a flat-topped rock whose collider a dropped box rests on."
+        },
+        "type": "BOX",
+        "params": {
+          "width": 1.6,
+          "height": 0.7,
+          "depth": 1.3
+        },
+        "id": "scatterTestSlab"
+      },
+      "__sourcePath": "src/app/scenes/scatterTest/scatterTestSlab.geometry.json"
+    },
     "testSphere": {
       "geoProps": {
         "debugData": {
@@ -29184,6 +30888,246 @@
       },
       "__vramBytes": {
         "in": 22369620,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "namaqualandBoulder02_albedoHeight": {
+      "id": "namaqualandBoulder02_albedoHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "namaqualandBoulder02 albedoHeight (FULL)",
+        "description": "The texture set namaqualandBoulder02's FULL albedoHeight: RGB albedo (sRGB), A height. Packed from polyHaven namaqualand_boulder_02's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "prop",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg"
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/namaqualandBoulder02/namaqualandBoulder02_albedoHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/namaqualandBoulder02/namaqualandBoulder02_albedoHeight.pack.0c090401.ktx2",
+      "__bytes": {
+        "in": 1310398,
+        "out": 1154852
+      },
+      "__vramBytes": {
+        "in": 5592404,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.1549,
+        0.0908,
+        0.0489
+      ]
+    },
+    "namaqualandBoulder02_normal": {
+      "id": "namaqualandBoulder02_normal",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "namaqualandBoulder02 normal (FULL)",
+        "description": "The texture set namaqualandBoulder02's FULL normal: RGB the normal (OpenGL). Packed from polyHaven namaqualand_boulder_02's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "prop",
+        "slot": "normal"
+      },
+      "pack": {
+        "channels": {
+          "rgb": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/namaqualandBoulder02/namaqualandBoulder02_normal.texture.json",
+      "__url": "/aek-assets/toolkit/textures/namaqualandBoulder02/namaqualandBoulder02_normal.pack.3f13aa0e.ktx2",
+      "__bytes": {
+        "in": 1031460,
+        "out": 1201452
+      },
+      "__vramBytes": {
+        "in": 5592404,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "namaqualandBoulder02_orm": {
+      "id": "namaqualandBoulder02_orm",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "namaqualandBoulder02 orm (FULL)",
+        "description": "The texture set namaqualandBoulder02's FULL orm: R AO, G roughness, B metalness 0. Packed from polyHaven namaqualand_boulder_02's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "prop",
+        "slot": "orm"
+      },
+      "pack": {
+        "channels": {
+          "r": {
+            "src": "./source/raw/ao.jpg",
+            "channel": "r"
+          },
+          "g": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "b": 0
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/namaqualandBoulder02/namaqualandBoulder02_orm.texture.json",
+      "__url": "/aek-assets/toolkit/textures/namaqualandBoulder02/namaqualandBoulder02_orm.pack.0b244654.ktx2",
+      "__bytes": {
+        "in": 1239519,
+        "out": 1047727
+      },
+      "__vramBytes": {
+        "in": 5592404,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "namaqualandStones01_albedoHeight": {
+      "id": "namaqualandStones01_albedoHeight",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX",
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "namaqualandStones01 albedoHeight (FULL)",
+        "description": "The texture set namaqualandStones01's FULL albedoHeight: RGB albedo (sRGB), A height. Packed from polyHaven namaqualand_stones_01's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "prop",
+        "slot": "baseColor"
+      },
+      "pack": {
+        "channels": {
+          "a": {
+            "src": "./source/raw/height.jpg",
+            "channel": "r",
+            "remap": "auto"
+          },
+          "rgb": {
+            "src": "./source/raw/color.jpg"
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/namaqualandStones01/namaqualandStones01_albedoHeight.texture.json",
+      "__url": "/aek-assets/toolkit/textures/namaqualandStones01/namaqualandStones01_albedoHeight.pack.9e62a1d3.ktx2",
+      "__bytes": {
+        "in": 1030362,
+        "out": 1090806
+      },
+      "__vramBytes": {
+        "in": 5592404,
+        "out": 1398128
+      },
+      "__codec": "uastc",
+      "__averageColor": [
+        0.264,
+        0.1894,
+        0.129
+      ]
+    },
+    "namaqualandStones01_normal": {
+      "id": "namaqualandStones01_normal",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "namaqualandStones01 normal (FULL)",
+        "description": "The texture set namaqualandStones01's FULL normal: RGB the normal (OpenGL). Packed from polyHaven namaqualand_stones_01's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "prop",
+        "slot": "normal"
+      },
+      "pack": {
+        "channels": {
+          "rgb": {
+            "src": "./source/raw/normal.jpg",
+            "normal": true
+          }
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/namaqualandStones01/namaqualandStones01_normal.texture.json",
+      "__url": "/aek-assets/toolkit/textures/namaqualandStones01/namaqualandStones01_normal.pack.588d6202.ktx2",
+      "__bytes": {
+        "in": 1091306,
+        "out": 1194972
+      },
+      "__vramBytes": {
+        "in": 5592404,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
+    "namaqualandStones01_orm": {
+      "id": "namaqualandStones01_orm",
+      "texOpts": {
+        "wrapS": 1000,
+        "wrapT": 1000,
+        "anisotropy": "MAX"
+      },
+      "debugData": {
+        "name": "namaqualandStones01 orm (FULL)",
+        "description": "The texture set namaqualandStones01's FULL orm: R AO, G roughness, B metalness 0. Packed from polyHaven namaqualand_stones_01's maps (yarn fetchTextureSources)."
+      },
+      "optimize": {
+        "profile": "prop",
+        "slot": "orm"
+      },
+      "pack": {
+        "channels": {
+          "r": {
+            "src": "./source/raw/ao.jpg",
+            "channel": "r"
+          },
+          "g": {
+            "src": "./source/raw/roughness.jpg",
+            "channel": "r"
+          },
+          "b": 0
+        }
+      },
+      "__sourcePath": "src/toolkit/textures/namaqualandStones01/namaqualandStones01_orm.texture.json",
+      "__url": "/aek-assets/toolkit/textures/namaqualandStones01/namaqualandStones01_orm.pack.acfa0be1.ktx2",
+      "__bytes": {
+        "in": 1074465,
+        "out": 952634
+      },
+      "__vramBytes": {
+        "in": 5592404,
         "out": 1398128
       },
       "__codec": "uastc"
@@ -38231,6 +40175,149 @@
       },
       "__codec": "uastc"
     },
+    "leafLitter.albedo": {
+      "id": "leafLitter.albedo",
+      "texOpts": {
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "Leaf litter",
+        "description": "ambientCG LeafSet024 (CC0, ambientcg.com/view?id=LeafSet024): nine beech leaves, its colour with its opacity as A (source/leafLitter_albedo.png, devTools/toolkit/buildLeafLitter.ts), a cell each (leaf0-leaf8, the 3 × 3 grid cut at 340 and 684 px). Alpha coverage kept at 0.5 down the mips (the leafLitter material's alphaTest), so distant cards don't thin out; FULL mip chain: past the levels the 4 px padding keeps apart, the leaves' transparent surroundings mix. For the toolkit's leaf cards (p308 D5)."
+      },
+      "__sourcePath": "src/toolkit/textures/leafLitter/leafLitter.textureAtlas.json",
+      "__atlas": {
+        "id": "leafLitter",
+        "slot": "albedo",
+        "size": [
+          1024,
+          1024
+        ],
+        "padding": 4,
+        "levels": 1,
+        "mipChain": "FULL",
+        "fromImage": true,
+        "cells": {
+          "leaf0": {
+            "uv": [
+              0.00390625,
+              0.671875,
+              0.328125,
+              0.99609375
+            ],
+            "size": [
+              332,
+              332
+            ]
+          },
+          "leaf1": {
+            "uv": [
+              0.3359375,
+              0.671875,
+              0.6640625,
+              0.99609375
+            ],
+            "size": [
+              336,
+              332
+            ]
+          },
+          "leaf2": {
+            "uv": [
+              0.671875,
+              0.671875,
+              0.99609375,
+              0.99609375
+            ],
+            "size": [
+              332,
+              332
+            ]
+          },
+          "leaf3": {
+            "uv": [
+              0.00390625,
+              0.3359375,
+              0.328125,
+              0.6640625
+            ],
+            "size": [
+              332,
+              336
+            ]
+          },
+          "leaf4": {
+            "uv": [
+              0.3359375,
+              0.3359375,
+              0.6640625,
+              0.6640625
+            ],
+            "size": [
+              336,
+              336
+            ]
+          },
+          "leaf5": {
+            "uv": [
+              0.671875,
+              0.3359375,
+              0.99609375,
+              0.6640625
+            ],
+            "size": [
+              332,
+              336
+            ]
+          },
+          "leaf6": {
+            "uv": [
+              0.00390625,
+              0.00390625,
+              0.328125,
+              0.328125
+            ],
+            "size": [
+              332,
+              332
+            ]
+          },
+          "leaf7": {
+            "uv": [
+              0.3359375,
+              0.00390625,
+              0.6640625,
+              0.328125
+            ],
+            "size": [
+              336,
+              332
+            ]
+          },
+          "leaf8": {
+            "uv": [
+              0.671875,
+              0.00390625,
+              0.99609375,
+              0.328125
+            ],
+            "size": [
+              332,
+              332
+            ]
+          }
+        }
+      },
+      "__url": "/aek-assets/toolkit/textures/leafLitter/leafLitter.atlas.albedo.7e2bc84c.ktx2",
+      "__bytes": {
+        "in": 1508316,
+        "out": 744339
+      },
+      "__vramBytes": {
+        "in": 5592404,
+        "out": 1398128
+      },
+      "__codec": "uastc"
+    },
     "ruinsPalette.map": {
       "id": "ruinsPalette.map",
       "texOpts": {
@@ -38855,6 +40942,76 @@
       "averageColor": "#7e6448",
       "__sourcePath": "src/toolkit/textures/mud02/mud02.textureSet.json"
     },
+    "namaqualandBoulder02": {
+      "id": "namaqualandBoulder02",
+      "category": "ROCKS",
+      "physicalSize": [
+        1,
+        1
+      ],
+      "heightScale": 0.01,
+      "packings": {
+        "FULL": {
+          "albedoHeight": "namaqualandBoulder02_albedoHeight",
+          "normal": "namaqualandBoulder02_normal",
+          "orm": "namaqualandBoulder02_orm"
+        }
+      },
+      "debugData": {
+        "name": "Namaqualand Boulder 02 (model maps)",
+        "description": "Poly Haven namaqualand_boulder_02's own 1k maps, CC0: a sandstone boulder, laid out on the model's UV (physicalSize 1: the UV's 0..1), for the toolkit's imported scatter rocks (models/nature/namaqualandBoulder02/, rockScatter at tiling UV; p308 D5)."
+      },
+      "defaultPacking": "FULL",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.4,
+        "wetDarkening": 0.35,
+        "wetRoughness": 0.2,
+        "puddleResponse": 0.6,
+        "dryingSpeed": 1
+      },
+      "averageColor": "#6e553e",
+      "__sourcePath": "src/toolkit/textures/namaqualandBoulder02/namaqualandBoulder02.textureSet.json"
+    },
+    "namaqualandStones01": {
+      "id": "namaqualandStones01",
+      "category": "ROCKS",
+      "physicalSize": [
+        1,
+        1
+      ],
+      "heightScale": 0.01,
+      "packings": {
+        "FULL": {
+          "albedoHeight": "namaqualandStones01_albedoHeight",
+          "normal": "namaqualandStones01_normal",
+          "orm": "namaqualandStones01_orm"
+        }
+      },
+      "debugData": {
+        "name": "Namaqualand Stones 01 (model maps)",
+        "description": "Poly Haven namaqualand_stones_01's own 1k maps, CC0: small sandstone pebbles, laid out on the model's UV (physicalSize 1: the UV's 0..1), for the toolkit's imported scatter rocks (models/nature/namaqualandStones01/, rockScatter at tiling UV; p308 D5)."
+      },
+      "defaultPacking": "FULL",
+      "surface": {
+        "tint": "#ffffff",
+        "normalStrength": 1,
+        "roughnessScale": 1,
+        "aoStrength": 1,
+        "heightContrast": 1,
+        "porosity": 0.4,
+        "wetDarkening": 0.35,
+        "wetRoughness": 0.2,
+        "puddleResponse": 0.6,
+        "dryingSpeed": 1
+      },
+      "averageColor": "#8c7865",
+      "__sourcePath": "src/toolkit/textures/namaqualandStones01/namaqualandStones01.textureSet.json"
+    },
     "rocks01": {
       "id": "rocks01",
       "category": "ROCKS",
@@ -39397,6 +41554,48 @@
       "type": "STANDARD",
       "__sourcePath": "src/app/scenes/mergeMaterials/ruinStone.material.json"
     },
+    "scatterTestRulesTerrain": {
+      "id": "scatterTestRulesTerrain",
+      "debugData": {
+        "name": "Rules scatter terrain",
+        "description": "The rules scatter block's terrain material: sand (layer 0) and rock (layer 1) by the block's vertex colour (RGB_AO: R the rock), which the terrainScatter layer mask reads the same way."
+      },
+      "tslFile": "scenes/scatterTest/scatterTestTerrain.tsl.ts",
+      "staticDefines": {
+        "terrain": {
+          "layers": [
+            {},
+            {}
+          ],
+          "blend": {
+            "source": "VERTEX_COLOR",
+            "vertexColor": {
+              "layout": "RGB_AO"
+            }
+          }
+        }
+      },
+      "inputs": {
+        "layer0": {
+          "textureSet": "sand01"
+        },
+        "layer1": {
+          "textureSet": "rocks01"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/scatterTest/scatterTestRulesTerrain.material.json"
+    },
+    "scatterTestStone": {
+      "id": "scatterTestStone",
+      "params": {
+        "color": "#b9b1a4",
+        "roughness": 0.8,
+        "metalness": 0
+      },
+      "type": "STANDARD",
+      "__sourcePath": "src/app/scenes/scatterTest/scatterTestStone.material.json"
+    },
     "testTslMat": {
       "id": "testTslMat",
       "debugData": {
@@ -39638,6 +41837,53 @@
       "type": "STANDARDNODEMATERIAL",
       "__sourcePath": "src/toolkit/materials/asteroid/asteroid.material.json"
     },
+    "leafLitter": {
+      "id": "leafLitter",
+      "debugData": {
+        "name": "Leaf litter",
+        "description": "Leaf litter cards (p308 D5) on generateLeafCard's quads: input albedo the leaf atlas's slot (leafLitter.albedo, ambientCG LeafSet024), a leaf cell per instance by a hash of its instanceIndex (one material and one draw a scatter cell), fitted at its aspect; a share of the leaves (autumn, 0.6) turned toward autumnColor; × tint and the instance's colour; alpha-tested at 0.5 (the atlas's alpha coverage), alphaToCoverage under MSAA. Static define wet (SIMPLE, NONE): wet by the surface conditions by porosity, wetDarkening, wetRoughness. Numbers and colours (optional inputs): autumn, autumnColor, tint, roughness, porosity, wetDarkening, wetRoughness."
+      },
+      "params": {
+        "alphaTest": 0.5,
+        "alphaToCoverage": true
+      },
+      "tslFile": "materials/leafLitter/leafLitter.tsl.ts",
+      "staticDefines": {
+        "wet": "SIMPLE"
+      },
+      "inputs": {
+        "albedo": {
+          "texture": "leafLitter.albedo"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/toolkit/materials/leafLitter/leafLitter.material.json"
+    },
+    "rockScatter": {
+      "id": "rockScatter",
+      "debugData": {
+        "name": "Rock scatter",
+        "description": "Scatter rocks (p308 D5; generateRock's, or an imported rock's own maps): input surface the texture set ({ textureSet }), the ground's for the procedural rocks (no texture memory of their own), triplanar in the rock's own space (each instance of an InstancedMesh keeps its texture), DUAL_SCALE anti-tiled; macro a macro texture (the tint at the world's position); dustColor (default the set's averageColor) on the faces turned up; wet by the surface conditions with frost. Numbers (optional inputs): sharpness, farScale, antiTilingDistance, macroScale, macroBrightness, macroHue, macroRoughness, dustAmount, dustFacing. Static defines: tiling (TRIPLANAR, or UV: an imported rock's own maps at its UV), antiTiling (DUAL_SCALE, NONE), wet (FULL, SIMPLE, NONE), frost (boolean), rainOcclusion (NORMAL_Y, MAP). Rocks on another ground set: a material JSON of its own over that set (and a two-line TSL file: export const setup = setupRockMaterial)."
+      },
+      "tslFile": "materials/rockScatter/rockScatter.tsl.ts",
+      "staticDefines": {
+        "tiling": "TRIPLANAR",
+        "antiTiling": "DUAL_SCALE",
+        "wet": "FULL",
+        "frost": true,
+        "rainOcclusion": "NORMAL_Y"
+      },
+      "inputs": {
+        "surface": {
+          "textureSet": "rocks01"
+        },
+        "macro": {
+          "texture": "macroNoise"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/toolkit/materials/rockScatter/rockScatter.material.json"
+    },
     "terrain": {
       "id": "terrain",
       "debugData": {
@@ -39816,6 +42062,54 @@
       },
       "type": "STANDARDNODEMATERIAL",
       "__sourcePath": "src/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlenderVertex.material.json"
+    },
+    "rockScatterNamaqualandBoulder02": {
+      "id": "rockScatterNamaqualandBoulder02",
+      "debugData": {
+        "name": "Rock scatter: Namaqualand boulder 02",
+        "description": "The toolkit's rockScatter material (p308 D5) on the imported boulder namaqualandBoulder02: its own maps (the texture set namaqualandBoulder02) at the mesh's UV, the macro tint at the world's position, dust on the faces turned up toward the set's average colour, wet by the surface conditions with frost."
+      },
+      "tslFile": "materials/rockScatter/rockScatter.tsl.ts",
+      "staticDefines": {
+        "tiling": "UV",
+        "wet": "FULL",
+        "frost": true,
+        "rainOcclusion": "NORMAL_Y"
+      },
+      "inputs": {
+        "surface": {
+          "textureSet": "namaqualandBoulder02"
+        },
+        "macro": {
+          "texture": "macroNoise"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/toolkit/models/nature/namaqualandBoulder02/rockScatterNamaqualandBoulder02.material.json"
+    },
+    "rockScatterNamaqualandStones01": {
+      "id": "rockScatterNamaqualandStones01",
+      "debugData": {
+        "name": "Rock scatter: Namaqualand stones 01",
+        "description": "The toolkit's rockScatter material (p308 D5) on the imported pebbles and rocks namaqualandStones01: its own maps (the texture set namaqualandStones01) at the mesh's UV, the macro tint at the world's position, dust on the faces turned up toward the set's average colour, wet by the surface conditions with frost."
+      },
+      "tslFile": "materials/rockScatter/rockScatter.tsl.ts",
+      "staticDefines": {
+        "tiling": "UV",
+        "wet": "FULL",
+        "frost": true,
+        "rainOcclusion": "NORMAL_Y"
+      },
+      "inputs": {
+        "surface": {
+          "textureSet": "namaqualandStones01"
+        },
+        "macro": {
+          "texture": "macroNoise"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/toolkit/models/nature/namaqualandStones01/rockScatterNamaqualandStones01.material.json"
     }
   },
   "mergeMaterials": {
@@ -40093,6 +42387,56 @@
         "out": 21000
       }
     },
+    "scatterTestGnGpu": {
+      "id": "scatterTestGnGpu",
+      "fileName": "./scatterTestGnGpu.glb",
+      "debugData": {
+        "name": "Blender scatter (Gpu)",
+        "description": "scatterTest's Geometry Nodes scatter (devTools/blender/buildScatterTest.py; p308 Phase 2) exported as GPU Instances: the node ScatterInstances, whose children hold the GPU instances (EXT_mesh_gpu_instancing) of RockA's and RockB's meshes, and the rocks' own nodes. Lossless: a scatter draws its items without their nodes, where a quantized encode puts its scale."
+      },
+      "optimize": {
+        "mesh": {
+          "quantize": false
+        }
+      },
+      "__sourcePath": "src/app/scenes/scatterTest/blenderScatter/scatterTestGnGpu.importedAsset.json",
+      "__fileSize": 15708,
+      "__sourceUrl": "/app/scenes/scatterTest/blenderScatter/scatterTestGnGpu.glb",
+      "__url": "/aek-assets/app/scenes/scatterTest/blenderScatter/scatterTestGnGpu.fa2289d8.glb",
+      "__bytes": {
+        "in": 15708,
+        "out": 16064
+      },
+      "__vramBytes": {
+        "in": 5568,
+        "out": 5568
+      }
+    },
+    "scatterTestGnPoints": {
+      "id": "scatterTestGnPoints",
+      "fileName": "./scatterTestGnPoints.glb",
+      "debugData": {
+        "name": "Blender scatter (Points)",
+        "description": "scatterTest's Geometry Nodes scatter (devTools/blender/buildScatterTest.py; p308 Phase 2) exported as a point cloud: the node ScatterPoints (custom prop aekScatterPoints) and its child, the points with _ROT, _SCALE and _ITEM, and the rocks' own nodes. Lossless: a scatter draws its items without their nodes, where a quantized encode puts its scale."
+      },
+      "optimize": {
+        "mesh": {
+          "quantize": false
+        }
+      },
+      "__sourcePath": "src/app/scenes/scatterTest/blenderScatter/scatterTestGnPoints.importedAsset.json",
+      "__fileSize": 13084,
+      "__sourceUrl": "/app/scenes/scatterTest/blenderScatter/scatterTestGnPoints.glb",
+      "__url": "/aek-assets/app/scenes/scatterTest/blenderScatter/scatterTestGnPoints.f3d02d44.glb",
+      "__bytes": {
+        "in": 13084,
+        "out": 12288
+      },
+      "__vramBytes": {
+        "in": 10416,
+        "out": 10416
+      }
+    },
     "terrainBlockTestBlender": {
       "id": "terrainBlockTestBlender",
       "fileName": "./terrainBlockTestBlender.glb",
@@ -40139,6 +42483,56 @@
       "__vramBytes": {
         "in": 117856,
         "out": 117248
+      }
+    },
+    "namaqualandBoulder02": {
+      "id": "namaqualandBoulder02",
+      "fileName": "./namaqualandBoulder02.glb",
+      "debugData": {
+        "name": "Namaqualand boulder 02 (scatter rocks)",
+        "description": "Poly Haven namaqualand_boulder_02 (CC0, polyhaven.com/a/namaqualand_boulder_02), decimated by devTools/toolkit/buildNatureRocks.ts for the scatter (p308 D5): a sandstone boulder, 2.48 × 0.87 × 1.23 m, at 1,500 triangles (namaqualandBoulder02/Boulder), its base centre at its origin; positions, normals and UVs, no material (its texture set namaqualandBoulder02 through rockScatterNamaqualandBoulder02). Lossless: a scatter draws its items without their nodes, where a quantized encode puts its scale."
+      },
+      "optimize": {
+        "mesh": {
+          "quantize": false
+        }
+      },
+      "__sourcePath": "src/toolkit/models/nature/namaqualandBoulder02/namaqualandBoulder02.importedAsset.json",
+      "__fileSize": 62560,
+      "__sourceUrl": "/toolkit/models/nature/namaqualandBoulder02/namaqualandBoulder02.glb",
+      "__url": "/aek-assets/toolkit/models/nature/namaqualandBoulder02/namaqualandBoulder02.ad91c8fa.glb",
+      "__bytes": {
+        "in": 62560,
+        "out": 44052
+      },
+      "__vramBytes": {
+        "in": 61584,
+        "out": 61584
+      }
+    },
+    "namaqualandStones01": {
+      "id": "namaqualandStones01",
+      "fileName": "./namaqualandStones01.glb",
+      "debugData": {
+        "name": "Namaqualand stones 01 (scatter rocks)",
+        "description": "Poly Haven namaqualand_stones_01 (CC0, polyhaven.com/a/namaqualand_stones_01), decimated by devTools/toolkit/buildNatureRocks.ts for the scatter (p308 D5): five sandstone pebbles of 7-14 cm at 80 triangles each (StoneA-E: namaqualandStones01/StoneA, …), and three of them scaled ×4 into rocks of 41-59 cm at 400 triangles (RockA-C), each piece's base centre at its origin; positions, normals and UVs, no material (its texture set namaqualandStones01 through rockScatterNamaqualandStones01). Lossless: a scatter draws its items without their nodes, where a quantized encode puts its scale."
+      },
+      "optimize": {
+        "mesh": {
+          "quantize": false
+        }
+      },
+      "__sourcePath": "src/toolkit/models/nature/namaqualandStones01/namaqualandStones01.importedAsset.json",
+      "__fileSize": 62236,
+      "__sourceUrl": "/toolkit/models/nature/namaqualandStones01/namaqualandStones01.glb",
+      "__url": "/aek-assets/toolkit/models/nature/namaqualandStones01/namaqualandStones01.fc9326c2.glb",
+      "__bytes": {
+        "in": 62236,
+        "out": 49412
+      },
+      "__vramBytes": {
+        "in": 56480,
+        "out": 56480
       }
     }
   },

@@ -5,7 +5,12 @@ import { getGeometryRegistry } from '../Geometry';
 import { getMaterial } from '../Material';
 import { createMeshEntity, type MeshProps } from '../../mesh/Mesh';
 import { parseCustomProps } from './CustomProps';
-import { getImportPhysicsSpawn, warnMissingImportExtension } from './ImportExtensions';
+import {
+  getImportInstancesSpawn,
+  getImportPhysicsSpawn,
+  type ImportInstancesSpawn,
+  warnMissingImportExtension,
+} from './ImportExtensions';
 import { getImportedAsset, retagImportedAsset } from './ImportRegistry';
 import type {
   ImportedAssetManifest,
@@ -87,6 +92,19 @@ const toSpawnNodes = (
   return nodes;
 };
 
+const MATRIX_SIZE = 16;
+
+/** A node's instances in world space: its composed transform applied to each */
+const toWorldInstances = (node: ImportSpawnNode, matrices: Float32Array) => {
+  const nodeMatrix = new THREE.Matrix4().compose(node.position, node.quaternion, node.scale);
+  const instance = new THREE.Matrix4();
+  const world = new Float32Array(matrices.length);
+  for (let i = 0; i < matrices.length; i += MATRIX_SIZE) {
+    instance.fromArray(matrices, i).premultiply(nodeMatrix).toArray(world, i);
+  }
+  return world;
+};
+
 const getMeshProps = (
   params: SpawnImportedParams,
   info: ImportedGeometryInfo,
@@ -102,6 +120,14 @@ const getMeshProps = (
  * (the `physics()` feature: without it, the physics nodes spawn no bodies, with a warning).
  * A piece is drawn merged into a merge group by its node's `merge` custom prop or the spawn's
  * `merge` (the `merging()` feature), joining at the group's next build.
+ *
+ * A node of GPU instances (`EXT_mesh_gpu_instancing`, eg. Blender's Geometry Nodes exported with
+ * GPU Instances) is drawn as static instances in 16 m cells (`createStaticInstances`, the
+ * `instancing()` feature), each cell a mesh entity `<appId>/<node>/<cellX>,<cellZ>`: its
+ * `meshProps` entry's geometry, material, shadows and `lod` apply to every cell, its transform
+ * fields, `merge` and physics don't; its cells are made once their code has loaded (with the first
+ * such node), none when the scene was left meanwhile. Without `instancing()` it warns once and
+ * draws the geometry once, at the node. A point cloud (`aekScatterPoints`) spawns nothing: it's a scatter's data.
  * @param manifestOrId an import's manifest, or the id of an imported asset
  * @param params the root transform, the material, and the mesh and physics overrides
  * @returns the created entities (none, with an error logged, for an id that isn't imported)
@@ -161,12 +187,48 @@ export const spawnImportedAsset = async (
   );
 
   const meshEntityIds: number[] = [];
+  const spawnInstances = getImportInstancesSpawn();
+  const instancedNodes = new Set<ImportSpawnNode>();
+  /** The GPU instances' spawns, each with its place in `meshEntityIds` */
+  const instanceSpawns: { at: number; spawn: ImportInstancesSpawn }[] = [];
   nodes.forEach((node) => {
-    if (node.props.isPhysObj && !node.props.keepMesh) return;
     const index = manifest.geometries.indexOf(node.info);
     const meshProps = getMeshProps(params, node.info, index);
     const appId =
       meshProps?.appId ?? (appIdPrefix ? `${appIdPrefix}/${node.localName}` : undefined);
+    const { instances } = node.info;
+    if (instances && spawnInstances) {
+      instancedNodes.add(node);
+      if (node.props.isPhysObj || node.props.merge) {
+        lwarn(
+          `spawnImportedAsset: node "${node.info.nodeName}" of import "${manifest.id}" has GPU instances, which get no physics or merge (its custom props ask for them): ignored.`
+        );
+      }
+      const { appId: _appId, ...entityOpts } = params.entityOpts ?? {};
+      instanceSpawns.push({
+        at: meshEntityIds.length,
+        spawn: {
+          // Generated app ids (a spawn whose prefix is taken) are unique, as a mesh's UUID
+          id: appId ?? `${manifest.id}/${node.localName}/${THREE.MathUtils.generateUUID()}`,
+          geometry: meshProps?.geo ?? node.info.geometryId,
+          material: meshProps?.mat ?? material,
+          matrices: toWorldInstances(node, instances.matrices),
+          colors: instances.colors,
+          castShadow: meshProps?.castShadow ?? params.castShadow,
+          receiveShadow: meshProps?.receiveShadow ?? params.receiveShadow,
+          lod: meshProps?.lod,
+          entityOpts,
+        },
+      });
+      return;
+    }
+    if (instances) {
+      warnMissingImportExtension(
+        'instancing',
+        'spawnImportedAsset (a node of GPU instances; drawn once, at the node)'
+      );
+    }
+    if (node.props.isPhysObj && !node.props.keepMesh) return;
     const hasTransformOverride = Boolean(meshProps?.rotation || meshProps?.quaternion);
     node.entityId = createMeshEntity(
       {
@@ -188,13 +250,24 @@ export const spawnImportedAsset = async (
     );
     meshEntityIds.push(node.entityId);
   });
+  if (spawnInstances && instanceSpawns.length) {
+    // Their code loads with the first: each node's cells go in at its place, the last first
+    const cells = await Promise.all(instanceSpawns.map(({ spawn }) => spawnInstances(spawn)));
+    for (let i = instanceSpawns.length - 1; i >= 0; i--) {
+      meshEntityIds.splice(instanceSpawns[i].at, 0, ...cells[i]);
+    }
+  }
 
   // The physics extension (`physics()`) spawns the bodies and colliders the nodes describe
   let physicsEntityIds: number[] = [];
-  if (nodes.some((node) => node.props.isPhysObj)) {
+  const physicsNodes = instancedNodes.size
+    ? nodes.filter((node) => !instancedNodes.has(node))
+    : nodes;
+  if (physicsNodes.some((node) => node.props.isPhysObj)) {
     const spawnPhysics = getImportPhysicsSpawn();
-    if (spawnPhysics) physicsEntityIds = await spawnPhysics({ nodes, params, appIdPrefix });
-    else warnMissingImportExtension('physics', 'spawnImportedAsset (a node with physics)');
+    if (spawnPhysics) {
+      physicsEntityIds = await spawnPhysics({ nodes: physicsNodes, params, appIdPrefix });
+    } else warnMissingImportExtension('physics', 'spawnImportedAsset (a node with physics)');
   }
   return { meshEntityIds, physicsEntityIds };
 };

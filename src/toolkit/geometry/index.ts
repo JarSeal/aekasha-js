@@ -11,6 +11,10 @@ export type {
   GeneratedTreeGeometry,
   TreeGeometryOptions,
 } from './generate/Foliage';
+export { generateLeafCard, LEAF_CARD_GEOMETRY_ID, saveLeafCardGeometry } from './generate/LeafCard';
+export type { LeafCardOptions } from './generate/LeafCard';
+export { generateRock, ROCK_TRIANGLE_BUDGETS, saveRockGeometries } from './generate/Rock';
+export type { GeneratedRock, RockKind, RockOptions } from './generate/Rock';
 export { generateTerrain } from './generate/terrain/Terrain';
 export { generateTerrainAsync } from './generate/terrain/TerrainAsync';
 export type { TerrainAsyncOptions } from './generate/terrain/TerrainAsync';

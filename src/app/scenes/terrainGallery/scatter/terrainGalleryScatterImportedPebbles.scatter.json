@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../../../.schemas/scatter.schema.json",
+  "items": [
+    {
+      "geometry": "namaqualandStones01/StoneA",
+      "material": "rockScatterNamaqualandStones01"
+    },
+    {
+      "geometry": "namaqualandStones01/StoneB",
+      "material": "rockScatterNamaqualandStones01"
+    },
+    {
+      "geometry": "namaqualandStones01/StoneC",
+      "material": "rockScatterNamaqualandStones01"
+    },
+    {
+      "geometry": "namaqualandStones01/StoneD",
+      "material": "rockScatterNamaqualandStones01"
+    },
+    {
+      "geometry": "namaqualandStones01/StoneE",
+      "material": "rockScatterNamaqualandStones01"
+    }
+  ],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "terrainScatter",
+    "params": {
+      "minSpacing": 0.3,
+      "density": 0.7,
+      "mask": {
+        "layers": {
+          "2": 1
+        }
+      },
+      "scale": [0.7, 1.5],
+      "alignToNormal": 0.8,
+      "sink": 0.25,
+      "tint": 0.2
+    },
+    "seed": 11
+  },
+  "lod": {
+    "levels": [
+      {
+        "screenSize": 0
+      }
+    ],
+    "cullScreenSize": 0.05
+  },
+  "debugData": {
+    "name": "Scatter row: imported pebbles",
+    "description": "The toolkit's imported pebbles (Poly Haven namaqualand_stones_01's five pebbles (80 triangles each), models/nature/) on the Scatter row's imported half (layer 2), as the procedural pebbles on the other half, in their own maps' rockScatter material (tiling UV)."
+  }
+}

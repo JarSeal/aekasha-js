@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../../.schemas/geometry.schema.json",
+  "geoProps": {
+    "type": "SPHERE",
+    "params": { "radius": 0.9, "widthSegments": 9, "heightSegments": 6 },
+    "debugData": { "name": "Test boulder", "description": "A 9 × 6 segment sphere, 0.9 m." }
+  }
+}
