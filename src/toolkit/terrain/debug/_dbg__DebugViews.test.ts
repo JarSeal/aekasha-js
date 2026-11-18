@@ -183,6 +183,11 @@ describe('applyTerrainDebugView', () => {
     expect(estimateTerrainFetches(contextOf(puddled, 'MINIMAL')).always).toBe(3 + 1 + 1 + 1);
     const patched = { ...blended, wet: { puddles: { patches: { scale: 30 } } } };
     expect(estimateTerrainFetches(contextOf(patched, 'MINIMAL')).always).toBe(3 + 1 + 1 + 1 + 1);
+    // The rain occlusion map: one compare fetch everywhere with MAP, none with NORMAL_Y
+    const mapped = { ...blended, wet: { rainOcclusion: 'MAP' } };
+    expect(estimateTerrainFetches(contextOf(mapped, 'MINIMAL')).always).toBe(3 + 1 + 1 + 1 + 1);
+    const faced = { ...blended, wet: { rainOcclusion: 'NORMAL_Y' } };
+    expect(estimateTerrainFetches(contextOf(faced, 'MINIMAL')).always).toBe(3 + 1 + 1 + 1);
     // The rain ripples: two gated by the ripple mask, none always (and none without the masks)
     const ripple = float(0.4) as unknown as Node<'float'>;
     const masks = { ripple } as never;

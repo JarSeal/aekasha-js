@@ -9,14 +9,16 @@
 // level, arithmetic at the world's position, in both qualities; its snow (T10) the input `snow`'s
 // set sampled top-down in the material's space, its average colour past a far mode's band, in both
 // qualities; its frost (T11) by the sets' porosity, in both qualities, its sparkle (`FULL`) at the
-// material's position, faded out by the view distance. The conditions are the
-// `surfaceConditions()` feature's stable uniforms; without the feature the material builds dry,
-// warned once a page load.
+// material's position, faded out by the view distance; with `rainOcclusion: 'MAP'` (T12) the
+// `rainOcclusion()` feature's map at the world's position, in both qualities. The conditions are
+// the `surfaceConditions()` feature's stable uniforms; without the feature the material builds
+// dry, and without `rainOcclusion()` a `MAP` material builds with the facing alone, each warned
+// once a page load.
 import { attribute, float, smoothstep, uniform } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import { Vector2, type Node, type NodeMaterial, type TextureNode } from 'three/webgpu';
 import { lwarn } from 'aekasha';
-import { getSurfaceConditionNodes } from 'aekasha/surface';
+import { getRainOcclusionNode, getSurfaceConditionNodes } from 'aekasha/surface';
 import type { TextureSetInput } from 'aekasha/texturesets';
 import { sampleMacroTexture } from '../nodes/Macro';
 import type { SurfaceSpace } from '../nodes/SurfaceSpace';
@@ -35,6 +37,8 @@ import { keepUniform, type LayerWet } from './TerrainLayers';
 
 /** Whether a material with `wet` has warned that the feature isn't installed (once a page load) */
 let isMissingFeatureWarned = false;
+/** Whether a `MAP` material has warned that the rain occlusion feature isn't installed (once) */
+let isMissingMapWarned = false;
 
 /**
  * The surface the wet response gets: the albedo, the roughness, the shaded normal in the
@@ -228,6 +232,24 @@ const getFrostOpts = (
   };
 };
 
+/**
+ * The rain occlusion map's node at the world's position (the map is the world's, whatever the
+ * material's space) with `rainOcclusion: 'MAP'`; undefined with `NORMAL_Y` or without the
+ * `rainOcclusion()` feature (warned once a page load)
+ */
+const getRainOcclusion = (material: NodeMaterial, settings: TerrainWetDefine) => {
+  if (settings.rainOcclusion !== 'MAP') return undefined;
+  const occlusion = getRainOcclusionNode();
+  if (occlusion) return occlusion;
+  if (!isMissingMapWarned) {
+    isMissingMapWarned = true;
+    lwarn(
+      `[terrain] Material "${String(material.userData.id ?? material.name)}" has wet.rainOcclusion 'MAP', but the rain occlusion feature isn't installed: it builds with the facing alone (list rainOcclusion() from 'aekasha/surface' in InitEngine's features, after surfaceConditions()).`
+    );
+  }
+  return undefined;
+};
+
 /** The regional wetness's node: the vertex attribute, or the first splat map's A; undefined without */
 const getRegional = (settings: TerrainWetDefine, surface: TerrainWetInput) => {
   const { regional } = settings;
@@ -240,7 +262,8 @@ const getRegional = (settings: TerrainWetDefine, surface: TerrainWetInput) => {
 
 /**
  * The surface wet by the surface conditions with the define's `wet` (uniforms
- * `terrain_wetShelter`, the streaks', the shoreline's, the snow's, the frost's, and with `FULL` `terrain_wetHeightInfluence`,
+ * `terrain_wetShelter`, the streaks', the shoreline's, the snow's, the frost's, and with `FULL`
+ * `terrain_wetHeightInfluence`,
  * `terrain_wetCavityInfluence`, the puddles' and the ripples'), and its masks (the `WETNESS`
  * view's); as given, masks null, without `wet` or without the `surfaceConditions()` feature
  * (warned once a page load).
@@ -275,6 +298,7 @@ export const applyTerrainWetness = (
   const shoreline = getShorelineOpts(settings, keep);
   const snow = getSnowOpts(settings, surface, space, keep);
   const frost = getFrostOpts(settings, surface, space, keep);
+  const rainOcclusion = getRainOcclusion(material, settings);
   const wet = applySurfaceWetness(
     {
       albedo: surface.albedo,
@@ -308,6 +332,7 @@ export const applyTerrainWetness = (
       ...(shoreline ? { shoreline } : {}),
       ...(snow ? { snow } : {}),
       ...(frost ? { frost } : {}),
+      ...(rainOcclusion ? { rainOcclusion } : {}),
     }
   );
   return {

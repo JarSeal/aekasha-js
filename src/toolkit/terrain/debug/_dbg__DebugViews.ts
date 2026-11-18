@@ -257,8 +257,8 @@ const getSampledFetches = (ctx: TerrainDebugViewContext, sampled: TerrainDebugVi
 /**
  * The material's own texture fetches beside the layers': the splat maps, the macro variation's
  * one, each rule's noise, the colour map's one (`DETAIL`, or the far `COLOR_MAP`: sampled
- * outside the far branch) and the puddle patches' one (p307); three's lighting, shadows and
- * environment not counted
+ * outside the far branch), the puddle patches' one and the rain occlusion map's one (p307);
+ * three's lighting, shadows and environment not counted
  */
 const getMaterialFetches = ({ define }: TerrainDebugViewContext) => {
   const rules = define.blend.source === 'SINGLE' ? [] : define.blend.rules;
@@ -267,14 +267,16 @@ const getMaterialFetches = ({ define }: TerrainDebugViewContext) => {
     (define.macro ? 1 : 0) +
     rules.filter((rule) => rule.noise).length +
     (define.colorMap?.mode === 'DETAIL' || define.far?.mode === 'COLOR_MAP' ? 1 : 0) +
-    (define.wet?.puddles?.patches ? 1 : 0)
+    (define.wet?.puddles?.patches ? 1 : 0) +
+    (define.wet?.rainOcclusion === 'MAP' ? 1 : 0)
   );
 };
 
 /**
  * The material's own texture fetches at a pixel, as `TAPS` counts them: those every pixel makes
  * (each sampled layer's or slot's taps, its packing slots × its anti-tiling's taps × its planes;
- * the splat maps, the macro, the rules' noise, the colour map, the puddle patches), each slope gate's branch's, made where its
+ * the splat maps, the macro, the rules' noise, the colour map, the puddle patches, the rain
+ * occlusion map), each slope gate's branch's, made where its
  * share is over 0 (a slot's: the kept layer's gate), the rain ripples' two and the streaks' one
  * where they run, and the snow set's where the snow covers.
  * @internal

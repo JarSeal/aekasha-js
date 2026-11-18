@@ -67,15 +67,15 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7636,
-      "gzip": 3098
+      "gzip": 3097
     },
     "assets/GeometryMerge.js": {
       "bytes": 8249,
-      "gzip": 3429
+      "gzip": 3427
     },
     "assets/GeometryTransfer.js": {
       "bytes": 1933,
-      "gzip": 870
+      "gzip": 867
     },
     "assets/GeometryTransfer.js@AssetsWorker": {
       "bytes": 1939,
@@ -119,11 +119,11 @@
     },
     "assets/ImportRegistry.js": {
       "bytes": 15734,
-      "gzip": 6379
+      "gzip": 6377
     },
     "assets/KTX2Loader.js": {
       "bytes": 60311,
-      "gzip": 24500
+      "gzip": 24498
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2210,
@@ -143,7 +143,7 @@
     },
     "assets/TextureInputResolvers.js": {
       "bytes": 3306,
-      "gzip": 1368
+      "gzip": 1365
     },
     "assets/three.core.js": {
       "bytes": 199218,
@@ -162,8 +162,8 @@
       "gzip": 1987
     },
     "assets/uiKit.embed.js": {
-      "bytes": 973235,
-      "gzip": 272033
+      "bytes": 973290,
+      "gzip": 272047
     },
     "assets/uiKitEmbed.css": {
       "bytes": 18013,
@@ -171,7 +171,7 @@
     },
     "assets/uiKitEmbed.js": {
       "bytes": 46618,
-      "gzip": 16880
+      "gzip": 16881
     },
     "assets/uiKitEmbedData.css": {
       "bytes": 24414,
@@ -187,7 +187,7 @@
     },
     "assets/uiKitEmbedForm.js": {
       "bytes": 47693,
-      "gzip": 18057
+      "gzip": 18058
     },
     "assets/uiKitEmbedGame.css": {
       "bytes": 13897,
@@ -195,18 +195,18 @@
     },
     "assets/uiKitEmbedGame.js": {
       "bytes": 23040,
-      "gzip": 8592
+      "gzip": 8595
     },
     "uiKit.embed.js": {
       "bytes": 249,
-      "gzip": 212
+      "gzip": 211
     }
   },
   "main": {
     "chunk": "assets/uiKit.embed.js",
     "modules": 69,
-    "minified": 997261,
-    "gzip": 278257
+    "minified": 997316,
+    "gzip": 278275
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -231,8 +231,8 @@
     },
     "_engine/kernel/init": {
       "modules": 5,
-      "minified": 7653,
-      "gzip": 3250
+      "minified": 7708,
+      "gzip": 3268
     },
     "_engine/kernel/input": {
       "modules": 1,

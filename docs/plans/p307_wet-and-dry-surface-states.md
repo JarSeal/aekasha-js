@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-5 implemented
+Status: in progress | Phases 1-6 implemented
 Category: Materials, Terrain, Weather
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -420,7 +420,7 @@ type SurfaceConditions = {
   - Then, at −5 °C: the ice block (wetness 0.6, a mirror at 15 °C) matte and a little paler, its pattern kept, glints over it; the row frosty without washing out, the dense sets (cliffs, concrete, the boulder) most, the sand least.
   - Frozen snow from 1.6 m: white points across the near metres, others between two frames 30 cm apart; none past about 10 m. At 3 °C the snow's glints are gone (slush).
 
-### Phase 6 (optional) — Rain occlusion map (T12)
+### Phase 6 (optional) — Rain occlusion map (T12) — done
 
 1. An orthographic depth render (512², 64 m around the camera, updated every N frames or on camera movement > X), sampled in `wet` when `rainOcclusion: 'MAP'`.
 
@@ -445,7 +445,22 @@ type SurfaceConditions = {
 - **Debug:** the surface tab's "Rain occlusion map" folder (with the feature): the switch, the frames between renders, the status (idle until a material reads it), the map's size, the renders, renders a second, CPU and GPU ms a render (`createBakeStats`, the hooks `_setRainOcclusionRenderHooks`) and the centre.
 - **Wiring:** `ENGINE_FEATURE_FACTORIES`, `src/index.ts`.
 - **SBP:** the feature is 1.8 KiB gzip in the app's first download (three modules, 2.3 KiB gzipped alone: `RainOcclusion.ts` 1.6, the model 0.5, the factory 0.2): the initial 402.7 KiB (402 → 403), `assets/index.js` 398.4 (398 → 399), the group `_engine/features/surface` 3.6 (2 → 4 KiB).
-- **Not yet seen on a GPU:** nothing reads the map before section 2, so its first render, its orientation on screen and its cost are section 2's.
+- **Not seen on a GPU in this section:** nothing read the map before section 2 (its look and cost are there).
+
+**As built (section 2):**
+
+- **The node:** `applySurfaceWetness`' `opts.rainOcclusion?: Node<'float'>` (0 open to 1 under cover; the caller samples it, eg. `getRainOcclusionNode()`). The share of open sky (1 − it) scales the exposure (`masks.exposure`, so the wetness, the streaks' weight and the frost's facing: under cover the frost is half, as on an underside), the puddle level (before the regional floor), the ripples' rain (no rings under cover) and the snow coverage (in the snow's branch). The regional wetness, the shoreline and the meltwater aren't scaled.
+- **The terrain `wet.rainOcclusion`:** `'NORMAL_Y'` (default) | `'MAP'` (schema `TERRAIN_WET_RAIN_OCCLUSIONS`, the reader's `WET_RAIN_OCCLUSIONS`, kept in step by `TerrainDefine.test.ts`), both qualities, a tier override with the rest of `wet`. `MAP` samples `getRainOcclusionNode()` at the world's position and geometry normal (the map is the world's) at the graph's top level (a compare fetch needs uniform control flow); no uniform of its own. Without `rainOcclusion()` it builds with the facing alone, warned once a page load. The colour-map bake strips `wet` (nothing to do).
+- **`TAPS`:** the map's fetch counted in every pixel's (`getMaterialFetches`).
+- **The API** gained `isRainOcclusionEnabled()` (null without the feature) for the gallery's switch.
+- **The gallery:** every row material and piece has `rainOcclusion: 'MAP'` (their `LOW` tier too); a concrete canopy on the mud block (`concrete02`, a 6 × 6 m roof 0.25 m thick, its underside 2.6 m up, on four 0.3 m posts at its corners, 1.5 m in front of the block's centre); the canopy, the wall and the boulder are rain occluders by `userData.rainOccluder` (the row casts no shadows). The tab's Wet/dry section has a Rain occlusion map switch (`setRainOcclusionEnabled`, global); the list notes each piece. The debug tab module exports its stats view (`rainOcclusionStatsView`) for a measuring script.
+- **Seen** (2026-11-18, Windows Chrome 157 on WebGPU, AMD RDNA 3; no shader or console errors):
+  - `WETNESS` at wetness 1, puddle level 0.6, rain 1: the mud under the canopy dry (the floor's grey) to the roof's footprint, a one-texel rim; puddles and film around it; the posts' inner faces dry, their outer faces wet and streaked; the roof's top wet (no self-shelter). Map off: the mud under it as wet as around.
+  - Shaded: the dry mud under the canopy, glossy water and ripples around it.
+  - The boulder (its overhang mostly buried) and the wall: their faces the same with the map on and off (no self-shelter); a thin dry rim at the boulder's foot; the ground beside the wall wet up to it.
+  - `TAPS`: 4 under the canopy (the layer's 2, the patches', the map's), 6 around it where the ripples run: none under cover.
+  - Snow 0.6 at −5 °C: the floor under the canopy bare, the roof's top covered.
+- **The cost** (the gallery's 512² map over 64 m, three small occluders, rendering every frame for 6 s at about 88 a second): the render 0.26 ms CPU on average (0.88 the last: three's projection walks the whole scene, so it grows with the scene's objects, not the occluders), 0.005 ms GPU (the depth pass's timestamps); at the default 30 frames about 0.01 ms CPU a frame. The material's part: one compare fetch a pixel. Memory: the 512² depth texture (1 MiB) and its R8 colour (0.25 MiB).
 
 ### Phase 7 — Handbook, Hub and versioning
 
@@ -469,10 +484,11 @@ type SurfaceConditions = {
      - weather-driven games (survival, open world, racing on wet tracks);
      - stylized games use SIMPLE (darkening only);
      - top-down/RTS get little from puddles and ripples, so use SIMPLE.
-2. **Hub** (`hub/CLAUDE.md`): a feature page for surface conditions (`hub/pages/features/surface-conditions/`, group World: the state, its time source, the scene field, the API as `api:` links, `aek:covers` for the nested `CLAUDE.md`'s sections) and the terrain feature page's wet section linking the handbook page; a `::: scene` panel on `terrainGallery`'s wet row (its showcase comes with p310). Then `yarn hub:build`.
+2. **Hub** (`hub/CLAUDE.md`): a feature page for surface conditions (`hub/pages/features/surface-conditions/`, group World: the state, its time source, the scene field, the rain occlusion map (`rainOcclusion()`, its occluders, its cost from Phase 6's As built), the API as `api:` links, `aek:covers` for the nested `CLAUDE.md`'s sections) and the terrain feature page's wet section linking the handbook page; a `::: scene` panel on `terrainGallery`'s wet row (its showcase comes with p310). Then `yarn hub:build`.
 3. **Repo docs:**
    - `readme.md` Features (engine: surface conditions; toolkit: wet response);
-   - `src/_engine/features/surface/CLAUDE.md` (stable uniforms, time source, scene reset, the sun source), a line in the root's Architecture map, and the new feature in the root's Bootstrap flow and Three-folder split;
+   - `src/_engine/features/surface/CLAUDE.md` (stable uniforms, time source, scene reset, the sun source; the rain occlusion map: its render, occluders, node, scene life and the destroyed-texture clear), a line in the root's Architecture map, and the two new features (`surfaceConditions()`, `rainOcclusion()`) in the root's Bootstrap flow and Three-folder split and `kernel/init/CLAUDE.md`'s counts;
+   - **p990:** the rain occlusion map tilted by the wind (the rain falls straight down; Phase 6's "Decided at the start");
    - **p990:** its deferred "weather" bullet already points here (since 2026-10-02). When this plan lands, update that bullet to say the surface side is done;
    - **p427:** its grounding names the API that landed (`aekasha/surface`, the sun source it replaces when it owns the clock).
 4. **Versions:** engine minor, toolkit minor, app minor; `CHANGELOG.md`.

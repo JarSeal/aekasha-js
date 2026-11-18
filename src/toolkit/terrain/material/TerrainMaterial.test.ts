@@ -79,10 +79,13 @@ const stubs = vi.hoisted(() => ({
   generators: new Map<string, unknown>(),
   // The surface conditions' uniforms (p307), null without the feature
   conditions: null as unknown,
+  // The rain occlusion map's node (p307 T12), null without its feature
+  rainOcclusion: null as unknown,
 }));
 
 vi.mock('aekasha/surface', () => ({
   getSurfaceConditionNodes: () => stubs.conditions,
+  getRainOcclusionNode: () => stubs.rainOcclusion,
 }));
 
 vi.mock('aekasha/texturesets', async (importOriginal) => ({
@@ -1410,6 +1413,31 @@ describe('setupTerrainMaterial: wet (p307)', () => {
     const warned = stubs.warnings.filter((message) => /builds dry/.test(message));
     expect(warned).toHaveLength(1);
     expect(warned[0]).toMatch(/surfaceConditions\(\)/);
+  });
+
+  it("keeps the rain off under cover with MAP (the rain occlusion map's node), in either quality", () => {
+    const occlusion = uniform(0.5);
+    stubs.rainOcclusion = occlusion;
+    try {
+      for (const quality of ['FULL', 'SIMPLE'] as const) {
+        const mapped = build({ layers: [{}], wet: { quality, rainOcclusion: 'MAP' } });
+        expect(reaches(mapped.colorNode, occlusion), quality).toBe(true);
+        // No uniform of its own: the map's are the feature's
+        const faced = build({ layers: [{}], wet: { quality } });
+        expect(getUniformKeys(mapped)).toEqual(getUniformKeys(faced));
+        expect(reaches(faced.colorNode, occlusion), quality).toBe(false);
+      }
+    } finally {
+      stubs.rainOcclusion = null;
+    }
+    // Without the feature: the facing alone, warned once a page load
+    stubs.warnings.length = 0;
+    const material = build({ layers: [{}], wet: { rainOcclusion: 'MAP' } });
+    build({ layers: [{}], wet: { rainOcclusion: 'MAP' } });
+    expect(reaches(material.colorNode, conditions.wetness)).toBe(true);
+    const warned = stubs.warnings.filter((message) => /rain occlusion/.test(message));
+    expect(warned).toHaveLength(1);
+    expect(warned[0]).toMatch(/rainOcclusion\(\)/);
   });
 
   it('stands puddles on the relief by the puddle level, their patches one fetch of the macro input', () => {

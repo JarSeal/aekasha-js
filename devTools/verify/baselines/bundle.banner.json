@@ -30,8 +30,8 @@
       "gzip": 1987
     },
     "assets/banner.embed.js": {
-      "bytes": 974940,
-      "gzip": 272701
+      "bytes": 974995,
+      "gzip": 272716
     },
     "assets/banner.js": {
       "bytes": 483,
@@ -75,15 +75,15 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7637,
-      "gzip": 3098
+      "gzip": 3099
     },
     "assets/GeometryMerge.js": {
       "bytes": 8248,
-      "gzip": 3427
+      "gzip": 3425
     },
     "assets/GeometryTransfer.js": {
       "bytes": 1933,
-      "gzip": 871
+      "gzip": 868
     },
     "assets/GeometryTransfer.js@AssetsWorker": {
       "bytes": 1939,
@@ -91,7 +91,7 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 47088,
-      "gzip": 14027
+      "gzip": 14025
     },
     "assets/HDRLoader.js": {
       "bytes": 3407,
@@ -99,11 +99,11 @@
     },
     "assets/ImportRegistry.js": {
       "bytes": 15737,
-      "gzip": 6380
+      "gzip": 6377
     },
     "assets/KTX2Loader.js": {
       "bytes": 60312,
-      "gzip": 24499
+      "gzip": 24497
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2210,
@@ -123,7 +123,7 @@
     },
     "assets/TextureInputResolvers.js": {
       "bytes": 3306,
-      "gzip": 1367
+      "gzip": 1366
     },
     "assets/three.core.js": {
       "bytes": 199218,
@@ -131,7 +131,7 @@
     },
     "assets/three.module.js": {
       "bytes": 220,
-      "gzip": 183
+      "gzip": 182
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -139,14 +139,14 @@
     },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 211
+      "gzip": 210
     }
   },
   "main": {
     "chunk": "assets/banner.embed.js",
     "modules": 68,
-    "minified": 999155,
-    "gzip": 278972
+    "minified": 999210,
+    "gzip": 278988
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -171,8 +171,8 @@
     },
     "_engine/kernel/init": {
       "modules": 5,
-      "minified": 7553,
-      "gzip": 3213
+      "minified": 7608,
+      "gzip": 3229
     },
     "_engine/kernel/input": {
       "modules": 1,

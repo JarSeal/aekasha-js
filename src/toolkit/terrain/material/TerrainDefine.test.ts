@@ -24,6 +24,7 @@ import {
   TERRAIN_UV_MODES,
   TERRAIN_VERTEX_COLOR_LAYOUTS,
   TERRAIN_WET_QUALITIES,
+  TERRAIN_WET_RAIN_OCCLUSIONS,
   TERRAIN_WET_SPLAT_CHANNELS,
   TerrainAntiTilingSchema,
   TerrainBlendSchema,
@@ -360,6 +361,10 @@ const ACCEPTED: unknown[] = [
     layers: [{}],
     wet: { quality: 'SIMPLE', streaks: { minSlope: 90, scale: 2, length: 1, speed: 0 } },
   },
+  // Its rain occlusion, in either quality
+  { layers: [{}], wet: { rainOcclusion: 'MAP' } },
+  { layers: [{}], wet: { quality: 'SIMPLE', rainOcclusion: 'NORMAL_Y' } },
+  { layers: [{}], wet: {}, quality: { LOW: { wet: { quality: 'SIMPLE', rainOcclusion: 'MAP' } } } },
 ];
 const REFUSED: unknown[] = [
   {},
@@ -675,7 +680,7 @@ const REFUSED: unknown[] = [
   },
   // p307's wet response: its keys (a later phase's too), values and ranges; its view without it
   { layers: [{}], wet: { ripples: true } },
-  { layers: [{}], wet: { rainOcclusion: 'MAP' } },
+  { layers: [{}], wet: { rainOcclusion: 'SHADOW' } },
   { layers: [{}], wet: { quality: 'NONE' } },
   { layers: [{}], wet: { heightInfluence: -1 } },
   { layers: [{}], wet: { cavityInfluence: '1' } },
@@ -812,7 +817,9 @@ describe('readTerrainDefine', () => {
       shoreline: null,
       snow: null,
       frost: null,
+      rainOcclusion: 'NORMAL_Y',
     });
+    expect(read({ layers: [{}], wet: { rainOcclusion: 'MAP' } }).wet?.rainOcclusion).toBe('MAP');
     expect(read({ layers: [{}], wet: { frost: {} } }).wet?.frost).toEqual({
       temperature: [0, -5],
       strength: 1,
@@ -1158,6 +1165,10 @@ describe('readTerrainDefine', () => {
     expect(values.wetKeys.sort()).toEqual(Object.keys(wet.unwrap().shape).sort());
     expect(values.wetQualities).toEqual(TERRAIN_WET_QUALITIES);
     expect(wet.unwrap().shape.quality.unwrap().options).toEqual([...TERRAIN_WET_QUALITIES]);
+    expect(values.wetRainOcclusions).toEqual(TERRAIN_WET_RAIN_OCCLUSIONS);
+    expect(wet.unwrap().shape.rainOcclusion.unwrap().options).toEqual([
+      ...TERRAIN_WET_RAIN_OCCLUSIONS,
+    ]);
     const puddles = wet.unwrap().shape.puddles.unwrap();
     expect(values.wetPuddleKeys.sort()).toEqual(Object.keys(puddles.shape).sort());
     expect(values.wetPatchKeys.sort()).toEqual(

@@ -5,11 +5,17 @@
 // show the streaks fade after), the water level the beach's shoreline follows (a switch and a
 // slider over the block's heights), the snow cover and the temperature (sliders with the exit's
 // steps: in `MANUAL` the snow melts only in look, slush, not into the wetness; below 0 °C frost),
-// the row's quality (`FULL`, `SIMPLE`) and view (the shading, `WETNESS`, `TAPS`), and
+// the rain occlusion map's switch (p307 Phase 6: the canopy over the mud block, the boulder's
+// overhang), the row's quality (`FULL`, `SIMPLE`) and view (the shading, `WETNESS`, `TAPS`), and
 // the blocks' list, a click flying the camera to the block. The "Surface conditions" tab has the
 // rest of the weather.
 import { debuggerListCMP, updateDebuggerTab, type DebuggerTabSection } from 'aekasha/debug';
-import { getSurfaceConditions, setSurfaceConditions } from 'aekasha/surface';
+import {
+  getSurfaceConditions,
+  isRainOcclusionEnabled,
+  setRainOcclusionEnabled,
+  setSurfaceConditions,
+} from 'aekasha/surface';
 import { getTextureSet } from 'aekasha/texturesets';
 import { loadTerrainDebugViewsAsync } from 'aekasha/toolkit/terrain';
 import { flyToGalleryBlock } from './_dbg__terrainGalleryCamera';
@@ -88,6 +94,12 @@ const conditions = {
   set temperature(value: number) {
     setSurfaceConditions({ temperature: value });
   },
+  get isRainOccluded() {
+    return isRainOcclusionEnabled() ?? false;
+  },
+  set isRainOccluded(value: boolean) {
+    setRainOcclusionEnabled(value);
+  },
 };
 
 /** Applies the row's view, loading the debug views first for a debug view; the latest call wins */
@@ -104,7 +116,7 @@ const getBlockRow = (block: WetBlock) => {
   const piece = WET_PIECES.find((candidate) => candidate.block === block.key);
   const notes = [
     ...(block.key === REGIONAL_WET_KEY ? ['regional wetness along its left edge'] : []),
-    ...(piece ? [`${piece.title} that streaks`] : []),
+    ...(piece ? [`${piece.title} ${piece.note}`] : []),
     ...(block.key === SHORE_WET_KEY ? ['a shoreline along the water level'] : []),
   ];
   return {
@@ -222,6 +234,13 @@ export const getWetSections = (tabId: string, onSelect: () => void): DebuggerTab
           updateDebuggerTab(tabId);
         },
       })),
+      {
+        key: 'isRainOccluded',
+        target: conditions,
+        label: 'Rain occlusion map',
+        disabled: () => isRainOcclusionEnabled() === null,
+        hint: 'The rainOcclusion() feature’s map (global: the Surface conditions tab has its stats): the canopy, the wall and the boulder keep the rain off what’s under them, so the mud under the canopy and the ground under the boulder’s overhang stay dry, without puddles, ripples or snow. Off, every material reads open sky (the facing alone)',
+      },
       { type: 'separator' },
       {
         key: 'quality',

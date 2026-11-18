@@ -107,6 +107,11 @@ export const TERRAIN_DEBUG_VIEWS = [
  * the film flattens the normal, `SIMPLE` the layers' response and the sky exposure only.
  */
 export const TERRAIN_WET_QUALITIES = ['FULL', 'SIMPLE'] as const;
+/**
+ * What keeps the rain off a surface (p307 T6, T12): `NORMAL_Y` its facing alone (overhangs and
+ * undersides), `MAP` also the `rainOcclusion()` feature's map (roofs, trees, bridges).
+ */
+export const TERRAIN_WET_RAIN_OCCLUSIONS = ['NORMAL_Y', 'MAP'] as const;
 
 /**
  * The splat channels a regional wetness reads (p307 T7): the first splat map's A.
@@ -1228,6 +1233,18 @@ const TerrainWetSchema = z
     snow: TerrainSnowSchema.optional(),
     /** The frost; default none. */
     frost: TerrainFrostSchema.optional(),
+    /**
+     * What keeps the rain off the surface: `NORMAL_Y` (default) its facing alone; `MAP` also the
+     * rain occlusion map (`rainOcclusion()` from `aekasha/surface`: roofs, trees, bridges), one
+     * fetch, which keeps the wetness, the puddles, the ripples and the snow out from under them.
+     * Without the feature, `MAP` builds as `NORMAL_Y`, warned once.
+     */
+    rainOcclusion: z
+      .enum(TERRAIN_WET_RAIN_OCCLUSIONS)
+      .optional()
+      .describe(
+        "What keeps the rain off the surface: NORMAL_Y (default) its facing alone; MAP also the rain occlusion map (rainOcclusion() from 'aekasha/surface': roofs, trees, bridges), one fetch, keeping the wetness, puddles, ripples and snow out from under them."
+      ),
   })
   .strict()
   .superRefine((wet, ctx) => {

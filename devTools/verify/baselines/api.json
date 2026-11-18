@@ -2163,6 +2163,37 @@
       "STREAMING_MIN_CELL_SIZE": "Variable",
       "STREAMING_NEARBY_PHYSICS_TIERS": "Variable"
     },
+    "src/_engine/features/surface/RainOcclusion.ts": {
+      "_setRainOcclusionRenderHooks": "Function",
+      "getRainOcclusionDebugState": "Function",
+      "getRainOcclusionNode": "Function",
+      "installRainOcclusion": "Function",
+      "isRainOccluder": "Function",
+      "isRainOcclusionEnabled": "Function",
+      "RainOcclusionNodeOpts": "TypeAlias",
+      "RainOcclusionRenderHooks": "TypeAlias",
+      "rainOcclusionSceneHooks": "Variable",
+      "requestRainOcclusionUpdate": "Function",
+      "setRainOcclusionEnabled": "Function",
+      "setRainOcclusionUpdateFrames": "Function",
+      "stopRainOcclusion": "Function"
+    },
+    "src/_engine/features/surface/RainOcclusionFeature.ts": {
+      "rainOcclusion": "Function"
+    },
+    "src/_engine/features/surface/RainOcclusionModel.ts": {
+      "createRainMapRenderState": "Function",
+      "RAIN_MAP_EDGE_FADE": "Variable",
+      "RAIN_MAP_NORMAL_OFFSET_TEXELS": "Variable",
+      "RAIN_MAP_RECENTRE_SHARE": "Variable",
+      "RAIN_OCCLUSION_DEFAULTS": "Variable",
+      "RainMapRenderState": "TypeAlias",
+      "RainOcclusionOpts": "TypeAlias",
+      "ResolvedRainOcclusionOpts": "TypeAlias",
+      "resolveRainOcclusionOpts": "Function",
+      "shouldRenderRainMap": "Function",
+      "snapRainMapCoordinate": "Function"
+    },
     "src/_engine/features/surface/SurfaceConditions.ts": {
       "applySceneSurfaceConditions": "Function",
       "getSurfaceConditionNodes": "Function",
@@ -5115,6 +5146,7 @@
       "TERRAIN_UV_MODES": "Variable",
       "TERRAIN_VERTEX_COLOR_LAYOUTS": "Variable",
       "TERRAIN_WET_QUALITIES": "Variable",
+      "TERRAIN_WET_RAIN_OCCLUSIONS": "Variable",
       "TERRAIN_WET_SPLAT_CHANNELS": "Variable",
       "TerrainAntiTiling": "TypeAlias",
       "TerrainAntiTilingSchema": "Variable",
@@ -6372,6 +6404,8 @@
       "unregisterStreamingCellContent"
     ],
     "aekasha/surface": [
+      "RainOcclusionNodeOpts",
+      "RainOcclusionOpts",
       "SURFACE_WATER_LEVEL_NONE",
       "SceneSurfaceConditions",
       "SetSurfaceConditionsOpts",
@@ -6384,9 +6418,14 @@
       "SurfaceConditionsMode",
       "SurfaceSunSource",
       "SurfaceTimeSource",
+      "getRainOcclusionNode",
       "getSurfaceConditionNodes",
       "getSurfaceConditions",
       "getSurfaceTime",
+      "isRainOcclusionEnabled",
+      "rainOcclusion",
+      "requestRainOcclusionUpdate",
+      "setRainOcclusionEnabled",
       "setSurfaceConditions",
       "setSurfaceSunSource",
       "startRain",

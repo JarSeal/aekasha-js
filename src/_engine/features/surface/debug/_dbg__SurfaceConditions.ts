@@ -7,6 +7,7 @@ import { createDebuggerTab, type DebuggerPaneItem } from '../../../debug/Debugge
 import {
   _setRainOcclusionRenderHooks,
   getRainOcclusionDebugState,
+  isRainOcclusionEnabled,
   setRainOcclusionEnabled,
   setRainOcclusionUpdateFrames,
 } from '../RainOcclusion';
@@ -128,10 +129,16 @@ const isWaterLevelOff = () => read().waterLevel === null;
 const rainMapStats = createBakeStats();
 _setRainOcclusionRenderHooks(rainMapStats.hooks);
 
+/**
+ * The rain occlusion map's render stats, as the folder shows them (and a measuring script reads).
+ * @internal
+ */
+export const rainOcclusionStatsView = rainMapStats.view;
+
 /** The rain occlusion map's fields: its switch and update interval, its state's readouts */
 const rainMap = {
   get isEnabled() {
-    return getRainOcclusionDebugState()?.isEnabled ?? false;
+    return isRainOcclusionEnabled() ?? false;
   },
   set isEnabled(value: boolean) {
     setRainOcclusionEnabled(value);

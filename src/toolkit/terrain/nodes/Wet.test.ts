@@ -25,6 +25,26 @@ const collectNodes = (roots: unknown[]) => {
   return nodes;
 };
 
+/** The snow's `Fn` call a socket reads (a struct member's) */
+const snowCallOf = (root: unknown) =>
+  [...collectNodes([root])].find(
+    (node) =>
+      (node as { structNode?: { node?: { shaderNode?: unknown } } }).structNode?.node?.shaderNode
+  ) as { structNode: { node: { shaderNode: { jsFunc: () => unknown } } } } | undefined;
+
+/** The nodes the statements of the snow's `Fn` body reach, run on a stack of its own */
+const snowBodyOf = (root: unknown) => {
+  const stack = new StackNode() as unknown as { nodes: Node[] };
+  const previous = getCurrentStack();
+  setCurrentStack(stack);
+  try {
+    snowCallOf(root)?.structNode.node.shaderNode.jsFunc();
+    return collectNodes(stack.nodes);
+  } finally {
+    setCurrentStack(previous);
+  }
+};
+
 const makeConditions = () =>
   ({
     wetness: uniform(0.6),
@@ -263,38 +283,20 @@ describe('applySurfaceWetness', () => {
       puddleResponse: uniform(0.5),
     } as unknown as TextureSetInput;
     const reads = (root: unknown, node: unknown) => collectNodes([root]).has(node);
-    /** The snow's `Fn` call a socket reads (a struct member's), and the statements of its body */
-    const snowCallOf = (root: unknown) =>
-      [...collectNodes([root])].find(
-        (node) =>
-          (node as { structNode?: { node?: { shaderNode?: unknown } } }).structNode?.node
-            ?.shaderNode
-      ) as { structNode: { node: { shaderNode: { jsFunc: () => unknown } } } } | undefined;
-    const bodyOf = (root: unknown) => {
-      const stack = new StackNode() as unknown as { nodes: Node[] };
-      const previous = getCurrentStack();
-      setCurrentStack(stack);
-      try {
-        snowCallOf(root)?.structNode.node.shaderNode.jsFunc();
-        return collectNodes(stack.nodes);
-      } finally {
-        setCurrentStack(previous);
-      }
-    };
     const wet = applySurfaceWetness(surface, conditions, { snow: { set } });
     for (const socket of [wet.albedo, wet.roughness, wet.normal, wet.masks.snow]) {
       expect(snowCallOf(socket)).toBeTruthy();
     }
-    expect(bodyOf(wet.masks.snow).has(conditions.snowCoverage)).toBe(true);
+    expect(snowBodyOf(wet.masks.snow).has(conditions.snowCoverage)).toBe(true);
     // The snow's own response wets it, by the temperature: frozen dry, slush above 0 °C
     expect(reads(wet.masks.pores, set.porosity)).toBe(true);
     expect(reads(wet.masks.wetness, conditions.temperature)).toBe(true);
     expect(reads(wet.albedo, conditions.temperature)).toBe(true);
     // FULL: the relief under the snow resists it
-    expect(bodyOf(wet.masks.snow).has(surface.height)).toBe(true);
+    expect(snowBodyOf(wet.masks.snow).has(surface.height)).toBe(true);
     // SIMPLE: no relief, the normal as given
     const simple = applySurfaceWetness(surface, conditions, { quality: 'SIMPLE', snow: { set } });
-    expect(bodyOf(simple.masks.snow).has(surface.height)).toBe(false);
+    expect(snowBodyOf(simple.masks.snow).has(surface.height)).toBe(false);
     expect(simple.normal).toBe(surface.normal);
     expect(snowCallOf(simple.albedo)).toBeTruthy();
     // Without snow nothing reads the snow, and the mask is 0
@@ -333,5 +335,44 @@ describe('applySurfaceWetness', () => {
       frost: {},
     });
     expect(calls(simple.albedo)).toBe(calls(simpleFrosted.albedo));
+  });
+
+  it("keeps the rain's doing out from under cover: the exposure, puddles, ripples and snow, not the regional", () => {
+    const conditions = makeConditions();
+    const surface = makeSurface();
+    const occlusion = uniform(0.7) as unknown as Node<'float'>;
+    const regional = uniform(0.3) as unknown as Node<'float'>;
+    const set = {
+      albedoRough: texture(new Texture()),
+      normalHeight: texture(new Texture()),
+      physicalSize: uniform(new Vector2(3, 3)),
+      heightScale: uniform(0.05),
+      tint: uniform(color(1, 1, 1)),
+      normalStrength: uniform(1),
+      roughnessScale: uniform(1),
+      porosity: uniform(0.5),
+      wetDarkening: uniform(0.25),
+      wetRoughness: uniform(0.3),
+      dryingSpeed: uniform(0.6),
+      puddleResponse: uniform(0.5),
+    } as unknown as TextureSetInput;
+    const atlas = texture(new Texture()) as unknown as TextureNode;
+    const opts = { puddles: {}, ripples: { atlas }, snow: { set } };
+    const wet = applySurfaceWetness({ ...surface, regional }, conditions, {
+      ...opts,
+      rainOcclusion: occlusion,
+    });
+    const reads = (root: unknown) => collectNodes([root]).has(occlusion);
+    expect(reads(wet.masks.exposure)).toBe(true);
+    expect(reads(wet.masks.wetness)).toBe(true);
+    expect(reads(wet.masks.puddle)).toBe(true);
+    expect(reads(wet.masks.ripple)).toBe(true);
+    expect(snowBodyOf(wet.masks.snow).has(occlusion)).toBe(true);
+    // The regional wetness still floors the wetness under cover: read beside the exposure
+    expect(collectNodes([wet.masks.wetness]).has(regional)).toBe(true);
+    // Without it, nothing reads an occlusion (and the masks are what they were)
+    const open = applySurfaceWetness({ ...surface, regional }, conditions, opts);
+    expect(reads(open.albedo)).toBe(false);
+    expect(snowBodyOf(open.masks.snow).has(occlusion)).toBe(false);
   });
 });

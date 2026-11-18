@@ -15,12 +15,17 @@
 // level, its waves washing up, and a still water plane over the beach at the level (hidden
 // without one), which follows it on the scene's looper. Phase 5: snow over every block and both
 // pieces by the surface conditions' snow cover (the toolkit's `snow01`, the code route's default),
-// slush above 0 °C, and frost below it (sparkling, on the ice block most). Code route materials (`createTerrainMaterial`) with a `LOW` tier whose wet is
+// slush above 0 °C, and frost below it (sparkling, on the ice block most). Phase 6: a concrete
+// canopy over the mud block, and every material's rain occlusion the map (`rainOcclusion: 'MAP'`,
+// the `rainOcclusion()` feature): the canopy, the wall and the boulder are rain occluders
+// (`userData.rainOccluder`: the row casts no shadows), so the mud under the canopy and the ground
+// under the boulder's overhang stay dry, unpuddled and unsnowed. Code route materials
+// (`createTerrainMaterial`) with a `LOW` tier whose wet is
 // `SIMPLE` (without the puddles and the ripples: a tier's variant shares the material's inputs,
 // which a variant without them would refuse): the quality (the tier) and the view are variants of
 // a block's or a piece's material.
 import * as THREE from 'three/webgpu';
-import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import {
   createMeshEntity,
   createSceneMainLooper,
@@ -110,21 +115,59 @@ const WATER_OPACITY = 0.6;
 /** The regional wetness's vertex attribute (the terrain material's default) */
 const REGIONAL_WET_ATTRIBUTE = '_wetness';
 
-/** A steep piece with rain streaks, standing on a block: its set (a structure material's) */
-type WetPiece = { key: 'WALL' | 'BOULDER'; block: WetKey; set: string; title: string };
+/**
+ * A piece standing on a block, a rain occluder: its set (a structure material's), where it stands
+ * from the block's centre (z, metres) and what its tab note says it shows
+ */
+type WetPiece = {
+  key: 'WALL' | 'BOULDER' | 'CANOPY';
+  block: WetKey;
+  set: string;
+  title: string;
+  z: number;
+  note: string;
+};
 
-/** The streaked pieces: a wall on the concrete block, a boulder on the cliff block */
+/** The pieces stand this far behind their block's centre (−z): in front of the ramp's foot */
+const PIECE_Z = -1.5;
+
+/**
+ * The pieces: a wall on the concrete block and a boulder on the cliff block (their streaks), a
+ * canopy over the mud block's flat (the dry ground under it)
+ */
 export const WET_PIECES: readonly WetPiece[] = [
-  { key: 'WALL', block: 'CONCRETE', set: 'concrete02', title: 'a concrete wall' },
-  { key: 'BOULDER', block: 'CLIFF', set: 'cliffs01', title: 'a cliff boulder' },
+  {
+    key: 'WALL',
+    block: 'CONCRETE',
+    set: 'concrete02',
+    title: 'a concrete wall',
+    z: PIECE_Z,
+    note: 'that streaks',
+  },
+  {
+    key: 'BOULDER',
+    block: 'CLIFF',
+    set: 'cliffs01',
+    title: 'a cliff boulder',
+    z: PIECE_Z,
+    note: 'that streaks, dry under its overhang',
+  },
+  {
+    key: 'CANOPY',
+    block: 'MUD',
+    set: 'concrete02',
+    title: 'a concrete canopy',
+    z: 1.5,
+    note: 'dry under it in the rain',
+  },
 ];
 /** The wall's size, metres */
 const WALL = { width: 8, height: 4, depth: 0.6 } as const;
 /** The boulder's half extents, metres, and how much of its height is buried */
 const BOULDER_RADII = [3, 2.4, 2] as const;
 const BOULDER_BURIED = 0.35;
-/** The pieces stand this far behind their block's centre (−z): in front of the ramp's foot */
-const PIECE_Z = -1.5;
+/** The canopy: its roof's size, its underside's height and thickness, its posts' width, metres */
+const CANOPY = { width: 6, depth: 6, height: 2.6, thickness: 0.25, post: 0.3 } as const;
 /** How far the wall sinks into the block's noise, metres */
 const WALL_SINK = 0.3;
 
@@ -156,6 +199,8 @@ const SIMPLE_TIER = 'LOW';
 
 /** The row's frost, sparkling (the `SIMPLE` tier's without) */
 const FROST = { sparkle: {} };
+/** The row's rain occlusion: the map, so the pieces keep the rain off what's under them */
+const RAIN_OCCLUSION = 'MAP' as const;
 
 /** A row material's wet with its `SIMPLE` tier: the same without what `FULL` alone takes */
 const withSimpleTier = (wet: NonNullable<TerrainMaterialConfig['wet']>) => {
@@ -184,6 +229,7 @@ const getBlockConfig = (block: WetBlock): TerrainMaterialConfig => ({
     ripples: {},
     snow: {},
     frost: FROST,
+    rainOcclusion: RAIN_OCCLUSION,
     ...(block.key === REGIONAL_WET_KEY ? { regional: {} } : {}),
     ...(block.key === SHORE_WET_KEY ? { shoreline: { band: SHORE_BAND, runUp: {} } } : {}),
   }),
@@ -202,12 +248,15 @@ const getBlockMaterial = (block: WetBlock, view: WetRowView): THREE.Material => 
   return getViewMaterial(config.id, view);
 };
 
-/** A piece's material for the view: its structure material (streaks, snow, frost), or its variant */
+/**
+ * A piece's material for the view: its structure material (streaks, snow, frost, the map's rain
+ * occlusion), or its variant
+ */
 const getPieceMaterial = (piece: WetPiece, view: WetRowView): THREE.Material => {
   const id = `terrainGalleryWet_${piece.key}`;
   createStructureMaterial(piece.set, {
     id,
-    ...withSimpleTier({ streaks: {}, snow: {}, frost: FROST }),
+    ...withSimpleTier({ streaks: {}, snow: {}, frost: FROST, rainOcclusion: RAIN_OCCLUSION }),
   });
   return getViewMaterial(id, view);
 };
@@ -296,18 +345,54 @@ const buildBoulderGeometry = () => {
   return geometry;
 };
 
-/** A piece's geometry, its origin at its centre */
-const getPieceGeometry = (piece: WetPiece) =>
-  piece.key === 'WALL'
-    ? getOrBuildGeometry(
-        'terrainGalleryWetWall',
-        () => new THREE.BoxGeometry(WALL.width, WALL.height, WALL.depth)
+/** The canopy: a roof slab on four posts at its corners, its origin on the ground at its centre */
+const buildCanopyGeometry = () => {
+  const { width, depth, height, thickness, post } = CANOPY;
+  const roof = new THREE.BoxGeometry(width, thickness, depth).translate(
+    0,
+    height + thickness / 2,
+    0
+  );
+  const postHeight = height + WALL_SINK;
+  const posts = [-1, 1].flatMap((sx) =>
+    [-1, 1].map((sz) =>
+      new THREE.BoxGeometry(post, postHeight, post).translate(
+        sx * (width / 2 - post),
+        postHeight / 2 - WALL_SINK,
+        sz * (depth / 2 - post)
       )
-    : getOrBuildGeometry('terrainGalleryWetBoulder', buildBoulderGeometry);
+    )
+  );
+  const parts = [roof, ...posts];
+  const geometry = existsOrThrow(
+    mergeGeometries(parts),
+    "[terrainGallery] The canopy's boxes didn't merge."
+  );
+  for (const part of parts) part.dispose();
+  return geometry;
+};
 
-/** A piece's centre over its block's: the wall's foot sunk into the noise, the boulder buried */
-const getPieceY = (piece: WetPiece) =>
-  piece.key === 'WALL' ? WALL.height / 2 - WALL_SINK : BOULDER_RADII[1] * (1 - 2 * BOULDER_BURIED);
+/** A piece's geometry: the wall's and the boulder's origin at their centre, the canopy's on the
+ * ground */
+const getPieceGeometry = (piece: WetPiece) => {
+  if (piece.key === 'WALL') {
+    return getOrBuildGeometry(
+      'terrainGalleryWetWall',
+      () => new THREE.BoxGeometry(WALL.width, WALL.height, WALL.depth)
+    );
+  }
+  if (piece.key === 'CANOPY')
+    return getOrBuildGeometry('terrainGalleryWetCanopy', buildCanopyGeometry);
+  return getOrBuildGeometry('terrainGalleryWetBoulder', buildBoulderGeometry);
+};
+
+/** A piece's origin over its block's: the wall's foot sunk into the noise, the boulder buried, the
+ * canopy on the ground */
+const getPieceY = (piece: WetPiece) => {
+  if (piece.key === 'WALL') return WALL.height / 2 - WALL_SINK;
+  if (piece.key === 'CANOPY') return 0;
+  return BOULDER_RADII[1] * (1 - 2 * BOULDER_BURIED);
+};
 
 /** The block with the shoreline, which the water covers */
 const getShoreBlock = () =>
@@ -360,8 +445,9 @@ const createWater = (sceneId: string) => {
 };
 
 /**
- * Creates the row's blocks, each on the library's generated block with its own seed, the streaked
- * pieces on theirs and the water over the shore
+ * Creates the row's blocks, each on the library's generated block with its own seed, the pieces on
+ * theirs (rain occluders: `userData.rainOccluder`, as they cast no shadows) and the water over the
+ * shore
  * @param sceneId the gallery's scene id (the water's looper's)
  */
 export const createWetRow = (sceneId: string) => {
@@ -386,11 +472,13 @@ export const createWetRow = (sceneId: string) => {
       {
         geo: getPieceGeometry(piece),
         mat: getPieceMaterial(piece, { quality: 'FULL', debugView: 'NONE' }),
-        position: { x: block.x, y: getPieceY(piece), z: block.z + PIECE_Z },
+        position: { x: block.x, y: getPieceY(piece), z: block.z + piece.z },
         ...NO_SHADOWS,
       },
       { appId: getPieceAppId(piece), debugData: { name: `Wet/dry: ${piece.title}` } }
     );
+    const mesh = getMeshByAppId(getPieceAppId(piece));
+    if (mesh) mesh.userData.rainOccluder = true;
   }
   createWater(sceneId);
 };

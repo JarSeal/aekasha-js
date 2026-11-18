@@ -23,6 +23,7 @@ export type {
 } from './SurfaceConditionsModel';
 export {
   getRainOcclusionNode,
+  isRainOcclusionEnabled,
   requestRainOcclusionUpdate,
   setRainOcclusionEnabled,
 } from './RainOcclusion';

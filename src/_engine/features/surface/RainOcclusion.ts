@@ -362,6 +362,12 @@ export const setRainOcclusionEnabled = (isEnabled: boolean) => {
 };
 
 /**
+ * Whether the rain occlusion map is on (`setRainOcclusionEnabled`), or null without the
+ * `rainOcclusion()` feature.
+ */
+export const isRainOcclusionEnabled = () => runtime?.isEnabled ?? null;
+
+/**
  * Renders the rain occlusion map again on the next frame: after an occluder has moved, when its
  * `updateFrames` doesn't catch it (0, or a change that must show at once).
  * @throws when the `rainOcclusion()` feature isn't installed

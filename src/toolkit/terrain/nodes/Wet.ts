@@ -11,7 +11,8 @@
 // steep faces rivulets run down while it rains and stay damp after (T5); along the water level a
 // shoreline's bands wash, saturate and dampen the ground (T8); snow covers it by the snow cover,
 // flat ground first, frozen dry below 0 °C and slush above, its meltwater wetting the ground around
-// (T10); below freezing, frost whitens and roughens it, ice crystals sparkling (T11). Every number
+// (T10); below freezing, frost whitens and roughens it, ice crystals sparkling (T11); under a roof
+// (the rain occlusion map, T12) none of the rain's doing reaches it. Every number
 // of the response is a node: a terrain material's are its layers' set uniforms
 // blended by weight, an app material's its own. The ripples' two fetches, the streaks' one and
 // the snow set's are the only ones, each in a branch on the weather (`Ripples.ts`, `Streaks.ts`,
@@ -247,6 +248,14 @@ export type ApplySurfaceWetnessOpts = {
    * snow. Arithmetic, the sparkle in a dynamic branch. Left out: none.
    */
   frost?: SurfaceFrostOpts;
+  /**
+   * How far the surface is sheltered from the rain, 0 open sky to 1 under cover (eg.
+   * `getRainOcclusionNode()` from `aekasha/surface`: roofs, trees, bridges): it scales down the
+   * rain's reach (so the wetness, the streaks and the frost's facing), the puddle level, the
+   * ripples' rain and the snow cover; not a `regional` wetness, the shoreline or the meltwater.
+   * Left out: the facing alone (`shelter`).
+   */
+  rainOcclusion?: Node<'float'>;
 };
 
 /** {@link ApplySurfaceWetnessOpts}' frost. */
@@ -386,7 +395,10 @@ export type SurfacePuddleOpts = {
  * terrain material's `WETNESS` debug view shows).
  */
 export type SurfaceWetnessMasks = {
-  /** How much the rain reaches the surface: its facing (1 up, 0 an underside). */
+  /**
+   * How much the rain reaches the surface: its facing (1 up, 0 an underside), × the open sky above
+   * with `opts.rainOcclusion`.
+   */
   exposure: Node<'float'>;
   /** The local wetness: the conditions' × the exposure, shifted by the relief and the cavity. */
   wetness: Node<'float'>;
@@ -448,8 +460,9 @@ export type WetSurface = {
  * surface by the conditions' `snowCoverage` (flat ground first, nothing past `maxSlope`), frozen
  * dry below 0 °C and slush above (its meltwater wetting the ground around), its taps in a dynamic
  * branch on the cover; with `opts.frost` (T11), below freezing the surface whitens a little and
- * roughens by 1 − its porosity, its `sparkle` glinting in a dynamic branch; nothing else fetches or
- * branches. At wetness, puddle level, rain and snow cover 0, above the frost's temperature,
+ * roughens by 1 − its porosity, its `sparkle` glinting in a dynamic branch; with
+ * `opts.rainOcclusion` (T12), the rain, the puddles, the ripples and the snow don't reach under
+ * cover (the caller's sample, eg. `getRainOcclusionNode()`); nothing else fetches or branches. At wetness, puddle level, rain and snow cover 0, above the frost's temperature,
  * without a regional wetness the surface is as given.
  * @param input the dry surface, its relief, cavity, regional wetness and response
  * @param conditions the surface conditions' uniforms (`getSurfaceConditionNodes()`)
@@ -480,9 +493,11 @@ export const applySurfaceWetness = (
   const isFull = (opts.quality ?? 'FULL') === 'FULL';
   const up = opts.up ?? ((normalWorldGeometry as unknown as Node<'vec3'>).y as Node<'float'>);
   const geometryNormal = opts.geometryNormal ?? (normalWorldGeometry as unknown as Node<'vec3'>);
+  // T12: the share of open sky above (a roof keeps the rain and the snow off), or null for all
+  const open = opts.rainOcclusion ? (float(1).sub(opts.rainOcclusion) as Node<'float'>) : null;
   // T10: the snow over the dry surface, which the rest wets (slush)
   const snow = opts.snow
-    ? coverWithSnow(input, { up, geometryNormal, isFull, conditions, opts: opts.snow })
+    ? coverWithSnow(input, { up, geometryNormal, isFull, conditions, open, opts: opts.snow })
     : null;
   const surface = snow?.surface ?? input;
   const porosity = toFloat(surface.response.porosity);
@@ -495,7 +510,8 @@ export const applySurfaceWetness = (
     ? shelter
     : vec2(shelter[0], shelter[1])) as unknown as Node<'vec2'>;
   const cosines = angles.mul(DEG_TO_RAD).cos() as Node<'vec2'>;
-  const exposure = smoothstep(cosines.y, cosines.x, up) as unknown as Node<'float'>;
+  const facing = smoothstep(cosines.y, cosines.x, up) as unknown as Node<'float'>;
+  const exposure = open ? (facing.mul(open) as Node<'float'>) : facing;
   let global = (conditions.wetness as unknown as Node<'float'>).mul(exposure) as Node<'float'>;
   // Frozen snow shows no wetness: only as far as it's slush
   if (snow) global = global.mul(snow.wettable) as Node<'float'>;
@@ -556,7 +572,9 @@ export const applySurfaceWetness = (
   // T3: a puddle soaks what's beneath it (its pores and film full); the shore's wash is one
   const flat = getFlatGate(up, opts.puddles?.maxSlope);
   const pooled =
-    isFull && opts.puddles ? getPuddle(surface, regional, conditions, flat, opts.puddles) : null;
+    isFull && opts.puddles
+      ? getPuddle(surface, { regional, open, conditions, flat }, opts.puddles)
+      : null;
   const puddle =
     pooled && shore
       ? (max(pooled, shore.wash) as unknown as Node<'float'>)
@@ -586,7 +604,7 @@ export const applySurfaceWetness = (
   if (normal && isFull && opts.ripples) {
     const standing = film.mul(flat) as Node<'float'>;
     const water = puddle ? (max(standing, puddle) as unknown as Node<'float'>) : standing;
-    const rippled = applyRipples(normal, water, conditions, opts.ripples);
+    const rippled = applyRipples(normal, water, conditions, open, opts.ripples);
     normal = rippled.normal;
     ripple = rippled.weight;
   }
@@ -640,6 +658,8 @@ type SnowContext = {
   geometryNormal: Node<'vec3'>;
   isFull: boolean;
   conditions: SurfaceConditionNodes;
+  /** The share of open sky above, or null for all (`opts.rainOcclusion`) */
+  open: Node<'float'> | null;
   opts: SurfaceSnowOpts;
 };
 
@@ -659,7 +679,9 @@ const coverWithSnow = (surface: WetSurfaceInput, ctx: SnowContext) => {
     normal: ctx.geometryNormal,
     up: ctx.up,
     height: height ?? (float(FLAT_HEIGHT) as unknown as Node<'float'>),
-    coverage: conditions.snowCoverage as unknown as Node<'float'>,
+    coverage: (ctx.open
+      ? conditions.snowCoverage.mul(ctx.open)
+      : conditions.snowCoverage) as unknown as Node<'float'>,
     maxSlope: toFloat(opts.maxSlope ?? defaults.snowMaxSlope).mul(DEG_TO_RAD) as Node<'float'>,
     noiseScale: toFloat(opts.noiseScale ?? defaults.snowNoiseScale),
     edge: toFloat(opts.edge ?? defaults.snowEdge),
@@ -814,6 +836,7 @@ const applyRipples = (
   normal: Node<'vec3'>,
   water: Node<'float'>,
   conditions: SurfaceConditionNodes,
+  open: Node<'float'> | null,
   opts: SurfaceRippleOpts
 ) => {
   const defaults = SURFACE_WETNESS_DEFAULTS;
@@ -822,7 +845,8 @@ const applyRipples = (
   const fade =
     opts.fade ?? (float(1).sub(smoothstep(from, to, viewDistance)) as unknown as Node<'float'>);
   const weight = water.mul(fade) as Node<'float'>;
-  const rain = conditions.rain as unknown as Node<'float'>;
+  // No rings under a roof: the rain there is the open sky's share of it
+  const rain = (open ? conditions.rain.mul(open) : conditions.rain) as unknown as Node<'float'>;
   const offset = sampleRainRipples({
     atlas: opts.atlas,
     position: opts.position ?? (positionWorld as unknown as Node<'vec3'>),
@@ -839,21 +863,27 @@ const applyRipples = (
   };
 };
 
+/** What {@link getPuddle} reads beside the surface */
+type PuddleContext = {
+  /** The regional wetness (with the shoreline's damp band and the meltwater), if any */
+  regional: Node<'float'> | undefined;
+  /** The share of open sky above, or null for all (`opts.rainOcclusion`) */
+  open: Node<'float'> | null;
+  conditions: SurfaceConditionNodes;
+  flat: Node<'float'>;
+};
+
 /**
- * The puddle mask (T3): the waterline (the puddle level, at least the regional wetness and the
- * shoreline's damp band, ×
- * `puddleResponse`, × the patches' share) over the relief, faded in over `edge`, on ground
- * flatter than `maxSlope` (full up to half of it)
+ * The puddle mask (T3): the waterline (the puddle level where the rain reaches, at least the
+ * regional wetness and the shoreline's damp band, × `puddleResponse`, × the patches' share) over
+ * the relief, faded in over `edge`, on ground flatter than `maxSlope` (full up to half of it)
  */
-const getPuddle = (
-  surface: WetSurfaceInput,
-  regional: Node<'float'> | undefined,
-  conditions: SurfaceConditionNodes,
-  flat: Node<'float'>,
-  opts: SurfacePuddleOpts
-) => {
+const getPuddle = (surface: WetSurfaceInput, ctx: PuddleContext, opts: SurfacePuddleOpts) => {
   const defaults = SURFACE_WETNESS_DEFAULTS;
-  const puddleLevel = conditions.puddleLevel as unknown as Node<'float'>;
+  const { regional, open, conditions, flat } = ctx;
+  const puddleLevel = (open
+    ? conditions.puddleLevel.mul(open)
+    : conditions.puddleLevel) as unknown as Node<'float'>;
   const level = (regional ? max(puddleLevel, regional) : puddleLevel) as Node<'float'>;
   const { puddleResponse } = surface.response;
   let waterline =

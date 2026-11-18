@@ -32,6 +32,7 @@ import {
   getRainOcclusionDebugState,
   getRainOcclusionNode,
   isRainOccluder,
+  isRainOcclusionEnabled,
   requestRainOcclusionUpdate,
   setRainOcclusionEnabled,
 } from './RainOcclusion';
@@ -104,6 +105,7 @@ describe('rain occlusion without the feature', () => {
   it('returns null from the node and throws from the setters, naming it', () => {
     expect(getRainOcclusionNode()).toBeNull();
     expect(getRainOcclusionDebugState()).toBeNull();
+    expect(isRainOcclusionEnabled()).toBeNull();
     expect(() => setRainOcclusionEnabled(false)).toThrow(/rainOcclusion\(\)/);
     expect(() => requestRainOcclusionUpdate()).toThrow(/rainOcclusion\(\)/);
   });
@@ -195,6 +197,7 @@ describe('rain occlusion with the feature', () => {
     frame();
     expect(renderer.renders).toHaveLength(count + 1);
     setRainOcclusionEnabled(false);
+    expect(isRainOcclusionEnabled()).toBe(false);
     for (let i = 0; i < 5; i++) frame();
     expect(renderer.renders).toHaveLength(count + 1);
     setRainOcclusionEnabled(true);

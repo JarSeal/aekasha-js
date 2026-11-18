@@ -53,6 +53,7 @@ const DEBUG_VIEWS = [
   'WETNESS',
 ] as const;
 const WET_QUALITIES = ['FULL', 'SIMPLE'] as const;
+const WET_RAIN_OCCLUSIONS = ['NORMAL_Y', 'MAP'] as const;
 
 /** The keys each object of the define takes (the schema's) */
 const OVERRIDE_KEYS = [
@@ -140,6 +141,7 @@ const WET_KEYS = [
   'shoreline',
   'snow',
   'frost',
+  'rainOcclusion',
 ];
 const WET_PUDDLE_KEYS = ['maxSlope', 'edge', 'patches'];
 const WET_RIPPLE_KEYS = ['scale', 'lifetime', 'strength', 'distance'];
@@ -322,6 +324,8 @@ export type TerrainWetDefine = {
   snow: TerrainSnowDefine | null;
   /** The frost, or null for none */
   frost: TerrainFrostDefine | null;
+  /** What keeps the rain off: the facing alone, or the rain occlusion map too */
+  rainOcclusion: (typeof WET_RAIN_OCCLUSIONS)[number];
 };
 
 /** The wet response's frost with its defaults filled in (p307 T11) */
@@ -475,6 +479,7 @@ export const TERRAIN_DEFINE_VALUES = {
   distanceKeys: DISTANCE_KEYS,
   wetKeys: WET_KEYS,
   wetQualities: WET_QUALITIES,
+  wetRainOcclusions: WET_RAIN_OCCLUSIONS,
   wetPuddleKeys: WET_PUDDLE_KEYS,
   wetPatchKeys: WET_PATCH_KEYS,
   wetRippleKeys: WET_RIPPLE_KEYS,
@@ -1296,6 +1301,7 @@ const readWet = (value: unknown, path: string): TerrainWetDefine | null => {
     shoreline: readShoreline(wet.shoreline, `${path}.shoreline`),
     snow: readSnow(wet.snow, `${path}.snow`),
     frost: readFrost(wet.frost, `${path}.frost`),
+    rainOcclusion: readEnum(wet, 'rainOcclusion', WET_RAIN_OCCLUSIONS, path),
   };
 };
 
