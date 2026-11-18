@@ -48,6 +48,14 @@ const MESH_FIELDS = {
     .boolean()
     .optional()
     .describe("three's own render-list culling (Object3D.frustumCulled). Default true."),
+  /** `Object3D.renderOrder`: within its pass (opaque, then transparent), meshes draw in ascending
+   * order, before three's own sort (eg. decals after the terrain). Default 0. */
+  renderOrder: z
+    .number()
+    .optional()
+    .describe(
+      'Object3D.renderOrder: within its pass, meshes draw in ascending order (eg. decals after the terrain). Default 0.'
+    ),
 };
 
 /** `MESH_FIELDS`' `keys`, in that order */
@@ -67,7 +75,7 @@ const KERNEL_MESH_PROPS_SHAPE = {
     .union([MaterialAssetSchema, z.string()])
     .describe("The material: its props, or a material's id."),
   ...pick('matOverrides', 'castShadow', 'receiveShadow', 'preWarm', ...TRANSFORM_FIELDS),
-  ...pick('appId', 'frustumCullingEnabled'),
+  ...pick('appId', 'frustumCullingEnabled', 'renderOrder'),
 };
 
 const PartialGeoProps = z.union(GeoPropsSchema.options.map((variant) => variant.partial()));
@@ -83,7 +91,7 @@ const KERNEL_MESH_OVERRIDES_SHAPE = {
    * material's `inputs` and `nodes` key by key too). */
   mat: z.union([PartialMatProps, z.string()]).optional(),
   ...pick('matOverrides', 'castShadow', 'receiveShadow', 'preWarm', ...TRANSFORM_FIELDS),
-  ...pick('frustumCullingEnabled'),
+  ...pick('frustumCullingEnabled', 'renderOrder'),
 };
 
 /**
@@ -102,7 +110,7 @@ export const createMeshAssetSchema = <const P extends readonly FeatureSchemaPart
         'mesh'
       ) as typeof KERNEL_MESH_PROPS_SHAPE & PartsShape
     )
-    .describe('The mesh: its geometry and material, shadows, transform and culling.');
+    .describe('The mesh: its geometry and material, shadows, transform, culling and render order.');
   const MeshOverridesSchema = z.object({
     ...(mergeFeatureSchemaShapes(
       KERNEL_MESH_OVERRIDES_SHAPE,

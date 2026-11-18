@@ -45,11 +45,14 @@
         "frustumCullingEnabled": {
           "$ref": "#/definitions/__schema158"
         },
-        "lod": {
+        "renderOrder": {
           "$ref": "#/definitions/__schema160"
         },
+        "lod": {
+          "$ref": "#/definitions/__schema162"
+        },
         "merge": {
-          "$ref": "#/definitions/__schema181"
+          "$ref": "#/definitions/__schema183"
         }
       },
       "required": [
@@ -57,34 +60,34 @@
         "mat"
       ],
       "additionalProperties": false,
-      "description": "The mesh: its geometry and material, shadows, transform and culling."
+      "description": "The mesh: its geometry and material, shadows, transform, culling and render order."
     },
     "entityOpts": {
       "type": "object",
       "properties": {
         "appId": {
-          "$ref": "#/definitions/__schema190"
-        },
-        "disabled": {
           "$ref": "#/definitions/__schema192"
         },
-        "persistent": {
+        "disabled": {
           "$ref": "#/definitions/__schema194"
         },
-        "doNotAddToScene": {
+        "persistent": {
           "$ref": "#/definitions/__schema196"
         },
-        "userData": {
+        "doNotAddToScene": {
           "$ref": "#/definitions/__schema198"
         },
-        "debugData": {
-          "$ref": "#/definitions/__schema199"
-        },
-        "spatialIndex": {
+        "userData": {
           "$ref": "#/definitions/__schema200"
         },
-        "ecsFrustumCullingEnabled": {
+        "debugData": {
+          "$ref": "#/definitions/__schema201"
+        },
+        "spatialIndex": {
           "$ref": "#/definitions/__schema202"
+        },
+        "ecsFrustumCullingEnabled": {
+          "$ref": "#/definitions/__schema204"
         }
       },
       "additionalProperties": false,
@@ -101,7 +104,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema204"
+          "$ref": "#/definitions/__schema206"
         }
       ]
     }
@@ -1703,24 +1706,35 @@
       "type": "boolean"
     },
     "__schema160": {
+      "description": "Object3D.renderOrder: within its pass, meshes draw in ascending order (eg. decals after the terrain). Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema161"
+        }
+      ]
+    },
+    "__schema161": {
+      "type": "number"
+    },
+    "__schema162": {
       "anyOf": [
         {
           "type": "object",
           "properties": {
             "levels": {
-              "$ref": "#/definitions/__schema161"
+              "$ref": "#/definitions/__schema163"
             },
             "cullScreenSize": {
-              "$ref": "#/definitions/__schema170"
-            },
-            "hysteresis": {
               "$ref": "#/definitions/__schema172"
             },
-            "bias": {
+            "hysteresis": {
               "$ref": "#/definitions/__schema174"
             },
-            "fadeSeconds": {
+            "bias": {
               "$ref": "#/definitions/__schema176"
+            },
+            "fadeSeconds": {
+              "$ref": "#/definitions/__schema178"
             }
           },
           "required": [
@@ -1733,22 +1747,22 @@
           "type": "object",
           "properties": {
             "auto": {
-              "$ref": "#/definitions/__schema178"
+              "$ref": "#/definitions/__schema180"
             },
             "maxPixelError": {
-              "$ref": "#/definitions/__schema179"
+              "$ref": "#/definitions/__schema181"
             },
             "cullScreenSize": {
-              "$ref": "#/definitions/__schema170"
-            },
-            "hysteresis": {
               "$ref": "#/definitions/__schema172"
             },
-            "bias": {
+            "hysteresis": {
               "$ref": "#/definitions/__schema174"
             },
-            "fadeSeconds": {
+            "bias": {
               "$ref": "#/definitions/__schema176"
+            },
+            "fadeSeconds": {
+              "$ref": "#/definitions/__schema178"
             }
           },
           "required": [
@@ -1764,28 +1778,28 @@
         }
       ]
     },
-    "__schema161": {
+    "__schema163": {
       "minItems": 1,
       "type": "array",
       "items": {
-        "$ref": "#/definitions/__schema162"
+        "$ref": "#/definitions/__schema164"
       },
       "description": "Level 0 (the finest) first, screenSize descending."
     },
-    "__schema162": {
+    "__schema164": {
       "type": "object",
       "properties": {
         "screenSize": {
-          "$ref": "#/definitions/__schema163"
+          "$ref": "#/definitions/__schema165"
         },
         "geo": {
-          "$ref": "#/definitions/__schema164"
-        },
-        "mat": {
           "$ref": "#/definitions/__schema166"
         },
-        "castShadow": {
+        "mat": {
           "$ref": "#/definitions/__schema168"
+        },
+        "castShadow": {
+          "$ref": "#/definitions/__schema170"
         }
       },
       "required": [
@@ -1794,25 +1808,13 @@
       "additionalProperties": false,
       "description": "A level of detail."
     },
-    "__schema163": {
+    "__schema165": {
       "type": "number",
       "minimum": 0,
       "description": "Smallest screen size (bounding-sphere diameter / viewport height) this level is used at. Coarser levels need smaller values. Moving to a coarser level waits for `hysteresis` below it."
     },
-    "__schema164": {
-      "description": "Registered geometry id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema165"
-        }
-      ]
-    },
-    "__schema165": {
-      "type": "string",
-      "minLength": 1
-    },
     "__schema166": {
-      "description": "Registered material id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
+      "description": "Registered geometry id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
       "allOf": [
         {
           "$ref": "#/definitions/__schema167"
@@ -1824,7 +1826,7 @@
       "minLength": 1
     },
     "__schema168": {
-      "description": "Omitted = the previous level's (level 0: the mesh's own).",
+      "description": "Registered material id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
       "allOf": [
         {
           "$ref": "#/definitions/__schema169"
@@ -1832,10 +1834,11 @@
       ]
     },
     "__schema169": {
-      "type": "boolean"
+      "type": "string",
+      "minLength": 1
     },
     "__schema170": {
-      "description": "Below this screen size the mesh is hidden (with hysteresis, like the levels). 0 = never hidden. Default 0.",
+      "description": "Omitted = the previous level's (level 0: the mesh's own).",
       "allOf": [
         {
           "$ref": "#/definitions/__schema171"
@@ -1843,11 +1846,10 @@
       ]
     },
     "__schema171": {
-      "type": "number",
-      "minimum": 0
+      "type": "boolean"
     },
     "__schema172": {
-      "description": "Moving to a coarser level (or hiding) waits until the screen size is this fraction below the threshold, so a mesh on a boundary does not flip every frame. Default 0.1.",
+      "description": "Below this screen size the mesh is hidden (with hysteresis, like the levels). 0 = never hidden. Default 0.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema173"
@@ -1856,11 +1858,10 @@
     },
     "__schema173": {
       "type": "number",
-      "minimum": 0,
-      "exclusiveMaximum": 1
+      "minimum": 0
     },
     "__schema174": {
-      "description": "Multiplies the screen size: >1 keeps detail longer. Default 1. The global bias (AppConfig.lod.bias, setLodBias) applies on top.",
+      "description": "Moving to a coarser level (or hiding) waits until the screen size is this fraction below the threshold, so a mesh on a boundary does not flip every frame. Default 0.1.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema175"
@@ -1869,10 +1870,11 @@
     },
     "__schema175": {
       "type": "number",
-      "exclusiveMinimum": 0
+      "minimum": 0,
+      "exclusiveMaximum": 1
     },
     "__schema176": {
-      "description": "How long a level change (or hiding and showing) cross-fades with a dither, in seconds; 0 switches at once and leaves the level materials undithered. Default AppConfig.lod.fadeSeconds (0.25, setLodFadeSeconds).",
+      "description": "Multiplies the screen size: >1 keeps detail longer. Default 1. The global bias (AppConfig.lod.bias, setLodBias) applies on top.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema177"
@@ -1881,25 +1883,37 @@
     },
     "__schema177": {
       "type": "number",
-      "minimum": 0
+      "exclusiveMinimum": 0
     },
     "__schema178": {
-      "type": "boolean",
-      "const": true
-    },
-    "__schema179": {
-      "description": "The largest simplification error, in pixels at a viewport height of 1080, a level may show. Smaller keeps detail longer. Default 1.",
+      "description": "How long a level change (or hiding and showing) cross-fades with a dither, in seconds; 0 switches at once and leaves the level materials undithered. Default AppConfig.lod.fadeSeconds (0.25, setLodFadeSeconds).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema180"
+          "$ref": "#/definitions/__schema179"
         }
       ]
     },
+    "__schema179": {
+      "type": "number",
+      "minimum": 0
+    },
     "__schema180": {
+      "type": "boolean",
+      "const": true
+    },
+    "__schema181": {
+      "description": "The largest simplification error, in pixels at a viewport height of 1080, a level may show. Smaller keeps detail longer. Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema182"
+        }
+      ]
+    },
+    "__schema182": {
       "type": "number",
       "exclusiveMinimum": 0
     },
-    "__schema181": {
+    "__schema183": {
       "anyOf": [
         {
           "type": "string",
@@ -1910,7 +1924,7 @@
           "description": "The merge group's id: made on first use (the scene's mergeGroups entry's settings).",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema182"
+              "$ref": "#/definitions/__schema184"
             }
           ]
         },
@@ -1918,19 +1932,19 @@
           "type": "object",
           "properties": {
             "group": {
-              "$ref": "#/definitions/__schema183"
-            },
-            "mode": {
               "$ref": "#/definitions/__schema185"
             },
-            "cellSize": {
-              "$ref": "#/definitions/__schema186"
-            },
-            "maxVertices": {
+            "mode": {
               "$ref": "#/definitions/__schema187"
             },
-            "palettes": {
+            "cellSize": {
               "$ref": "#/definitions/__schema188"
+            },
+            "maxVertices": {
+              "$ref": "#/definitions/__schema189"
+            },
+            "palettes": {
+              "$ref": "#/definitions/__schema190"
             }
           },
           "additionalProperties": false,
@@ -1938,30 +1952,30 @@
         }
       ]
     },
-    "__schema182": {
+    "__schema184": {
       "type": "string",
       "minLength": 1
     },
-    "__schema183": {
+    "__schema185": {
       "description": "The group's id, or AUTO (the default).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema184"
+          "$ref": "#/definitions/__schema186"
         }
       ]
     },
-    "__schema184": {
+    "__schema186": {
       "anyOf": [
         {
           "type": "string",
           "const": "AUTO"
         },
         {
-          "$ref": "#/definitions/__schema182"
+          "$ref": "#/definitions/__schema184"
         }
       ]
     },
-    "__schema185": {
+    "__schema187": {
       "type": "string",
       "enum": [
         "BAKED",
@@ -1969,41 +1983,30 @@
       ],
       "description": "How the group draws its members: BAKED (the default) merges them into one geometry, for static content; BATCHED draws them as instances of one BatchedMesh, each member's matrix written when it moves and each culled on its own, for moving members (bodies included)."
     },
-    "__schema186": {
+    "__schema188": {
       "type": "number",
       "exclusiveMinimum": 0,
       "description": "AUTO only: the side of the square x/z cells that bound an automatic group, in metres (default 32). In a streaming scene it divides the streaming cell size, or a group can span two streaming cells."
     },
-    "__schema187": {
+    "__schema189": {
       "type": "integer",
       "exclusiveMinimum": 0,
       "maximum": 9007199254740991,
       "description": "AUTO only: an automatic group's vertex cap (default 262144); a full one opens another in its cell."
     },
-    "__schema188": {
+    "__schema190": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/__schema189"
+        "$ref": "#/definitions/__schema191"
       },
       "description": "AUTO only: merge material palettes the scene lists (mergeMaterials) whose materials share an automatic group, drawn in one draw by the palette's merge material; the first that has a mesh's material wins. [] for none."
     },
-    "__schema189": {
+    "__schema191": {
       "type": "string",
       "minLength": 1
     },
-    "__schema190": {
-      "description": "The entity's app id, for getEntityIdByAppId. Default: a generated UUID.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema191"
-        }
-      ]
-    },
-    "__schema191": {
-      "type": "string"
-    },
     "__schema192": {
-      "description": "Creates the entity disabled.",
+      "description": "The entity's app id, for getEntityIdByAppId. Default: a generated UUID.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema193"
@@ -2011,10 +2014,10 @@
       ]
     },
     "__schema193": {
-      "type": "boolean"
+      "type": "string"
     },
     "__schema194": {
-      "description": "Keeps the entity on a scene switch. Read only by lines and a light's target entity so far.",
+      "description": "Creates the entity disabled.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema195"
@@ -2025,7 +2028,7 @@
       "type": "boolean"
     },
     "__schema196": {
-      "description": "Leaves the entity's object out of the root scene.",
+      "description": "Keeps the entity on a scene switch. Read only by lines and a light's target entity so far.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema197"
@@ -2036,32 +2039,32 @@
       "type": "boolean"
     },
     "__schema198": {
+      "description": "Leaves the entity's object out of the root scene.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema199"
+        }
+      ]
+    },
+    "__schema199": {
+      "type": "boolean"
+    },
+    "__schema200": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema79"
         }
       ]
     },
-    "__schema199": {
+    "__schema201": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema7"
         }
       ]
     },
-    "__schema200": {
-      "description": "false keeps a mesh or a point or spot light out of the spatial index.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema201"
-        }
-      ]
-    },
-    "__schema201": {
-      "type": "boolean"
-    },
     "__schema202": {
-      "description": "A mesh's TAG_FRUSTUM_CULLED follows the camera's frustum, for gameplay systems to read (not three's render culling).",
+      "description": "false keeps a mesh or a point or spot light out of the spatial index.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema203"
@@ -2072,6 +2075,17 @@
       "type": "boolean"
     },
     "__schema204": {
+      "description": "A mesh's TAG_FRUSTUM_CULLED follows the camera's frustum, for gameplay systems to read (not three's render culling).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema205"
+        }
+      ]
+    },
+    "__schema205": {
+      "type": "boolean"
+    },
+    "__schema206": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -2463,11 +2477,14 @@
             "frustumCullingEnabled": {
               "$ref": "#/definitions/__schema158"
             },
-            "lod": {
+            "renderOrder": {
               "$ref": "#/definitions/__schema160"
             },
+            "lod": {
+              "$ref": "#/definitions/__schema162"
+            },
             "merge": {
-              "$ref": "#/definitions/__schema181"
+              "$ref": "#/definitions/__schema183"
             },
             "__meta": {
               "allOf": [

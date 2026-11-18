@@ -114,6 +114,19 @@ describe('without the delegate drawing the entity (the plain path)', () => {
     expect(mesh.children).toEqual([]);
     expect(calls).toEqual([]);
   });
+
+  test("a level change and its fade copy keep the mesh's renderOrder", () => {
+    setLodMeshDrawDelegate(delegate);
+    const entityId = createMeshEntity({ geo: 'dlgBox', mat: 'dlgMat', lod: LOD, renderOrder: 10 });
+    stepAt(1);
+    stepAt(4);
+    const mesh = getMesh(entityId);
+    expect(mesh.geometry.userData.id).toBe('dlgBoxLow');
+    expect([mesh, ...mesh.children].map((object) => object.renderOrder)).toEqual([10, 10]);
+    stepAt(4, 6);
+    expect(mesh.renderOrder).toBe(10);
+    world.deleteEntity(entityId);
+  });
 });
 
 describe('with the delegate drawing the entity', () => {

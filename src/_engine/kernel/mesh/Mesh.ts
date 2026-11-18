@@ -70,6 +70,12 @@ export type MeshProps = {
   appId?: string;
   /** Native Object3D.frustumCulled (Three.js's own per-mesh render-list culling). Defaults to Three's own default (true). */
   frustumCullingEnabled?: boolean;
+  /**
+   * The mesh's `Object3D.renderOrder`: within its pass (opaque, then transparent), meshes draw in
+   * ascending order, before three's own sort. Default 0. Kept by its LOD's level swaps and fades.
+   * @remarks A `BATCHED` merge group draws at one place in the order: its members must share it.
+   */
+  renderOrder?: number;
   /** Levels of detail, or `AUTO` from the geometry's LOD chain, see {@link setMeshLod}. */
   lod?: MeshLodDef;
   /** Draws the mesh merged into a merge group (the `merging()` feature): a group's id, `'AUTO'`
@@ -328,6 +334,7 @@ export const addMeshEntity = (
   mesh.castShadow = props.castShadow ?? false;
   mesh.receiveShadow = props.receiveShadow ?? false;
   mesh.frustumCulled = props.frustumCullingEnabled ?? true;
+  mesh.renderOrder = props.renderOrder ?? 0;
   mesh.userData.id = appId;
 
   warnIfUnregistered(appId, geo, mat);
