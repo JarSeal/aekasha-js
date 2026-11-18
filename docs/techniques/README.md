@@ -37,7 +37,7 @@ The plan that implements a technique writes its page, in its last phase. Pages n
 | [`structure-materials.md`](structure-materials.md)               | Concrete and large structures: object or world space, triplanar, macro, wear layers, decals                      | Written (p305, p306)                           |
 | [`terrain-blocks-blender.md`](terrain-blocks-blender.md)         | The block workflow: grid, shaping, normals, custom props, export, import                                         | Written (p306)                                 |
 | [`terrain-procedural-meshes.md`](terrain-procedural-meshes.md)   | Engine-generated terrain: noise, rules to vertex splat, CPU AO, colliders                                        | Written (p306)                                 |
-| `wet-dry-surfaces.md`                                            | Wetness, puddles, rain ripples, drying, shoreline, snow coverage                                                 | Planned: p307                                  |
+| [`wet-dry-surfaces.md`](wet-dry-surfaces.md)                     | Wetness and drying, puddles, rain ripples, streaks, shoreline, snow and frost; the rain occlusion map            | Written (p307)                                 |
 | `terrain-scatter.md`                                             | GPU-instanced rocks and details from Blender and procedural masks                                                | Planned: p308                                  |
 | `terrain-decals.md`                                              | Mesh decals with an atlas, projected decals, procedural decals                                                   | Planned: p309                                  |
 | [`terrain-modular-kits.md`](terrain-modular-kits.md)             | Terrain from kit modules and tile-chunk worlds, merged per cell                                                  | Written (p372; array-material variation: p374) |
@@ -77,15 +77,15 @@ Every technique page has these sections, in this order. A section that doesn't a
 
 Every page states its cost in the same terms (p301 §6). Texture fetches per pixel ≈ `P × L × A × T + S + M + W`:
 
-| Term | Meaning                      | Values                                                                                  |
-| ---- | ---------------------------- | --------------------------------------------------------------------------------------- |
-| `P`  | Textures per layer (packing) | `FULL` 3, `LITE` 2, `MINIMAL` 1                                                         |
-| `L`  | Layers actually sampled      | All layers, or the top few with [sparse sampling](terrain-splat-map.md#sparse-sampling) |
-| `A`  | Anti-tiling taps             | None 1, dual-scale 2, hex 3                                                             |
-| `T`  | Projection                   | UV / world 1, biplanar 2, triplanar 3 (slope-gated: only on steep pixels)               |
-| `S`  | Splat fetches                | 0 for vertex colours and rules, 1 per 4 layers for splat maps                           |
-| `M`  | Macro variation              | 1                                                                                       |
-| `W`  | Wet effects                  | 0–2 (a ripple atlas)                                                                    |
+| Term | Meaning                      | Values                                                                                                                                                                                        |
+| ---- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `P`  | Textures per layer (packing) | `FULL` 3, `LITE` 2, `MINIMAL` 1                                                                                                                                                               |
+| `L`  | Layers actually sampled      | All layers, or the top few with [sparse sampling](terrain-splat-map.md#sparse-sampling)                                                                                                       |
+| `A`  | Anti-tiling taps             | None 1, dual-scale 2, hex 3                                                                                                                                                                   |
+| `T`  | Projection                   | UV / world 1, biplanar 2, triplanar 3 (slope-gated: only on steep pixels)                                                                                                                     |
+| `S`  | Splat fetches                | 0 for vertex colours and rules, 1 per 4 layers for splat maps                                                                                                                                 |
+| `M`  | Macro variation              | 1                                                                                                                                                                                             |
+| `W`  | Wet effects                  | 0 for the wetness alone; 1 for puddle patches, 1 for the rain occlusion map; gated by the weather: 2 ripples, 1–2 streaks, `P` snow ([Wet and dry surfaces](wet-dry-surfaces.md#performance)) |
 
 `LITE`, 4 layers, dual-scale anti-tiling, world UVs, a splat map and macro variation: 2·4·2·1 + 1 + 1 = **18**, a good default. `FULL`, 4 layers, hex, always triplanar: 3·4·3·3 + 2 = **110**: don't.
 
