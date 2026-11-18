@@ -3,10 +3,11 @@
 // relief the layers' blended height, its response their sets' `porosity`, `wetDarkening`,
 // `wetRoughness` and `dryingSpeed` by weight, its cavities the AO; its puddles (T3) by the sets'
 // `puddleResponse`, their patches one fetch of the macro texture at their own scale; its regional
-// wetness (T7) a vertex attribute or the first splat map's A. The conditions are the
+// wetness (T7) a vertex attribute or the first splat map's A; its rain ripples (T4) the input
+// `ripples`' atlas, faded out by the view distance. The conditions are the
 // `surfaceConditions()` feature's stable uniforms; without the feature the material builds dry,
 // warned once a page load.
-import { attribute, float, uniform } from 'three/tsl';
+import { attribute, float, smoothstep, uniform } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import { Vector2, type Node, type NodeMaterial, type TextureNode } from 'three/webgpu';
 import { lwarn } from 'aekasha';
@@ -16,6 +17,7 @@ import type { SurfaceSpace } from '../nodes/SurfaceSpace';
 import {
   applySurfaceWetness,
   type SurfacePuddleOpts,
+  type SurfaceRippleOpts,
   type SurfaceWetnessMasks,
 } from '../nodes/Wet';
 import type { ResolvedTerrainDefine, TerrainWetDefine } from './TerrainDefine';
@@ -27,7 +29,8 @@ let isMissingFeatureWarned = false;
 /**
  * The surface the wet response gets: the albedo, the roughness, the shaded normal in the
  * material's space, the AO (the material's `aoNode`, or null), what the layers' wet reads, the
- * macro texture (the puddle patches') and the first splat map's A (a regional wetness's)
+ * macro texture (the puddle patches'), the ripple atlas, the first splat map's A (a regional
+ * wetness's) and the view distance (the ripples' fade)
  * @internal
  */
 export type TerrainWetInput = {
@@ -37,7 +40,9 @@ export type TerrainWetInput = {
   ao: Node<'float'> | null;
   wet: LayerWet | null;
   macroTexture: TextureNode | null;
+  rippleTexture: TextureNode | null;
   splatAlpha: Node<'float'> | null;
+  viewDistance: Node<'float'>;
 };
 
 type Keep = <T>(name: string, node: unknown) => T;
@@ -67,6 +72,36 @@ const getPuddleOpts = (
     ...opts,
     patches: sampleMacroTexture(texture, scale, space.position).b as unknown as Node<'float'>,
     patchAmount: keep('wetPuddlePatchAmount', uniform(puddles.patches.amount)),
+  };
+};
+
+/**
+ * The ripples' options (uniforms `terrain_wetRippleScale`, `terrain_wetRippleLifetime`,
+ * `terrain_wetRippleStrength` and `terrain_wetRippleDistance`: faded out over its view distances),
+ * at the material's position, or undefined without
+ */
+const getRippleOpts = (
+  settings: TerrainWetDefine,
+  surface: TerrainWetInput,
+  space: SurfaceSpace,
+  keep: Keep
+): SurfaceRippleOpts | undefined => {
+  const { ripples } = settings;
+  if (!ripples) return undefined;
+  const distance = keep<Node<'vec2'>>(
+    'wetRippleDistance',
+    uniform(new Vector2(...ripples.distance))
+  );
+  return {
+    // The reader requires the ripples input with ripples (`takesRippleTexture`)
+    atlas: surface.rippleTexture as TextureNode,
+    position: space.position,
+    scale: keep('wetRippleScale', uniform(ripples.scale)),
+    lifetime: keep('wetRippleLifetime', uniform(ripples.lifetime)),
+    strength: keep('wetRippleStrength', uniform(ripples.strength)),
+    fade: float(1).sub(
+      smoothstep(distance.x, distance.y, surface.viewDistance)
+    ) as unknown as Node<'float'>,
   };
 };
 
@@ -111,6 +146,7 @@ export const applyTerrainWetness = (
   const { height, response, puddleResponse } = surface.wet;
   const regional = getRegional(settings, surface);
   const puddles = isFull ? getPuddleOpts(settings, surface, space, keep) : undefined;
+  const ripples = isFull ? getRippleOpts(settings, surface, space, keep) : undefined;
   const wet = applySurfaceWetness(
     {
       albedo: surface.albedo,
@@ -139,6 +175,7 @@ export const applyTerrainWetness = (
           }
         : {}),
       ...(puddles ? { puddles } : {}),
+      ...(ripples ? { ripples } : {}),
     }
   );
   return {

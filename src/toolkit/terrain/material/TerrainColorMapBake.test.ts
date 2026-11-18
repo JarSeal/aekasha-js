@@ -25,15 +25,24 @@ vi.mock('aekasha', async (importOriginal) => ({
 }));
 
 // The surface conditions' uniforms: the block's material is wet (p307), its bake isn't
-const surface = vi.hoisted(() => ({ wetness: null as unknown, puddleLevel: null as unknown }));
+const surface = vi.hoisted(() => ({
+  wetness: null as unknown,
+  puddleLevel: null as unknown,
+  rain: null as unknown,
+  time: null as unknown,
+}));
 vi.mock('aekasha/surface', async () => {
   const tsl = await import('three/tsl');
   surface.wetness = tsl.uniform(0.5);
   surface.puddleLevel = tsl.uniform(0.5);
+  surface.rain = tsl.uniform(0.5);
+  surface.time = tsl.uniform(0);
   return {
     getSurfaceConditionNodes: () => ({
       wetness: surface.wetness,
       puddleLevel: surface.puddleLevel,
+      rain: surface.rain,
+      time: surface.time,
     }),
   };
 });
@@ -141,6 +150,17 @@ describe('bakeTerrainColorMap', () => {
     const patches = { puddles: { patches: { scale: 30 } } };
     expect(await bakeWith({ layers: [{}], wet: patches })).toBe(false);
     expect(await bakeWith({ layers: [{}], macro: { scale: 90 }, wet: patches })).toBe(true);
+  });
+
+  it('drops the ripple atlas input with the wet response', async () => {
+    const material = new MeshStandardNodeMaterial();
+    const terrain = { layers: [{}], wet: { ripples: {} } };
+    setupTerrainMaterial({ layer0: makeBundle(), ripples: texture(new Texture()) }, material, {
+      terrain,
+    });
+    material.userData.terrainDefine = terrain;
+    const { mesh } = makeBlock();
+    await expect(bakeTerrainColorMap({ id: 'rippled', mesh, material })).resolves.toBeTruthy();
   });
 
   it("multiplies the material's AO in when asked", async () => {

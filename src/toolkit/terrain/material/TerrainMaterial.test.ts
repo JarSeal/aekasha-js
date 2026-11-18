@@ -1205,6 +1205,28 @@ describe('getTerrainMaterialProps', () => {
       texture: 'macroNoise',
     });
     expect(inputsOf({ wet: { puddles: {} } })).not.toHaveProperty('macro');
+    // p307's ripples: the ripple atlas, rippleTexture else rippleAtlas, a tier's too
+    const blend = rules({ layer: 1, height: { min: 4 } });
+    expect(inputsOf({ blend, wet: { ripples: {} } })).toHaveProperty('ripples', {
+      texture: 'rippleAtlas',
+    });
+    expect(
+      inputsOf({ blend, wet: { ripples: {} }, rippleTexture: 'rippleAtlas.data' })
+    ).toHaveProperty('ripples', { texture: 'rippleAtlas.data' });
+    expect(inputsOf({ blend, quality: { ULTRA: { wet: { ripples: {} } } } })).toHaveProperty(
+      'ripples',
+      { texture: 'rippleAtlas' }
+    );
+    expect(inputsOf({ blend, wet: {} })).not.toHaveProperty('ripples');
+    expect(
+      getTerrainMaterialProps({
+        id: 'ridge',
+        layers,
+        blend,
+        wet: { ripples: {} },
+        rippleTexture: 'x',
+      }).staticDefines
+    ).toEqual({ terrain: { layers: [{}, {}], blend, wet: { ripples: {} } } });
   });
 });
 
@@ -1448,6 +1470,60 @@ describe('setupTerrainMaterial: wet (p307)', () => {
     );
     expect(alpha).toBeTruthy();
     expect(reaches(material.colorNode, alpha)).toBe(true);
+  });
+
+  it('ripples where water stands while it rains: the ripples input, its uniforms, its budget', () => {
+    const atlas = texture(new Texture());
+    const material = build(
+      { layers: [{}], wet: { puddles: {}, ripples: { scale: 2, distance: [5, 20] } } },
+      { layer0: makeBundle(), ripples: atlas }
+    );
+    const uniforms = getUniforms(material);
+    expect(uniforms.terrain_wetRippleScale.value).toBe(2);
+    expect(uniforms.terrain_wetRippleLifetime.value).toBe(0.7);
+    expect(uniforms.terrain_wetRippleStrength.value).toBe(0.5);
+    expect(uniforms.terrain_wetRippleDistance.value).toEqual(new Vector2(5, 20));
+    // The roughness and the colour don't read the ripples; the normal adds their branch (a Fn
+    // call, Ripples.test.ts), which the mask's weight gates by the rain
+    const calls = (root: unknown) =>
+      collectNodesFrom([root]).filter((node) => (node as { shaderNode?: unknown }).shaderNode)
+        .length;
+    const unrippled = build({ layers: [{}], wet: { puddles: {} } });
+    expect(calls(material.normalNode)).toBe(calls(unrippled.normalNode) + 1);
+    expect(reaches(material.roughnessNode, conditions.rain)).toBe(false);
+    // The input: wanted with ripples, refused without, and counted in the budget
+    expect(() => build({ layers: [{}], wet: { ripples: {} } })).toThrow(/Missing input "ripples"/);
+    expect(() =>
+      build({ layers: [{}], wet: {} }, { layer0: makeBundle(), ripples: atlas })
+    ).toThrow(/Input "ripples" has no use/);
+    expect(() =>
+      build(
+        { layers: [{}], wet: {}, quality: { HIGH: { wet: { ripples: {} } } } },
+        { layer0: makeBundle(), ripples: atlas }
+      )
+    ).not.toThrow();
+    expect(() =>
+      build(
+        { layers: [{}], wet: { ripples: {} }, reservedTextures: 14 },
+        { layer0: makeBundle(), ripples: atlas }
+      )
+    ).toThrow(/ripple atlas: 1/);
+    expect(() => build({ layers: [{}], wet: { quality: 'SIMPLE', ripples: {} } })).toThrow(
+      /is for quality FULL/
+    );
+  });
+
+  it("counts the ripples' two taps in TAPS where they run", async () => {
+    expect(await loadTerrainDebugViewsAsync()).toBe(true);
+    const material = build(
+      { layers: [{}], wet: { ripples: {} }, debugView: 'TAPS' },
+      { layer0: makeBundle(), ripples: texture(new Texture()) }
+    );
+    expect(material.emissiveNode).toBeTruthy();
+    // The gated taps' share is the ripple mask: the rain × the standing water × the fade
+    expect(reaches(material.emissiveNode, conditions.rain)).toBe(true);
+    const dry = build({ layers: [{}], wet: {}, debugView: 'TAPS' });
+    expect(reaches(dry.emissiveNode, conditions.rain)).toBe(false);
   });
 
   it('shows the masks in the WETNESS view', async () => {

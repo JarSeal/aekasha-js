@@ -543,7 +543,8 @@ meshes](repo:docs/techniques/terrain-procedural-meshes.md).
   [`loadTerrainDebugViewsAsync`](api:loadTerrainDebugViewsAsync)): `TEXEL_DENSITY` (texels a metre
   in colour bands over a 1 m checker), `NORMALS`, `WEIGHTS` (each layer's false colour),
   `PROJECTION` (the planes' weights and the slope gate's band), `TAPS` (the texture fetches at the
-  pixel, heat-mapped), `LAYER_COUNT` (striped where sparse sampling drops a layer) and `WETNESS`
+  pixel, heat-mapped; the wet response's rain ripples count only where it rains on standing
+  water), `LAYER_COUNT` (striped where sparse sampling drops a layer) and `WETNESS`
   (the wet response's stages: red the pores filling, yellow under a film, the blue of a puddle
   over either; needs `wet`). Their code
   is a debug chunk, so a production build has none.

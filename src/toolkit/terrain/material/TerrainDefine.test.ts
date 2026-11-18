@@ -322,6 +322,18 @@ const ACCEPTED: unknown[] = [
     },
     wet: { regional: { splatChannel: 'A' } },
   },
+  // Its rain ripples (a SIMPLE tier's own wet without them)
+  { layers: [{}], wet: { ripples: {} } },
+  {
+    layers: [{}],
+    wet: { puddles: {}, ripples: { scale: 2, lifetime: 1, strength: 0, distance: [0, 5] } },
+  },
+  {
+    layers: [{}],
+    wet: { ripples: {} },
+    quality: { LOW: { wet: { quality: 'SIMPLE' } } },
+    qualityLevel: 'LOW',
+  },
 ];
 const REFUSED: unknown[] = [
   {},
@@ -656,6 +668,14 @@ const REFUSED: unknown[] = [
   { layers: [{}], wet: { puddles: { patches: {} } } },
   { layers: [{}], wet: { puddles: { patches: { scale: 0 } } } },
   { layers: [{}], wet: { puddles: { patches: { scale: 30, amount: 2 } } } },
+  // Its rain ripples: FULL only, their ranges and keys
+  { layers: [{}], wet: { quality: 'SIMPLE', ripples: {} } },
+  { layers: [{}], wet: { ripples: { scale: 0 } } },
+  { layers: [{}], wet: { ripples: { lifetime: -1 } } },
+  { layers: [{}], wet: { ripples: { strength: -0.5 } } },
+  { layers: [{}], wet: { ripples: { distance: [30, 10] } } },
+  { layers: [{}], wet: { ripples: { distance: [10] } } },
+  { layers: [{}], wet: { ripples: { density: 1 } } },
   // Its regional wetness: an attribute's name, or the first splat map's A where it weighs no layer
   { layers: [{}], wet: { regional: { attribute: '' } } },
   { layers: [{}], wet: { regional: { splatChannel: 'R' } } },
@@ -705,6 +725,7 @@ describe('readTerrainDefine', () => {
       reservedTextures: 6,
       macro: null,
       takesMacroTexture: false,
+      takesRippleTexture: false,
       distanceFade: null,
       far: null,
       colorMap: null,
@@ -720,6 +741,13 @@ describe('readTerrainDefine', () => {
       shelter: [60, 120],
       puddles: null,
       regional: null,
+      ripples: null,
+    });
+    expect(read({ layers: [{}], wet: { ripples: {} } }).wet?.ripples).toEqual({
+      scale: 1.5,
+      lifetime: 0.7,
+      strength: 0.5,
+      distance: [10, 30],
     });
     expect(read({ layers: [{}], wet: { puddles: {}, regional: {} } }).wet).toMatchObject({
       puddles: { maxSlope: 15, edge: 0.05, patches: null },
@@ -843,6 +871,14 @@ describe('readTerrainDefine', () => {
     expect(read({ layers: [{}], quality: { HIGH: { wet: patches } } }).takesMacroTexture).toBe(
       true
     );
+  });
+
+  it("takes the ripples input with ripples, a tier's included", () => {
+    expect(read({ layers: [{}], wet: {} }).takesRippleTexture).toBe(false);
+    expect(read({ layers: [{}], wet: { ripples: {} } }).takesRippleTexture).toBe(true);
+    const tiered = { layers: [{}], wet: {}, quality: { ULTRA: { wet: { ripples: {} } } } };
+    expect(read(tiered).takesRippleTexture).toBe(true);
+    expect(read({ ...tiered, qualityLevel: 'ULTRA' }).wet?.ripples).toBeTruthy();
   });
 
   it("gives a layer its own anti-tiling, else the material's (its tier's)", () => {
@@ -1014,6 +1050,9 @@ describe('readTerrainDefine', () => {
     expect(values.wetPuddleKeys.sort()).toEqual(Object.keys(puddles.shape).sort());
     expect(values.wetPatchKeys.sort()).toEqual(
       Object.keys(puddles.shape.patches.unwrap().shape).sort()
+    );
+    expect(values.wetRippleKeys.sort()).toEqual(
+      Object.keys(wet.unwrap().shape.ripples.unwrap().shape).sort()
     );
     const [byAttribute, bySplat] = wet.unwrap().shape.regional.unwrap().options;
     expect(Object.keys(byAttribute.shape)).toEqual(['attribute']);

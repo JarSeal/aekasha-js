@@ -903,6 +903,47 @@ const TerrainPuddlesSchema = z
   );
 
 /**
+ * The rain ripples (p307 T4): rings where water stands while it rains, a ripple atlas sampled
+ * twice in a dynamic branch on the rain.
+ */
+const TerrainRipplesSchema = z
+  .object({
+    /** The metres one ripple atlas tile covers, over 0 (default 1.5: 16 drops in 1.5 m). */
+    scale: z
+      .number()
+      .gt(0)
+      .optional()
+      .describe('The metres one ripple atlas tile covers, over 0 (default 1.5).'),
+    /** The seconds a ring lives, over 0 (default 0.7). */
+    lifetime: z
+      .number()
+      .gt(0)
+      .optional()
+      .describe('The seconds a ring lives, over 0 (default 0.7).'),
+    /** How far the rings tilt the normal, 0 or more (default 0.5). */
+    strength: z
+      .number()
+      .min(0)
+      .optional()
+      .describe('How far the rings tilt the normal, 0 or more (default 0.5).'),
+    /**
+     * The view distances over which the ripples fade out, `[from, to]` metres (default
+     * `[10, 30]`): none sampled past `to` (the atlas is close-up detail).
+     */
+    distance: z
+      .tuple([z.number().min(0), z.number().min(0)])
+      .refine(([from, to]) => from < to, 'the first value under the second')
+      .optional()
+      .describe(
+        'The view distances over which the ripples fade out, [from, to] metres (default [10, 30]): none sampled past to.'
+      ),
+  })
+  .strict()
+  .describe(
+    "Rain ripples (p307 T4): rings where water stands (the puddles, a film on the flat) while the surface conditions' rain is over 0, two fetches of a ripple atlas (the code route's rippleTexture, default rippleAtlas; the JSON route's input ripples) in a dynamic branch. FULL only."
+  );
+
+/**
  * The regional wetness (p307 T7): an authored wetness, 0..1, the least the surface shows and the
  * least puddle level, in any weather: a float vertex attribute (default `_wetness`, glTF's
  * `_WETNESS`), or the first splat map's A.
@@ -992,6 +1033,8 @@ const TerrainWetSchema = z
     puddles: TerrainPuddlesSchema.optional(),
     /** The regional wetness's source; default none. */
     regional: TerrainWetRegionalSchema.optional(),
+    /** The rain ripples (`FULL` only); default none. */
+    ripples: TerrainRipplesSchema.optional(),
   })
   .strict()
   .superRefine((wet, ctx) => {
@@ -1000,6 +1043,13 @@ const TerrainWetSchema = z
         code: 'custom',
         path: ['puddles'],
         message: 'is for quality FULL: SIMPLE reads no relief to fill.',
+      });
+    }
+    if (wet.quality === 'SIMPLE' && wet.ripples) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ripples'],
+        message: 'is for quality FULL: SIMPLE leaves the normal alone.',
       });
     }
   })
@@ -1773,6 +1823,7 @@ const checkTextureIds = (
     splatMaps?: string[];
     macro?: unknown;
     noiseTexture?: string;
+    rippleTexture?: string;
     wet?: TerrainWet;
     quality?: Partial<Record<string, { blend?: TerrainBlend; wet?: TerrainWet } | undefined>>;
   },
@@ -1801,6 +1852,10 @@ const checkTextureIds = (
       'noiseTexture',
       "is macro.texture's with a macro: the rules' noise and the puddle patches read it."
     );
+  }
+  const wets = [value.wet, ...Object.values(value.quality ?? {}).map((tier) => tier?.wet)];
+  if (value.rippleTexture !== undefined && !wets.some((wet) => wet?.ripples)) {
+    issue('rippleTexture', "is for rain ripples (wet.ripples, the material's or a tier's).");
   }
 };
 
@@ -1914,6 +1969,18 @@ export const TerrainMaterialConfigSchema = z
       .optional()
       .describe(
         "The macro noise texture the rules' noise and the puddle patches read, without a macro (whose texture they read otherwise; default macroNoise)."
+      ),
+    /**
+     * The ripple atlas the rain ripples read (the input `ripples`), for a material with
+     * `wet.ripples` (its own or a tier's; default `rippleAtlas`, the toolkit's, or a bake's
+     * `rippleAtlas.data`).
+     */
+    rippleTexture: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "The ripple atlas the rain ripples read, for a material with wet.ripples (default rippleAtlas, or a bake's rippleAtlas.data)."
       ),
     /**
      * How the layers' textures bind (default `AUTO`: `SEPARATE` while it fits the texture budget

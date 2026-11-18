@@ -68,6 +68,13 @@ describe('TerrainMaterialConfigSchema', () => {
     ]);
   });
 
+  it('takes a rippleTexture only with ripples, its own or a tier', () => {
+    expect(issuesOf(configOf(1, { wet: { ripples: {} }, rippleTexture: 'r' }))).toEqual([]);
+    const tier = { quality: { HIGH: { wet: { ripples: {} } } }, rippleTexture: 'r' };
+    expect(issuesOf(configOf(1, tier))).toEqual([]);
+    expect(issuesOf(configOf(1, { wet: {}, rippleTexture: 'r' }))).toEqual(['rippleTexture']);
+  });
+
   it('refuses SEPARATE storage where the layers sample in slots, its own or a tier', () => {
     const painted = { blend: { source: 'VERTEX_COLOR' } };
     const sparse = { sparse: { maxLayers: 2 } };

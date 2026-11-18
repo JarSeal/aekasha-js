@@ -38,6 +38,10 @@ const getSplatInputKey = (index: number) => `splat${index}`;
 const MACRO_INPUT_KEY = 'macro';
 /** The colour map's input key */
 const COLOR_MAP_INPUT_KEY = 'colorMap';
+/** The input the rain ripples' atlas comes in (p307 T4) */
+const RIPPLES_INPUT_KEY = 'ripples';
+/** The ripple atlas the code route's ripples read without a `rippleTexture` */
+const DEFAULT_RIPPLE_TEXTURE = 'rippleAtlas';
 /** The texture the code route's rule noise reads without a `macro` or a `noiseTexture` */
 const DEFAULT_NOISE_TEXTURE = 'macroNoise';
 /** The layers' set array's input key (`ARRAY` storage) */
@@ -290,6 +294,30 @@ export const readMacroTexture = (
 };
 
 /**
+ * The ripple atlas's node when the define's wet response has rain ripples, else null. The input
+ * is refused where nothing in the define (its tiers included) takes it.
+ * @internal
+ */
+export const readRippleTexture = (
+  inputs: Record<string, unknown>,
+  define: ResolvedTerrainDefine
+): TextureNode | null => {
+  const input = inputs[RIPPLES_INPUT_KEY];
+  if (!define.takesRippleTexture && input !== undefined) {
+    throw new Error(
+      `[terrain] Input "${RIPPLES_INPUT_KEY}" has no use: give staticDefines.terrain.wet.ripples to use it.`
+    );
+  }
+  if (!define.wet?.ripples) return null;
+  if (!isTextureNode(input)) {
+    throw new Error(
+      `[terrain] Missing input "${RIPPLES_INPUT_KEY}": the ripple atlas ({ "texture": id }, eg. rippleAtlas) that staticDefines.terrain.wet.ripples reads.`
+    );
+  }
+  return input;
+};
+
+/**
  * The colour map's texture node when the define has a colour map, else null; the input is refused
  * without one.
  * @internal
@@ -375,8 +403,20 @@ const getMacroTextureId = (config: TerrainMaterialConfig) => {
 };
 
 /**
+ * The code route's ripple atlas id: `rippleTexture` (default `rippleAtlas`) when the material's or
+ * a tier's wet response has ripples; undefined for none
+ */
+const getRippleTextureId = (config: TerrainMaterialConfig) => {
+  const tiers = Object.values(config.quality ?? {});
+  const hasRipples = [config.wet, ...tiers.map((tier) => tier?.wet)].some(
+    (wet) => wet?.ripples !== undefined
+  );
+  return hasRipples ? config.rippleTexture ?? DEFAULT_RIPPLE_TEXTURE : undefined;
+};
+
+/**
  * The config's static define: no id, no packing, no layer sets, no storage, no splat maps and no
- * macro, noise or colour map texture (the inputs carry them)
+ * macro, noise, ripple or colour map texture (the inputs carry them)
  * @internal
  */
 export const getTerrainDefine = (config: TerrainMaterialConfig): TerrainMaterialDefine => {
@@ -385,6 +425,7 @@ export const getTerrainDefine = (config: TerrainMaterialConfig): TerrainMaterial
     packing: _packing,
     splatMaps: _splatMaps,
     noiseTexture: _noiseTexture,
+    rippleTexture: _rippleTexture,
     storage: _storage,
     layers,
     macro,
@@ -419,7 +460,7 @@ const takesSlots = (define: TerrainMaterialDefine) =>
 /**
  * The code route's storage: `AUTO` (the default) is `ARRAY` where the layers sample in slots (the
  * material's fields or a tier's), else `SEPARATE` while each layer's packing slots, the splat maps,
- * the macro texture and the colour map fit the budget (a set no data has counts as fitting: its input throws
+ * the macro texture, the ripple atlas and the colour map fit the budget (a set no data has counts as fitting: its input throws
  * then)
  */
 const getStorage = (config: TerrainMaterialConfig, define: TerrainMaterialDefine) => {
@@ -435,6 +476,7 @@ const getStorage = (config: TerrainMaterialConfig, define: TerrainMaterialDefine
   const extra =
     (config.splatMaps?.length ?? 0) +
     (getMacroTextureId(config) ? 1 : 0) +
+    (getRippleTextureId(config) ? 1 : 0) +
     (config.colorMap ? 1 : 0);
   return chooseTerrainStorage(
     layerSlots,
@@ -480,7 +522,8 @@ const getArrayInputs = (config: TerrainMaterialConfig) => {
  * The code route's inputs: the layers' sets (`SEPARATE`: `layer<i>`, `{ textureSet, packing? }`
  * each; `ARRAY`: `layers`, `{ textureSetArray, packing }`, a procedural set's or a live layer
  * keeping its own `layer<i>`; `AUTO` choosing), the splat maps (`splat<i>`), the macro texture
- * (`macro`: the macro variation's, or the rules' noise texture) and the colour map (`colorMap`)
+ * (`macro`: the macro variation's, or the rules' and puddle patches' noise texture), the ripple
+ * atlas (`ripples`) and the colour map (`colorMap`)
  * @internal
  * @param define the config's static define (`getTerrainDefine`'s): `AUTO` reads its slots
  */
@@ -496,6 +539,8 @@ export const getTerrainInputs = (config: TerrainMaterialConfig, define: TerrainM
   });
   const macroTexture = getMacroTextureId(config);
   if (macroTexture) inputs[MACRO_INPUT_KEY] = { texture: macroTexture };
+  const rippleTexture = getRippleTextureId(config);
+  if (rippleTexture) inputs[RIPPLES_INPUT_KEY] = { texture: rippleTexture };
   if (config.colorMap) inputs[COLOR_MAP_INPUT_KEY] = { texture: config.colorMap.texture };
   return inputs;
 };

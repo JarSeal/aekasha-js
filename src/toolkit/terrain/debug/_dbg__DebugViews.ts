@@ -230,6 +230,9 @@ const buildProjection = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
   return mix(color, vec3(1), band.mul(stripes).mul(BAND_LIGHTEN)) as unknown as Node<'vec3'>;
 };
 
+/** The rain ripples' taps (p307 T4): two samples of the atlas */
+const RIPPLE_TAPS = 2;
+
 /** The anti-tiling modes' taps (p305 D3) */
 const ANTI_TILING_TAPS = { NONE: 1, DUAL_SCALE: 2, HEX: 3 } as const;
 
@@ -268,7 +271,7 @@ const getMaterialFetches = ({ define }: TerrainDebugViewContext) => {
  * The material's own texture fetches at a pixel, as `TAPS` counts them: those every pixel makes
  * (each sampled layer's or slot's taps, its packing slots × its anti-tiling's taps × its planes;
  * the splat maps, the macro, the rules' noise, the colour map, the puddle patches), each slope gate's branch's, made where its
- * share is over 0 (a slot's: the kept layer's gate).
+ * share is over 0 (a slot's: the kept layer's gate), and the rain ripples' two where they run.
  * @internal
  */
 export const estimateTerrainFetches = (ctx: TerrainDebugViewContext) => {
@@ -280,6 +283,10 @@ export const estimateTerrainFetches = (ctx: TerrainDebugViewContext) => {
     always += fetches.always;
     const share = getGateShare(sampled);
     if (share && fetches.gated) gated.push({ share, fetches: fetches.gated });
+  }
+  // p307's rain ripples: the atlas's two taps where they run (rain and standing water)
+  if (ctx.define.wet?.ripples && ctx.wet) {
+    gated.push({ share: ctx.wet.ripple, fetches: RIPPLE_TAPS });
   }
   return { always, gated, material };
 };
@@ -304,7 +311,7 @@ const TAP_COLORS = [
  * `TAPS`: the material's own texture fetches at the pixel (p301 §6's estimate made visible): every
  * sampled layer's or slot's taps (its packing slots × its anti-tiling's taps × its planes), its
  * slope gate's branch's where the share is over 0, the splat maps, the macro, the rules' noise,
- * the colour map and the puddle patches; past a far mode's band, those last alone (the far surface samples no layer). In
+ * the colour map, the puddle patches, and the rain ripples' two where it rains on standing water; past a far mode's band, those last alone (the far surface samples no layer). In
  * bands (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more magenta)
  * over the faint 1 m checker. A layer at its own index is sampled whatever its weight; sparse
  * sampling samples its slots alone.

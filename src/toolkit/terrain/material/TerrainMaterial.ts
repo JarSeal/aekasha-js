@@ -42,6 +42,7 @@ import {
   readLayerSources,
   readColorMapTexture,
   readMacroTexture,
+  readRippleTexture,
   readSplatMaps,
   type LayerParams,
 } from './TerrainInputs';
@@ -128,13 +129,13 @@ const createDistanceUniforms = (material: NodeMaterial, define: ResolvedTerrainD
 const getBindings = (
   layerBindings: TerrainBinding[],
   splatMaps: TextureNode[],
-  hasMacro: boolean,
-  hasColorMap: boolean
+  extra: { hasMacro: boolean; hasRipples: boolean; hasColorMap: boolean }
 ): TerrainBinding[] => [
   ...layerBindings,
   ...(splatMaps.length ? [{ name: 'splat maps', count: splatMaps.length }] : []),
-  ...(hasMacro ? [{ name: 'macro', count: 1 }] : []),
-  ...(hasColorMap ? [{ name: 'colour map', count: 1 }] : []),
+  ...(extra.hasMacro ? [{ name: 'macro', count: 1 }] : []),
+  ...(extra.hasRipples ? [{ name: 'ripple atlas', count: 1 }] : []),
+  ...(extra.hasColorMap ? [{ name: 'colour map', count: 1 }] : []),
 ];
 
 /**
@@ -260,7 +261,8 @@ const getAoNode = (
  * set's `porosity`, `wetDarkening` and `wetRoughness`, blended by weight; with `wet.puddles` water
  * stands where the puddle level × the sets' `puddleResponse` is over the blended relief on flat
  * ground (its patches one fetch of the input `macro`), and `wet.regional` (a vertex attribute or
- * the first splat map's A) keeps its places wet. With `space: 'OBJECT'` all of it is in the mesh's own space (its
+ * the first splat map's A) keeps its places wet; with `wet.ripples` rain rings ripple where water
+ * stands, two fetches of the input `ripples` (a ripple atlas) in a branch on the rain. With `space: 'OBJECT'` all of it is in the mesh's own space (its
  * position × scale, its normal: coordinates, projections, rules, macro), the shaded normal turned
  * into world space before the view; `WORLD` (default) the world's. A live layer (`source:
  * 'PROCEDURAL_LIVE'`) runs its procedural set's generator in place of sampling (its whole graph at
@@ -284,13 +286,16 @@ const getAoNode = (
  * `detailDistance`, `terrain_distanceFade` with `distance`, `terrain_farBlend` with a far mode, and
  * `terrain_wetShelter` with `wet` (`terrain_wetHeightInfluence` and `terrain_wetCavityInfluence`
  * with its `FULL` quality; `terrain_wetPuddleMaxSlope` and `terrain_wetPuddleEdge` with its
- * puddles, `terrain_wetPuddlePatchScale` and `terrain_wetPuddlePatchAmount` with their patches).
+ * puddles, `terrain_wetPuddlePatchScale` and `terrain_wetPuddlePatchAmount` with their patches,
+ * `terrain_wetRippleScale`, `terrain_wetRippleLifetime`, `terrain_wetRippleStrength` and
+ * `terrain_wetRippleDistance` with its ripples).
  * A `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug env, once
  * {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the view. The
  * define as given is kept at `material.userData.terrainDefine`.
  * @param inputs the material's inputs: `layer<i>` bundles or the `layers` set array bundle (the
  * `textureSets()` feature's resolvers), with the splat map sources the splat maps `splat<i>` and
- * with `macro`, a rule's noise or puddle patches the macro texture `macro`, with `colorMap` the colour map
+ * with `macro`, a rule's noise or puddle patches the macro texture `macro`, with ripples the ripple
+ * atlas `ripples`, with `colorMap` the colour map
  * `colorMap` (texture nodes: `{ "texture": id }`)
  * @param material the node material being built (a `STANDARDNODEMATERIAL`)
  * @param staticDefines the material's static defines, `terrain` among them
@@ -351,8 +356,13 @@ export const buildTerrainGraph = (
   const splatMaps = readSplatMaps(inputs, define);
   const macroTexture = readMacroTexture(inputs, define);
   const colorMapTexture = readColorMapTexture(inputs, define);
+  const rippleTexture = readRippleTexture(inputs, define);
   checkTextureBudget(
-    getBindings(sources.bindings, splatMaps, macroTexture !== null, colorMapTexture !== null),
+    getBindings(sources.bindings, splatMaps, {
+      hasMacro: macroTexture !== null,
+      hasRipples: rippleTexture !== null,
+      hasColorMap: colorMapTexture !== null,
+    }),
     define.reservedTextures,
     sources.isArray
   );
@@ -475,7 +485,9 @@ export const buildTerrainGraph = (
       ao,
       wet: surface.wet,
       macroTexture,
+      rippleTexture,
       splatAlpha: raw?.splatAlpha ?? null,
+      viewDistance,
     },
     space
   );

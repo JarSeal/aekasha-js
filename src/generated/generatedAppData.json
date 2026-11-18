@@ -20921,6 +20921,30 @@
           "__codec": "uastc"
         },
         {
+          "id": "rippleAtlas",
+          "fileName": "./source/rippleAtlas.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "debugData": {
+            "name": "Rain ripple atlas (shared, tileable)",
+            "description": "4 × 4 rain drops for a wet surface's rings: RG the direction away from the texel's drop (× 0.5 + 0.5), B 1 at the drop falling to 0 at the ring's largest radius, A the cell's time offset. Decoded by the toolkit's decodeRippleAtlas(). Linear data, UASTC without RDO. The toolkit's bakeRippleAtlas() with its defaults (256², 4 cells, seed 0), exported on WebGPU from the noiseLibrary scene's tab (exportBakedTexture, p304 D4-D5): the same texture without a bake at load."
+          },
+          "__fileSize": 42233,
+          "__sourceUrl": "/toolkit/textures/rippleAtlas/source/rippleAtlas.png",
+          "__url": "/aek-assets/toolkit/textures/rippleAtlas/source/rippleAtlas.5c747ea3.ktx2",
+          "__bytes": {
+            "in": 42233,
+            "out": 34899
+          },
+          "__vramBytes": {
+            "in": 349524,
+            "out": 87408
+          },
+          "__codec": "uastc"
+        },
+        {
           "id": "sand01_albedoRough",
           "texOpts": {
             "wrapS": 1000,

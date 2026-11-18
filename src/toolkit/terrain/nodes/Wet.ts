@@ -7,13 +7,25 @@
 // fills its pores before any film, a dense one gets the film at once; one that sheds water (grass,
 // a cliff face) gets little film or none. Puddles (T3) stand where the puddle level's waterline
 // is over the relief, on the flat, filling some patches first; an authored regional wetness (T7)
-// keeps its places wet in any weather. Every number of the response is a node: a terrain
-// material's are its layers' set uniforms blended by weight, an app material's its own. No
-// texture fetch (the patches are the caller's sample).
-import { cos, float, max, mix, normalWorldGeometry, smoothstep, vec2 } from 'three/tsl';
+// keeps its places wet in any weather; while it rains, rings ripple where water stands (T4). Every
+// number of the response is a node: a terrain material's are its layers' set uniforms blended by
+// weight, an app material's its own. The ripples' two fetches are the only ones, in a branch on
+// the rain (`Ripples.ts`; the patches are the caller's sample).
+import {
+  cos,
+  float,
+  max,
+  mix,
+  normalWorldGeometry,
+  positionView,
+  positionWorld,
+  smoothstep,
+  vec2,
+} from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
-import type { Node } from 'three/webgpu';
+import type { Node, TextureNode } from 'three/webgpu';
 import type { SurfaceConditionNodes } from 'aekasha/surface';
+import { sampleRainRipples } from './Ripples';
 
 /**
  * The roughness of a water film (and of water's surface), which a soaked surface falls to.
@@ -59,6 +71,10 @@ export const SURFACE_WETNESS_DEFAULTS = {
   puddleMaxSlope: 15,
   puddleEdge: 0.05,
   puddlePatchAmount: 0.75,
+  rippleScale: 1.5,
+  rippleLifetime: 0.7,
+  rippleStrength: 0.5,
+  rippleDistance: [10, 30],
 } as const satisfies Record<string, number | readonly [number, number]>;
 
 /** A number as a constant node, or the node given */
@@ -154,6 +170,34 @@ export type ApplySurfaceWetnessOpts = {
    * Left out: none.
    */
   puddles?: SurfacePuddleOpts;
+  /**
+   * Rain ripples (`'FULL'` only, with the shaded `normal`): rings where water stands (the puddles,
+   * and a film on ground flatter than the puddles' `maxSlope`) while the conditions' `rain` is over
+   * 0, the atlas sampled twice in a dynamic branch. Left out: none.
+   */
+  ripples?: SurfaceRippleOpts;
+};
+
+/** {@link ApplySurfaceWetnessOpts}' rain ripples. */
+export type SurfaceRippleOpts = {
+  /** A ripple atlas's texture node: `bakeRippleAtlas`'s, or the toolkit's `rippleAtlas`. */
+  atlas: TextureNode;
+  /**
+   * The surface's position, its XZ the atlas's tiling (in the shaded normal's space; default the
+   * world's).
+   */
+  position?: Node<'vec3'>;
+  /** The metres one atlas tile covers, over 0 (default 1.5: 16 drops in 1.5 m). */
+  scale?: Node<'float'> | number;
+  /** The seconds a ring lives, over 0 (default 0.7). */
+  lifetime?: Node<'float'> | number;
+  /** How far the rings tilt the normal (default 0.5). */
+  strength?: Node<'float'> | number;
+  /**
+   * The ripples' share at the pixel, 0..1 (eg. a distance fade: the atlas is close-up detail, and
+   * 0 samples nothing). Default: full to 10 m from the camera, none past 30 m.
+   */
+  fade?: Node<'float'>;
 };
 
 /** {@link ApplySurfaceWetnessOpts}' puddles. */
@@ -190,6 +234,11 @@ export type SurfaceWetnessMasks = {
   film: Node<'float'>;
   /** The puddle: how far water stands over the surface (0 without `opts.puddles`). */
   puddle: Node<'float'>;
+  /**
+   * The ripples' weight: standing water × the fade × the rain (0 without `opts.ripples`); where
+   * it's over 0, the atlas is sampled.
+   */
+  ripple: Node<'float'>;
 };
 
 /** The wet surface: the albedo, the roughness, the normal (when given) and the masks. */
@@ -212,8 +261,10 @@ export type WetSurface = {
  * its local wetness. With `opts.puddles` (T3), water stands where the conditions' `puddleLevel` ×
  * `puddleResponse` (× the patches' share) is over the relief on flat ground: soaked, a little
  * darker, water's roughness (`PUDDLE_ROUGHNESS`, 0.02) and the geometry's normal. A `regional`
- * wetness (T7) is the least wetness and puddle level shown. Builds no texture fetch and no branch;
- * at wetness and puddle level 0 without a regional wetness the surface is as given.
+ * wetness (T7) is the least wetness and puddle level shown. With `opts.ripples` (T4), rain rings
+ * tilt the normal where water stands, the atlas's two fetches in a dynamic branch on the rain;
+ * nothing else fetches or branches. At wetness, puddle level and rain 0 without a regional
+ * wetness the surface is as given.
  * @param surface the dry surface, its relief, cavity, regional wetness and response
  * @param conditions the surface conditions' uniforms (`getSurfaceConditionNodes()`)
  * @returns the wet surface and its masks
@@ -291,7 +342,8 @@ export const applySurfaceWetness = (
       : filmStage.mul(toFloat(puddleResponse))
   ) as Node<'float'>;
   // T3: a puddle soaks what's beneath it (its pores and film full)
-  const puddle = isFull && opts.puddles ? getPuddle(surface, conditions, up, opts.puddles) : null;
+  const flat = getFlatGate(up, opts.puddles?.maxSlope);
+  const puddle = isFull && opts.puddles ? getPuddle(surface, conditions, flat, opts.puddles) : null;
   const soaked = puddle ? (max(pores, puddle) as unknown as Node<'float'>) : pores;
   const filmed = puddle ? (max(film, puddle) as unknown as Node<'float'>) : film;
   let albedo = surface.albedo.mul(float(1).sub(darkening.mul(soaked))) as Node<'vec3'>;
@@ -305,7 +357,7 @@ export const applySurfaceWetness = (
   const geometryNormal = opts.geometryNormal ?? (normalWorldGeometry as unknown as Node<'vec3'>);
   // A puddle's water is flat: the geometry's normal under a full one
   const flatten = film.mul(FILM_FLATTEN) as Node<'float'>;
-  const normal =
+  let normal =
     surface.normal && isFull
       ? (mix(
           surface.normal,
@@ -313,6 +365,15 @@ export const applySurfaceWetness = (
           puddle ? max(flatten, puddle) : flatten
         ).normalize() as Node<'vec3'>)
       : surface.normal;
+  // T4: where water stands (a puddle, a film on the flat), while it rains
+  let ripple: Node<'float'> | null = null;
+  if (normal && isFull && opts.ripples) {
+    const standing = film.mul(flat) as Node<'float'>;
+    const water = puddle ? (max(standing, puddle) as unknown as Node<'float'>) : standing;
+    const rippled = applyRipples(normal, water, conditions, opts.ripples);
+    normal = rippled.normal;
+    ripple = rippled.weight;
+  }
   if (puddle) {
     albedo = albedo.mul(float(1).sub(puddle.mul(PUDDLE_DARKENING))) as Node<'vec3'>;
     roughness = mix(roughness, roughness.min(PUDDLE_ROUGHNESS), puddle) as Node<'float'>;
@@ -327,7 +388,49 @@ export const applySurfaceWetness = (
       pores,
       film,
       puddle: puddle ?? (float(0) as unknown as Node<'float'>),
+      ripple: ripple ?? (float(0) as unknown as Node<'float'>),
     },
+  };
+};
+
+/** The ground's flatness: 1 up to half of `maxSlope` (degrees from flat), 0 past it */
+const getFlatGate = (up: Node<'float'>, maxSlopeDegrees: Node<'float'> | number | undefined) => {
+  const maxSlope = toFloat(maxSlopeDegrees ?? SURFACE_WETNESS_DEFAULTS.puddleMaxSlope).mul(
+    DEG_TO_RAD
+  );
+  return smoothstep(cos(maxSlope), cos(maxSlope.mul(0.5)), up) as unknown as Node<'float'>;
+};
+
+/**
+ * The normal tilted by the rain's rings (`Ripples.ts`), their weight the standing water × the
+ * fade, and that weight × the rain (the ripple mask)
+ */
+const applyRipples = (
+  normal: Node<'vec3'>,
+  water: Node<'float'>,
+  conditions: SurfaceConditionNodes,
+  opts: SurfaceRippleOpts
+) => {
+  const defaults = SURFACE_WETNESS_DEFAULTS;
+  const [from, to] = defaults.rippleDistance;
+  const viewDistance = (positionView as unknown as Node<'vec3'>).length();
+  const fade =
+    opts.fade ?? (float(1).sub(smoothstep(from, to, viewDistance)) as unknown as Node<'float'>);
+  const weight = water.mul(fade) as Node<'float'>;
+  const rain = conditions.rain as unknown as Node<'float'>;
+  const offset = sampleRainRipples({
+    atlas: opts.atlas,
+    position: opts.position ?? (positionWorld as unknown as Node<'vec3'>),
+    scale: toFloat(opts.scale ?? defaults.rippleScale),
+    lifetime: toFloat(opts.lifetime ?? defaults.rippleLifetime),
+    strength: toFloat(opts.strength ?? defaults.rippleStrength),
+    rain,
+    time: conditions.time as unknown as Node<'float'>,
+    weight,
+  });
+  return {
+    normal: normal.add(offset).normalize() as Node<'vec3'>,
+    weight: weight.mul(rain) as Node<'float'>,
   };
 };
 
@@ -339,7 +442,7 @@ export const applySurfaceWetness = (
 const getPuddle = (
   surface: WetSurfaceInput,
   conditions: SurfaceConditionNodes,
-  up: Node<'float'>,
+  flat: Node<'float'>,
   opts: SurfacePuddleOpts
 ) => {
   const defaults = SURFACE_WETNESS_DEFAULTS;
@@ -357,7 +460,5 @@ const getPuddle = (
   }
   const depth = waterline.sub(surface.height ?? FLAT_HEIGHT);
   const rim = smoothstep(0, toFloat(opts.edge ?? defaults.puddleEdge), depth);
-  const maxSlope = toFloat(opts.maxSlope ?? defaults.puddleMaxSlope).mul(DEG_TO_RAD);
-  const flat = smoothstep(cos(maxSlope), cos(maxSlope.mul(0.5)), up);
   return rim.mul(flat) as unknown as Node<'float'>;
 };

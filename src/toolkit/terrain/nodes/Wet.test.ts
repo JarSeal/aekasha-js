@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { float, uniform, vec3 } from 'three/tsl';
-import { Vector2, type Node } from 'three/webgpu';
+import { float, texture, uniform, vec3 } from 'three/tsl';
+import { Texture, Vector2, type Node, type TextureNode } from 'three/webgpu';
 import type { SurfaceConditionNodes } from 'aekasha/surface';
 import { applySurfaceWetness, type WetSurfaceInput } from './Wet';
 
@@ -133,5 +133,41 @@ describe('applySurfaceWetness', () => {
       shelter: [0, 90],
     });
     expect(collectNodes([flattened.normal]).has(geometryNormal)).toBe(true);
+  });
+
+  it('ripples where water stands while it rains: the normal takes the branch, the mask reads the rain', () => {
+    const conditions = makeConditions();
+    const surface = makeSurface();
+    const atlas = texture(new Texture()) as unknown as TextureNode;
+    const fade = uniform(1) as unknown as Node<'float'>;
+    const wet = applySurfaceWetness(surface, conditions, {
+      puddles: {},
+      ripples: { atlas, fade },
+    });
+    // The normal adds the ripples' branch: one Fn call more (its body reads the rain and the
+    // clock, Ripples.test.ts; three's normal nodes are calls too)
+    const countCalls = (root: unknown) =>
+      [...collectNodes([root])].filter((node) => (node as { shaderNode?: unknown }).shaderNode)
+        .length;
+    // Its weight: the standing water (the puddle's level, the film) × the fade, × the rain
+    const ripple = collectNodes([wet.masks.ripple]);
+    for (const node of [conditions.rain, conditions.puddleLevel, fade]) {
+      expect(ripple.has(node)).toBe(true);
+    }
+    // The albedo and roughness don't read it
+    expect(collectNodes([wet.albedo]).has(conditions.rain)).toBe(false);
+    // Without ripples, nothing reads the rain; SIMPLE and a surface without a normal have none
+    const dry = applySurfaceWetness(surface, conditions, { puddles: {} });
+    expect(collectNodes([dry.normal, dry.masks.ripple]).has(conditions.rain)).toBe(false);
+    expect(countCalls(wet.normal)).toBe(countCalls(dry.normal) + 1);
+    const simple = applySurfaceWetness(surface, conditions, {
+      quality: 'SIMPLE',
+      ripples: { atlas },
+    });
+    expect(simple.normal).toBe(surface.normal);
+    expect(collectNodes([simple.masks.ripple]).has(conditions.rain)).toBe(false);
+    const { normal: _normal, ...unshaded } = surface;
+    const noNormal = applySurfaceWetness(unshaded, conditions, { ripples: { atlas } });
+    expect(collectNodes([noNormal.masks.ripple]).has(conditions.rain)).toBe(false);
   });
 });

@@ -182,6 +182,14 @@ describe('applyTerrainDebugView', () => {
     expect(estimateTerrainFetches(contextOf(puddled, 'MINIMAL')).always).toBe(3 + 1 + 1 + 1);
     const patched = { ...blended, wet: { puddles: { patches: { scale: 30 } } } };
     expect(estimateTerrainFetches(contextOf(patched, 'MINIMAL')).always).toBe(3 + 1 + 1 + 1 + 1);
+    // The rain ripples: two gated by the ripple mask, none always (and none without the masks)
+    const ripple = float(0.4) as unknown as Node<'float'>;
+    const masks = { ripple } as never;
+    const rippled = contextOf({ ...blended, wet: { ripples: {} } }, 'MINIMAL');
+    const rippledEstimate = estimateTerrainFetches({ ...rippled, wet: masks });
+    expect(rippledEstimate.always).toBe(3 + 1 + 1 + 1);
+    expect(rippledEstimate.gated).toEqual([{ share: ripple, fetches: 2 }]);
+    expect(estimateTerrainFetches(rippled).gated).toEqual([]);
   });
 
   it("counts only the far surface's fetches past a far mode's band", () => {

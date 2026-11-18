@@ -5024,6 +5024,7 @@
       "TerrainMacroDefine": "TypeAlias",
       "TerrainProjectionDefine": "TypeAlias",
       "TerrainPuddlesDefine": "TypeAlias",
+      "TerrainRipplesDefine": "TypeAlias",
       "TerrainRuleDefine": "TypeAlias",
       "TerrainRuleRangeDefine": "TypeAlias",
       "TerrainWetDefine": "TypeAlias"
@@ -5045,6 +5046,7 @@
       "readColorMapTexture": "Function",
       "readLayerSources": "Function",
       "readMacroTexture": "Function",
+      "readRippleTexture": "Function",
       "readSplatMaps": "Function"
     },
     "src/toolkit/terrain/material/TerrainLayers.ts": {
@@ -5250,6 +5252,10 @@
       "ProjectionTiling": "TypeAlias",
       "sampleProjected": "Function"
     },
+    "src/toolkit/terrain/nodes/Ripples.ts": {
+      "RainRippleInputs": "TypeAlias",
+      "sampleRainRipples": "Function"
+    },
     "src/toolkit/terrain/nodes/Rules.ts": {
       "applyRules": "Function",
       "createRuleContext": "Function",
@@ -5305,6 +5311,7 @@
       "PUDDLE_ROUGHNESS": "Variable",
       "SURFACE_WETNESS_DEFAULTS": "Variable",
       "SurfacePuddleOpts": "TypeAlias",
+      "SurfaceRippleOpts": "TypeAlias",
       "SurfaceWetnessMasks": "TypeAlias",
       "SurfaceWetResponse": "TypeAlias",
       "WET_FILM_ROUGHNESS": "Variable",

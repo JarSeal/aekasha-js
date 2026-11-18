@@ -1,8 +1,9 @@
-// The terrain gallery tab's Wet/dry row sections (p307 Phases 2-3): the surface conditions' wetness
-// and puddle level (a slider each and the exit's steps, 0, 0.3, 0.6 and 1: the scene's JSON starts
-// them `MANUAL`, so they hold), the row's quality (`FULL`, `SIMPLE`) and the `WETNESS` view, and the
-// blocks' list, a click flying the camera to the block. The "Surface conditions" tab has the rest
-// of the weather.
+// The terrain gallery tab's Wet/dry row sections (p307 Phases 2-3): the surface conditions' wetness,
+// puddle level and rain (a slider each, the first two with the exits' steps, 0, 0.3, 0.6 and 1:
+// the scene's JSON starts them `MANUAL`, so they hold; in `MANUAL` the rain only ripples, it wets
+// nothing), the row's quality (`FULL`, `SIMPLE`) and view (the shading, `WETNESS`, `TAPS`), and
+// the blocks' list, a click flying the camera to the block. The "Surface conditions" tab has the
+// rest of the weather.
 import { debuggerListCMP, updateDebuggerTab, type DebuggerTabSection } from 'aekasha/debug';
 import { getSurfaceConditions, setSurfaceConditions } from 'aekasha/surface';
 import { getTextureSet } from 'aekasha/texturesets';
@@ -21,11 +22,7 @@ import {
 const WETNESS_STEPS = [0, 0.3, 0.6, 1] as const;
 
 /** The row's view (bound by the fields); the selected block */
-const tabState: WetRowView & { isWetnessView: boolean } = {
-  quality: 'FULL',
-  debugView: 'NONE',
-  isWetnessView: false,
-};
+const tabState: WetRowView = { quality: 'FULL', debugView: 'NONE' };
 let selectedKey: WetKey | null = null;
 
 /** The wetness slider's binding: the live state, written through the public API */
@@ -42,14 +39,19 @@ const conditions = {
   set puddleLevel(value: number) {
     setSurfaceConditions({ puddleLevel: value });
   },
+  get rain() {
+    return getSurfaceConditions()?.rain ?? 0;
+  },
+  set rain(value: number) {
+    setSurfaceConditions({ rain: value });
+  },
 };
 
-/** Applies the row's view, loading the debug views first for `WETNESS`; the latest call wins */
+/** Applies the row's view, loading the debug views first for a debug view; the latest call wins */
 let viewRequest = 0;
 const applyViewAsync = async () => {
   const request = ++viewRequest;
-  tabState.debugView = tabState.isWetnessView ? 'WETNESS' : 'NONE';
-  if (tabState.debugView === 'WETNESS') await loadTerrainDebugViewsAsync();
+  if (tabState.debugView !== 'NONE') await loadTerrainDebugViewsAsync();
   if (request !== viewRequest) return;
   setWetRowView(tabState);
 };
@@ -116,6 +118,15 @@ export const getWetSections = (tabId: string, onSelect: () => void): DebuggerTab
           updateDebuggerTab(tabId);
         },
       })),
+      {
+        key: 'rain',
+        target: conditions,
+        label: 'Rain',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        hint: 'The surface conditions’ rain: rings ripple where water stands (puddles, a film on the flat) within 30 m, more drops the harder it rains; at 0 the ripple atlas isn’t sampled (the TAPS view)',
+      },
       { type: 'separator' },
       {
         key: 'quality',
@@ -130,11 +141,16 @@ export const getWetSections = (tabId: string, onSelect: () => void): DebuggerTab
         onChange: () => void applyViewAsync(),
       },
       {
-        key: 'isWetnessView',
+        key: 'debugView',
         target: tabState,
-        label: 'WETNESS view',
-        kind: 'switch',
-        hint: 'The terrain material’s WETNESS debug view on the row: red the pores filling, yellow under a water film, the blue of a puddle over either (magenta to white), dark grey dry',
+        label: 'View',
+        kind: 'segmented',
+        options: [
+          { label: 'Shaded', value: 'NONE' },
+          { label: 'Wetness', value: 'WETNESS' },
+          { label: 'Taps', value: 'TAPS' },
+        ],
+        hint: 'The row’s terrain debug view. WETNESS: red the pores filling, yellow under a water film, the blue of a puddle over either (magenta to white), dark grey dry. TAPS: the texture fetches at the pixel, the ripples’ two only where it rains on standing water',
         onChange: () => void applyViewAsync(),
       },
     ],
@@ -164,7 +180,7 @@ export const clearWetSelection = () => {
 
 /** Starts the row's part of the tab for a visit: no selection, the row's own view */
 export const startWetTab = () => {
-  Object.assign(tabState, { quality: 'FULL', debugView: 'NONE', isWetnessView: false });
+  Object.assign(tabState, { quality: 'FULL', debugView: 'NONE' });
   selectedKey = null;
   viewRequest++;
 };

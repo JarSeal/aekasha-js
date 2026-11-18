@@ -135,8 +135,10 @@ const WET_KEYS = [
   'shelter',
   'puddles',
   'regional',
+  'ripples',
 ];
 const WET_PUDDLE_KEYS = ['maxSlope', 'edge', 'patches'];
+const WET_RIPPLE_KEYS = ['scale', 'lifetime', 'strength', 'distance'];
 const WET_PATCH_KEYS = ['scale', 'amount'];
 const WET_SPLAT_CHANNELS = ['A'] as const;
 /** The vertex attribute a regional wetness reads by default: glTF's `_WETNESS` (GLTFLoader's
@@ -300,6 +302,20 @@ export type TerrainWetDefine = {
    * source painting at most 4 layers); null for none
    */
   regional: { attribute: string } | { splatChannel: (typeof WET_SPLAT_CHANNELS)[number] } | null;
+  /** The rain ripples (`FULL` only; the input `ripples`, a ripple atlas), or null for none */
+  ripples: TerrainRipplesDefine | null;
+};
+
+/** The wet response's rain ripples with their defaults filled in (p307 T4) */
+export type TerrainRipplesDefine = {
+  /** The metres one atlas tile covers */
+  scale: number;
+  /** The seconds a ring lives */
+  lifetime: number;
+  /** How far the rings tilt the normal */
+  strength: number;
+  /** The view distances over which the ripples fade out, metres: none sampled past the second */
+  distance: [number, number];
 };
 
 /** The wet response's puddles with their defaults filled in (p307 T3) */
@@ -344,6 +360,11 @@ export type ResolvedTerrainDefine = {
    * tier's has noise (a tier's variant shares the material's inputs)
    */
   takesMacroTexture: boolean;
+  /**
+   * Whether the define takes the input `ripples` (a ripple atlas): its wet response or a tier's
+   * has ripples
+   */
+  takesRippleTexture: boolean;
   /** The detail normals' fade, view distances in metres, or null for none */
   distanceFade: [number, number] | null;
   /** The far surface past the fade's end (`distance.far`), or null for none (`NONE`) */
@@ -385,6 +406,7 @@ export const TERRAIN_DEFINE_VALUES = {
   wetQualities: WET_QUALITIES,
   wetPuddleKeys: WET_PUDDLE_KEYS,
   wetPatchKeys: WET_PATCH_KEYS,
+  wetRippleKeys: WET_RIPPLE_KEYS,
   wetSplatChannels: WET_SPLAT_CHANNELS,
   colorMapKeys: COLOR_MAP_KEYS,
   farModes: FAR_MODES,
@@ -1179,6 +1201,9 @@ const readWet = (value: unknown, path: string): TerrainWetDefine | null => {
   if (quality === 'SIMPLE' && wet.puddles !== undefined) {
     fail(`${path}.puddles`, 'is for quality FULL: SIMPLE reads no relief to fill.');
   }
+  if (quality === 'SIMPLE' && wet.ripples !== undefined) {
+    fail(`${path}.ripples`, 'is for quality FULL: SIMPLE leaves the normal alone.');
+  }
   return {
     quality,
     heightInfluence: readNumber(wet, 'heightInfluence', heightInfluence, NON_NEGATIVE, path),
@@ -1186,6 +1211,22 @@ const readWet = (value: unknown, path: string): TerrainWetDefine | null => {
     shelter: [from, to],
     puddles: readPuddles(wet.puddles, `${path}.puddles`),
     regional: readRegional(wet.regional, `${path}.regional`),
+    ripples: readRipples(wet.ripples, `${path}.ripples`),
+  };
+};
+
+/** The rain ripples' numbers (p307 T4), their defaults filled in; null without */
+const readRipples = (value: unknown, path: string): TerrainRipplesDefine | null => {
+  if (value === undefined) return null;
+  const ripples = readObject(value, path);
+  checkKeys(ripples, WET_RIPPLE_KEYS, path);
+  const { rippleScale, rippleLifetime, rippleStrength, rippleDistance } = SURFACE_WETNESS_DEFAULTS;
+  const over0 = { min: { value: 0, isExclusive: true } };
+  return {
+    scale: readNumber(ripples, 'scale', rippleScale, over0, path),
+    lifetime: readNumber(ripples, 'lifetime', rippleLifetime, over0, path),
+    strength: readNumber(ripples, 'strength', rippleStrength, NON_NEGATIVE, path),
+    distance: readMetreRange(ripples, 'distance', [...rippleDistance], path),
   };
 };
 
@@ -1257,6 +1298,9 @@ const checkWetSplatChannel = (
  */
 const hasPuddlePatches = (wet: unknown) =>
   isRecord(wet) && isRecord(wet.puddles) && wet.puddles.patches !== undefined;
+
+/** Whether a wet response (the material's or a tier's, as given) has ripples: the input `ripples` */
+const hasRipples = (wet: unknown) => isRecord(wet) && wet.ripples !== undefined;
 
 /**
  * The `WETNESS` debug view against the wet response: the material's `wet` or a tier's must be
@@ -1404,6 +1448,9 @@ export const readTerrainDefine = (
       define.macro !== undefined ||
       [define.blend, ...Object.values(quality).map((tier) => tier.blend)].some(hasRawRuleNoise) ||
       [define.wet, ...Object.values(quality).map((tier) => tier.wet)].some(hasPuddlePatches),
+    takesRippleTexture: [define.wet, ...Object.values(quality).map((tier) => tier.wet)].some(
+      hasRipples
+    ),
     reservedTextures: readReservedTextures(define),
     distanceFade: distance?.fade ?? null,
     far: distance?.far ?? null,

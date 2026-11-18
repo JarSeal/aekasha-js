@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Materials, Terrain, Weather
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -280,7 +280,7 @@ type SurfaceConditions = {
 
 **Exit:** each category reads as plausibly wet at 0.3 / 0.6 / 1.0 when judged side by side against reference photos (collect 1–2 photo references per category from CC0 sources into the handbook page).
 
-### Phase 3 — Puddles and ripples (T3, T4, T7)
+### Phase 3 — Puddles and ripples (T3, T4, T7) — done
 
 1. Puddle mask from height, macro patches, flat gate, regional attribute.
 2. Ripples (`rippleAtlas`).
@@ -305,6 +305,20 @@ type SurfaceConditions = {
 - **Seen** (2026-11-18, Windows Chrome on WebGPU, AMD RDNA 3; no shader errors):
   - `WETNESS`: mud has almost no puddles at a puddle level of 0.3 and most of its flat under water at 1, the higher spots and the 35° ramp left out; the rocks' gravel puddles between its stones, more in one patch than the other; cliffs none; the grass's regional band stays wet (with small puddles) at wetness and puddle level 0.
   - In colour a puddle reads little against a full film (mud from wetness 0.3: roughness 0.05 against 0.02, the normal 60 % flattened against 100 %, 15 % darker): open for section 2's review, with the ripples, which mark puddles apart from the film.
+
+**As built (section 2):**
+
+- **The node:** `nodes/Ripples.ts`' `sampleRainRipples` (internal), called by `applySurfaceWetness` with `opts.ripples: { atlas, position?, scale?, lifetime?, strength?, fade? }` (`SurfaceRippleOpts`; `FULL` and a shaded `normal` only); `masks.ripple` is the branch's weight × the rain (0 without). The node's doc no longer says "no fetch": the ripples' two are its only ones, in their branch.
+  - Two samples of the atlas at the position's `(x, −z)` over `scale` and over `scale × 0.71` offset by (0.37, 0.61) tiles, half a ring's lifetime apart, decoded at `conditions.time / lifetime` (the surface clock); a drop is kept where `fract(A × 7.31) < rain`, so light rain has fewer rings. The offset (`normalXY × strength × weight`, the atlas's +v the world's −z) is added to the normal and normalized.
+  - Where: `max(puddle, film × flat)` × the fade: the puddles, and a film on ground flatter than the puddles' `maxSlope` (15° without puddles; `getFlatGate`, which the puddles share). A film on a slope runs off: no rings.
+  - The branch (`If(weight > 0 && rain > 0)` in a `Fn` returning a var, the slope gate's pattern): the UV's `dFdx` / `dFdy`, the weight, the rain, the clock and the numbers are declared before it (`declareBranchInput`); both taps `.grad()`. A dry frame or a pixel without standing water within the fade samples nothing.
+  - Defaults (`SURFACE_WETNESS_DEFAULTS`): scale 1.5 m (16 drops a tile: rings up to about 25 cm across), lifetime 0.7 s, strength 0.5, fade `[10, 30]` m from the camera.
+- **The terrain `wet.ripples`:** `{ scale? (over 0), lifetime? (over 0), strength? (≥ 0), distance? ([from, to] metres) }`, refused with `SIMPLE`; uniforms `terrain_wetRippleScale`, `…Lifetime`, `…Strength`, `…Distance` (the fade over the material's view distance). The atlas is the input `ripples` (`takesRippleTexture`: the material's or a tier's ripples; refused without, wanted with); the code route's `rippleTexture` (default `rippleAtlas`, the toolkit's KTX2; refused without ripples). It counts in the texture budget (`ripple atlas`) and the code route's `AUTO` storage. A scene with a code-route material lists `rippleAtlas` in its `textures` (the gallery's does).
+- **`TAPS`:** the two taps gated by `masks.ripple` (`estimateTerrainFetches`' `gated`). The colour-map bake drops the `ripples` input with `wet`.
+- **The gallery:** every block has `ripples: {}` (the `SIMPLE` variant drops them); the tab has a Rain slider (in `MANUAL` the rain only ripples) and the row's view is now a choice of Shaded, `WETNESS` and `TAPS`.
+- **Seen** (2026-11-18, Windows Chrome on WebGPU, AMD RDNA 3; no shader errors):
+  - `TAPS` on `mud02` from 5 m at puddle level 0.6: 3 fetches everywhere at rain 0 (its layer's 2 and the patches'), 5 at rain 1 where water stands, 3 on the ramp and the drier spots. Past 30 m (the row from 34 m) the same at rain 0 and 1.
+  - From 1.5 m the rings read as rings on the puddles and the film, moving between frames 250 ms apart; from 5 m they're a few pixels, a sparkle on the water. On the rocks' gravel none show from 5 m (its puddles are specks between the stones); not looked at closer.
 
 ### Phase 4 — Streaks, shoreline (T5, T8)
 

@@ -5,8 +5,9 @@
 // library's generated block (its 35° ramp), so a set's response is judged on the flat and on a
 // slope. The wetness and the puddle level are the surface conditions' (the scene's JSON starts
 // them `MANUAL`, so nothing dries them); the tab's sliders and steps set them, and switch the
-// row's quality (`FULL`, `SIMPLE`) and the `WETNESS` view. Phase 3: every block has puddles
-// (filling by its set's `puddleResponse`, in `macroNoise` patches), and the grass block a regional
+// row's quality (`FULL`, `SIMPLE`) and its view (`WETNESS`, `TAPS`). Phase 3: every block has puddles
+// (filling by its set's `puddleResponse`, in `macroNoise` patches) and rain ripples where water
+// stands (the `rippleAtlas`, while the tab's rain is over 0), and the grass block a regional
 // wetness along its left edge (a riverbank: its `_wetness` vertex attribute). Code route materials
 // (`createTerrainMaterial`): the view and the quality are variants of a block's material.
 import * as THREE from 'three/webgpu';
@@ -45,7 +46,7 @@ export type WetBlock = {
 };
 
 /** The row's quality (`wet.quality`) and view, which the tab switches */
-export type WetRowView = { quality: 'FULL' | 'SIMPLE'; debugView: 'NONE' | 'WETNESS' };
+export type WetRowView = { quality: 'FULL' | 'SIMPLE'; debugView: 'NONE' | 'WETNESS' | 'TAPS' };
 
 /** Each block's sets: a set of each category (its showcase where the library has one), the beach's
  * two */
@@ -105,8 +106,8 @@ export const WET_ROW_BOUNDS = {
 /** A block's mesh entity's app id */
 export const getWetAppId = (key: WetKey) => `terrainGallery_wet_${key}`;
 
-/** A block's code route config: its sets, wet (`FULL`, puddles in patches; the grass block's
- * regional wetness); the beach's rocks by slope */
+/** A block's code route config: its sets, wet (`FULL`, puddles in patches, ripples; the grass
+ * block's regional wetness); the beach's rocks by slope */
 const getBlockConfig = (block: WetBlock): TerrainMaterialConfig => ({
   id: `terrainGalleryWet_${block.key}`,
   layers: block.sets.map((set) => ({ set })),
@@ -120,6 +121,7 @@ const getBlockConfig = (block: WetBlock): TerrainMaterialConfig => ({
     : {}),
   wet: {
     puddles: { patches: { scale: PUDDLE_PATCH_SCALE } },
+    ripples: {},
     ...(block.key === REGIONAL_WET_KEY ? { regional: {} } : {}),
   },
 });
@@ -136,14 +138,18 @@ const getBlockMaterial = (block: WetBlock, view: WetRowView): THREE.Material => 
     `[terrainGallery] No material "${config.id}".`
   );
   if (view.quality === 'FULL' && view.debugView === 'NONE') return base;
-  const terrain = base.userData.terrainDefine as { wet?: { puddles?: object } };
-  // SIMPLE has no puddles (no relief to fill)
-  const { puddles, ...wet } = terrain.wet ?? {};
+  const terrain = base.userData.terrainDefine as { wet?: { puddles?: object; ripples?: object } };
+  // SIMPLE has no puddles (no relief to fill) and no ripples (it leaves the normal alone)
+  const { puddles, ripples, ...wet } = terrain.wet ?? {};
   return getMaterialVariant(config.id, {
     staticDefines: {
       terrain: {
         ...terrain,
-        wet: { ...wet, ...(view.quality === 'FULL' ? { puddles } : {}), quality: view.quality },
+        wet: {
+          ...wet,
+          ...(view.quality === 'FULL' ? { puddles, ripples } : {}),
+          quality: view.quality,
+        },
         ...(view.debugView === 'NONE' ? {} : { debugView: view.debugView }),
       },
     },
@@ -151,7 +157,7 @@ const getBlockMaterial = (block: WetBlock, view: WetRowView): THREE.Material => 
 };
 
 /**
- * Switches the row's blocks to the view's quality and debug view (`WETNESS` needs the terrain
+ * Switches the row's blocks to the view's quality and debug view (a debug view needs the terrain
  * debug views loaded first: `loadTerrainDebugViewsAsync`)
  */
 export const setWetRowView = (view: WetRowView) => {
