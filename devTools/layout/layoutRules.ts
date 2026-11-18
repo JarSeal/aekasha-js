@@ -109,6 +109,8 @@ const getToolkitRules = (files: string[]): LayoutRule[] => [
   { from: `${T}terrain/debug/` },
   // The terrain block generators (p306 D4: `noiseTerrain`, `rulesTerrain`) and their registration
   { from: `${T}terrain/blocks/` },
+  // The terrain scatter generator (p308 D4: `terrainScatter`) and its registration
+  { from: `${T}terrain/scatter/` },
   // The Blender side of terrain blocks (p306 D5, D6): the add-on (`aekasha_terrain_tools.py`), the
   // `.blend` templates and the images painted for them (`splatMap_splat0.png`); not modules, so
   // the PascalCase rule doesn't reach them
