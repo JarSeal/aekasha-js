@@ -18,6 +18,7 @@ import traceback
 
 import bmesh
 import numpy as np
+from mathutils import Vector
 import bpy
 
 # No __pycache__ next to the add-on in the repo
@@ -950,6 +951,114 @@ def check_workflow(aek):
             record_export(split, split_folder)
 
 
+def check_decals(aek):
+    """p309 D3: the decal atlases read from the repo (the cell rect as the gather's table), a decal
+    set on a block with relief (a strip along a path, a quad), conformed by the Shrinkwrap, then
+    exported: the GLB's nodes in the block's space, the atlas UVs in their cells, DecalUV 0..1
+    """
+    expect(aek.check_exporter_options(aek.DECAL_EXPORT_SETTINGS) == [],
+           f"Blender 5.3 takes every decal export setting: {aek.check_exporter_options(aek.DECAL_EXPORT_SETTINGS)}")
+    atlases = aek.find_decal_atlases(REPO_ROOT)
+    expect({"decalsGround", "decalsStructure"} <= set(atlases), f"the toolkit's decal atlases: {sorted(atlases)}")
+    tracks = atlases["decalsGround"]["cells"]["tireTracks"]
+    # The gather's cell table: the 1024 x 256 rect at (0, 0) of 2048, inset by 16 px, v up
+    expected = (16 / 2048, 1 - 240 / 2048, 1008 / 2048, 1 - 16 / 2048)
+    expect(np.allclose(tracks["uv"], expected), f"tireTracks' rect as the gather's: {tracks['uv']}")
+    expect(tracks["size"] == (1.8, 0.45) and tracks["tile_along"] == "U", f"tireTracks' data: {tracks}")
+    damage = atlases["decalsGround"]["cells"]["asphaltDamage"]
+
+    # Add, Add Decal Set and Add Decal find the repo above a saved .blend: here it's given
+    aek.get_repo_root = lambda context: REPO_ROOT
+    bpy.ops.aek.add_terrain_block(block_id="checkDecals", size="32", resolution="65", grid_x=3,
+                                  grid_z=-2, collider="NONE")
+    block = bpy.data.objects["checkDecals"]
+    mesh = block.data
+    co = np.empty(len(mesh.vertices) * 3)
+    mesh.vertices.foreach_get("co", co)
+    co = co.reshape(-1, 3)
+    co[:, 2] = 0.8 * np.sin(co[:, 0] * 0.6) * np.cos(co[:, 1] * 0.45)
+    mesh.vertices.foreach_set("co", co.ravel())
+    mesh.update()
+    bpy.context.view_layer.objects.active = block
+    expect(bpy.ops.aek.add_decal_set() == {"FINISHED"}, "Add Decal Set")
+    collection = bpy.data.collections["checkDecals_decals"]
+    settings = collection.aek_decal_set
+    expect(settings.block == block and settings.atlas == "decalsGround"
+           and settings.material == "decalsGround_blend", "the set's block, atlas and material")
+
+    bpy.context.scene.cursor.location = block.location
+    expect(bpy.ops.aek.add_decal(cell="tireTracks") == {"FINISHED"}, "Add Decal: a strip")
+    strip = bpy.context.active_object
+    expect([m.type for m in strip.modifiers] == ["ARRAY", "NODES", "CURVE", "SHRINKWRAP"],
+           f"a strip's modifiers: {[m.type for m in strip.modifiers]}")
+    expect(bpy.data.objects.get("tireTracks_path") in collection.objects.values(), "the strip's path")
+    bpy.context.scene.cursor.location = block.location + Vector((5, 5, 0))
+    expect(bpy.ops.aek.add_decal(cell="asphaltDamage") == {"FINISHED"}, "Add Decal: a quad")
+    quad = bpy.context.active_object
+    expect([m.type for m in quad.modifiers] == ["NODES", "SHRINKWRAP"],
+           f"a quad's modifiers: {[m.type for m in quad.modifiers]}")
+    # 1.2 m on a 0.5 m grid: level 2, a 4 x 4 quad (25 vertices) before the Shrinkwrap
+    expect(aek.get_decal_level(block, 1.2, 1.2) == 2, "the level for 1.2 m on 0.5 m")
+    evaluated = quad.evaluated_get(bpy.context.evaluated_depsgraph_get()).to_mesh()
+    expect(len(evaluated.vertices) == 25, f"the quad subdivided by its level: {len(evaluated.vertices)}")
+    quad.evaluated_get(bpy.context.evaluated_depsgraph_get()).to_mesh_clear()
+
+    # Conformed: each vertex the Shrinkwrap's offset over the block, straight below it
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    gaps = []
+    for obj in (strip, quad):
+        evaluated = obj.evaluated_get(depsgraph).to_mesh()
+        uv = np.array([d.uv[:] for d in evaluated.uv_layers[aek.DECAL_UV].data])
+        expect(np.allclose([uv.min(axis=0), uv.max(axis=0)], [[0, 0], [1, 1]], atol=1e-5),
+               f"{obj.name}: DecalUV 0..1 over the decal ({uv.min(axis=0)}, {uv.max(axis=0)})")
+        for vertex in evaluated.vertices:
+            world = obj.matrix_world @ vertex.co
+            hit, location, _normal, _face = block.ray_cast(
+                block.matrix_world.inverted() @ (world + Vector((0, 0, 5))), Vector((0, 0, -1)))
+            expect(hit, f"{obj.name}: a vertex over the block")
+            gaps.append(world.z - (block.matrix_world @ location).z)
+        obj.evaluated_get(depsgraph).to_mesh_clear()
+    REPORT["decal_gaps"] = [round(min(gaps), 4), round(max(gaps), 4)]
+    expect(aek.DECAL_OFFSET - 0.002 < min(gaps) and max(gaps) < aek.DECAL_OFFSET + 0.005,
+           f"the decals {aek.DECAL_OFFSET} m over the block: {REPORT['decal_gaps']}")
+
+    folder = os.path.join(OUT_DIR, "export", "decals")
+    shutil.rmtree(folder, ignore_errors=True)
+    settings.output_dir = folder
+    objects, meshes = len(bpy.data.objects), len(bpy.data.meshes)
+    expect(bpy.ops.aek.export_decal_set() == {"FINISHED"}, "Export Decal Set")
+    expect(len(bpy.data.objects) == objects and len(bpy.data.meshes) == meshes, "no export copy left")
+    expect(strip.name == "tireTracks" and quad.name == "asphaltDamage", "the decals' names as they were")
+    expect(sorted(os.listdir(folder)) == ["checkDecals_decals.decalSet.json", "checkDecals_decals.glb",
+                                         "checkDecals_decals.importedAsset.json"],
+           f"the export's files: {sorted(os.listdir(folder))}")
+    with open(os.path.join(folder, "checkDecals_decals.decalSet.json"), encoding="utf-8") as f:
+        stub = json.load(f)
+    expect(stub["importedAsset"] == "checkDecals_decals" and stub["material"] == "decalsGround_blend",
+           f"the decal set stub: {stub}")
+
+    gltf, binary = read_glb(os.path.join(folder, "checkDecals_decals.glb"))
+    expect(aek.check_exported_decal_glb(gltf, ["tireTracks", "asphaltDamage"]) == [],
+           f"the GLB: {aek.check_exported_decal_glb(gltf, ['tireTracks', 'asphaltDamage'])}")
+    half = 16 + 0.5
+    for node in (n for n in gltf["nodes"] if "mesh" in n):
+        attributes = gltf["meshes"][node["mesh"]]["primitives"][0]["attributes"]
+        cell = tracks if node["name"] == "tireTracks" else damage
+        # glTF's V is the engine's: the cell's own rect
+        atlas_uv = read_accessor(gltf, binary, attributes["TEXCOORD_0"])
+        u0, v0, u1, v1 = cell["uv"]
+        expect(atlas_uv[:, 0].min() > u0 - 1e-4 and atlas_uv[:, 0].max() < u1 + 1e-4
+               and atlas_uv[:, 1].min() > v0 - 1e-4 and atlas_uv[:, 1].max() < v1 + 1e-4,
+               f"{node['name']}: TEXCOORD_0 in its cell {cell['uv']}")
+        decal_uv = read_accessor(gltf, binary, attributes["TEXCOORD_1"])
+        expect(np.allclose([decal_uv.min(), decal_uv.max()], [0, 1], atol=1e-5),
+               f"{node['name']}: TEXCOORD_1 0..1")
+        # In the block's space: within its square, y up
+        positions = read_accessor(gltf, binary, attributes["POSITION"]) + node.get("translation", [0, 0, 0])
+        expect(np.abs(positions[:, [0, 2]]).max() < half and np.abs(positions[:, 1]).max() < 1,
+               f"{node['name']}: in the block's space ({positions.min(axis=0)}, {positions.max(axis=0)})")
+
+
 CHECKS = [
     check_conventions,
     check_triangles,
@@ -965,6 +1074,7 @@ CHECKS = [
     check_trimesh,
     check_splat_map,
     check_workflow,
+    check_decals,
 ]
 REPORT = {"blender": bpy.app.version_string, "checks": {}, "exports": []}
 #: A line `yarn verify:blender` shows (the rest of Blender's output goes to its log only)
