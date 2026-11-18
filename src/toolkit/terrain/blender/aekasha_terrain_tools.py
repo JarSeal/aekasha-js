@@ -2206,8 +2206,8 @@ def ensure_decal_group() -> bpy.types.GeometryNodeTree:
     tree.interface.new_socket("Geometry", in_out="INPUT", socket_type="NodeSocketGeometry")
     level = tree.interface.new_socket(
         "Level", in_out="INPUT", socket_type="NodeSocketInt",
-        description="Subdivisions: a face's edge about the block's grid spacing, so the "
-        "Shrinkwrap follows its relief",
+        description="Subdivisions: a face's edge at most half the block's grid spacing, so the "
+        "Shrinkwrap follows its relief between the block's vertices",
     )
     level.default_value, level.min_value, level.max_value = 0, 0, DECAL_MAX_LEVEL
     tree.interface.new_socket("Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
@@ -2295,12 +2295,15 @@ def ensure_decal_preview_material() -> bpy.types.Material:
 
 
 def get_decal_level(block: bpy.types.Object | None, width: float, depth: float) -> int:
-    """Add Decal's subdivision: a face's longest edge at most the block's grid spacing"""
+    """Add Decal's subdivision: a face's longest edge at most half the block's grid spacing. At the
+    spacing itself a face spanning a fold of the block's triangles cut 6 mm into 0.25 m bumps 5 m
+    apart (p309 Phase 3, `buildDecalTest.py`); at half of it none did, and none floated 4 cm.
+    """
     settings = get_block_settings(block)
     spacing = get_spacing(int(settings.size), int(settings.resolution)) if settings else 0.5
     longest = max(width, depth)
     level = 0
-    while longest / 2**level > spacing and level < DECAL_MAX_LEVEL:
+    while longest / 2**level > spacing / 2 and level < DECAL_MAX_LEVEL:
         level += 1
     return level
 
@@ -2469,8 +2472,8 @@ def export_decal_set(context: bpy.types.Context, collection: bpy.types.Collectio
     """Exports the set's decals into `folder`: `<setId>.glb`, each decal's evaluated mesh (its
     modifiers applied) as a node named by it, placed relative to the block's origin (the engine
     spawns the set at the block's grid place), its custom props kept (`merge`); then the JSON stubs
-    where none are (`<setId>.importedAsset.json`, lossless; `<setId>.decalSet.json` with the set's
-    material) and the GLB read back. Returns the files written and the findings.
+    where none are (`<setId>.importedAsset.json`, the default encode; `<setId>.decalSet.json` with
+    the set's material) and the GLB read back. Returns the files written and the findings.
     """
     settings = collection.aek_decal_set
     set_id, block = settings.set_id, settings.block
@@ -2527,12 +2530,12 @@ def export_decal_set(context: bpy.types.Context, collection: bpy.types.Collectio
         "$schema": get_schema_ref(folder, "importedAsset.schema.json"),
         "id": set_id,
         "fileName": f"./{set_id}.glb",
-        "optimize": {"profile": "terrainBlock"},
         "debugData": {
             "name": f"Decal set {set_id}",
             "description": f"{len(decals)} decals on the terrain block {block_id}, exported by the "
-            "Ækasha terrain add-on in the block's space. The terrainBlock profile keeps their "
-            "positions lossless: they lie 1-2 cm over the block.",
+            "Ækasha terrain add-on in the block's space. The default mesh encode (meshopt, "
+            "quantized) keeps them within about 2 mm of the export, well inside the 1.5 cm they "
+            "lie over the block, and their UVs within a quarter texel of a 2K atlas.",
         },
     }
     decal_set = {

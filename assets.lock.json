@@ -634,6 +634,15 @@
       "ktxVersion": "4.4.2",
       "recipeKey": "f42bdb50c7cd9ca95d4aaaa649b7953d039df21da5c5395ce257a7b62f3a3550"
     },
+    "429f0724fa61fe944d9326684293f858545a38f8f989d2a3411e5b369bcb3237": {
+      "source": "src/app/scenes/terrainBlockTest/decalBlock/terrainBlockTestDecals.glb",
+      "url": "/aek-assets/app/scenes/terrainBlockTest/decalBlock/terrainBlockTestDecals.6d62987f.glb",
+      "bytes": 78312,
+      "geometryBytes": {
+        "in": 218152,
+        "out": 218152
+      }
+    },
     "43ab2021044991b77a8a3abbc7dc03293bd8ad070137a816c1f74bdf3cf3ae51": {
       "source": "src/toolkit/textures/sand01/sand01_orm.texture.json",
       "url": "/aek-assets/toolkit/textures/sand01/sand01_orm.pack.475a3503.ktx2",
@@ -657,6 +666,15 @@
       ],
       "ktxVersion": "4.4.2",
       "recipeKey": "bd41718fdc829b9f7f4cfd7fdfb03da6e8dd3cdd84f2d3c03a0f0e58d4ea01a2"
+    },
+    "43bc92b6e1c2c4c8159ccb4519c426683b797969f488067b1e9b71eb97d8d544": {
+      "source": "src/app/scenes/terrainBlockTest/decalBlock/terrainBlockTestDecals_decals.glb",
+      "url": "/aek-assets/app/scenes/terrainBlockTest/decalBlock/terrainBlockTestDecals_decals.c70519ea.glb",
+      "bytes": 54512,
+      "geometryBytes": {
+        "in": 229888,
+        "out": 138008
+      }
     },
     "44a20507e10a16d5a58d5c7728d9cc00d7598cd3a0e69ada8b9f6f64301e0410": {
       "source": "src/app/scenes/mergeMaterials/ruinsPalette.mergeMaterial.json",

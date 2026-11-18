@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../../../.schemas/terrainBlock.schema.json",
+  "geometry": {
+    "importedAsset": "terrainBlockTestDecals",
+    "node": "terrainBlockTestDecals"
+  },
+  "material": "textureSetSurface",
+  "materialInputs": {
+    "surface": {
+      "textureSet": "mud01"
+    }
+  },
+  "grid": {
+    "x": -4,
+    "z": 3,
+    "size": 32,
+    "resolution": 65
+  },
+  "collider": {
+    "type": "HEIGHTFIELD"
+  },
+  "decals": [
+    "terrainBlockTestDecals_decals"
+  ],
+  "debugData": {
+    "name": "Decal block",
+    "description": "p309 Phase 3's decal block: the terrain add-on's export (devTools/blender/buildDecalTest.py), 32 m / 65, a ridge 2.5 m high with ±0.25 m bumps about 5 m apart, mud01 through textureSetSurface's variant; its decal set terrainBlockTestDecals_decals (two tyre tracks curving over the ridge, asphaltDamage on its flank, a crack at its foot) spawns with it."
+  }
+}

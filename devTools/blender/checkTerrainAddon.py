@@ -997,10 +997,10 @@ def check_decals(aek):
     quad = bpy.context.active_object
     expect([m.type for m in quad.modifiers] == ["NODES", "SHRINKWRAP"],
            f"a quad's modifiers: {[m.type for m in quad.modifiers]}")
-    # 1.2 m on a 0.5 m grid: level 2, a 4 x 4 quad (25 vertices) before the Shrinkwrap
-    expect(aek.get_decal_level(block, 1.2, 1.2) == 2, "the level for 1.2 m on 0.5 m")
+    # 1.2 m on a 0.5 m grid: level 3 (a face's edge at most 0.25 m), 8 x 8 faces (81 vertices)
+    expect(aek.get_decal_level(block, 1.2, 1.2) == 3, "the level for 1.2 m on 0.5 m")
     evaluated = quad.evaluated_get(bpy.context.evaluated_depsgraph_get()).to_mesh()
-    expect(len(evaluated.vertices) == 25, f"the quad subdivided by its level: {len(evaluated.vertices)}")
+    expect(len(evaluated.vertices) == 81, f"the quad subdivided by its level: {len(evaluated.vertices)}")
     quad.evaluated_get(bpy.context.evaluated_depsgraph_get()).to_mesh_clear()
 
     # Conformed: each vertex the Shrinkwrap's offset over the block, straight below it

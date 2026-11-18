@@ -1,4 +1,4 @@
-import { llog } from 'aekasha';
+import { getActiveCamera, llog } from 'aekasha';
 import { createDebuggerTab } from 'aekasha/debug';
 import { spawnTerrainBlock } from 'aekasha/terrain';
 import { generateTerrainAsync, type TerrainAsyncOptions } from 'aekasha/toolkit/geometry';
@@ -141,6 +141,17 @@ const measureAsync = async (run: TerrainBlockTestRun): Promise<TerrainBlockTestF
   return frames;
 };
 
+/** The decal block's tracks (p309 Phase 3: grid (-4, 3), 32 m), seen low from its +z side */
+const DECAL_VIEW = { position: [-122, 9, 118], target: [-128, 1.5, 98] } as const;
+
+/** Moves the active camera to look at the decal block's tracks */
+const lookAtDecalTracks = () => {
+  const camera = getActiveCamera();
+  if (!camera) return;
+  camera.position.set(...DECAL_VIEW.position);
+  camera.lookAt(...DECAL_VIEW.target);
+};
+
 /** Creates the scene's tab (removed on its exit) and the script's `measureAsync`. */
 export const createTerrainBlockTestTab = (state: object) => {
   Object.assign(state, { measureAsync });
@@ -161,6 +172,11 @@ export const createTerrainBlockTestTab = (state: object) => {
           button('Generate 257² with AO: worker', 'WORKER'),
           button('Generate 257² with AO: main thread', 'MAIN_THREAD'),
           button('Spawn the large block (worker)', 'SPAWN'),
+          {
+            type: 'button' as const,
+            title: 'Look at the decal tracks',
+            onClick: lookAtDecalTracks,
+          },
         ],
       },
     ],

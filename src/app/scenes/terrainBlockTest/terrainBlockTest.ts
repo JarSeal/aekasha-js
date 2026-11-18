@@ -49,6 +49,13 @@ import {
  *   beside it (the same GLB) from its painted splat map: the two must look alike.
  *   `blenderBlock/terrainBlockTestBlender.test.ts` pins the orientation in the files.
  *
+ * - **Further left** (p309 Phase 3's decal block, `decalBlock/`): the terrain add-on's export
+ *   (`devTools/blender/buildDecalTest.py`), 32 m / 65 at grid (-4, 3), a ridge with ±0.25 m bumps,
+ *   and its decal set (`decals`: two tyre tracks curving over the ridge, an asphalt damage and a
+ *   crack decal of the `decalsGround` atlas, `BLEND`), conformed to the block in Blender by the
+ *   add-on's Shrinkwrap and spawned with it. A block whose decal set brings no meshes logs an
+ *   error. No boxes fall on it. The tab's "Look at the decal tracks" flies the camera there.
+ *
  * A 3 × 3 grid of boxes falls on each block. `window.__terrainBlockTest` holds the spawn results
  * and, after `SETTLE_STEPS` fixed steps, where each box is; a block without its collider, or a box
  * that didn't come to rest on its block (under the lowest terrain: fell through; still high:
@@ -68,7 +75,10 @@ const BLOCK_IDS = [
   'terrainBlockTestTrimesh',
   'terrainBlockTestBlender',
   'terrainBlockTestBlenderSplatMap',
+  'terrainBlockTestDecals',
 ];
+/** The block whose decal set spawns with it (its JSON's `decals`) */
+const DECAL_BLOCK_ID = 'terrainBlockTestDecals';
 const BOX_HALF = 1;
 const BLOCK_SIZE = 100;
 const BOX_SPACING = 15;
@@ -95,7 +105,7 @@ type BlockSquare = { x: number; z: number; half: number };
 /** A box: the block it fell on, and where it is (after `SETTLE_STEPS`) */
 type BoxResult = { appId: string; block: BlockSquare; x: number; y: number; z: number };
 const state: {
-  blocks: Pick<TerrainBlock, 'id' | 'meshEntityId' | 'physicsEntityId'>[];
+  blocks: Pick<TerrainBlock, 'id' | 'meshEntityId' | 'physicsEntityId' | 'decalIds'>[];
   /** The heightmap block's mesh and its heights' largest gap to the map's texels */
   heightmapBlock: { meshEntityId: number; maxGap: number } | null;
   boxes: BoxResult[];
@@ -291,7 +301,11 @@ export const scene = async () => {
       id: block.id,
       meshEntityId: block.meshEntityId,
       physicsEntityId: block.physicsEntityId,
+      decalIds: block.decalIds,
     });
+  }
+  if (!state.blocks.find((block) => block.id === DECAL_BLOCK_ID)?.decalIds.length) {
+    lerror(`terrainBlockTest: the decal block "${DECAL_BLOCK_ID}" spawned no decals.`);
   }
   const withoutCollider = state.blocks.filter((block) => block.physicsEntityId === undefined);
   if (withoutCollider.length) {

@@ -1185,15 +1185,15 @@ What's here
 """ + COMMON_SETUP + """
 A decal
 - A plane with two UV maps: UVMap, its cell in the atlas (TEXCOORD_0), and DecalUV, 0..1 over the whole decal (TEXCOORD_1, the engine's uv1: the decal material's edge fade reads it, and without it draws nothing).
-- Its modifiers, in this order: Array (a strip: its tile repeated, Fit Curve to the path's length; every tile the cell again), "AEK Decal" (Geometry Nodes: Subdivide by its Level, about the block's grid spacing a face, then DecalUV from the bounds: after the Array, whose UV offset would move every UV map), Curve (a strip, along the path's X), Shrinkwrap (Target the block, Project along Z both ways, Above Surface, Offset 0.015 m).
+- Its modifiers, in this order: Array (a strip: its tile repeated, Fit Curve to the path's length; every tile the cell again), "AEK Decal" (Geometry Nodes: Subdivide by its Level, a face at most half the block's grid spacing, then DecalUV from the bounds: after the Array, whose UV offset would move every UV map), Curve (a strip, along the path's X), Shrinkwrap (Target the block, Project along Z both ways, Above Surface, Offset 0.015 m).
 - Nothing to apply: Export Decal Set exports each decal as its modifiers make it. Apply only to edit the result by hand.
 
 The workflow
 1. A block (the block template's workflow), then select it: Add Decal Set. Its Atlas is decalsGround; its Material the engine's decal material the export's stub names (decalsGround_blend, or decalsGround_cutout: opaque, cheaper, for footprints and cracks).
 2. Add Decal: put the 3D cursor where it goes, pick a cell (a search). A cell that tiles along its length (tireTracks) comes as a strip with its own path: edit the path (Edit mode on <name>_path) and the strip follows. A second wheel: duplicate the strip (Shift+D), give its Array and Curve the first's path and move its mesh aside in Edit mode (G Y).
 3. Turn and move a quad freely (rotation Z, location X/Y): the Shrinkwrap puts it on the ground. Scale it in X/Y only to change its size (the cell stretches).
-4. Floating or cutting in on steep or bumpy ground: raise the AEK Decal modifier's Level (a face about the block's grid spacing); the offset stays 1-2 cm, and the engine's polygon offset does the rest.
-5. Export Decal Set: <setId>.glb into the block's Folder (or the set's own), the decals placed from the block's centre, and the JSON stubs it lacks: <setId>.importedAsset.json (the lossless terrainBlock profile) and <setId>.decalSet.json (the set's material, render order 10 by default).
+4. Floating or cutting in on steep or bumpy ground: raise the AEK Decal modifier's Level. Between its vertices a decal face is flat while the block folds along its own triangles: Add Decal's Level (a face at most half the grid spacing) kept the tracks on 0.25 m bumps within 0-3 cm of the ground; at the grid spacing they cut 6 mm in. The offset stays 1-2 cm, and the engine's polygon offset does the rest.
+5. Export Decal Set: <setId>.glb into the block's Folder (or the set's own), the decals placed from the block's centre, and the JSON stubs it lacks: <setId>.importedAsset.json (the default mesh encode: within about 2 mm, well inside the 1.5 cm offset) and <setId>.decalSet.json (the set's material, render order 10 by default).
 6. Into Ækasha: yarn assets --only <setId>, then add "<setId>" to the block's terrainBlock JSON "decals": the set spawns with the block. A decal set of a scene's own: the scene's "decalSets" and spawnDecalSet('<setId>').
 
 Merging: a node's custom prop merge (Object Properties > Custom Properties) puts the decal in a merge group: CUTOUT decals in a BAKED group, BLEND ones in a BATCHED group.

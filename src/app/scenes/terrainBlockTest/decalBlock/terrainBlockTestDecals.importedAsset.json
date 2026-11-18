@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../../../.schemas/importedAsset.schema.json",
+  "id": "terrainBlockTestDecals",
+  "fileName": "./terrainBlockTestDecals.glb",
+  "optimize": {
+    "profile": "terrainBlock"
+  },
+  "debugData": {
+    "name": "Terrain block terrainBlockTestDecals",
+    "description": "32 m / 65, exported by the Ækasha terrain add-on. The terrainBlock profile keeps its positions lossless: neighbouring blocks share their edge vertices exactly."
+  }
+}
