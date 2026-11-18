@@ -302,4 +302,36 @@ describe('applySurfaceWetness', () => {
     expect(snowCallOf(plain.albedo)).toBeUndefined();
     expect(snowCallOf(plain.masks.snow)).toBeUndefined();
   });
+
+  it('frosts below freezing in either quality by 1 − the porosity; the sparkle FULL only', () => {
+    const conditions = makeConditions();
+    const surface = makeSurface();
+    const reads = (root: unknown, node: unknown) => collectNodes([root]).has(node);
+    /** The `Fn` calls a socket reads (the sparkle's branch, the snow's) */
+    const calls = (root: unknown) =>
+      [...collectNodes([root])].filter((node) => (node as { shaderNode?: unknown }).shaderNode)
+        .length;
+    for (const quality of ['FULL', 'SIMPLE'] as const) {
+      const wet = applySurfaceWetness(surface, conditions, { quality, frost: {} });
+      for (const socket of [wet.albedo, wet.roughness, wet.masks.frost]) {
+        expect(reads(socket, conditions.temperature)).toBe(true);
+      }
+      expect(reads(wet.masks.frost, surface.response.porosity)).toBe(true);
+    }
+    const plain = applySurfaceWetness(surface, conditions);
+    expect(reads(plain.roughness, conditions.temperature)).toBe(false);
+    // The sparkle: its branch in the albedo, FULL only
+    const frosted = applySurfaceWetness(surface, conditions, { frost: {} });
+    const sparkling = applySurfaceWetness(surface, conditions, { frost: { sparkle: {} } });
+    expect(calls(sparkling.albedo)).toBe(calls(frosted.albedo) + 1);
+    const simple = applySurfaceWetness(surface, conditions, {
+      quality: 'SIMPLE',
+      frost: { sparkle: {} },
+    });
+    const simpleFrosted = applySurfaceWetness(surface, conditions, {
+      quality: 'SIMPLE',
+      frost: {},
+    });
+    expect(calls(simple.albedo)).toBe(calls(simpleFrosted.albedo));
+  });
 });

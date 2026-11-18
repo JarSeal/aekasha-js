@@ -8,7 +8,8 @@
 // texture's R stretched down steep faces, in both qualities; its shoreline (T8) along the water
 // level, arithmetic at the world's position, in both qualities; its snow (T10) the input `snow`'s
 // set sampled top-down in the material's space, its average colour past a far mode's band, in both
-// qualities. The conditions are the
+// qualities; its frost (T11) by the sets' porosity, in both qualities, its sparkle (`FULL`) at the
+// material's position, faded out by the view distance. The conditions are the
 // `surfaceConditions()` feature's stable uniforms; without the feature the material builds dry,
 // warned once a page load.
 import { attribute, float, smoothstep, uniform } from 'three/tsl';
@@ -21,6 +22,7 @@ import { sampleMacroTexture } from '../nodes/Macro';
 import type { SurfaceSpace } from '../nodes/SurfaceSpace';
 import {
   applySurfaceWetness,
+  type SurfaceFrostOpts,
   type SurfacePuddleOpts,
   type SurfaceRippleOpts,
   type SurfaceShorelineOpts,
@@ -189,6 +191,43 @@ const getSnowOpts = (
   };
 };
 
+/**
+ * The frost's options (uniforms `terrain_wetFrostTemperature` and `terrain_wetFrostStrength`, and
+ * with the sparkle `terrain_wetSparkleDensity`, `terrain_wetSparkleStrength` and
+ * `terrain_wetSparkleDistance`: at the material's position, faded out over its view distances),
+ * or undefined without; `SIMPLE` has no sparkle (the reader refuses it there)
+ */
+const getFrostOpts = (
+  settings: TerrainWetDefine,
+  surface: TerrainWetInput,
+  space: SurfaceSpace,
+  keep: Keep
+): SurfaceFrostOpts | undefined => {
+  const { frost } = settings;
+  if (!frost) return undefined;
+  const opts: SurfaceFrostOpts = {
+    temperature: keep('wetFrostTemperature', uniform(new Vector2(...frost.temperature))),
+    strength: keep('wetFrostStrength', uniform(frost.strength)),
+  };
+  const { sparkle } = frost;
+  if (!sparkle) return opts;
+  const distance = keep<Node<'vec2'>>(
+    'wetSparkleDistance',
+    uniform(new Vector2(...sparkle.distance))
+  );
+  return {
+    ...opts,
+    sparkle: {
+      position: space.position,
+      density: keep('wetSparkleDensity', uniform(sparkle.density)),
+      strength: keep('wetSparkleStrength', uniform(sparkle.strength)),
+      fade: float(1).sub(
+        smoothstep(distance.x, distance.y, surface.viewDistance)
+      ) as unknown as Node<'float'>,
+    },
+  };
+};
+
 /** The regional wetness's node: the vertex attribute, or the first splat map's A; undefined without */
 const getRegional = (settings: TerrainWetDefine, surface: TerrainWetInput) => {
   const { regional } = settings;
@@ -201,7 +240,7 @@ const getRegional = (settings: TerrainWetDefine, surface: TerrainWetInput) => {
 
 /**
  * The surface wet by the surface conditions with the define's `wet` (uniforms
- * `terrain_wetShelter`, the streaks', the shoreline's, the snow's, and with `FULL` `terrain_wetHeightInfluence`,
+ * `terrain_wetShelter`, the streaks', the shoreline's, the snow's, the frost's, and with `FULL` `terrain_wetHeightInfluence`,
  * `terrain_wetCavityInfluence`, the puddles' and the ripples'), and its masks (the `WETNESS`
  * view's); as given, masks null, without `wet` or without the `surfaceConditions()` feature
  * (warned once a page load).
@@ -235,6 +274,7 @@ export const applyTerrainWetness = (
   const streaks = getStreakOpts(settings, surface, space, keep);
   const shoreline = getShorelineOpts(settings, keep);
   const snow = getSnowOpts(settings, surface, space, keep);
+  const frost = getFrostOpts(settings, surface, space, keep);
   const wet = applySurfaceWetness(
     {
       albedo: surface.albedo,
@@ -267,6 +307,7 @@ export const applyTerrainWetness = (
       ...(streaks ? { streaks } : {}),
       ...(shoreline ? { shoreline } : {}),
       ...(snow ? { snow } : {}),
+      ...(frost ? { frost } : {}),
     }
   );
   return {

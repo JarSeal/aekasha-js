@@ -1071,6 +1071,64 @@ const TerrainSnowSchema = z
   );
 
 /**
+ * The frost (p307 T11): below freezing the layers whiten a little and roughen, each by 1 − its
+ * set's porosity; its sparkle glints.
+ */
+const TerrainFrostSchema = z
+  .object({
+    /**
+     * The temperatures where frost starts and where it's full, °C, `[from, to]` with `from` the
+     * warmer (default `[0, -5]`).
+     */
+    temperature: z
+      .tuple([z.number(), z.number()])
+      .refine(([from, to]) => from > to, 'the first value over the second')
+      .optional()
+      .describe(
+        "The temperatures where frost starts and where it's full, °C, [from, to], from the warmer (default [0, -5])."
+      ),
+    /** The frost's strength, 0..1 (default 1). */
+    strength: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe("The frost's strength, 0..1 (default 1)."),
+    /** Ice crystals glinting toward the camera (`FULL` only); default none. */
+    sparkle: z
+      .object({
+        /** The crystals a metre, over 0 (default 50). */
+        density: z.number().gt(0).optional().describe('The crystals a metre, over 0 (default 50).'),
+        /** How bright a glint is, added to the albedo, 0 or more (default 3). */
+        strength: z
+          .number()
+          .min(0)
+          .optional()
+          .describe('How bright a glint is, added to the albedo, 0 or more (default 3).'),
+        /**
+         * The view distances over which the sparkle fades out, `[from, to]` metres (default
+         * `[4, 10]`): none computed past `to`.
+         */
+        distance: z
+          .tuple([z.number().min(0), z.number().min(0)])
+          .refine(([from, to]) => from < to, 'the first value under the second')
+          .optional()
+          .describe(
+            'The view distances over which the sparkle fades out, [from, to] metres (default [4, 10]).'
+          ),
+      })
+      .strict()
+      .optional()
+      .describe(
+        'Ice crystals glinting toward the camera on the frost and on frozen snow, in a dynamic branch. FULL only.'
+      ),
+  })
+  .strict()
+  .describe(
+    "Frost (p307 T11): below the surface conditions' temperature range the layers whiten a little and roughen (never smoother), each by 1 - its set's porosity, an underside half; after the wetness. Arithmetic, both qualities; its sparkle FULL only."
+  );
+
+/**
  * The regional wetness (p307 T7): an authored wetness, 0..1, the least the surface shows and the
  * least puddle level, in any weather: a float vertex attribute (default `_wetness`, glTF's
  * `_WETNESS`), or the first splat map's A.
@@ -1168,6 +1226,8 @@ const TerrainWetSchema = z
     shoreline: TerrainShorelineSchema.optional(),
     /** The snow cover; default none. */
     snow: TerrainSnowSchema.optional(),
+    /** The frost; default none. */
+    frost: TerrainFrostSchema.optional(),
   })
   .strict()
   .superRefine((wet, ctx) => {
@@ -1183,6 +1243,13 @@ const TerrainWetSchema = z
         code: 'custom',
         path: ['ripples'],
         message: 'is for quality FULL: SIMPLE leaves the normal alone.',
+      });
+    }
+    if (wet.quality === 'SIMPLE' && wet.frost?.sparkle) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['frost', 'sparkle'],
+        message: 'is for quality FULL: SIMPLE is the frost alone.',
       });
     }
   })

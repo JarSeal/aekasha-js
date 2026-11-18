@@ -1633,6 +1633,31 @@ describe('setupTerrainMaterial: wet (p307)', () => {
     ).toThrow(/Input "snow": its texture set has no averageColor/);
   });
 
+  it('frosts in either quality by its uniforms, its sparkle FULL only', () => {
+    const material = build({
+      layers: [{}],
+      wet: { frost: { temperature: [1, -8], sparkle: { distance: [2, 8] } } },
+    });
+    const uniforms = getUniforms(material);
+    expect(uniforms.terrain_wetFrostTemperature.value).toEqual(new Vector2(1, -8));
+    expect(uniforms.terrain_wetFrostStrength.value).toBe(1);
+    expect(uniforms.terrain_wetSparkleDensity.value).toBe(50);
+    expect(uniforms.terrain_wetSparkleStrength.value).toBe(3);
+    expect(uniforms.terrain_wetSparkleDistance.value).toEqual(new Vector2(2, 8));
+    for (const socket of [material.colorNode, material.roughnessNode]) {
+      expect(reaches(socket, conditions.temperature)).toBe(true);
+      expect(reaches(socket, uniforms.terrain_wetFrostTemperature)).toBe(true);
+    }
+    const simple = build({ layers: [{}], wet: { quality: 'SIMPLE', frost: {} } });
+    expect(reaches(simple.roughnessNode, conditions.temperature)).toBe(true);
+    expect(getUniforms(simple).terrain_wetSparkleDensity).toBeUndefined();
+    expect(() =>
+      build({ layers: [{}], wet: { quality: 'SIMPLE', frost: { sparkle: {} } } })
+    ).toThrow(/is for quality FULL/);
+    const dry = build({ layers: [{}], wet: {} });
+    expect(reaches(dry.roughnessNode, conditions.temperature)).toBe(false);
+  });
+
   it("counts the snow set's taps in TAPS where it covers", async () => {
     expect(await loadTerrainDebugViewsAsync()).toBe(true);
     const material = build(

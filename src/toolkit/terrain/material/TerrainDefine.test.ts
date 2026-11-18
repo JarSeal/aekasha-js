@@ -347,6 +347,13 @@ const ACCEPTED: unknown[] = [
     wet: { quality: 'SIMPLE', snow: { maxSlope: 90, noiseScale: 0.5, edge: 1, tiling: 2 } },
   },
   { layers: [{}], wet: {}, quality: { LOW: { wet: { snow: {} } } } },
+  // Its frost, in either quality, its sparkle FULL's
+  { layers: [{}], wet: { frost: {} } },
+  { layers: [{}], wet: { quality: 'SIMPLE', frost: { temperature: [2, -10], strength: 0 } } },
+  {
+    layers: [{}],
+    wet: { frost: { sparkle: { density: 40, strength: 0, distance: [0, 6] } } },
+  },
   // Its rain streaks, in either quality
   { layers: [{}], wet: { streaks: {} } },
   {
@@ -714,6 +721,18 @@ const REFUSED: unknown[] = [
   { layers: [{}], wet: { snow: { edge: 1.5 } } },
   { layers: [{}], wet: { snow: { tiling: -1 } } },
   { layers: [{}], wet: { snow: true } },
+  // Its frost: its ranges and keys, its sparkle FULL's
+  { layers: [{}], wet: { frost: { temperature: [-5, 0] } } },
+  { layers: [{}], wet: { frost: { temperature: [0, 0] } } },
+  { layers: [{}], wet: { frost: { temperature: [0] } } },
+  { layers: [{}], wet: { frost: { strength: 1.5 } } },
+  { layers: [{}], wet: { frost: { below: -5 } } },
+  { layers: [{}], wet: { frost: true } },
+  { layers: [{}], wet: { quality: 'SIMPLE', frost: { sparkle: {} } } },
+  { layers: [{}], wet: { frost: { sparkle: { density: 0 } } } },
+  { layers: [{}], wet: { frost: { sparkle: { strength: -1 } } } },
+  { layers: [{}], wet: { frost: { sparkle: { distance: [10, 4] } } } },
+  { layers: [{}], wet: { frost: { sparkle: { size: 1 } } } },
   // Its rain streaks: their ranges and keys
   { layers: [{}], wet: { streaks: { minSlope: 0 } } },
   { layers: [{}], wet: { streaks: { minSlope: 95 } } },
@@ -792,6 +811,17 @@ describe('readTerrainDefine', () => {
       streaks: null,
       shoreline: null,
       snow: null,
+      frost: null,
+    });
+    expect(read({ layers: [{}], wet: { frost: {} } }).wet?.frost).toEqual({
+      temperature: [0, -5],
+      strength: 1,
+      sparkle: null,
+    });
+    expect(read({ layers: [{}], wet: { frost: { sparkle: {} } } }).wet?.frost?.sparkle).toEqual({
+      density: 50,
+      strength: 3,
+      distance: [4, 10],
     });
     expect(read({ layers: [{}], wet: { snow: {} } }).wet?.snow).toEqual({
       maxSlope: 55,
@@ -1146,6 +1176,11 @@ describe('readTerrainDefine', () => {
     );
     expect(values.wetSnowKeys.sort()).toEqual(
       Object.keys(wet.unwrap().shape.snow.unwrap().shape).sort()
+    );
+    const frost = wet.unwrap().shape.frost.unwrap();
+    expect(values.wetFrostKeys.sort()).toEqual(Object.keys(frost.shape).sort());
+    expect(values.wetSparkleKeys.sort()).toEqual(
+      Object.keys(frost.shape.sparkle.unwrap().shape).sort()
     );
     const [byAttribute, bySplat] = wet.unwrap().shape.regional.unwrap().options;
     expect(Object.keys(byAttribute.shape)).toEqual(['attribute']);

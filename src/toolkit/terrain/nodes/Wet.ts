@@ -11,7 +11,8 @@
 // steep faces rivulets run down while it rains and stay damp after (T5); along the water level a
 // shoreline's bands wash, saturate and dampen the ground (T8); snow covers it by the snow cover,
 // flat ground first, frozen dry below 0 °C and slush above, its meltwater wetting the ground around
-// (T10). Every number of the response is a node: a terrain material's are its layers' set uniforms
+// (T10); below freezing, frost whitens and roughens it, ice crystals sparkling (T11). Every number
+// of the response is a node: a terrain material's are its layers' set uniforms
 // blended by weight, an app material's its own. The ripples' two fetches, the streaks' one and
 // the snow set's are the only ones, each in a branch on the weather (`Ripples.ts`, `Streaks.ts`,
 // `Snow.ts`; the patches are the caller's sample).
@@ -31,6 +32,7 @@ import {
 import type { Node, TextureNode } from 'three/webgpu';
 import type { SurfaceConditionNodes } from 'aekasha/surface';
 import type { TextureSetInput } from 'aekasha/texturesets';
+import { applyFrost, getFrost, getSparkle } from './Frost';
 import { sampleRainRipples } from './Ripples';
 import { getShoreline } from './Shoreline';
 import { sampleSnowCover } from './Snow';
@@ -108,6 +110,11 @@ export const SURFACE_WETNESS_DEFAULTS = {
   snowNoiseScale: 3,
   snowEdge: 0.08,
   snowTiling: 1,
+  frostTemperature: [0, -5],
+  frostStrength: 1,
+  sparkleDensity: 50,
+  sparkleStrength: 3,
+  sparkleDistance: [4, 10],
 } as const satisfies Record<string, number | readonly [number, number]>;
 
 /** A number as a constant node, or the node given */
@@ -232,6 +239,42 @@ export type ApplySurfaceWetnessOpts = {
    * the coverage. Both qualities (`'SIMPLE'` reads no relief and leaves the normal). Left out: none.
    */
   snow?: SurfaceSnowOpts;
+  /**
+   * Frost by the conditions' `temperature`: below `temperature[0]` the surface whitens a little and
+   * roughens (never smoother: ice loses its mirror), full at `temperature[1]` and below, as far as
+   * it takes frost (1 − its porosity: ice fully, sand little) and faces the sky (an underside
+   * half); after the wetness. Its `sparkle` (`'FULL'` only) glints on the frost and on frozen
+   * snow. Arithmetic, the sparkle in a dynamic branch. Left out: none.
+   */
+  frost?: SurfaceFrostOpts;
+};
+
+/** {@link ApplySurfaceWetnessOpts}' frost. */
+export type SurfaceFrostOpts = {
+  /**
+   * The temperatures where frost starts and where it's full, °C, the first the warmer (default
+   * `[0, -5]`): a vec2 node, or the numbers.
+   */
+  temperature?: Node<'vec2'> | readonly [number, number];
+  /** The frost's strength, 0..1 (default 1). */
+  strength?: Node<'float'> | number;
+  /** Ice crystals glinting toward the camera (`'FULL'` only). Left out: none. */
+  sparkle?: SurfaceSparkleOpts;
+};
+
+/** {@link SurfaceFrostOpts}' sparkle. */
+export type SurfaceSparkleOpts = {
+  /** The surface's position, its cells the crystals (default the world's). */
+  position?: Node<'vec3'>;
+  /** The crystals a metre, over 0 (default 50). */
+  density?: Node<'float'> | number;
+  /** How bright a glint is, added to the albedo (default 3). */
+  strength?: Node<'float'> | number;
+  /**
+   * The sparkle's share at the pixel, 0..1 (eg. a distance fade: a crystal under a pixel would
+   * shimmer; 0 computes none). Default: full to 4 m from the camera, none past 10 m.
+   */
+  fade?: Node<'float'>;
 };
 
 /** {@link ApplySurfaceWetnessOpts}' snow cover. */
@@ -372,6 +415,8 @@ export type SurfaceWetnessMasks = {
   streak: Node<'float'>;
   /** The snow's cover (0 without `opts.snow`); where it's over 0, the snow set is sampled. */
   snow: Node<'float'>;
+  /** The frost (0 without `opts.frost`). */
+  frost: Node<'float'>;
 };
 
 /** The wet surface: the albedo, the roughness, the normal (when given) and the masks. */
@@ -402,8 +447,10 @@ export type WetSurface = {
  * above (a regional wetness), arithmetic only; with `opts.snow` (T10), a texture set covers the
  * surface by the conditions' `snowCoverage` (flat ground first, nothing past `maxSlope`), frozen
  * dry below 0 °C and slush above (its meltwater wetting the ground around), its taps in a dynamic
- * branch on the cover; nothing else fetches or branches. At wetness, puddle level, rain and snow
- * cover 0 without a regional wetness the surface is as given.
+ * branch on the cover; with `opts.frost` (T11), below freezing the surface whitens a little and
+ * roughens by 1 − its porosity, its `sparkle` glinting in a dynamic branch; nothing else fetches or
+ * branches. At wetness, puddle level, rain and snow cover 0, above the frost's temperature,
+ * without a regional wetness the surface is as given.
  * @param input the dry surface, its relief, cavity, regional wetness and response
  * @param conditions the surface conditions' uniforms (`getSurfaceConditionNodes()`)
  * @returns the wet surface and its masks
@@ -550,6 +597,17 @@ export const applySurfaceWetness = (
     albedo = albedo.mul(float(1).sub(puddle.mul(PUDDLE_DARKENING))) as Node<'vec3'>;
     roughness = mix(roughness, roughness.min(PUDDLE_ROUGHNESS), puddle) as Node<'float'>;
   }
+  // T11: frost over it all, its sparkle on the frost and on frozen snow
+  let frost: Node<'float'> | null = null;
+  if (opts.frost) {
+    frost = getSurfaceFrost(porosity, exposure, conditions, opts.frost);
+    ({ albedo, roughness } = applyFrost(albedo, roughness, frost));
+    const { sparkle } = opts.frost;
+    if (isFull && sparkle) {
+      const frozen = snow ? (max(frost, snow.frozen) as unknown as Node<'float'>) : frost;
+      albedo = albedo.add(getSurfaceSparkle(frozen, sparkle)) as Node<'vec3'>;
+    }
+  }
   return {
     albedo,
     roughness,
@@ -563,6 +621,7 @@ export const applySurfaceWetness = (
       ripple: ripple ?? (float(0) as unknown as Node<'float'>),
       streak: streaks?.weight ?? (float(0) as unknown as Node<'float'>),
       snow: snow?.cover ?? (float(0) as unknown as Node<'float'>),
+      frost: frost ?? (float(0) as unknown as Node<'float'>),
     },
   };
 };
@@ -646,7 +705,41 @@ const coverWithSnow = (surface: WetSurfaceInput, ctx: SnowContext) => {
     // The wetness shows on the ground and on slush, not on frozen snow
     wettable: float(1).sub(cover.mul(float(1).sub(melt))) as Node<'float'>,
     meltwater: snow.fringe.mul(melt) as Node<'float'>,
+    frozen: cover.mul(float(1).sub(melt)) as Node<'float'>,
   };
+};
+
+/** The frost (`Frost.ts`): the response 1 − the porosity, the facing the rain's exposure */
+const getSurfaceFrost = (
+  porosity: Node<'float'>,
+  exposure: Node<'float'>,
+  conditions: SurfaceConditionNodes,
+  opts: SurfaceFrostOpts
+) => {
+  const defaults = SURFACE_WETNESS_DEFAULTS;
+  const range = opts.temperature ?? defaults.frostTemperature;
+  return getFrost({
+    temperature: conditions.temperature as unknown as Node<'float'>,
+    range: ('isNode' in range ? range : vec2(range[0], range[1])) as unknown as Node<'vec2'>,
+    strength: toFloat(opts.strength ?? defaults.frostStrength),
+    response: float(1).sub(porosity) as Node<'float'>,
+    exposure,
+  });
+};
+
+/** The sparkle's glints (`Frost.ts`) × its strength, white: on the weight × the fade */
+const getSurfaceSparkle = (weight: Node<'float'>, opts: SurfaceSparkleOpts) => {
+  const defaults = SURFACE_WETNESS_DEFAULTS;
+  const [from, to] = defaults.sparkleDistance;
+  const viewDistance = (positionView as unknown as Node<'vec3'>).length();
+  const fade =
+    opts.fade ?? (float(1).sub(smoothstep(from, to, viewDistance)) as unknown as Node<'float'>);
+  const glint = getSparkle({
+    position: opts.position ?? (positionWorld as unknown as Node<'vec3'>),
+    density: toFloat(opts.density ?? defaults.sparkleDensity),
+    weight: weight.mul(fade) as Node<'float'>,
+  });
+  return vec3(glint.mul(toFloat(opts.strength ?? defaults.sparkleStrength)));
 };
 
 /** The ground's flatness: 1 up to half of `maxSlope` (degrees from flat), 0 past it */

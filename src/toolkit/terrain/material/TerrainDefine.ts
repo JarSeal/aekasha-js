@@ -139,6 +139,7 @@ const WET_KEYS = [
   'streaks',
   'shoreline',
   'snow',
+  'frost',
 ];
 const WET_PUDDLE_KEYS = ['maxSlope', 'edge', 'patches'];
 const WET_RIPPLE_KEYS = ['scale', 'lifetime', 'strength', 'distance'];
@@ -146,6 +147,8 @@ const WET_STREAK_KEYS = ['minSlope', 'scale', 'length', 'speed'];
 const WET_SHORELINE_KEYS = ['band', 'noise', 'runUp'];
 const WET_RUN_UP_KEYS = ['height', 'period'];
 const WET_SNOW_KEYS = ['maxSlope', 'noiseScale', 'edge', 'tiling'];
+const WET_FROST_KEYS = ['temperature', 'strength', 'sparkle'];
+const WET_SPARKLE_KEYS = ['density', 'strength', 'distance'];
 const WET_PATCH_KEYS = ['scale', 'amount'];
 const WET_SPLAT_CHANNELS = ['A'] as const;
 /** The vertex attribute a regional wetness reads by default: glTF's `_WETNESS` (GLTFLoader's
@@ -317,6 +320,21 @@ export type TerrainWetDefine = {
   shoreline: TerrainShorelineDefine | null;
   /** The snow cover (the input `snow`, a texture set), or null for none */
   snow: TerrainSnowDefine | null;
+  /** The frost, or null for none */
+  frost: TerrainFrostDefine | null;
+};
+
+/** The wet response's frost with its defaults filled in (p307 T11) */
+export type TerrainFrostDefine = {
+  /** Where frost starts and where it's full, °C, the first the warmer */
+  temperature: [number, number];
+  /** The frost's strength, 0..1 */
+  strength: number;
+  /**
+   * The sparkle (`FULL` only): the crystals a metre, a glint's brightness and the view distances
+   * it fades out over, metres; or null for none
+   */
+  sparkle: { density: number; strength: number; distance: [number, number] } | null;
 };
 
 /** The wet response's snow cover with its defaults filled in (p307 T10) */
@@ -464,6 +482,8 @@ export const TERRAIN_DEFINE_VALUES = {
   wetShorelineKeys: WET_SHORELINE_KEYS,
   wetRunUpKeys: WET_RUN_UP_KEYS,
   wetSnowKeys: WET_SNOW_KEYS,
+  wetFrostKeys: WET_FROST_KEYS,
+  wetSparkleKeys: WET_SPARKLE_KEYS,
   wetSplatChannels: WET_SPLAT_CHANNELS,
   colorMapKeys: COLOR_MAP_KEYS,
   farModes: FAR_MODES,
@@ -1261,6 +1281,9 @@ const readWet = (value: unknown, path: string): TerrainWetDefine | null => {
   if (quality === 'SIMPLE' && wet.ripples !== undefined) {
     fail(`${path}.ripples`, 'is for quality FULL: SIMPLE leaves the normal alone.');
   }
+  if (quality === 'SIMPLE' && isRecord(wet.frost) && wet.frost.sparkle !== undefined) {
+    fail(`${path}.frost.sparkle`, 'is for quality FULL: SIMPLE is the frost alone.');
+  }
   return {
     quality,
     heightInfluence: readNumber(wet, 'heightInfluence', heightInfluence, NON_NEGATIVE, path),
@@ -1272,6 +1295,49 @@ const readWet = (value: unknown, path: string): TerrainWetDefine | null => {
     streaks: readStreaks(wet.streaks, `${path}.streaks`),
     shoreline: readShoreline(wet.shoreline, `${path}.shoreline`),
     snow: readSnow(wet.snow, `${path}.snow`),
+    frost: readFrost(wet.frost, `${path}.frost`),
+  };
+};
+
+/**
+ * The frost's numbers (p307 T11), their defaults filled in; null without: the temperatures two
+ * finite numbers, the first the warmer
+ */
+const readFrost = (value: unknown, path: string): TerrainFrostDefine | null => {
+  if (value === undefined) return null;
+  const frost = readObject(value, path);
+  checkKeys(frost, WET_FROST_KEYS, path);
+  const { frostTemperature, frostStrength } = SURFACE_WETNESS_DEFAULTS;
+  const temperature = frost.temperature ?? frostTemperature;
+  const isPair =
+    Array.isArray(temperature) &&
+    temperature.length === 2 &&
+    temperature.every((n) => typeof n === 'number' && Number.isFinite(n));
+  if (!isPair) {
+    fail(`${path}.temperature`, `is ${JSON.stringify(temperature)}: give [from, to], °C.`);
+  }
+  const [from, to] = temperature as [number, number];
+  if (from <= to) {
+    fail(`${path}.temperature`, `is [${from}, ${to}]: the first value is over the second.`);
+  }
+  return {
+    temperature: [from, to],
+    strength: readNumber(frost, 'strength', frostStrength, UNIT, path),
+    sparkle: readSparkle(frost.sparkle, `${path}.sparkle`),
+  };
+};
+
+/** The sparkle's numbers (p307 T11), their defaults filled in; null without */
+const readSparkle = (value: unknown, path: string): TerrainFrostDefine['sparkle'] => {
+  if (value === undefined) return null;
+  const sparkle = readObject(value, path);
+  checkKeys(sparkle, WET_SPARKLE_KEYS, path);
+  const { sparkleDensity, sparkleStrength, sparkleDistance } = SURFACE_WETNESS_DEFAULTS;
+  const over0 = { min: { value: 0, isExclusive: true } };
+  return {
+    density: readNumber(sparkle, 'density', sparkleDensity, over0, path),
+    strength: readNumber(sparkle, 'strength', sparkleStrength, NON_NEGATIVE, path),
+    distance: readMetreRange(sparkle, 'distance', [...sparkleDistance], path),
   };
 };
 

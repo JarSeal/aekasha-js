@@ -270,7 +270,9 @@ const getAoNode = (
  * surface conditions' `waterLevel` is washed, saturated and damp above (arithmetic, at the world's
  * position); with `wet.snow` the input `snow` (a texture set) covers the surface by the surface
  * conditions' `snowCoverage`, flat ground first (its taps in a branch on the cover; past a far
- * mode's band its average colour), frozen dry below 0 °C and slush above. With `space: 'OBJECT'` all of it is in the mesh's own space (its
+ * mode's band its average colour), frozen dry below 0 °C and slush above; with `wet.frost` the
+ * surface whitens a little and roughens below freezing by its sets' porosity, its `sparkle`
+ * glinting (`FULL`). With `space: 'OBJECT'` all of it is in the mesh's own space (its
  * position × scale, its normal: coordinates, projections, rules, macro), the shaded normal turned
  * into world space before the view; `WORLD` (default) the world's. A live layer (`source:
  * 'PROCEDURAL_LIVE'`) runs its procedural set's generator in place of sampling (its whole graph at
@@ -300,7 +302,10 @@ const getAoNode = (
  * `terrain_wetStreakScale`, `terrain_wetStreakLength` and `terrain_wetStreakSpeed` with its
  * streaks, `terrain_wetShoreBand` and `terrain_wetShoreNoise` with its shoreline,
  * `terrain_wetShoreRunUp` with the shoreline's run-up, `terrain_wetSnowMaxSlope`,
- * `terrain_wetSnowNoiseScale`, `terrain_wetSnowEdge` and `terrain_wetSnowTiling` with its snow).
+ * `terrain_wetSnowNoiseScale`, `terrain_wetSnowEdge` and `terrain_wetSnowTiling` with its snow,
+ * `terrain_wetFrostTemperature` and `terrain_wetFrostStrength` with its frost,
+ * `terrain_wetSparkleDensity`, `terrain_wetSparkleStrength` and `terrain_wetSparkleDistance` with
+ * the frost's sparkle).
  * A `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug env, once
  * {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the view. The
  * define as given is kept at `material.userData.terrainDefine`.

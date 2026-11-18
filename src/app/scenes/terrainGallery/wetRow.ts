@@ -15,7 +15,7 @@
 // level, its waves washing up, and a still water plane over the beach at the level (hidden
 // without one), which follows it on the scene's looper. Phase 5: snow over every block and both
 // pieces by the surface conditions' snow cover (the toolkit's `snow01`, the code route's default),
-// slush above 0 °C. Code route materials (`createTerrainMaterial`) with a `LOW` tier whose wet is
+// slush above 0 °C, and frost below it (sparkling, on the ice block most). Code route materials (`createTerrainMaterial`) with a `LOW` tier whose wet is
 // `SIMPLE` (without the puddles and the ripples: a tier's variant shares the material's inputs,
 // which a variant without them would refuse): the quality (the tier) and the view are variants of
 // a block's or a piece's material.
@@ -154,13 +154,18 @@ export const getWetAppId = (key: WetKey) => `terrainGallery_wet_${key}`;
 /** The row's `SIMPLE` quality: the tier its materials switch to */
 const SIMPLE_TIER = 'LOW';
 
+/** The row's frost, sparkling (the `SIMPLE` tier's without) */
+const FROST = { sparkle: {} };
+
 /** A row material's wet with its `SIMPLE` tier: the same without what `FULL` alone takes */
 const withSimpleTier = (wet: NonNullable<TerrainMaterialConfig['wet']>) => {
-  const { puddles: _puddles, ripples: _ripples, ...simple } = wet;
-  return { wet, quality: { [SIMPLE_TIER]: { wet: { ...simple, quality: 'SIMPLE' as const } } } };
+  const { puddles: _puddles, ripples: _ripples, frost, ...rest } = wet;
+  const { sparkle: _sparkle, ...still } = frost ?? {};
+  const simple = { ...rest, ...(frost ? { frost: still } : {}), quality: 'SIMPLE' as const };
+  return { wet, quality: { [SIMPLE_TIER]: { wet: simple } } };
 };
 
-/** A block's code route config: its sets, wet (`FULL`, puddles in patches, ripples, snow; the
+/** A block's code route config: its sets, wet (`FULL`, puddles in patches, ripples, snow, frost; the
  * grass block's regional wetness, the beach's shoreline) and its `SIMPLE` tier; the beach's rocks
  * by slope */
 const getBlockConfig = (block: WetBlock): TerrainMaterialConfig => ({
@@ -178,6 +183,7 @@ const getBlockConfig = (block: WetBlock): TerrainMaterialConfig => ({
     puddles: { patches: { scale: PUDDLE_PATCH_SCALE } },
     ripples: {},
     snow: {},
+    frost: FROST,
     ...(block.key === REGIONAL_WET_KEY ? { regional: {} } : {}),
     ...(block.key === SHORE_WET_KEY ? { shoreline: { band: SHORE_BAND, runUp: {} } } : {}),
   }),
@@ -196,10 +202,13 @@ const getBlockMaterial = (block: WetBlock, view: WetRowView): THREE.Material => 
   return getViewMaterial(config.id, view);
 };
 
-/** A piece's material for the view: its structure material (streaks and snow), or its variant */
+/** A piece's material for the view: its structure material (streaks, snow, frost), or its variant */
 const getPieceMaterial = (piece: WetPiece, view: WetRowView): THREE.Material => {
   const id = `terrainGalleryWet_${piece.key}`;
-  createStructureMaterial(piece.set, { id, ...withSimpleTier({ streaks: {}, snow: {} }) });
+  createStructureMaterial(piece.set, {
+    id,
+    ...withSimpleTier({ streaks: {}, snow: {}, frost: FROST }),
+  });
   return getViewMaterial(id, view);
 };
 

@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 4115,
-      "total": 4115
+      "documented": 4123,
+      "total": 4123
     },
     "members": {
       "documented": 1118,
@@ -23,8 +23,8 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 451,
-        "total": 451
+        "documented": 459,
+        "total": 459
       },
       "members": {
         "documented": 165,
@@ -1127,8 +1127,8 @@
     },
     "toolkit/terrain/material": {
       "exports": {
-        "documented": 149,
-        "total": 149
+        "documented": 150,
+        "total": 150
       },
       "members": {
         "documented": 0,
@@ -1141,8 +1141,8 @@
     },
     "toolkit/terrain/nodes": {
       "exports": {
-        "documented": 91,
-        "total": 91
+        "documented": 98,
+        "total": 98
       },
       "members": {
         "documented": 0,

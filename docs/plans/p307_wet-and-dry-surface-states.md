@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-4 implemented, Phase 5 section 1
+Status: in progress | Phases 1-5 implemented
 Category: Materials, Terrain, Weather
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -368,7 +368,7 @@ type SurfaceConditions = {
   - The run-up: in `WETNESS` the wash and the saturated band move along the shore between frames 1.5 s apart; shaded, it's a moving gloss edge, a few levels in the lowest strips. A foam line would read better (left for a water material).
   - `SIMPLE`: the bands without the flat normal; the wash still darkens and glosses.
 
-### Phase 5 — Snow coverage and frost (T10, T11)
+### Phase 5 — Snow coverage and frost (T10, T11) — done
 
 **Exit:**
 
@@ -404,6 +404,21 @@ type SurfaceConditions = {
   - `SIMPLE` at 0.6: the same cover a little fuller (no relief).
   - `WETNESS` at −5 °C: the grass block's regional band showed its wetness through the snow (a pink tint) on the first build, whose `wettable` scaled only the weather's wetness; the regional and the damp band are scaled too now (the band's snow from mean R − B −1.8 to −10.3, as blue as the rest; its bare drifts still orange).
   - At 3 °C (cover 0.6): the snow grey-blue and glossy, the slush's pores filling in hard-edged blotches over snow01's relief (its porosity 0.5 fills the pores over a quarter of the wetness), the bare mud at the ramp's top darkened by the meltwater.
+
+**As built (section 2):**
+
+- **The node:** `nodes/Frost.ts`' `getFrost`, `applyFrost` and `getSparkle` (internal), called by `applySurfaceWetness` with `opts.frost: { temperature?, strength?, sparkle?: { position?, density?, strength?, fade? } }` (`SurfaceFrostOpts`, `SurfaceSparkleOpts`, on the entry); `masks.frost` (0 without). After the wetness, so frost covers a wet or a soaked surface too (a frozen film, then hoarfrost on it).
+  - The frost: `1 − smoothstep(to, from, temperature)` (none at `from`, full at `to`; default `[0, −5]` °C) × `strength` × (1 − the blended porosity, the snow's in it) × (0.5 + 0.5 × the rain's exposure: an underside half). Arithmetic, both qualities.
+  - Under it: the albedo 12 % toward (0.82, 0.86, 0.9), the roughness toward `max(r, 0.6)` (never lowered: ice loses its mirror).
+  - The sparkle (`FULL` only): 3D cells of the position × `density` (the cell's y folded into the noise library's 2D hashes' x × 131), each a random facet (`hash22`, `hash12`) and a spot of 0.35 cells, glinting by `smoothstep(0.95, 1, facet · toCamera)` (about 2.5 % of the cells from a view); × the frost or the frozen snow (the cover × 1 − the melt) × the fade; added to the albedo × `strength`, white, so the scene's light shows it (dimmer in shade). In a branch on that weight (a `Fn` returning a var; the position, the density and the direction to the camera declared before it). No fetch.
+  - Defaults (`SURFACE_WETNESS_DEFAULTS`): `frostTemperature` [0, −5], `frostStrength` 1, `sparkleDensity` 50, `sparkleStrength` 3, `sparkleDistance` [4, 10] m.
+- **The terrain `wet.frost`:** `{ temperature? ([from, to] °C, from over to), strength? (0..1), sparkle?: { density? (over 0), strength? (≥ 0), distance? ([from, to] metres) } }`, both qualities, the sparkle refused with `SIMPLE`; uniforms `terrain_wetFrostTemperature` (vec2), `terrain_wetFrostStrength`, with the sparkle `terrain_wetSparkleDensity`, `…Strength`, `…Distance` (its fade over the material's view distance). At the material's position. No input.
+- **Not in a debug view:** `WETNESS` doesn't show the frost (judged shaded), `TAPS` has nothing to count.
+- **The gallery:** every row block and both pieces have `frost: { sparkle: {} }`, their `LOW` tier the frost without the sparkle; the tab's Temperature hint says what it does.
+- **Seen** (2026-11-18, Windows Chrome on WebGPU, AMD RDNA 3; no shader errors):
+  - The first build whitened 30 % (the plan's "slight white"): at −5 °C the row went pale, the mud grey, the grass mint, the ice nearly white (a mix of a dark linear albedo toward white more than doubles it); and the sparkle (80 cells a metre, 1 % glinting, strength 2) was specks of a pixel or two from 1.6 m. Tuned to 12 %, 50 cells a metre, about 2.5 % and 3.
+  - Then, at −5 °C: the ice block (wetness 0.6, a mirror at 15 °C) matte and a little paler, its pattern kept, glints over it; the row frosty without washing out, the dense sets (cliffs, concrete, the boulder) most, the sand least.
+  - Frozen snow from 1.6 m: white points across the near metres, others between two frames 30 cm apart; none past about 10 m. At 3 °C the snow's glints are gone (slush).
 
 ### Phase 6 (optional) — Rain occlusion map (T12)
 

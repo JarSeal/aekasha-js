@@ -4,7 +4,8 @@
 // down the streaks, it wets nothing; the Surface conditions tab's `SIMULATED` mode and Rain shower
 // show the streaks fade after), the water level the beach's shoreline follows (a switch and a
 // slider over the block's heights), the snow cover and the temperature (sliders with the exit's
-// steps: in `MANUAL` the snow melts only in look, slush, not into the wetness), the row's quality (`FULL`, `SIMPLE`) and view (the shading, `WETNESS`, `TAPS`), and
+// steps: in `MANUAL` the snow melts only in look, slush, not into the wetness; below 0 °C frost),
+// the row's quality (`FULL`, `SIMPLE`) and view (the shading, `WETNESS`, `TAPS`), and
 // the blocks' list, a click flying the camera to the block. The "Surface conditions" tab has the
 // rest of the weather.
 import { debuggerListCMP, updateDebuggerTab, type DebuggerTabSection } from 'aekasha/debug';
@@ -211,7 +212,7 @@ export const getWetSections = (tabId: string, onSelect: () => void): DebuggerTab
         min: TEMPERATURE_RANGE[0],
         max: TEMPERATURE_RANGE[1],
         step: 0.5,
-        hint: 'The surface conditions’ temperature: below 0 °C the snow is frozen (the wetness doesn’t show on it), from 0 to 3 °C it turns to slush (greyer, smoother, wet) and its meltwater wets the ground around it. In MANUAL mode nothing melts away: the Surface conditions tab’s SIMULATED mode melts the cover into the wetness',
+        hint: 'The surface conditions’ temperature: below 0 °C the snow is frozen (the wetness doesn’t show on it) and frost forms, full at −5 °C (whiter and rougher, the dense sets most: ice loses its mirror; crystals sparkle within 10 m, on frozen snow too); from 0 to 3 °C the snow turns to slush (greyer, smoother, wet) and its meltwater wets the ground around it. In MANUAL mode nothing melts away: the Surface conditions tab’s SIMULATED mode melts the cover into the wetness',
       },
       ...TEMPERATURE_STEPS.map((temperature) => ({
         type: 'button' as const,
