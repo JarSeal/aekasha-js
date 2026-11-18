@@ -4,8 +4,10 @@ import { installInstanceSets } from './InstanceSet';
 
 /**
  * The instancing feature: instanced mesh pools (`createInstancedMeshPool`,
- * `createInstancedLodPool`), many entities drawn by one `InstancedMesh` each, and instance sets
- * (`createInstanceSetAsync`), many instances as plain data, culled and LOD-selected per instance.
+ * `createInstancedLodPool`), many entities drawn by one `InstancedMesh` each, instance sets
+ * (`createInstanceSetAsync`), many instances as plain data, culled and LOD-selected per instance,
+ * and static instances (`createStaticInstances`, `createInstancedMeshEntity`), cells of instances
+ * that never move, one entity per cell.
  * An instanced LOD pool's and an instance set's levels need `lod()` too, and a pool's
  * `spatialDomain` option `spatial()`.
  * @example

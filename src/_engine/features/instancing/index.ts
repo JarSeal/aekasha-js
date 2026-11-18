@@ -16,3 +16,9 @@ export type {
   InstanceSetStats,
 } from './InstanceSetTypes';
 export { instancing } from './InstancingFeature';
+export { createInstancedMeshEntity, createStaticInstances } from './StaticInstances';
+export type {
+  CreateStaticInstancesOptions,
+  InstancedMeshEntityProps,
+  StaticInstances,
+} from './StaticInstances';

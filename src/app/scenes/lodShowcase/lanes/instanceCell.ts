@@ -1,13 +1,6 @@
 import * as THREE from 'three/webgpu';
-import {
-  ComponentType,
-  createGeometry,
-  incGeometryRef,
-  createMaterial,
-  incMaterialRef,
-  setMeshLod,
-  createSeededRandom,
-} from 'aekasha';
+import { ComponentType, createGeometry, setMeshLod, createSeededRandom } from 'aekasha';
+import { createInstancedMeshEntity } from 'aekasha/instancing';
 import type { LodDef } from 'aekasha/lod';
 import type { ShowcaseLaneContext, ShowcaseLane } from '../layout';
 
@@ -39,39 +32,32 @@ const DEF: LodDef = {
 /** One cell: a 4 × 4 block of bollards drawn by one InstancedMesh entity, its instances around
  * the mesh's origin. It stands at the origin until placed. */
 const createCell = (ctx: ShowcaseLaneContext, index: number) => {
-  const geometry = createGeometry({
-    id: levelGeoId(0),
-    type: 'CAPSULE',
-    params: { ...BOLLARD, ...LEVEL_SEGMENTS[0] },
-  });
-  const material = createMaterial({
-    id: MAT_ID,
-    type: 'STANDARD',
-    params: { color: '#b8b2a7', roughness: 0.6, metalness: 0 },
-  });
-  const mesh = new THREE.InstancedMesh(geometry, material, GRID * GRID);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  mesh.userData.id = `lodShowcaseCell_${index}`;
   const random = createSeededRandom(31);
   const matrix = new THREE.Matrix4();
+  const matrices = new Float32Array(GRID * GRID * 16);
   const half = ((GRID - 1) * SPACING) / 2;
   for (let i = 0; i < GRID * GRID; i++) {
     const x = (i % GRID) * SPACING - half + (random() - 0.5) * 0.15;
     const z = Math.floor(i / GRID) * SPACING - half + (random() - 0.5) * 0.15;
     // Standing on the ground: the capsule's centre is half its full height up
-    mesh.setMatrixAt(i, matrix.makeTranslation(x, BOLLARD.height / 2 + BOLLARD.radius, z));
+    matrix.makeTranslation(x, BOLLARD.height / 2 + BOLLARD.radius, z).toArray(matrices, i * 16);
   }
-  mesh.computeBoundingSphere();
   // The mesh holds level 0's refs, which the level swaps move
-  incGeometryRef(levelGeoId(0));
-  incMaterialRef(MAT_ID);
-
-  const entityId = ctx.world.createEntity({ appId: `lodShowcaseCell_${index}` });
-  mesh.userData.entityId = entityId;
-  ctx.world.addComponent(entityId, ComponentType.OBJECT3D, { value: mesh, _lastVersion: -1 });
-  ctx.world.addComponent(entityId, ComponentType.TAG_IS_MESH, true);
-  ctx.rootScene.add(mesh);
+  const entityId = createInstancedMeshEntity(
+    {
+      geo: { id: levelGeoId(0), type: 'CAPSULE', params: { ...BOLLARD, ...LEVEL_SEGMENTS[0] } },
+      mat: {
+        id: MAT_ID,
+        type: 'STANDARD',
+        params: { color: '#b8b2a7', roughness: 0.6, metalness: 0 },
+      },
+      instances: matrices,
+      castShadow: true,
+      receiveShadow: true,
+      appId: `lodShowcaseCell_${index}`,
+    },
+    { world: ctx.world }
+  );
   return { entityId };
 };
 
