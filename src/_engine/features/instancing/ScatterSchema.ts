@@ -122,8 +122,46 @@ const PlacementsSourceSchema = z
   })
   .describe("Hand-placed instances (or a tool's).");
 
-/** The scatter sources: `PROCEDURAL` (a generator) and `PLACEMENTS` (a list). */
-export const SCATTER_SOURCE_TYPES = ['PROCEDURAL', 'PLACEMENTS'] as const;
+/** An import's instances (p308 D3): its nodes of GPU instances and its point clouds. */
+const ImportedSourceSchema = z
+  .strictObject({
+    /** The instances of an import's nodes. */
+    type: z.literal('IMPORTED').describe("The instances of an import's nodes."),
+    /** The `*.importedAsset.json`'s id (the gather adds it to the scene). Its nodes of GPU
+     * instances (`EXT_mesh_gpu_instancing`) and its point clouds (`aekScatterPoints`) are the
+     * instances, placed from the target's position as they are from the file's root. */
+    importedAsset: z
+      .string()
+      .min(1)
+      .describe(
+        "The *.importedAsset.json's id (the gather adds it to the scene). Its nodes of GPU instances (EXT_mesh_gpu_instancing) and its point clouds (aekScatterPoints) are the instances, placed from the target's position as they are from the file's root."
+      ),
+    /** The nodes to take, by name, `*` matching any run of characters (`Rocks*`). Default: every
+     * node of GPU instances and every point cloud. */
+    nodes: z
+      .array(z.string().min(1))
+      .min(1)
+      .optional()
+      .describe(
+        'The nodes to take, by name, * matching any run of characters (Rocks*). Default: every node of GPU instances and every point cloud.'
+      ),
+    /** The seed the points without an `_ITEM` are picked from (default 0), combined as a
+     * generator's. */
+    seed: z
+      .number()
+      .int()
+      .optional()
+      .describe(
+        "The seed the points without an _ITEM are picked from (default 0), combined as a generator's."
+      ),
+  })
+  .describe(
+    "An import's instances: a GPU-instanced node's item is the one whose geometry is the node's, a point's its _ITEM."
+  );
+
+/** The scatter sources: `PROCEDURAL` (a generator), `PLACEMENTS` (a list) and `IMPORTED` (an
+ * import's instances). */
+export const SCATTER_SOURCE_TYPES = ['PROCEDURAL', 'PLACEMENTS', 'IMPORTED'] as const;
 
 /** The defaults the gather fills in. */
 export const SCATTER_DEFAULTS = {
@@ -156,11 +194,16 @@ export const ScatterAssetSchema = z
       .min(1)
       .max(256)
       .describe('The kinds of instance (at most 256): each a geometry and a material.'),
-    /** Where the instances go: `PROCEDURAL` (a registered generator) or `PLACEMENTS` (a list). */
+    /** Where the instances go: `PROCEDURAL` (a registered generator), `PLACEMENTS` (a list) or
+     * `IMPORTED` (an import's GPU instances and point clouds). */
     source: z
-      .discriminatedUnion('type', [ProceduralSourceSchema, PlacementsSourceSchema])
+      .discriminatedUnion('type', [
+        ProceduralSourceSchema,
+        PlacementsSourceSchema,
+        ImportedSourceSchema,
+      ])
       .describe(
-        'Where the instances go: PROCEDURAL (a registered generator) or PLACEMENTS (a list).'
+        "Where the instances go: PROCEDURAL (a registered generator), PLACEMENTS (a list) or IMPORTED (an import's GPU instances and point clouds)."
       ),
     /** A cell's side in metres: each cell is one draw per item, culled and switched as a whole.
      * Default 16. */
@@ -228,7 +271,8 @@ export type ScatterPlacementDef = {
 /** A scatter's source, as a scene's data has it (its `params` and `seed` filled in). */
 export type ScatterSourceDef =
   | { type: 'PROCEDURAL'; generator: string; params: Record<string, unknown>; seed: number }
-  | { type: 'PLACEMENTS'; placements: ScatterPlacementDef[]; seed: number };
+  | { type: 'PLACEMENTS'; placements: ScatterPlacementDef[]; seed: number }
+  | { type: 'IMPORTED'; importedAsset: string; nodes?: string[]; seed: number };
 
 /**
  * A scatter as a scene's data has it (the gatherer's): its JSON with the defaults filled in.

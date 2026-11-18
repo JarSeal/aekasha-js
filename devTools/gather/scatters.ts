@@ -4,8 +4,9 @@
  * `scatters`) and before the geometries and materials, writes each scatter a scene's `scatters`
  * lists into its data, once (where `instancing()`'s `spawnScatter` reads it), and appends each
  * item's geometry and material, and its LOD levels' `geo` / `mat`, to the scene's `geometries` and
- * `materials` when an asset JSON has the id. Any other id is an import's piece or one code
- * registers: the spawn throws naming it when it isn't registered. A scene with scatters gets
+ * `materials` when an asset JSON has the id, and an `IMPORTED` source's import to its
+ * `importedAssets` (pass 1 fails on an import id no JSON has). Any other id is an import's piece
+ * or one code registers: the spawn throws naming it when it isn't registered. A scene with scatters gets
  * `instancing` in its manifest from the part's `scatters` field.
  */
 import {
@@ -13,12 +14,31 @@ import {
   ScatterAssetSchema,
   type ScatterAsset,
   type ScatterDef,
+  type ScatterSourceDef,
 } from '../../src/_engine/schemas';
 import { claimIds, readAssetJsons, type GatherContext, type Registries } from './context';
 import type { TakenIds } from './context';
 import { getIdFromFileName } from './gatheredJson';
 import type { SceneRun } from './sceneAssets';
 import { appendSceneListId } from './terrainBlocks';
+
+/** The source with its seed (and a generator's params) filled in */
+const toSourceDef = (source: ScatterAsset['source']): ScatterSourceDef => {
+  const seed = source.seed ?? SCATTER_DEFAULTS.seed;
+  switch (source.type) {
+    case 'PROCEDURAL':
+      return { type: 'PROCEDURAL', generator: source.generator, params: source.params ?? {}, seed };
+    case 'PLACEMENTS':
+      return { type: 'PLACEMENTS', placements: source.placements, seed };
+    case 'IMPORTED':
+      return {
+        type: 'IMPORTED',
+        importedAsset: source.importedAsset,
+        ...(source.nodes ? { nodes: source.nodes } : {}),
+        seed,
+      };
+  }
+};
 
 /** The scatter with its defaults filled in, as scenes get it */
 const toScatterDef = (scatter: ScatterAsset, id: string): ScatterDef => {
@@ -32,28 +52,24 @@ const toScatterDef = (scatter: ScatterAsset, id: string): ScatterDef => {
       castShadow: item.castShadow ?? SCATTER_DEFAULTS.castShadow,
       receiveShadow: item.receiveShadow ?? SCATTER_DEFAULTS.receiveShadow,
     })),
-    source:
-      source.type === 'PROCEDURAL'
-        ? {
-            type: 'PROCEDURAL',
-            generator: source.generator,
-            params: source.params ?? {},
-            seed: source.seed ?? SCATTER_DEFAULTS.seed,
-          }
-        : {
-            type: 'PLACEMENTS',
-            placements: source.placements,
-            seed: source.seed ?? SCATTER_DEFAULTS.seed,
-          },
+    source: toSourceDef(source),
     cellSize: cellSize ?? SCATTER_DEFAULTS.cellSize,
     ...(lod ? { lod } : {}),
     ...(debugData ? { debugData } : {}),
   };
 };
 
-/** Pass 1's scatters (before the terrain blocks: a block names its scatters) */
+/** Pass 1's scatters (after the imports: an `IMPORTED` source names one; before the terrain
+ * blocks: a block names its scatters) */
 export const readScatters = (ctx: GatherContext, reg: Registries, taken: TakenIds) =>
   readAssetJsons(ctx, 'scatter', ScatterAssetSchema, (scatterJSON, { file, sourcePath }) => {
+    const { source } = scatterJSON;
+    if (source.type === 'IMPORTED' && !reg.importedAssets[source.importedAsset]) {
+      ctx.log.error(
+        `${file}: source.importedAsset: no *.importedAsset.json has the id "${source.importedAsset}"`
+      );
+      return;
+    }
     const scatterId = scatterJSON.id || getIdFromFileName(file, 'scatter');
     if (!claimIds(ctx, taken.scatters, 'scatter', file, scatterId)) return;
     reg.scatters[scatterId] = { ...toScatterDef(scatterJSON, scatterId), __sourcePath: sourcePath };
@@ -90,6 +106,9 @@ export const resolveScatters = ({ ctx, reg, scene, reportUnknownId }: SceneRun) 
     }
     for (const id of materialIds) {
       if (reg.materials[id]) appendSceneListId(scene, 'materials', id);
+    }
+    if (def.source.type === 'IMPORTED') {
+      appendSceneListId(scene, 'importedAssets', def.source.importedAsset);
     }
   }
   // The generated data's shape: the definitions in place of the ids

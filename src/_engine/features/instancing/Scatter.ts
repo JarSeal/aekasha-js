@@ -25,8 +25,8 @@ import type { ScatterDef, ScatterItemDef, ScatterPlacementDef } from './ScatterS
 import { createStaticInstances } from './StaticInstances';
 
 // Scatters (docs/plans/p308_terrain-scatter.md D2): a `*.scatter.json` from the spawning scene's
-// data, its instances placed by its source (a registered generator, or its placements), grouped by
-// item and drawn in cells by `createStaticInstances`.
+// data, its instances placed by its source (a registered generator, its placements, or an import's
+// GPU instances and point clouds), grouped by item and drawn in cells by `createStaticInstances`.
 
 const MATRIX_SIZE = 16;
 const COLOR_SIZE = 3;
@@ -177,8 +177,8 @@ const selectItem = (
 
 /** `spawnScatter`'s options. */
 export type SpawnScatterOpts = {
-  /** Where it spawns: what `PLACEMENTS` are relative to, what a generator places on, and the grid
-   * place in its seed. Default: the origin, grid `(0, 0)`. */
+  /** Where it spawns: what `PLACEMENTS` and an `IMPORTED` source's file root are relative to, what
+   * a generator places on, and the grid place in its seed. Default: the origin, grid `(0, 0)`. */
   target?: ScatterTarget;
   /** The cells' app ids' start: a cell is `<appId>/<item>/<cellX>,<cellZ>`. Default:
    * `scatter/<id>`; give another to spawn a scatter twice over the same cells. */
@@ -207,10 +207,14 @@ export type SpawnedScatter = {
  * @param id the scatter's id (its `*.scatter.json`'s)
  * @returns the scatter's cells and its `dispose()`, or `null` when its scene left meanwhile
  * @throws when `instancing()` isn't installed, there's no scene, the scene doesn't have the
- * scatter, an item's geometry or material isn't registered, or its generator isn't registered or
- * returns instances that don't fit its items
- * @remarks Re-check your scene after the `await`: a load that leaves the scene while a generator
- * runs gets `null`, and nothing is made.
+ * scatter, an item's geometry or material isn't registered, its generator isn't registered or
+ * returns instances that don't fit its items, or its import has no node it takes, a node of GPU
+ * instances no item draws or a point's `_ITEM` past the items
+ * @remarks An `IMPORTED` source's node of GPU instances is drawn by the item whose `geometry` is
+ * the node's (`<importId>/<node>`), a point cloud's point by its `_ITEM` (else the weights
+ * pick).
+ * Re-check your scene after the `await`: a load that leaves the scene while a generator runs (or
+ * the `IMPORTED` source's code loads) gets `null`, and nothing is made.
  * @example
  * ```ts
  * import { spawnScatter } from 'aekasha/instancing';
@@ -259,6 +263,15 @@ export const spawnScatter = async (
     if (visit !== scatterState.sceneVisit) return null;
     ({ matrices, colors } = result);
     picked = result.items ? Int16Array.from(result.items) : new Int16Array(0);
+  } else if (scatter.source.type === 'IMPORTED') {
+    // Its code reads the import registry: loaded with the first such scatter
+    const { getImportedScatterInstances } = await import('./ScatterImported');
+    if (visit !== scatterState.sceneVisit) return null;
+    ({ matrices, colors, picked } = getImportedScatterInstances(
+      scatter,
+      scatter.source,
+      _origin.set(position.x, position.y, position.z)
+    ));
   } else {
     const { placements } = scatter.source;
     matrices = placementMatrices(placements, _origin.set(position.x, position.y, position.z));

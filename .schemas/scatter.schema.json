@@ -15,16 +15,16 @@
       "$ref": "#/definitions/__schema13"
     },
     "cellSize": {
-      "$ref": "#/definitions/__schema39"
+      "$ref": "#/definitions/__schema47"
     },
     "lod": {
-      "$ref": "#/definitions/__schema41"
+      "$ref": "#/definitions/__schema49"
     },
     "debugData": {
-      "$ref": "#/definitions/__schema60"
+      "$ref": "#/definitions/__schema68"
     },
     "__sourcePath": {
-      "$ref": "#/definitions/__schema71"
+      "$ref": "#/definitions/__schema79"
     }
   },
   "required": [
@@ -136,9 +136,12 @@
         },
         {
           "$ref": "#/definitions/__schema21"
+        },
+        {
+          "$ref": "#/definitions/__schema39"
         }
       ],
-      "description": "Where the instances go: PROCEDURAL (a registered generator) or PLACEMENTS (a list)."
+      "description": "Where the instances go: PROCEDURAL (a registered generator), PLACEMENTS (a list) or IMPORTED (an import's GPU instances and point clouds)."
     },
     "__schema14": {
       "type": "object",
@@ -363,42 +366,107 @@
       "maximum": 9007199254740991
     },
     "__schema39": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/__schema40"
+        },
+        "importedAsset": {
+          "$ref": "#/definitions/__schema41"
+        },
+        "nodes": {
+          "$ref": "#/definitions/__schema42"
+        },
+        "seed": {
+          "$ref": "#/definitions/__schema45"
+        }
+      },
+      "required": [
+        "type",
+        "importedAsset"
+      ],
+      "additionalProperties": false,
+      "description": "An import's instances: a GPU-instanced node's item is the one whose geometry is the node's, a point's its _ITEM."
+    },
+    "__schema40": {
+      "type": "string",
+      "const": "IMPORTED",
+      "description": "The instances of an import's nodes."
+    },
+    "__schema41": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The *.importedAsset.json's id (the gather adds it to the scene). Its nodes of GPU instances (EXT_mesh_gpu_instancing) and its point clouds (aekScatterPoints) are the instances, placed from the target's position as they are from the file's root."
+    },
+    "__schema42": {
+      "description": "The nodes to take, by name, * matching any run of characters (Rocks*). Default: every node of GPU instances and every point cloud.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema43"
+        }
+      ]
+    },
+    "__schema43": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema44"
+      }
+    },
+    "__schema44": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema45": {
+      "description": "The seed the points without an _ITEM are picked from (default 0), combined as a generator's.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema46"
+        }
+      ]
+    },
+    "__schema46": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "__schema47": {
       "description": "A cell's side in metres: each cell is one draw per item, culled and switched as a whole. Default 16.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema40"
+          "$ref": "#/definitions/__schema48"
         }
       ]
     },
-    "__schema40": {
+    "__schema48": {
       "type": "number",
       "exclusiveMinimum": 0
     },
-    "__schema41": {
+    "__schema49": {
       "description": "Every cell's levels of detail; cullScreenSize hides a cell too small on screen. Default: none.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema42"
+          "$ref": "#/definitions/__schema50"
         }
       ]
     },
-    "__schema42": {
+    "__schema50": {
       "type": "object",
       "properties": {
         "levels": {
-          "$ref": "#/definitions/__schema43"
+          "$ref": "#/definitions/__schema51"
         },
         "cullScreenSize": {
-          "$ref": "#/definitions/__schema52"
+          "$ref": "#/definitions/__schema60"
         },
         "hysteresis": {
-          "$ref": "#/definitions/__schema54"
+          "$ref": "#/definitions/__schema62"
         },
         "bias": {
-          "$ref": "#/definitions/__schema56"
+          "$ref": "#/definitions/__schema64"
         },
         "fadeSeconds": {
-          "$ref": "#/definitions/__schema58"
+          "$ref": "#/definitions/__schema66"
         }
       },
       "required": [
@@ -407,28 +475,28 @@
       "additionalProperties": false,
       "description": "Levels of detail (p348): each frame the mesh shows the level its screen size reaches, swapping its geometry, material and castShadow, cross-faded over fadeSeconds."
     },
-    "__schema43": {
+    "__schema51": {
       "minItems": 1,
       "type": "array",
       "items": {
-        "$ref": "#/definitions/__schema44"
+        "$ref": "#/definitions/__schema52"
       },
       "description": "Level 0 (the finest) first, screenSize descending."
     },
-    "__schema44": {
+    "__schema52": {
       "type": "object",
       "properties": {
         "screenSize": {
-          "$ref": "#/definitions/__schema45"
+          "$ref": "#/definitions/__schema53"
         },
         "geo": {
-          "$ref": "#/definitions/__schema46"
+          "$ref": "#/definitions/__schema54"
         },
         "mat": {
-          "$ref": "#/definitions/__schema48"
+          "$ref": "#/definitions/__schema56"
         },
         "castShadow": {
-          "$ref": "#/definitions/__schema50"
+          "$ref": "#/definitions/__schema58"
         }
       },
       "required": [
@@ -437,60 +505,13 @@
       "additionalProperties": false,
       "description": "A level of detail."
     },
-    "__schema45": {
+    "__schema53": {
       "type": "number",
       "minimum": 0,
       "description": "Smallest screen size (bounding-sphere diameter / viewport height) this level is used at. Coarser levels need smaller values. Moving to a coarser level waits for `hysteresis` below it."
     },
-    "__schema46": {
-      "description": "Registered geometry id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema47"
-        }
-      ]
-    },
-    "__schema47": {
-      "type": "string",
-      "minLength": 1
-    },
-    "__schema48": {
-      "description": "Registered material id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema49"
-        }
-      ]
-    },
-    "__schema49": {
-      "type": "string",
-      "minLength": 1
-    },
-    "__schema50": {
-      "description": "Omitted = the previous level's (level 0: the mesh's own).",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema51"
-        }
-      ]
-    },
-    "__schema51": {
-      "type": "boolean"
-    },
-    "__schema52": {
-      "description": "Below this screen size the mesh is hidden (with hysteresis, like the levels). 0 = never hidden. Default 0.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema53"
-        }
-      ]
-    },
-    "__schema53": {
-      "type": "number",
-      "minimum": 0
-    },
     "__schema54": {
-      "description": "Moving to a coarser level (or hiding) waits until the screen size is this fraction below the threshold, so a mesh on a boundary does not flip every frame. Default 0.1.",
+      "description": "Registered geometry id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
       "allOf": [
         {
           "$ref": "#/definitions/__schema55"
@@ -498,12 +519,11 @@
       ]
     },
     "__schema55": {
-      "type": "number",
-      "minimum": 0,
-      "exclusiveMaximum": 1
+      "type": "string",
+      "minLength": 1
     },
     "__schema56": {
-      "description": "Multiplies the screen size: >1 keeps detail longer. Default 1. The global bias (AppConfig.lod.bias, setLodBias) applies on top.",
+      "description": "Registered material id (the scene must load it). Omitted = the previous level's (level 0: the mesh's own).",
       "allOf": [
         {
           "$ref": "#/definitions/__schema57"
@@ -511,11 +531,11 @@
       ]
     },
     "__schema57": {
-      "type": "number",
-      "exclusiveMinimum": 0
+      "type": "string",
+      "minLength": 1
     },
     "__schema58": {
-      "description": "How long a level change (or hiding and showing) cross-fades with a dither, in seconds; 0 switches at once and leaves the level materials undithered. Default AppConfig.lod.fadeSeconds (0.25, setLodFadeSeconds).",
+      "description": "Omitted = the previous level's (level 0: the mesh's own).",
       "allOf": [
         {
           "$ref": "#/definitions/__schema59"
@@ -523,62 +543,110 @@
       ]
     },
     "__schema59": {
+      "type": "boolean"
+    },
+    "__schema60": {
+      "description": "Below this screen size the mesh is hidden (with hysteresis, like the levels). 0 = never hidden. Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema61"
+        }
+      ]
+    },
+    "__schema61": {
       "type": "number",
       "minimum": 0
     },
-    "__schema60": {
+    "__schema62": {
+      "description": "Moving to a coarser level (or hiding) waits until the screen size is this fraction below the threshold, so a mesh on a boundary does not flip every frame. Default 0.1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema63"
+        }
+      ]
+    },
+    "__schema63": {
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMaximum": 1
+    },
+    "__schema64": {
+      "description": "Multiplies the screen size: >1 keeps detail longer. Default 1. The global bias (AppConfig.lod.bias, setLodBias) applies on top.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema65"
+        }
+      ]
+    },
+    "__schema65": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "__schema66": {
+      "description": "How long a level change (or hiding and showing) cross-fades with a dither, in seconds; 0 switches at once and leaves the level materials undithered. Default AppConfig.lod.fadeSeconds (0.25, setLodFadeSeconds).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema67"
+        }
+      ]
+    },
+    "__schema67": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema68": {
       "type": "object",
       "properties": {
         "name": {
-          "$ref": "#/definitions/__schema61"
+          "$ref": "#/definitions/__schema69"
         },
         "description": {
-          "$ref": "#/definitions/__schema63"
+          "$ref": "#/definitions/__schema71"
         },
         "comments": {
-          "$ref": "#/definitions/__schema65"
+          "$ref": "#/definitions/__schema73"
         },
         "todo": {
-          "$ref": "#/definitions/__schema67"
+          "$ref": "#/definitions/__schema75"
         },
         "debugObj": {
-          "$ref": "#/definitions/__schema69"
+          "$ref": "#/definitions/__schema77"
         }
       },
       "additionalProperties": false,
       "description": "What the debug tools show for it. Production data has none."
     },
-    "__schema61": {
+    "__schema69": {
       "description": "The name the debug tools show.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema62"
+          "$ref": "#/definitions/__schema70"
         }
       ]
     },
-    "__schema62": {
+    "__schema70": {
       "type": "string"
     },
-    "__schema63": {
+    "__schema71": {
       "description": "A longer description for the debug tools.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema64"
+          "$ref": "#/definitions/__schema72"
         }
       ]
     },
-    "__schema64": {
+    "__schema72": {
       "type": "string"
     },
-    "__schema65": {
+    "__schema73": {
       "description": "Notes with their times.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema66"
+          "$ref": "#/definitions/__schema74"
         }
       ]
     },
-    "__schema66": {
+    "__schema74": {
       "type": "array",
       "items": {
         "type": "object",
@@ -599,37 +667,37 @@
         "additionalProperties": false
       }
     },
-    "__schema67": {
+    "__schema75": {
       "description": "Open items, by key.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema68"
+          "$ref": "#/definitions/__schema76"
         }
       ]
     },
-    "__schema68": {
+    "__schema76": {
       "type": "object",
       "propertyNames": {
         "type": "string"
       },
       "additionalProperties": {}
     },
-    "__schema69": {
+    "__schema77": {
       "description": "Anything else a debug tool keeps for it.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema70"
+          "$ref": "#/definitions/__schema78"
         }
       ]
     },
-    "__schema70": {
+    "__schema78": {
       "type": "object",
       "propertyNames": {
         "type": "string"
       },
       "additionalProperties": {}
     },
-    "__schema71": {
+    "__schema79": {
       "type": "string",
       "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
     }

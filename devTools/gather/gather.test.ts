@@ -1796,6 +1796,50 @@ describe('p308 D2: scatters', () => {
     expect(out?.__features).toEqual(['terrain', 'instancing']);
   });
 
+  it('writes an IMPORTED source with its seed, and loads its import with the scene', () => {
+    const { isGathered, scene: get } = gather(
+      files(
+        {
+          items: [{ geometry: 'coast/Boulders', material: 'stone' }],
+          source: { type: 'IMPORTED', importedAsset: 'coast', nodes: ['Boulders*'] },
+        },
+        { scatters: ['pebbles'] },
+        {
+          'app/scatter/coast.importedAsset.json': {
+            id: 'coast',
+            fileName: '/debugger/assets/testModels/box01.glb',
+          },
+        }
+      )
+    );
+    expect(isGathered).toBe(true);
+    const out = get('s');
+    const [scatter] = out?.scatters as Record<string, unknown>[];
+    expect(scatter.source).toEqual({
+      type: 'IMPORTED',
+      importedAsset: 'coast',
+      nodes: ['Boulders*'],
+      seed: 0,
+    });
+    expect(ids(out?.importedAssets)).toEqual(['coast']);
+    // The import's piece isn't a geometry JSON: the spawn finds it registered by the import
+    expect(ids(out?.geometries)).toEqual([]);
+  });
+
+  it('fails the gather on an IMPORTED source whose import no JSON has, or with no nodes', () => {
+    const imported = (source: Record<string, unknown>) =>
+      files({ source: { type: 'IMPORTED', importedAsset: 'coast', ...source } });
+    expect(gather(imported({})).isGathered).toBe(false);
+    const coast = {
+      'app/scatter/coast.importedAsset.json': {
+        id: 'coast',
+        fileName: '/debugger/assets/testModels/box01.glb',
+      },
+    };
+    expect(gather({ ...imported({ nodes: [] }), ...coast }).isGathered).toBe(false);
+    expect(gather({ ...imported({}), ...coast }).isGathered).toBe(true);
+  });
+
   it('fails the gather on an unknown scatter, a placement past the items or with two rotations', () => {
     expect(gather(files({}, { scatters: ['nope'] })).isGathered).toBe(false);
     const placements = (placement: Record<string, unknown>) =>

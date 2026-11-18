@@ -19,12 +19,23 @@ import {
   type ScatterGenerator,
 } from './ScatterGenerators';
 import type { ScatterDef } from './ScatterSchema';
+import type {
+  ImportedAssetManifest,
+  ImportedGeometryInfo,
+  ImportedInstances,
+} from '../../kernel/assets/import/ImportTypes';
+import { parseCustomProps } from '../../kernel/assets/import/CustomProps';
 
 // The scene ids and data are stand-ins; the registries, the entities and the cells are real
 const fns = vi.hoisted(() => ({
   loadingSceneId: null as string | null,
   currentSceneId: 'scene' as string | null,
   scenes: {} as Record<string, { scatters?: ScatterDef[] }>,
+  imports: {} as Record<string, ImportedAssetManifest>,
+}));
+vi.mock(import('../../kernel/assets/import/ImportRegistry'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  getImportedAsset: (id: string) => fns.imports[id],
 }));
 vi.mock(import('../../kernel/scene/Scene'), async (importOriginal) => ({
   ...(await importOriginal()),
@@ -89,6 +100,7 @@ beforeEach(() => {
   fns.loadingSceneId = null;
   fns.currentSceneId = 'scene';
   fns.scenes = { scene: { scatters: [scatter()] } };
+  fns.imports = {};
   installScatters({
     addSceneHooks: (hooks: SceneHooks) => {
       exitHook = hooks.exit as () => void;
@@ -258,6 +270,127 @@ describe('spawnScatter', () => {
     exitHook?.();
     finish();
     expect(await pending).toBeNull();
+    expect(getGeometryRegistry().pebble?.count).toBe(0);
+  });
+});
+
+describe("spawnScatter's IMPORTED source", () => {
+  const translations = (...points: [number, number, number][]) => {
+    const matrices = new Float32Array(points.length * 16);
+    points.forEach((p, i) => new THREE.Matrix4().makeTranslation(...p).toArray(matrices, i * 16));
+    return matrices;
+  };
+  const at = (x: number, z: number) => ({
+    position: { x, y: 0, z },
+    quaternion: { x: 0, y: 0, z: 0, w: 1 },
+    scale: { x: 1, y: 1, z: 1 },
+  });
+  const node = (nodeName: string, geometryId: string, instances: ImportedInstances) =>
+    ({
+      geometryId,
+      importId: 'coast',
+      nodeName,
+      parentPath: [],
+      transform: at(2, 0),
+      customProps: parseCustomProps({}),
+      isDracoCompressed: false,
+      instances,
+    }) satisfies ImportedGeometryInfo;
+
+  /** A node of two GPU instances drawing `boulder` at x 2, and three points at z -5 */
+  const setImport = (items?: Int32Array) => {
+    fns.imports.coast = {
+      id: 'coast',
+      fileName: 'coast.glb',
+      textureIds: [],
+      geometries: [
+        {
+          ...node('Ground', 'pebble', { matrices: translations([0, 0, 0]) }),
+          instances: undefined,
+        },
+        node('Boulders', 'boulder', {
+          matrices: translations([1, 0, 0], [0, 0, 1]),
+          colors: new Float32Array([1, 0, 0, 0, 1, 0]),
+        }),
+      ],
+      pointClouds: [
+        {
+          importId: 'coast',
+          nodeName: 'Pebbles',
+          parentPath: [],
+          transform: at(0, -5),
+          customProps: parseCustomProps({}),
+          instances: {
+            matrices: translations([0, 0, 0], [1, 0, 0], [2, 0, 0]),
+            ...(items ? { items } : {}),
+          },
+        },
+      ],
+    };
+  };
+  const imported = (nodes?: string[]): ScatterDef['source'] => ({
+    type: 'IMPORTED',
+    importedAsset: 'coast',
+    ...(nodes ? { nodes } : {}),
+    seed: 0,
+  });
+
+  test("places the GPU instances by their geometry's item and the points by _ITEM, from the target", async () => {
+    setImport(new Int32Array([0, 0, 1]));
+    fns.scenes.scene.scatters = [scatter({ source: imported() })];
+    const spawned = await spawnScatter('rocks', {
+      target: { position: { x: 100, y: 0, z: 0 } },
+      world,
+    });
+    expect(spawned?.count).toBe(5);
+    expect(positionsOf(spawned!.entityIds).sort()).toEqual([
+      'boulder@102,-5',
+      'boulder@102,1',
+      'boulder@103,0',
+      'pebble@100,-5',
+      'pebble@101,-5',
+    ]);
+    // The points have no colours: white beside the node's
+    const colors = spawned!.entityIds.flatMap((id) => {
+      const mesh = world.getComponent(id, ComponentType.OBJECT3D)!.value as THREE.InstancedMesh;
+      return Array.from({ length: mesh.count }, (_, i) =>
+        mesh.getColorAt(i, new THREE.Color()).getHexString()
+      );
+    });
+    expect(colors.sort()).toEqual(['00ff00', 'ff0000', 'ffffff', 'ffffff', 'ffffff']);
+    spawned?.dispose();
+  });
+
+  test("takes the nodes its globs match, and the weights pick the points' items without _ITEM", async () => {
+    setImport();
+    fns.scenes.scene.scatters = [scatter({ source: imported(['Peb*']) })];
+    const spawned = await spawnScatter('rocks', { world });
+    expect(spawned?.count).toBe(3);
+    expect(
+      positionsOf(spawned!.entityIds)
+        .map((p) => p.split('@')[1])
+        .sort()
+    ).toEqual(['0,-5', '1,-5', '2,-5']);
+    spawned?.dispose();
+  });
+
+  test('refuses an import not loaded, no node taken, a node no item draws and an _ITEM past the items', async () => {
+    fns.scenes.scene.scatters = [scatter({ source: imported() })];
+    await expect(spawnScatter('rocks', { world })).rejects.toThrow(
+      /the import "coast", which isn't loaded/
+    );
+    setImport(new Int32Array([0, 2, 0]));
+    await expect(spawnScatter('rocks', { world })).rejects.toThrow(
+      /point cloud "Pebbles" has the _ITEM 2, not one of the 2 items/
+    );
+    fns.scenes.scene.scatters = [scatter({ source: imported(['Trees*']) })];
+    await expect(spawnScatter('rocks', { world })).rejects.toThrow(
+      /no node of GPU instances or point cloud matching "Trees\*" \(it has "Boulders", "Pebbles"\)/
+    );
+    fns.scenes.scene.scatters = [scatter({ items: [item('pebble')], source: imported() })];
+    await expect(spawnScatter('rocks', { world })).rejects.toThrow(
+      /no item draws the geometry "boulder" of its node "Boulders"/
+    );
     expect(getGeometryRegistry().pebble?.count).toBe(0);
   });
 });
