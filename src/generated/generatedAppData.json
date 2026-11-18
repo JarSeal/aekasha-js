@@ -21611,8 +21611,8 @@
     },
     "terrainGallery": {
       "isDebugScene": true,
-      "name": "Terrain gallery (p303, p304, p305, p306, p307)",
-      "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the toolkit's terrain material (p305, its JSON route; one layer, world tiling) in the set's default packing, which the debug tab switches to the code route or to the baseline textureSetSurface (they look the same). Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). Behind the library, the Anti-tiling row (p305): three flat 48 × 48 m grass01 blocks with the terrain material's anti-tiling NONE, DUAL_SCALE and HEX, the macro variation (macroNoise) on, which the debug tab switches and tunes. Left of the library, the Splatting row (p305): six 24 × 24 m generated blocks blending several sets by weights painted in code, the vertex colour (RGBA, 5 layers) and a splat map (5 layers) each LINEAR beside HEIGHT, RGB_AO with the vertex AO (4 layers), and 9 layers with two splat maps (code route materials, storage AUTO: the splat blocks bind one texture too many for SEPARATE, so each takes a set array the scene lists), which the debug tab tunes. In front of the library, the Rules row (p305): two 64 × 64 m blocks on one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces, macroNoise breaking the borders), the rules alone beside a splat map's sandy path and mud under the same rules (its six sets a set array the scene lists), which the debug tab tunes. In front of the Cliffs row, the Colour map row (p305): the Rules row's 8-layer material on four 64 × 64 m blocks of its terrain, then with a DETAIL colour map (baked at the load from the source on the block's own mesh), with the far COLOR_MAP surface and with the far AVERAGE_COLOR one, which the debug tab tunes and bakes again. In front of that, the Structures row (p305): structure materials (createStructureMaterial: triplanar, dual-scale anti-tiling, a 12 m macro) on pieces made in code, a wall of two segments in world space and a bunker's passage piece in object space worn by their vertex colour (RGBA: clean and stained concrete, grime, damage), and two pillars turning and rising, concrete02 in object space beside world space, which the debug tab pauses. Left of the Splatting row, the Wet/dry row (p307): 3 × 3 library blocks, a set of each category (sand02, mud02, rocks01, cliffs01, snow01, ice01, grass01, concrete02) and a beach (sand02 with rocks01 on the ramp by slope), each the terrain material with wet over the surface conditions' wetness, which the scene holds (MANUAL, 0.6) and the debug tab sets, with puddles, rain ripples, streaks on a concrete wall and a cliff boulder, a shoreline on the beach, and snow (snow01) by the snow cover, slush above 0 °C, which the debug tab sets too, with the row's quality (FULL, SIMPLE) and the WETNESS and TAPS views. Right of the library, the Procedural row (p304): the toolkit's ten surface generators on a block each (five rows of two), baked at the load (1024² LITE), which the debug tab switches between the bake, the generator live in the material and an imported set of its category, with each generator's params, its export and a GPU measurement. Right of that, the Live block (p305): a 48 × 48 m generated terrain, grass, rocks by slope and snow on the tops by rules, sand ripples in the hollows from the gallery's procedural set terrainGalleryLiveDunes (sandRipples, baked at the load) run live in the terrain material or sampled baked (the imported sets in a set array, the procedural set beside it), which the debug tab switches, tunes and measures. Behind the Anti-tiling row, past the ground, the Blocks patch (p306): 3 × 3 terrain blocks of 32 m (*.terrainBlock.json) of the toolkit's rulesTerrain, one world-continuous noise with HEIGHT_FN normals, the rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces) laid into the vertex colours on the CPU with the horizon AO in their A, which the debug tab switches to the same rules in the shader (RULES) on the same blocks. In front of the Wet/dry row, the Scatter row (p308): one 24 m block, rocks01 patches over sand02 split down the middle (the vertex colour), the toolkit's procedural pebbles, rocks and boulders (generateRock) scattered on the left half's rock by terrainScatter in the rockScatter material over rocks01, and the toolkit's imported ones (Poly Haven namaqualand_stones_01 and namaqualand_boulder_02, decimated; models/nature/) on the right half's with the same params in rockScatter at their own maps' UV, and right of it a 12 m grass02 and mud02 patch under the toolkit's leaf litter cards (generateLeafCard, the leafLitter material over its LeafSet024 atlas), all wet with the ground by the surface conditions, which the debug tab switches between dry and wet. The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
+      "name": "Terrain gallery (p303, p304, p305, p306, p307, p308, p309)",
+      "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the toolkit's terrain material (p305, its JSON route; one layer, world tiling) in the set's default packing, which the debug tab switches to the code route or to the baseline textureSetSurface (they look the same). Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). Behind the library, the Anti-tiling row (p305): three flat 48 × 48 m grass01 blocks with the terrain material's anti-tiling NONE, DUAL_SCALE and HEX, the macro variation (macroNoise) on, which the debug tab switches and tunes. Left of the library, the Splatting row (p305): six 24 × 24 m generated blocks blending several sets by weights painted in code, the vertex colour (RGBA, 5 layers) and a splat map (5 layers) each LINEAR beside HEIGHT, RGB_AO with the vertex AO (4 layers), and 9 layers with two splat maps (code route materials, storage AUTO: the splat blocks bind one texture too many for SEPARATE, so each takes a set array the scene lists), which the debug tab tunes. In front of the library, the Rules row (p305): two 64 × 64 m blocks on one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces, macroNoise breaking the borders), the rules alone beside a splat map's sandy path and mud under the same rules (its six sets a set array the scene lists), which the debug tab tunes. In front of the Cliffs row, the Colour map row (p305): the Rules row's 8-layer material on four 64 × 64 m blocks of its terrain, then with a DETAIL colour map (baked at the load from the source on the block's own mesh), with the far COLOR_MAP surface and with the far AVERAGE_COLOR one, which the debug tab tunes and bakes again. In front of that, the Structures row (p305): structure materials (createStructureMaterial: triplanar, dual-scale anti-tiling, a 12 m macro) on pieces made in code, a wall of two segments in world space and a bunker's passage piece in object space worn by their vertex colour (RGBA: clean and stained concrete, grime, damage), and two pillars turning and rising, concrete02 in object space beside world space, which the debug tab pauses. Left of the Splatting row, the Wet/dry row (p307): 3 × 3 library blocks, a set of each category (sand02, mud02, rocks01, cliffs01, snow01, ice01, grass01, concrete02) and a beach (sand02 with rocks01 on the ramp by slope), each the terrain material with wet over the surface conditions' wetness, which the scene holds (MANUAL, 0.6) and the debug tab sets, with puddles, rain ripples, streaks on a concrete wall and a cliff boulder, a shoreline on the beach, and snow (snow01) by the snow cover, slush above 0 °C, which the debug tab sets too, with the row's quality (FULL, SIMPLE) and the WETNESS and TAPS views. Right of the library, the Procedural row (p304): the toolkit's ten surface generators on a block each (five rows of two), baked at the load (1024² LITE), which the debug tab switches between the bake, the generator live in the material and an imported set of its category, with each generator's params, its export and a GPU measurement. Right of that, the Live block (p305): a 48 × 48 m generated terrain, grass, rocks by slope and snow on the tops by rules, sand ripples in the hollows from the gallery's procedural set terrainGalleryLiveDunes (sandRipples, baked at the load) run live in the terrain material or sampled baked (the imported sets in a set array, the procedural set beside it), which the debug tab switches, tunes and measures. Behind the Anti-tiling row, past the ground, the Blocks patch (p306): 3 × 3 terrain blocks of 32 m (*.terrainBlock.json) of the toolkit's rulesTerrain, one world-continuous noise with HEIGHT_FN normals, the rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces) laid into the vertex colours on the CPU with the horizon AO in their A, which the debug tab switches to the same rules in the shader (RULES) on the same blocks. In front of the Wet/dry row, the Scatter row (p308): one 24 m block, rocks01 patches over sand02 split down the middle (the vertex colour), the toolkit's procedural pebbles, rocks and boulders (generateRock) scattered on the left half's rock by terrainScatter in the rockScatter material over rocks01, and the toolkit's imported ones (Poly Haven namaqualand_stones_01 and namaqualand_boulder_02, decimated; models/nature/) on the right half's with the same params in rockScatter at their own maps' UV, and right of it a 12 m grass02 and mud02 patch under the toolkit's leaf litter cards (generateLeafCard, the leafLitter material over its LeafSet024 atlas), all wet with the ground by the surface conditions, which the debug tab switches between dry and wet. Right of the Live block, the Decals row (p309): the toolkit's decal atlases decalsGround and decalsStructure (the DECAL packing: albedoAlpha, normalRough) on flat unlit panels, an atlas per row and a panel per view (the albedo over a ground colour, the opacity, the normal and roughness, the puddle mask), each cell outlined and named. The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
       "cameras": [
         {
           "camProps": {
@@ -21688,6 +21688,1042 @@
           "__vramBytes": {
             "in": 349524,
             "out": 87408
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "decalsGround.albedoAlpha",
+          "texOpts": {
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "Ground decals",
+            "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 × 4 grid of 512 cells with 16 px of padding (480² of content; levels 0-4), but tireTracks, a 1024 × 256 strip at its source's 4:1 (992 × 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. A cell's data: physicalSize in m, tileAlong, opacitySource, and a placeholder's generator."
+          },
+          "__atlas": {
+            "id": "decalsGround",
+            "slot": "albedoAlpha",
+            "size": [
+              2048,
+              2048
+            ],
+            "padding": 16,
+            "levels": 5,
+            "cells": {
+              "tireTracks": {
+                "uv": [
+                  0.0078125,
+                  0.8828125,
+                  0.4921875,
+                  0.9921875
+                ],
+                "size": [
+                  992,
+                  224
+                ],
+                "data": {
+                  "physicalSize": [
+                    1.8,
+                    0.45
+                  ],
+                  "tileAlong": "U",
+                  "opacitySource": "CONSTANT"
+                }
+              },
+              "asphaltDamage": {
+                "uv": [
+                  0.5078125,
+                  0.7578125,
+                  0.7421875,
+                  0.9921875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1.2,
+                    1.2
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "MAP"
+                }
+              },
+              "crack": {
+                "uv": [
+                  0.7578125,
+                  0.7578125,
+                  0.9921875,
+                  0.9921875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1,
+                    1
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalCracks"
+                }
+              },
+              "mudSplatter": {
+                "uv": [
+                  0.0078125,
+                  0.5078125,
+                  0.2421875,
+                  0.7421875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1,
+                    1
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalMudSplatter"
+                }
+              },
+              "wetPatch": {
+                "uv": [
+                  0.2578125,
+                  0.5078125,
+                  0.4921875,
+                  0.7421875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    2,
+                    2
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalWetPatch"
+                }
+              },
+              "stain01": {
+                "uv": [
+                  0.5078125,
+                  0.5078125,
+                  0.7421875,
+                  0.7421875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1.5,
+                    1.5
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalStain"
+                }
+              },
+              "stain02": {
+                "uv": [
+                  0.7578125,
+                  0.5078125,
+                  0.9921875,
+                  0.7421875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1.5,
+                    1.5
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalStain"
+                }
+              },
+              "scorch": {
+                "uv": [
+                  0.0078125,
+                  0.2578125,
+                  0.2421875,
+                  0.4921875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    2,
+                    2
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalScorch"
+                }
+              },
+              "footprintBoot": {
+                "uv": [
+                  0.2578125,
+                  0.2578125,
+                  0.4921875,
+                  0.4921875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    0.35,
+                    0.35
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalFootprint"
+                }
+              },
+              "footprintBare": {
+                "uv": [
+                  0.5078125,
+                  0.2578125,
+                  0.7421875,
+                  0.4921875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    0.3,
+                    0.3
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalFootprint"
+                }
+              },
+              "footprintPaw": {
+                "uv": [
+                  0.7578125,
+                  0.2578125,
+                  0.9921875,
+                  0.4921875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    0.12,
+                    0.12
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalFootprint"
+                }
+              },
+              "footprintSnowBoot": {
+                "uv": [
+                  0.0078125,
+                  0.0078125,
+                  0.2421875,
+                  0.2421875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    0.35,
+                    0.35
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalFootprint"
+                }
+              },
+              "leafPatch": {
+                "uv": [
+                  0.2578125,
+                  0.0078125,
+                  0.4921875,
+                  0.2421875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1.5,
+                    1.5
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalLeafPatch"
+                }
+              },
+              "iceCrack": {
+                "uv": [
+                  0.5078125,
+                  0.0078125,
+                  0.7421875,
+                  0.2421875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1.5,
+                    1.5
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalIceCrack"
+                }
+              }
+            }
+          },
+          "__url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.albedoAlpha.ad402bf1.ktx2",
+          "__bytes": {
+            "in": 7342225,
+            "out": 437502
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 5586944
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "decalsGround.normalRough",
+          "debugData": {
+            "name": "Ground decals",
+            "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 × 4 grid of 512 cells with 16 px of padding (480² of content; levels 0-4), but tireTracks, a 1024 × 256 strip at its source's 4:1 (992 × 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. A cell's data: physicalSize in m, tileAlong, opacitySource, and a placeholder's generator."
+          },
+          "__atlas": {
+            "id": "decalsGround",
+            "slot": "normalRough",
+            "size": [
+              2048,
+              2048
+            ],
+            "padding": 16,
+            "levels": 5,
+            "cells": {
+              "tireTracks": {
+                "uv": [
+                  0.0078125,
+                  0.8828125,
+                  0.4921875,
+                  0.9921875
+                ],
+                "size": [
+                  992,
+                  224
+                ],
+                "data": {
+                  "physicalSize": [
+                    1.8,
+                    0.45
+                  ],
+                  "tileAlong": "U",
+                  "opacitySource": "CONSTANT"
+                }
+              },
+              "asphaltDamage": {
+                "uv": [
+                  0.5078125,
+                  0.7578125,
+                  0.7421875,
+                  0.9921875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1.2,
+                    1.2
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "MAP"
+                }
+              },
+              "crack": {
+                "uv": [
+                  0.7578125,
+                  0.7578125,
+                  0.9921875,
+                  0.9921875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1,
+                    1
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalCracks"
+                }
+              },
+              "mudSplatter": {
+                "uv": [
+                  0.0078125,
+                  0.5078125,
+                  0.2421875,
+                  0.7421875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1,
+                    1
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalMudSplatter"
+                }
+              },
+              "wetPatch": {
+                "uv": [
+                  0.2578125,
+                  0.5078125,
+                  0.4921875,
+                  0.7421875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    2,
+                    2
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalWetPatch"
+                }
+              },
+              "stain01": {
+                "uv": [
+                  0.5078125,
+                  0.5078125,
+                  0.7421875,
+                  0.7421875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1.5,
+                    1.5
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalStain"
+                }
+              },
+              "stain02": {
+                "uv": [
+                  0.7578125,
+                  0.5078125,
+                  0.9921875,
+                  0.7421875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1.5,
+                    1.5
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalStain"
+                }
+              },
+              "scorch": {
+                "uv": [
+                  0.0078125,
+                  0.2578125,
+                  0.2421875,
+                  0.4921875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    2,
+                    2
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalScorch"
+                }
+              },
+              "footprintBoot": {
+                "uv": [
+                  0.2578125,
+                  0.2578125,
+                  0.4921875,
+                  0.4921875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    0.35,
+                    0.35
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalFootprint"
+                }
+              },
+              "footprintBare": {
+                "uv": [
+                  0.5078125,
+                  0.2578125,
+                  0.7421875,
+                  0.4921875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    0.3,
+                    0.3
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalFootprint"
+                }
+              },
+              "footprintPaw": {
+                "uv": [
+                  0.7578125,
+                  0.2578125,
+                  0.9921875,
+                  0.4921875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    0.12,
+                    0.12
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalFootprint"
+                }
+              },
+              "footprintSnowBoot": {
+                "uv": [
+                  0.0078125,
+                  0.0078125,
+                  0.2421875,
+                  0.2421875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    0.35,
+                    0.35
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalFootprint"
+                }
+              },
+              "leafPatch": {
+                "uv": [
+                  0.2578125,
+                  0.0078125,
+                  0.4921875,
+                  0.2421875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1.5,
+                    1.5
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalLeafPatch"
+                }
+              },
+              "iceCrack": {
+                "uv": [
+                  0.5078125,
+                  0.0078125,
+                  0.7421875,
+                  0.2421875
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1.5,
+                    1.5
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalIceCrack"
+                }
+              }
+            }
+          },
+          "__url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.normalRough.5df54d1b.ktx2",
+          "__bytes": {
+            "in": 13502722,
+            "out": 448033
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 5586944
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "decalsStructure.albedoAlpha",
+          "texOpts": {
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "Structure decals",
+            "description": "p309 D1: the toolkit's structure decals in the DECAL packing (see decalsGround), 4 × 2 cells of 512 with 16 px of padding. leak01-03 (ambientCG Leaking012A, 017B, 019A) from their pack recipes (decalLeak01-03/: a constant stain colour, opacity from the displacement); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. Physical sizes are estimates (the leaks' downloads give none)."
+          },
+          "__atlas": {
+            "id": "decalsStructure",
+            "slot": "albedoAlpha",
+            "size": [
+              2048,
+              1024
+            ],
+            "padding": 16,
+            "levels": 5,
+            "cells": {
+              "leak01": {
+                "uv": [
+                  0.0078125,
+                  0.515625,
+                  0.2421875,
+                  0.984375
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    2,
+                    2
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "HEIGHT"
+                }
+              },
+              "leak02": {
+                "uv": [
+                  0.2578125,
+                  0.515625,
+                  0.4921875,
+                  0.984375
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    2,
+                    2
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "HEIGHT"
+                }
+              },
+              "leak03": {
+                "uv": [
+                  0.5078125,
+                  0.515625,
+                  0.7421875,
+                  0.984375
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    2,
+                    2
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "HEIGHT"
+                }
+              },
+              "formworkMarks": {
+                "uv": [
+                  0.7578125,
+                  0.515625,
+                  0.9921875,
+                  0.984375
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    2,
+                    2
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalFormwork"
+                }
+              },
+              "crack01": {
+                "uv": [
+                  0.0078125,
+                  0.015625,
+                  0.2421875,
+                  0.484375
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1,
+                    1
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalCracks"
+                }
+              },
+              "crack02": {
+                "uv": [
+                  0.2578125,
+                  0.015625,
+                  0.4921875,
+                  0.484375
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1,
+                    1
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalCracks"
+                }
+              },
+              "stain01": {
+                "uv": [
+                  0.5078125,
+                  0.015625,
+                  0.7421875,
+                  0.484375
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1.5,
+                    1.5
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalStain"
+                }
+              },
+              "stain02": {
+                "uv": [
+                  0.7578125,
+                  0.015625,
+                  0.9921875,
+                  0.484375
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1.5,
+                    1.5
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalStain"
+                }
+              }
+            }
+          },
+          "__url": "/aek-assets/toolkit/textures/decalsStructure/decalsStructure.atlas.albedoAlpha.004439fe.ktx2",
+          "__bytes": {
+            "in": 562800,
+            "out": 159055
+          },
+          "__vramBytes": {
+            "in": 11184812,
+            "out": 2793472
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "decalsStructure.normalRough",
+          "debugData": {
+            "name": "Structure decals",
+            "description": "p309 D1: the toolkit's structure decals in the DECAL packing (see decalsGround), 4 × 2 cells of 512 with 16 px of padding. leak01-03 (ambientCG Leaking012A, 017B, 019A) from their pack recipes (decalLeak01-03/: a constant stain colour, opacity from the displacement); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. Physical sizes are estimates (the leaks' downloads give none)."
+          },
+          "__atlas": {
+            "id": "decalsStructure",
+            "slot": "normalRough",
+            "size": [
+              2048,
+              1024
+            ],
+            "padding": 16,
+            "levels": 5,
+            "cells": {
+              "leak01": {
+                "uv": [
+                  0.0078125,
+                  0.515625,
+                  0.2421875,
+                  0.984375
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    2,
+                    2
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "HEIGHT"
+                }
+              },
+              "leak02": {
+                "uv": [
+                  0.2578125,
+                  0.515625,
+                  0.4921875,
+                  0.984375
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    2,
+                    2
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "HEIGHT"
+                }
+              },
+              "leak03": {
+                "uv": [
+                  0.5078125,
+                  0.515625,
+                  0.7421875,
+                  0.984375
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    2,
+                    2
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "HEIGHT"
+                }
+              },
+              "formworkMarks": {
+                "uv": [
+                  0.7578125,
+                  0.515625,
+                  0.9921875,
+                  0.984375
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    2,
+                    2
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalFormwork"
+                }
+              },
+              "crack01": {
+                "uv": [
+                  0.0078125,
+                  0.015625,
+                  0.2421875,
+                  0.484375
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1,
+                    1
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalCracks"
+                }
+              },
+              "crack02": {
+                "uv": [
+                  0.2578125,
+                  0.015625,
+                  0.4921875,
+                  0.484375
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1,
+                    1
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalCracks"
+                }
+              },
+              "stain01": {
+                "uv": [
+                  0.5078125,
+                  0.015625,
+                  0.7421875,
+                  0.484375
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1.5,
+                    1.5
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalStain"
+                }
+              },
+              "stain02": {
+                "uv": [
+                  0.7578125,
+                  0.015625,
+                  0.9921875,
+                  0.484375
+                ],
+                "size": [
+                  480,
+                  480
+                ],
+                "data": {
+                  "physicalSize": [
+                    1.5,
+                    1.5
+                  ],
+                  "tileAlong": "NONE",
+                  "opacitySource": "GENERATED",
+                  "generator": "decalStain"
+                }
+              }
+            }
+          },
+          "__url": "/aek-assets/toolkit/textures/decalsStructure/decalsStructure.atlas.normalRough.9657dc14.ktx2",
+          "__bytes": {
+            "in": 4796067,
+            "out": 188941
+          },
+          "__vramBytes": {
+            "in": 11184812,
+            "out": 2793472
           },
           "__codec": "uastc"
         },
@@ -40172,6 +41208,1046 @@
       "__vramBytes": {
         "in": 196600,
         "out": 49200
+      },
+      "__codec": "uastc"
+    },
+    "decalsGround.albedoAlpha": {
+      "id": "decalsGround.albedoAlpha",
+      "texOpts": {
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "Ground decals",
+        "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 × 4 grid of 512 cells with 16 px of padding (480² of content; levels 0-4), but tireTracks, a 1024 × 256 strip at its source's 4:1 (992 × 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. A cell's data: physicalSize in m, tileAlong, opacitySource, and a placeholder's generator."
+      },
+      "__sourcePath": "src/toolkit/textures/decalsGround/decalsGround.textureAtlas.json",
+      "__atlas": {
+        "id": "decalsGround",
+        "slot": "albedoAlpha",
+        "size": [
+          2048,
+          2048
+        ],
+        "padding": 16,
+        "levels": 5,
+        "cells": {
+          "tireTracks": {
+            "uv": [
+              0.0078125,
+              0.8828125,
+              0.4921875,
+              0.9921875
+            ],
+            "size": [
+              992,
+              224
+            ],
+            "data": {
+              "physicalSize": [
+                1.8,
+                0.45
+              ],
+              "tileAlong": "U",
+              "opacitySource": "CONSTANT"
+            }
+          },
+          "asphaltDamage": {
+            "uv": [
+              0.5078125,
+              0.7578125,
+              0.7421875,
+              0.9921875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1.2,
+                1.2
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "MAP"
+            }
+          },
+          "crack": {
+            "uv": [
+              0.7578125,
+              0.7578125,
+              0.9921875,
+              0.9921875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1,
+                1
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalCracks"
+            }
+          },
+          "mudSplatter": {
+            "uv": [
+              0.0078125,
+              0.5078125,
+              0.2421875,
+              0.7421875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1,
+                1
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalMudSplatter"
+            }
+          },
+          "wetPatch": {
+            "uv": [
+              0.2578125,
+              0.5078125,
+              0.4921875,
+              0.7421875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                2,
+                2
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalWetPatch"
+            }
+          },
+          "stain01": {
+            "uv": [
+              0.5078125,
+              0.5078125,
+              0.7421875,
+              0.7421875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1.5,
+                1.5
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalStain"
+            }
+          },
+          "stain02": {
+            "uv": [
+              0.7578125,
+              0.5078125,
+              0.9921875,
+              0.7421875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1.5,
+                1.5
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalStain"
+            }
+          },
+          "scorch": {
+            "uv": [
+              0.0078125,
+              0.2578125,
+              0.2421875,
+              0.4921875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                2,
+                2
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalScorch"
+            }
+          },
+          "footprintBoot": {
+            "uv": [
+              0.2578125,
+              0.2578125,
+              0.4921875,
+              0.4921875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                0.35,
+                0.35
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalFootprint"
+            }
+          },
+          "footprintBare": {
+            "uv": [
+              0.5078125,
+              0.2578125,
+              0.7421875,
+              0.4921875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                0.3,
+                0.3
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalFootprint"
+            }
+          },
+          "footprintPaw": {
+            "uv": [
+              0.7578125,
+              0.2578125,
+              0.9921875,
+              0.4921875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                0.12,
+                0.12
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalFootprint"
+            }
+          },
+          "footprintSnowBoot": {
+            "uv": [
+              0.0078125,
+              0.0078125,
+              0.2421875,
+              0.2421875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                0.35,
+                0.35
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalFootprint"
+            }
+          },
+          "leafPatch": {
+            "uv": [
+              0.2578125,
+              0.0078125,
+              0.4921875,
+              0.2421875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1.5,
+                1.5
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalLeafPatch"
+            }
+          },
+          "iceCrack": {
+            "uv": [
+              0.5078125,
+              0.0078125,
+              0.7421875,
+              0.2421875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1.5,
+                1.5
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalIceCrack"
+            }
+          }
+        }
+      },
+      "__url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.albedoAlpha.ad402bf1.ktx2",
+      "__bytes": {
+        "in": 7342225,
+        "out": 437502
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 5586944
+      },
+      "__codec": "uastc"
+    },
+    "decalsGround.normalRough": {
+      "id": "decalsGround.normalRough",
+      "debugData": {
+        "name": "Ground decals",
+        "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 × 4 grid of 512 cells with 16 px of padding (480² of content; levels 0-4), but tireTracks, a 1024 × 256 strip at its source's 4:1 (992 × 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. A cell's data: physicalSize in m, tileAlong, opacitySource, and a placeholder's generator."
+      },
+      "__sourcePath": "src/toolkit/textures/decalsGround/decalsGround.textureAtlas.json",
+      "__atlas": {
+        "id": "decalsGround",
+        "slot": "normalRough",
+        "size": [
+          2048,
+          2048
+        ],
+        "padding": 16,
+        "levels": 5,
+        "cells": {
+          "tireTracks": {
+            "uv": [
+              0.0078125,
+              0.8828125,
+              0.4921875,
+              0.9921875
+            ],
+            "size": [
+              992,
+              224
+            ],
+            "data": {
+              "physicalSize": [
+                1.8,
+                0.45
+              ],
+              "tileAlong": "U",
+              "opacitySource": "CONSTANT"
+            }
+          },
+          "asphaltDamage": {
+            "uv": [
+              0.5078125,
+              0.7578125,
+              0.7421875,
+              0.9921875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1.2,
+                1.2
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "MAP"
+            }
+          },
+          "crack": {
+            "uv": [
+              0.7578125,
+              0.7578125,
+              0.9921875,
+              0.9921875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1,
+                1
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalCracks"
+            }
+          },
+          "mudSplatter": {
+            "uv": [
+              0.0078125,
+              0.5078125,
+              0.2421875,
+              0.7421875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1,
+                1
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalMudSplatter"
+            }
+          },
+          "wetPatch": {
+            "uv": [
+              0.2578125,
+              0.5078125,
+              0.4921875,
+              0.7421875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                2,
+                2
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalWetPatch"
+            }
+          },
+          "stain01": {
+            "uv": [
+              0.5078125,
+              0.5078125,
+              0.7421875,
+              0.7421875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1.5,
+                1.5
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalStain"
+            }
+          },
+          "stain02": {
+            "uv": [
+              0.7578125,
+              0.5078125,
+              0.9921875,
+              0.7421875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1.5,
+                1.5
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalStain"
+            }
+          },
+          "scorch": {
+            "uv": [
+              0.0078125,
+              0.2578125,
+              0.2421875,
+              0.4921875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                2,
+                2
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalScorch"
+            }
+          },
+          "footprintBoot": {
+            "uv": [
+              0.2578125,
+              0.2578125,
+              0.4921875,
+              0.4921875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                0.35,
+                0.35
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalFootprint"
+            }
+          },
+          "footprintBare": {
+            "uv": [
+              0.5078125,
+              0.2578125,
+              0.7421875,
+              0.4921875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                0.3,
+                0.3
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalFootprint"
+            }
+          },
+          "footprintPaw": {
+            "uv": [
+              0.7578125,
+              0.2578125,
+              0.9921875,
+              0.4921875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                0.12,
+                0.12
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalFootprint"
+            }
+          },
+          "footprintSnowBoot": {
+            "uv": [
+              0.0078125,
+              0.0078125,
+              0.2421875,
+              0.2421875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                0.35,
+                0.35
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalFootprint"
+            }
+          },
+          "leafPatch": {
+            "uv": [
+              0.2578125,
+              0.0078125,
+              0.4921875,
+              0.2421875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1.5,
+                1.5
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalLeafPatch"
+            }
+          },
+          "iceCrack": {
+            "uv": [
+              0.5078125,
+              0.0078125,
+              0.7421875,
+              0.2421875
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1.5,
+                1.5
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalIceCrack"
+            }
+          }
+        }
+      },
+      "__url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.normalRough.5df54d1b.ktx2",
+      "__bytes": {
+        "in": 13502722,
+        "out": 448033
+      },
+      "__vramBytes": {
+        "in": 22369620,
+        "out": 5586944
+      },
+      "__codec": "uastc"
+    },
+    "decalsStructure.albedoAlpha": {
+      "id": "decalsStructure.albedoAlpha",
+      "texOpts": {
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "Structure decals",
+        "description": "p309 D1: the toolkit's structure decals in the DECAL packing (see decalsGround), 4 × 2 cells of 512 with 16 px of padding. leak01-03 (ambientCG Leaking012A, 017B, 019A) from their pack recipes (decalLeak01-03/: a constant stain colour, opacity from the displacement); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. Physical sizes are estimates (the leaks' downloads give none)."
+      },
+      "__sourcePath": "src/toolkit/textures/decalsStructure/decalsStructure.textureAtlas.json",
+      "__atlas": {
+        "id": "decalsStructure",
+        "slot": "albedoAlpha",
+        "size": [
+          2048,
+          1024
+        ],
+        "padding": 16,
+        "levels": 5,
+        "cells": {
+          "leak01": {
+            "uv": [
+              0.0078125,
+              0.515625,
+              0.2421875,
+              0.984375
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                2,
+                2
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "HEIGHT"
+            }
+          },
+          "leak02": {
+            "uv": [
+              0.2578125,
+              0.515625,
+              0.4921875,
+              0.984375
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                2,
+                2
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "HEIGHT"
+            }
+          },
+          "leak03": {
+            "uv": [
+              0.5078125,
+              0.515625,
+              0.7421875,
+              0.984375
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                2,
+                2
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "HEIGHT"
+            }
+          },
+          "formworkMarks": {
+            "uv": [
+              0.7578125,
+              0.515625,
+              0.9921875,
+              0.984375
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                2,
+                2
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalFormwork"
+            }
+          },
+          "crack01": {
+            "uv": [
+              0.0078125,
+              0.015625,
+              0.2421875,
+              0.484375
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1,
+                1
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalCracks"
+            }
+          },
+          "crack02": {
+            "uv": [
+              0.2578125,
+              0.015625,
+              0.4921875,
+              0.484375
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1,
+                1
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalCracks"
+            }
+          },
+          "stain01": {
+            "uv": [
+              0.5078125,
+              0.015625,
+              0.7421875,
+              0.484375
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1.5,
+                1.5
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalStain"
+            }
+          },
+          "stain02": {
+            "uv": [
+              0.7578125,
+              0.015625,
+              0.9921875,
+              0.484375
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1.5,
+                1.5
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalStain"
+            }
+          }
+        }
+      },
+      "__url": "/aek-assets/toolkit/textures/decalsStructure/decalsStructure.atlas.albedoAlpha.004439fe.ktx2",
+      "__bytes": {
+        "in": 562800,
+        "out": 159055
+      },
+      "__vramBytes": {
+        "in": 11184812,
+        "out": 2793472
+      },
+      "__codec": "uastc"
+    },
+    "decalsStructure.normalRough": {
+      "id": "decalsStructure.normalRough",
+      "debugData": {
+        "name": "Structure decals",
+        "description": "p309 D1: the toolkit's structure decals in the DECAL packing (see decalsGround), 4 × 2 cells of 512 with 16 px of padding. leak01-03 (ambientCG Leaking012A, 017B, 019A) from their pack recipes (decalLeak01-03/: a constant stain colour, opacity from the displacement); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. Physical sizes are estimates (the leaks' downloads give none)."
+      },
+      "__sourcePath": "src/toolkit/textures/decalsStructure/decalsStructure.textureAtlas.json",
+      "__atlas": {
+        "id": "decalsStructure",
+        "slot": "normalRough",
+        "size": [
+          2048,
+          1024
+        ],
+        "padding": 16,
+        "levels": 5,
+        "cells": {
+          "leak01": {
+            "uv": [
+              0.0078125,
+              0.515625,
+              0.2421875,
+              0.984375
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                2,
+                2
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "HEIGHT"
+            }
+          },
+          "leak02": {
+            "uv": [
+              0.2578125,
+              0.515625,
+              0.4921875,
+              0.984375
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                2,
+                2
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "HEIGHT"
+            }
+          },
+          "leak03": {
+            "uv": [
+              0.5078125,
+              0.515625,
+              0.7421875,
+              0.984375
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                2,
+                2
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "HEIGHT"
+            }
+          },
+          "formworkMarks": {
+            "uv": [
+              0.7578125,
+              0.515625,
+              0.9921875,
+              0.984375
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                2,
+                2
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalFormwork"
+            }
+          },
+          "crack01": {
+            "uv": [
+              0.0078125,
+              0.015625,
+              0.2421875,
+              0.484375
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1,
+                1
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalCracks"
+            }
+          },
+          "crack02": {
+            "uv": [
+              0.2578125,
+              0.015625,
+              0.4921875,
+              0.484375
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1,
+                1
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalCracks"
+            }
+          },
+          "stain01": {
+            "uv": [
+              0.5078125,
+              0.015625,
+              0.7421875,
+              0.484375
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1.5,
+                1.5
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalStain"
+            }
+          },
+          "stain02": {
+            "uv": [
+              0.7578125,
+              0.015625,
+              0.9921875,
+              0.484375
+            ],
+            "size": [
+              480,
+              480
+            ],
+            "data": {
+              "physicalSize": [
+                1.5,
+                1.5
+              ],
+              "tileAlong": "NONE",
+              "opacitySource": "GENERATED",
+              "generator": "decalStain"
+            }
+          }
+        }
+      },
+      "__url": "/aek-assets/toolkit/textures/decalsStructure/decalsStructure.atlas.normalRough.9657dc14.ktx2",
+      "__bytes": {
+        "in": 4796067,
+        "out": 188941
+      },
+      "__vramBytes": {
+        "in": 11184812,
+        "out": 2793472
       },
       "__codec": "uastc"
     },

@@ -119,8 +119,9 @@ tile: decals, scatter cards, sprites, impostors.
 ```
 
 - **Cells** with a `rect` stay there; the rest are packed, each at its `size` (by default its
-  first source's). A source is a texture asset's id or an image. A cell that doesn't fit fails
-  the run, naming it. `data` is anything you want in the cell table (a decal's physical size).
+  first source's). A source is a texture asset's id or an image. A texture asset that's only a
+  cell's source (a decal's pack recipe) sets `"sourceOnly": true`: the run doesn't encode it on
+  its own, and no scene can load it. A cell that doesn't fit fails the run, naming it. `data` is anything you want in the cell table (a decal's physical size).
 - **`padding`** extends each cell's edges outwards, and the mip chain stops at the last level it
   keeps the cells apart (16 px keeps levels 0-4), so a cell never shows its neighbour. A slot a
   cell has no source for gets the slot's `fill` (by default transparent black).

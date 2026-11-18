@@ -14,7 +14,7 @@ import {
   IMPOSTOR_EXPORT_FORMAT_VERSION,
 } from '../../src/_engine/features/lod/impostors/ImpostorFormat';
 import { mergeSkyBoxPreset } from '../../src/_engine/features/skybox/Presets';
-import type { GatherContext, Registries } from './context';
+import { getSourceOnlyTextureError, type GatherContext, type Registries } from './context';
 import { EngineMeshAssetSchema, type EngineSceneAsset } from './engineSchemas';
 import { checkSceneMergedGeometries } from './mergedGeometries';
 import { resolveSceneMergeMaterials } from './mergeMaterials';
@@ -168,6 +168,7 @@ const resolveTextureAsset = (
   ship.checkAsset(texData, 'texture', jsonFile, sceneId);
   delete texData.optimize; // Build time only (p300)
   delete texData.pack;
+  delete texData.sourceOnly; // Build time only (p309 D1)
   delete texData.__sourcePath;
   delete texData.__saveData;
   return texData;
@@ -179,6 +180,11 @@ const resolveTextures = (run: SceneRun) => {
   scene.textures = expandAtlasIds(reg, scene.textures).map((texId) => {
     if (typeof texId !== 'string') return texId;
     const texture = reg.textures[texId];
+    const sourceOnlyError = getSourceOnlyTextureError(reg, texId);
+    if (sourceOnlyError) {
+      ctx.log.error(`Scene "${sceneId}" lists the texture ${sourceOnlyError}.`);
+      return texId;
+    }
     if (texture) return resolveTextureAsset(run, texture);
     if (reg.textureArrays[texId]) {
       // Build time only: the runtime loads the encoded array (its generated fields, from the

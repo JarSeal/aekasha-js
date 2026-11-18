@@ -95,6 +95,15 @@ export type Registries = {
   loaders: GeneratedLoaders;
 };
 
+/**
+ * Why a scene can't load the texture id: it's a source-only texture asset (`sourceOnly`, p309
+ * D1), which nothing encodes on its own. Undefined for any other id.
+ */
+export const getSourceOnlyTextureError = (reg: Registries, id: string) =>
+  reg.textures[id]?.sourceOnly
+    ? `"${id}" is a source-only texture (sourceOnly: an atlas cell's or a texture array layer's source, never loaded on its own): name the atlas's or the array's texture instead`
+    : undefined;
+
 /** The id spaces: textures, arrays, atlases and their slots (and palette slots) share one */
 export type IdSpace =
   | 'scenes'

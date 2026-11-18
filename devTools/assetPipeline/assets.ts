@@ -38,7 +38,8 @@ import { ROOT, SRC_DIR } from '../paths';
 /**
  * The pipeline's asset list (p300 Phase 2 step 7): every source file a `*.texture.json` or
  * `*.importedAsset.json` loads, its own and each scene's latest save entry's (step 2's decision:
- * a scene's file is optimized with the asset's one `optimize`), every `*.textureArray.json`
+ * a scene's file is optimized with the asset's one `optimize`; a `sourceOnly` texture's none,
+ * p309 D1: only the arrays and atlases that read it encode it), every `*.textureArray.json`
  * (p299 D2), every slot of a `*.textureAtlas.json` (p299 D3) and every slot a
  * `*.mergeMaterial.json` palette's members use (p374 D2, its members read from their
  * `*.material.json`s). One {@link PipelineAsset} per
@@ -313,6 +314,8 @@ export const collectPipelineAssets = (assetJsons: AssetJson[]) => {
       continue;
     }
     if (assetJson.type === 'material') continue;
+    // An atlas cell's or an array layer's source only (p309 D1): read through `findTexture`
+    if (assetJson.type === 'texture' && assetJson.data.sourceOnly) continue;
     if (assetJson.type === 'mergeMaterial') {
       const slots = collectMergeMaterial(assetJson, findMaterial, findTexture);
       if ('error' in slots) drop(assetJson.jsonFile, slots.error);

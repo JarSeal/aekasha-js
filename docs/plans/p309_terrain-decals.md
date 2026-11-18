@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 implemented
 Category: Terrain, Rendering, Materials
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -161,9 +161,30 @@ Searches for footprint, crack and stain decals found nothing, so those come from
 
 ## Phases
 
-### Phase 1 — Atlas tooling (D1)
+### Phase 1 — Atlas tooling (D1) — done
 
 1. The packed texture JSONs per decal (the `DECAL` channels), the two atlas JSONs in `src/toolkit/textures/decalsGround/` and `src/toolkit/textures/decalsStructure/` (p301 §2: shared textures by id), and the `opacitySource` derivation if `pack` lacks it (an asset pipeline change, its test next to it).
+
+Found when it started (2026-11-18), and decided:
+
+- **ambientCG, by its API:** `TireTracks001` has colour, normal, roughness, AO and displacement, no opacity, 180 × 45 cm (stored stretched in a square cell, its UVs over the whole cell: about 280 px/m along the track). `Leaking012A` / `017B` / `019A` have colour, normal, roughness, metalness and displacement, no opacity. `AsphaltDamage001` has an opacity map (120 × 120 cm). So two `decalsGround` cells (tyre tracks, one crack) and three `decalsStructure` cells (leaks) come from ambientCG; the rest are placeholders (cells without sources: the slots' `fill`) until Phase 5.
+- **`AsphaltDamageSet001` dropped:** it's an atlas of several potholes, and `pack` can't crop; the second crack is Phase 5's `decalCracks`.
+- **Opacity derivation needs no pack step:** `remap: [t0, t1]` with the output's clamp to 0-1 is a soft threshold, so a recipe derives a missing opacity from its displacement or colour; the cell's `opacitySource` in `data` only records it.
+- **Fetching:** `yarn fetchTextureSources` took only texture-set folders. A `source.json` without a set beside it is now a source folder (a decal's, `decalsGround/<decal>/`), named by its folder, with an `opacity` map type, the `.gitignore` pattern `src/toolkit/textures/**/source/raw/` and its row in `CREDITS.md`.
+- **Atlas-only sources:** every `*.texture.json` is encoded on its own, so a decal's two pack recipes would each ship an unused 2K output. A texture JSON gets a flag that makes it an atlas cell's source only, never encoded on its own.
+- **The gallery's Decals row** shows each atlas's two slots as whole-atlas quads with cell labels; per-cell quads come with Phase 2's material.
+
+Sections:
+
+1. Source folders in `yarn fetchTextureSources` (`textureSources.ts`, its tests) — done.
+2. The atlas-source-only texture flag (the pipeline, its test) — done. As built: `sourceOnly: true` on a `*.texture.json` (`TextureAssetSchema`, build time only; named for both uses, an atlas cell's or a texture array layer's source). `collectPipelineAssets` skips it; the gather keeps it in pass 1's lookup, leaves it out of the development data's `textures` and drops it from a texture's data, and fails a scene listing it, a material naming it (the closure) and a texture set slot naming it (`getSourceOnlyTextureError`, `gather/context.ts`). An engine schema change: the engine's minor (Phase 6) covers it.
+3. The decals' `source.json`s and pack recipes, the two atlas JSONs; fetch, `yarn assets`, the cell tables — done. As built:
+   - **Source folders** (each a `source.json`, its two `sourceOnly` recipes `<decal>_albedoAlpha` / `<decal>_normalRough`, its gitignored `source/raw/`): `decalsGround/decalTireTracks01/` (TireTracks001), `decalsGround/decalAsphaltDamage01/` (AsphaltDamage001: a square patch of damaged asphalt, not a crack line, so its cell is `asphaltDamage`), `decalsStructure/decalLeak01-03/` (Leaking012A, 017B, 019A), all 2K-JPG.
+   - **What the maps held, and the recipes:** TireTracks001 is 2048 × 512, a sand strip with no transparent border: colour × AO, opacity 1 (the material's edge fade blends its long edges), puddle mask the inverted height (`remap [0.3, 0.8]`, the tread's depressions). AsphaltDamage001: colour, its opacity map, puddle the inverted height (`remap [0.2, 0.6]`, its deepest dips). The Leaking downloads hold their streaks only in the displacement (colour near-white greyscale, metalness 1 everywhere, normal flat, roughness low): a constant stain colour (linear 0.06, 0.05, 0.04), opacity the displacement over its full range (`remap: "auto"`) × 0.85, no puddle mask. A single-channel target from a greyscale JPG needs `"channel": "r"` (a target `a` reads the source's `a` by default).
+   - **Placeholders:** a cell must have a source in some slot, so each placeholder cell's `albedoAlpha` is `source/placeholder.png` (480², a 50 % grey crossed square, committed in each atlas folder) and its `normalRough` the fill. A cell's `data`: `physicalSize` (m; estimates for the placeholders and the leaks, whose downloads give none), `tileAlong`, `opacitySource` (`CONSTANT`, `MAP`, `HEIGHT`, `GENERATED`) and a placeholder's `generator` (D5's name; `decalLeafPatch` and `decalFormwork` aren't in D5's table yet).
+   - **Layouts:** `decalsGround` 2048², padding 16, a grid of 512 cells, but `tireTracks` a 1024 × 256 strip (992 × 224 of content, ~550 px/m along; the pipeline warns of a 9.7 % stretch, which the 64 px grid can't avoid: a 4:1 content rect would need a width of 4 × height − 96); 14 cells, the grid cell under the strip and the last one free. `decalsStructure` 2048 × 1024 (8 cells: leak01-03, formworkMarks; crack01-02, stain01-02): three leaks, not four, since ambientCG has three. Both slots `profile: "hero"` (the default `maxSize` is 1024), `normalRough` UASTC RDO 1; levels 0-4.
+   - **Outputs:** `decalsGround` 437 KB + 448 KB on disk, 5.6 MB of VRAM per slot; `decalsStructure` 159 KB + 189 KB, 2.8 MB per slot. The handbook's "≈ 5.6 MB for 2 maps" is per map: UASTC is 8 bits a texel, so 2K × 2 maps ≈ 11.2 MB.
+4. The gallery's Decals row — done. As built: `src/app/scenes/terrainGallery/decalsRow.ts` (`createDecalsRow`, `DECALS_ROW_BOUNDS`, `DECALS_PANELS`), right of the Live block (x 130-168, z −24…−6, in the ground's extent): an atlas per row from the back, a flat 8 m panel per view (`ALBEDO` over a ground colour by its alpha, `OPACITY`, `NORMAL_ROUGH`, `PUDDLE`), `BASICNODEMATERIAL` showing the stored values (the data views through `sRGBTransferEOTF`), every cell outlined and named by a `CanvasTexture` drawn from the slot's cell table (`getTextureAtlasInfo`), registered with `saveTexture` (the scene's). The scene JSON lists `decalsGround` and `decalsStructure` in its `textures`; the tab's Decals section (`_dbg__terrainGalleryDecals.ts`) flies the camera over the row or an atlas. Checked on WebGPU (the Windows Chrome, through the scene runner's server and browser helpers): the scene loads without errors, and the panels show the cells as the decoded outputs held them.
 
 **Exit:** `decalsGround` and `decalsStructure` built by `yarn assets` as p299 atlases from the ambientCG sources (procedural cells still placeholders), encoded, with cell tables generated, and drawn in the gallery's Decals row.
 

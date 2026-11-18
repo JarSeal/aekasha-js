@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "decalTireTracks01_normalRough",
+  "sourceOnly": true,
+  "pack": {
+    "channels": {
+      "rg": {
+        "src": "./source/raw/normal.jpg",
+        "channel": "rg",
+        "normal": true
+      },
+      "b": {
+        "src": "./source/raw/roughness.jpg"
+      },
+      "a": {
+        "src": "./source/raw/height.jpg",
+        "channel": "r",
+        "remap": [0.3, 0.8],
+        "invert": true
+      }
+    }
+  },
+  "debugData": {
+    "name": "decalTireTracks01 normalRough",
+    "description": "p309 D1 DECAL normalRough of ambientCG TireTracks001 (CC0): normal XY, roughness, and the puddle mask from the inverted height (the tread's depressions fill first). An atlas cell's source only."
+  }
+}

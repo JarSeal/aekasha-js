@@ -104,7 +104,10 @@ const runGather = (ctx: GatherContext, opts: GatherOptions, outDir: string): Gat
           lights: reg.lights,
           geometries: reg.geometries,
           textures: {
-            ...reg.textures,
+            // A source-only texture (p309 D1) has no output: nothing loads it
+            ...Object.fromEntries(
+              Object.entries(reg.textures).filter(([, texture]) => !texture.sourceOnly)
+            ),
             ...reg.textureArrays,
             ...reg.atlasSlots,
             ...reg.mergeMaterialSlots,

@@ -9,13 +9,15 @@ import { readZip } from './archives';
  * The texture sets' source downloads (p303 D5, `yarn fetchTextureSources`): a set folder's
  * `source.json` (next to its `*.textureSet.json`) names a provider's asset; its maps are
  * downloaded (cached in `.cache/texture-downloads/`) and written to the set's gitignored
- * `source/raw/<map>.<ext>`, the fixed names its texture JSONs' pack recipes read (D3). The toolkit's
- * sets' credits (`src/toolkit/textures/CREDITS.md`) are generated from their `source.json`s.
+ * `source/raw/<map>.<ext>`, the fixed names its texture JSONs' pack recipes read (D3). A
+ * `source.json` without a set beside it is a source folder (p309 D1: a decal's maps, which its
+ * pack recipes put into an atlas's cell), fetched the same way and named by its folder. The
+ * toolkit's credits (`src/toolkit/textures/CREDITS.md`) are generated from their `source.json`s.
  */
 
 /**
  * The maps a `source.json` can name, by the file name each gets in `source/raw/`. `arm` is Poly
- * Haven's ready-made AO / roughness / metalness pack.
+ * Haven's ready-made AO / roughness / metalness pack, `opacity` a decal's alpha (p309 D1).
  */
 export const TEXTURE_SOURCE_MAPS = [
   'color',
@@ -25,6 +27,7 @@ export const TEXTURE_SOURCE_MAPS = [
   'height',
   'metalness',
   'arm',
+  'opacity',
 ] as const;
 
 /** A map the download must have when the `source.json` names it; the others are optional */
@@ -68,15 +71,21 @@ export const TextureSourceSchema = z
 /** A parsed {@link TextureSourceSchema} */
 export type TextureSource = z.infer<typeof TextureSourceSchema>;
 
-/** A texture set folder with a `source.json`, found by {@link findTextureSetSources} */
+/**
+ * A texture set folder with a `source.json`, or a source folder (one without a set), found by
+ * {@link findTextureSetSources}
+ */
 export type TextureSetSourceDir = {
-  /** The set's id (its `*.textureSet.json`'s), or the folder's path from `src/` when unreadable */
+  /**
+   * The set's id (its `*.textureSet.json`'s; the folder's path from `src/` when unreadable), or a
+   * source folder's name
+   */
   setId: string;
-  /** The set folder, absolute */
+  /** The folder, absolute */
   dir: string;
-  /** The set folder from `src/`, '/'-separated */
+  /** The folder from `src/`, '/'-separated */
   srcPath: string;
-  /** The set's `*.textureSet.json`, absolute (undefined when the folder has none or two) */
+  /** The set's `*.textureSet.json`, absolute (undefined for a source folder, or two sets) */
   setFile?: string;
   /** The parsed `source.json`, or why it can't be used */
   source: TextureSource | { error: string };
@@ -87,7 +96,8 @@ const readJson = (file: string): unknown => JSON.parse(fs.readFileSync(file, 'ut
 /**
  * Every `source.json` in the toolkit and the app (`<srcDir>/toolkit/`, `<srcDir>/app/`), each with
  * its set: the `*.textureSet.json` beside it (a set folder holds one set). A `source.json` without
- * one, or with two, is returned with an error, as is an invalid one. Sorted by set id.
+ * one is a source folder, its id the folder's name. One with two sets, an invalid one and an id
+ * another folder has too are returned with an error. Sorted by id, then path.
  */
 export const findTextureSetSources = (srcDir: string): TextureSetSourceDir[] => {
   const files = listSourceFiles(srcDir).map((file) => file.split(path.sep).join('/'));
@@ -108,19 +118,17 @@ export const findTextureSetSources = (srcDir: string): TextureSetSourceDir[] => 
   for (const [srcPath, { hasSource, setFiles }] of dirs) {
     if (!hasSource) continue; // A hand-made set: nothing to fetch
     const dir = path.join(srcDir, srcPath);
-    let setId = srcPath;
+    let setId = setFiles.length ? srcPath : path.posix.basename(srcPath);
     let setFile: string | undefined;
     let source: TextureSetSourceDir['source'];
-    if (setFiles.length !== 1) {
+    if (setFiles.length > 1) {
       source = {
-        error: setFiles.length
-          ? `one texture set per folder: ${setFiles.map((f) => path.posix.basename(f)).join(', ')}`
-          : 'source.json without a *.textureSet.json beside it',
+        error: `one texture set per folder: ${setFiles.map((f) => path.posix.basename(f)).join(', ')}`,
       };
     } else {
-      setFile = path.join(srcDir, setFiles[0]);
+      if (setFiles.length) setFile = path.join(srcDir, setFiles[0]);
       try {
-        const id = (readJson(setFile) as { id?: unknown }).id;
+        const id = setFile ? (readJson(setFile) as { id?: unknown }).id : undefined;
         if (typeof id === 'string') setId = id;
         const parsed = TextureSourceSchema.safeParse(readJson(path.join(dir, 'source.json')));
         source = parsed.success
@@ -136,7 +144,17 @@ export const findTextureSetSources = (srcDir: string): TextureSetSourceDir[] => 
     }
     result.push({ setId, dir, srcPath, ...(setFile ? { setFile } : {}), source });
   }
-  return result.sort((a, b) => a.setId.localeCompare(b.setId));
+  // `--only` and the credits name a folder by its id: two with one are both refused
+  for (const entry of result) {
+    const others = result.filter((other) => other !== entry && other.setId === entry.setId);
+    if (!others.length) continue;
+    entry.source = {
+      error: `the id "${entry.setId}" is also ${others.map((other) => `src/${other.srcPath}`).join(', ')}'s`,
+    };
+  }
+  return result.sort(
+    (a, b) => a.setId.localeCompare(b.setId) || a.srcPath.localeCompare(b.srcPath)
+  );
 };
 
 /** Downloads a URL's bytes; throws with the URL in the message */
@@ -333,14 +351,14 @@ const PROVIDER_NAMES: Record<TextureSource['provider'], string> = {
   polyHaven: 'Poly Haven',
 };
 
-/** The toolkit's sets' credits, `src/toolkit/textures/CREDITS.md`'s content */
+/** The toolkit's sets' and source folders' credits, `src/toolkit/textures/CREDITS.md`'s content */
 export const renderTextureCredits = (sets: { setId: string; source: TextureSource }[]) =>
   [
-    '# Texture set credits',
+    '# Texture credits',
     '',
-    "Generated by `yarn fetchTextureSources` from each set's `source.json` (p303 D5); don't edit it by hand. A CC0 asset needs no attribution: this records where each set comes from.",
+    "Generated by `yarn fetchTextureSources` from each texture set's and source folder's `source.json` (p303 D5, p309 D1); don't edit it by hand. A CC0 asset needs no attribution: this records where each one comes from.",
     '',
-    '| Set | Asset | Provider | Licence | Page |',
+    '| Set or source | Asset | Provider | Licence | Page |',
     '| --- | --- | --- | --- | --- |',
     ...[...sets]
       .sort((a, b) => a.setId.localeCompare(b.setId))
@@ -352,9 +370,9 @@ export const renderTextureCredits = (sets: { setId: string; source: TextureSourc
   ].join('\n');
 
 /**
- * Writes `<srcDir>/toolkit/textures/CREDITS.md` from the toolkit's sets when it changed. Not
- * written while a toolkit `source.json` is invalid (its set would drop out) or no toolkit set has
- * one.
+ * Writes `<srcDir>/toolkit/textures/CREDITS.md` from the toolkit's sets and source folders when it
+ * changed. Not written while a toolkit `source.json` is invalid (its row would drop out) or the
+ * toolkit has none.
  * @returns the file and whether it was written, or why it wasn't
  */
 export const writeTextureCredits = (srcDir: string, sets: TextureSetSourceDir[]) => {
@@ -364,7 +382,7 @@ export const writeTextureCredits = (srcDir: string, sets: TextureSetSourceDir[])
   if (invalid.length) {
     return { file, skipped: `invalid: ${invalid.map((set) => set.srcPath).join(', ')}` };
   }
-  if (!toolkitSets.length) return { file, skipped: 'no toolkit set has a source.json' };
+  if (!toolkitSets.length) return { file, skipped: 'the toolkit has no source.json' };
   const valid = toolkitSets as (TextureSetSourceDir & { source: TextureSource })[];
   return { file, isWritten: writeFileIfChanged(file, renderTextureCredits(valid)) };
 };

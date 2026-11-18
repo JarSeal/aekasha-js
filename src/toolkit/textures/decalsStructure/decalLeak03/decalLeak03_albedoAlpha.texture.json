@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "decalLeak03_albedoAlpha",
+  "sourceOnly": true,
+  "texOpts": {
+    "colorSpace": "srgb"
+  },
+  "pack": {
+    "channels": {
+      "r": 0.06,
+      "g": 0.05,
+      "b": 0.04,
+      "a": {
+        "src": "./source/raw/height.jpg",
+        "channel": "r",
+        "remap": "auto",
+        "multiply": 0.85
+      }
+    }
+  },
+  "debugData": {
+    "name": "decalLeak03 albedoAlpha",
+    "description": "p309 D1 DECAL albedoAlpha of ambientCG Leaking019A (CC0): a constant dark stain colour (the download's colour is near white and its metalness 1: the streaks are only in its displacement), opacity from the displacement over its full range \u00d7 0.85. An atlas cell's source only."
+  }
+}

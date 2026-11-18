@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "decalAsphaltDamage01_normalRough",
+  "sourceOnly": true,
+  "pack": {
+    "channels": {
+      "rg": {
+        "src": "./source/raw/normal.jpg",
+        "channel": "rg",
+        "normal": true
+      },
+      "b": {
+        "src": "./source/raw/roughness.jpg"
+      },
+      "a": {
+        "src": "./source/raw/height.jpg",
+        "channel": "r",
+        "remap": [0.2, 0.6],
+        "invert": true
+      }
+    }
+  },
+  "debugData": {
+    "name": "decalAsphaltDamage01 normalRough",
+    "description": "p309 D1 DECAL normalRough of ambientCG AsphaltDamage001 (CC0): normal XY, roughness, and the puddle mask from the inverted height (its deepest dips). An atlas cell's source only."
+  }
+}

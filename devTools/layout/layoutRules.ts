@@ -132,7 +132,7 @@ const getToolkitRules = (files: string[]): LayoutRule[] => [
   ...getSubfolderRules(`${T}textures/`, 1, files),
   {
     from: `${T}textures/CREDITS.md`,
-    note: "the texture sets' credits, generated from their `source.json`s (p303 D5)",
+    note: "the texture sets' and source folders' credits, generated from their `source.json`s (p303 D5, p309 D1)",
   },
   ...getSubfolderRules(`${T}skyboxes/`, 1, files),
 ];

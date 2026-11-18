@@ -260,6 +260,14 @@ export const TextureAssetSchema = z.object({
   optimize: TextureOptimizeSchema.optional(),
   /** Build time only: the texture packed from source images, in place of `fileName`. */
   pack: TexturePackSchema.optional(),
+  /** Build time only: the texture is only a source, an atlas cell's or a texture array layer's
+   * (p309 D1). The asset pipeline doesn't encode it on its own, and no scene loads it. */
+  sourceOnly: z
+    .boolean()
+    .optional()
+    .describe(
+      "Build time only: the texture is only a source, an atlas cell's or a texture array layer's. The asset pipeline doesn't encode it on its own, and no scene, material or texture set can name it."
+    ),
   /** Per scene id, its save entries over the texture (the first applies). */
   __saveData: createSaveDataSchema(TextureOverridesSchema),
   /** Set by the gatherer: the file it came from. */
@@ -283,6 +291,7 @@ export type TextureAsset = z.infer<typeof TextureAssetSchema>;
 export const InlineTextureSchema = TextureAssetSchema.omit({
   optimize: true,
   pack: true,
+  sourceOnly: true,
   __url: true,
   __sourceUrl: true,
   __bytes: true,

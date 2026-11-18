@@ -32,6 +32,7 @@ import { linearToSrgb } from '../assetPipeline/images';
 import {
   claimIds,
   GENERATOR_SUFFIX,
+  getSourceOnlyTextureError,
   readAssetJsons,
   type GatherContext,
   type Registries,
@@ -114,6 +115,8 @@ const resolveProcedural = (
 
 /** What's wrong with a slot's texture id: none for a texture asset */
 const getSlotError = (reg: Registries, texId: string) => {
+  const sourceOnlyError = getSourceOnlyTextureError(reg, texId);
+  if (sourceOnlyError) return sourceOnlyError;
   if (reg.textures[texId]) return null;
   if (reg.textureArrays[texId]) return `"${texId}" is a texture array, not a texture asset`;
   if (reg.atlasSlots[texId] || reg.atlasSlotIds[texId]) {

@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "decalTireTracks01_albedoAlpha",
+  "sourceOnly": true,
+  "texOpts": {
+    "colorSpace": "srgb"
+  },
+  "pack": {
+    "channels": {
+      "rgb": {
+        "src": "./source/raw/color.jpg",
+        "multiply": {
+          "src": "./source/raw/ao.jpg"
+        }
+      },
+      "a": 1
+    }
+  },
+  "debugData": {
+    "name": "decalTireTracks01 albedoAlpha",
+    "description": "p309 D1 DECAL albedoAlpha of ambientCG TireTracks001 (CC0): colour \u00d7 AO, opacity 1 (the whole strip; the decal material's edge fade blends its long edges). An atlas cell's source only."
+  }
+}

@@ -26,6 +26,7 @@ import { createLiveBlock, LIVE_BLOCK_BOUNDS } from './liveBlock';
 import { createPatchRowAsync } from './patchRow';
 import { createWetRow, WET_ROW_BOUNDS } from './wetRow';
 import { createScatterRowAsync, SCATTER_ROW_BOUNDS } from './scatterRow';
+import { createDecalsRow, DECALS_ROW_BOUNDS } from './decalsRow';
 import {
   createProceduralRowAsync,
   PROCEDURAL_ROW_DEPTH,
@@ -110,6 +111,11 @@ import {
  *   under the toolkit's leaf litter cards (`generateLeafCard`, the `leafLitter` material); the
  *   grounds, the rocks and the leaves wet alike. The tab switches
  *   the weather between dry and wet and flies the camera there.
+ * - **The Decals row** (`decalsRow.ts`, p309 Phase 1): the toolkit's decal atlases
+ *   (`decalsGround`, `decalsStructure`, which the scene lists) on flat panels right of the Live
+ *   block, a row per atlas, a panel per view (the albedo over a ground colour, the opacity, the
+ *   normal and roughness, the puddle mask), unlit, each cell outlined and named; the tab flies the
+ *   camera there.
  * - **The light:** the scene's own DAY_NIGHT sky box standing at 10:00 (`terrainGallerySky`); its
  *   sun and sky are the only lights. No shadows for now (`NO_SHADOWS`).
  *
@@ -237,6 +243,7 @@ export const scene = async () => {
     Math.max(
       PROCEDURAL_ROW_EDGE_X,
       LIVE_BLOCK_BOUNDS.maxX,
+      DECALS_ROW_BOUNDS.maxX,
       ANTI_TILING_ROW_BOUNDS.maxX,
       CLIFFS_ROW_BOUNDS.maxX,
       COLOR_MAP_ROW_BOUNDS.maxX,
@@ -279,6 +286,7 @@ export const scene = async () => {
   createStructuresRow(TERRAIN_GALLERY_SCENE_ID);
   await createProceduralRowAsync(addGalleryExitCleanup);
   createLiveBlock();
+  createDecalsRow();
   await createScatterRowAsync(() => visit.isCurrent);
   if (!visit.isCurrent) return;
   // Past the ground's back edge (the ground's extent leaves it out): its blocks stand on their own

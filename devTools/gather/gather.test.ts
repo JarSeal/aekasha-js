@@ -886,6 +886,72 @@ describe('p299 D5: texture array layer and atlas cell inputs', () => {
   });
 });
 
+describe('p309 D1: a source-only texture', () => {
+  const albedo = '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg';
+  const assets = {
+    'app/textures/crackSrc.texture.json': { id: 'crackSrc', fileName: albedo, sourceOnly: true },
+    'app/textures/decals.textureAtlas.json': {
+      id: 'decals',
+      size: [256, 256],
+      slots: { albedo: {} },
+      cells: [{ id: 'crack', rect: [0, 0, 128, 128], sources: { albedo: 'crackSrc' } }],
+    },
+  };
+  /** The gather's errors for a tree */
+  const gatherErrors = (files: Record<string, unknown>) => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { isGathered } = gather(files);
+    const text = errors.mock.calls.flat().join('\n');
+    errors.mockRestore();
+    return { isGathered, text };
+  };
+  const SOURCE_ONLY = '"crackSrc" is a source-only texture';
+
+  it('is an atlas cell’s source, and isn’t in the development data’s textures', () => {
+    const { isGathered, output } = gather({
+      ...assets,
+      ...scene('a', { textures: ['decals'] }),
+    });
+    expect(isGathered).toBe(true);
+    const textures = (output?.json as unknown as { textures: Record<string, unknown> }).textures;
+    expect(Object.keys(textures)).toEqual(['decals.albedo']);
+  });
+
+  it('fails a scene that lists it', () => {
+    const { isGathered, text } = gatherErrors({
+      ...assets,
+      ...scene('a', { textures: ['crackSrc'] }),
+    });
+    expect(isGathered).toBe(false);
+    expect(text).toContain(`Scene "a" lists the texture ${SOURCE_ONLY}`);
+  });
+
+  it('fails a material that names it, naming the material', () => {
+    const { isGathered, text } = gatherErrors({
+      ...assets,
+      'app/materials/m.material.json': material('m', { params: { map: 'crackSrc' } }),
+      ...scene('a', { materials: ['m'] }),
+    });
+    expect(isGathered).toBe(false);
+    expect(text).toContain(`Scene "a": the material "m"`);
+    expect(text).toContain(SOURCE_ONLY);
+  });
+
+  it('fails a texture set slot that names it', () => {
+    const { isGathered, text } = gatherErrors({
+      ...assets,
+      'app/textures/sand.textureSet.json': {
+        category: 'SAND',
+        physicalSize: [3, 3],
+        heightScale: 0.03,
+        packings: { MINIMAL: { albedoHeight: 'crackSrc' } },
+      },
+    });
+    expect(isGathered).toBe(false);
+    expect(text).toContain(SOURCE_ONLY);
+  });
+});
+
 describe('p303 D1: texture sets', () => {
   const albedo = '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg';
   const tex = (id: string, colorSpace?: string) => ({
