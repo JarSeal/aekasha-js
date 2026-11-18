@@ -77,6 +77,7 @@ Subsystem detail lives in nested `CLAUDE.md` files next to its code. A session l
 - `src/_engine/features/character/CLAUDE.md`: characters (actors, the kind registries, the step order, the player brains, the dynamic controller, character debugging).
 - `src/_engine/debug/editors/CLAUDE.md`: the editor views' code (`createViewCamera`, the material editor).
 - `src/_engine/features/skybox/CLAUDE.md`: the sky box (the state flow and the stop, layers, composite path and env bake, static layers, day-night and the sky clock, sky lights, its debug tab).
+- `src/_engine/features/surface/CLAUDE.md`: the surface conditions (the state, its stable uniforms, the surface clock, the simulation and transitions, the sun source, the scene reset, the debug tab) and the rain occlusion map (its render and occluders, the node, its scene life and the destroyed-texture clear, its cost).
 - `src/_engine/features/lod/CLAUDE.md`: LOD chains and LOD selection (budget, cross-fades, `AUTO`), and the `lodShowcase` scene.
 - `src/_engine/features/lod/impostors/CLAUDE.md`: impostors (cross-quads, octahedral, exports).
 - `src/_engine/features/spatial/CLAUDE.md`: the spatial index (domains, scene scope, update policies, radii).
