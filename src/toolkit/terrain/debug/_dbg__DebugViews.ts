@@ -27,6 +27,7 @@ import { TERRAIN_PACKING_SLOTS } from '../material/TerrainStorage';
 import type { AntiTilingNodes } from '../nodes/AntiTiling';
 import { getProjectionWeights, getSlope, type ProjectionNodes } from '../nodes/Projection';
 import { getSlopeGateShare } from '../nodes/SlopeGate';
+import type { SurfaceWetnessMasks } from '../nodes/Wet';
 
 /** The debug views this module builds */
 export type TerrainDebugView =
@@ -35,7 +36,8 @@ export type TerrainDebugView =
   | 'WEIGHTS'
   | 'PROJECTION'
   | 'TAPS'
-  | 'LAYER_COUNT';
+  | 'LAYER_COUNT'
+  | 'WETNESS';
 
 /** A layer as the texel density reads it */
 export type TerrainDebugViewLayer = {
@@ -79,6 +81,11 @@ export type TerrainDebugViewContext = {
    * layer: `TAPS` counts the far surface's fetches there), else null
    */
   far: { share: Node<'float'> } | null;
+  /**
+   * The wet response's masks (`WETNESS`), or null: no `wet`, or the surface conditions feature
+   * isn't installed (the material is dry)
+   */
+  wet: SurfaceWetnessMasks | null;
   /** The shaded normal in world space */
   normal: Node<'vec3'>;
   /** The define as read (its tier's), for the fetches `TAPS` counts */
@@ -365,6 +372,19 @@ const buildLayerCount = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
   return mix(shaded, vec3(1), dropped.mul(stripes).mul(DROP_LIGHTEN)) as unknown as Node<'vec3'>;
 };
 
+/** `WETNESS`' floor: a dry pixel's grey, so the checker still reads */
+const DRY_SHADE = 0.06;
+
+/**
+ * `WETNESS`: the wet response's stages, R how full the pores are, G how far the film has formed
+ * (red: pores filling, yellow: under a film), over the faint 1 m checker; dark grey where it's dry
+ * (and everywhere when the surface conditions feature isn't installed)
+ */
+const buildWetness = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
+  const stages = ctx.wet ? vec3(ctx.wet.pores, ctx.wet.film, 0) : vec3(0);
+  return stages.max(DRY_SHADE).mul(mix(0.8, 1, getChecker(ctx))) as unknown as Node<'vec3'>;
+};
+
 /** Each view's builder */
 const VIEW_BUILDERS: Record<TerrainDebugView, (ctx: TerrainDebugViewContext) => Node<'vec3'>> = {
   TEXEL_DENSITY: buildTexelDensity,
@@ -373,6 +393,7 @@ const VIEW_BUILDERS: Record<TerrainDebugView, (ctx: TerrainDebugViewContext) => 
   PROJECTION: buildProjection,
   TAPS: buildTaps,
   LAYER_COUNT: buildLayerCount,
+  WETNESS: buildWetness,
 };
 
 /**

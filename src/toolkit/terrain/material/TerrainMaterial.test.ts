@@ -75,6 +75,12 @@ const stubs = vi.hoisted(() => ({
   // A live layer's bundle's set, and the loaded generators (p305 Phase 8)
   setsOfInputs: new Map<object, unknown>(),
   generators: new Map<string, unknown>(),
+  // The surface conditions' uniforms (p307), null without the feature
+  conditions: null as unknown,
+}));
+
+vi.mock('aekasha/surface', () => ({
+  getSurfaceConditionNodes: () => stubs.conditions,
 }));
 
 vi.mock('aekasha/texturesets', async (importOriginal) => ({
@@ -376,7 +382,7 @@ describe('setupTerrainMaterial', () => {
     expect(() => build({ layers: [{}] }, { layer0: makeBundle(), layer1: makeBundle() })).toThrow(
       /Input "layer1" has no layer/
     );
-    expect(() => build({ layers: [{}], wet: {} })).toThrow(/has no field "wet"/);
+    expect(() => build({ layers: [{}], weather: {} })).toThrow(/has no field "weather"/);
     expect(() => build(undefined)).toThrow(/Missing static define "terrain"/);
   });
 });
@@ -1235,6 +1241,124 @@ describe('debug views', () => {
     );
     expect(arrayWeights.emissiveNode).toBeTruthy();
     expect(build({ layers: [{}] }).emissiveNode).toBeNull();
+  });
+});
+
+describe('setupTerrainMaterial: wet (p307)', () => {
+  /** The surface conditions' uniforms, as `getSurfaceConditionNodes()` makes them */
+  const makeConditions = () => ({
+    wetness: uniform(0.5),
+    rain: uniform(0),
+    puddleLevel: uniform(0),
+    waterLevel: uniform(-1e9),
+    snowCoverage: uniform(0),
+    temperature: uniform(10),
+    wind: uniform(new Vector2()),
+    time: uniform(0),
+  });
+  let conditions = makeConditions();
+
+  beforeEach(() => {
+    conditions = makeConditions();
+    stubs.conditions = conditions;
+  });
+
+  const reaches = (root: unknown, target: unknown) =>
+    collectNodesFrom([root]).includes(target as Node);
+  const WET_UNIFORMS = [
+    'terrain_wetCavityInfluence',
+    'terrain_wetHeightInfluence',
+    'terrain_wetShelter',
+  ];
+
+  it('builds dry without wet: no wet uniform, nothing reads the conditions', () => {
+    const material = build({ layers: [{}] });
+    expect(getUniformKeys(material)).toEqual(LAYER_UNIFORMS);
+    expect(reaches(material.colorNode, conditions.wetness)).toBe(false);
+  });
+
+  it("wets the albedo, the roughness and (FULL) the normal by the conditions' wetness", () => {
+    const material = build({ layers: [{}], wet: {} });
+    expect(getUniformKeys(material)).toEqual([...LAYER_UNIFORMS, ...WET_UNIFORMS].sort());
+    expect(getUniforms(material).terrain_wetShelter.value).toEqual(new Vector2(60, 120));
+    for (const socket of [material.colorNode, material.roughnessNode, material.normalNode]) {
+      expect(reaches(socket, conditions.wetness)).toBe(true);
+    }
+    // A tier's SIMPLE: the response and the exposure, no relief and no normal
+    const simple = build({ layers: [{}], wet: { quality: 'SIMPLE' } });
+    expect(getUniformKeys(simple)).toEqual([...LAYER_UNIFORMS, 'terrain_wetShelter'].sort());
+    expect(reaches(simple.colorNode, conditions.wetness)).toBe(true);
+    expect(reaches(simple.normalNode, conditions.wetness)).toBe(false);
+  });
+
+  it("reads each layer's response, blended, and FULL's cavities from the AO", () => {
+    const inputs = layerInputs(2, 'FULL');
+    const material = build(
+      { layers: layersOf(2), blend: { source: 'VERTEX_COLOR' }, wet: {} },
+      inputs
+    );
+    for (const key of ['layer0', 'layer1']) {
+      const bundle = inputs[key as 'layer0'] as unknown as Record<string, unknown>;
+      expect(reaches(material.colorNode, bundle.porosity), key).toBe(true);
+      expect(reaches(material.colorNode, bundle.wetDarkening), key).toBe(true);
+      expect(reaches(material.roughnessNode, bundle.wetRoughness), key).toBe(true);
+    }
+    const aoInfluence = getUniforms(material).terrain_aoTextureInfluence;
+    expect(reaches(material.colorNode, aoInfluence)).toBe(true);
+    const simple = build(
+      { layers: layersOf(2), blend: { source: 'VERTEX_COLOR' }, wet: { quality: 'SIMPLE' } },
+      layerInputs(2, 'FULL')
+    );
+    const simpleAo = getUniforms(simple).terrain_aoTextureInfluence;
+    expect(reaches(simple.colorNode, simpleAo)).toBe(false);
+    // A set array's layers: their params
+    const array = build(
+      { layers: layersOf(2), blend: { source: 'VERTEX_COLOR' }, wet: {} },
+      { layers: makeArrayBundle(2) }
+    );
+    expect(reaches(array.colorNode, conditions.wetness)).toBe(true);
+  });
+
+  it('wets past a far mode too', () => {
+    const define = {
+      layers: layersOf(2),
+      blend: { source: 'VERTEX_COLOR' },
+      distance: { fade: [30, 90], far: 'AVERAGE_COLOR' },
+      wet: {},
+    };
+    const inputs = {
+      layer0: makeBundle('LITE', { averageColor: true }),
+      layer1: makeBundle('LITE', { averageColor: true }),
+    };
+    const material = build(define, inputs);
+    expect(reaches(material.colorNode, conditions.wetness)).toBe(true);
+    // (the branch's members: TerrainFar.test.ts) MINIMAL bumps after the branch: the film flattens its bump
+    const minimal = build(
+      { ...define, distance: { fade: [30, 90], far: 'AVERAGE_COLOR' } },
+      {
+        layer0: makeBundle('MINIMAL', { averageColor: true }),
+        layer1: makeBundle('MINIMAL', { averageColor: true }),
+      }
+    );
+    expect(reaches(minimal.normalNode, conditions.wetness)).toBe(true);
+  });
+
+  it('builds dry without the surface conditions feature, warned once a page load', () => {
+    stubs.conditions = null;
+    stubs.warnings.length = 0;
+    const material = build({ layers: [{}], wet: {} });
+    build({ layers: [{}], wet: {} });
+    expect(getUniformKeys(material)).toEqual(LAYER_UNIFORMS);
+    const warned = stubs.warnings.filter((message) => /builds dry/.test(message));
+    expect(warned).toHaveLength(1);
+    expect(warned[0]).toMatch(/surfaceConditions\(\)/);
+  });
+
+  it('shows the masks in the WETNESS view', async () => {
+    expect(await loadTerrainDebugViewsAsync()).toBe(true);
+    const material = build({ layers: [{}], wet: {}, debugView: 'WETNESS' });
+    expect(reaches(material.emissiveNode, conditions.wetness)).toBe(true);
+    expect(() => build({ layers: [{}], debugView: 'WETNESS' })).toThrow(/is WETNESS: give wet/);
   });
 });
 

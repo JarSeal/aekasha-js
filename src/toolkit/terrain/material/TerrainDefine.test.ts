@@ -23,6 +23,7 @@ import {
   TERRAIN_SPARSE_MAX_LAYERS,
   TERRAIN_UV_MODES,
   TERRAIN_VERTEX_COLOR_LAYOUTS,
+  TERRAIN_WET_QUALITIES,
   TerrainAntiTilingSchema,
   TerrainBlendSchema,
   TerrainColorMapSettingsSchema,
@@ -284,6 +285,15 @@ const ACCEPTED: unknown[] = [
     quality: { ULTRA: { layers: [{}, { source: 'PROCEDURAL_LIVE' }] } },
     qualityLevel: 'ULTRA',
   }),
+  // p307's wet response, its view; a tier's own (SIMPLE), or a tier's view of it
+  { layers: [{}], wet: {} },
+  {
+    layers: [{}],
+    wet: { quality: 'FULL', heightInfluence: 0, cavityInfluence: 2, shelter: [0, 180] },
+    debugView: 'WETNESS',
+  },
+  { layers: [{}], wet: {}, quality: { LOW: { wet: { quality: 'SIMPLE' } } }, qualityLevel: 'LOW' },
+  { layers: [{}], quality: { HIGH: { wet: {} } }, debugView: 'WETNESS' },
 ];
 const REFUSED: unknown[] = [
   {},
@@ -597,6 +607,17 @@ const REFUSED: unknown[] = [
     quality: { HIGH: { blend: { source: 'RULES', rules: [{ layer: 2, slope: { min: 9 } }] } } },
     qualityLevel: 'HIGH',
   },
+  // p307's wet response: its keys (a later phase's too), values and ranges; its view without it
+  { layers: [{}], wet: { puddles: {} } },
+  { layers: [{}], wet: { quality: 'NONE' } },
+  { layers: [{}], wet: { heightInfluence: -1 } },
+  { layers: [{}], wet: { cavityInfluence: '1' } },
+  { layers: [{}], wet: { shelter: [120, 60] } },
+  { layers: [{}], wet: { shelter: [60, 200] } },
+  { layers: [{}], wet: { shelter: [60] } },
+  { layers: [{}], wet: true },
+  { layers: [{}], debugView: 'WETNESS' },
+  { layers: [{}], wet: {}, quality: { LOW: { wet: { shelter: [90, 90] } } }, qualityLevel: 'LOW' },
 ];
 
 describe('readTerrainDefine', () => {
@@ -629,10 +650,26 @@ describe('readTerrainDefine', () => {
       distanceFade: null,
       far: null,
       colorMap: null,
+      wet: null,
       slotCount: null,
       qualityLevel: null,
       debugView: null,
     });
+    expect(read({ layers: [{}], wet: {} }).wet).toEqual({
+      quality: 'FULL',
+      heightInfluence: 0.5,
+      cavityInfluence: 0.5,
+      shelter: [60, 120],
+    });
+    // A tier's wet replaces the material's whole
+    expect(
+      read({
+        layers: [{}],
+        wet: { heightInfluence: 1 },
+        quality: { LOW: { wet: { quality: 'SIMPLE' } } },
+        qualityLevel: 'LOW',
+      }).wet
+    ).toMatchObject({ quality: 'SIMPLE', heightInfluence: 0.5 });
     expect(read({ layers: [{ rotation: 0 }] }).layers[0].rotation).toBe(0);
     expect(read({ layers: [{}], antiTiling: { mode: 'DUAL_SCALE' } }).layers[0].antiTiling).toEqual(
       { mode: 'DUAL_SCALE', farScale: 0.23, distance: [6, 40] }
@@ -896,6 +933,10 @@ describe('readTerrainDefine', () => {
     expect(values.vertexColorLayouts).toEqual(TERRAIN_VERTEX_COLOR_LAYOUTS);
     expect(values.blendLayerCounts).toEqual(TERRAIN_BLEND_LAYER_COUNTS);
     expect(values.distanceKeys.sort()).toEqual(Object.keys(distance.unwrap().shape).sort());
+    const { wet } = TerrainMaterialDefineSchema.shape;
+    expect(values.wetKeys.sort()).toEqual(Object.keys(wet.unwrap().shape).sort());
+    expect(values.wetQualities).toEqual(TERRAIN_WET_QUALITIES);
+    expect(wet.unwrap().shape.quality.unwrap().options).toEqual([...TERRAIN_WET_QUALITIES]);
     expect(values.macroKeys.sort()).toEqual(Object.keys(TerrainMacroSettingsSchema.shape).sort());
     for (const option of TerrainColorMapSettingsSchema.options) {
       const mode = option.shape.mode.value;

@@ -237,6 +237,26 @@ type SurfaceConditions = {
 1. `applySurfaceWetness`, p305 integration (`wet` key), weighted per-layer responses, the `WETNESS` debug view.
 2. Category defaults (S3), `dryingSpeed`.
 
+**As built (section 1):**
+
+- **The node** (`src/toolkit/terrain/nodes/Wet.ts`, on `aekasha/toolkit/terrain`): `applySurfaceWetness(surface, conditions, opts?)`. The conditions are the second parameter (an app material passes `getSurfaceConditionNodes()` and handles null itself). `surface`: `{ albedo, roughness, normal?, height?, cavity?, response: { porosity, wetDarkening, wetRoughness } }`, each response field a node or a number. `opts`: `quality` (`FULL` | `SIMPLE`), `geometryNormal` (in the shaded normal's space, default `normalWorldGeometry`), `up` (default `normalWorldGeometry.y`), `heightInfluence`, `cavityInfluence`, `shelter`. It returns `{ albedo, roughness, normal?, masks: { exposure, wetness, pores, film } }`. It adds no fetch and no branch.
+- **The formula, differing from S4:**
+  - Exposure: `smoothstep(cos(to), cos(from), up)` over `shelter`, the angles from straight up (default `[60, 120]`: a wall half wet, an underside dry).
+  - Local wetness: `w + k₂·(w − height) + k₃·cavity·w`, saturated, with `w = wetness × exposure`. k₁ = k₂, so 0 stays dry and 1 wets every height. The cavity term is × w: S4's unscaled `cavity·k₃` would wet dry ground.
+  - The stages follow the porosity, so a dense surface films at once (S1.4), which S4's fixed ×2 couldn't do: `split = 0.5·porosity`, `pores = saturate(local / max(split, 0.1))`, `film = saturate((local − split) / (1 − split))`. Porosity 1 gives S4's stages.
+  - The pores never raise the roughness: `mix(r, min(r, wetRoughness), pores)`. The film roughness is 0.05.
+  - The film flattens the normal × 0.6, not fully: a film fills small bumps, not a stone's shape.
+  - `SIMPLE` reads no height or cavity and leaves the normal alone.
+- **The terrain `wet` key** (schema and reader in step): `{ quality?, heightInfluence? (≥ 0, 0.5), cavityInfluence? (≥ 0, 0.5), shelter? ([from, to] in 0..180, [60, 120]) }`, also a tier override (`OVERRIDE_KEYS`), replacing the material's whole. D2's later keys (`puddles`, `ripples`, `streaks`, `shoreline`, `regional`, `snow`, `rainOcclusion`) come with their phases; until then the strict reader refuses them. Uniforms: `terrain_wetShelter` (degrees), plus `terrain_wetHeightInfluence` and `terrain_wetCavityInfluence` with `FULL`.
+- **The graph** (`material/TerrainWet.ts`):
+  - Order: after the far branch and the macro roughness, before the detail normals' fade. The cavities are `1 − aoNode` (a `FULL` layer's map × the vertex AO), so `LITE` and `MINIMAL` without vertex AO get none.
+  - Per layer: `LayerParams` gained `porosity`, `wetDarkening` and `wetRoughness` (both bundle kinds had them already). `LayerSurface.wet` carries the sample's height and the response, which `blendSurfaces` blends by the final weights, slots included.
+  - The far branch's struct gets `wetHeight` and `wetResponse` members. The far side takes the response by the raw weights (normalized), at height 0.5.
+  - Without the feature: dry, warned once a page load.
+  - The colour-map bake strips `wet` (the material's and each tier's), so a bake stays dry.
+- **`WETNESS` view:** R the pores, G the film (B is left for Phase 3's puddles), over the faint checker, with a dark-grey floor. Both readers refuse it without `wet` (the material's or a tier's). `TAPS` doesn't change (no fetch).
+- **For section 2:** the set array's `layerParams` is full (4 vec4 a layer, all 16 floats used), so `puddleResponse` and `dryingSpeed` need a fifth vec4 (`PARAMS_PER_LAYER` 4 → 5, `writeLayerParams`, `getTextureSetLayerParams`). The category defaults change `TEXTURE_SET_SURFACE_DEFAULTS`' flat wet values into a per-category table, which the gatherer fills.
+
 **Gallery row "Wet/dry"** (p310 completes it): one 12 m block per category plus a blended beach block, with a global wetness slider.
 
 **Exit:** each category reads as plausibly wet at 0.3 / 0.6 / 1.0 when judged side by side against reference photos (collect 1–2 photo references per category from CC0 sources into the handbook page).

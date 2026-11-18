@@ -90,7 +90,8 @@ export const TERRAIN_QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as cons
  * `NORMALS` the shaded normal in world space, `WEIGHTS` each layer's false colour by its weight,
  * `PROJECTION` the planes' weights (X red, Y green, Z blue) with the slope gates' bands striped,
  * `TAPS` the material's own texture fetches at the pixel in bands, `LAYER_COUNT` how many layers
- * weigh in at the pixel, striped where sparse sampling drops one.
+ * weigh in at the pixel, striped where sparse sampling drops one, `WETNESS` the wet response's
+ * masks (R the pores, G the film; needs `wet`).
  */
 export const TERRAIN_DEBUG_VIEWS = [
   'TEXEL_DENSITY',
@@ -99,7 +100,13 @@ export const TERRAIN_DEBUG_VIEWS = [
   'PROJECTION',
   'TAPS',
   'LAYER_COUNT',
+  'WETNESS',
 ] as const;
+/**
+ * The wet response's quality (p307 D2): `FULL` the relief and the cavities shape the wetness and
+ * the film flattens the normal, `SIMPLE` the layers' response and the sky exposure only.
+ */
+export const TERRAIN_WET_QUALITIES = ['FULL', 'SIMPLE'] as const;
 /**
  * What a far surface shows past `distance.fade`'s end, where the layers aren't sampled (p305 D7):
  * `NONE` (default) the layers at every distance, `AVERAGE_COLOR` each layer's set's average colour
@@ -830,6 +837,63 @@ const TerrainDistanceSchema = z
   .strict()
   .describe("The view distance's effects on the surface.");
 
+/**
+ * The wet response (p307 D2): the surface conditions' wetness (`aekasha/surface`) on the layers,
+ * each by its set's `porosity`, `wetDarkening` and `wetRoughness`, blended by weight.
+ */
+const TerrainWetSchema = z
+  .object({
+    /**
+     * `FULL` (default) the relief (the layers' blended height) and the cavities (the AO) shape the
+     * local wetness and the film flattens the detail normal; `SIMPLE` the response and the sky
+     * exposure only (a low tier).
+     */
+    quality: z
+      .enum(TERRAIN_WET_QUALITIES)
+      .optional()
+      .describe(
+        'FULL (default) the relief and the cavities shape the wetness and the film flattens the normal; SIMPLE the response and the sky exposure only.'
+      ),
+    /**
+     * How far the relief shifts the wetness, ≥ 0 (default 0.5): the low points wet that much ahead
+     * of the overall wetness, the peaks behind. `FULL` only.
+     */
+    heightInfluence: z
+      .number()
+      .min(0)
+      .optional()
+      .describe(
+        'How far the relief shifts the wetness, 0 or more (default 0.5): the low points wet ahead of the overall wetness, the peaks behind. FULL only.'
+      ),
+    /**
+     * How much wetter a full cavity (1 − the AO: a `FULL` layer's map, the vertex AO) is, ≥ 0
+     * (default 0.5), × the wetness. `FULL` only.
+     */
+    cavityInfluence: z
+      .number()
+      .min(0)
+      .optional()
+      .describe(
+        'How much wetter a full cavity (1 - the AO) is, 0 or more (default 0.5), × the wetness. FULL only.'
+      ),
+    /**
+     * The geometry's angles from straight up in degrees, `[from, to]` within 0..180 (default
+     * `[60, 120]`), over which the rain's reach fades out: fully wet up to `from`, dry past `to`
+     * (overhangs, undersides).
+     */
+    shelter: z
+      .tuple([z.number().min(0).max(180), z.number().min(0).max(180)])
+      .refine(([from, to]) => from < to, 'the first value under the second')
+      .optional()
+      .describe(
+        "The geometry's angles from straight up in degrees, [from, to] within 0..180 (default [60, 120]), over which the rain's reach fades out: wet up to from, dry past to."
+      ),
+  })
+  .strict()
+  .describe(
+    "The wet response: the surface conditions' wetness on the layers, each by its set's porosity, wetDarkening and wetRoughness."
+  );
+
 /** The colour map's settings of each mode, with its texture's id for the code route */
 const colorMapOptions = <T extends z.ZodRawShape>(texture: T) =>
   [
@@ -1020,6 +1084,11 @@ const sharedFields = {
   distance: TerrainDistanceSchema.optional(),
   /** Sparse sampling: only the layers weighing most at each pixel (default: every layer). */
   sparse: TerrainSparseSchema.optional(),
+  /**
+   * The wet response to the surface conditions (`aekasha/surface`'s `wetness`; needs the
+   * `surfaceConditions()` feature, else the material builds dry, warned). Default none: dry.
+   */
+  wet: TerrainWetSchema.optional(),
 };
 
 /** A quality tier's overrides of one layer's own settings */
@@ -1111,14 +1180,14 @@ const variantFields = {
     ),
   /**
    * A debug view in place of the surface (debug env only, ignored elsewhere; its code loads with
-   * `loadTerrainDebugViewsAsync`): `TEXEL_DENSITY`, `NORMALS`, `WEIGHTS`, `PROJECTION`, `TAPS`
-   * or `LAYER_COUNT`.
+   * `loadTerrainDebugViewsAsync`): `TEXEL_DENSITY`, `NORMALS`, `WEIGHTS`, `PROJECTION`, `TAPS`,
+   * `LAYER_COUNT` or `WETNESS` (with `wet`, the material's or a tier's).
    */
   debugView: z
     .enum(TERRAIN_DEBUG_VIEWS)
     .optional()
     .describe(
-      'A debug view in place of the surface (debug env only; its code loads with loadTerrainDebugViewsAsync): TEXEL_DENSITY, NORMALS, WEIGHTS, PROJECTION, TAPS or LAYER_COUNT.'
+      'A debug view in place of the surface (debug env only; its code loads with loadTerrainDebugViewsAsync): TEXEL_DENSITY, NORMALS, WEIGHTS, PROJECTION, TAPS, LAYER_COUNT or WETNESS (with wet).'
     ),
 };
 
@@ -1525,6 +1594,27 @@ const checkFar = (value: FarValue, ctx: z.RefinementCtx) => {
 };
 
 /**
+ * The `WETNESS` debug view shows the wet response: the material's `wet` or a tier's must be there
+ * (a tier's variant shares the material's define). The refinement both schemas share.
+ */
+const checkWetView = (
+  value: {
+    debugView?: string;
+    wet?: unknown;
+    quality?: Partial<Record<string, { wet?: unknown } | undefined>>;
+  },
+  ctx: z.RefinementCtx
+) => {
+  if (value.debugView !== 'WETNESS') return;
+  if (value.wet || Object.values(value.quality ?? {}).some((tier) => tier?.wet)) return;
+  ctx.addIssue({
+    code: 'custom',
+    path: ['debugView'],
+    message: "is WETNESS: give wet (the material's or a tier's), else there's nothing to show.",
+  });
+};
+
+/**
  * Whether the config (its own fields or a tier's) samples the layers in slots, which read the
  * layers at a per-pixel index: `ARRAY` storage
  */
@@ -1613,6 +1703,7 @@ export const TerrainMaterialDefineSchema = z
   .superRefine(checkSlots)
   .superRefine(checkLive)
   .superRefine(checkFar)
+  .superRefine(checkWetView)
   .describe("The terrain material's static define (staticDefines.terrain).");
 
 /**
@@ -1705,6 +1796,7 @@ export const TerrainMaterialConfigSchema = z
   .superRefine(checkSlots)
   .superRefine(checkLive)
   .superRefine(checkFar)
+  .superRefine(checkWetView)
   .superRefine(checkTextureIds)
   .superRefine(checkStorage)
   .describe("The terrain material's config (createTerrainMaterial).");

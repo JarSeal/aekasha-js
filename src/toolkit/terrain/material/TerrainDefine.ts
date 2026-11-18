@@ -5,6 +5,7 @@
 // in step: the same keys, values and refusals. Over 800 lines: one reader mirrors the whole
 // schema field by field, so a field and its refusals sit next to its neighbours'.
 import { TERRAIN_RULE_DEFAULTS, TERRAIN_RULE_NOISE_CHANNELS } from 'aekasha/toolkit/geometry';
+import { SURFACE_WETNESS_DEFAULTS } from '../nodes/Wet';
 
 const LAYER_SOURCES = ['TEXTURE', 'PROCEDURAL_LIVE'] as const;
 const LIVE_NORMALS = ['BUMP', 'TAPS'] as const;
@@ -49,10 +50,21 @@ const DEBUG_VIEWS = [
   'PROJECTION',
   'TAPS',
   'LAYER_COUNT',
+  'WETNESS',
 ] as const;
+const WET_QUALITIES = ['FULL', 'SIMPLE'] as const;
 
 /** The keys each object of the define takes (the schema's) */
-const OVERRIDE_KEYS = ['uv', 'blend', 'ao', 'antiTiling', 'projection', 'distance', 'sparse'];
+const OVERRIDE_KEYS = [
+  'uv',
+  'blend',
+  'ao',
+  'antiTiling',
+  'projection',
+  'distance',
+  'sparse',
+  'wet',
+];
 /** A tier's keys: the material-wide ones and its layers' overrides */
 const TIER_KEYS = [...OVERRIDE_KEYS, 'layers'];
 const LAYER_OVERRIDE_KEYS = ['source', 'antiTiling', 'projection'];
@@ -116,6 +128,7 @@ const PROJECTION_KEYS: Record<(typeof PROJECTION_MODES)[number], string[]> = {
 };
 const MACRO_KEYS = ['scale', 'brightness', 'hue', 'roughness'];
 const DISTANCE_KEYS = ['fade', 'far', 'farBlend'];
+const WET_KEYS = ['quality', 'heightInfluence', 'cavityInfluence', 'shelter'];
 const COLOR_MAP_KEYS: Record<(typeof COLOR_MAP_MODES)[number], string[]> = {
   DETAIL: ['mode', 'detailDistance'],
   FAR_ONLY: ['mode'],
@@ -260,6 +273,15 @@ export type TerrainFarDefine = {
   blend: number;
 };
 
+/** The wet response's settings with their defaults filled in (p307 D2) */
+export type TerrainWetDefine = {
+  quality: (typeof WET_QUALITIES)[number];
+  heightInfluence: number;
+  cavityInfluence: number;
+  /** The angles from up over which the rain's reach fades out, degrees */
+  shelter: [number, number];
+};
+
 /** The colour map's settings with their defaults filled in */
 export type TerrainColorMapDefine = {
   mode: (typeof COLOR_MAP_MODES)[number];
@@ -295,6 +317,8 @@ export type ResolvedTerrainDefine = {
   far: TerrainFarDefine | null;
   /** The colour map (its texture the input `colorMap`), or null for none */
   colorMap: TerrainColorMapDefine | null;
+  /** The wet response (p307), or null for none: dry */
+  wet: TerrainWetDefine | null;
   /**
    * The layers sampled at a pixel in slots sorted by weight there (p305 D6: sparse sampling's kept
    * layers, or every layer for `HEX`'s `DOMINANT`; `ARRAY` storage, each read at a per-pixel
@@ -324,6 +348,8 @@ export const TERRAIN_DEFINE_VALUES = {
   projectionKeys: PROJECTION_KEYS,
   macroKeys: MACRO_KEYS,
   distanceKeys: DISTANCE_KEYS,
+  wetKeys: WET_KEYS,
+  wetQualities: WET_QUALITIES,
   colorMapKeys: COLOR_MAP_KEYS,
   farModes: FAR_MODES,
   colorMapModes: COLOR_MAP_MODES,
@@ -1092,6 +1118,48 @@ const checkFarOnly = (
   );
 };
 
+/**
+ * The wet response (`wet`, the tier's when it gives one), its defaults filled in; null without:
+ * the shelter's angles within 0..180, the first under the second
+ */
+const readWet = (value: unknown, path: string): TerrainWetDefine | null => {
+  if (value === undefined) return null;
+  const wet = readObject(value, path);
+  checkKeys(wet, WET_KEYS, path);
+  const shelter = wet.shelter ?? SURFACE_WETNESS_DEFAULTS.shelter;
+  const isPair =
+    Array.isArray(shelter) &&
+    shelter.length === 2 &&
+    shelter.every((n) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 180);
+  if (!isPair) {
+    fail(`${path}.shelter`, `is ${JSON.stringify(shelter)}: give [from, to], degrees 0 to 180.`);
+  }
+  const [from, to] = shelter as [number, number];
+  if (from >= to) {
+    fail(`${path}.shelter`, `is [${from}, ${to}]: the first value is under the second.`);
+  }
+  const { heightInfluence, cavityInfluence } = SURFACE_WETNESS_DEFAULTS;
+  return {
+    quality: readEnum(wet, 'quality', WET_QUALITIES, path),
+    heightInfluence: readNumber(wet, 'heightInfluence', heightInfluence, NON_NEGATIVE, path),
+    cavityInfluence: readNumber(wet, 'cavityInfluence', cavityInfluence, NON_NEGATIVE, path),
+    shelter: [from, to],
+  };
+};
+
+/**
+ * The `WETNESS` debug view against the wet response: the material's `wet` or a tier's must be
+ * there (a tier's variant shares the material's define)
+ */
+const checkWetView = (define: Record<string, unknown>, tiers: Record<string, unknown>[]) => {
+  if (define.debugView !== 'WETNESS') return;
+  if ([define, ...tiers].some((fields) => fields.wet !== undefined)) return;
+  fail(
+    '.debugView',
+    "is WETNESS: give wet (the material's or a tier's), else there's nothing to show."
+  );
+};
+
 /** The texture budget's reserve: a whole number 0..15 */
 const readReservedTextures = (define: Record<string, unknown>) => {
   const bounds = { min: { value: 0 }, max: { value: 15 } };
@@ -1202,6 +1270,8 @@ export const readTerrainDefine = (
   const colorMap = readColorMap(define);
   checkFarOnly(colorMap, define, Object.values(quality));
   const distance = readDistance(fields.distance, colorMap, `${pathOf('distance')}.distance`);
+  const debugView = readOptionalEnum(define, 'debugView', DEBUG_VIEWS, '');
+  checkWetView(define, Object.values(quality));
   return {
     layers,
     space: readEnum(define, 'space', SPACES, ''),
@@ -1224,8 +1294,9 @@ export const readTerrainDefine = (
     distanceFade: distance?.fade ?? null,
     far: distance?.far ?? null,
     colorMap,
+    wet: readWet(fields.wet, `${pathOf('wet')}.wet`),
     slotCount,
     qualityLevel,
-    debugView: readOptionalEnum(define, 'debugView', DEBUG_VIEWS, ''),
+    debugView,
   };
 };

@@ -55,6 +55,12 @@ export type LayerParams = {
   normalStrength: Node<'float'>;
   roughnessScale: Node<'float'>;
   aoStrength: Node<'float'>;
+  /** The wet response's (p307): how much water the set soaks up, 0..1 */
+  porosity: Node<'float'>;
+  /** How much the filled pores darken the albedo, 0..1 */
+  wetDarkening: Node<'float'>;
+  /** The roughness with the pores full */
+  wetRoughness: Node<'float'>;
   /**
    * The set's average colour, linear: a set array's layer always has one (mid-grey for a set
    * without), a `{ textureSet }` bundle only when its set has one

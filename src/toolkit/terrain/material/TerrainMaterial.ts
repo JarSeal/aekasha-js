@@ -59,6 +59,7 @@ import {
 } from './TerrainLayers';
 import { createLiveLayer } from './TerrainLive';
 import { checkTextureBudget, type TerrainBinding } from './TerrainStorage';
+import { applyTerrainWetness } from './TerrainWet';
 import {
   buildNearSurface,
   createSurfaceUniforms,
@@ -247,7 +248,12 @@ const getAoNode = (
  * its `fade` range, and with a `far` mode the layers aren't sampled past it (a dynamic branch): the
  * far surface is the sets' average colours by the weights (`AVERAGE_COLOR`) or the colour map
  * (`COLOR_MAP`), mixed in over `farBlend` metres, its normal the geometry's (a `debugView` shows
- * the near surface everywhere). With `space: 'OBJECT'` all of it is in the mesh's own space (its
+ * the near surface everywhere). With `wet` (p307), the surface conditions' wetness (the
+ * `surfaceConditions()` feature's uniforms, `aekasha/surface`; without the feature the material
+ * builds dry, warned) wets the blended surface where it faces the sky (`shelter`), the low points
+ * and cavities first (`FULL`): the albedo darkens and the roughness falls as the pores fill, then
+ * the roughness falls to water's and the detail normal flattens as a film forms, each layer by its
+ * set's `porosity`, `wetDarkening` and `wetRoughness`, blended by weight. With `space: 'OBJECT'` all of it is in the mesh's own space (its
  * position × scale, its normal: coordinates, projections, rules, macro), the shaded normal turned
  * into world space before the view; `WORLD` (default) the world's. A live layer (`source:
  * 'PROCEDURAL_LIVE'`) runs its procedural set's generator in place of sampling (its whole graph at
@@ -268,7 +274,9 @@ const getAoNode = (
  * `terrain_macroRoughness` with `macro`, a live layer's generator's numbers and colours
  * `terrain_l<i>_live_<param>` and its seed `terrain_l<i>_live_seed` (the set's values to start),
  * `terrain_detailDistance` with a colour map's
- * `detailDistance`, `terrain_distanceFade` with `distance`, and `terrain_farBlend` with a far mode.
+ * `detailDistance`, `terrain_distanceFade` with `distance`, `terrain_farBlend` with a far mode, and
+ * `terrain_wetShelter` with `wet` (`terrain_wetHeightInfluence` and `terrain_wetCavityInfluence`
+ * with its `FULL` quality).
  * A `qualityLevel` applies that tier's `quality` overrides first; a `debugView` (debug env, once
  * {@link loadTerrainDebugViewsAsync} has loaded the views) replaces the shading with the view. The
  * define as given is kept at `material.userData.terrainDefine`.
@@ -382,6 +390,7 @@ export const buildTerrainGraph = (
     const layers = sources.layers.map(({ params }, i) => ({ params, uniforms: uniforms[i] }));
     surface = buildFarBranch({
       packing,
+      hasWet: define.wet !== null,
       from: distance.fade.y,
       blend: distance.farBlend,
       inputs: {
@@ -437,7 +446,6 @@ export const buildTerrainGraph = (
   }
 
   // The material-wide effects over the blended surface, the normal into view space once
-  const { albedo } = surface;
   const roughness = macro
     ? varyRoughness(surface.roughness, macro.sample, macro.nodes)
     : surface.roughness;
@@ -447,15 +455,22 @@ export const buildTerrainGraph = (
       existsOrThrow(surface.bumpHeight, 'A surface without a normal has a bump.'),
       space
     );
+  const ao = getAoNode(material, define, surface.ao, raw, packing !== 'FULL');
+  // p307's wet response over it all (its cavities the AO), before the detail normals' fade
+  const wet = applyTerrainWetness(
+    material,
+    define,
+    { albedo: surface.albedo, roughness, normal: shaded, ao, wet: surface.wet },
+    space
+  );
   // In the material's space; into world space once, then view space
   const normal = distance.fade
-    ? fadeDetailNormal(shaded, viewDistance, distance.fade, space.normal)
-    : shaded;
-  standard.colorNode = albedo;
+    ? fadeDetailNormal(wet.normal, viewDistance, distance.fade, space.normal)
+    : wet.normal;
+  standard.colorNode = wet.albedo;
   standard.normalNode = transformWorldNormalToView(space.toWorld(normal));
-  standard.roughnessNode = roughness;
+  standard.roughnessNode = wet.roughness;
   standard.metalnessNode = float(0);
-  const ao = getAoNode(material, define, surface.ao, raw, packing !== 'FULL');
   if (ao) standard.aoNode = ao;
 
   if (IS_DEBUG_ENV && define.debugView && near) {
@@ -481,6 +496,7 @@ export const buildTerrainGraph = (
         distance.fade && distance.farBlend
           ? { share: getFarShare(viewDistance, distance.fade.y, distance.farBlend) }
           : null,
+      wet: wet.masks,
       normal,
       define,
       packing,

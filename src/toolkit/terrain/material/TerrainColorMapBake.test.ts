@@ -24,6 +24,14 @@ vi.mock('aekasha', async (importOriginal) => ({
   },
 }));
 
+// The surface conditions' uniforms: the block's material is wet (p307), its bake isn't
+const surface = vi.hoisted(() => ({ wetness: null as unknown }));
+vi.mock('aekasha/surface', async () => {
+  const tsl = await import('three/tsl');
+  surface.wetness = tsl.uniform(0.5);
+  return { getSurfaceConditionNodes: () => ({ wetness: surface.wetness }) };
+});
+
 const makeBundle = () =>
   ({
     albedoRough: texture(new Texture()),
@@ -35,6 +43,9 @@ const makeBundle = () =>
     roughnessScale: uniform(1),
     aoStrength: uniform(1),
     heightContrast: uniform(1),
+    porosity: uniform(0.5),
+    wetDarkening: uniform(0.5),
+    wetRoughness: uniform(0.3),
     averageColor: uniform(color(0.4, 0.3, 0.2)),
   }) as unknown as TextureSetInput;
 
@@ -51,7 +62,7 @@ const collectNodes = (root: unknown) => {
   return [...nodes];
 };
 
-/** A block whose terrain material has a far mode, a DETAIL colour map and the vertex AO */
+/** A block whose terrain material has a far mode, a DETAIL colour map, the vertex AO and wet */
 const makeBlock = () => {
   const material = new MeshStandardNodeMaterial();
   material.name = 'blockTerrain';
@@ -61,7 +72,8 @@ const makeBlock = () => {
     ao: { vertex: true },
     colorMap: { mode: 'DETAIL' },
     distance: { fade: [30, 90], far: 'COLOR_MAP' },
-    quality: { LOW: { distance: { fade: [10, 40], far: 'COLOR_MAP' } } },
+    wet: {},
+    quality: { LOW: { distance: { fade: [10, 40], far: 'COLOR_MAP' }, wet: {} } },
   };
   const colorMap = texture(new Texture());
   setupTerrainMaterial({ layer0: makeBundle(), layer1: makeBundle(), colorMap }, material, {
@@ -93,14 +105,16 @@ describe('bakeTerrainColorMap', () => {
     expect(opts.mesh?.matrixWorld?.elements[12]).toBe(40);
   });
 
-  it('leaves out the colour map, the far surface and the camera: the near look', async () => {
-    const { mesh, colorMap } = makeBlock();
+  it('leaves out the colour map, the far surface, the wetness and the camera: the near look', async () => {
+    const { mesh, colorMap, material } = makeBlock();
+    expect(collectNodes(material.colorNode)).toContain(surface.wetness);
     await bakeTerrainColorMap({ id: 'block', mesh });
     const nodes = collectNodes(bakes.opts[0].outputs[0].node);
     // The bake's colour has no colour map, no camera and no far branch (a struct of the share)
     expect(nodes.some((n) => (n as { value?: unknown }).value === colorMap.value)).toBe(false);
     expect(nodes).not.toContain(positionView);
     expect(nodes.some((n) => (n as { structNode?: unknown }).structNode)).toBe(false);
+    expect(nodes).not.toContain(surface.wetness);
   });
 
   it("multiplies the material's AO in when asked", async () => {

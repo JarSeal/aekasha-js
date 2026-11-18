@@ -5022,7 +5022,8 @@
       "TerrainMacroDefine": "TypeAlias",
       "TerrainProjectionDefine": "TypeAlias",
       "TerrainRuleDefine": "TypeAlias",
-      "TerrainRuleRangeDefine": "TypeAlias"
+      "TerrainRuleRangeDefine": "TypeAlias",
+      "TerrainWetDefine": "TypeAlias"
     },
     "src/toolkit/terrain/material/TerrainFar.ts": {
       "BranchSurface": "TypeAlias",
@@ -5055,6 +5056,7 @@
       "LayerSurface": "TypeAlias",
       "LayerUniforms": "TypeAlias",
       "LayerUv": "TypeAlias",
+      "LayerWet": "TypeAlias",
       "MINIMAL_ROUGHNESS": "Variable",
       "sampleLayer": "Function",
       "SharedCoords": "TypeAlias"
@@ -5100,6 +5102,7 @@
       "TERRAIN_STORAGES": "Variable",
       "TERRAIN_UV_MODES": "Variable",
       "TERRAIN_VERTEX_COLOR_LAYOUTS": "Variable",
+      "TERRAIN_WET_QUALITIES": "Variable",
       "TerrainAntiTiling": "TypeAlias",
       "TerrainAntiTilingSchema": "Variable",
       "TerrainBlend": "TypeAlias",
@@ -5151,6 +5154,10 @@
       "LayerBuildContext": "TypeAlias",
       "NearSurface": "TypeAlias",
       "SurfaceUniforms": "TypeAlias"
+    },
+    "src/toolkit/terrain/material/TerrainWet.ts": {
+      "applyTerrainWetness": "Function",
+      "TerrainWetInput": "TypeAlias"
     },
     "src/toolkit/terrain/nodes/AntiTiling.ts": {
       "AntiTilingContext": "TypeAlias",
@@ -5286,6 +5293,16 @@
       "getVertexColorWeights": "Function",
       "PaintedWeights": "TypeAlias",
       "VertexColorLayout": "TypeAlias"
+    },
+    "src/toolkit/terrain/nodes/Wet.ts": {
+      "applySurfaceWetness": "Function",
+      "ApplySurfaceWetnessOpts": "TypeAlias",
+      "SURFACE_WETNESS_DEFAULTS": "Variable",
+      "SurfaceWetnessMasks": "TypeAlias",
+      "SurfaceWetResponse": "TypeAlias",
+      "WET_FILM_ROUGHNESS": "Variable",
+      "WetSurface": "TypeAlias",
+      "WetSurfaceInput": "TypeAlias"
     },
     "src/toolkit/terrain/procedural/BakeSurface.ts": {
       "BakedSurface": "TypeAlias",
@@ -6463,6 +6480,7 @@
       "triplanarProjection"
     ],
     "aekasha/toolkit/terrain": [
+      "ApplySurfaceWetnessOpts",
       "BakeMacroNoiseOpts",
       "BakeRippleAtlasOpts",
       "BakeSurfaceGeneratorOpts",
@@ -6498,6 +6516,8 @@
       "SurfaceParamSpecs",
       "SurfaceParamValues",
       "SurfaceToggleParam",
+      "SurfaceWetResponse",
+      "SurfaceWetnessMasks",
       "TERRAIN_TSL_MATERIAL_ID",
       "TerrainAntiTiling",
       "TerrainAntiTilingSchema",
@@ -6528,8 +6548,11 @@
       "TerrainQualityOverridesSchema",
       "TerrainQualityPresetOpts",
       "TextureSetSample",
+      "WetSurface",
+      "WetSurfaceInput",
       "WorleyOptions",
       "WorleySample",
+      "applySurfaceWetness",
       "bakeMacroNoise",
       "bakeRippleAtlas",
       "bakeSurfaceGenerator",

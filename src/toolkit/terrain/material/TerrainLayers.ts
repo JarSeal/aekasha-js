@@ -71,6 +71,13 @@ export type LayerUniforms = {
 };
 
 /**
+ * What the wet response reads of a layer's surface (p307): its height, 0..1, and its set's
+ * response, `porosity`, `wetDarkening` and `wetRoughness`; blended by weight like the rest
+ * @internal
+ */
+export type LayerWet = { height: Node<'float'>; response: Node<'vec3'> };
+
+/**
  * A layer's surface, its normal in world space: what the layers blend (one, for `SINGLE`)
  * @internal
  */
@@ -85,6 +92,8 @@ export type LayerSurface = {
    * null where a normal map gives it; a slot's bump is the blend's (`bumpBlendedHeight`)
    */
   bumpHeight: Node<'float'> | null;
+  /** What the wet response reads, or null without `wet` */
+  wet: LayerWet | null;
 };
 
 /**
@@ -329,9 +338,10 @@ export type BuiltLayer = {
  * (`FULL`, `LITE`) through the tiling's frame (planar world tiling's analytic one, a mesh UV's
  * from its derivatives) or `MINIMAL`'s bump of its height in metres, its slope × the set's and
  * the layer's `normalStrength`; the roughness (`MINIMAL`'s 0.8) × both `roughnessScale`s, capped
- * at 1; `FULL`'s AO with the set's `aoStrength` × the material's influence. With `deferBump`
- * (slots) the bump is left to the blend: a slot's height jumps where its layer changes, so its own
- * derivatives would draw a seam; the normal is then the geometry's.
+ * at 1; `FULL`'s AO with the set's `aoStrength` × the material's influence; with `wet`, its height
+ * and its set's wet response (p307). With `deferBump` (slots) the bump is left to the blend: a
+ * slot's height jumps where its layer changes, so its own derivatives would draw a seam; the
+ * normal is then the geometry's.
  * @internal
  */
 export const getLayerSurface = (
@@ -375,6 +385,16 @@ export const getLayerSurface = (
       ? (mix(float(1), sample.ao, aoStrength.mul(aoInfluence())) as Node<'float'>)
       : null,
     bumpHeight,
+    wet: define.wet
+      ? {
+          height: sample.height,
+          response: vec3(
+            params.porosity,
+            params.wetDarkening,
+            params.wetRoughness
+          ) as unknown as Node<'vec3'>,
+        }
+      : null,
   };
 };
 
@@ -405,6 +425,12 @@ export const blendSurfaces = (
     // One packing: every layer has texture AO or none has
     ao: first.ao ? sum((surface) => surface.ao as Node<'float'>) : null,
     bumpHeight,
+    wet: first.wet
+      ? {
+          height: sum((surface) => (surface.wet as LayerWet).height),
+          response: sum((surface) => (surface.wet as LayerWet).response),
+        }
+      : null,
   };
 };
 

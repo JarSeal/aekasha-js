@@ -20,6 +20,12 @@ vi.mock('aekasha/texturesets', async (importOriginal) => ({
   getTextureSetOfInput: (bundle: object) => live.sets.get(bundle),
   getTextureSetGenerator: () => live.generator,
 }));
+// The surface conditions' uniforms (p307's wet response reads them)
+vi.mock('aekasha/surface', async () => {
+  const tsl = await import('three/tsl');
+  const nodes = { wetness: tsl.uniform(0.5), time: tsl.uniform(0) };
+  return { getSurfaceConditionNodes: () => nodes };
+});
 live.generator = defineSurfaceGenerator({
   id: 'testFarRipples',
   category: 'SAND',
@@ -58,6 +64,9 @@ const makeBundle = (packing: Packing) =>
     roughnessScale: uniform(1),
     aoStrength: uniform(1),
     heightContrast: uniform(1),
+    porosity: uniform(0.5),
+    wetDarkening: uniform(0.5),
+    wetRoughness: uniform(0.3),
     averageColor: uniform(color(0.4, 0.3, 0.2)),
   }) as unknown as TextureSetInput;
 
@@ -435,6 +444,29 @@ describe('the far branch', () => {
     // The bump of the branch's height, outside the branch
     const normalNodes = collectNodes([minimal.material.normalNode], (node) => !node.structNode);
     expect(normalNodes.filter((node) => node.method === 'dFdx')).toHaveLength(2);
+  });
+
+  it("carries the wet response's height and response: the far side's by the weights, the near layers' in the branch", () => {
+    const inputs = { layer0: makeBundle('LITE'), layer1: makeBundle('LITE') };
+    const terrain = { layers: layersOf(2), blend: { source: 'VERTEX_COLOR' }, distance: FAR };
+    const material = build({ ...terrain, wet: {} }, inputs);
+    const members = collectNodes([material.colorNode, material.roughnessNode]).filter(
+      (node) => node.structNode?.node?.shaderNode
+    ) as unknown as { property: string }[];
+    const names = [...new Set(members.map((member) => member.property))].sort();
+    expect(names).toEqual(['albedo', 'roughness', 'wetHeight', 'wetResponse']);
+    const { before, inBranch } = getBranch(material);
+    const far = collectNodes(before);
+    for (const bundle of [inputs.layer0, inputs.layer1]) {
+      expect(far).toContain(bundle.porosity as unknown as Inspect);
+      expect(inBranch).toContain(bundle.wetRoughness as unknown as Inspect);
+    }
+    // Without wet, no such member
+    const dry = build(terrain, inputs);
+    const dryMembers = collectNodes([dry.colorNode]).filter(
+      (node) => node.structNode?.node?.shaderNode
+    ) as unknown as { property: string }[];
+    expect(dryMembers.map((member) => member.property)).not.toContain('wetHeight');
   });
 
   it('makes its uniforms at setup, and none with a debug view', () => {

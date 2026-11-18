@@ -9,8 +9,10 @@
 // derivatives (the near layers sample with them: an implicit-derivative sample in a branch is
 // non-uniform), the geometry normal. The normal isn't mixed: the far surface starts where the
 // detail normals have faded to the geometry's (the setup's `fadeDetailNormal`), and a `MINIMAL`
-// bump is the caller's, after the branch, of the height the branch leaves.
-import { dFdx, dFdy, float, Fn, If, mix, struct } from 'three/tsl';
+// bump is the caller's, after the branch, of the height the branch leaves. With `wet` (p307) the
+// wet response's height and response are members too: the far side's response the layers' by
+// weight, its height the middle (the relief isn't sampled there).
+import { dFdx, dFdy, float, Fn, If, mix, struct, vec3 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node } from 'three/webgpu';
 import type { TextureSetPacking } from 'aekasha/texturesets';
@@ -25,6 +27,7 @@ import {
   getLayerCoords,
   MINIMAL_ROUGHNESS,
   type LayerUniforms,
+  type LayerWet,
   type SharedCoords,
 } from './TerrainLayers';
 
@@ -39,6 +42,8 @@ export type BranchSurface = {
   normal: Node<'vec3'> | null;
   bumpHeight: Node<'float'> | null;
   ao: Node<'float'> | null;
+  /** What the wet response reads (p307), or null without `wet` */
+  wet: LayerWet | null;
 };
 
 /**
@@ -59,10 +64,14 @@ export type FarBranchInputs = {
   projection: ProjectionContext;
 };
 
+/** The far side's wet height: the relief isn't sampled there, so neither peak nor hollow */
+const FAR_WET_HEIGHT = 0.5;
+
 /**
  * The far surface's albedo and roughness from the layers' weights (raw, normalized linearly: the
  * height blend needs the layers' heights): `AVERAGE_COLOR` each set's average colour × its tints,
- * `COLOR_MAP` the colour map; the roughness `MINIMAL`'s × each layer's scales, capped at 1
+ * `COLOR_MAP` the colour map; the roughness `MINIMAL`'s × each layer's scales, capped at 1; with
+ * `wet`, the sets' wet response by the same weights at the middle height
  * @internal
  * @param define the define (its far mode)
  * @param layers each layer's set params and uniforms
@@ -86,10 +95,26 @@ export const getFarSurface = (
     ),
     weights
   );
+  const wet: LayerWet | null = define.wet
+    ? {
+        height: float(FAR_WET_HEIGHT) as unknown as Node<'float'>,
+        response: sumByWeights(
+          layers.map(
+            ({ params }) =>
+              vec3(
+                params.porosity,
+                params.wetDarkening,
+                params.wetRoughness
+              ) as unknown as Node<'vec3'>
+          ),
+          weights
+        ),
+      }
+    : null;
   if (define.far?.mode === 'COLOR_MAP') {
     const colorMap = inputs.colorMap;
     if (!colorMap) throw new Error('[terrain] The far COLOR_MAP surface has no colour map sample.');
-    return { albedo: colorMap, roughness };
+    return { albedo: colorMap, roughness, wet };
   }
   const albedo = sumByWeights(
     layers.map(({ params, uniforms }) => {
@@ -100,7 +125,7 @@ export const getFarSurface = (
     }),
     weights
   );
-  return { albedo, roughness };
+  return { albedo, roughness, wet };
 };
 
 /**
@@ -170,26 +195,33 @@ type StructVar = { get: (name: string) => Node<'float'> & { assign: (value: unkn
 
 /**
  * The surface's members of a packing: the normal unless `MINIMAL` (its bump the caller's, of the
- * height), the texture AO with `FULL`
+ * height), the texture AO with `FULL`, the wet response's height and response with `wet`
  */
-const getMembers = (packing: TextureSetPacking) => ({
+const getMembers = (packing: TextureSetPacking, hasWet: boolean) => ({
   albedo: 'vec3',
   roughness: 'float',
   ...(packing === 'MINIMAL' ? { bumpHeight: 'float' } : { normal: 'vec3' }),
   ...(packing === 'FULL' ? { ao: 'float' } : {}),
+  ...(hasWet ? { wetHeight: 'float', wetResponse: 'vec3' } : {}),
 });
 
 /** What {@link buildFarBranch} branches between */
 export type FarBranchProps = {
   /** The layers' one packing: the struct's members */
   packing: TextureSetPacking;
+  /** Whether both surfaces carry the wet response's members (`wet`) */
+  hasWet: boolean;
   /** Where the far surface starts (`distance.fade`'s end) and its band, metres (uniforms) */
   from: Node<'float'>;
   blend: Node<'float'>;
   /** What the branch reads from outside it, not yet declared */
   inputs: FarBranchInputs;
   /** The far surface from the declared inputs (`getFarSurface`) */
-  getFar: (inputs: FarBranchInputs) => { albedo: Node<'vec3'>; roughness: Node<'float'> };
+  getFar: (inputs: FarBranchInputs) => {
+    albedo: Node<'vec3'>;
+    roughness: Node<'float'>;
+    wet: LayerWet | null;
+  };
   /** The near surface from the declared inputs, built in the branch, its bump deferred */
   buildNear: (inputs: FarBranchInputs) => BranchSurface;
 };
@@ -202,7 +234,7 @@ export type FarBranchProps = {
  * @internal
  */
 export const buildFarBranch = (props: FarBranchProps): BranchSurface => {
-  const members = getMembers(props.packing);
+  const members = getMembers(props.packing, props.hasWet);
   const names = Object.keys(members);
   const Surface = struct(members);
 
@@ -216,6 +248,8 @@ export const buildFarBranch = (props: FarBranchProps): BranchSurface => {
       normal: inputs.projection.normal,
       bumpHeight: float(0),
       ao: float(1),
+      wetHeight: far.wet?.height,
+      wetResponse: far.wet?.response,
     };
     // Three's struct takes its members by name too (the typings list the positional forms only)
     const out = toVar(
@@ -231,6 +265,11 @@ export const buildFarBranch = (props: FarBranchProps): BranchSurface => {
       if (near.bumpHeight && 'bumpHeight' in members) {
         out.get('bumpHeight').assign(near.bumpHeight);
       }
+      if (near.wet && 'wetHeight' in members) {
+        out.get('wetHeight').assign(mix(near.wet.height, out.get('wetHeight'), share));
+        const response = out.get('wetResponse') as unknown as Node<'vec3'>;
+        out.get('wetResponse').assign(mix(near.wet.response, response, share));
+      }
     });
     return out;
   }).once()();
@@ -242,5 +281,12 @@ export const buildFarBranch = (props: FarBranchProps): BranchSurface => {
     normal: get('normal') as unknown as Node<'vec3'> | null,
     bumpHeight: get('bumpHeight'),
     ao: get('ao'),
+    wet:
+      'wetHeight' in members
+        ? {
+            height: get('wetHeight') as Node<'float'>,
+            response: get('wetResponse') as unknown as Node<'vec3'>,
+          }
+        : null,
   };
 };

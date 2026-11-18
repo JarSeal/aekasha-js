@@ -30,9 +30,23 @@ const ctx: TerrainDebugViewContext = {
   sampled: [{ antiTiling: 'NONE', projection: { mode: 'PLANAR' } }],
   slots: null,
   far: null,
+  wet: null,
   normal: vec3(0, 1, 0) as unknown as Node<'vec3'>,
   define: readTerrainDefine({ terrain: { layers: [{}] } }),
   packing: 'LITE',
+};
+
+/** The nodes a view reaches, each once */
+const collect = (root: unknown) => {
+  const nodes = new Set<unknown>();
+  const stack = [root] as (Node | null)[];
+  while (stack.length) {
+    const node = stack.pop();
+    if (!node || nodes.has(node)) continue;
+    nodes.add(node);
+    for (const child of node.getChildren()) stack.push(child as Node);
+  }
+  return nodes;
 };
 
 /** How many of a view's nodes run a method, each node once */
@@ -51,7 +65,15 @@ const countMethod = (root: unknown, method: string) => {
 
 describe('applyTerrainDebugView', () => {
   it('replaces the shading with an unlit view', () => {
-    const views = ['TEXEL_DENSITY', 'NORMALS', 'WEIGHTS', 'PROJECTION', 'TAPS', 'LAYER_COUNT'];
+    const views = [
+      'TEXEL_DENSITY',
+      'NORMALS',
+      'WEIGHTS',
+      'PROJECTION',
+      'TAPS',
+      'LAYER_COUNT',
+      'WETNESS',
+    ];
     for (const view of views as TerrainDebugView[]) {
       const material = new MeshStandardNodeMaterial();
       material.aoNode = vec3(1) as never;
@@ -269,5 +291,19 @@ describe('applyTerrainDebugView', () => {
       ])
     );
     expect(reaches(taps.emissiveNode, projection.slopeGate)).toBe(true);
+  });
+
+  it("shows the wet response's pores and film, a dry grey without its masks", () => {
+    const pores = float(0.3) as unknown as Node<'float'>;
+    const film = float(0.1) as unknown as Node<'float'>;
+    const wet = { exposure: float(1), wetness: float(0.4), pores, film } as never;
+    const view = new MeshStandardNodeMaterial();
+    applyTerrainDebugView(view, 'WETNESS', { ...ctx, wet });
+    const nodes = collect(view.emissiveNode);
+    expect(nodes.has(pores)).toBe(true);
+    expect(nodes.has(film)).toBe(true);
+    const dry = new MeshStandardNodeMaterial();
+    applyTerrainDebugView(dry, 'WETNESS', ctx);
+    expect(dry.emissiveNode).toBeTruthy();
   });
 });

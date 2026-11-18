@@ -542,8 +542,9 @@ meshes](repo:docs/techniques/terrain-procedural-meshes.md).
   [`loadTerrainDebugViewsAsync`](api:loadTerrainDebugViewsAsync)): `TEXEL_DENSITY` (texels a metre
   in colour bands over a 1 m checker), `NORMALS`, `WEIGHTS` (each layer's false colour),
   `PROJECTION` (the planes' weights and the slope gate's band), `TAPS` (the texture fetches at the
-  pixel, heat-mapped) and `LAYER_COUNT` (striped where sparse sampling drops a layer). Their code is
-  a debug chunk, so a production build has none.
+  pixel, heat-mapped), `LAYER_COUNT` (striped where sparse sampling drops a layer) and `WETNESS`
+  (the wet response's stages: red the pores filling, yellow under a film; needs `wet`). Their code
+  is a debug chunk, so a production build has none.
 - **The uniforms** are in a terrain material's `userData.uniforms` (`terrain_l<i>_tiling`,
   `terrain_r<i>_slopeMin`, `terrain_macroScale`, …): set a uniform's `value` from code, as the
   gallery's sliders do.
