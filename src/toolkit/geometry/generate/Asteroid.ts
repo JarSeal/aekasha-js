@@ -120,7 +120,12 @@ const tetraVolume = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3) =>
   (a.x * (b.y * c.z - b.z * c.y) + a.y * (b.z * c.x - b.x * c.z) + a.z * (b.x * c.y - b.y * c.x)) /
   6;
 
-const computeHullVolume = (points: THREE.Vector3[]) => {
+/**
+ * The volume of the convex hull of the points (what a physics engine derives a `CONVEXHULL`
+ * collider's mass from).
+ * @internal
+ */
+export const computeHullVolume = (points: THREE.Vector3[]) => {
   const hull = new ConvexHull().setFromPoints(points);
   let volume = 0;
   for (const face of hull.faces) {
@@ -132,6 +137,30 @@ const computeHullVolume = (points: THREE.Vector3[]) => {
       volume += tetraVolume(a, edge.head().point, edge.next.head().point);
       edge = edge.next;
     }
+  }
+  return Math.abs(volume);
+};
+
+/**
+ * The volume of a closed, indexed triangle mesh (the sum of its triangles' tetrahedra from the
+ * origin).
+ * @internal
+ * @param geometry an indexed geometry whose triangles close a volume
+ * @param caller the function named by the error
+ * @throws when the geometry isn't indexed
+ */
+export const computeClosedVolume = (geometry: THREE.BufferGeometry, caller: string) => {
+  const index = existsOrThrow(geometry.getIndex(), `[${caller}] The geometry isn't indexed.`);
+  const position = geometry.getAttribute('position');
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const c = new THREE.Vector3();
+  let volume = 0;
+  for (let i = 0; i < index.count; i += 3) {
+    a.fromBufferAttribute(position, index.getX(i));
+    b.fromBufferAttribute(position, index.getX(i + 1));
+    c.fromBufferAttribute(position, index.getX(i + 2));
+    volume += tetraVolume(a, b, c);
   }
   return Math.abs(volume);
 };
@@ -240,22 +269,7 @@ export const generateAsteroid = (opts: AsteroidOptions = {}): GeneratedAsteroid 
   }
   position.needsUpdate = true;
 
-  // Mesh volume from the indexed (closed) triangles
-  const index = existsOrThrow(
-    indexed.getIndex(),
-    "[generateAsteroid] The merged icosphere isn't indexed."
-  );
-  const a = new THREE.Vector3();
-  const b = new THREE.Vector3();
-  const c = new THREE.Vector3();
-  let volume = 0;
-  for (let i = 0; i < index.count; i += 3) {
-    a.fromBufferAttribute(position, index.getX(i));
-    b.fromBufferAttribute(position, index.getX(i + 1));
-    c.fromBufferAttribute(position, index.getX(i + 2));
-    volume += tetraVolume(a, b, c);
-  }
-  volume = Math.abs(volume);
+  const volume = computeClosedVolume(indexed, 'generateAsteroid');
 
   let geometry: THREE.BufferGeometry;
   if (flatShading) {

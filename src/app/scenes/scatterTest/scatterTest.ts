@@ -23,7 +23,7 @@ import {
 } from './rulesScatter';
 
 /**
- * p308 Phase 1's verification scene (`docs/plans/p308_terrain-scatter.md`): a flat 64 m terrain
+ * p308 Phase 1's verification scene (`docs/plans/_DONE_p308_terrain-scatter.md`): a flat 64 m terrain
  * block whose own scatter (`scatterTestPebbles`, the block JSON's `scatter`) places 20,000 pebbles
  * of two kinds by `scatterTestUniform`, a test generator this file registers (uniform over the
  * target's square, yaw, scale and a grey tint per instance), in 16 m cells: one `InstancedMesh`

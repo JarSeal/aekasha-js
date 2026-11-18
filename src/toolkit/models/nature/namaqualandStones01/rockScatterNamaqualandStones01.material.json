@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../../../.schemas/material.schema.json",
+  "id": "rockScatterNamaqualandStones01",
+  "tslFile": "materials/rockScatter/rockScatter.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "staticDefines": {
+    "tiling": "UV",
+    "wet": "FULL",
+    "frost": true,
+    "rainOcclusion": "NORMAL_Y"
+  },
+  "inputs": {
+    "surface": {
+      "textureSet": "namaqualandStones01"
+    },
+    "macro": {
+      "texture": "macroNoise"
+    }
+  },
+  "debugData": {
+    "name": "Rock scatter: Namaqualand stones 01",
+    "description": "The toolkit's rockScatter material (p308 D5) on the imported pebbles and rocks namaqualandStones01: its own maps (the texture set namaqualandStones01) at the mesh's UV, the macro tint at the world's position, dust on the faces turned up toward the set's average colour, wet by the surface conditions with frost."
+  }
+}

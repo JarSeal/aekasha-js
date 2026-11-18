@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "rockScatter",
+  "tslFile": "materials/rockScatter/rockScatter.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "staticDefines": {
+    "tiling": "TRIPLANAR",
+    "antiTiling": "DUAL_SCALE",
+    "wet": "FULL",
+    "frost": true,
+    "rainOcclusion": "NORMAL_Y"
+  },
+  "inputs": {
+    "surface": { "textureSet": "rocks01" },
+    "macro": { "texture": "macroNoise" }
+  },
+  "debugData": {
+    "name": "Rock scatter",
+    "description": "Scatter rocks (p308 D5; generateRock's, or an imported rock's own maps): input surface the texture set ({ textureSet }), the ground's for the procedural rocks (no texture memory of their own), triplanar in the rock's own space (each instance of an InstancedMesh keeps its texture), DUAL_SCALE anti-tiled; macro a macro texture (the tint at the world's position); dustColor (default the set's averageColor) on the faces turned up; wet by the surface conditions with frost. Numbers (optional inputs): sharpness, farScale, antiTilingDistance, macroScale, macroBrightness, macroHue, macroRoughness, dustAmount, dustFacing. Static defines: tiling (TRIPLANAR, or UV: an imported rock's own maps at its UV), antiTiling (DUAL_SCALE, NONE), wet (FULL, SIMPLE, NONE), frost (boolean), rainOcclusion (NORMAL_Y, MAP). Rocks on another ground set: a material JSON of its own over that set (and a two-line TSL file: export const setup = setupRockMaterial)."
+  }
+}

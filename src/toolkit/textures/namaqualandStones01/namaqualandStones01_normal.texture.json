@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "namaqualandStones01_normal",
+  "pack": {
+    "channels": {
+      "rgb": {
+        "src": "./source/raw/normal.jpg",
+        "normal": true
+      }
+    }
+  },
+  "optimize": {
+    "profile": "prop",
+    "slot": "normal"
+  },
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "anisotropy": "MAX"
+  },
+  "debugData": {
+    "name": "namaqualandStones01 normal (FULL)",
+    "description": "The texture set namaqualandStones01's FULL normal: RGB the normal (OpenGL). Packed from polyHaven namaqualand_stones_01's maps (yarn fetchTextureSources)."
+  }
+}

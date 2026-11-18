@@ -9,7 +9,7 @@ import type {
 import { hasQuantizedPositions, LOSSLESS_IMPORT_FIX } from './Scatter';
 import type { ScatterDef } from './ScatterSchema';
 
-// A scatter's `IMPORTED` source (docs/plans/p308_terrain-scatter.md D3): an import's nodes of GPU
+// A scatter's `IMPORTED` source (docs/plans/_DONE_p308_terrain-scatter.md D3): an import's nodes of GPU
 // instances and its point clouds as the scatter's instances. Its own module, which `spawnScatter`
 // loads with the first such source: it reads the import registry, and so the glTF import path.
 

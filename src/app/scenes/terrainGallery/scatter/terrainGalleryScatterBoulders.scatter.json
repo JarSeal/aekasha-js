@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../../.schemas/scatter.schema.json",
+  "items": [
+    { "geometry": "boulder_a", "material": "rockScatter" },
+    { "geometry": "boulder_b", "material": "rockScatter" }
+  ],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "terrainScatter",
+    "params": {
+      "minSpacing": 3.5,
+      "density": 1,
+      "mask": { "layers": { "1": 1 } },
+      "scale": [0.6, 1],
+      "alignToNormal": 0.2,
+      "sink": 0.25,
+      "tint": 0.1
+    },
+    "seed": 3
+  },
+  "debugData": {
+    "name": "Scatter row: boulders",
+    "description": "The toolkit's procedural boulders (generateRock's BOULDER, boulder_a..b) on the Scatter row's procedural half (layer 1, rocks01), 3.5 m apart, in the rocks01 rockScatter material."
+  }
+}

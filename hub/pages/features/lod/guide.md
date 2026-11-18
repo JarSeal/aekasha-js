@@ -79,6 +79,66 @@ Meshes of different geometries that share a material, each with its own `LOD` (r
 shapes), can be one [batched merge group](hub:features/mesh-merging#per-member-lod) instead: one
 object for the renderer, a draw per geometry and level on WebGPU, with the same cross-fades.
 
+## Static instances
+
+Instances that never move and that nothing addresses one by one (pebbles, rocks, leaf litter)
+don't need an entity each. [`createInstancedMeshEntity`](api:createInstancedMeshEntity) makes one
+entity of a whole `InstancedMesh`, the way `createMeshEntity` makes a mesh's (the registry refs,
+the root scene, the shadows, the LOD), with its instances written once and its bounds computed
+over all of them, so three culls it as a whole. With a `lod`, the whole mesh switches levels and
+hides by its own screen size, with the same cross-fades. Place it by its `Transform`; after
+changing its matrices, compute its bounds again and call
+[`refreshLodBounds`](api:refreshLodBounds).
+
+[`createStaticInstances`](api:createStaticInstances) splits many such instances into cells on the
+ground's grid (`cellSize`, 16 m by default), each cell one of those entities. So the cells out of
+view are culled, the far ones hide by `lod.cullScreenSize`, and nothing runs per frame: a draw
+per cell in view, the matrices uploaded once.
+
+```ts
+import { createStaticInstances } from 'aekasha/instancing';
+
+const pebbles = createStaticInstances({
+  id: 'beachPebbles',
+  geometry: 'pebbleGeo',
+  material: 'pebbleMaterial',
+  instances: matrices, // world space: placements, or 16 floats a matrix
+  cellSize: 16,
+  lod: { levels: [{ screenSize: 0 }], cullScreenSize: 0.4 },
+});
+// pebbles.entityIds: a cell each; the scene's exit deletes them, or pebbles.dispose()
+```
+
+A cell hides when its bounds' screen size falls under `cullScreenSize`: a 16 m cell's radius is
+about 11 m, so with a 60° field of view 0.4 hides it past about 50 m, and an 8 m cell at the same
+value past about 24 m. Smaller cells hide nearer and cost more draws.
+
+**Scatters.** A `*.scatter.json` names the items (a geometry and a material each, a weight, the
+shadows, a `CONVEXHULL` or `BALL` collider per instance) and the source that places them, and
+[`spawnScatter`](api:spawnScatter) draws each item's instances as static cells. The terrain
+gallery's pebbles:
+
+<<< src/app/scenes/terrainGallery/scatter/terrainGalleryScatterPebbles.scatter.json
+
+- **`PROCEDURAL`:** a generator registered with
+  [`registerScatterGenerator`](api:registerScatterGenerator) from an install; the toolkit's
+  `terrainScatter` places on a terrain block by its painted layers, slope, height and a
+  clustering noise ([Terrain scatter](hub:features/terrain#terrain-scatter)).
+- **`IMPORTED`:** an import's instances, from Blender's Geometry Nodes exported as GPU instances
+  (`EXT_mesh_gpu_instancing`) or as a point cloud with `_ROT`, `_SCALE` and `_ITEM`. The import
+  must be lossless (`"optimize": { "mesh": { "quantize": false } }`).
+- **`PLACEMENTS`:** a list, relative to the target.
+
+A terrain block spawns its own scatters (its `scatter` ids); scene code spawns one with
+`await spawnScatter(id, { target })`, which resolves `null` when the scene was left meanwhile.
+The seed mixes the world seed, the target's grid place and the scatter's id, so every block gets
+its own placements and every visit the same. An import's GPU instances spawned with
+`spawnImportedAsset` become static cells too.
+
+Cells aren't in the spatial index (it would measure one instance at the mesh's origin), so a
+point or spot light with object culling whose only receivers in range are cells is culled; a
+terrain block under them keeps it on ([the issue](hub:issues/static-instance-cells-not-light-receivers)).
+
 ## Instance sets
 
 A pool's cost grows with its instances: every instance is an entity, selected and synced on the
@@ -110,9 +170,11 @@ is meant for content that stays put: a sway or wind belongs in the material.
 
 ### A pool or a set
 
-Take a set for static content past about 20-50k instances: a forest, a field of rocks, a
-scatter. Keep a pool for instances that gameplay addresses, and below about 20k, where a pool's
-selection and sync cost under 2 ms. Measured on the `instanceStress` scene's forest (three mesh
+Take a set for static content past about 20-50k instances: a forest, a field of rocks. Keep a
+pool for instances that gameplay addresses, and below about 20k, where a pool's selection and
+sync cost under 2 ms. Static content in cells ([static instances](#static-instances)) sits
+between: no CPU cost per frame at any count, but culled and switched per cell, so past about
+20-50k instances a set, which culls and picks levels per instance, draws less. Measured on the `instanceStress` scene's forest (three mesh
 levels and a cull, the camera circling inside it; a minified build, Apple M2, Chrome, WebGPU):
 
 | Trees | Pools: CPU / GPU frame | Set, CPU backend | Set, GPU backend |
@@ -237,7 +299,8 @@ shows its live screen size and the distance of each switch.
 
 ::: scene lodShowcase
 **The full demo:** every LOD feature in its own lane, every level of every lane on screen from
-the start camera, an instanced pool's trees and the same trees as an instance set side by side,
+the start camera, an instanced pool's trees and the same trees as an instance set side by side, a static instance
+cell of bollards,
 and hand-made levels on plain meshes and on a batched merge group's members. Its LOD demo tab has camera stops on both sides of every switch and a dolly
 down the lanes.
 :::
@@ -252,6 +315,10 @@ down the lanes.
 - [`generateLodChain`](api:generateLodChain).
 - [`createInstancedMeshPool`](api:createInstancedMeshPool) and
   [`createInstancedLodPool`](api:createInstancedLodPool).
+- [`createInstancedMeshEntity`](api:createInstancedMeshEntity) and
+  [`createStaticInstances`](api:createStaticInstances): static instances in cells;
+  [`spawnScatter`](api:spawnScatter), [`getScatter`](api:getScatter) and
+  [`registerScatterGenerator`](api:registerScatterGenerator): scatters.
 - [`createInstanceSetAsync`](api:createInstanceSetAsync) and
   [`readInstanceSetStatsAsync`](api:readInstanceSetStatsAsync).
 - [`generateCrossQuads`](api:generateCrossQuads) and
@@ -264,6 +331,8 @@ down the lanes.
 ## Read more
 
 - The [LOD example](hub:examples/lod).
+- [Terrain scatter](repo:docs/techniques/terrain-scatter.md): scatters on terrain blocks from
+  Blender or the toolkit's generator, their cost, and the `cellSize` / `cullScreenSize` trade-off.
 - [Alpha-cut textures](repo:docs/techniques/asset-optimization.md#alpha-cut-textures) and
   [Impostor atlases](repo:docs/techniques/asset-optimization.md#impostor-atlases) in the asset
   optimization guide.

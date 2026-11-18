@@ -1,0 +1,31 @@
+{
+  "$schema": "../../../../../.schemas/scatter.schema.json",
+  "items": [
+    {
+      "geometry": "namaqualandBoulder02/Boulder",
+      "material": "rockScatterNamaqualandBoulder02"
+    }
+  ],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "terrainScatter",
+    "params": {
+      "minSpacing": 3.5,
+      "density": 1,
+      "mask": {
+        "layers": {
+          "2": 1
+        }
+      },
+      "scale": [0.6, 1],
+      "alignToNormal": 0.2,
+      "sink": 0.25,
+      "tint": 0.1
+    },
+    "seed": 13
+  },
+  "debugData": {
+    "name": "Scatter row: imported boulders",
+    "description": "The toolkit's imported boulders (Poly Haven namaqualand_boulder_02 (1,500 triangles), models/nature/) on the Scatter row's imported half (layer 2), as the procedural boulders on the other half, in their own maps' rockScatter material (tiling UV)."
+  }
+}

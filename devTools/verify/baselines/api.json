@@ -477,6 +477,58 @@
     "src/_engine/features/instancing/InstancingFeature.ts": {
       "instancing": "Function"
     },
+    "src/_engine/features/instancing/Scatter.ts": {
+      "getScatter": "Function",
+      "getScatterSeed": "Function",
+      "hasQuantizedPositions": "Function",
+      "LOSSLESS_IMPORT_FIX": "Variable",
+      "SpawnedScatter": "TypeAlias",
+      "spawnScatter": "Function",
+      "SpawnScatterOpts": "TypeAlias"
+    },
+    "src/_engine/features/instancing/ScatterColliders.ts": {
+      "createScatterCollidersAsync": "Function"
+    },
+    "src/_engine/features/instancing/ScatterGenerators.ts": {
+      "assertScattersInstalled": "Function",
+      "getScatterGenerator": "Function",
+      "getScatterGeneratorIds": "Function",
+      "installScatters": "Function",
+      "registerScatterGenerator": "Function",
+      "ScatterGenerator": "TypeAlias",
+      "ScatterGeneratorInput": "TypeAlias",
+      "ScatterGeneratorResult": "TypeAlias",
+      "scatterState": "Variable",
+      "ScatterTarget": "TypeAlias",
+      "unregisterScatterGenerator": "Function"
+    },
+    "src/_engine/features/instancing/ScatterImported.ts": {
+      "getImportedScatterInstances": "Function"
+    },
+    "src/_engine/features/instancing/ScatterLimits.ts": {
+      "SCATTER_COLLIDER_WARNING": "Variable"
+    },
+    "src/_engine/features/instancing/ScatterSchema.ts": {
+      "instancingSchemaPart": "Variable",
+      "SCATTER_COLLIDER_TYPES": "Variable",
+      "SCATTER_DEFAULTS": "Variable",
+      "SCATTER_SOURCE_TYPES": "Variable",
+      "ScatterAsset": "TypeAlias",
+      "ScatterAssetSchema": "Variable",
+      "ScatterColliderType": "TypeAlias",
+      "ScatterDef": "TypeAlias",
+      "ScatterItemDef": "TypeAlias",
+      "ScatterPlacementDef": "TypeAlias",
+      "ScatterSourceDef": "TypeAlias"
+    },
+    "src/_engine/features/instancing/StaticInstances.ts": {
+      "createInstancedMeshEntity": "Function",
+      "createStaticInstances": "Function",
+      "CreateStaticInstancesOptions": "Interface",
+      "InstancedMeshEntityProps": "TypeAlias",
+      "spawnImportedInstances": "Function",
+      "StaticInstances": "Interface"
+    },
     "src/_engine/features/lines/LineBackend.ts": {
       "getFatLineBackendFactory": "Function",
       "LineBackend": "Interface",
@@ -2479,6 +2531,7 @@
       "getDracoWorkerSettings": "Function"
     },
     "src/_engine/kernel/assets/import/GeometryTransfer.ts": {
+      "addInstancesToTransfer": "Function",
       "deserializeAttribute": "Function",
       "deserializeGeometry": "Function",
       "serializeGeometry": "Function",
@@ -2494,7 +2547,9 @@
       "disposeGLTFLeftovers": "Function",
       "ExtractedPrimitive": "TypeAlias",
       "extractPrimitives": "Function",
-      "ExtractResult": "TypeAlias",
+      "ExtractResult": "TypeAlias"
+    },
+    "src/_engine/kernel/assets/import/GLTFPrimitiveKey.ts": {
       "getGLTFPrimitiveKey": "Function"
     },
     "src/_engine/kernel/assets/import/GLTFSource.ts": {
@@ -2513,9 +2568,11 @@
       "TextureSlots": "TypeAlias"
     },
     "src/_engine/kernel/assets/import/ImportExtensions.ts": {
+      "getImportInstancesSpawn": "Function",
       "getImportLodChains": "Function",
       "getImportPhysicsSpawn": "Function",
       "ImportExtension": "TypeAlias",
+      "ImportInstancesSpawn": "TypeAlias",
       "ImportLodChainsExtension": "TypeAlias",
       "ImportPhysicsSpawn": "TypeAlias",
       "registerImportExtension": "Function",
@@ -2532,6 +2589,8 @@
       "ImportAssetParams": "TypeAlias",
       "ImportedAssetManifest": "TypeAlias",
       "ImportedGeometryInfo": "TypeAlias",
+      "ImportedInstances": "TypeAlias",
+      "ImportedPointCloudInfo": "TypeAlias",
       "ImportPhysicsParams": "TypeAlias",
       "ImportSpawnNode": "TypeAlias",
       "ParsedCustomProps": "TypeAlias",
@@ -3144,16 +3203,19 @@
       "InitWorkerOptions": "TypeAlias"
     },
     "src/_engine/kernel/mesh/Mesh.ts": {
+      "addMeshEntity": "Function",
       "AutoLodResolver": "TypeAlias",
       "createMeshEntity": "Function",
       "disposeMesh": "Function",
       "getMeshByAppId": "Function",
       "installMeshes": "Function",
+      "MeshEntityProps": "TypeAlias",
       "MeshMergeHandler": "TypeAlias",
       "MeshProps": "TypeAlias",
       "preWarmMesh": "Function",
       "preWarmObjectsAsync": "Function",
       "removeMeshLod": "Function",
+      "resolveMeshAssets": "Function",
       "setAutoLodResolverLoader": "Function",
       "setMeshGeometry": "Function",
       "setMeshLod": "Function",
@@ -4919,6 +4981,8 @@
       "AsteroidCraterOptions": "Interface",
       "AsteroidNoiseOptions": "Interface",
       "AsteroidOptions": "Interface",
+      "computeClosedVolume": "Function",
+      "computeHullVolume": "Function",
       "generateAsteroid": "Function",
       "GeneratedAsteroid": "Interface"
     },
@@ -4928,6 +4992,20 @@
       "GeneratedTreeGeometry": "Interface",
       "generateTreeGeometry": "Function",
       "TreeGeometryOptions": "Interface"
+    },
+    "src/toolkit/geometry/generate/LeafCard.ts": {
+      "generateLeafCard": "Function",
+      "LEAF_CARD_GEOMETRY_ID": "Variable",
+      "LeafCardOptions": "Interface",
+      "saveLeafCardGeometry": "Function"
+    },
+    "src/toolkit/geometry/generate/Rock.ts": {
+      "GeneratedRock": "Interface",
+      "generateRock": "Function",
+      "ROCK_TRIANGLE_BUDGETS": "Variable",
+      "RockKind": "TypeAlias",
+      "RockOptions": "Interface",
+      "saveRockGeometries": "Function"
     },
     "src/toolkit/geometry/generate/terrain/Terrain.ts": {
       "GeneratedTerrain": "Interface",
@@ -4994,6 +5072,12 @@
     "src/toolkit/materials/asteroid/asteroid.tsl.ts": {
       "colorNode": "Function"
     },
+    "src/toolkit/materials/leafLitter/leafLitter.tsl.ts": {
+      "setup": "Function"
+    },
+    "src/toolkit/materials/rockScatter/rockScatter.tsl.ts": {
+      "setup": "Variable"
+    },
     "src/toolkit/materials/terrain/terrain.tsl.ts": {
       "setup": "Variable"
     },
@@ -5022,6 +5106,11 @@
     "src/toolkit/terrain/blocks/TerrainBlockGenerators.ts": {
       "generateNoiseTerrainBlockAsync": "Function",
       "generateRulesTerrainBlockAsync": "Function"
+    },
+    "src/toolkit/terrain/material/RockMaterial.ts": {
+      "readRockDefine": "Function",
+      "RockMaterialInputs": "TypeAlias",
+      "setupRockMaterial": "Function"
     },
     "src/toolkit/terrain/material/StructureMaterial.ts": {
       "createStructureMaterial": "Function",
@@ -5462,6 +5551,29 @@
       "SurfaceParamValues": "TypeAlias",
       "SurfaceToggleParam": "TypeAlias"
     },
+    "src/toolkit/terrain/scatter/PoissonDisk.ts": {
+      "PoissonDiskOpts": "TypeAlias",
+      "samplePoissonDisk": "Function"
+    },
+    "src/toolkit/terrain/scatter/RegisterTerrainScatter.ts": {
+      "registerTerrainScatter": "Function"
+    },
+    "src/toolkit/terrain/scatter/ScatterLayerWeights.ts": {
+      "createScatterLayerWeigher": "Function",
+      "ScatterLayerWeigher": "TypeAlias",
+      "toTerrainRule": "Function"
+    },
+    "src/toolkit/terrain/scatter/ScatterSurface.ts": {
+      "createFlatScatterSurface": "Function",
+      "createScatterSurfaceSample": "Function",
+      "readScatterSurface": "Function",
+      "sampleScatterSurface": "Function",
+      "ScatterSurface": "TypeAlias",
+      "ScatterSurfaceSample": "TypeAlias"
+    },
+    "src/toolkit/terrain/scatter/TerrainScatter.ts": {
+      "generateTerrainScatterAsync": "Function"
+    },
     "src/toolkit/terrain/textures/MacroNoise.ts": {
       "bakeMacroNoise": "Function",
       "BakeMacroNoiseOpts": "TypeAlias",
@@ -5566,6 +5678,8 @@
       "ImportPhysicsParams",
       "ImportedAssetManifest",
       "ImportedGeometryInfo",
+      "ImportedInstances",
+      "ImportedPointCloudInfo",
       "InitEngine",
       "InitEngineOptions",
       "InputDeviceKind",
@@ -5970,6 +6084,7 @@
       "CreateInstanceSetOptions",
       "CreateInstancedLodPoolOptions",
       "CreateInstancedMeshPoolOptions",
+      "CreateStaticInstancesOptions",
       "InstancePlacement",
       "InstanceRange",
       "InstanceSet",
@@ -5979,13 +6094,33 @@
       "InstanceSetStats",
       "InstancedLodPool",
       "InstancedLodPoolLevel",
+      "InstancedMeshEntityProps",
       "InstancedMeshPool",
       "InstancedMeshSlotData",
+      "ScatterColliderType",
+      "ScatterDef",
+      "ScatterGenerator",
+      "ScatterGeneratorInput",
+      "ScatterGeneratorResult",
+      "ScatterItemDef",
+      "ScatterPlacementDef",
+      "ScatterSourceDef",
+      "ScatterTarget",
+      "SpawnScatterOpts",
+      "SpawnedScatter",
+      "StaticInstances",
       "createInstanceSetAsync",
       "createInstancedLodPool",
+      "createInstancedMeshEntity",
       "createInstancedMeshPool",
+      "createStaticInstances",
+      "getScatter",
+      "getScatterGenerator",
       "instancing",
-      "readInstanceSetStatsAsync"
+      "readInstanceSetStatsAsync",
+      "registerScatterGenerator",
+      "spawnScatter",
+      "unregisterScatterGenerator"
     ],
     "aekasha/lines": [
       "BOX_EDGE_SEGMENT_COUNT",
@@ -6244,6 +6379,17 @@
       "PostFxAsset",
       "PostFxAssetSchema",
       "PostFxParamMeta",
+      "SCATTER_COLLIDER_TYPES",
+      "SCATTER_COLLIDER_WARNING",
+      "SCATTER_DEFAULTS",
+      "SCATTER_SOURCE_TYPES",
+      "ScatterAsset",
+      "ScatterAssetSchema",
+      "ScatterColliderType",
+      "ScatterDef",
+      "ScatterItemDef",
+      "ScatterPlacementDef",
+      "ScatterSourceDef",
       "SceneAsset",
       "SceneMergeMaterial",
       "SceneSpatialDomainEntry",
@@ -6311,6 +6457,7 @@
       "getAtlasSlotTextureId",
       "getFullMipLevelCount",
       "getMergeMaterialSlotTextureId",
+      "instancingSchemaPart",
       "isJsonRelativeFileName",
       "isTextureArrayLayerFile",
       "isTextureSetColorSlot",
@@ -6521,8 +6668,14 @@
       "AsteroidOptions",
       "BushGeometryOptions",
       "GeneratedAsteroid",
+      "GeneratedRock",
       "GeneratedTerrain",
       "GeneratedTreeGeometry",
+      "LEAF_CARD_GEOMETRY_ID",
+      "LeafCardOptions",
+      "ROCK_TRIANGLE_BUDGETS",
+      "RockKind",
+      "RockOptions",
       "ScatterOptions",
       "ScatterPlacement",
       "SpawnScatterMeshOptions",
@@ -6548,11 +6701,15 @@
       "evaluateTerrainRulesCPU",
       "generateAsteroid",
       "generateBushGeometry",
+      "generateLeafCard",
+      "generateRock",
       "generateTerrain",
       "generateTerrainAsync",
       "generateTreeGeometry",
       "getTerrainRuleCoverageCPU",
       "loadTerrainHeightmapAsync",
+      "saveLeafCardGeometry",
+      "saveRockGeometries",
       "scatterOnSurface",
       "spawnScatterAsMeshEntities"
     ],
@@ -6586,6 +6743,7 @@
       "NoiseSeed",
       "PackableSurface",
       "RippleRings",
+      "RockMaterialInputs",
       "SampleTextureSetOptions",
       "StructureMaterialOpts",
       "SurfaceBuildContext",
@@ -6679,10 +6837,12 @@
       "packSurfaceOutputs",
       "readTextureTexelsAsync",
       "registerTerrainGenerators",
+      "registerTerrainScatter",
       "rockyGround",
       "sampleTextureSet",
       "sandFlat",
       "sandRipples",
+      "setupRockMaterial",
       "setupTerrainMaterial",
       "snowDrift",
       "transformTangentNormalToView",

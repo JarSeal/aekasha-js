@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "chunks": {
     "assets/AssetsSwitchGLTF.js": {
-      "bytes": 150090,
-      "gzip": 52287
+      "bytes": 152452,
+      "gzip": 53250
     },
     "assets/AssetsSwitchMerge.js": {
       "bytes": 6563,
@@ -19,23 +19,23 @@
     },
     "assets/AssetsWorker.js": {
       "bytes": 158,
-      "gzip": 157
+      "gzip": 155
     },
     "assets/AssetsWorker.js@AssetsWorker": {
       "bytes": 2180,
-      "gzip": 1095
+      "gzip": 1094
     },
     "assets/banner.css": {
       "bytes": 7212,
       "gzip": 1987
     },
     "assets/banner.embed.js": {
-      "bytes": 974995,
-      "gzip": 272716
+      "bytes": 975284,
+      "gzip": 272810
     },
     "assets/banner.js": {
       "bytes": 483,
-      "gzip": 337
+      "gzip": 336
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
@@ -75,19 +75,19 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7637,
-      "gzip": 3099
+      "gzip": 3098
     },
     "assets/GeometryMerge.js": {
       "bytes": 8248,
-      "gzip": 3425
+      "gzip": 3424
     },
     "assets/GeometryTransfer.js": {
       "bytes": 1933,
       "gzip": 868
     },
     "assets/GeometryTransfer.js@AssetsWorker": {
-      "bytes": 1939,
-      "gzip": 867
+      "bytes": 2051,
+      "gzip": 913
     },
     "assets/GLTFLoader.js": {
       "bytes": 47088,
@@ -95,19 +95,19 @@
     },
     "assets/HDRLoader.js": {
       "bytes": 3407,
-      "gzip": 1635
+      "gzip": 1633
     },
     "assets/ImportRegistry.js": {
-      "bytes": 15737,
-      "gzip": 6377
+      "bytes": 18138,
+      "gzip": 7354
     },
     "assets/KTX2Loader.js": {
       "bytes": 60312,
-      "gzip": 24497
+      "gzip": 24498
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2210,
-      "gzip": 971
+      "gzip": 970
     },
     "assets/meshopt_decoder.module.js": {
       "bytes": 26491,
@@ -123,7 +123,7 @@
     },
     "assets/TextureInputResolvers.js": {
       "bytes": 3306,
-      "gzip": 1366
+      "gzip": 1365
     },
     "assets/three.core.js": {
       "bytes": 199218,
@@ -139,20 +139,20 @@
     },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 210
+      "gzip": 208
     }
   },
   "main": {
     "chunk": "assets/banner.embed.js",
     "modules": 68,
-    "minified": 999210,
-    "gzip": 278988
+    "minified": 999510,
+    "gzip": 279120
   },
   "mainGroups": {
     "_engine/kernel/assets": {
       "modules": 15,
-      "minified": 31735,
-      "gzip": 11252
+      "minified": 31806,
+      "gzip": 11274
     },
     "_engine/kernel/camera": {
       "modules": 1,
@@ -162,7 +162,7 @@
     "_engine/kernel/config": {
       "modules": 1,
       "minified": 2428,
-      "gzip": 1077
+      "gzip": 1078
     },
     "_engine/kernel/ecs": {
       "modules": 6,
@@ -191,8 +191,8 @@
     },
     "_engine/kernel/mesh": {
       "modules": 1,
-      "minified": 4168,
-      "gzip": 1740
+      "minified": 4397,
+      "gzip": 1849
     },
     "_engine/kernel/render": {
       "modules": 7,

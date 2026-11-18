@@ -25,6 +25,7 @@ import { createStructuresRow, STRUCTURES_ROW_BOUNDS } from './structuresRow';
 import { createLiveBlock, LIVE_BLOCK_BOUNDS } from './liveBlock';
 import { createPatchRowAsync } from './patchRow';
 import { createWetRow, WET_ROW_BOUNDS } from './wetRow';
+import { createScatterRowAsync, SCATTER_ROW_BOUNDS } from './scatterRow';
 import {
   createProceduralRowAsync,
   PROCEDURAL_ROW_DEPTH,
@@ -100,6 +101,15 @@ import {
  *   world-continuous noise with `HEIGHT_FN` normals, the rules laid into the vertex colours on the
  *   CPU, the horizon AO in their A. No seams between the blocks; the tab switches its rules to the
  *   shader's (`RULES`, the same rules from the blocks' JSON) on the same blocks, and its AO.
+ * - **The Scatter row** (`scatterRow.ts`, p308 Phase 4): one 24 m block in front of the Wet/dry
+ *   row, rocks01 patches over sand02 split down the middle (the vertex colour), the toolkit's
+ *   procedural pebbles, rocks and boulders (`generateRock`) on the left half's rock in the
+ *   `rockScatter` material over rocks01 and its imported ones (Poly Haven's, `models/nature/`, which
+ *   the scene lists) on the right half's in `rockScatter` at their own maps' UV, each placed by
+ *   `terrainScatter` (`scatter/`, which the scene lists); right of it a 12 m grass02 and mud02 patch
+ *   under the toolkit's leaf litter cards (`generateLeafCard`, the `leafLitter` material); the
+ *   grounds, the rocks and the leaves wet alike. The tab switches
+ *   the weather between dry and wet and flies the camera there.
  * - **The light:** the scene's own DAY_NIGHT sky box standing at 10:00 (`terrainGallerySky`); its
  *   sun and sky are the only lights. No shadows for now (`NO_SHADOWS`).
  *
@@ -218,6 +228,7 @@ export const scene = async () => {
     ANTI_TILING_ROW_BOUNDS.minX - BLOCK_GAP,
     SPLATTING_ROW_BOUNDS.minX - BLOCK_GAP,
     WET_ROW_BOUNDS.minX - BLOCK_GAP,
+    SCATTER_ROW_BOUNDS.minX - BLOCK_GAP,
     CLIFFS_ROW_BOUNDS.minX - BLOCK_GAP,
     COLOR_MAP_ROW_BOUNDS.minX - BLOCK_GAP,
     STRUCTURES_ROW_BOUNDS.minX - BLOCK_GAP
@@ -234,6 +245,7 @@ export const scene = async () => {
   const front = Math.max(
     (Math.max(ROWS.length * BLOCK_PITCH, PROCEDURAL_ROW_DEPTH + BLOCK_GAP) + BLOCK_GAP) / 2,
     SPLATTING_ROW_BOUNDS.maxZ + BLOCK_GAP,
+    SCATTER_ROW_BOUNDS.maxZ + BLOCK_GAP,
     RULES_ROW_BOUNDS.maxZ + BLOCK_GAP,
     CLIFFS_ROW_BOUNDS.maxZ + BLOCK_GAP,
     COLOR_MAP_ROW_BOUNDS.maxZ + BLOCK_GAP,
@@ -267,6 +279,8 @@ export const scene = async () => {
   createStructuresRow(TERRAIN_GALLERY_SCENE_ID);
   await createProceduralRowAsync(addGalleryExitCleanup);
   createLiveBlock();
+  await createScatterRowAsync(() => visit.isCurrent);
+  if (!visit.isCurrent) return;
   // Past the ground's back edge (the ground's extent leaves it out): its blocks stand on their own
   await createPatchRowAsync(() => visit.isCurrent, addGalleryExitCleanup);
   if (!visit.isCurrent) return;

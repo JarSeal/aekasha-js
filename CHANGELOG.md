@@ -4,6 +4,76 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-18 — p308_terrain-scatter
+
+Terrain scatter (p308, part of the terrain texturing epic p301): pebbles, rocks, boulders and leaf litter on terrain blocks, drawn as static instances in cells with no entity per instance and no per-frame cost. A new asset, `*.scatter.json`, names the items and the source that places them: a generator (the toolkit's `terrainScatter`, which follows a block's painted layers, slope and height), Blender's Geometry Nodes exported as GPU instances or as a point cloud, which the glTF import now reads, or a list. A terrain block spawns its own scatters, seeded by the world seed and its grid place. The toolkit brings procedural and scanned rocks, a rock material that draws the ground's own texture set and gets wet with it, and leaf litter cards. The handbook gains its scatter page and a Blender template, the Hub a static instances section and the terrain page's scatter. Nothing breaks.
+
+### Engine 6.18.0 (Sunset)
+
+**Added**
+
+- `createInstancedMeshEntity(props, opts?)` (`aekasha/instancing`): one entity of a whole `InstancedMesh` whose instances don't move, made with `createMeshEntity`'s steps (the registry refs, the root scene, the shadows, the transform, `preWarm`, the LOD), `instances` (placements or a `Float32Array` of matrices) and `colors` (`instanceColor`) copied, its bounds over every instance. With a `lod` the whole mesh switches levels and hides by its own screen size. Type `InstancedMeshEntityProps`.
+- `createStaticInstances(opts)`: many static instances split into cells of `cellSize` (16 m) on the ground's grid, each cell such an entity at its centre, culled, switched and hidden by its LOD as a whole; returns `{ entityIds, count, dispose() }`. Types `CreateStaticInstancesOptions`, `StaticInstances`.
+- The scatter asset, `*.scatter.json` (the `instancing()` feature's; its schema on `aekasha/schemas`: `ScatterAssetSchema`, `ScatterAsset`, `ScatterDef`, `ScatterItemDef`, `ScatterPlacementDef`, `ScatterSourceDef`, `ScatterColliderType`, `SCATTER_DEFAULTS`, `SCATTER_SOURCE_TYPES`, `SCATTER_COLLIDER_TYPES`, `SCATTER_COLLIDER_WARNING`, `instancingSchemaPart`): `items` (a geometry, a material, a `weight`, the shadows and a `collider`, `CONVEXHULL`, `BALL` or `NONE`), a `source` (`PROCEDURAL`: a registered generator with its `params` and `seed`; `PLACEMENTS`: a list relative to the target; `IMPORTED`: an import's GPU instances and point clouds, by node name globs), `cellSize` and `lod`. A scene lists the scatters its code spawns in `scatters`; a terrain block names its own in `scatter`. The scene's manifest names `instancing`, and `physics` for a collider item.
+- `spawnScatter(id, { target?, appId?, world? })` and `getScatter(id, sceneId?)`: each item's instances as static cells, a `FIXED` collider per instance of a collider item (through `physics()`, its code loaded with the first; without the feature a warning and none, past 200 a target a warning), resolving `null` with nothing kept when the scene was left meanwhile. Its seed mixes the world seed (`getRandomSeed`), the target's grid place and the scatter's id, so every block gets its own placements, the same on every visit and in any load order. Types `SpawnScatterOpts`, `SpawnedScatter`, `ScatterTarget`.
+- `registerScatterGenerator(id, fn)`, `unregisterScatterGenerator(id)` and `getScatterGenerator(id)`: a generator gets the scatter's params, seed, items and target and returns world-space matrices, items and colours. Types `ScatterGenerator`, `ScatterGeneratorInput`, `ScatterGeneratorResult`.
+- Terrain blocks spawn their `scatter` ids after their collider, on the block's mesh (`TerrainBlockSchema`'s new field; the block's `scatterIds` holds their cells and colliders, deleted by its `dispose()`).
+- The glTF import reads GPU instances (`EXT_mesh_gpu_instancing`): such a node's instances (and their `_COLOR_0`) are in the manifest (`ImportedGeometryInfo.instances`, type `ImportedInstances` on `aekasha`) and transferred from the assets worker, and `spawnImportedAsset` draws them as static cells (`instancing()` registers the import extension's `spawnInstances` member; without it the node warns once and draws its geometry once). A node with the custom prop `aekScatterPoints` (or a points node under one) is a point cloud whose `_ROT`, `_SCALE` and `_ITEM` attributes, in Blender's axes, are read into instances (`ImportedAssetManifest.pointClouds`, type `ImportedPointCloudInfo`); quantized positions or a wrong-sized attribute refuse it with a warning. `ImportedGeometryInfo.meshName` is the glTF mesh's name.
+
+**Changed**
+
+- The glTF extraction is out of the main chunk: `lod()`'s install reached it through `getGLTFPrimitiveKey`, which has a module of its own now. The template's first download shrinks 1,587 B gzip (`assets/index.js` 421,971 → 420,384 B): `_engine/kernel/assets` 13.7 → 11.8 KiB, `_engine/features/instancing` 4.6 → 4.8 KiB (the scatter generators' registry). `StaticInstances.js` (1.2 KiB) loads with the first imported GPU instances, the scatter's spawn and colliders with the first scatter; every build carries the import extension's new member (22 B in the banner's).
+- A lone point or line node is no longer taken for Blender's empty wrapper root by the import.
+
+**Fixed**
+
+- [No public way to make an entity of an `InstancedMesh` with static instances](docs/issues/no-public-instanced-mesh-entity.md): `createInstancedMeshEntity`. `lodShowcase`'s static cell lane uses it.
+
+### Toolkit 3.6.0 (Gibbous)
+
+**Added**
+
+- `registerTerrainScatter()` (`aekasha/toolkit/terrain`, `terrain/scatter/`): the `terrainScatter` generator, its code loaded with its first scatter. Poisson-disk candidates `minSpacing` apart over a block (inset by half the spacing, so neighbours keep it across their seam), kept by `density` × a mask of the block's terrain material's layer weights (its vertex colours, splat maps and rules, evaluated on the CPU), slope and height ranges and a clustering simplex noise that continues across blocks; each placed on the mesh's own triangle, tilted toward its normal (`alignToNormal`), sunk (`sink`), scaled and darkened (`tint`). About 4 µs a candidate on the main thread (a dense 64 m block at 0.4 m: about 70 ms).
+- `generateRock(opts?)` (`aekasha/toolkit/geometry`): a seeded scatter rock, an asteroid without craters, squashed, stretched and cut flat, its origin at its base's centre; kinds `PEBBLE` (80 triangles), `ROCK` (320), `BOULDER` (1,280) within `ROCK_TRIANGLE_BUDGETS`. `saveRockGeometries({ kinds? })` registers `rockPebble_a..c`, `rockSmall_a..c` and `boulder_a..b`. Types `RockKind`, `RockOptions`, `GeneratedRock`.
+- `generateLeafCard(opts?)` and `saveLeafCardGeometry()` (`LEAF_CARD_GEOMETRY_ID`, `leafCard`): a leaf card folded along its midrib, 4 triangles. Type `LeafCardOptions`.
+- `setupRockMaterial` (`aekasha/toolkit/terrain`, type `RockMaterialInputs`) and the material `rockScatter`: a texture set on scatter rocks, the ground's own (no texture memory of their own), triplanar in the rock's own space and dual-scale anti-tiled (12 fetches a pixel on a `LITE` set), or an imported rock's own maps at its UV (`tiling: 'UV'`); a macro tint by world position, dust toward the set's average colour on top, the surface conditions' wetness and frost.
+- The material `leafLitter`: a leaf of the `leafLitter` atlas (ambientCG LeafSet024's nine leaves, `textures/leafLitter/`, its alpha coverage kept down the mips) per instance, a share turned brown, alpha-tested with `alphaToCoverage`, wet with the ground.
+- Scatter rocks from Poly Haven (CC0, `models/nature/`), decimated to the budgets with their maps still fitting: `namaqualandStones01` (pebbles `StoneA`-`E`, rocks `RockA`-`C`) and `namaqualandBoulder02` (`Boulder`), each with its maps as a texture set and its `rockScatter` material; `CREDITS.md` lists them.
+- The Blender template `terrain/blender/terrain_scatter.blend`: a painted block, three rocks and a Geometry Nodes scatter of them masked by the block's `Splat`, exportable as GPU instances or as a point cloud.
+
+**Changed**
+
+- The terrain material's define reader and the rules are chunks of their own (`TerrainDefine.js` 8.1 KiB, `TerrainRules.js` 0.9 KiB gzip), which the block generators (now 2.3 KiB) and the scatter generator (`TerrainScatter.js`, 5.4 KiB) share.
+
+### App 1.30.0 (Preschooler)
+
+**Added**
+
+- The debug scene `scatterTest`: 20,000 pebbles in 32 cells culled per cell, hand-placed boulders, a Blender scatter exported both ways and compared instance by instance, and a `rulesTerrain` block with `terrainScatter` pebbles on its rock and slabs with colliders, a box dropped on one; its load logs an error on any failed check.
+- `terrainGallery`'s Scatter row: the procedural rocks and the imported ones on the two halves of one block, and leaf litter beside it, wet with the ground; its tab's Scatter section has the weather and three camera poses.
+- `appECSPlugins` registers `terrainScatter`.
+
+**Changed**
+
+- `lodShowcase`'s static cell lane is made with `createInstancedMeshEntity`.
+
+### Project
+
+**Added**
+
+- The handbook's `docs/techniques/terrain-scatter.md`: instancing and cells, what fits which game, the cost (draws, vertices, fetches, the generator, `cellSize` against `cullScreenSize`), the items, the Blender steps and export both ways, the procedural scatter with examples, every param, the variations and the pitfalls; the index's row.
+- The Hub: the LOD page's Static instances section, the terrain page's scatter section, the toolkit page's rocks, materials and models.
+- The issue [Static instance cells aren't light receivers](docs/issues/static-instance-cells-not-light-receivers.md) (open, read from the code).
+- `devTools/blender/buildScatterTest.py` (`scatterTest`'s Blender scatter), `devTools/toolkit/buildNatureRocks.ts` (the Poly Haven rocks), `devTools/toolkit/buildLeafLitter.ts` (the leaf atlas), and `terrain_scatter` in `buildTerrainTemplates.py`.
+- The gather's `*.scatter.json` (`devTools/gather/scatters.ts`, `.schemas/scatter.schema.json`).
+- `features/instancing/CLAUDE.md`'s Static instances section; the root `CLAUDE.md`, `features/lod/CLAUDE.md`, `features/terrain/CLAUDE.md`, `toolkit/terrain/CLAUDE.md`, `devTools/gather/CLAUDE.md` and the readme.
+
+**Changed**
+
+- `sbp.config.ts`: the app's `_engine/kernel/assets` 14 → 13 KiB, the banner's and uiKit's 11 → 12 KiB.
+- The baselines: `api.json` (the new exports), `docs.json` and the bundles.
+- The plans: p308 done; p310 no longer waits on it.
+
 ## 2026-11-18 — p307_wet-and-dry-surface-states
 
 Wet and dry surface states (p307, part of the terrain texturing epic p301). A new `surfaceConditions()` feature holds the weather on the ground as one global state (wetness, rain, puddle level, a water level, snow cover, temperature, drying rate and wind), simulated or set by the game, and gives materials stable uniforms to read; a second feature, `rainOcclusion()`, renders a depth map from above so the ground under roofs, trees and bridges stays dry. The toolkit's wet response turns it into a look: each layer of a terrain or structure material darkens and glosses by its texture set's own response to water, with puddles and rain ripples, streaks down steep faces, a shoreline, snow turning to slush, and frost. Texture sets gain two wet fields and per-category defaults. The handbook gains its wet and dry page and the Hub a Surface conditions page. Nothing breaks.

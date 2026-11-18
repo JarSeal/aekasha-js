@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "namaqualandBoulder02_albedoHeight",
+  "pack": {
+    "channels": {
+      "rgb": {
+        "src": "./source/raw/color.jpg"
+      },
+      "a": {
+        "src": "./source/raw/height.jpg",
+        "channel": "r",
+        "remap": "auto"
+      }
+    }
+  },
+  "optimize": {
+    "profile": "prop",
+    "slot": "baseColor"
+  },
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "colorSpace": "srgb",
+    "anisotropy": "MAX"
+  },
+  "debugData": {
+    "name": "namaqualandBoulder02 albedoHeight (FULL)",
+    "description": "The texture set namaqualandBoulder02's FULL albedoHeight: RGB albedo (sRGB), A height. Packed from polyHaven namaqualand_boulder_02's maps (yarn fetchTextureSources)."
+  }
+}

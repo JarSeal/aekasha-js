@@ -9,7 +9,7 @@ import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
 import type { MeshLodDef } from '../lod/LodTypes';
 import type { InstancePlacement } from './InstancedMeshPoolTypes';
 
-// Static instances (docs/plans/p308_terrain-scatter.md D1): an `InstancedMesh` as one mesh entity
+// Static instances (docs/plans/_DONE_p308_terrain-scatter.md D1): an `InstancedMesh` as one mesh entity
 // whose instances never move, and a grid of such cells over many instances. No entity per instance
 // and no per-frame sync: the matrices upload once. A cell is a plain mesh to the LOD
 // (docs/plans/_DONE_p348_ecs-lod-selection.md §4.3): the whole cell swaps levels, measured by its

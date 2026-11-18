@@ -1,0 +1,62 @@
+{
+  "$schema": "../../../../.schemas/textureAtlas.schema.json",
+  "id": "leafLitter",
+  "size": [1024, 1024],
+  "padding": 4,
+  "mipChain": "FULL",
+  "slots": {
+    "albedo": {
+      "texOpts": {
+        "colorSpace": "srgb"
+      },
+      "image": "./source/leafLitter_albedo.png",
+      "optimize": {
+        "profile": "prop",
+        "slot": "baseColor",
+        "alphaCoverage": 0.5
+      }
+    }
+  },
+  "cells": [
+    {
+      "id": "leaf0",
+      "rect": [0, 0, 340, 340]
+    },
+    {
+      "id": "leaf1",
+      "rect": [340, 0, 344, 340]
+    },
+    {
+      "id": "leaf2",
+      "rect": [684, 0, 340, 340]
+    },
+    {
+      "id": "leaf3",
+      "rect": [0, 340, 340, 344]
+    },
+    {
+      "id": "leaf4",
+      "rect": [340, 340, 344, 344]
+    },
+    {
+      "id": "leaf5",
+      "rect": [684, 340, 340, 344]
+    },
+    {
+      "id": "leaf6",
+      "rect": [0, 684, 340, 340]
+    },
+    {
+      "id": "leaf7",
+      "rect": [340, 684, 344, 340]
+    },
+    {
+      "id": "leaf8",
+      "rect": [684, 684, 340, 340]
+    }
+  ],
+  "debugData": {
+    "name": "Leaf litter",
+    "description": "ambientCG LeafSet024 (CC0, ambientcg.com/view?id=LeafSet024): nine beech leaves, its colour with its opacity as A (source/leafLitter_albedo.png, devTools/toolkit/buildLeafLitter.ts), a cell each (leaf0-leaf8, the 3 \u00d7 3 grid cut at 340 and 684 px). Alpha coverage kept at 0.5 down the mips (the leafLitter material's alphaTest), so distant cards don't thin out; FULL mip chain: past the levels the 4 px padding keeps apart, the leaves' transparent surroundings mix. For the toolkit's leaf cards (p308 D5)."
+  }
+}

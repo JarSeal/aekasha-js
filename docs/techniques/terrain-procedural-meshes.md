@@ -213,7 +213,7 @@ The generators' `params` (a block's `geometry.params`; each error names the gene
 
 Both always return the heightfield (a `TRIMESH` or `NONE` block ignores it).
 
-**Seeds and determinism.** A block's height noise uses its `seed` as it is, sampled at its world place (`grid × size`): blocks of one seed continue each other, and the same seed gives the same world on every machine and every visit. A block's own randomness (scattered props, later) mixes the seed with `grid.x` / `grid.z`. For worlds that vary per save, derive the seed from the world seed (`getRandomSeed()`, `setRandomSeed()` on `aekasha`), never from a named stream: `getRandomStream` restarts with each scene load and depends on the draw order, so two blocks spawned in another order would differ.
+**Seeds and determinism.** A block's height noise uses its `seed` as it is, sampled at its world place (`grid × size`): blocks of one seed continue each other, and the same seed gives the same world on every machine and every visit. A block's own randomness (its scatter: [Terrain scatter](terrain-scatter.md#set-up-and-parameters)) mixes the seed with `grid.x` / `grid.z`. For worlds that vary per save, derive the seed from the world seed (`getRandomSeed()`, `setRandomSeed()` on `aekasha`), never from a named stream: `getRandomStream` restarts with each scene load and depends on the draw order, so two blocks spawned in another order would differ.
 
 ## Variations
 

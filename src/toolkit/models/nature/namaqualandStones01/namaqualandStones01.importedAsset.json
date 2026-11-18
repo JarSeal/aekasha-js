@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../../.schemas/importedAsset.schema.json",
+  "id": "namaqualandStones01",
+  "fileName": "./namaqualandStones01.glb",
+  "optimize": {
+    "mesh": {
+      "quantize": false
+    }
+  },
+  "debugData": {
+    "name": "Namaqualand stones 01 (scatter rocks)",
+    "description": "Poly Haven namaqualand_stones_01 (CC0, polyhaven.com/a/namaqualand_stones_01), decimated by devTools/toolkit/buildNatureRocks.ts for the scatter (p308 D5): five sandstone pebbles of 7-14 cm at 80 triangles each (StoneA-E: namaqualandStones01/StoneA, \u2026), and three of them scaled \u00d74 into rocks of 41-59 cm at 400 triangles (RockA-C), each piece's base centre at its origin; positions, normals and UVs, no material (its texture set namaqualandStones01 through rockScatterNamaqualandStones01). Lossless: a scatter draws its items without their nodes, where a quantized encode puts its scale."
+  }
+}

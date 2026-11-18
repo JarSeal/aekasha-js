@@ -12,6 +12,9 @@ blocks have a collider names `physics()` too; the collider's code loads with the
 has one, so an app without physics (a landscape embed) loads no Rapier for its blocks. The
 toolkit's block generators register from an install with
 [`registerTerrainGenerators()`](api:registerTerrainGenerators) (the template's `appECSPlugins`).
+A block with a [scatter](#terrain-scatter) needs [`instancing()`](api:instancing) too, and the
+toolkit's scatter generator registers the same way, with
+[`registerTerrainScatter()`](api:registerTerrainScatter).
 
 ## A texture set
 
@@ -484,6 +487,8 @@ of one biome share the shader), its grid, its collider and its shadows:
 - **`collider.type`:** `HEIGHTFIELD` (the default: from the geometry's grid, or the generator's),
   `TRIMESH` (the triangles: overhangs and cave mouths, costlier) or `NONE` (a background block).
   The collider is a `FIXED` body on the block's mesh entity.
+- **`scatter`:** the block's [scatters](#terrain-scatter) (`*.scatter.json` ids), spawned on it
+  after its collider and owned by it.
 - **The gather** writes each block a scene lists into its data and adds its import, material and
   textures to the scene's lists, so the load brings everything the block needs. Its id is its file
   name.
@@ -518,7 +523,7 @@ _Install from Disk_, Blender 5.3) makes blocks that follow the conventions: _Add
 `Splat`, the custom props), a preview material of the terrain material's layers, _New Splat Map_
 for Texture Paint, _Bake AO → Splat Alpha_, _Bake Colour Map_, _Split Into Blocks_ (one large
 grid into neighbours with shared edges and normals), _Validate_ and _Export Block_ (the glTF
-settings locked, the images, and the JSON stubs). Seven templates beside it start a block or a
+settings locked, the images, and the JSON stubs). Eight templates beside it start a block or a
 technique, each with a README:
 
 | Template                         | What it shows                                                         |
@@ -529,6 +534,7 @@ technique, each with a README:
 | `terrain_splatMap.blend`         | Five layers in a 1K splat map painted in Texture Paint                |
 | `terrain_triplanarCliff.blend`   | A heightfield cliff, and a `TRIMESH` neighbour with an overhang       |
 | `terrain_colormapDetail.blend`   | A painted block ready to bake its colour map                          |
+| `terrain_scatter.blend`          | Rocks scattered by Geometry Nodes on a block's paint, both exports    |
 | `structure_concrete.blend`       | Walls and a bunker worn by a vertex colour (structures, not blocks)   |
 
 The workflow step by step, from the set-up to the collider check in the engine, is the
@@ -562,6 +568,84 @@ the collider's params (`collider: true`). A 257² block with everything takes ab
 frame on the main thread and none on the worker. Options, seeds, costs and when to bake rules into
 the colours rather than run them in the shader: [procedural terrain
 meshes](repo:docs/techniques/terrain-procedural-meshes.md).
+
+## Terrain scatter
+
+Pebbles, rocks, boulders and leaf litter break up a ground's repetition more than any texture
+trick. A block names its scatters (`"scatter": ["valleyPebbles"]`), each a `*.scatter.json`: its
+items (a geometry and a material each, with a weight, shadows and an optional collider per
+instance) and the source that places them. The block spawns them after its collider, as
+[static instances](hub:features/lod#static-instances) in cells of `cellSize` (16 m): an
+`InstancedMesh` entity per item and cell, culled and hidden by `lod.cullScreenSize` as a whole,
+nothing per frame, deleted with the block.
+
+The toolkit's generator `terrainScatter` places on the block's own mesh:
+
+```json
+{
+  "items": [
+    { "geometry": "rockSmall_a", "material": "rockScatter", "castShadow": true },
+    { "geometry": "rockSmall_b", "material": "rockScatter", "castShadow": true }
+  ],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "terrainScatter",
+    "params": {
+      "minSpacing": 1.2,
+      "density": 0.7,
+      "mask": {
+        "layers": { "1": 1 },
+        "slope": { "max": 35 },
+        "noise": { "scale": 8, "amount": 0.6 }
+      },
+      "scale": [0.6, 1.6],
+      "alignToNormal": 0.5,
+      "sink": 0.2,
+      "tint": 0.15
+    },
+    "seed": 2
+  },
+  "lod": { "levels": [{ "screenSize": 0 }], "cullScreenSize": 0.2 }
+}
+```
+
+Boulders go in a scatter of their own, with a spacing past their size, `"collider": "CONVEXHULL"`
+(a `FIXED` body per instance, through `physics()`) and their shadows.
+
+- **Placement:** Poisson-disk candidates `minSpacing` apart over the block (inset by half the
+  spacing, so neighbours keep it across their seam), each kept by `density` × its mask: the
+  block's terrain material's layer weights (by layer index: its vertex colours, splat maps and
+  rules, evaluated on the CPU as the material does), slope and height ranges, and a clustering
+  noise that continues across blocks. Each lands on the mesh's own triangle, tilted toward its
+  normal by `alignToNormal`, sunk by `sink` of its height, darkened by up to `tint`.
+- **Seeds:** the world seed, the block's grid place and the scatter's id, so every block gets its
+  own placements, the same on every visit and in any load order.
+- **Cost:** about 4 µs a candidate on the main thread during the block's spawn (a dense 64 m
+  block at 0.4 m: about 70 ms). `minSpacing` sets it.
+- **From Blender:** a Geometry Nodes scatter exported as GPU instances or a point cloud is an
+  `IMPORTED` source (`terrain_scatter.blend` has one, masked by the block's paint); hand
+  placements are `PLACEMENTS`.
+
+The items:
+
+- **Procedural rocks:** [`generateRock`](api:generateRock) (`PEBBLE` 80 triangles, `ROCK` 320,
+  `BOULDER` 1,280), registered as `rockPebble_a..c`, `rockSmall_a..c` and `boulder_a..b` by
+  [`saveRockGeometries()`](api:saveRockGeometries) in the scene's code before the spawn.
+- **Imported rocks:** Poly Haven's Namaqualand stones and boulder, decimated to the same budgets
+  (`namaqualandStones01/StoneA`, …, `namaqualandBoulder02/Boulder`), each with its own maps.
+- **The rock material** `rockScatter` ([`setupRockMaterial`](api:setupRockMaterial)): the
+  ground's own texture set, triplanar in the rock's own space and anti-tiled, so rocks match the
+  ground and cost no texture memory; a macro tint by world position, dust toward the ground's
+  colour on top, and the [surface conditions'](hub:features/surface-conditions) wetness and frost.
+  An imported rock's material draws its own maps at its UV (`tiling: 'UV'`).
+- **Leaf litter:** [`generateLeafCard`](api:generateLeafCard)'s folded card (4 triangles,
+  [`saveLeafCardGeometry()`](api:saveLeafCardGeometry)) in the `leafLitter` material: a leaf of its
+  atlas per instance, alpha-tested, a share turned brown, wet with the ground.
+
+Without a block, a scene lists a scatter in its `scatters` and spawns it with
+[`spawnScatter`](api:spawnScatter) on any target. Choosing the items, tuning the spacing and the
+cells, colliders, the Blender steps and the pitfalls: [Terrain
+scatter](repo:docs/techniques/terrain-scatter.md).
 
 ## Debugging
 
@@ -611,6 +695,12 @@ meshes](repo:docs/techniques/terrain-procedural-meshes.md).
   `yarn verify:blender` runs every operator of the add-on in a background Blender and reads its GLBs
   as the engine does; `devTools/blender/buildTerrainTemplates.py` makes the templates again.
   :::
+- **The gallery's Scatter row** (its tab's Scatter section: the weather, dry, wet or soaked, and
+  three camera poses): the toolkit's procedural rocks on one half of a block and the imported ones
+  on the other, and leaf litter beside it. The LOD tab's boxes show each cell's level and
+  culling. `?isDebug=true&startScene=scatterTest` checks scatters as it loads: 20,000 pebbles in
+  cells, a Blender scatter exported both ways compared instance by instance, `terrainScatter` on a
+  rules block's rock, and a box dropped on a slab's collider.
 - **The Assets tab**'s texture info window names the sets, packings and slots a texture fills.
 - **The material editor** builds a material's set arrays before previewing it, so a
   `{ textureSetArray }` material shows outside the scene that builds them.
@@ -644,6 +734,12 @@ meshes](repo:docs/techniques/terrain-procedural-meshes.md).
   [`loadTerrainHeightmapAsync`](api:loadTerrainHeightmapAsync) and
   [`evaluateTerrainRulesCPU`](api:evaluateTerrainRulesCPU): generated terrain;
   [`toHeightfieldColliderParams`](api:toHeightfieldColliderParams): a heightfield from a grid.
+- [`spawnScatter`](api:spawnScatter) and [`registerScatterGenerator`](api:registerScatterGenerator)
+  (`aekasha/instancing`): scatters; [`registerTerrainScatter`](api:registerTerrainScatter): the
+  toolkit's generator; [`setupRockMaterial`](api:setupRockMaterial): the rock material;
+  [`generateRock`](api:generateRock), [`saveRockGeometries`](api:saveRockGeometries),
+  [`generateLeafCard`](api:generateLeafCard) and
+  [`saveLeafCardGeometry`](api:saveLeafCardGeometry): the items.
 - [`getTerrainQualityPreset`](api:getTerrainQualityPreset): the tiers;
   [`bakeTerrainColorMap`](api:bakeTerrainColorMap): a block's colour map;
   [`createStructureMaterial`](api:createStructureMaterial): structures;
@@ -652,6 +748,9 @@ meshes](repo:docs/techniques/terrain-procedural-meshes.md).
 
 ## Related issues
 
+- [Static instance cells aren't light receivers](hub:issues/static-instance-cells-not-light-receivers):
+  a point or spot light with object culling over a scatter alone is culled; a block in range keeps
+  it on.
 - [VSM stripes on unshadowed slopes](hub:issues/vsm-stripes-on-unshadowed-slopes): why the
   gallery's blocks cast and receive no shadows.
 - [Texture array image layers premultiplied](hub:issues/texture-array-image-layers-premultiplied):
@@ -675,7 +774,8 @@ meshes](repo:docs/techniques/terrain-procedural-meshes.md).
   [structure materials](repo:docs/techniques/structure-materials.md)), the weather
   ([wet and dry surfaces](repo:docs/techniques/wet-dry-surfaces.md)), the geometry
   ([terrain blocks from Blender](repo:docs/techniques/terrain-blocks-blender.md) and
-  [procedural terrain meshes](repo:docs/techniques/terrain-procedural-meshes.md)) and the
+  [procedural terrain meshes](repo:docs/techniques/terrain-procedural-meshes.md)), its dressing
+  ([terrain scatter](repo:docs/techniques/terrain-scatter.md)) and the
   [techniques index](repo:docs/techniques/README.md) (which technique for which game).
 - The API reference: [`aekasha/texturesets`](hub:documentation/aekasha/texturesets),
   [`aekasha/terrain`](hub:documentation/aekasha/terrain),

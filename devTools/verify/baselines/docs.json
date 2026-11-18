@@ -2,33 +2,33 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 4149,
-      "total": 4149
+      "documented": 4225,
+      "total": 4225
     },
     "members": {
-      "documented": 1118,
-      "total": 1118
+      "documented": 1145,
+      "total": 1145
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3689,
-        "total": 3689
+        "documented": 3735,
+        "total": 3735
       },
       "members": {
-        "documented": 953,
-        "total": 953
+        "documented": 969,
+        "total": 969
       }
     },
     "toolkit": {
       "exports": {
-        "documented": 460,
-        "total": 460
+        "documented": 490,
+        "total": 490
       },
       "members": {
-        "documented": 165,
-        "total": 165
+        "documented": 176,
+        "total": 176
       }
     }
   },
@@ -105,12 +105,12 @@
     },
     "engine/features/instancing": {
       "exports": {
-        "documented": 55,
-        "total": 55
+        "documented": 93,
+        "total": 93
       },
       "members": {
-        "documented": 95,
-        "total": 95
+        "documented": 111,
+        "total": 111
       },
       "undocumented": {
         "exports": [],
@@ -469,8 +469,8 @@
     },
     "engine/kernel/assets/import": {
       "exports": {
-        "documented": 66,
-        "total": 66
+        "documented": 71,
+        "total": 71
       },
       "members": {
         "documented": 0,
@@ -595,8 +595,8 @@
     },
     "engine/kernel/mesh": {
       "exports": {
-        "documented": 15,
-        "total": 15
+        "documented": 18,
+        "total": 18
       },
       "members": {
         "documented": 0,
@@ -987,12 +987,12 @@
     },
     "toolkit/geometry/generate": {
       "exports": {
-        "documented": 10,
-        "total": 10
+        "documented": 22,
+        "total": 22
       },
       "members": {
-        "documented": 31,
-        "total": 31
+        "documented": 42,
+        "total": 42
       },
       "undocumented": {
         "exports": [],
@@ -1042,6 +1042,34 @@
       }
     },
     "toolkit/materials/asteroid": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/materials/leafLitter": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/materials/rockScatter": {
       "exports": {
         "documented": 1,
         "total": 1
@@ -1127,8 +1155,8 @@
     },
     "toolkit/terrain/material": {
       "exports": {
-        "documented": 151,
-        "total": 151
+        "documented": 154,
+        "total": 154
       },
       "members": {
         "documented": 0,
@@ -1311,6 +1339,20 @@
       "exports": {
         "documented": 1,
         "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/scatter": {
+      "exports": {
+        "documented": 13,
+        "total": 13
       },
       "members": {
         "documented": 0,

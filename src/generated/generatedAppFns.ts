@@ -336,12 +336,16 @@ export const tslMaterialFileObjects = {
   p303SetLiteMat: () => import('../app/scenes/textureSets/p303TextureSetMat.tsl.ts'),
   p303SetMinimalMat: () => import('../app/scenes/textureSets/p303TextureSetMat.tsl.ts'),
   asteroid: () => import('../toolkit/materials/asteroid/asteroid.tsl.ts'),
+  leafLitter: () => import('../toolkit/materials/leafLitter/leafLitter.tsl.ts'),
+  rockScatter: () => import('../toolkit/materials/rockScatter/rockScatter.tsl.ts'),
   terrain: () => import('../toolkit/materials/terrain/terrain.tsl.ts'),
   textureSetSurface: () => import('../toolkit/materials/textureSetSurface/textureSetSurface.tsl.ts'),
   triplanarCheckerboard: () => import('../toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts'),
   triplanarGrid: () => import('../toolkit/materials/triplanarGrid/triplanarGrid.tsl.ts'),
   terrainBlockTestBlenderSplat: () => import('../app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts'),
   terrainBlockTestBlenderVertex: () => import('../app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts'),
+  rockScatterNamaqualandBoulder02: () => import('../toolkit/materials/rockScatter/rockScatter.tsl.ts'),
+  rockScatterNamaqualandStones01: () => import('../toolkit/materials/rockScatter/rockScatter.tsl.ts'),
 };
 
 export const postFxFileObjects = {

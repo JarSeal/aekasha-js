@@ -79,6 +79,8 @@ export { bakeTerrainColorMap } from './material/TerrainColorMapBake';
 export type { BakeTerrainColorMapOpts } from './material/TerrainColorMapBake';
 export { createStructureMaterial, getStructureMaterialConfig } from './material/StructureMaterial';
 export type { StructureMaterialOpts } from './material/StructureMaterial';
+export { setupRockMaterial } from './material/RockMaterial';
+export type { RockMaterialInputs } from './material/RockMaterial';
 export { getTerrainQualityPreset } from './material/TerrainQualityPreset';
 export type { TerrainQualityPresetOpts } from './material/TerrainQualityPreset';
 export { loadTerrainDebugViewsAsync } from './material/TerrainDebugViews';

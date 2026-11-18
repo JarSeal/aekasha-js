@@ -193,6 +193,7 @@ The preview (sidebar → Preview Material, the scene's): the layout, the base an
 - **A heightmap from a terrain tool** (Gaea, World Machine, World Creator): no Blender at all, `loadTerrainHeightmapAsync` and `generateTerrainAsync` ([Procedural meshes](terrain-procedural-meshes.md#variations)); or import the heightmap into Blender as a displaced grid and continue here to paint it.
 - **Generated blocks beside Blender ones:** a `noiseTerrain` block with the same world seed continues its own neighbours, not a Blender block; give a hand-shaped area its own blocks and blend at a flat border.
 - **Static dressing on a block:** its props and cutout mesh decals merged per block and material with merge groups (a group id per block, or `AUTO` with a cell size that divides the block size), so they never cross the block that owns them ([Mesh merging](../../hub/pages/features/mesh-merging/guide.md)).
+- **Rocks and litter on a block:** its scatters, from Geometry Nodes in Blender or the engine's generator over the block's paint ([Terrain scatter](terrain-scatter.md)).
 - **Terrain from modules** (cliffs with overhangs, caves, tile worlds) instead of a heightfield grid: [Modular kits](terrain-modular-kits.md).
 
 ## Pitfalls and checklist
@@ -226,6 +227,7 @@ The preview (sidebar → Preview Material, the scene's): the layout, the base an
   - `terrain_splatMap.blend` (with `splatMap_splat0.png`): [Splat map](terrain-splat-map.md).
   - `terrain_triplanarCliff.blend`: [Triplanar cliffs](terrain-triplanar-cliffs.md).
   - `terrain_colormapDetail.blend`: [Colour map + detail](terrain-colormap-detail.md).
+  - `terrain_scatter.blend`: [Terrain scatter](terrain-scatter.md) (rocks scattered by Geometry Nodes on a block's paint).
   - `structure_concrete.blend`: [Structure materials](structure-materials.md).
 - **The orientation block** (`src/app/scenes/terrainBlockTest/blenderBlock/`, `?isDebug=true&startScene=terrainBlockTest`): the add-on's export (`devTools/blender/exportOrientationBlock.py`), 32 m / 33, a mound towards the engine's +x, +z corner, red at −x, −z and green at +x, −z, drawn twice: through its `COLOR_0` (`terrainBlockTestBlender`) and through its splat map (`terrainBlockTestBlenderSplatMap`). Its test pins the orientation in the files.
 - **The API:** `spawnTerrainBlock`, `getTerrainBlock` on `aekasha/terrain`; the asset's schema `terrainBlock.schema.json`.

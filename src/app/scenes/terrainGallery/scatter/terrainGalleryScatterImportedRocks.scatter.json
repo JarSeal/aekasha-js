@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../../../.schemas/scatter.schema.json",
+  "items": [
+    {
+      "geometry": "namaqualandStones01/RockA",
+      "material": "rockScatterNamaqualandStones01"
+    },
+    {
+      "geometry": "namaqualandStones01/RockB",
+      "material": "rockScatterNamaqualandStones01"
+    },
+    {
+      "geometry": "namaqualandStones01/RockC",
+      "material": "rockScatterNamaqualandStones01"
+    }
+  ],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "terrainScatter",
+    "params": {
+      "minSpacing": 1.2,
+      "density": 0.7,
+      "mask": {
+        "layers": {
+          "2": 1
+        }
+      },
+      "scale": [0.6, 1.6],
+      "alignToNormal": 0.5,
+      "sink": 0.2,
+      "tint": 0.15
+    },
+    "seed": 12
+  },
+  "lod": {
+    "levels": [
+      {
+        "screenSize": 0
+      }
+    ],
+    "cullScreenSize": 0.02
+  },
+  "debugData": {
+    "name": "Scatter row: imported rocks",
+    "description": "The toolkit's imported rocks (Poly Haven namaqualand_stones_01's stones scaled into rocks (400 triangles each), models/nature/) on the Scatter row's imported half (layer 2), as the procedural rocks on the other half, in their own maps' rockScatter material (tiling UV)."
+  }
+}

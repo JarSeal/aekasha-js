@@ -1,0 +1,14 @@
+{
+  "provider": "polyHaven",
+  "assetId": "namaqualand_boulder_02",
+  "download": "1K-JPG",
+  "license": "CC0-1.0",
+  "page": "https://polyhaven.com/a/namaqualand_boulder_02",
+  "maps": {
+    "color": "Diffuse",
+    "normal": "nor_gl",
+    "roughness": "Rough",
+    "ao": "AO",
+    "height": "Displacement"
+  }
+}

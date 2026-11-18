@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "namaqualandBoulder02_orm",
+  "pack": {
+    "channels": {
+      "r": {
+        "src": "./source/raw/ao.jpg",
+        "channel": "r"
+      },
+      "g": {
+        "src": "./source/raw/roughness.jpg",
+        "channel": "r"
+      },
+      "b": 0
+    }
+  },
+  "optimize": {
+    "profile": "prop",
+    "slot": "orm"
+  },
+  "texOpts": {
+    "wrapS": "REPEAT",
+    "wrapT": "REPEAT",
+    "anisotropy": "MAX"
+  },
+  "debugData": {
+    "name": "namaqualandBoulder02 orm (FULL)",
+    "description": "The texture set namaqualandBoulder02's FULL orm: R AO, G roughness, B metalness 0. Packed from polyHaven namaqualand_boulder_02's maps (yarn fetchTextureSources)."
+  }
+}

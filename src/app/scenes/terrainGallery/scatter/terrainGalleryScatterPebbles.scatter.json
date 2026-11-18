@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../../../.schemas/scatter.schema.json",
+  "items": [
+    { "geometry": "rockPebble_a", "material": "rockScatter" },
+    { "geometry": "rockPebble_b", "material": "rockScatter" },
+    { "geometry": "rockPebble_c", "material": "rockScatter" }
+  ],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "terrainScatter",
+    "params": {
+      "minSpacing": 0.3,
+      "density": 0.7,
+      "mask": { "layers": { "1": 1 } },
+      "scale": [0.7, 1.5],
+      "alignToNormal": 0.8,
+      "sink": 0.25,
+      "tint": 0.2
+    },
+    "seed": 1
+  },
+  "lod": { "levels": [{ "screenSize": 0 }], "cullScreenSize": 0.05 },
+  "debugData": {
+    "name": "Scatter row: pebbles",
+    "description": "The toolkit's procedural pebbles (generateRock's PEBBLE, rockPebble_a..c) on the Scatter row's procedural half (layer 1, rocks01), 0.3 m apart, in the rocks01 rockScatter material."
+  }
+}
