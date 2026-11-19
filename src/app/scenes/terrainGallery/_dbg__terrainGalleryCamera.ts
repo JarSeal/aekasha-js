@@ -45,6 +45,22 @@ export type GalleryCameraPose = {
 };
 
 /**
+ * An extent's overview: in front of it (+z) and above, looking down at its middle
+ * @returns the pose that has the whole extent in view
+ */
+export const getBoundsPose = (
+  minX: number,
+  maxX: number,
+  minZ: number,
+  maxZ: number
+): GalleryCameraPose => {
+  const x = (minX + maxX) / 2;
+  const z = (minZ + maxZ) / 2;
+  const span = Math.max(maxX - minX, maxZ - minZ);
+  return { pos: { x, y: span * 0.7, z: z + span * 0.45 }, look: { x, y: 0, z } };
+};
+
+/**
  * Flies the scene's camera to a pose over `FLIGHT_SEC`: its position and its look-at point eased
  * from where they are. A flight started meanwhile replaces it.
  * @param pose where the camera ends and what it looks at

@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 started
 Category: App, Terrain, Docs
 Epic: p301_terrain-texturing-epic.md
 Related: \_DONE_p309_terrain-decals.md (the decals this plan's scenes and blocks use; its As built lists have what landed, which differs from this plan's text in places: the strip cell is `tireTracks`, the structure leaks `leak01`-`leak03`; the add-on's Add Decal conforms with a 0.015 m offset and a subdivision level of its own, Export Decal Set writes the GLB and stubs; the gallery already has a Decals row, a Decals stage with the weathers and a bake bench for the decal generators, and `terrainBlockTest` a runtime decal walk; the handbook is `docs/techniques/terrain-decals.md`), \_DONE_p307_wet-and-dry-surface-states.md (the surface conditions and the wet response this plan's scenes show: its As built lists have the API that landed, the gallery's Wet/dry row and the measurements; the handbook's `wet-dry-surfaces.md`), \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (merged dressing and modular kit terrain, for the matrix and the measurements)
@@ -315,6 +315,27 @@ If p372 has landed, the matrix gets a "Static dressing" note (merge a block's pr
 
 1. Rows A–L (whatever previous plans haven't added), signposts, camera presets, solo + measurement mode with copy-out.
 2. The scene runner: `terrainGallery` in `devTools/verify/scenes.config.ts` (its camera poses, the tab it opens), its baseline recorded (`yarn verify:scenes --only terrainGallery --update`).
+
+Found when it started (2026-11-19), and decided:
+
+- **The rows p303-p309 built:** A Library (`terrainGallery.ts`, with the tab's Terrain / Terrain (code) / Baseline switch), C Anti-tiling, D Splatting (vertex colour and splat map, `LINEAR` beside `HEIGHT`, `RGB_AO`, 9 layers; sparse through the quality tiers), E Rules (`rulesRow.ts`; the CPU-against-shader A/B is the Blocks patch's, `patchRow.ts`), F Cliffs, G Procedural, H Colour map, I Structures (no leak decals yet), J Wet/dry, K Scatter, L Decals (the atlas panels, the stage and the bake bench; no footprint pad), plus the Live block and the Blocks patch. **Missing:** B Packing as a row (today a switch on the library's three sets, one packing at a time), I's leak decals, L's footprint pad, the Orientation block, the signposts, the camera presets, and a measurement every row shares (the Procedural row's `measureBlocksAsync` and the Live block's measure their own blocks only).
+- **The layout isn't rows along +Z:** p303-p309 placed each row where it fit (the library in the middle, rows on every side, the patch behind). It stays; the signposts and a Rows list in the tab say what's where.
+- **One registry of the rows** (`_dbg__terrainGalleryRows.ts`, debug only): each row's letter, title, bounds and blocks (key, label, app ids, centre, size, whether the quality tiers apply), read by the signposts, the presets and the measurement, so a row added later is one entry.
+- **Signposts without entities:** one world anchor layer (`createWorldAnchorLayer`) under the HUD root, an anchor per row placed by `setPosition` at the row's front edge, projected by `registerWorldAnchorSync` (it updates every anchor of its layer, not only the entities'); removed on the scene's exit (`unregisterWorldAnchorSync`, the layer's CMP).
+- **The canvas:** the engine owns its size, so the measurement doesn't resize it: it sets the pixel ratio to 1 while it runs, records the canvas's size in the table's header and warns when it isn't 1920 × 1080 (a bench script sets the viewport). PostFX: the gallery has none. Shadows: off (`NO_SHADOWS`, `docs/issues/vsm-stripes-on-unshadowed-slopes.md` still open), which the table's header says. The sky already stands still.
+- **The Orientation block** (`terrainBlockTest`'s `blenderBlock/`) becomes a second scene's asset, so it moves to the shared `src/app/terrainBlocks/` (p306 D2: a new `APP_ASSET_FOLDERS` entry), its ids kept.
+
+Sections:
+
+1. The row registry, the signposts and the Rows list — done. As built:
+   - **`_dbg__terrainGalleryRows.ts`:** `GALLERY_ROWS` (`GalleryRow`: `id`, `letter`, `title`, `shows`, `bounds`, `getY()`, `getBlocks()` returning `GalleryRowBlock`s `{ key, label, x, y, z, size }`), by letter: A Library, C Anti-tiling, D Splatting, E Rules and E Blocks patch, F Cliffs, G Procedural and G Live block, H Colour map, I Structures, J Wet/dry, K Scatter, L Decals (the stage's two blocks and the bench; the atlas panels are in the row's bounds). B and the Orientation block join in section 3. `getGalleryRow(id)`, `getRowPose(row)`.
+   - **Signposts:** `setGallerySignposts(isShown)` / `hideGallerySignposts()`: a world anchor layer (class `terrainGallerySignposts`) under the HUD root, an anchor per row (`A · Library`, `align: 'above'`) 2 m above the middle of its front edge (+z), and `registerWorldAnchorSync` with no entities; the tab's exit cleanup removes both. From the overview a row whose front edge is behind the camera hides its sign, as an anchor does.
+   - **The tab:** a "Signposts" switch (saved, on by default) and a "Rows" list (the letter and title, what it shows, its block count) above the Texture sets list, flying to the row's overview; its selection clears with the other lists'. `getBoundsPose` (the Decals section's overview pose) moved to `_dbg__terrainGalleryCamera.ts` for both. The overview doesn't allow for the open drawer, which covers a wide row's right side.
+   - Checked on WebGPU (Windows Chrome, RDNA 3; `.cache/look/p310s1.mts`): the gallery loads without new warnings, the signposts in view show, and the Rules and Scatter rows' flights frame them. `yarn test` passes.
+2. The camera presets (§2.2): the six poses and FOVs relative to the selected block, the flyover.
+3. The missing rows: B Packing (3 sets × 3 packings side by side), I's leak decals, L's footprint pad (click to stamp, wet toggle), the Orientation block (moved to `src/app/terrainBlocks/`).
+4. The measurement mode (§2.3): solo, a block × the tiers, a row, the copied table with the machine; the Procedural and Live measurements on the same sampler.
+5. The scene runner's entry and baseline, the exit's checks on WebGPU and WebGL2, the docs (the scene's description, `src/toolkit/terrain/CLAUDE.md`'s verification line).
 
 **Exit:** every row renders on WebGPU and WebGL2, and a full row measurement completes and copies a table.
 

@@ -27,7 +27,18 @@ import {
   getAntiTilingSections,
   startAntiTilingTab,
 } from './_dbg__terrainGalleryAntiTiling';
-import { flyToGalleryBlock, stopGalleryFlight } from './_dbg__terrainGalleryCamera';
+import {
+  flyGalleryCamera,
+  flyToGalleryBlock,
+  stopGalleryFlight,
+} from './_dbg__terrainGalleryCamera';
+import {
+  GALLERY_ROWS,
+  getGalleryRow,
+  getRowPose,
+  hideGallerySignposts,
+  setGallerySignposts,
+} from './_dbg__terrainGalleryRows';
 import {
   clearSplattingSelection,
   getSplattingSections,
@@ -142,6 +153,7 @@ type GalleryTabState = {
   material: GalleryMaterial;
   debugView: GalleryDebugView;
   quality: GalleryQuality;
+  signposts: boolean;
 };
 const DEFAULT_STATE: GalleryTabState = {
   packing: 'LITE',
@@ -149,6 +161,7 @@ const DEFAULT_STATE: GalleryTabState = {
   material: 'TERRAIN',
   debugView: 'NONE',
   quality: 'OWN',
+  signposts: true,
 };
 const state: GalleryTabState = { ...DEFAULT_STATE };
 
@@ -158,6 +171,8 @@ let visit = { isCurrent: false };
 let shownPacking: TextureSetPacking = 'LITE';
 /** The block the camera flew to last: the list's selection */
 let selectedSetId: string | null = null;
+/** The row the camera flew over last: the Rows list's selection */
+let selectedRowId: string | null = null;
 /** The latest packing apply: an older one that finishes later is dropped */
 let packingRequest = 0;
 
@@ -403,6 +418,9 @@ const SELECTION_CLEARERS = {
   library: () => {
     selectedSetId = null;
   },
+  rows: () => {
+    selectedRowId = null;
+  },
   procedural: clearGeneratorSelection,
   antiTiling: clearAntiTilingSelection,
   splatting: clearSplattingSelection,
@@ -464,6 +482,7 @@ export const createTerrainGalleryTab = () => {
   visit = thisVisit;
   shownPacking = 'LITE';
   selectedSetId = null;
+  selectedRowId = null;
   stopGalleryFlight(true);
   startAntiTilingTab();
   startSplattingTab();
@@ -479,6 +498,7 @@ export const createTerrainGalleryTab = () => {
   addGalleryExitCleanup(() => {
     thisVisit.isCurrent = false;
     stopGalleryFlight(true);
+    hideGallerySignposts();
     endProceduralTab();
     endLiveTab();
     endDecalBakeTab();
@@ -491,12 +511,13 @@ export const createTerrainGalleryTab = () => {
     sceneId: TERRAIN_GALLERY_SCENE_ID,
     state,
     lsKey: 'AEK_debugTerrainGallery',
-    persistKeys: ['packing', 'checker', 'material', 'debugView', 'quality'],
+    persistKeys: ['packing', 'checker', 'material', 'debugView', 'quality', 'signposts'],
     refreshIntervalMs: 500,
     onRefresh: refreshProceduralFigures,
     onClearLS: () => {
       Object.assign(state, DEFAULT_STATE);
       setChecker(false);
+      setGallerySignposts(state.signposts);
       applyMaterial();
       void applyPackingAsync(state.packing);
     },
@@ -543,8 +564,37 @@ export const createTerrainGalleryTab = () => {
             hint: 'World 1 m cells over the blocks, against each set’s physicalSize',
             onChange: (value) => setChecker(Boolean(value)),
           },
+          {
+            key: 'signposts',
+            label: 'Signposts',
+            kind: 'switch',
+            hint: 'Each row’s letter (the p310 plan’s table) and title over its front edge',
+            onChange: (value) => setGallerySignposts(Boolean(value)),
+          },
         ],
       },
+      debuggerListCMP({
+        id: 'terrainGalleryRows',
+        heading: 'Rows',
+        perItemConfig: {
+          onClick: (rowId) => {
+            const row = getGalleryRow(rowId);
+            if (!row) return;
+            selectedRowId = rowId;
+            clearSelectionsBut('rows');
+            flyGalleryCamera(getRowPose(row));
+            updateDebuggerTab(TAB_ID, { rebuild: true });
+          },
+        },
+        selectedItemId: () => selectedRowId,
+        data: () =>
+          GALLERY_ROWS.map((row) => ({
+            itemId: row.id,
+            title: `${row.letter} ${row.title}`,
+            subTitle: row.shows,
+            suffix: String(row.getBlocks().length),
+          })),
+      }),
       debuggerListCMP({
         id: 'terrainGallerySets',
         heading: 'Texture sets',
@@ -590,6 +640,7 @@ export const createTerrainGalleryTab = () => {
   });
 
   if (state.checker) setChecker(true);
+  if (state.signposts) setGallerySignposts(true);
   if (state.debugView !== 'NONE') void applyDebugViewAsync();
   else if (state.material !== 'TERRAIN' || state.quality !== 'OWN') applyMaterial();
   if (state.packing !== 'LITE') void applyPackingAsync(state.packing);
