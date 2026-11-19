@@ -5,6 +5,6 @@
   "dayNight": { "timeOfDay": 10.5, "playing": false, "dayOfYear": 100 },
   "debugData": {
     "name": "Terrain showcase sky",
-    "description": "The DAY_NIGHT preset (as the shared dayNight sky box) standing still at 10:30, so the showcase's blocks are lit the same on every visit and in the scene runner's snapshot; the showcase tab plays the day (p310 Phase 3)."
+    "description": "The DAY_NIGHT preset (as the shared dayNight sky box) standing still at 10:30, so the showcase's blocks are lit the same on every visit and in the scene runner's snapshot; the showcase tab's Day section sets the hour and plays the day (p310 Phase 3)."
   }
 }

@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: App, Terrain, Docs
 Epic: p301_terrain-texturing-epic.md
 Related: \_DONE_p309_terrain-decals.md (the decals this plan's scenes and blocks use; its As built lists have what landed, which differs from this plan's text in places: the strip cell is `tireTracks`, the structure leaks `leak01`-`leak03`; the add-on's Add Decal conforms with a 0.015 m offset and a subdivision level of its own, Export Decal Set writes the GLB and stubs; the gallery already has a Decals row, a Decals stage with the weathers and a bake bench for the decal generators, and `terrainBlockTest` a runtime decal walk; the handbook is `docs/techniques/terrain-decals.md`), \_DONE_p307_wet-and-dry-surface-states.md (the surface conditions and the wet response this plan's scenes show: its As built lists have the API that landed, the gallery's Wet/dry row and the measurements; the handbook's `wet-dry-surfaces.md`), \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (merged dressing and modular kit terrain, for the matrix and the measurements)
@@ -28,13 +28,13 @@ Both are ordinary app scenes (`hub/CLAUDE.md`'s Scenes and examples): one folder
 
 All are CC0. Source sizes are what to download. Shipped sizes are what p300 produces. The fetch tool (`yarn fetchTextureSources`, p303 D5) downloads every texture source from its `source.json`. Models are downloaded by hand once (glTF zip), decimated in Blender, and committed.
 
-| What                                                                                                       | Where from                                   | Download                                                     | Ships as                                                                                          | Location                                             |
-| ---------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| 16 terrain/structure texture sets (p303 D6 table)                                                          | ambientCG (primary), Poly Haven (alternates) | 2K-JPG zip (2K-PNG for cliffs if JPEG blocking shows)        | 1K LITE KTX2 (+FULL/MINIMAL for `sand01`, `grass01`, `cliffs01`; 2K LITE optional for `cliffs01`) | `src/toolkit/textures/<set>/`                        |
+| What                                                                                                       | Where from                                   | Download                                                     | Ships as                                                                                          | Location                                                                   |
+| ---------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| 16 terrain/structure texture sets (p303 D6 table)                                                          | ambientCG (primary), Poly Haven (alternates) | 2K-JPG zip (2K-PNG for cliffs if JPEG blocking shows)        | 1K LITE KTX2 (+FULL/MINIMAL for `sand01`, `grass01`, `cliffs01`; 2K LITE optional for `cliffs01`) | `src/toolkit/textures/<set>/`                                              |
 | Decals: `TireTracks001`, `AsphaltDamage001`, `Leaking012A`, `Leaking017B`, `Leaking019A`                   | ambientCG                                    | 1K-PNG zip (decals live in 512-px atlas cells; 1K is enough) | Atlas cells in `decalsGround` / `decalsStructure` (2K KTX2)                                       | `src/toolkit/textures/decalsGround/` / `decalsStructure/` (`source/<id>/`) |
-| Leaf litter: `LeafSet024`                                                                                  | ambientCG                                    | 1K-PNG zip                                                   | Scatter-card atlas (1K KTX2)                                                                      | `src/toolkit/textures/leafLitter/`                   |
-| Rocks (optional realism): `rock_moss_set_01`, `namaqualand_stones_01`, `sand_rocks_small_01`, `boulder_01` | Poly Haven (models)                          | glTF, 1K textures                                            | Decimated GLBs (meshopt) + 1K KTX2 (`prop` profile)                                               | `src/toolkit/models/nature/<id>/`                    |
-| Procedural sets, decals, macro noise, ripple atlas                                                         | Generated (p304)                             | —                                                            | Baked at load, or exported → committed PNG → KTX2                                                 | `src/toolkit/textures/<id>/`, decal atlas sources    |
+| Leaf litter: `LeafSet024`                                                                                  | ambientCG                                    | 1K-PNG zip                                                   | Scatter-card atlas (1K KTX2)                                                                      | `src/toolkit/textures/leafLitter/`                                         |
+| Rocks (optional realism): `rock_moss_set_01`, `namaqualand_stones_01`, `sand_rocks_small_01`, `boulder_01` | Poly Haven (models)                          | glTF, 1K textures                                            | Decimated GLBs (meshopt) + 1K KTX2 (`prop` profile)                                               | `src/toolkit/models/nature/<id>/`                                          |
+| Procedural sets, decals, macro noise, ripple atlas                                                         | Generated (p304)                             | —                                                            | Baked at load, or exported → committed PNG → KTX2                                                 | `src/toolkit/textures/<id>/`, decal atlas sources                          |
 
 **Disk budget for the downloads:**
 
@@ -102,13 +102,13 @@ Buttons in the gallery tab (the scene-scoped `src/app/scenes/terrainGallery/_dbg
 
 **Blocks** (64 m, 129 vertices, 0.5 m spacing), placed as separate islands with sunk edges. Seamless multi-block worlds are the future world plan; p306's _Split Into Blocks_ is tested separately.
 
-| Block                | Grid        | Built in | Layers                                                                          | Technique                                                                                                                                         |
-| -------------------- | ----------- | -------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `showcaseCoast`      | (0, 0)      | Blender  | `sand01` (base), `sand02` (R), `rocks01` (G), `cliffs01` (B)                    | Vertex-colour `RGB_AO` + slope-gated triplanar on cliffs + shoreline wetness + pebble/rock scatter + tyre-track mesh decal + runtime footprints   |
-| `showcaseAlpine`     | (2, 0)      | Blender  | `grass01` (base), `grass02`, `rocks02`, `cliffs02`, `snow01`, `snow02`, `ice01` | 2 splat maps (8 weights) + snow rules (height/aspect) + ARRAY storage + sparse top-3 + boulders with colliders + ice-crack decals + snow coverage |
-| `showcaseWetlands`   | (0, 2)      | Blender  | `mud01` (base), `mud02` (R), `grass02` (G), `rocks01` (B), AO in A              | Vertex-colour `RGB_AO` + `_WETNESS` regional attribute + puddles and ripples + tyre ruts with puddle mask + leaf cards + rocks                    |
-| `showcaseProcedural` | (2, 2)      | Engine   | Alpine's layers                                                                 | `rulesTerrain` generator, CPU rules vs shader rules toggle, procedural scatter. Compare with the Alpine block: authored vs generated              |
-| `showcaseBunker`     | on Wetlands | Blender  | `concrete01`, `concrete02`                                                      | Structure mode, wear vertex colours, leak decals, streaks in rain                                                                                 |
+| Block                | Grid        | Built in | Layers                                                                          | Technique                                                                                                                                             |
+| -------------------- | ----------- | -------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `showcaseCoast`      | (0, 0)      | Blender  | `sand01` (base), `sand02` (R), `rocks01` (G), `cliffs01` (B)                    | Vertex-colour `RGB_AO` + slope-gated triplanar on cliffs + shoreline wetness + pebble/rock scatter + tyre-track mesh decal + runtime footprints       |
+| `showcaseAlpine`     | (2, 0)      | Blender  | `grass01` (base), `grass02`, `rocks02`, `cliffs02`, `snow01`, `snow02`, `ice01` | 2 splat maps (8 weights) + snow rules (height/aspect) + ARRAY storage + sparse top-3 + boulders with colliders + ice-crack decals + snow coverage     |
+| `showcaseWetlands`   | (0, 2)      | Blender  | `mud01` (base), `mud02` (R), `grass02` (G), `rocks01` (B), AO in A              | Vertex-colour `RGB_AO` + `_WETNESS` regional attribute + puddles and ripples + tyre ruts with puddle mask + leaf cards + rocks                        |
+| `showcaseProcedural` | (2, 2)      | Engine   | Four of Alpine's: `grass01` (base), `rocks02`, `snow01`, `cliffs02`             | `rulesTerrain` generator (rules into `RGB_AO` vertex colours), CPU rules vs shader rules toggle, procedural rocks and boulders. Authored vs generated |
+| `showcaseBunker`     | on Wetlands | Blender  | `concrete01`, `concrete02`                                                      | Structure mode, wear vertex colours, leak decals, streaks in rain                                                                                     |
 
 ### 3.1 Files per block (app)
 
@@ -263,16 +263,22 @@ These follow `docs/techniques/terrain-blocks-blender.md` (p306). Summary:
 ### 3.7 Scene code (outline)
 
 ```ts
-// src/app/scenes/terrainShowcase/terrainShowcase.ts: entries only (`aekasha*`, `aekasha/toolkit/*`)
+// src/app/scenes/terrainShowcase/terrainShowcase.ts (as built in Phases 2-3): entries only
 export const scene = async () => {
-  const update = getLoaderStatusUpdater();
+  saveRockGeometries({ kinds: ['PEBBLE', 'ROCK', 'BOULDER'] }); // the procedural scatters' rocks
+  saveLeafCardGeometry();
   for (const id of ['showcaseCoast', 'showcaseAlpine', 'showcaseWetlands', 'showcaseProcedural']) {
-    await spawnTerrainBlock(id); // geometry, material variant, collider, scatter, decals (p306/p308/p309)
+    await spawnTerrainBlock(id); // geometry, material, collider, scatter, decals (p306/p308/p309)
   }
   await spawnImportedAsset('showcaseBunker', {
-    material: getStructureMaterial('concrete') /* … */,
+    transform: { position: BUNKER_POSITION },
+    material: 'structureBunker',
+    castShadow: true, // a rain occluder: the doorway's ground stays dry
+    receiveShadow: true,
   });
-  setSurfaceConditions({ wetness: 0, waterLevel: 0.5 }); // p307 (or the scene JSON's `surfaceConditions`)
+  await spawnDecalSet('showcaseBunker_leaks', { transform: { position: BUNKER_POSITION } });
+  createSea(); // the surface conditions (SIMULATED, waterLevel 0.5) are the scene JSON's
+  addShowcaseExitCleanup(await createShowcasePlayerAsync(SCENE_ID, blocks));
   if (IS_DEBUG_ENV) (await import('./_dbg__terrainShowcase')).createTerrainShowcaseTab();
 };
 ```
@@ -340,6 +346,7 @@ Sections:
    - **The tab:** a "Signposts" switch (saved, on by default) and a "Rows" list (the letter and title, what it shows, its block count) above the Texture sets list, flying to the row's overview; its selection clears with the other lists'. `getBoundsPose` (the Decals section's overview pose) moved to `_dbg__terrainGalleryCamera.ts` for both. The overview doesn't allow for the open drawer, which covers a wide row's right side.
    - Checked on WebGPU (Windows Chrome, RDNA 3; `.cache/look/p310s1.mts`): the gallery loads without new warnings, the signposts in view show, and the Rules and Scatter rows' flights frame them. `yarn test` passes.
 2. The camera presets (§2.2): the six poses and FOVs relative to the selected block, the flyover — done. As built:
+
    - **`_dbg__terrainGalleryPresets.ts`:** the tab's Camera presets section after the Rows list: a Block select (every block of `GALLERY_ROWS`, `A Library: grass01`), a button per preset with its FOV in its text (`First person (75°)`; a button with a grid `label` takes it as its accessible name, so the FOV can't go there), Overview (50°, the scene camera's pose) and a Why line. The library and Rows lists' clicks select their block (`setPresetBlock`; the Rows list its row's first); the other rows' lists don't yet, the select does.
    - **Poses** (the block's front is +z, as the overview's): the ground under a point is a ray down onto the highest visible mesh. First person: the eye 1.7 m over the ground 0.35 of the block in front of its centre, 10° down. Third person: a player 0.15 in front of the centre, the camera 6 m behind and 2.5 m over it, looking 1 m over its feet. Top-down: 30 m over the centre at 55°. Isometric: 120 m out at 35°, turned 45° toward +x. Side view: level at the middle of the centre's and the +x edge's heights plus 1 m, 15 m out from the +x edge, looking −x (the Cliffs row's mesa faces +x with its steep face). Flight: `startGalleryFlyover`, along −z at the block's x from 300 m in front to 300 m behind, 15 m over the centre's ground at 60 m/s, looking 60 m ahead, looping until another flight.
    - **The camera module:** every flight eases the FOV too (`GalleryCameraPose.fov`, default `GALLERY_DEFAULT_FOV` 50, so a list's flight after a preset puts it back), a hold sets the pose's FOV and its restore the one it found, and the flyover is the flight's looper (`stopGalleryFlight` and any flight end it).
@@ -422,11 +429,11 @@ Sections:
    - **The scene runner:** `terrainShowcase` in `scenes.config.ts` with `probeSteps: 180` (the player lands and settles before the freeze). Its WebGPU baselines recorded (`--update`) and then passed against them in all four configurations, both worker targets included (37 s). The probe hash is FNV-1a's empty `811c9dc5`: every body is fixed and the character isn't in the hash, so the probe has nothing moving to check; the snapshot is the follow camera on the player.
    - **Docs:** the scene JSON's description and the scene file's header (each block, the bunker, the player); the handbook pages' "Template file" sections (`terrain-blocks-blender.md`, `terrain-splat-map.md`, `terrain-scatter.md`, `terrain-decals.md`, `terrain-vertex-color-splat.md`, `terrain-triplanar-cliffs.md`, `terrain-procedural-rules.md`) name the showcase's blocks as worked examples.
 
-### Phase 3 — Procedural block and scenarios
+### Phase 3 — Procedural block and scenarios — done
 
 1. `showcaseProcedural`; Rain shower, Dry and Snowfall scenarios; day-night playing.
 
-**Exit:** a full rain shower cycle (dry → soaked → puddles → drying) reads plausibly on every block, and the GPU cost of the wettest state is recorded. Each category's look at wetness 0.3, 0.6 and 1 is judged against 1–2 CC0 reference photos (p307 Phase 2's exit, left to here), linked from the handbook's `wet-dry-surfaces.md`.
+**Exit:** a full rain shower cycle (dry → soaked → puddles → drying) reads plausibly on every block, and the GPU cost of the wettest state is recorded. Each category's look at wetness 0.3, 0.6 and 1 is judged against 1–2 CC0 reference photos (p307 Phase 2's exit, left to here), linked from the handbook's `wet-dry-surfaces.md`. Met: the tab's Rain shower played out on every block in about 4.5 minutes of the surface clock, each block wetting and drying back to its dry look, and the snowfall covering them (section 3); the wettest state's GPU cost recorded per block in two poses, within ±0.05 ms of dry, snow 0.04-0.27 ms (section 3); each category judged against two CC0 photos, snow and grass corrected, the photos and the judgement in `wet-dry-surfaces.md` (section 4).
 
 Found when it started (2026-11-19), and decided:
 
@@ -455,6 +462,7 @@ Sections:
    - **CPU against shader rules:** the procedural block's two `WEIGHTS` shots from above differ on 0.9 % of the pixels, all at the layers' edges (the shaded view from the north on 1.8 %, the vertex AO with it): at 0.5 m spacing the rules laid per vertex and the same rules per pixel draw the same layers, the CPU's edges a little blockier. Checked that the shader's variant was on the mesh (its define's `blend.source` `RULES`), not the same material twice.
    - **Checked on WebGPU** (`.cache/look/p310p3s2.mts`, a page per saved view): each view and each tier on all four blocks and the bunker with no warning of their own (`low`, `ultra`, `wetness`, `taps` with `HIGH`, `cpuWeights`, `shaderWeights`, `shader`); the list put the player on each block, grounded ((113, 7.9, 139), (116, 1.2, 22), (−16, 1.25, 136), back to (−14, 2.1, 6)); the day at speed 20 went from 10:30 to 13:23 in 3 s. `yarn test` passes.
 3. **The scenarios and the weather's look:** Rain shower, Dry and Snowfall in the tab (the drying sped up), snow and frost in every block's material and the decal sets' (the storage changes the budget needs), the rain occlusion map where shelter shows; the full cycle looked at on every block (dry → soaked → puddles → drying, and snow); the wettest state's GPU cost recorded per block (the sampler moved to `src/app/shared/`). As built:
+
    - **The tab's Weather section** (`_dbg__terrainShowcaseWeather.ts`, after the Blocks list): Rain shower (`startRain(1)`, 10 s up, 60 s, 10 s down, with `dryingRate` 0.6 and a 3 m/s wind), Dry (the scene's start at once: no rain, wetness, puddles or snow, 15 °C, `dryingRate` 0.1, still air), Snowfall (−5 °C, the cover over 30 s), a Now line (wetness, rain, puddles, snow, temperature) and the measurement. The buttons take no hint (a property grid button has none), so the Now and Status rows' hints explain them.
    - **The cycle** (`.cache/look/p310p3s3.mts`: the tab's own Rain shower button, each block shot at stages read from the conditions; the surface clock's seconds): soaked at 76 s (wetness 0.98, puddles 0.51), the rain over at 91 s (the puddles' peak 0.64), wetness 0.5 at 141 s and 0.1 at 183 s, everything dry at 271 s; the snowfall full in 44 s. So the shower plays out in about 4.5 minutes, the puddles drying last. Every block wets and dries back to its dry look: the alpine grass and scree darken 20-23 % soaked, the coast's sand 13 %, the procedural block's grass top keeps its brightness (its gloss reflects the bright sky at that angle: the handbook's pitfall), the wetlands' channel stays glossy through the cycle (its regional wetness), the bunker's walls darken and streak. The snowfall covers every block, the decal sets' tracks and ruts with them; the scatter rocks stay bare, sticking out (the rock material has no snow input).
    - **Snow and frost in every block's material**, the rain parts where they were missing: `terrainCoast` (`snow`, `frost`), `terrainAlpine` (`puddles`, `ripples`, `frost`; the input `ripples`), `terrainWetlands` (`snow`, `frost`, `rainOcclusion: 'MAP'`, and its puddles in **patches** at 20 m, the input `macro`: at the cycle's puddle levels its flat mud stood under water almost everywhere, a lake rather than puddles), `terrainProcedural` (`puddles`, `ripples`, `frost`); the decal materials `showcaseCoastTracks` and `showcaseWetlandsRuts` take the input `snow`. Every block's material was an array material already (section 2), so the snow set's two bindings fit.
@@ -462,27 +470,32 @@ Sections:
    - **Shelter:** the bunker cast no shadows (`spawnImportedAsset` without `castShadow`), so it wasn't an occluder of the rain occlusion map and the ground inside its doorway puddled in the rain. The scene file spawns it with `castShadow` and `receiveShadow`; the `WETNESS` view in the rain shows the floor inside dry with a crisp edge at the threshold (`p310p3s3door.mts`).
    - **The weather's GPU cost** (the tab's Measure, `window.__terrainShowcaseMeasure.measureWeatherAsync()`, on the sampler moved to `src/app/shared/_dbg__gpuFrameMeasure.ts` with the gallery's other measurement helpers; `getMeasureHeading` takes the conditions' text, the gallery's the default): each block alone (the scene's children off its square hidden) in two poses, from above and from a first person's eye 0.35 of the block in front of its centre (the first pose is past the ripples' 30 m fade, so the second is where their taps run), the frame without it and dry, wettest (wetness, rain and puddles 1) and under full snow, `MANUAL`, the weather put back after. Windows Chrome 157, RDNA 3, 1920 × 1080:
 
-     | Block | Pose | Empty frame | Dry | Wettest | Snow | Wettest − dry | Snow − dry |
-     | --- | --- | --- | --- | --- | --- | --- | --- |
-     | Coast | overview | 0.11 | 0.97 | 0.97 | 1.04 | -0.00 | 0.07 |
-     | Coast | first person | 0.25 | 1.95 | 1.99 | 2.19 | 0.05 | 0.24 |
-     | Alpine slope | overview | 0.11 | 0.78 | 0.78 | 0.85 | -0.01 | 0.06 |
-     | Alpine slope | first person | 0.16 | 1.20 | 1.21 | 1.39 | 0.01 | 0.19 |
-     | Wetlands | overview | 0.11 | 1.02 | 1.03 | 1.07 | 0.01 | 0.05 |
-     | Wetlands | first person | 0.26 | 2.18 | 2.20 | 2.44 | 0.02 | 0.27 |
-     | Procedural | overview | 0.24 | 0.89 | 0.88 | 0.92 | -0.00 | 0.04 |
-     | Procedural | first person | 0.27 | 1.15 | 1.15 | 1.30 | -0.00 | 0.14 |
+     | Block        | Pose         | Empty frame | Dry  | Wettest | Snow | Wettest − dry | Snow − dry |
+     | ------------ | ------------ | ----------- | ---- | ------- | ---- | ------------- | ---------- |
+     | Coast        | overview     | 0.11        | 0.97 | 0.97    | 1.04 | -0.00         | 0.07       |
+     | Coast        | first person | 0.25        | 1.95 | 1.99    | 2.19 | 0.05          | 0.24       |
+     | Alpine slope | overview     | 0.11        | 0.78 | 0.78    | 0.85 | -0.01         | 0.06       |
+     | Alpine slope | first person | 0.16        | 1.20 | 1.21    | 1.39 | 0.01          | 0.19       |
+     | Wetlands     | overview     | 0.11        | 1.02 | 1.03    | 1.07 | 0.01          | 0.05       |
+     | Wetlands     | first person | 0.26        | 2.18 | 2.20    | 2.44 | 0.02          | 0.27       |
+     | Procedural   | overview     | 0.24        | 0.89 | 0.88    | 0.92 | -0.00         | 0.04       |
+     | Procedural   | first person | 0.27        | 1.15 | 1.15    | 1.30 | -0.00         | 0.14       |
 
      **The wettest state costs what the dry one does** (−0.04 to +0.05 ms over two runs): the wet response's arithmetic runs on every pixel in either state, and the ripples' two taps on standing water near the camera (the rings show in the shaded shots) are within the noise on this GPU. **Snow costs 0.04-0.27 ms**, the most from a first person's eye (the set's taps under the cover on most of the frame). The `TAPS` view's bands (16-24 there) are too coarse to show the ripples' two fetches.
+
    - **A test bridge finding:** `focusDebuggerControl({ name })` with a property grid button's text (the shower's) focused the next button in the pane (Dry), so the first two cycle runs pressed Dry; the script clicks the button found by its text. Not fixed here (the engine's test bridge; a property grid button whose row has a label).
    - `yarn test`, `tsc` and lint pass.
+
 4. **The reference photos:** each category on the gallery's Wet/dry row at wetness 0.3, 0.6 and 1 against 1-2 CC0 photos; a category that reads wrong gets its response corrected (`TEXTURE_SET_WET_RESPONSES` or the set's own `surface`, a toolkit change); the photos and the judgement in `wet-dry-surfaces.md`. As built:
    - **The photos:** two a category, CC0 on their pages (Flickr's public-domain dedications, StockSnap's CC0), found through Openverse's API with its `license=cc0` filter (Wikimedia Commons' CC0 alone had too few of wet surfaces; rawpixel's "CC0" mirrors and the generated-looking vintage street scenes left out), linked from the handbook, not committed. The thumbnails and the candidate sheets stayed in the session's scratch folder.
    - **The renders** (`.cache/look/p310p3s4.mts`, `--only`, `--tag`): each category's block on the gallery's Wet/dry row (the beach aside) from 6 m in front and 3.5 m up at wetness 0, 0.3, 0.6 and 1 (`MANUAL`, the puddle level following, no rain), a sheet a category with the two photos under the four renders (`.cache/look/p310p3s4/judge_<CATEGORY>.png`), the main surface's sRGB luminance measured. Plausible: sand (−21 % at 1, little at 0.3 by its `dryingSpeed`), mud (glossy at once; the gallery's very flat top stands under water from a puddle level of 0.3: patches, as the showcase's wetlands got in section 3), rocks, cliff, ice, concrete (the wall's streaks at 0.3 are the kerb photo's).
    - **Two categories corrected** (the engine's table, `src/_engine/schemas/TextureSetSchema.ts`' `TEXTURE_SET_WET_RESPONSES`, not the toolkit's as this section's text assumed: **an engine patch for Phase 5**): `SNOW.wetDarkening` 0.25 → 0.45 (wet snow stayed white, −8 %, beside the slush photo's grey; now −15 %) and `GRASS.wetRoughness` 0.35 → 0.55 (a smooth bluish sheen on the sky-facing slopes, like a film; wet grass beads its water on rough blades: now a diffuse dampness). Re-shot (`.cache/look/p310p3s4fix/`). No set overrides either in its own `surface`; the gather writes the new values into every snow and grass set.
    - **Handbook:** `wet-dry-surfaces.md`'s category table (the two values), its pitfall on bright sets (ice and cliffs 4-12 % darker, snow 15 %), and a new Reference photos section (each category's photos with their creators, its figures on screen and the judgement).
    - The gallery's scene runner baselines will differ where its snow and grass blocks show wet (section 5 records them again). `yarn test` and `tsc` pass.
-5. **The exit:** the scene runner's baseline recorded again (the fourth block, the materials), the scene JSON's description and the scene file's header, the sky box's description, `terrain-procedural-rules.md` (the procedural block as the CPU-against-shader worked example), §3's table and §3.7 corrected to what was built.
+5. **The exit:** the scene runner's baseline recorded again (the fourth block, the materials), the scene JSON's description and the scene file's header, the sky box's description, `terrain-procedural-rules.md` (the procedural block as the CPU-against-shader worked example), §3's table and §3.7 corrected to what was built. As built:
+   - **The scene runner:** `terrainShowcase` gets a `debugger` configuration (`{ tabs: ['terrainShowcase'] }`, the gallery's way: the tab's shot and its axe check, no violation), its comment the procedural block's boulders. Both scenes' WebGPU baselines recorded again (`yarn verify:scenes --only terrainShowcase,terrainGallery --update`, then `--config debugger` for the showcase's new one: the fourth block and the materials here, the snow and grass responses in the gallery) and then passed against them, all ten runs (197 s). The probe hash is still FNV-1a's empty one: every body is fixed, the procedural boulders' hulls too.
+   - **Docs:** the scene JSON's description (the procedural block, the bunker's shadows, the weather, the tab), the scene file's header (the same, the tab's modules), the sky box's description (the tab's Day section), `terrain-procedural-rules.md`' Template file section (the procedural block as the CPU-against-shader example: its 0.9 % of pixels, a baked rule's ramps and the staircase, its own snow line), `devTools/verify/CLAUDE.md` (both terrain scenes among the `debugger` runs), §3's table and §3.7's outline (as built).
+   - `yarn test`, `tsc` (both projects), lint (no errors) and the docs ratchet pass.
 
 ### Phase 4 — Measurements, the handbook and the Hub (§4)
 
@@ -494,7 +507,7 @@ Sections:
 ### Phase 5 — Release
 
 1. `readme.md`, `CLAUDE.md` (§4 steps 4-5), `CHANGELOG.md`.
-2. App minor bump (scenes); engine/toolkit bumps if this plan touched them.
+2. App minor bump (scenes); engine/toolkit bumps if this plan touched them. It did: the engine (Phase 3 section 4: `TEXTURE_SET_WET_RESPONSES`' snow darkening and grass wet roughness, a patch) and the toolkit (Phase 2: the add-on's second splat map and Export's fix, the `decalsStructure` leak cells' recipes; a minor for the add-on's new map).
 3. `yarn checkVersions --against main`.
 4. Mark the plan done; it's the epic's last child, so the epic's own closing steps follow (p301).
 
@@ -502,9 +515,9 @@ Sections:
 
 ## Risks
 
-| Risk                                                   | Mitigation                                                                                                                          |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Blender steps drift from the installed Blender version | The add-on encapsulates the fragile steps; pages name the version they were verified with; Phase 2 corrects the text while building |
-| Showcase too heavy for low-end machines                | The tab's tier switch (p305 variants); the gallery documents per-tier cost; the showcase is a demo, not a budget target             |
-| Measurement noise                                      | Warm-up, 120-frame averages, fixed poses, PostFX off, one machine per table                                                         |
+| Risk                                                   | Mitigation                                                                                                                                                                                                                   |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Blender steps drift from the installed Blender version | The add-on encapsulates the fragile steps; pages name the version they were verified with; Phase 2 corrects the text while building                                                                                          |
+| Showcase too heavy for low-end machines                | The tab's tier switch (p305 variants); the gallery documents per-tier cost; the showcase is a demo, not a budget target                                                                                                      |
+| Measurement noise                                      | Warm-up, 120-frame averages, fixed poses, PostFX off, one machine per table                                                                                                                                                  |
 | Headless WebGPU doesn't render under WSL2              | `yarn verify:scenes` renders in the Windows Chrome on the real GPU there (`devTools/verify/CLAUDE.md`; `--webgl` is SwiftShader, too slow for these scenes); the GPU-ms tables need a headed browser on the recorded machine |

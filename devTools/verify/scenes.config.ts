@@ -480,10 +480,13 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
   },
   terrainShowcase: {
     // 3 s: the player character (dropped 2 m onto the coast's beach at the load) lands and
-    // settles before the freeze. The Blender blocks' heightfields, the boulders' hulls and the
-    // bunker's boxes are fixed bodies; the sky stands still and the surface conditions start dry,
-    // so the snapshot (the follow camera on the player) is the same on every run
+    // settles before the freeze. The blocks' heightfields, the boulders' hulls (the alpine's
+    // imported, the procedural block's scattered) and the bunker's boxes are fixed bodies; the sky
+    // stands still and the surface conditions start dry, so the snapshot (the follow camera on the
+    // player) is the same on every run
     probeSteps: 180,
+    // The scene's tab (p310 Phase 3): its blocks, weather, day and materials sections
+    debugger: { tabs: ['terrainShowcase'] },
   },
   terrainBlockTest: {
     // 6 s: the boxes' 35 m fall onto the blocks and their tumble take about 4 s, and the scene
