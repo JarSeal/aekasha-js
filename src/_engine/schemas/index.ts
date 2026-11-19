@@ -86,6 +86,8 @@ export {
   TerrainBlockAssetSchema,
   terrainSchemaPart,
 } from '../features/terrain/TerrainBlockSchema';
+export { DECAL_SET_DEFAULTS, DecalSetAssetSchema } from '../features/terrain/DecalSetSchema';
+export type { DecalSetAsset, DecalSetDef } from '../features/terrain/DecalSetSchema';
 export {
   SceneSurfaceConditionsSchema,
   surfaceConditionsSchemaPart,

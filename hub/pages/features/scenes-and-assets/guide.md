@@ -21,22 +21,26 @@
 
 The engine finds every file with one of these suffixes under `src/` by itself:
 
-| Suffix                 | What it is                                                                  |
-| ---------------------- | --------------------------------------------------------------------------- |
-| `*.scene.json`         | A scene.                                                                    |
-| `*.camera.json`        | A perspective or orthographic camera.                                       |
-| `*.light.json`         | A light of any three.js type.                                               |
-| `*.geometry.json`      | A geometry: a three.js type and its params, or a merge of other geometries. |
-| `*.texture.json`       | A texture, and how the asset pipeline encodes it.                           |
-| `*.textureArray.json`  | Textures of one size as the layers of one array texture.                    |
-| `*.textureAtlas.json`  | Images packed into one layout as cells, a texture per map slot.             |
-| `*.textureSet.json`    | A [texture set](hub:features/terrain): a surface's packed PBR maps and size. |
-| `*.material.json`      | A material: a three.js one, or a TSL node material with its `tslFile`.      |
-| `*.mesh.json`          | A mesh: its geometry, material, transform, shadows and levels of detail.    |
-| `*.importedAsset.json` | A glTF or GLB model to import, and how the asset pipeline optimizes it.     |
-| `*.skybox.json`        | A [sky box](hub:features/sky-box).                                          |
-| `*.postFx.json`        | A [PostFX pass](hub:features/rendering#post-effects), with its `*.tsl.ts`.  |
-| `*.impostor.json`      | An exported [impostor](hub:features/lod#impostors), written by its export.  |
+| Suffix                 | What it is                                                                                                                   |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `*.scene.json`         | A scene.                                                                                                                     |
+| `*.camera.json`        | A perspective or orthographic camera.                                                                                        |
+| `*.light.json`         | A light of any three.js type.                                                                                                |
+| `*.geometry.json`      | A geometry: a three.js type and its params, or a merge of other geometries.                                                  |
+| `*.texture.json`       | A texture, and how the asset pipeline encodes it.                                                                            |
+| `*.textureArray.json`  | Textures of one size as the layers of one array texture.                                                                     |
+| `*.textureAtlas.json`  | Images packed into one layout as cells, a texture per map slot.                                                              |
+| `*.textureSet.json`    | A [texture set](hub:features/terrain): a surface's packed PBR maps and size.                                                 |
+| `*.material.json`      | A material: a three.js one, or a TSL node material with its `tslFile`.                                                       |
+| `*.mergeMaterial.json` | A [merge material palette](hub:features/mesh-merging#palettes-several-materials-in-one-draw): several materials in one draw. |
+| `*.mesh.json`          | A mesh: its geometry, material, transform, shadows and levels of detail.                                                     |
+| `*.importedAsset.json` | A glTF or GLB model to import, and how the asset pipeline optimizes it.                                                      |
+| `*.skybox.json`        | A [sky box](hub:features/sky-box).                                                                                           |
+| `*.postFx.json`        | A [PostFX pass](hub:features/rendering#post-effects), with its `*.tsl.ts`.                                                   |
+| `*.impostor.json`      | An exported [impostor](hub:features/lod#impostors), written by its export.                                                   |
+| `*.terrainBlock.json`  | A [terrain block](hub:features/terrain#terrain-blocks): its geometry, material, grid and collider.                           |
+| `*.scatter.json`       | A [scatter](hub:features/terrain#terrain-scatter): instances placed on a block in cells.                                     |
+| `*.decalSet.json`      | A [decal set](hub:features/terrain#decal-sets-from-blender): an import's meshes drawn as decals.                             |
 
 Each has a Zod schema in `src/_engine/schemas/`. Start a file with a `$schema` line pointing at
 `.schemas/<type>.schema.json`, and your editor checks and autocompletes it as you type.

@@ -172,12 +172,23 @@ export const TerrainBlockAssetSchema = z
       .describe(
         "The block's scatters (*.scatter.json ids), spawned with it on the block and owned by it. Needs instancing(); the gather adds them to a scene listing the block."
       ),
+    /** The block's decal sets (`*.decalSet.json` ids, p309 D3), spawned with it at its grid place
+     * and owned by it: their meshes are in the block's own space, as exported beside it. The
+     * gather adds them to a scene listing the block. */
+    decals: z
+      .array(z.string().min(1))
+      .optional()
+      .describe(
+        "The block's decal sets (*.decalSet.json ids), spawned with it at its grid place and owned by it: their meshes are in the block's own space, as exported beside it. The gather adds them to a scene listing the block."
+      ),
     /** The debug tools' name and description. */
     debugData: DebugDataSchema.optional(),
     /** Set by the gatherer. */
     __sourcePath: SourcePathSchema.optional(),
   })
-  .describe('A terrain block: its geometry, material, grid place, collider, shadows and scatters.');
+  .describe(
+    'A terrain block: its geometry, material, grid place, collider, shadows, scatters and decal sets.'
+  );
 
 /** A terrain block's JSON (`*.terrainBlock.json`), as written. */
 export type TerrainBlockAsset = z.infer<typeof TerrainBlockAssetSchema>;
@@ -209,12 +220,15 @@ export type TerrainBlockDef = {
   shadows: { cast: boolean; receive: boolean };
   /** The block's scatters' ids, when it has any */
   scatter?: string[];
+  /** The block's decal sets' ids, when it has any */
+  decals?: string[];
   /** The debug tools' name and description (not in a production build) */
   debugData?: DebugData;
 };
 
-/** The terrain feature's scene field (p306 D2): `terrainBlocks`, the ids of the
- * `*.terrainBlock.json` blocks the scene's code spawns (`spawnTerrainBlock`). */
+/** The terrain feature's scene fields: `terrainBlocks` (p306 D2), the ids of the
+ * `*.terrainBlock.json` blocks the scene's code spawns (`spawnTerrainBlock`), and `decalSets` (p309
+ * D3), the `*.decalSet.json` sets it spawns (`spawnDecalSet`). */
 export const terrainSchemaPart = {
   feature: 'terrain',
   scene: {
@@ -225,6 +239,14 @@ export const terrainSchemaPart = {
       .optional()
       .describe(
         "Terrain block ids (*.terrainBlock.json) the scene's code spawns (spawnTerrainBlock): each one's import, material and input textures load with the scene."
+      ),
+    /** Decal set ids (`*.decalSet.json`) the scene's code spawns: each one's import and material
+     * load with the scene. A terrain block's decal sets are added for it. */
+    decalSets: z
+      .array(z.string().min(1))
+      .optional()
+      .describe(
+        "Decal set ids (*.decalSet.json) the scene's code spawns (spawnDecalSet): each one's import and material load with the scene. A terrain block's decal sets are added for it."
       ),
   },
 } satisfies FeatureSchemaPart;

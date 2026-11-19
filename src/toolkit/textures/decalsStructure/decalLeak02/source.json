@@ -1,0 +1,14 @@
+{
+  "provider": "ambientCG",
+  "assetId": "Leaking017B",
+  "download": "2K-JPG",
+  "license": "CC0-1.0",
+  "page": "https://ambientcg.com/view?id=Leaking017B",
+  "maps": {
+    "color": "_Color",
+    "normal": "_NormalGL",
+    "roughness": "_Roughness",
+    "metalness": "_Metalness",
+    "height": "_Displacement"
+  }
+}

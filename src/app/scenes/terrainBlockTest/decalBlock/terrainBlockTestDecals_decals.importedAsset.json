@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../../../.schemas/importedAsset.schema.json",
+  "id": "terrainBlockTestDecals_decals",
+  "fileName": "./terrainBlockTestDecals_decals.glb",
+  "debugData": {
+    "name": "Decal set terrainBlockTestDecals_decals",
+    "description": "p309 Phase 3's decal set on terrainBlockTestDecals, exported by the terrain add-on in the block's space (devTools/blender/buildDecalTest.py). The default mesh encode (meshopt, quantized): positions within 1.6 mm of the lossless encode, UVs within 0.23 texel of the 2K atlas, 54 KB against 143 KB."
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "decalsStructure_blend",
+  "tslFile": "materials/decal/decal.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "params": {
+    "polygonOffsetFactor": -1,
+    "polygonOffsetUnits": -4
+  },
+  "staticDefines": {
+    "mode": "BLEND",
+    "edgeFade": "UV1",
+    "wet": "FULL",
+    "frost": true,
+    "rainOcclusion": "NORMAL_Y"
+  },
+  "inputs": {
+    "albedoAlpha": {
+      "texture": "decalsStructure.albedoAlpha"
+    },
+    "normalRough": {
+      "texture": "decalsStructure.normalRough"
+    }
+  },
+  "debugData": {
+    "name": "Structure decals, BLEND",
+    "description": "Decals (p309 D2) of the decalsStructure atlas (leaks, cracks, stains on concrete and cliffs) in its DECAL packing: the mesh's UV in the atlas's space, its second UV set 0..1 over the decal for the edge fade (edgeFade UV1: a mesh without it draws nothing). BLEND: alpha-blended in the transparent pass, no depth writes (soft decals); polygon offset -1, -4 (params). Wet by the surface conditions (FULL: puddles fill the puddle mask first) with frost. Static defines: mode (BLEND, CUTOUT), edgeFade (UV1, NONE), wet (FULL, SIMPLE, NONE), frost, rainOcclusion (NORMAL_Y, MAP). Numbers and colours (optional inputs): tint, opacity, normalStrength, roughnessScale, edgeFade, puddleDepth, porosity, wetDarkening, wetRoughness, puddleResponse; optional snow ({ textureSet }). Draw it after the surface (the mesh's renderOrder, eg. 10), castShadow false, receiveShadow true."
+  }
+}

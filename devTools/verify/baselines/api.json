@@ -2299,6 +2299,18 @@
       "SceneSurfaceConditionsSchema": "Variable",
       "surfaceConditionsSchemaPart": "Variable"
     },
+    "src/_engine/features/terrain/DecalSets.ts": {
+      "DecalSet": "TypeAlias",
+      "getDecalSet": "Function",
+      "spawnDecalSet": "Function",
+      "SpawnDecalSetOpts": "TypeAlias"
+    },
+    "src/_engine/features/terrain/DecalSetSchema.ts": {
+      "DECAL_SET_DEFAULTS": "Variable",
+      "DecalSetAsset": "TypeAlias",
+      "DecalSetAssetSchema": "Variable",
+      "DecalSetDef": "TypeAlias"
+    },
     "src/_engine/features/terrain/TerrainBlocks.ts": {
       "getTerrainBlock": "Function",
       "spawnTerrainBlock": "Function",
@@ -5072,6 +5084,9 @@
     "src/toolkit/materials/asteroid/asteroid.tsl.ts": {
       "colorNode": "Function"
     },
+    "src/toolkit/materials/decal/decal.tsl.ts": {
+      "setup": "Variable"
+    },
     "src/toolkit/materials/leafLitter/leafLitter.tsl.ts": {
       "setup": "Function"
     },
@@ -5100,12 +5115,130 @@
       "TriplanarProjection": "TypeAlias",
       "TriplanarProjectionOptions": "Interface"
     },
+    "src/toolkit/terrain/blocks/BlockSurface.ts": {
+      "BlockSurface": "TypeAlias",
+      "BlockSurfaceSample": "TypeAlias",
+      "createBlockSurfaceSample": "Function",
+      "createFlatBlockSurface": "Function",
+      "readBlockSurface": "Function",
+      "sampleBlockSurface": "Function"
+    },
     "src/toolkit/terrain/blocks/RegisterTerrainGenerators.ts": {
       "registerTerrainGenerators": "Function"
     },
     "src/toolkit/terrain/blocks/TerrainBlockGenerators.ts": {
       "generateNoiseTerrainBlockAsync": "Function",
       "generateRulesTerrainBlockAsync": "Function"
+    },
+    "src/toolkit/terrain/decals/BakeDecal.ts": {
+      "BakedDecal": "TypeAlias",
+      "bakeDecalGenerator": "Function",
+      "BakeDecalGeneratorOpts": "TypeAlias"
+    },
+    "src/toolkit/terrain/decals/DecalGenerator.ts": {
+      "buildDecalPacking": "Function",
+      "DECAL_BAKE_OUTPUTS": "Variable",
+      "DecalBuildContext": "TypeAlias",
+      "DecalGenerator": "TypeAlias",
+      "DecalGeneratorDef": "TypeAlias",
+      "DecalOutputs": "TypeAlias",
+      "DecalPackingBuild": "TypeAlias",
+      "defineDecalGenerator": "Function",
+      "packDecalOutputs": "Function"
+    },
+    "src/toolkit/terrain/decals/DecalMaterial.ts": {
+      "DecalMaterialInputs": "TypeAlias",
+      "getDecalEdgeFade": "Function",
+      "readDecalDefine": "Function",
+      "setupDecalMaterial": "Function"
+    },
+    "src/toolkit/terrain/decals/DecalPatch.ts": {
+      "createDecalPatchArrays": "Function",
+      "DecalFrame": "TypeAlias",
+      "DecalPatchArrays": "TypeAlias",
+      "DecalPatchCounts": "TypeAlias",
+      "DecalPatchSpec": "TypeAlias",
+      "getDecalFrame": "Function",
+      "getDecalPatchMaxIndices": "Function",
+      "writeDecalPatch": "Function",
+      "writeMeshDecalPatch": "Function"
+    },
+    "src/toolkit/terrain/decals/DecalRibbonPatch.ts": {
+      "DecalRibbonCounts": "TypeAlias",
+      "DecalRibbonSpec": "TypeAlias",
+      "writeRibbonPatch": "Function"
+    },
+    "src/toolkit/terrain/decals/DecalRibbons.ts": {
+      "createDecalTrail": "Function",
+      "CreateDecalTrailOpts": "TypeAlias",
+      "DecalTrail": "TypeAlias",
+      "spawnRibbonDecal": "Function",
+      "SpawnRibbonDecalOpts": "TypeAlias"
+    },
+    "src/toolkit/terrain/decals/generators/DecalCracks.ts": {
+      "decalCracks": "Variable"
+    },
+    "src/toolkit/terrain/decals/generators/DecalFootprint.ts": {
+      "decalFootprint": "Variable"
+    },
+    "src/toolkit/terrain/decals/generators/DecalFormwork.ts": {
+      "decalFormwork": "Variable"
+    },
+    "src/toolkit/terrain/decals/generators/DecalIceCrack.ts": {
+      "decalIceCrack": "Variable"
+    },
+    "src/toolkit/terrain/decals/generators/DecalLeafPatch.ts": {
+      "decalLeafPatch": "Variable"
+    },
+    "src/toolkit/terrain/decals/generators/DecalMudSplatter.ts": {
+      "decalMudSplatter": "Variable"
+    },
+    "src/toolkit/terrain/decals/generators/DecalScorch.ts": {
+      "decalScorch": "Variable"
+    },
+    "src/toolkit/terrain/decals/generators/DecalShapes.ts": {
+      "angleOf": "Function",
+      "boxEdgeGuard": "Function",
+      "centredPoint": "Function",
+      "edgeGuard": "Function",
+      "insideOf": "Function",
+      "rotatePoint": "Function",
+      "sdCapsule": "Function",
+      "sdEllipse": "Function",
+      "smoothUnion": "Function",
+      "under": "Function",
+      "union": "Function"
+    },
+    "src/toolkit/terrain/decals/generators/DecalStain.ts": {
+      "decalStain": "Variable"
+    },
+    "src/toolkit/terrain/decals/generators/DecalWetPatch.ts": {
+      "decalWetPatch": "Variable"
+    },
+    "src/toolkit/terrain/decals/MeshDecals.ts": {
+      "spawnMeshDecalAsync": "Function",
+      "SpawnMeshDecalOpts": "TypeAlias"
+    },
+    "src/toolkit/terrain/decals/RuntimeDecals.ts": {
+      "createDecalPool": "Function",
+      "CreateDecalPoolOpts": "TypeAlias",
+      "createLook": "Function",
+      "createPlace": "Function",
+      "DecalBlockTarget": "TypeAlias",
+      "DecalCell": "TypeAlias",
+      "DecalLook": "TypeAlias",
+      "DecalPlace": "TypeAlias",
+      "DecalPool": "TypeAlias",
+      "finishSpawn": "Function",
+      "getLiveState": "Function",
+      "pickCell": "Function",
+      "PoolState": "TypeAlias",
+      "readDecalBlockTarget": "Function",
+      "releasePlace": "Function",
+      "resolveLook": "Function",
+      "spawnDecal": "Function",
+      "SpawnDecalOpts": "TypeAlias",
+      "takePlace": "Function"
     },
     "src/toolkit/terrain/material/RockMaterial.ts": {
       "readRockDefine": "Function",
@@ -5471,9 +5604,13 @@
       "WetSurfaceInput": "TypeAlias"
     },
     "src/toolkit/terrain/procedural/BakeSurface.ts": {
+      "BakeControls": "TypeAlias",
       "BakedSurface": "TypeAlias",
       "bakeSurfaceGenerator": "Function",
-      "BakeSurfaceGeneratorOpts": "TypeAlias"
+      "BakeSurfaceGeneratorOpts": "TypeAlias",
+      "ControlledBake": "TypeAlias",
+      "reuseOrStartBakeAsync": "Function",
+      "startControlledBakeAsync": "Function"
     },
     "src/toolkit/terrain/procedural/cliffStrata/cliffStrata.generator.ts": {
       "generator": "Variable"
@@ -5519,6 +5656,7 @@
     "src/toolkit/terrain/procedural/SurfaceGenerator.ts": {
       "buildSurfaceGraph": "Function",
       "buildSurfacePacking": "Function",
+      "checkSurfaceFacts": "Function",
       "createSurfaceContext": "Function",
       "defineSurfaceGenerator": "Function",
       "PreparedSurfaceGraph": "TypeAlias",
@@ -5530,6 +5668,7 @@
       "SurfaceGeneratorDef": "TypeAlias",
       "SurfaceGraph": "TypeAlias",
       "SurfaceGraphOpts": "TypeAlias",
+      "SurfaceGraphSource": "TypeAlias",
       "SurfaceOutputs": "TypeAlias",
       "SurfacePackingBuild": "TypeAlias"
     },
@@ -5541,6 +5680,8 @@
     "src/toolkit/terrain/procedural/SurfaceParams.ts": {
       "buildSurfaceParams": "Function",
       "checkSurfaceParamSpecs": "Function",
+      "isSurfaceParamStatic": "Function",
+      "SurfaceChoiceParam": "TypeAlias",
       "SurfaceColorParam": "TypeAlias",
       "SurfaceNumberParam": "TypeAlias",
       "SurfaceParamNode": "TypeAlias",
@@ -5562,14 +5703,6 @@
       "createScatterLayerWeigher": "Function",
       "ScatterLayerWeigher": "TypeAlias",
       "toTerrainRule": "Function"
-    },
-    "src/toolkit/terrain/scatter/ScatterSurface.ts": {
-      "createFlatScatterSurface": "Function",
-      "createScatterSurfaceSample": "Function",
-      "readScatterSurface": "Function",
-      "sampleScatterSurface": "Function",
-      "ScatterSurface": "TypeAlias",
-      "ScatterSurfaceSample": "TypeAlias"
     },
     "src/toolkit/terrain/scatter/TerrainScatter.ts": {
       "generateTerrainScatterAsync": "Function"
@@ -6341,8 +6474,12 @@
       "ColorJSON",
       "CoreEntityOpts",
       "CoreEntityOptsSchema",
+      "DECAL_SET_DEFAULTS",
       "DEFAULT_ATLAS_PADDING",
       "DebugData",
+      "DecalSetAsset",
+      "DecalSetAssetSchema",
+      "DecalSetDef",
       "FeatureSchemaPart",
       "FeatureSchemaShape",
       "GeneratedAssetFields",
@@ -6580,6 +6717,9 @@
       "surfaceConditions"
     ],
     "aekasha/terrain": [
+      "DecalSet",
+      "DecalSetDef",
+      "SpawnDecalSetOpts",
       "SpawnTerrainBlockOpts",
       "TerrainBlock",
       "TerrainBlockColliderType",
@@ -6588,9 +6728,11 @@
       "TerrainGenerator",
       "TerrainGeneratorOpts",
       "TerrainGeneratorResult",
+      "getDecalSet",
       "getTerrainBlock",
       "getTerrainGenerator",
       "registerTerrainGenerator",
+      "spawnDecalSet",
       "spawnTerrainBlock",
       "terrain",
       "unregisterTerrainGenerator"
@@ -6724,11 +6866,22 @@
     ],
     "aekasha/toolkit/terrain": [
       "ApplySurfaceWetnessOpts",
+      "BakeDecalGeneratorOpts",
       "BakeMacroNoiseOpts",
       "BakeRippleAtlasOpts",
       "BakeSurfaceGeneratorOpts",
       "BakeTerrainColorMapOpts",
+      "BakedDecal",
       "BakedSurface",
+      "CreateDecalPoolOpts",
+      "CreateDecalTrailOpts",
+      "DecalBuildContext",
+      "DecalGenerator",
+      "DecalGeneratorDef",
+      "DecalMaterialInputs",
+      "DecalOutputs",
+      "DecalPool",
+      "DecalTrail",
       "DecodeRippleAtlasOpts",
       "DomainWarpOptions",
       "FbmOptions",
@@ -6745,10 +6898,14 @@
       "RippleRings",
       "RockMaterialInputs",
       "SampleTextureSetOptions",
+      "SpawnDecalOpts",
+      "SpawnMeshDecalOpts",
+      "SpawnRibbonDecalOpts",
       "StructureMaterialOpts",
       "SurfaceBuildContext",
       "SurfaceCellCount",
       "SurfaceCells",
+      "SurfaceChoiceParam",
       "SurfaceColorParam",
       "SurfaceFrostOpts",
       "SurfaceGenerator",
@@ -6804,6 +6961,7 @@
       "WorleyOptions",
       "WorleySample",
       "applySurfaceWetness",
+      "bakeDecalGenerator",
       "bakeMacroNoise",
       "bakeRippleAtlas",
       "bakeSurfaceGenerator",
@@ -6811,10 +6969,22 @@
       "bumpNormalView",
       "cliffStrata",
       "concretePores",
+      "createDecalPool",
+      "createDecalTrail",
       "createLiveSurface",
       "createStructureMaterial",
       "createTerrainMaterial",
+      "decalCracks",
+      "decalFootprint",
+      "decalFormwork",
+      "decalIceCrack",
+      "decalLeafPatch",
+      "decalMudSplatter",
+      "decalScorch",
+      "decalStain",
+      "decalWetPatch",
       "decodeRippleAtlas",
+      "defineDecalGenerator",
       "defineSurfaceGenerator",
       "doesPackingStoreNormal",
       "domainWarp",
@@ -6842,9 +7012,13 @@
       "sampleTextureSet",
       "sandFlat",
       "sandRipples",
+      "setupDecalMaterial",
       "setupRockMaterial",
       "setupTerrainMaterial",
       "snowDrift",
+      "spawnDecal",
+      "spawnMeshDecalAsync",
+      "spawnRibbonDecal",
       "transformTangentNormalToView",
       "valueNoise",
       "worley"

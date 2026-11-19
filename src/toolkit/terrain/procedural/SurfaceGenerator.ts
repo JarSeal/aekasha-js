@@ -10,6 +10,8 @@
 // height at other points. That height is one layout function (`aekSurfaceHeight…`) the taps call,
 // with the uniforms as its inputs: three caches a layout function's code per backend, so a body
 // that read a uniform itself would lose the uniform's declaration in the next shader built with it.
+// The graph builders also take a decal generator (p309 D5, `decals/DecalGenerator.ts`), whose
+// outputs carry a height the same way (`SurfaceGraphSource`).
 import { Fn, max, round, uint, uniform, vec2 } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node, UniformNode } from 'three/webgpu';
@@ -147,7 +149,16 @@ const checkWhole = (value: number, what: string, generatorId: string) => {
   }
 };
 
-const checkFacts = (generatorId: string, physicalSize: [number, number], heightScale: number) => {
+/**
+ * Checks a generator's physical facts (the generator's id names it in the error).
+ * @internal
+ * @throws for a size that isn't two numbers above 0, or a height scale below 0
+ */
+export const checkSurfaceFacts = (
+  generatorId: string,
+  physicalSize: [number, number],
+  heightScale: number
+) => {
   if (!(physicalSize[0] > 0) || !(physicalSize[1] > 0)) {
     throw new Error(
       `[${generatorId}] physicalSize ${JSON.stringify(physicalSize)} takes two sizes above 0 (metres).`
@@ -206,14 +217,32 @@ export const createSurfaceContext = (opts: {
   };
 };
 
+/**
+ * What a surface graph is built from: a surface generator, or a decal generator (p309 D5), whose
+ * outputs carry a height too.
+ * @template P the param specs
+ * @template O what its `build` returns
+ * @internal
+ */
+export type SurfaceGraphSource<
+  P extends SurfaceParamSpecs,
+  O extends { height: Node<'float'> } = SurfaceOutputs,
+> = {
+  id: string;
+  params: P;
+  physicalSize: [number, number];
+  heightScale: number;
+  build: (ctx: SurfaceBuildContext, params: SurfaceParamNodes<P>) => O;
+};
+
 type HeightInput = { name: string; type: string; node: Node };
 
 /**
  * The surface's height at any uv, as one layout function the taps call: the uniforms (the float
  * and colour params and the seed) are its inputs, so its body reads no uniform of its own.
  */
-const createHeightFunction = <P extends SurfaceParamSpecs>(
-  def: SurfaceGeneratorDef<P>,
+const createHeightFunction = <P extends SurfaceParamSpecs, O extends { height: Node<'float'> }>(
+  def: SurfaceGraphSource<P, O>,
   params: SurfaceParamsBuild<P>,
   base: Omit<Parameters<typeof createSurfaceContext>[0], 'uv' | 'seed'>,
   seed: Node<'uint'>
@@ -273,8 +302,11 @@ export type SurfaceGraphOpts<P extends SurfaceParamSpecs> = {
  * controls, and the height at any other uv for the default normal's and AO's taps.
  * @internal
  */
-export type SurfaceGraph<P extends SurfaceParamSpecs> = {
-  surface: SurfaceOutputs;
+export type SurfaceGraph<
+  P extends SurfaceParamSpecs,
+  O extends { height: Node<'float'> } = SurfaceOutputs,
+> = {
+  surface: O;
   /** The build context of the point. */
   ctx: SurfaceBuildContext;
   params: SurfaceParamsBuild<P>;
@@ -292,14 +324,17 @@ export type SurfaceGraph<P extends SurfaceParamSpecs> = {
  * by every point it's built at (a live terrain layer's planes, its taps).
  * @internal
  */
-export type PreparedSurfaceGraph<P extends SurfaceParamSpecs> = {
+export type PreparedSurfaceGraph<
+  P extends SurfaceParamSpecs,
+  O extends { height: Node<'float'> } = SurfaceOutputs,
+> = {
   params: SurfaceParamsBuild<P>;
   seed: UniformNode<'uint', number>;
   /** The facts in effect (the given ones, else the generator's). */
   physicalSize: [number, number];
   heightScale: number;
   /** The surface built at a point (the whole graph again), with its build context. */
-  surfaceAt: (uv: Node<'vec2'>) => { surface: SurfaceOutputs; ctx: SurfaceBuildContext };
+  surfaceAt: (uv: Node<'vec2'>) => { surface: O; ctx: SurfaceBuildContext };
   /** The height at a point: one layout function (made on its first call) the taps share. */
   heightAt: HeightFunction;
 };
@@ -311,14 +346,17 @@ export type PreparedSurfaceGraph<P extends SurfaceParamSpecs> = {
  * @throws for a param the generator lacks or a value it refuses, a seed that isn't a whole
  * number, or physical facts out of range
  */
-export const prepareSurfaceGraph = <P extends SurfaceParamSpecs>(
-  generator: SurfaceGenerator<P>,
+export const prepareSurfaceGraph = <
+  P extends SurfaceParamSpecs,
+  O extends { height: Node<'float'> } = SurfaceOutputs,
+>(
+  generator: SurfaceGraphSource<P, O>,
   opts: Omit<SurfaceGraphOpts<P>, 'uv'>
-): PreparedSurfaceGraph<P> => {
+): PreparedSurfaceGraph<P, O> => {
   const { id } = generator;
   const physicalSize = opts.physicalSize ?? generator.physicalSize;
   const heightScale = opts.heightScale ?? generator.heightScale;
-  checkFacts(id, physicalSize, heightScale);
+  checkSurfaceFacts(id, physicalSize, heightScale);
   const seedValue = opts.seed ?? 0;
   checkWhole(seedValue, 'The seed', id);
   const params = buildSurfaceParams(id, generator.params, opts.params);
@@ -349,15 +387,19 @@ export const prepareSurfaceGraph = <P extends SurfaceParamSpecs>(
 
 /**
  * Builds a generator's surface at a point, the params and the seed as uniforms: the shared first
- * step of a bake (`buildSurfacePacking`) and of the live mode (`createLiveSurface`).
+ * step of a bake (`buildSurfacePacking`), of the live mode (`createLiveSurface`) and of a decal's
+ * bake (`buildDecalPacking`, p309 D5).
  * @internal
  * @throws for a param the generator lacks or a value it refuses, a seed that isn't a whole
  * number, or physical facts out of range
  */
-export const buildSurfaceGraph = <P extends SurfaceParamSpecs>(
-  generator: SurfaceGenerator<P>,
+export const buildSurfaceGraph = <
+  P extends SurfaceParamSpecs,
+  O extends { height: Node<'float'> } = SurfaceOutputs,
+>(
+  generator: SurfaceGraphSource<P, O>,
   opts: SurfaceGraphOpts<P>
-): SurfaceGraph<P> => {
+): SurfaceGraph<P, O> => {
   const { uv, ...rest } = opts;
   const prepared = prepareSurfaceGraph(generator, rest);
   const { surface, ctx } = prepared.surfaceAt(uv);
@@ -458,7 +500,7 @@ export const defineSurfaceGenerator = <const P extends SurfaceParamSpecs>(
 ): SurfaceGenerator<P> => {
   if (!def.id) throw new Error('[defineSurfaceGenerator] A generator needs an id.');
   checkSurfaceParamSpecs(def.id, def.params);
-  checkFacts(def.id, def.physicalSize, def.heightScale);
+  checkSurfaceFacts(def.id, def.physicalSize, def.heightScale);
   const generator: SurfaceGenerator<P> = {
     id: def.id,
     category: def.category,

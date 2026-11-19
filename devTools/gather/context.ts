@@ -3,6 +3,7 @@ import path from 'path';
 import type z from 'zod';
 import type {
   CameraAsset,
+  DecalSetDef,
   GeoAsset,
   ImportedAsset,
   ImpostorAsset,
@@ -88,12 +89,23 @@ export type Registries = {
   terrainBlocks: Record<string, TerrainBlockDef & { __sourcePath?: string }>;
   /** Scatters (p308 D2): their defaults filled in, as scenes get them */
   scatters: Record<string, ScatterDef & { __sourcePath?: string }>;
+  /** Decal sets (p309 D3): their defaults filled in, as scenes get them */
+  decalSets: Record<string, DecalSetDef & { __sourcePath?: string }>;
   /** The procedural texture set generators (p304 D3), each module by its id (`<id>.generator.ts`),
    * as paths from `srcDir` */
   generators: Record<string, string>;
   /** The files the generated code loads on demand, by id, as paths from `srcDir` */
   loaders: GeneratedLoaders;
 };
+
+/**
+ * Why a scene can't load the texture id: it's a source-only texture asset (`sourceOnly`, p309
+ * D1), which nothing encodes on its own. Undefined for any other id.
+ */
+export const getSourceOnlyTextureError = (reg: Registries, id: string) =>
+  reg.textures[id]?.sourceOnly
+    ? `"${id}" is a source-only texture (sourceOnly: an atlas cell's or a texture array layer's source, never loaded on its own): name the atlas's or the array's texture instead`
+    : undefined;
 
 /** The id spaces: textures, arrays, atlases and their slots (and palette slots) share one */
 export type IdSpace =
@@ -110,7 +122,8 @@ export type IdSpace =
   | 'skyboxes'
   | 'postFx'
   | 'terrainBlocks'
-  | 'scatters';
+  | 'scatters'
+  | 'decalSets';
 
 /** The ids taken in each space */
 export type TakenIds = Record<IdSpace, Set<string>>;
@@ -137,6 +150,7 @@ export const createRegistries = (): { registries: Registries; taken: TakenIds } 
     postFx: {},
     terrainBlocks: {},
     scatters: {},
+    decalSets: {},
     generators: {},
     loaders: { scenes: {}, tslMaterials: {}, postFx: {}, textureSetGenerators: {} },
   },
@@ -155,6 +169,7 @@ export const createRegistries = (): { registries: Registries; taken: TakenIds } 
     postFx: new Set(),
     terrainBlocks: new Set(),
     scatters: new Set(),
+    decalSets: new Set(),
   },
 });
 
@@ -220,6 +235,7 @@ const TYPE_LABELS: Record<GatheredJsonType, string> = {
   postFx: 'PostFX',
   terrainBlock: 'terrain block',
   scatter: 'scatter',
+  decalSet: 'decal set',
 };
 
 /**

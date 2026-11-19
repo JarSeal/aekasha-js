@@ -27,6 +27,7 @@ Blender runs on Windows (5.3 checked; the server's Blender add-on needs 5.1+), C
 - **Units:** metres, scale 1. Blender is +Z up; glTF and the engine +Y up (the exporter's `export_yup`). A model's front toward Blender's −Y (the Front view) faces the engine's +z. Apply rotation and scale before export; the origin is where the engine's transform pivots.
 - **Licences:** only your own work or CC0 sources go into the repo. The terrain texture sets come from `yarn fetchTextureSources` (ambientCG, Poly Haven, CC0); say a model's source in its JSON's `debugData.description`.
 - **Exporter options change between Blender versions** (`export_colors` became `export_vertex_color` in 4.2): read the operator's properties first (`bpy.ops.export_scene.gltf.get_rna_type().properties.keys()`) instead of trusting a remembered name.
+- **A Geometry Nodes modifier's input in Blender 5** is `getattr(modifier.properties.inputs, socket.identifier).value = …` (the socket from `node_group.interface.items_tree`); 4.x's `modifier[socket.identifier] = …` is refused, and `modifier.properties.inputs[identifier] = …` reads back but doesn't reach the evaluated mesh. Check a result by evaluating it (`obj.evaluated_get(depsgraph).to_mesh()`).
 
 ## Bringing a model into Ækasha
 

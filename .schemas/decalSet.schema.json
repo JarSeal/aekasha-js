@@ -1,0 +1,195 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "$ref": "#/definitions/__schema0"
+    },
+    "id": {
+      "$ref": "#/definitions/__schema1"
+    },
+    "importedAsset": {
+      "$ref": "#/definitions/__schema3"
+    },
+    "material": {
+      "$ref": "#/definitions/__schema4"
+    },
+    "renderOrder": {
+      "$ref": "#/definitions/__schema5"
+    },
+    "receiveShadow": {
+      "$ref": "#/definitions/__schema7"
+    },
+    "debugData": {
+      "$ref": "#/definitions/__schema9"
+    },
+    "__sourcePath": {
+      "$ref": "#/definitions/__schema20"
+    }
+  },
+  "required": [
+    "importedAsset",
+    "material"
+  ],
+  "additionalProperties": false,
+  "description": "A decal set: an import's mesh decals, their decal material and render order.",
+  "definitions": {
+    "__schema0": {
+      "type": "string",
+      "description": "The JSON Schema in .schemas/ an editor validates this file with. The gatherer ignores it."
+    },
+    "__schema1": {
+      "description": "The id. Default: the file name without .decalSet.json.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema2"
+        }
+      ]
+    },
+    "__schema2": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema3": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The *.importedAsset.json's id: its meshes are the decals. The gather adds it to a scene listing the set."
+    },
+    "__schema4": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The decal material's id (a *.material.json, eg. the toolkit's decalsGround_blend). The gather adds it to a scene listing the set."
+    },
+    "__schema5": {
+      "description": "The meshes' draw order within a pass. Default: 10 (after the terrain's 0, before other transparents' 20 and up).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema6"
+        }
+      ]
+    },
+    "__schema6": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "__schema7": {
+      "description": "The meshes receive shadows. Default: true. Decals never cast them.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema8"
+        }
+      ]
+    },
+    "__schema8": {
+      "type": "boolean"
+    },
+    "__schema9": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/__schema10"
+        },
+        "description": {
+          "$ref": "#/definitions/__schema12"
+        },
+        "comments": {
+          "$ref": "#/definitions/__schema14"
+        },
+        "todo": {
+          "$ref": "#/definitions/__schema16"
+        },
+        "debugObj": {
+          "$ref": "#/definitions/__schema18"
+        }
+      },
+      "additionalProperties": false,
+      "description": "What the debug tools show for it. Production data has none."
+    },
+    "__schema10": {
+      "description": "The name the debug tools show.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema11"
+        }
+      ]
+    },
+    "__schema11": {
+      "type": "string"
+    },
+    "__schema12": {
+      "description": "A longer description for the debug tools.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema13"
+        }
+      ]
+    },
+    "__schema13": {
+      "type": "string"
+    },
+    "__schema14": {
+      "description": "Notes with their times.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema15"
+        }
+      ]
+    },
+    "__schema15": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "number",
+            "description": "Milliseconds since the UNIX epoch."
+          },
+          "comment": {
+            "type": "string",
+            "description": "The note."
+          }
+        },
+        "required": [
+          "timestamp",
+          "comment"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "__schema16": {
+      "description": "Open items, by key.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema17"
+        }
+      ]
+    },
+    "__schema17": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema18": {
+      "description": "Anything else a debug tool keeps for it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema19"
+        }
+      ]
+    },
+    "__schema19": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema20": {
+      "type": "string",
+      "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
+    }
+  }
+}

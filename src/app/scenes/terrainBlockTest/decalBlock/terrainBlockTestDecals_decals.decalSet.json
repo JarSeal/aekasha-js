@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../../../.schemas/decalSet.schema.json",
+  "importedAsset": "terrainBlockTestDecals_decals",
+  "material": "decalsGround_blend",
+  "debugData": {
+    "name": "Decal set terrainBlockTestDecals_decals",
+    "description": "p309 Phase 3's decal set on terrainBlockTestDecals (devTools/blender/buildDecalTest.py, the terrain add-on's Export Decal Set): two tireTracks strips on one path 1.7 m apart, an asphaltDamage quad and a crack quad of the decalsGround atlas, conformed to the block by the add-on's Shrinkwrap (1.5 cm over it, a face at most half its 0.5 m grid spacing), in its BLEND decal material."
+  }
+}

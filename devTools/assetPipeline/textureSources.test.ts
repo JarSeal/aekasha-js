@@ -15,7 +15,7 @@ import {
 } from './textureSources';
 
 // p303 D5: `yarn fetchTextureSources`' set discovery, both providers against a fake downloader,
-// the raw folder and the credits
+// the raw folder and the credits; p309 D1: source folders (a source.json without a set)
 
 /** A stored zip of the files (the reader's own tests cover deflate) */
 const zip = (files: Record<string, string>) => {
@@ -99,6 +99,12 @@ const writeSet = (dir: string, id: string, source?: unknown) => {
   if (source) fs.writeFileSync(path.join(srcDir, dir, 'source.json'), JSON.stringify(source));
 };
 
+/** A source folder: a `source.json` without a set beside it (p309 D1) */
+const writeSourceFolder = (dir: string, source: unknown) => {
+  fs.mkdirSync(path.join(srcDir, dir), { recursive: true });
+  fs.writeFileSync(path.join(srcDir, dir, 'source.json'), JSON.stringify(source));
+};
+
 const findSet = (id: string) => {
   const set = findTextureSetSources(srcDir).find((s) => s.setId === id)!;
   return set as TextureSetSourceDir & { source: TextureSource };
@@ -143,8 +149,6 @@ describe('findTextureSetSources', () => {
     writeSet('app/scenes/demo/rock', 'demoRock', { ...AMBIENT_SOURCE, assetId: 'Rock051' });
     writeSet('app/scenes/handMade', 'handMade');
     writeSet('toolkit/textures/bad', 'bad', { ...AMBIENT_SOURCE, download: 'big' });
-    fs.mkdirSync(path.join(srcDir, 'toolkit/textures/orphan'), { recursive: true });
-    fs.writeFileSync(path.join(srcDir, 'toolkit/textures/orphan/source.json'), '{}');
     writeSet('toolkit/textures/two', 'twoA', AMBIENT_SOURCE);
     writeSet('toolkit/textures/two', 'twoB');
 
@@ -153,15 +157,40 @@ describe('findTextureSetSources', () => {
       ['bad', 'toolkit/textures/bad'],
       ['demoRock', 'app/scenes/demo/rock'],
       ['sand01', 'toolkit/textures/sand01'],
-      ['toolkit/textures/orphan', 'toolkit/textures/orphan'],
       ['toolkit/textures/two', 'toolkit/textures/two'],
     ]);
     expect(sets[0].source).toEqual({
       error: expect.stringMatching(/^invalid source.json: download/),
     });
     expect(sets[2].source).toEqual(AMBIENT_SOURCE);
-    expect(sets[3].source).toEqual({ error: 'source.json without a *.textureSet.json beside it' });
-    expect(sets[4].source).toEqual({ error: expect.stringMatching(/^one texture set per folder/) });
+    expect(sets[3].source).toEqual({ error: expect.stringMatching(/^one texture set per folder/) });
+  });
+
+  it('finds a source folder by its name, and refuses an id two folders have', () => {
+    writeSourceFolder('toolkit/textures/decalsGround/tireTracks01', AMBIENT_SOURCE);
+    writeSourceFolder('toolkit/textures/decalsGround/broken', { provider: 'ambientCG' });
+    writeSourceFolder('toolkit/textures/decalsGround/sand01', AMBIENT_SOURCE);
+    writeSet('toolkit/textures/sand01', 'sand01', AMBIENT_SOURCE);
+
+    const sets = findTextureSetSources(srcDir);
+    expect(sets.map(({ setId, srcPath, setFile }) => [setId, srcPath, setFile])).toEqual([
+      ['broken', 'toolkit/textures/decalsGround/broken', undefined],
+      ['sand01', 'toolkit/textures/decalsGround/sand01', undefined],
+      [
+        'sand01',
+        'toolkit/textures/sand01',
+        path.join(srcDir, 'toolkit/textures/sand01/sand01.textureSet.json'),
+      ],
+      ['tireTracks01', 'toolkit/textures/decalsGround/tireTracks01', undefined],
+    ]);
+    expect(sets[0].source).toEqual({ error: expect.stringMatching(/^invalid source.json/) });
+    expect(sets[1].source).toEqual({
+      error: 'the id "sand01" is also src/toolkit/textures/sand01\'s',
+    });
+    expect(sets[2].source).toEqual({
+      error: 'the id "sand01" is also src/toolkit/textures/decalsGround/sand01\'s',
+    });
+    expect(sets[3].source).toEqual(AMBIENT_SOURCE);
   });
 });
 
@@ -178,6 +207,29 @@ describe('fetchTextureSetSourceAsync', () => {
       'height.jpg': 'height',
     });
     expect(fs.existsSync(path.join(cacheDir, 'ambientCG', 'Ground080_2K-JPG.zip'))).toBe(true);
+  });
+
+  it("fetches a source folder's maps, its opacity among them", async () => {
+    writeSourceFolder('toolkit/textures/decalsGround/crack01', {
+      ...AMBIENT_SOURCE,
+      assetId: 'AsphaltDamage001',
+      maps: { color: '_Color', normal: '_NormalGL', roughness: '_Roughness', opacity: '_Opacity' },
+    });
+    responses['https://ambientcg.com/get?file=AsphaltDamage001_2K-JPG.zip'] = zip({
+      'AsphaltDamage001_2K-JPG_Color.jpg': 'color',
+      'AsphaltDamage001_2K-JPG_NormalGL.jpg': 'normal gl',
+      'AsphaltDamage001_2K-JPG_Roughness.jpg': 'roughness',
+      'AsphaltDamage001_2K-JPG_Opacity.jpg': 'opacity',
+    });
+    const result = await fetchTextureSetSourceAsync(findSet('crack01'), opts());
+    expect(result).toEqual({ status: 'fetched', missingOptional: [] });
+    expect(readRaw('toolkit/textures/decalsGround/crack01')).toEqual({
+      '.fetched.json': expect.any(String),
+      'color.jpg': 'color',
+      'normal.jpg': 'normal gl',
+      'roughness.jpg': 'roughness',
+      'opacity.jpg': 'opacity',
+    });
   });
 
   it('skips an unchanged set, fetches again on a change or a touched map, uses the cache', async () => {
@@ -289,9 +341,13 @@ describe('fetchTextureSetSourceAsync', () => {
 });
 
 describe('the credits', () => {
-  it("lists the toolkit's sets, and isn't written while one is invalid", () => {
+  it("lists the toolkit's sets and source folders, and isn't written while one is invalid", () => {
     writeSet('toolkit/textures/sand02', 'sand02', { ...AMBIENT_SOURCE, assetId: 'Ground093C' });
     writeSet('toolkit/textures/sand01', 'sand01', AMBIENT_SOURCE);
+    writeSourceFolder('toolkit/textures/decalsGround/tireTracks01', {
+      ...AMBIENT_SOURCE,
+      assetId: 'TireTracks001',
+    });
     writeSet('app/scenes/demo', 'appSet', AMBIENT_SOURCE);
     const sets = findTextureSetSources(srcDir);
     const credits = writeTextureCredits(srcDir, sets);
@@ -304,6 +360,7 @@ describe('the credits', () => {
     expect(text.split('\n').filter((line) => line.startsWith('| `'))).toEqual([
       '| `sand01` | Ground080 (2K-JPG) | ambientCG | CC0-1.0 | <https://ambientcg.com/view?id=Ground080> |',
       '| `sand02` | Ground093C (2K-JPG) | ambientCG | CC0-1.0 | <https://ambientcg.com/view?id=Ground080> |',
+      '| `tireTracks01` | TireTracks001 (2K-JPG) | ambientCG | CC0-1.0 | <https://ambientcg.com/view?id=Ground080> |',
     ]);
     expect(writeTextureCredits(srcDir, sets)).toMatchObject({ isWritten: false });
 

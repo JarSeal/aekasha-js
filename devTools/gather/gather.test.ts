@@ -886,6 +886,72 @@ describe('p299 D5: texture array layer and atlas cell inputs', () => {
   });
 });
 
+describe('p309 D1: a source-only texture', () => {
+  const albedo = '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg';
+  const assets = {
+    'app/textures/crackSrc.texture.json': { id: 'crackSrc', fileName: albedo, sourceOnly: true },
+    'app/textures/decals.textureAtlas.json': {
+      id: 'decals',
+      size: [256, 256],
+      slots: { albedo: {} },
+      cells: [{ id: 'crack', rect: [0, 0, 128, 128], sources: { albedo: 'crackSrc' } }],
+    },
+  };
+  /** The gather's errors for a tree */
+  const gatherErrors = (files: Record<string, unknown>) => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { isGathered } = gather(files);
+    const text = errors.mock.calls.flat().join('\n');
+    errors.mockRestore();
+    return { isGathered, text };
+  };
+  const SOURCE_ONLY = '"crackSrc" is a source-only texture';
+
+  it('is an atlas cell’s source, and isn’t in the development data’s textures', () => {
+    const { isGathered, output } = gather({
+      ...assets,
+      ...scene('a', { textures: ['decals'] }),
+    });
+    expect(isGathered).toBe(true);
+    const textures = (output?.json as unknown as { textures: Record<string, unknown> }).textures;
+    expect(Object.keys(textures)).toEqual(['decals.albedo']);
+  });
+
+  it('fails a scene that lists it', () => {
+    const { isGathered, text } = gatherErrors({
+      ...assets,
+      ...scene('a', { textures: ['crackSrc'] }),
+    });
+    expect(isGathered).toBe(false);
+    expect(text).toContain(`Scene "a" lists the texture ${SOURCE_ONLY}`);
+  });
+
+  it('fails a material that names it, naming the material', () => {
+    const { isGathered, text } = gatherErrors({
+      ...assets,
+      'app/materials/m.material.json': material('m', { params: { map: 'crackSrc' } }),
+      ...scene('a', { materials: ['m'] }),
+    });
+    expect(isGathered).toBe(false);
+    expect(text).toContain(`Scene "a": the material "m"`);
+    expect(text).toContain(SOURCE_ONLY);
+  });
+
+  it('fails a texture set slot that names it', () => {
+    const { isGathered, text } = gatherErrors({
+      ...assets,
+      'app/textures/sand.textureSet.json': {
+        category: 'SAND',
+        physicalSize: [3, 3],
+        heightScale: 0.03,
+        packings: { MINIMAL: { albedoHeight: 'crackSrc' } },
+      },
+    });
+    expect(isGathered).toBe(false);
+    expect(text).toContain(SOURCE_ONLY);
+  });
+});
+
 describe('p303 D1: texture sets', () => {
   const albedo = '/debugger/assets/testTextures/Poliigon_MetalRust_7642_BaseColor.jpg';
   const tex = (id: string, colorSpace?: string) => ({
@@ -1693,7 +1759,7 @@ describe('p306 D2: terrain blocks', () => {
   });
 
   it('refuses a field the asset doesn’t have, and a resolution under 2', () => {
-    expect(gather(files({ decals: ['cracks'] })).isGathered).toBe(false);
+    expect(gather(files({ heightmap: 'coast' })).isGathered).toBe(false);
     expect(gather(files({ grid: { size: 64, resolution: 1 } })).isGathered).toBe(false);
   });
 });
@@ -1899,5 +1965,103 @@ describe('p308 D2: scatters', () => {
       },
     };
     expect(gather(files({}, { terrainBlocks: ['coast'] }, block)).isGathered).toBe(false);
+  });
+});
+
+describe('p309 D3: decal sets', () => {
+  const files = (
+    decalSet: Record<string, unknown> = {},
+    sceneFields: Record<string, unknown> = { decalSets: ['tracks'] },
+    extra: Record<string, unknown> = {}
+  ) => ({
+    'app/decals/tracksMesh.importedAsset.json': {
+      id: 'tracksMesh',
+      fileName: '/debugger/assets/testModels/box01.glb',
+    },
+    'app/decals/decalMat.material.json': material('decalMat'),
+    'app/decals/tracks.decalSet.json': {
+      importedAsset: 'tracksMesh',
+      material: 'decalMat',
+      ...decalSet,
+    },
+    ...scene('s', sceneFields),
+    ...extra,
+  });
+  const ids = (list: unknown) =>
+    ((list ?? []) as ({ id?: string } | string)[]).map((entry) =>
+      typeof entry === 'string' ? entry : entry.id
+    );
+  const block = (fields: Record<string, unknown> = {}) => ({
+    'app/blocks/coast.terrainBlock.json': {
+      geometry: { generator: 'noiseTerrain' },
+      material: 'decalMat',
+      grid: { size: 64, resolution: 65 },
+      collider: { type: 'NONE' },
+      ...fields,
+    },
+  });
+
+  it('writes a listed set with its defaults, and loads its import and material', () => {
+    const { isGathered, scene: get } = gather(files({ debugData: { name: 'Tracks' } }));
+    expect(isGathered).toBe(true);
+    const out = get('s');
+    expect(out?.decalSets).toEqual([
+      {
+        id: 'tracks',
+        importedAsset: 'tracksMesh',
+        material: 'decalMat',
+        renderOrder: 10,
+        receiveShadow: true,
+        debugData: { name: 'Tracks' },
+      },
+    ]);
+    expect(ids(out?.importedAssets)).toEqual(['tracksMesh']);
+    expect(ids(out?.materials)).toEqual(['decalMat']);
+    expect(out?.__features).toEqual(['terrain']);
+  });
+
+  it('keeps its own render order and shadows, a set listed twice once, without debug data in production', () => {
+    const { scene: get } = gather(
+      files(
+        { renderOrder: 12, receiveShadow: false, debugData: { name: 'Tracks' } },
+        { decalSets: ['tracks', 'tracks'], materials: ['decalMat'] }
+      ),
+      { isProduction: true }
+    );
+    const out = get('s');
+    expect(out?.decalSets).toEqual([
+      {
+        id: 'tracks',
+        importedAsset: 'tracksMesh',
+        material: 'decalMat',
+        renderOrder: 12,
+        receiveShadow: false,
+      },
+    ]);
+    expect(ids(out?.materials)).toEqual(['decalMat']);
+  });
+
+  it("adds a terrain block's decal sets to its scene", () => {
+    const { isGathered, scene: get } = gather(
+      files({}, { terrainBlocks: ['coast'] }, block({ decals: ['tracks', 'tracks'] }))
+    );
+    expect(isGathered).toBe(true);
+    const out = get('s');
+    const [def] = out?.terrainBlocks as Record<string, unknown>[];
+    expect(def.decals).toEqual(['tracks']);
+    expect(ids(out?.decalSets)).toEqual(['tracks']);
+    expect(ids(out?.importedAssets)).toEqual(['tracksMesh']);
+    expect(out?.__features).toEqual(['terrain']);
+  });
+
+  it('fails the gather on an unknown import, material or set, a fractional render order and a field it lacks', () => {
+    expect(gather(files({ importedAsset: 'nope' })).isGathered).toBe(false);
+    expect(gather(files({ material: 'nope' })).isGathered).toBe(false);
+    expect(gather(files({}, { decalSets: ['nope'] })).isGathered).toBe(false);
+    expect(
+      gather(files({}, { terrainBlocks: ['coast'] }, block({ decals: ['nope'] }))).isGathered
+    ).toBe(false);
+    expect(gather(files({ renderOrder: 1.5 })).isGathered).toBe(false);
+    expect(gather(files({ castShadow: true })).isGathered).toBe(false);
   });
 });

@@ -1,9 +1,9 @@
-// A terrain block's surface for the scatter (p308 D4): its geometry's grid read back by position,
-// so a generated block (its grid first, then its skirt) and an imported one (Blender's vertex
-// order, seams' duplicates) read alike, and sampled on the mesh's own triangles (each cell split
-// along the diagonal from (col + 1, row) to (col, row + 1), the one `generateTerrain` and the block
-// conventions use), so a point's height is the mesh's and its normal and colour are what the GPU
-// interpolates there.
+// A terrain block's surface (p308 D4; moved here from the scatter by p309 Phase 4, whose runtime
+// decals' patches read it too): its geometry's grid read back by position, so a generated block
+// (its grid first, then its skirt) and an imported one (Blender's vertex order, seams' duplicates)
+// read alike, and sampled on the mesh's own triangles (each cell split along the diagonal from
+// (col + 1, row) to (col, row + 1), the one `generateTerrain` and the block conventions use), so a
+// point's height is the mesh's and its normal and colour are what the GPU interpolates there.
 import type * as THREE from 'three/webgpu';
 
 /** How far off its grid line a vertex may sit, in cells (the collider's extraction's 1 %) */
@@ -15,7 +15,7 @@ const COLOR_SIZE = 4;
  * `−size / 2`, column c along x), in the block's own space.
  * @internal
  */
-export type ScatterSurface = {
+export type BlockSurface = {
   /** The block's side, metres */
   size: number;
   /** Grid points along x */
@@ -34,7 +34,7 @@ export type ScatterSurface = {
  * colours), in the block's space.
  * @internal
  */
-export type ScatterSurfaceSample = {
+export type BlockSurfaceSample = {
   height: number;
   normalX: number;
   normalY: number;
@@ -83,15 +83,15 @@ const getGridNormals = (heights: Float32Array, cols: number, rows: number, size:
  * @internal
  * @param geometry the block's geometry, centred on its origin (the block conventions)
  * @param size the block's side, metres
- * @param where what reads it, for the errors (eg. `terrainScatter: the scatter "rocks"`)
+ * @param where what reads it, for the errors (eg. `terrainScatter: the scatter "rocks"`, `spawnDecal`)
  * @throws for a geometry that isn't a regular grid `size` wide: a vertex off its grid line or past
  * the block, or a grid point without a vertex (overhangs, caves: a `TRIMESH` block)
  */
-export const readScatterSurface = (
+export const readBlockSurface = (
   geometry: THREE.BufferGeometry,
   size: number,
   where: string
-): ScatterSurface => {
+): BlockSurface => {
   const position = geometry.getAttribute('position');
   if (!position) throw new Error(`${where}: the surface's geometry has no positions.`);
   const count = position.count;
@@ -103,7 +103,7 @@ export const readScatterSurface = (
   }
   const cols = countDistinct(xs, size * 1e-5);
   const rows = countDistinct(zs, size * 1e-5);
-  const notGrid = `${where}: the surface isn't a regular grid ${size} m wide (a TRIMESH block's overhangs and caves can't be scattered on)`;
+  const notGrid = `${where}: the surface isn't a regular grid ${size} m wide (a TRIMESH block's overhangs and caves aren't one)`;
   if (cols < 2 || rows < 2) throw new Error(`${notGrid}: ${cols} × ${rows} grid lines.`);
   const dx = size / (cols - 1);
   const dz = size / (rows - 1);
@@ -177,7 +177,7 @@ export const readScatterSurface = (
  * entity scatters on.
  * @internal
  */
-export const createFlatScatterSurface = (size: number): ScatterSurface => ({
+export const createFlatBlockSurface = (size: number): BlockSurface => ({
   size,
   cols: 2,
   rows: 2,
@@ -187,10 +187,10 @@ export const createFlatScatterSurface = (size: number): ScatterSurface => ({
 });
 
 /**
- * A sample to fill with {@link sampleScatterSurface}.
+ * A sample to fill with {@link sampleBlockSurface}.
  * @internal
  */
-export const createScatterSurfaceSample = (): ScatterSurfaceSample => ({
+export const createBlockSurfaceSample = (): BlockSurfaceSample => ({
   height: 0,
   normalX: 0,
   normalY: 1,
@@ -204,11 +204,11 @@ export const createScatterSurfaceSample = (): ScatterSurfaceSample => ({
  * @internal
  * @returns `out`
  */
-export const sampleScatterSurface = (
-  surface: ScatterSurface,
+export const sampleBlockSurface = (
+  surface: BlockSurface,
   x: number,
   z: number,
-  out: ScatterSurfaceSample
+  out: BlockSurfaceSample
 ) => {
   const { size, cols, rows, heights, normals, colors } = surface;
   const u = Math.min(1, Math.max(0, x / size + 0.5)) * (cols - 1);

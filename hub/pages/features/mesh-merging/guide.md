@@ -442,6 +442,13 @@ const respawn = (decal: number, x: number, y: number, z: number) => {
 On the `batchedMeshSpike` debug scene, a pool of 128 decals rewritten at 60 a second for 10
 minutes kept the same buffers and slots, and the renderer the same geometries and textures.
 
+A `TRANSFORM` written outside `MAIN` reaches the batch the next frame, while
+`updateMergeMember` rewrites the slot at once: the example's respawn draws its new geometry at the
+old place for a frame unless it runs in a `MAIN` system. The toolkit's runtime decals
+([Terrain](hub:features/terrain#runtime-decals)) are such a pool built for it: each decal's entity
+stays at the origin with its patch in world space, so a respawn is the rewrite alone, from any
+stage.
+
 ### Which member of a batch a ray hit
 
 A raycast hits the batch, whose `userData.entityId` is the group's entity, and three gives the

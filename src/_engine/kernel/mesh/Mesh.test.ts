@@ -46,6 +46,17 @@ describe('createMeshEntity', () => {
     world.deleteEntity(entityId);
   });
 
+  test('sets its renderOrder, 0 by default', () => {
+    const ids = [10, undefined].map((renderOrder) =>
+      createMeshEntity({ geo: new THREE.BoxGeometry(), mat: 'meshTestMaterial', renderOrder })
+    );
+    const orders = ids.map(
+      (id) => (world.getComponent(id, ComponentType.OBJECT3D)!.value as THREE.Mesh).renderOrder
+    );
+    expect(orders).toEqual([10, 0]);
+    for (const id of ids) world.deleteEntity(id);
+  });
+
   test('a merge without the merging feature warns once, and the mesh is drawn on its own', () => {
     fns.lwarn.mockClear();
     const ids = [0, 1].map(() =>

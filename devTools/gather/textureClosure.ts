@@ -34,7 +34,7 @@ import {
 } from '../../src/_engine/features/texturesets/TextureSetRefs';
 import type { TextureSetPacking } from '../../src/_engine/schemas';
 import { textureMapKeys } from '../../src/_engine/utils/Constants';
-import type { Registries } from './context';
+import { getSourceOnlyTextureError, type Registries } from './context';
 import type { SceneRun } from './sceneAssets';
 import {
   getListedTextureSetArrayIds,
@@ -266,6 +266,11 @@ export const addTextureClosure = (run: SceneRun) => {
   for (const error of errors) run.ctx.log.error(`Scene "${run.sceneId}": ${error}.`);
   for (const [id, by] of named) {
     if (listed.has(id)) continue;
+    const sourceOnlyError = getSourceOnlyTextureError(run.reg, id);
+    if (sourceOnlyError) {
+      run.ctx.log.error(`Scene "${run.sceneId}": ${by} names the texture ${sourceOnlyError}.`);
+      continue;
+    }
     if (!isKnownTextureId(run, id)) {
       run.ctx.log.error(
         `Scene "${run.sceneId}": ${by} names the texture "${id}", which no asset JSON (or only an invalid one) has, and the scene doesn't list it inline.`

@@ -51,6 +51,8 @@ import {
 } from './_dbg__terrainGalleryStructures';
 import { getPatchSections, startPatchTab } from './_dbg__terrainGalleryPatch';
 import { getScatterSections } from './_dbg__terrainGalleryScatter';
+import { getDecalsSections } from './_dbg__terrainGalleryDecals';
+import { startDecalBakeTab } from './_dbg__terrainGalleryDecalBakes';
 import { clearWetSelection, getWetSections, startWetTab } from './_dbg__terrainGalleryWet';
 import { getLiveSections, startLiveTab, type LiveSectionOpts } from './_dbg__terrainGalleryLive';
 import {
@@ -473,11 +475,13 @@ export const createTerrainGalleryTab = () => {
   startPatchTab();
   const endProceduralTab = startProceduralTab(proceduralOpts);
   const endLiveTab = startLiveTab(liveOpts);
+  const endDecalBakeTab = startDecalBakeTab();
   addGalleryExitCleanup(() => {
     thisVisit.isCurrent = false;
     stopGalleryFlight(true);
     endProceduralTab();
     endLiveTab();
+    endDecalBakeTab();
   });
 
   createDebuggerTab({
@@ -578,6 +582,7 @@ export const createTerrainGalleryTab = () => {
       ) as DebuggerTabSection<GalleryTabState>[]),
       ...(getPatchSections(TAB_ID) as DebuggerTabSection<GalleryTabState>[]),
       ...(getScatterSections(TAB_ID) as DebuggerTabSection<GalleryTabState>[]),
+      ...(getDecalsSections(TAB_ID) as DebuggerTabSection<GalleryTabState>[]),
       // Its fields bind their own targets, none of this tab's state keys
       ...(getProceduralSections(proceduralOpts) as DebuggerTabSection<GalleryTabState>[]),
       ...(getLiveSections(liveOpts) as DebuggerTabSection<GalleryTabState>[]),

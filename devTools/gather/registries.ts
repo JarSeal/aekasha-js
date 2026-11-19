@@ -35,6 +35,7 @@ import { readTextureAssets } from './textures';
 import { readGenerators, readTextureSets } from './textureSets';
 import { checkMergedGeometryJsons } from './mergedGeometries';
 import { readMergeMaterials } from './mergeMaterials';
+import { readDecalSets } from './decalSets';
 import { readScatters } from './scatters';
 import { readTerrainBlocks } from './terrainBlocks';
 
@@ -218,7 +219,9 @@ export const readRegistries = (ctx: GatherContext): Registries => {
   readSkyBoxes(ctx, reg, taken);
   readPostFx(ctx, reg, taken, shipped);
   readScatters(ctx, reg, taken);
-  // After the materials, the imports and the scatters: a block names them
+  // After the materials and the imports: a decal set names them
+  readDecalSets(ctx, reg, taken);
+  // After the materials, the imports, the scatters and the decal sets: a block names them
   readTerrainBlocks(ctx, reg, taken);
   // After the imports: a MERGED geometry's parts can be their pieces
   checkMergedGeometryJsons(ctx, reg);

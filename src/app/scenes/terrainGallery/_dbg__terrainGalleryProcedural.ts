@@ -272,7 +272,8 @@ const getProceduralJson = (block: ProceduralBlock) => {
 };
 
 /** A field per param of the generator, from its spec: a number's or a colour's change rebakes on
- * every write, a static number's or a toggle's builds the graphs again when its gesture ends */
+ * every write, a static number's, a toggle's or a choice's builds the graphs again when its gesture
+ * ends */
 const getParamItems = (block: ProceduralBlock): DebuggerPaneItem[] => {
   const { generator } = block;
   const values = getProceduralValues(generator.id);
@@ -290,6 +291,10 @@ const getParamItems = (block: ProceduralBlock): DebuggerPaneItem[] => {
     };
     if (spec.type === 'color') return { ...base, kind: 'color' };
     if (spec.type === 'boolean') return { ...base, kind: 'switch' };
+    if (spec.type === 'choice') {
+      const options = spec.options.map((option) => ({ label: option, value: option }));
+      return { ...base, kind: 'select', options };
+    }
     return {
       ...base,
       ...(spec.min !== undefined ? { min: spec.min } : {}),

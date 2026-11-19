@@ -41,6 +41,7 @@ export type {
   SurfaceOutputs,
 } from './procedural/SurfaceGenerator';
 export type {
+  SurfaceChoiceParam,
   SurfaceColorParam,
   SurfaceNumberParam,
   SurfaceParamNode,
@@ -79,6 +80,32 @@ export { bakeTerrainColorMap } from './material/TerrainColorMapBake';
 export type { BakeTerrainColorMapOpts } from './material/TerrainColorMapBake';
 export { createStructureMaterial, getStructureMaterialConfig } from './material/StructureMaterial';
 export type { StructureMaterialOpts } from './material/StructureMaterial';
+export { bakeDecalGenerator } from './decals/BakeDecal';
+export type { BakeDecalGeneratorOpts, BakedDecal } from './decals/BakeDecal';
+export { defineDecalGenerator } from './decals/DecalGenerator';
+export type {
+  DecalBuildContext,
+  DecalGenerator,
+  DecalGeneratorDef,
+  DecalOutputs,
+} from './decals/DecalGenerator';
+export { setupDecalMaterial } from './decals/DecalMaterial';
+export { decalCracks } from './decals/generators/DecalCracks';
+export { decalFootprint } from './decals/generators/DecalFootprint';
+export { decalFormwork } from './decals/generators/DecalFormwork';
+export { decalIceCrack } from './decals/generators/DecalIceCrack';
+export { decalLeafPatch } from './decals/generators/DecalLeafPatch';
+export { decalMudSplatter } from './decals/generators/DecalMudSplatter';
+export { decalScorch } from './decals/generators/DecalScorch';
+export { decalStain } from './decals/generators/DecalStain';
+export { decalWetPatch } from './decals/generators/DecalWetPatch';
+export type { DecalMaterialInputs } from './decals/DecalMaterial';
+export { createDecalTrail, spawnRibbonDecal } from './decals/DecalRibbons';
+export type { CreateDecalTrailOpts, DecalTrail, SpawnRibbonDecalOpts } from './decals/DecalRibbons';
+export { spawnMeshDecalAsync } from './decals/MeshDecals';
+export type { SpawnMeshDecalOpts } from './decals/MeshDecals';
+export { createDecalPool, spawnDecal } from './decals/RuntimeDecals';
+export type { CreateDecalPoolOpts, DecalPool, SpawnDecalOpts } from './decals/RuntimeDecals';
 export { setupRockMaterial } from './material/RockMaterial';
 export type { RockMaterialInputs } from './material/RockMaterial';
 export { getTerrainQualityPreset } from './material/TerrainQualityPreset';

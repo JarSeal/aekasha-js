@@ -29,11 +29,14 @@
     "scatter": {
       "$ref": "#/definitions/__schema53"
     },
-    "debugData": {
+    "decals": {
       "$ref": "#/definitions/__schema55"
     },
+    "debugData": {
+      "$ref": "#/definitions/__schema57"
+    },
     "__sourcePath": {
-      "$ref": "#/definitions/__schema66"
+      "$ref": "#/definitions/__schema68"
     }
   },
   "required": [
@@ -42,7 +45,7 @@
     "grid"
   ],
   "additionalProperties": false,
-  "description": "A terrain block: its geometry, material, grid place, collider, shadows and scatters.",
+  "description": "A terrain block: its geometry, material, grid place, collider, shadows, scatters and decal sets.",
   "definitions": {
     "__schema0": {
       "type": "string",
@@ -564,40 +567,44 @@
       }
     },
     "__schema55": {
+      "description": "The block's decal sets (*.decalSet.json ids), spawned with it at its grid place and owned by it: their meshes are in the block's own space, as exported beside it. The gather adds them to a scene listing the block.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema56"
+        }
+      ]
+    },
+    "__schema56": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "__schema57": {
       "type": "object",
       "properties": {
         "name": {
-          "$ref": "#/definitions/__schema56"
-        },
-        "description": {
           "$ref": "#/definitions/__schema58"
         },
-        "comments": {
+        "description": {
           "$ref": "#/definitions/__schema60"
         },
-        "todo": {
+        "comments": {
           "$ref": "#/definitions/__schema62"
         },
-        "debugObj": {
+        "todo": {
           "$ref": "#/definitions/__schema64"
+        },
+        "debugObj": {
+          "$ref": "#/definitions/__schema66"
         }
       },
       "additionalProperties": false,
       "description": "What the debug tools show for it. Production data has none."
     },
-    "__schema56": {
-      "description": "The name the debug tools show.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema57"
-        }
-      ]
-    },
-    "__schema57": {
-      "type": "string"
-    },
     "__schema58": {
-      "description": "A longer description for the debug tools.",
+      "description": "The name the debug tools show.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema59"
@@ -608,7 +615,7 @@
       "type": "string"
     },
     "__schema60": {
-      "description": "Notes with their times.",
+      "description": "A longer description for the debug tools.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema61"
@@ -616,6 +623,17 @@
       ]
     },
     "__schema61": {
+      "type": "string"
+    },
+    "__schema62": {
+      "description": "Notes with their times.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema63"
+        }
+      ]
+    },
+    "__schema63": {
       "type": "array",
       "items": {
         "type": "object",
@@ -636,23 +654,8 @@
         "additionalProperties": false
       }
     },
-    "__schema62": {
-      "description": "Open items, by key.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema63"
-        }
-      ]
-    },
-    "__schema63": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {}
-    },
     "__schema64": {
-      "description": "Anything else a debug tool keeps for it.",
+      "description": "Open items, by key.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema65"
@@ -667,6 +670,21 @@
       "additionalProperties": {}
     },
     "__schema66": {
+      "description": "Anything else a debug tool keeps for it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema67"
+        }
+      ]
+    },
+    "__schema67": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema68": {
       "type": "string",
       "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
     }

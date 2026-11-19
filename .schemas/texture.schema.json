@@ -60,11 +60,19 @@
       "additionalProperties": false,
       "description": "Build time only: the texture packed from source images, in place of `fileName`."
     },
+    "sourceOnly": {
+      "description": "Build time only: the texture is only a source, an atlas cell's or a texture array layer's. The asset pipeline doesn't encode it on its own, and no scene, material or texture set can name it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema115"
+        }
+      ]
+    },
     "__saveData": {
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema115"
+          "$ref": "#/definitions/__schema116"
         }
       ]
     },
@@ -76,7 +84,7 @@
       "description": "Set by the gatherer: bytes on disk (all six faces for a cube texture).",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema122"
+          "$ref": "#/definitions/__schema123"
         }
       ]
     },
@@ -84,7 +92,7 @@
       "description": "Set by the gatherer: the pipeline's output.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema123"
+          "$ref": "#/definitions/__schema124"
         }
       ]
     },
@@ -92,7 +100,7 @@
       "description": "Set by the gatherer: the source as the dev server serves it.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema124"
+          "$ref": "#/definitions/__schema125"
         }
       ]
     },
@@ -100,7 +108,7 @@
       "description": "Set by the gatherer: the download in bytes.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema125"
+          "$ref": "#/definitions/__schema126"
         }
       ]
     },
@@ -108,7 +116,7 @@
       "description": "Set by the gatherer: the estimated GPU memory in bytes.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema125"
+          "$ref": "#/definitions/__schema126"
         }
       ]
     },
@@ -123,7 +131,7 @@
       "description": "Set by the gatherer (development data): the texture's average RGB, linear.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema126"
+          "$ref": "#/definitions/__schema127"
         }
       ]
     }
@@ -1348,6 +1356,9 @@
       ]
     },
     "__schema115": {
+      "type": "boolean"
+    },
+    "__schema116": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -1361,16 +1372,16 @@
               "type": "object",
               "properties": {
                 "date": {
-                  "$ref": "#/definitions/__schema116"
+                  "$ref": "#/definitions/__schema117"
                 },
                 "engineVersion": {
-                  "$ref": "#/definitions/__schema118"
+                  "$ref": "#/definitions/__schema119"
                 },
                 "toolkitVersion": {
-                  "$ref": "#/definitions/__schema120"
+                  "$ref": "#/definitions/__schema121"
                 },
                 "appVersion": {
-                  "$ref": "#/definitions/__schema121"
+                  "$ref": "#/definitions/__schema122"
                 }
               },
               "additionalProperties": false,
@@ -1408,55 +1419,55 @@
         }
       }
     },
-    "__schema116": {
+    "__schema117": {
       "description": "When the entry was saved: milliseconds since the UNIX epoch.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema117"
+          "$ref": "#/definitions/__schema118"
         }
       ]
     },
-    "__schema117": {
+    "__schema118": {
       "type": "number"
     },
-    "__schema118": {
+    "__schema119": {
       "description": "The engine's version when it was saved.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema119"
+          "$ref": "#/definitions/__schema120"
         }
       ]
     },
-    "__schema119": {
+    "__schema120": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$"
     },
-    "__schema120": {
+    "__schema121": {
       "description": "The toolkit's version when it was saved.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema119"
-        }
-      ]
-    },
-    "__schema121": {
-      "description": "The app's version when it was saved.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema119"
+          "$ref": "#/definitions/__schema120"
         }
       ]
     },
     "__schema122": {
-      "type": "number"
+      "description": "The app's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema120"
+        }
+      ]
     },
     "__schema123": {
-      "type": "string"
+      "type": "number"
     },
     "__schema124": {
       "type": "string"
     },
     "__schema125": {
+      "type": "string"
+    },
+    "__schema126": {
       "type": "object",
       "properties": {
         "in": {
@@ -1474,7 +1485,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema126": {
+    "__schema127": {
       "type": "array",
       "items": [
         {

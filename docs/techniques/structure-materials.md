@@ -20,7 +20,7 @@ Concrete walls, bunkers, rock faces, dams and other large pieces drawn with the 
 - **Object space** follows `triplanarProjection`'s `alignToObject`: the coordinates, the projections and their derivatives, the frames, the rules' height, slope and facing, the macro and the normals' fade all work in the mesh's space, scaled to metres (so a piece scaled 2 × shows the texture at its real size, not stretched).
 - **The defaults** (`getStructureMaterialConfig`): `space: 'OBJECT'`, `TRIPLANAR`, `DUAL_SCALE`, a `macroNoise` macro at 12 m. Any terrain field replaces its default.
 - **Wear** is a painted blend: clean, stained and damaged concrete weighed by the vertex colour (`RGBA`, up to 5 layers), painted in Blender or in code from the geometry (streaks down vertical faces, chips along top edges, grime at the foot).
-- **Decals** (p309) add the unique detail no tiling has: signs, cracks, scorch marks.
+- **Decals** add the unique detail no tiling has: leaks, cracks, stains, formwork marks ([Terrain decals](terrain-decals.md): the `decalsStructure` atlas).
 
 ## Best for
 
@@ -146,7 +146,7 @@ createStructureMaterial('concrete02', { id: 'wallConcrete', space: 'WORLD' });
 - **World vs object space:** `WORLD` for anything that never moves: the texture is continuous across pieces, so a wall of segments reads as one pour. `OBJECT` for pieces that move, turn or are placed many times (a kit piece rotated 90° keeps its texture's orientation relative to itself). **An `InstancedMesh`'s instances share its object space** (three applies the instance matrix to the local position): fine for static instances, but an instance moving on its own slides under its texture.
 - **Wear layers:** clean, stained, damaged, grime. Weight streaks and chips by the vertex normal's verticality (streaks run down walls, chips sit on top edges), so a roof keeps only stains. Each layer costs `P × A × T` fetches: use sparse sampling past two.
 - **Triplanar vs biplanar:** `BIPLANAR` is two thirds of the cost and hard to tell apart on flat-faced pieces; keep `TRIPLANAR` for rounded rock.
-- **Decals** (p309): signs, cracks, scorch marks and graffiti over the material, for the unique detail tiling can't give.
+- **Decals:** leaks, cracks, stains and formwork marks over the material (the toolkit's `decalsStructure` atlas), or signs and graffiti in an atlas of your own, for the unique detail tiling can't give: a decal set of the scene's own, or `spawnMeshDecalAsync` onto the piece ([Terrain decals](terrain-decals.md#variations)).
 - **A macro at the piece's scale:** 12 m for walls and bunkers (stains a few metres across), larger for dams and cliffs.
 - **`FULL` for hero pieces:** the AO in its own map into indirect light.
 

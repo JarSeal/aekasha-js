@@ -178,10 +178,11 @@ const getDefaultValues = (generator: SurfaceGenerator): ProceduralValues => ({
   ),
 });
 
-/** Whether a param is fixed when a graph is built (a toggle, a static number) */
+/** Whether a param is fixed when a graph is built (a toggle, a choice, a static number) */
 const isStaticParam = (generator: SurfaceGenerator, name: string) => {
   const spec = generator.params[name];
-  return spec?.type === 'boolean' || (spec?.type !== 'color' && Boolean(spec?.isStatic));
+  if (!spec || spec.type === 'color') return false;
+  return spec.type === 'boolean' || spec.type === 'choice' || Boolean(spec.isStatic);
 };
 
 const bakeBlockAsync = (block: RowBlock) =>

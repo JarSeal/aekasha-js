@@ -26,6 +26,8 @@ import { createLiveBlock, LIVE_BLOCK_BOUNDS } from './liveBlock';
 import { createPatchRowAsync } from './patchRow';
 import { createWetRow, WET_ROW_BOUNDS } from './wetRow';
 import { createScatterRowAsync, SCATTER_ROW_BOUNDS } from './scatterRow';
+import { createDecalsRow, DECALS_ROW_BOUNDS } from './decalsRow';
+import { createDecalsStage, DECALS_BENCH_BOUNDS, DECALS_STAGE_BOUNDS } from './decalsStage';
 import {
   createProceduralRowAsync,
   PROCEDURAL_ROW_DEPTH,
@@ -110,6 +112,18 @@ import {
  *   under the toolkit's leaf litter cards (`generateLeafCard`, the `leafLitter` material); the
  *   grounds, the rocks and the leaves wet alike. The tab switches
  *   the weather between dry and wet and flies the camera there.
+ * - **The Decals row** (`decalsRow.ts`, p309 Phase 1): the toolkit's decal atlases
+ *   (`decalsGround`, `decalsStructure`, which the scene lists) on flat panels right of the Live
+ *   block, a row per atlas, a panel per view (the albedo over a ground colour, the opacity, the
+ *   normal and roughness, the puddle mask), unlit, each cell outlined and named; the tab flies the
+ *   camera there. In front of it the Decals stage (`decalsStage.ts`, p309 Phase 2): two flat 12 m
+ *   mud02 blocks with a concrete wall behind each, every cell of both atlases on them as a decal
+ *   quad in the toolkit's decal materials, `BLEND` on the left and `CUTOUT` on the right, wet with
+ *   the ground; the tab sets the weather, flies the camera to 1, 50 and 200 m and switches the
+ *   polygon offset and the edge fade off for comparison. Right of the stage the bake bench (p309
+ *   Phase 5, made by the tab with its first bake, `_dbg__terrainGalleryDecalBakes.ts`): a generated
+ *   cell baked from its generator, as decals on a third block and wall and on panels of the views
+ *   beside the atlas's copy; the tab sets its seed and params, copies its data and exports it.
  * - **The light:** the scene's own DAY_NIGHT sky box standing at 10:00 (`terrainGallerySky`); its
  *   sun and sky are the only lights. No shadows for now (`NO_SHADOWS`).
  *
@@ -237,6 +251,9 @@ export const scene = async () => {
     Math.max(
       PROCEDURAL_ROW_EDGE_X,
       LIVE_BLOCK_BOUNDS.maxX,
+      DECALS_ROW_BOUNDS.maxX,
+      DECALS_STAGE_BOUNDS.maxX,
+      DECALS_BENCH_BOUNDS.maxX,
       ANTI_TILING_ROW_BOUNDS.maxX,
       CLIFFS_ROW_BOUNDS.maxX,
       COLOR_MAP_ROW_BOUNDS.maxX,
@@ -246,6 +263,7 @@ export const scene = async () => {
     (Math.max(ROWS.length * BLOCK_PITCH, PROCEDURAL_ROW_DEPTH + BLOCK_GAP) + BLOCK_GAP) / 2,
     SPLATTING_ROW_BOUNDS.maxZ + BLOCK_GAP,
     SCATTER_ROW_BOUNDS.maxZ + BLOCK_GAP,
+    DECALS_STAGE_BOUNDS.maxZ + BLOCK_GAP,
     RULES_ROW_BOUNDS.maxZ + BLOCK_GAP,
     CLIFFS_ROW_BOUNDS.maxZ + BLOCK_GAP,
     COLOR_MAP_ROW_BOUNDS.maxZ + BLOCK_GAP,
@@ -279,6 +297,8 @@ export const scene = async () => {
   createStructuresRow(TERRAIN_GALLERY_SCENE_ID);
   await createProceduralRowAsync(addGalleryExitCleanup);
   createLiveBlock();
+  createDecalsRow();
+  createDecalsStage();
   await createScatterRowAsync(() => visit.isCurrent);
   if (!visit.isCurrent) return;
   // Past the ground's back edge (the ground's extent leaves it out): its blocks stand on their own

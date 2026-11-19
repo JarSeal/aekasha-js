@@ -12,6 +12,7 @@ import {
 } from '../../kernel/scene/Scene';
 import { lwarn } from '../../utils/Logger';
 import type { TerrainBlockDef } from './TerrainBlockSchema';
+import { spawnDecalSet } from './DecalSets';
 import {
   getTerrainGenerator,
   getTerrainGeneratorIds,
@@ -37,10 +38,11 @@ export type TerrainBlock = {
   /** The block's scatters' entities (its `scatter`'s, spawned on it; empty without): each
    * scatter's cells, then its colliders' physics entities */
   scatterIds: number[];
-  /** The block's decal entities (p309; empty until then) */
+  /** The block's decal sets' mesh entities (its `decals`', spawned at its grid place; empty
+   * without) */
   decalIds: number[];
-  /** Deletes the block's entities now, its scatters' cells too (its scene's exit deletes them
-   * anyway). Its generated geometry goes with its last mesh, a material variant with its last
+  /** Deletes the block's entities now, its scatters' cells and decals too (its scene's exit
+   * deletes them anyway). Its generated geometry goes with its last mesh, a material variant with its last
    * user. Safe to call twice. */
   dispose: () => void;
 };
@@ -147,19 +149,20 @@ const getBlockMaterial = (block: TerrainBlockDef) =>
  * `(grid.x · size, 0, grid.z · size)` from its imported node's geometry or its generator's, with
  * its material (a variant when it has `materialInputs`) and shadows, its collider on the mesh
  * entity (a `FIXED` body; `HEIGHTFIELD` or `TRIMESH`, read from the geometry or the generator's
- * heightfield) and its scatters on it (`spawnScatter` from `aekasha/instancing`, their cells'
- * app ids starting `<appId>/scatter/<scatterId>`). Its entities belong to the spawning scene and go with its exit. Call it from the
- * scene's code: the scene's load holds physics until the collider exists, so the block's
- * simulation is deterministic.
+ * heightfield), its scatters on it (`spawnScatter` from `aekasha/instancing`, their cells' app ids
+ * starting `<appId>/scatter/<scatterId>`) and its decal sets at its grid place (`spawnDecalSet`,
+ * their meshes' app ids starting `<appId>/decals/<decalSetId>`). Its entities belong to the
+ * spawning scene and go with its exit. Call it from the scene's code: the scene's load holds
+ * physics until the collider exists, so the block's simulation is deterministic.
  * @param id the block's id (its `*.terrainBlock.json`'s)
  * @param opts the mesh entity's app id
  * @returns the block's entities and its `dispose()`, or `null` when its scene left meanwhile
  * @throws when `terrain()` isn't installed, there's no scene, the scene doesn't list the block,
  * its import isn't loaded or has no such single node, its generator isn't registered, its
  * collider needs `physics()` or its scatters `instancing()`, which isn't installed, or a scatter's
- * spawn throws
+ * spawn throws, or a decal set's import or material isn't loaded
  * @remarks Re-check your scene after the `await`: a load that leaves the scene while the block
- * spawns (a generator's, the collider's or a scatter's await) gets `null`, and what the spawn made
+ * spawns (a generator's, the collider's, a scatter's or a decal set's await) gets `null`, and what the spawn made
  * is deleted.
  * @example
  * ```ts
@@ -221,18 +224,20 @@ export const spawnTerrainBlock = async (
   }
 
   const { size, x, z } = block.grid;
+  const blockPosition = { x: x * size, y: 0, z: z * size };
   const appId = opts.appId ?? `terrainBlock/${id}`;
   const meshEntityId = createMeshEntity({
     geo: geometry,
     mat: getBlockMaterial(block),
     castShadow: block.shadows.cast,
     receiveShadow: block.shadows.receive,
-    position: { x: x * size, y: 0, z: z * size },
+    position: blockPosition,
     appId,
   });
-  const scatters: { dispose: () => void }[] = [];
+  /** The block's scatters and decal sets, deleted with it */
+  const owned: { dispose: () => void }[] = [];
   const dispose = () => {
-    for (const scatter of scatters) scatter.dispose();
+    for (const part of owned) part.dispose();
     deleteEntity(meshEntityId);
   };
 
@@ -265,7 +270,7 @@ export const spawnTerrainBlock = async (
     }
     // On the block: its centre, grid place (in each scatter's seed) and size, and its mesh
     const target = {
-      position: { x: x * size, y: 0, z: z * size },
+      position: blockPosition,
       grid: { x, z },
       size,
       entityId: meshEntityId,
@@ -284,9 +289,28 @@ export const spawnTerrainBlock = async (
         dispose();
         return null;
       }
-      scatters.push(scatter);
+      owned.push(scatter);
       scatterIds.push(...scatter.entityIds, ...scatter.colliderIds);
     }
   }
-  return { id, meshEntityId, physicsEntityId, scatterIds, decalIds: [], dispose };
+
+  // Its decal sets, exported in the block's own space: at its grid place
+  const decalIds: number[] = [];
+  for (const decalSetId of block.decals ?? []) {
+    const decalSet = await spawnDecalSet(decalSetId, {
+      transform: { position: blockPosition },
+      appId: `${appId}/decals/${decalSetId}`,
+    }).catch((err: unknown) => {
+      dispose();
+      throw err;
+    });
+    if (!decalSet || isLeft()) {
+      decalSet?.dispose();
+      dispose();
+      return null;
+    }
+    owned.push(decalSet);
+    decalIds.push(...decalSet.meshEntityIds);
+  }
+  return { id, meshEntityId, physicsEntityId, scatterIds, decalIds, dispose };
 };

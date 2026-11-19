@@ -20,11 +20,11 @@ import { readTextureTexelsAsync } from '../textures/ReadTexels';
 import { samplePoissonDisk } from './PoissonDisk';
 import { createScatterLayerWeigher, type ScatterLayerWeigher } from './ScatterLayerWeights';
 import {
-  createFlatScatterSurface,
-  createScatterSurfaceSample,
-  readScatterSurface,
-  sampleScatterSurface,
-} from './ScatterSurface';
+  createFlatBlockSurface,
+  createBlockSurfaceSample,
+  readBlockSurface,
+  sampleBlockSurface,
+} from '../blocks/BlockSurface';
 
 const PARAM_KEYS = [
   'minSpacing',
@@ -353,8 +353,8 @@ export const generateTerrainScatterAsync = async (
     mesh = object as THREE.Mesh;
   }
   const surface = mesh
-    ? readScatterSurface(mesh.geometry, size, where)
-    : createFlatScatterSurface(size);
+    ? readBlockSurface(mesh.geometry, size, where)
+    : createFlatBlockSurface(size);
   const getCoverage = await createMaskAsync(where, scatterId, params, mesh);
 
   const candidates = samplePoissonDisk({
@@ -372,7 +372,7 @@ export const generateTerrainScatterAsync = async (
   const matrices = new Float32Array(candidateCount * MATRIX_SIZE);
   const picked = new Uint8Array(candidateCount);
   const colors = params.tint > 0 ? new Float32Array(candidateCount * COLOR_SIZE) : undefined;
-  const sample = createScatterSurfaceSample();
+  const sample = createBlockSurfaceSample();
   const point: TerrainRulePoint = { x: 0, y: 0, z: 0, normalX: 0, normalY: 1, normalZ: 0 };
   const { position } = target;
   const half = size / 2;
@@ -390,7 +390,7 @@ export const generateTerrainScatterAsync = async (
 
     const x = inset + candidates[i * 2] - half;
     const z = inset + candidates[i * 2 + 1] - half;
-    sampleScatterSurface(surface, x, z, sample);
+    sampleBlockSurface(surface, x, z, sample);
     point.x = position.x + x;
     point.y = position.y + sample.height;
     point.z = position.z + z;

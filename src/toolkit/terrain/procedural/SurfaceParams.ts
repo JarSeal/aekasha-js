@@ -1,7 +1,7 @@
 // A surface generator's params (p304 D3, decided 2026-11-14): a plain spec per param instead of a
 // zod schema (zod would come with every generator's chunk). Numbers and colours become uniforms, so
-// a value changed later rebakes the same pipeline; static numbers and toggles are build-time values
-// (an octave count, a feature switched on), fixed once the graph is built.
+// a value changed later rebakes the same pipeline; static numbers, toggles and choices are build-time
+// values (an octave count, a feature switched on, a decal's shape), fixed once the graph is built.
 import * as THREE from 'three/webgpu';
 import { uniform } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
@@ -45,24 +45,42 @@ export type SurfaceToggleParam = {
   label?: string;
 };
 
-/** One param's spec: a number, a colour or a toggle. */
-export type SurfaceParamSpec = SurfaceNumberParam | SurfaceColorParam | SurfaceToggleParam;
+/** A choice param: a build-time string, one of its options (a variant of the surface or decal,
+ * eg. a footprint's shape; p309 D5). */
+export type SurfaceChoiceParam = {
+  type: 'choice';
+  /** The values it takes. */
+  options: readonly string[];
+  /** The value a set or a call doesn't give: one of the options. */
+  default: string;
+  /** What the debug tools call it. Default: its name. */
+  label?: string;
+};
+
+/** One param's spec: a number, a colour, a toggle or a choice. */
+export type SurfaceParamSpec =
+  | SurfaceNumberParam
+  | SurfaceColorParam
+  | SurfaceToggleParam
+  | SurfaceChoiceParam;
 
 /** A generator's params by name. */
 export type SurfaceParamSpecs = Record<string, SurfaceParamSpec>;
 
 /**
  * What a generator's `build` reads for a param: a colour's linear vec3 uniform, a toggle's
- * boolean, a static number's number, any other number's float uniform.
+ * boolean, a choice's option, a static number's number, any other number's float uniform.
  * @template S the param's spec
  */
 export type SurfaceParamNode<S extends SurfaceParamSpec> = S extends { type: 'color' }
   ? Node<'vec3'>
   : S extends { type: 'boolean' }
     ? boolean
-    : S extends { isStatic: true }
-      ? number
-      : Node<'float'>;
+    : S extends { type: 'choice'; options: readonly (infer O)[] }
+      ? O
+      : S extends { isStatic: true }
+        ? number
+        : Node<'float'>;
 
 /**
  * The params as a generator's `build` reads them, by name.
@@ -81,7 +99,9 @@ export type SurfaceParamValues<P extends SurfaceParamSpecs> = {
     ? string
     : P[K] extends { type: 'boolean' }
       ? boolean
-      : number;
+      : P[K] extends { type: 'choice'; options: readonly (infer O)[] }
+        ? O
+        : number;
 };
 
 /**
@@ -101,6 +121,15 @@ const COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
 const isColor = (spec: SurfaceParamSpec): spec is SurfaceColorParam => spec.type === 'color';
 const isToggle = (spec: SurfaceParamSpec): spec is SurfaceToggleParam => spec.type === 'boolean';
+const isChoice = (spec: SurfaceParamSpec): spec is SurfaceChoiceParam => spec.type === 'choice';
+
+/**
+ * Whether a param is fixed when the graph is built (a static number, a toggle or a choice): a
+ * change means building it again, not a uniform's new value.
+ * @internal
+ */
+export const isSurfaceParamStatic = (spec: SurfaceParamSpec) =>
+  isToggle(spec) || isChoice(spec) || (!isColor(spec) && Boolean(spec.isStatic));
 
 /** A value's problem against its spec, or null. */
 const getValueError = (spec: SurfaceParamSpec, value: unknown): string | null => {
@@ -111,6 +140,11 @@ const getValueError = (spec: SurfaceParamSpec, value: unknown): string | null =>
   }
   if (isToggle(spec)) {
     return typeof value === 'boolean' ? null : `${JSON.stringify(value)} isn't true or false`;
+  }
+  if (isChoice(spec)) {
+    return typeof value === 'string' && spec.options.includes(value)
+      ? null
+      : `${JSON.stringify(value)} isn't one of ${spec.options.map((o) => JSON.stringify(o)).join(', ')}`;
   }
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return `${JSON.stringify(value)} isn't a number`;
@@ -159,7 +193,7 @@ export const checkSurfaceParamSpecs = (generatorId: string, specs: SurfaceParamS
 
 /**
  * Builds a generator's params for one graph: a uniform per number and colour (its value the given
- * one, else the default), a plain value per static number and toggle.
+ * one, else the default), a plain value per static number, toggle and choice.
  * @internal
  * @param generatorId the generator, which the errors name
  * @param specs what each param takes
@@ -177,7 +211,7 @@ export const buildSurfaceParams = <P extends SurfaceParamSpecs>(
   const uniforms = new Map<string, THREE.UniformNode<'float' | 'color', number | THREE.Color>>();
   for (const [name, spec] of Object.entries(specs)) {
     const value = (resolved as Record<string, number | string | boolean>)[name];
-    if (isToggle(spec) || (!isColor(spec) && spec.isStatic)) {
+    if (isSurfaceParamStatic(spec)) {
       nodes[name] = value;
       continue;
     }

@@ -49,6 +49,31 @@
       "ktxVersion": "4.4.2",
       "recipeKey": "8e1cedfa2a0d87ec5166e2bdd05a1b5eae4965b6a2826e3ba262c2fa9e270db3"
     },
+    "06483770af98cf87fda41c22ed2a607c12b0f556b11827b4cedc49fbbccbb2b2": {
+      "source": "src/toolkit/textures/decalsStructure/decalsStructure.textureAtlas.json",
+      "url": "/aek-assets/toolkit/textures/decalsStructure/decalsStructure.atlas.normalRough.d2371b96.ktx2",
+      "bytes": 231927,
+      "textures": [
+        {
+          "slot": "data",
+          "bytes": 231927,
+          "source": {
+            "width": 2048,
+            "height": 1024,
+            "bytes": 4853782
+          },
+          "codec": "uastc",
+          "width": 2048,
+          "height": 1024,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false,
+          "levels": 5
+        }
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "1f1e68291f4c6827d1e74b04862e33f37ec7384b593b28c2fdb095b8978f3d93"
+    },
     "07494a183634c0b14b1141bface5a03b20bc8a00e6b5e507d454bdb2bfd79ec2": {
       "source": "src/toolkit/textures/grass02/grass02_albedoRough.texture.json",
       "url": "/aek-assets/toolkit/textures/grass02/grass02_albedoRough.pack.18c50f2c.ktx2",
@@ -606,6 +631,15 @@
       "ktxVersion": "4.4.2",
       "recipeKey": "f42bdb50c7cd9ca95d4aaaa649b7953d039df21da5c5395ce257a7b62f3a3550"
     },
+    "429f0724fa61fe944d9326684293f858545a38f8f989d2a3411e5b369bcb3237": {
+      "source": "src/app/scenes/terrainBlockTest/decalBlock/terrainBlockTestDecals.glb",
+      "url": "/aek-assets/app/scenes/terrainBlockTest/decalBlock/terrainBlockTestDecals.6d62987f.glb",
+      "bytes": 78312,
+      "geometryBytes": {
+        "in": 218152,
+        "out": 218152
+      }
+    },
     "43ab2021044991b77a8a3abbc7dc03293bd8ad070137a816c1f74bdf3cf3ae51": {
       "source": "src/toolkit/textures/sand01/sand01_orm.texture.json",
       "url": "/aek-assets/toolkit/textures/sand01/sand01_orm.pack.475a3503.ktx2",
@@ -629,6 +663,15 @@
       ],
       "ktxVersion": "4.4.2",
       "recipeKey": "bd41718fdc829b9f7f4cfd7fdfb03da6e8dd3cdd84f2d3c03a0f0e58d4ea01a2"
+    },
+    "43bc92b6e1c2c4c8159ccb4519c426683b797969f488067b1e9b71eb97d8d544": {
+      "source": "src/app/scenes/terrainBlockTest/decalBlock/terrainBlockTestDecals_decals.glb",
+      "url": "/aek-assets/app/scenes/terrainBlockTest/decalBlock/terrainBlockTestDecals_decals.c70519ea.glb",
+      "bytes": 54512,
+      "geometryBytes": {
+        "in": 229888,
+        "out": 138008
+      }
     },
     "44a20507e10a16d5a58d5c7728d9cc00d7598cd3a0e69ada8b9f6f64301e0410": {
       "source": "src/app/scenes/mergeMaterials/ruinsPalette.mergeMaterial.json",
@@ -1098,33 +1141,6 @@
         }
       }
     },
-    "787cf48c46c4912a1269621f982a977d34cd98cf50bd28d05f4f0bbf49b9041f": {
-      "source": "src/toolkit/textures/leafLitter/leafLitter.textureAtlas.json",
-      "url": "/aek-assets/toolkit/textures/leafLitter/leafLitter.atlas.albedo.59baa69c.ktx2",
-      "bytes": 794226,
-      "textures": [
-        {
-          "slot": "baseColor",
-          "bytes": 794226,
-          "source": {
-            "width": 1024,
-            "height": 1024,
-            "bytes": 1366219
-          },
-          "codec": "uastc",
-          "width": 1024,
-          "height": 1024,
-          "hasAlpha": false,
-          "mipmaps": true,
-          "normalMode": false,
-          "levels": 11
-        }
-      ],
-      "warnings": [
-        "slots.albedo.optimize.alphaCoverage: the texture has no alpha channel, so there is no coverage to keep"
-      ],
-      "ktxVersion": "4.4.2"
-    },
     "79bca03d150cdca5824a55606ca1c3ec9f673d10738a91bf7e6467e652140d52": {
       "source": "src/toolkit/textures/sand01/sand01_albedoHeightAO.texture.json",
       "url": "/aek-assets/toolkit/textures/sand01/sand01_albedoHeightAO.pack.cf7576ed.ktx2",
@@ -1201,6 +1217,34 @@
         }
       ],
       "ktxVersion": "4.4.2"
+    },
+    "81af195dd3f02ce3aa915526a77847ceddbf1ad38143f634d3c096fde4619312": {
+      "source": "src/toolkit/textures/decalsGround/decalsGround.textureAtlas.json",
+      "url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.normalRough.8d7873bb.ktx2",
+      "bytes": 1003515,
+      "textures": [
+        {
+          "slot": "data",
+          "bytes": 1003515,
+          "source": {
+            "width": 2048,
+            "height": 2048,
+            "bytes": 14260960
+          },
+          "codec": "uastc",
+          "width": 2048,
+          "height": 2048,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false,
+          "levels": 5
+        }
+      ],
+      "warnings": [
+        "cells[0] (\"tireTracks\"): sources.normalRough 2048×512 is stretched (its aspect ratio changes by 9.68%) to the cell's 992×224"
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "43cfe38eb14f400f3e4a6a14f0dc864ad8229c779c74cf21ae6222f9cdc6af4f"
     },
     "847901abe7554b09a218f171d1bf92e6579722b84bd1519ac15b804a11b631a0": {
       "source": "src/app/scenes/mergeMaterials/source/ruinBrick_normal.png",
@@ -2079,6 +2123,59 @@
       ],
       "ktxVersion": "4.4.2",
       "recipeKey": "3fa59bf7d2820a2248014da905a8710786c94492574df2f883bd6535dc84a925"
+    },
+    "d919833f0fb9267436094df8db6f55abfdc9faf3d487fee85a7d8f92556b4197": {
+      "source": "src/toolkit/textures/decalsGround/decalsGround.textureAtlas.json",
+      "url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.albedoAlpha.85bafc21.ktx2",
+      "bytes": 887768,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 887768,
+          "source": {
+            "width": 2048,
+            "height": 2048,
+            "bytes": 8220017
+          },
+          "codec": "uastc",
+          "width": 2048,
+          "height": 2048,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false,
+          "levels": 5
+        }
+      ],
+      "warnings": [
+        "cells[0] (\"tireTracks\"): sources.albedoAlpha 2048×512 is stretched (its aspect ratio changes by 9.68%) to the cell's 992×224"
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "c85999f02f40928f31ef36791e14ef3fd5dabb8e25489495d8abd33235a7650c"
+    },
+    "d9bcc0da35f7906acde07c962f1e9e3bd5a1812c73b001acf6d555641b14bb3d": {
+      "source": "src/toolkit/textures/decalsStructure/decalsStructure.textureAtlas.json",
+      "url": "/aek-assets/toolkit/textures/decalsStructure/decalsStructure.atlas.albedoAlpha.149c7cfe.ktx2",
+      "bytes": 323217,
+      "textures": [
+        {
+          "slot": "baseColor",
+          "bytes": 323217,
+          "source": {
+            "width": 2048,
+            "height": 1024,
+            "bytes": 757425
+          },
+          "codec": "uastc",
+          "width": 2048,
+          "height": 1024,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false,
+          "levels": 5
+        }
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "537b2cea340c6b8a3e73089b9a01c0c3a60c66b8aef1a40adbba3e48c5177bf9"
     },
     "db93cfa3272f42bb1381a5cab0a9ec2e0c4c90ed189f15b31da2f3d5376af82e": {
       "source": "src/toolkit/textures/cliffs01/cliffs01_albedoHeight.texture.json",

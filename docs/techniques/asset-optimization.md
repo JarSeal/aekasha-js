@@ -252,7 +252,7 @@ Textures that already share a size, a mip count and a codec can also be built in
 }
 ```
 
-- **`layers`**, in layer order: a texture asset's id (its source file or `pack`, never its output or its `optimize`) or a source image. A layer's name is its texture id, or a file's name without its extension; two layers can't share one.
+- **`layers`**, in layer order: a texture asset's id (its source file or `pack`, never its output or its `optimize`) or a source image. A texture asset that's only a layer's or an atlas cell's source sets `"sourceOnly": true` (p309 D1): the run doesn't encode it on its own, and a scene, material or texture set naming it fails the gather. A layer's name is its texture id, or a file's name without its extension; two layers can't share one.
 - **`size`** defaults to the layers' common size (they must agree). It's then fit to the slot's `maxSize` and to multiples of 4 like a texture's. A layer with alpha makes the whole array RGBA.
 - **`optimize`** is the array's: one codec for every layer. `texOpts` is its one sampler.
 - Output: `aek-assets/<json path>.array.<hash>.ktx2`, one file for every layer.
@@ -281,7 +281,7 @@ Textures that already share a size, a mip count and a codec can also be built in
 }
 ```
 
-- **Cells:** a `rect` (x, y, width, height in the layout's px, top-left origin, the padding included) places a cell; the rest are packed, tallest first, at their `size` (by default their first source's). A source is a texture asset's id or an image. A cell that doesn't fit fails the run, naming it. `data` is passed through to the cell table (a decal's physical size).
+- **Cells:** a `rect` (x, y, width, height in the layout's px, top-left origin, the padding included) places a cell; the rest are packed, tallest first, at their `size` (by default their first source's). A source is a texture asset's id (a `sourceOnly` one, as for an array's layers) or an image. A cell that doesn't fit fails the run, naming it. `data` is passed through to the cell table (a decal's physical size).
 - **Slots:** each is a texture of its own, `<atlas>.<slot>` (`decals.albedo`), with its own `texOpts` and `optimize`. A cell without a source in a slot gets the slot's `fill` (RGB(A), linear 0..1, by default transparent black; a normal map wants `[0.5, 0.5, 1]`).
 - **`padding`** (default 8 px) extends each cell's edge pixels outwards. The pipeline builds the mip levels itself with an exact 2 × 2 box and stops at the last level that keeps the cells apart: `2^level ≤ padding`, so 16 px keeps levels 0-4. A level's 4 × 4 compression blocks must not hold two cells either, so packed cells go on a grid of `4 · 2^⌊log2 padding⌋` px (64 px at padding 16). A `rect` off that grid shortens the chain, with a warning naming it and the alignment it needs.
 - **The grid costs space:** a packed cell's padded size is rounded up to it, so a 64² cell with 16 px of padding takes 128². An atlas of many small cells can lower its padding (fewer levels) or place its cells with `rect`.

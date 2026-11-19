@@ -1,0 +1,266 @@
+{
+  "$schema": "../../../../.schemas/textureAtlas.schema.json",
+  "id": "decalsGround",
+  "size": [2048, 2048],
+  "padding": 16,
+  "slots": {
+    "albedoAlpha": {
+      "texOpts": {
+        "colorSpace": "srgb"
+      },
+      "optimize": {
+        "profile": "hero",
+        "slot": "baseColor"
+      }
+    },
+    "normalRough": {
+      "fill": [0.5, 0.5, 1, 0],
+      "optimize": {
+        "profile": "hero",
+        "slot": "data",
+        "textures": {
+          "data": {
+            "codec": "uastc",
+            "rdo": 1
+          }
+        }
+      }
+    }
+  },
+  "cells": [
+    {
+      "id": "tireTracks",
+      "rect": [0, 0, 1024, 256],
+      "sources": {
+        "albedoAlpha": "decalTireTracks01_albedoAlpha",
+        "normalRough": "decalTireTracks01_normalRough"
+      },
+      "data": {
+        "physicalSize": [1.8, 0.45],
+        "tileAlong": "U",
+        "opacitySource": "HEIGHT"
+      }
+    },
+    {
+      "id": "asphaltDamage",
+      "rect": [1024, 0, 512, 512],
+      "sources": {
+        "albedoAlpha": "decalAsphaltDamage01_albedoAlpha",
+        "normalRough": "decalAsphaltDamage01_normalRough"
+      },
+      "data": {
+        "physicalSize": [1.2, 1.2],
+        "tileAlong": "NONE",
+        "opacitySource": "MAP"
+      }
+    },
+    {
+      "id": "crack",
+      "rect": [1536, 0, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/crack_albedoAlpha.png",
+        "normalRough": "./source/crack_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [1, 1],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalCracks",
+        "seed": 1,
+        "params": {}
+      }
+    },
+    {
+      "id": "mudSplatter",
+      "rect": [0, 512, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/mudSplatter_albedoAlpha.png",
+        "normalRough": "./source/mudSplatter_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [1, 1],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalMudSplatter",
+        "seed": 1,
+        "params": {}
+      }
+    },
+    {
+      "id": "wetPatch",
+      "rect": [512, 512, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/wetPatch_albedoAlpha.png",
+        "normalRough": "./source/wetPatch_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [2, 2],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalWetPatch",
+        "seed": 1,
+        "params": {}
+      }
+    },
+    {
+      "id": "stain01",
+      "rect": [1024, 512, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/stain01_albedoAlpha.png",
+        "normalRough": "./source/stain01_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [1.5, 1.5],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalStain",
+        "seed": 1,
+        "params": {}
+      }
+    },
+    {
+      "id": "stain02",
+      "rect": [1536, 512, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/stain02_albedoAlpha.png",
+        "normalRough": "./source/stain02_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [1.5, 1.5],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalStain",
+        "seed": 2,
+        "params": {
+          "color": "#4a3a2a",
+          "roughness": 0.75,
+          "rim": 0.7
+        }
+      }
+    },
+    {
+      "id": "scorch",
+      "rect": [0, 1024, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/scorch_albedoAlpha.png",
+        "normalRough": "./source/scorch_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [2, 2],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalScorch",
+        "seed": 1,
+        "params": {}
+      }
+    },
+    {
+      "id": "footprintBoot",
+      "rect": [512, 1024, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/footprintBoot_albedoAlpha.png",
+        "normalRough": "./source/footprintBoot_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [0.35, 0.35],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalFootprint",
+        "seed": 1,
+        "params": {
+          "shape": "BOOT"
+        }
+      }
+    },
+    {
+      "id": "footprintBare",
+      "rect": [1024, 1024, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/footprintBare_albedoAlpha.png",
+        "normalRough": "./source/footprintBare_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [0.3, 0.3],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalFootprint",
+        "seed": 1,
+        "params": {
+          "shape": "BARE"
+        }
+      }
+    },
+    {
+      "id": "footprintPaw",
+      "rect": [1536, 1024, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/footprintPaw_albedoAlpha.png",
+        "normalRough": "./source/footprintPaw_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [0.12, 0.12],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalFootprint",
+        "seed": 1,
+        "params": {
+          "shape": "PAW"
+        }
+      }
+    },
+    {
+      "id": "footprintSnowBoot",
+      "rect": [0, 1536, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/footprintSnowBoot_albedoAlpha.png",
+        "normalRough": "./source/footprintSnowBoot_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [0.35, 0.35],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalFootprint",
+        "seed": 1,
+        "params": {
+          "shape": "SNOW_BOOT"
+        }
+      }
+    },
+    {
+      "id": "leafPatch",
+      "rect": [512, 1536, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/leafPatch_albedoAlpha.png",
+        "normalRough": "./source/leafPatch_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [1.5, 1.5],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalLeafPatch",
+        "seed": 1,
+        "params": {}
+      }
+    },
+    {
+      "id": "iceCrack",
+      "rect": [1024, 1536, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/iceCrack_albedoAlpha.png",
+        "normalRough": "./source/iceCrack_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [1.5, 1.5],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalIceCrack",
+        "seed": 1,
+        "params": {}
+      }
+    }
+  ],
+  "debugData": {
+    "name": "Ground decals",
+    "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 \u00d7 4 grid of 512 cells with 16 px of padding (480\u00b2 of content; levels 0-4), but tireTracks, a 1024 \u00d7 256 strip at its source's 4:1 (992 \u00d7 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are procedural (p309 D5): a generator's bake exported as source/<cellId>_albedoAlpha.png and _normalRough.png (480\u00b2, the content size; the terrain gallery tab's procedural decals), the cell's data its recipe (generator, seed, params; params left out are the generator's defaults). A cell's data: physicalSize in m, tileAlong, opacitySource, and a procedural cell's generator, seed and params."
+  }
+}

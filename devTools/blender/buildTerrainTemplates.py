@@ -11,6 +11,8 @@ they can be made again (a template changed by hand drifts from this script: chan
 - terrain_scatter.blend: a painted block, three rocks and a Geometry Nodes scatter of them masked by
   the block's Splat, exportable as GPU instances or a point cloud (p308; the builder exports both
   into <renders dir> as a check);
+- terrain_decals.blend: a block with a decal set (p309 D3): two tyre-track strips along one path and
+  a quad of several decalsGround cells, conformed by the add-on's Shrinkwrap;
 - structure_concrete.blend: two wall segments and a bunker passage worn by a vertex colour.
 
 Each has a README text block (shown in the Layout workspace) mirroring its handbook page, metric
@@ -954,6 +956,72 @@ def build_structure():
     return path, (0, -5, 1.5), 17, 20
 
 
+# --- Decals (p309 D3) ----------------------------------------------------------------------------
+
+#: The tracks' path over the decals block, metres from its centre (Blender's x, y)
+DECAL_TRACK_PATH = ((-26.0, -10.0), (-10.0, 4.0), (6.0, -6.0), (24.0, 8.0))
+#: A vehicle's wheels, each track this far from the path's middle (metres)
+DECAL_TRACK_HALF_GAUGE = 0.85
+#: The quads: a cell each at (x, y, yaw in degrees) from the block's centre
+DECAL_QUADS = (
+    ("asphaltDamage", 14, 14, 20),
+    ("crack", -18, 12, -35),
+    ("stain01", 4, 16, 0),
+    ("mudSplatter", -6, -2, 60),
+    ("wetPatch", 18, -14, 0),
+    ("scorch", -16, -18, 0),
+    ("footprintBoot", 8, 4, 80),
+    ("footprintBoot", 8.6, 4.9, 80),
+    ("footprintBoot", 9.2, 5.8, 80),
+)
+
+
+def add_template_decal(cell, x, y, yaw=0.0, *, strip=False):
+    """Add Decal of the cell at the block's (x, y), turned `yaw` degrees"""
+    bpy.context.scene.cursor.location = (x, y, 0.0)
+    result = bpy.ops.aek.add_decal(cell=cell, strip="STRIP" if strip else "QUAD")
+    if result != {"FINISHED"}:
+        raise RuntimeError(f"Add Decal {cell}: {result}")
+    obj = bpy.context.active_object
+    obj.rotation_euler.z = math.radians(yaw)
+    return obj
+
+
+def build_decals():
+    path = new_file("terrain_decals")
+    grid = add_block("decalsBlock")
+    grid.set_heights(hills(grid, 17, 4.0) + 0.3 * fbm(grid.world_x, grid.world_z, 5.0, 3, 18))
+    set_preview(["mud01"])
+    validate(grid.obj)
+    select(grid.obj)
+    bpy.ops.aek.add_decal_set()
+
+    # Two tracks on one path: the second strip's path is the first's, each moved half the gauge
+    # aside in its own space (DecalUV is still 0..1 across it: the group reads the bounds)
+    left = add_template_decal("tireTracks", 0, 0, strip=True)
+    right = add_template_decal("tireTracks", 0, 0, strip=True)
+    track_path = bpy.data.objects[f"{left.name}_path"]
+    spline = track_path.data.splines[0]
+    spline.bezier_points.add(len(DECAL_TRACK_PATH) - len(spline.bezier_points))
+    for point, (x, y) in zip(spline.bezier_points, DECAL_TRACK_PATH):
+        point.co = (x, y, 0.0)
+        point.handle_left_type = point.handle_right_type = "AUTO"
+    bpy.data.objects.remove(bpy.data.objects[f"{right.name}_path"])
+    right.modifiers["Array"].curve = track_path
+    right.modifiers["Curve"].object = track_path
+    for obj, side in ((left, -1), (right, 1)):
+        for vertex in obj.data.vertices:
+            vertex.co.y += side * DECAL_TRACK_HALF_GAUGE
+    left.name, right.name = "tireTracksLeft", "tireTracksRight"
+    track_path.name = "tireTracksPath"
+
+    for cell, x, y, yaw in DECAL_QUADS:
+        add_template_decal(cell, x, y, yaw)
+    bpy.context.scene.cursor.location = (0.0, 0.0, 0.0)
+    set_up_views((0, 0, 2), 95, README_DECALS)
+    return path, (0, 0, 2), 75
+
+
 # --- The READMEs ---------------------------------------------------------------------------------
 
 README_BLOCK = """
@@ -1104,6 +1172,37 @@ The technique
 - Export: File > Export > glTF 2.0 (.glb), Include: Selected Objects; Transform: +Y Up; Mesh: Apply Modifiers, UVs off, Normals, Tangents off, Vertex Colors Active (the "Wear" attribute active); Materials: No export; Compression off (the asset pipeline encodes). Then an <id>.importedAsset.json, and in the engine createStructureMaterial (space OBJECT, or WORLD for static pieces that join), blend.source VERTEX_COLOR, layout RGBA, its layers base, R, G, B.
 """
 
+README_DECALS = """
+ÆKASHA TERRAIN DECALS
+The handbook: docs/techniques/terrain-decals.md; the block workflow: docs/techniques/terrain-blocks-blender.md.
+
+What's here
+- decalsBlock: a 64 m / 129 block of low hills, mud01 its preview.
+- decalsBlock_decals: its decal set (a collection; sidebar > Ækasha > Decal Sets): every decal in it is exported as one GLB in the block's space, which the engine spawns with the block (the block JSON's "decals").
+- tireTracksLeft, tireTracksRight: two strips of the decalsGround atlas's tireTracks cell along tireTracksPath (a Bézier curve), 1.7 m apart.
+- Quads of asphaltDamage, crack, stain01, mudSplatter, wetPatch, scorch and three footprints, each at its cell's physicalSize.
+- "AEK Decal Preview": a stand-in look (Blender can't read the atlas's KTX2 textures): a dark stain faded at its edges as the engine fades a decal. The real look is the engine's: the terrain gallery's Decals row shows every cell.
+""" + COMMON_SETUP + """
+A decal
+- A plane with two UV maps: UVMap, its cell in the atlas (TEXCOORD_0), and DecalUV, 0..1 over the whole decal (TEXCOORD_1, the engine's uv1: the decal material's edge fade reads it, and without it draws nothing).
+- Its modifiers, in this order: Array (a strip: its tile repeated, Fit Curve to the path's length; every tile the cell again), "AEK Decal" (Geometry Nodes: Subdivide by its Level, a face at most half the block's grid spacing, then DecalUV from the bounds: after the Array, whose UV offset would move every UV map), Curve (a strip, along the path's X), Shrinkwrap (Target the block, Project along Z both ways, Above Surface, Offset 0.015 m).
+- Nothing to apply: Export Decal Set exports each decal as its modifiers make it. Apply only to edit the result by hand.
+
+The workflow
+1. A block (the block template's workflow), then select it: Add Decal Set. Its Atlas is decalsGround; its Material the engine's decal material the export's stub names (decalsGround_blend, or decalsGround_cutout: opaque, cheaper, for footprints and cracks).
+2. Add Decal: put the 3D cursor where it goes, pick a cell (a search). A cell that tiles along its length (tireTracks) comes as a strip with its own path: edit the path (Edit mode on <name>_path) and the strip follows. A second wheel: duplicate the strip (Shift+D), give its Array and Curve the first's path and move its mesh aside in Edit mode (G Y).
+3. Turn and move a quad freely (rotation Z, location X/Y): the Shrinkwrap puts it on the ground. Scale it in X/Y only to change its size (the cell stretches).
+4. Floating or cutting in on steep or bumpy ground: raise the AEK Decal modifier's Level. Between its vertices a decal face is flat while the block folds along its own triangles: Add Decal's Level (a face at most half the grid spacing) kept the tracks on 0.25 m bumps within 0-3 cm of the ground; at the grid spacing they cut 6 mm in. The offset stays 1-2 cm, and the engine's polygon offset does the rest.
+5. Export Decal Set: <setId>.glb into the block's Folder (or the set's own), the decals placed from the block's centre, and the JSON stubs it lacks: <setId>.importedAsset.json (the default mesh encode: within about 2 mm, well inside the 1.5 cm offset) and <setId>.decalSet.json (the set's material, render order 10 by default).
+6. Into Ækasha: yarn assets --only <setId>, then add "<setId>" to the block's terrainBlock JSON "decals": the set spawns with the block. A decal set of a scene's own: the scene's "decalSets" and spawnDecalSet('<setId>').
+
+Merging: a node's custom prop merge (Object Properties > Custom Properties) puts the decal in a merge group: CUTOUT decals in a BAKED group, BLEND ones in a BATCHED group.
+
+In the engine
+- A decal's albedo replaces the ground's, so it reads only on grounds it suits: the tyre tracks' sand reads pressed into a light mud but as pale strips on a dark one. Tint the set to its ground: a material JSON of your own, decalsGround_blend's with an input "tint" ("#666666" on the dark mud), named by the set's decalSet.json. Check it on that ground.
+- The edge fade is a tenth of DecalUV at each edge, so a 35 m strip fades over 3.5 m at each end. That material's input "edgeFade": [0.01, 0.1] fades it over 35 cm.
+"""
+
 
 TEMPLATES = {
     "terrain_blockTemplate": build_block_template,
@@ -1113,6 +1212,7 @@ TEMPLATES = {
     "terrain_triplanarCliff": build_triplanar_cliff,
     "terrain_colormapDetail": build_colormap_detail,
     "terrain_scatter": build_scatter,
+    "terrain_decals": build_decals,
     "structure_concrete": build_structure,
 }
 

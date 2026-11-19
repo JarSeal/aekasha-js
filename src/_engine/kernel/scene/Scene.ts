@@ -27,6 +27,7 @@ import type { SceneMergeMaterial } from '../../features/merging/MergeMaterialSch
 import type { SceneTextureSetArrayEntry, TextureSetDef } from '../../schemas/TextureSetSchema';
 import type { TerrainBlockDef } from '../../features/terrain/TerrainBlockSchema';
 import type { ScatterDef } from '../../features/instancing/ScatterSchema';
+import type { DecalSetDef } from '../../features/terrain/DecalSetSchema';
 import type { SceneSurfaceConditions } from '../../features/surface/SurfaceConditionsSchema';
 
 /** A scene looper: called once per frame with the frame's delta (seconds). */
@@ -112,6 +113,10 @@ export type SceneData = {
    * geometry and material JSONs are in `geometries` and `materials`; the `instancing()` feature's
    * `spawnScatter` reads them). */
   scatters?: ScatterDef[];
+  /** The decal sets the scene lists and its terrain blocks name, resolved by the gatherer (their
+   * imports and materials are in `importedAssets` and `materials`; the `terrain()` feature's
+   * `spawnDecalSet` reads them). */
+  decalSets?: DecalSetDef[];
   /** The scene's starting surface conditions, over the defaults (the `surfaceConditions()`
    * feature applies them before the scene code runs). */
   surfaceConditions?: SceneSurfaceConditions;

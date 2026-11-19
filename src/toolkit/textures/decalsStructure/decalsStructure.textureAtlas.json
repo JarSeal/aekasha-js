@@ -1,0 +1,170 @@
+{
+  "$schema": "../../../../.schemas/textureAtlas.schema.json",
+  "id": "decalsStructure",
+  "size": [2048, 1024],
+  "padding": 16,
+  "slots": {
+    "albedoAlpha": {
+      "texOpts": {
+        "colorSpace": "srgb"
+      },
+      "optimize": {
+        "profile": "hero",
+        "slot": "baseColor"
+      }
+    },
+    "normalRough": {
+      "fill": [0.5, 0.5, 1, 0],
+      "optimize": {
+        "profile": "hero",
+        "slot": "data",
+        "textures": {
+          "data": {
+            "codec": "uastc",
+            "rdo": 1
+          }
+        }
+      }
+    }
+  },
+  "cells": [
+    {
+      "id": "leak01",
+      "rect": [0, 0, 512, 512],
+      "sources": {
+        "albedoAlpha": "decalLeak01_albedoAlpha",
+        "normalRough": "decalLeak01_normalRough"
+      },
+      "data": {
+        "physicalSize": [2, 2],
+        "tileAlong": "NONE",
+        "opacitySource": "HEIGHT"
+      }
+    },
+    {
+      "id": "leak02",
+      "rect": [512, 0, 512, 512],
+      "sources": {
+        "albedoAlpha": "decalLeak02_albedoAlpha",
+        "normalRough": "decalLeak02_normalRough"
+      },
+      "data": {
+        "physicalSize": [2, 2],
+        "tileAlong": "NONE",
+        "opacitySource": "HEIGHT"
+      }
+    },
+    {
+      "id": "leak03",
+      "rect": [1024, 0, 512, 512],
+      "sources": {
+        "albedoAlpha": "decalLeak03_albedoAlpha",
+        "normalRough": "decalLeak03_normalRough"
+      },
+      "data": {
+        "physicalSize": [2, 2],
+        "tileAlong": "NONE",
+        "opacitySource": "HEIGHT"
+      }
+    },
+    {
+      "id": "formworkMarks",
+      "rect": [1536, 0, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/formworkMarks_albedoAlpha.png",
+        "normalRough": "./source/formworkMarks_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [2, 2],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalFormwork",
+        "seed": 1,
+        "params": {}
+      }
+    },
+    {
+      "id": "crack01",
+      "rect": [0, 512, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/crack01_albedoAlpha.png",
+        "normalRough": "./source/crack01_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [1, 1],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalCracks",
+        "seed": 2,
+        "params": {
+          "cells": 4,
+          "width": 0.03,
+          "dustColor": "#8a857d"
+        }
+      }
+    },
+    {
+      "id": "crack02",
+      "rect": [512, 512, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/crack02_albedoAlpha.png",
+        "normalRough": "./source/crack02_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [1, 1],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalCracks",
+        "seed": 3,
+        "params": {
+          "cells": 6,
+          "branching": 0.7,
+          "width": 0.025
+        }
+      }
+    },
+    {
+      "id": "stain01",
+      "rect": [1024, 512, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/stain01_albedoAlpha.png",
+        "normalRough": "./source/stain01_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [1.5, 1.5],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalStain",
+        "seed": 3,
+        "params": {
+          "color": "#5a3a22",
+          "roughness": 0.7
+        }
+      }
+    },
+    {
+      "id": "stain02",
+      "rect": [1536, 512, 512, 512],
+      "sources": {
+        "albedoAlpha": "./source/stain02_albedoAlpha.png",
+        "normalRough": "./source/stain02_normalRough.png"
+      },
+      "data": {
+        "physicalSize": [1.5, 1.5],
+        "tileAlong": "NONE",
+        "opacitySource": "GENERATED",
+        "generator": "decalStain",
+        "seed": 4,
+        "params": {
+          "color": "#2b2b28",
+          "roughness": 0.6,
+          "rim": 0.3
+        }
+      }
+    }
+  ],
+  "debugData": {
+    "name": "Structure decals",
+    "description": "p309 D1: the toolkit's structure decals in the DECAL packing (see decalsGround), 4 \u00d7 2 cells of 512 with 16 px of padding. leak01-03 (ambientCG Leaking012A, 017B, 019A) from their pack recipes (decalLeak01-03/: a constant stain colour, opacity from the displacement); the other cells are procedural (p309 D5): a generator's bake exported as source/<cellId>_albedoAlpha.png and _normalRough.png (480\u00b2, the content size; the terrain gallery tab's procedural decals), the cell's data its recipe (generator, seed, params; params left out are the generator's defaults). Physical sizes are estimates (the leaks' downloads give none)."
+  }
+}

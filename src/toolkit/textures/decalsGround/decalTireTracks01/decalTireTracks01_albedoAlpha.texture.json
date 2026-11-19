@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "decalTireTracks01_albedoAlpha",
+  "sourceOnly": true,
+  "texOpts": {
+    "colorSpace": "srgb"
+  },
+  "pack": {
+    "channels": {
+      "rgb": {
+        "src": "./source/raw/color.jpg",
+        "multiply": {
+          "src": "./source/raw/ao.jpg"
+        },
+        "remap": [0, 2.6]
+      },
+      "a": {
+        "src": "./source/raw/height.jpg",
+        "channel": "r",
+        "remap": [0.2, 1.0],
+        "invert": true
+      }
+    }
+  },
+  "debugData": {
+    "name": "decalTireTracks01 albedoAlpha",
+    "description": "p309 D1 DECAL albedoAlpha of ambientCG TireTracks001 (CC0): colour \u00d7 AO, darkened to about 0.38 of its linear value (remap [0, 2.6]: the source is a pale sand strip, and a track pressed into mud reads darker than the ground, not lighter); opacity from the inverted height (remap [0.2, 1.0]: about 0.88 in the pressed grooves, its height ~0.3, and 0.25 on the tread's tops, ~0.8), so the ground shows between the grooves (p309 Phase 5; before, opacity 1 over the pale colour: a painted strip on dark mud). An atlas cell's source only."
+  }
+}

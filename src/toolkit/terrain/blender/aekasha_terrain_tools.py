@@ -4,7 +4,9 @@ A terrain block is a square heightfield grid that the engine spawns from a `*.te
 (the `terrain()` feature, `aekasha/terrain`). This add-on makes one that follows the block
 conventions (docs/plans/_DONE_p306_terrain-blocks-and-procedural-terrain-meshes.md D1; the
 handbook's docs/techniques/terrain-blocks-blender.md), lets you paint and bake its splat, checks
-it and exports it with the locked glTF settings (D5).
+it and exports it with the locked glTF settings (D5). Its decal sets (p309 D3): decals of a decal
+atlas's cells, quads or strips along a path, shrinkwrapped onto the block and exported as one GLB
+in its space (the `*.decalSet.json` its `decals` names).
 
 Install: Edit → Preferences → Add-ons → the drop-down → Install from Disk, then pick this file
 (a legacy add-on: one `.py`, so it installs straight from the repo). Checked with Blender 5.3.
@@ -39,10 +41,11 @@ from bpy.props import (
 bl_info = {
     "name": "Ækasha Terrain Tools",
     "author": "Ækasha",
-    "version": (1, 0, 0),
+    "version": (1, 1, 0),
     "blender": (5, 3, 0),
     "location": "3D Viewport → Sidebar → Ækasha",
-    "description": "Terrain blocks for Ækasha: add, paint, bake, validate and export",
+    "description": "Terrain blocks for Ækasha: add, paint, bake, validate and export; their decal "
+    "sets",
     "category": "Object",
 }
 
@@ -1270,11 +1273,13 @@ LOCKED_EXPORT_SETTINGS = {
 BLOCK_IMAGES = {"_colorMap": "COLOR", "_splat0": "DATA", "_splat1": "DATA"}
 
 
-def check_exporter_options() -> list[str]:
-    """The locked settings the running Blender's glTF exporter doesn't take, by name"""
+def check_exporter_options(settings: dict | None = None) -> list[str]:
+    """The locked settings (a block's, or `settings`) the running Blender's glTF exporter doesn't
+    take, by name
+    """
     properties = bpy.ops.export_scene.gltf.get_rna_type().properties
     missing = []
-    for key, value in LOCKED_EXPORT_SETTINGS.items():
+    for key, value in (settings or LOCKED_EXPORT_SETTINGS).items():
         prop = properties.get(key)
         if prop is None:
             missing.append(key)
@@ -2071,6 +2076,636 @@ class AEK_addon_preferences(bpy.types.AddonPreferences):
         self.layout.prop(self, "repo_root")
 
 
+# --- Decals (p309 D3) ---------------------------------------------------------------------------
+#
+# A decal set: a collection of decal meshes on one block, exported as one GLB in the block's own
+# space (the engine's `*.decalSet.json`, spawned with the block at its grid place). A decal is a
+# quad (a strip: tiles along a path curve) with two UV maps: `UVMap`, its atlas cell (TEXCOORD_0,
+# the engine's `uv`), and `DecalUV`, 0..1 over the whole decal (TEXCOORD_1, the engine's `uv1`,
+# which the decal material's edge fade reads). Its modifiers: Array (a strip: tiles fitted to the
+# curve, each the cell again), the "AEK Decal" group (subdivides to about the block's grid
+# spacing, and writes DecalUV from the bounds: after the Array, whose UV offset would move every
+# UV map), Curve (a strip), Shrinkwrap onto the block (projected along Z, an offset above it).
+
+#: The atlas cell's UV map (TEXCOORD_0) and the one over the decal (TEXCOORD_1, the engine's uv1)
+DECAL_ATLAS_UV = "UVMap"
+DECAL_UV = "DecalUV"
+#: The decal's Geometry Nodes group, and its Blender preview material
+DECAL_GROUP = "AEK Decal"
+DECAL_PREVIEW_MATERIAL = "AEK Decal Preview"
+#: A decal atlas's slots (p309 D1's DECAL packing): what tells one from another atlas
+DECAL_SLOTS = ("albedoAlpha", "normalRough")
+#: How far a decal sits over its block (the Shrinkwrap's offset), metres; the material's polygon
+#: offset does the rest
+DECAL_OFFSET = 0.015
+#: The finest subdivision Add Decal gives (4^6 faces a tile)
+DECAL_MAX_LEVEL = 6
+#: A new strip's path: three points along +x, metres from the 3D cursor
+STRIP_PATH = ((-6.0, -1.5), (0.0, 1.5), (6.0, -1.0))
+
+#: The decal set's export: the locked settings, the meshes already evaluated (so nothing to apply),
+#: no colour or other attribute (a decal has its two UV maps only)
+DECAL_EXPORT_SETTINGS = {
+    **LOCKED_EXPORT_SETTINGS,
+    "export_apply": False,
+    "export_vertex_color": "NONE",
+    "export_attributes": False,
+}
+
+
+def get_decal_cell_uv(size: tuple[int, int], padding: int, rect: list[int]) -> tuple[float, ...]:
+    """A cell's content rect as the engine's UVs `(u0, v0, u1, v1)`, v up: its `rect` inset by the
+    padding, as the gather's cell table (`getAtlasCellTable`)
+    """
+    width, height = size
+    x, y, w, h = rect[0] + padding, rect[1] + padding, rect[2] - 2 * padding, rect[3] - 2 * padding
+    return (x / width, 1 - (y + h) / height, (x + w) / width, 1 - y / height)
+
+
+def to_blender_uv(cell_uv: tuple[float, ...], u: float, v: float) -> tuple[float, float]:
+    """A decal's (u, v) in 0..1 as its Blender atlas UV: the engine's UV in the cell, V flipped
+    (the glTF exporter flips it back)
+    """
+    u0, v0, u1, v1 = cell_uv
+    return (u0 + u * (u1 - u0), 1 - (v0 + v * (v1 - v0)))
+
+
+def find_decal_atlases(root: str) -> dict[str, dict]:
+    """The decal atlases under the repo (a `*.textureAtlas.json` with the DECAL packing's slots), by
+    id: their cells by id, each its engine UV rect, `physicalSize` (metres; None without) and
+    `tileAlong`. A cell without an explicit `rect` (packed) is left out: its place is the packer's.
+    """
+    atlases: dict[str, dict] = {}
+    for parts in TEXTURE_SET_FOLDERS:
+        for folder, _dirs, files in os.walk(os.path.join(root, *parts)):
+            for file in files:
+                if not file.endswith(".textureAtlas.json"):
+                    continue
+                try:
+                    with open(os.path.join(folder, file), encoding="utf-8") as f:
+                        data = json.load(f)
+                except (OSError, ValueError):
+                    continue
+                if not all(slot in (data.get("slots") or {}) for slot in DECAL_SLOTS):
+                    continue
+                atlas_id = data.get("id") or file[: -len(".textureAtlas.json")]
+                size, padding = tuple(data["size"]), int(data.get("padding", 0))
+                cells = {}
+                for cell in data.get("cells", []):
+                    if "rect" not in cell:
+                        continue
+                    cell_data = cell.get("data") or {}
+                    physical = cell_data.get("physicalSize")
+                    cells[cell["id"]] = {
+                        "uv": get_decal_cell_uv(size, padding, cell["rect"]),
+                        "size": (float(physical[0]), float(physical[1])) if physical else None,
+                        "tile_along": cell_data.get("tileAlong", "NONE"),
+                    }
+                atlases[atlas_id] = {"id": atlas_id, "cells": cells}
+    return atlases
+
+
+_decal_atlases_cache: dict[str, dict] = {}
+
+
+def get_decal_atlases(root: str, refresh: bool = False) -> dict[str, dict]:
+    """`find_decal_atlases`, kept per root until `refresh`"""
+    if refresh or root not in _decal_atlases_cache:
+        _decal_atlases_cache[root] = find_decal_atlases(root)
+    return _decal_atlases_cache[root]
+
+
+def build_decal_mesh(name: str, cell_uv: tuple[float, ...], width: float, depth: float,
+                     strip: bool) -> bpy.types.Mesh:
+    """A decal's quad, `width` along x and `depth` along y: centred, or for a strip's tile from x 0
+    (the path's start); its atlas UVs in the cell (u along x, v along y: the cell's top at +y, the
+    engine's -z) and DecalUV 0..1; smooth shaded
+    """
+    x0 = 0.0 if strip else -width / 2
+    corners = ((0, 0), (1, 0), (1, 1), (0, 1))
+    mesh = bpy.data.meshes.new(name)
+    mesh.from_pydata([(x0 + u * width, (v - 0.5) * depth, 0.0) for u, v in corners], [],
+                     [(0, 1, 2, 3)])
+    atlas, decal = mesh.uv_layers.new(name=DECAL_ATLAS_UV), mesh.uv_layers.new(name=DECAL_UV)
+    for loop in mesh.loops:
+        u, v = corners[loop.vertex_index]
+        atlas.data[loop.index].uv = to_blender_uv(cell_uv, u, v)
+        decal.data[loop.index].uv = (u, v)
+    mesh.shade_smooth()
+    return mesh
+
+
+def ensure_decal_group() -> bpy.types.GeometryNodeTree:
+    """The "AEK Decal" group (made once): Subdivide Mesh by its Level, then DecalUV = the position
+    over the bounds in x and y (0..1 over the whole decal, a strip's whole length)
+    """
+    tree = bpy.data.node_groups.get(DECAL_GROUP)
+    if tree is not None:
+        return tree
+    tree = bpy.data.node_groups.new(DECAL_GROUP, "GeometryNodeTree")
+    tree.interface.new_socket("Geometry", in_out="INPUT", socket_type="NodeSocketGeometry")
+    level = tree.interface.new_socket(
+        "Level", in_out="INPUT", socket_type="NodeSocketInt",
+        description="Subdivisions: a face's edge at most half the block's grid spacing, so the "
+        "Shrinkwrap follows its relief between the block's vertices",
+    )
+    level.default_value, level.min_value, level.max_value = 0, 0, DECAL_MAX_LEVEL
+    tree.interface.new_socket("Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
+    nodes, links = tree.nodes, tree.links
+
+    def node(kind: str, x: float, y: float, **props) -> bpy.types.Node:
+        made = nodes.new(kind)
+        made.location = (x, y)
+        for key, value in props.items():
+            setattr(made, key, value)
+        return made
+
+    group_in, group_out = node("NodeGroupInput", -600, 0), node("NodeGroupOutput", 600, 0)
+    subdivide = node("GeometryNodeSubdivideMesh", -400, 0)
+    links.new(group_in.outputs["Geometry"], subdivide.inputs["Mesh"])
+    links.new(group_in.outputs["Level"], subdivide.inputs["Level"])
+    bounds = node("GeometryNodeBoundBox", -200, -200)
+    links.new(subdivide.outputs["Mesh"], bounds.inputs["Geometry"])
+    position = node("GeometryNodeInputPosition", -200, -400)
+    offset = node("ShaderNodeVectorMath", 0, -300, operation="SUBTRACT")
+    links.new(position.outputs["Position"], offset.inputs[0])
+    links.new(bounds.outputs["Min"], offset.inputs[1])
+    extent = node("ShaderNodeVectorMath", 0, -450, operation="SUBTRACT")
+    links.new(bounds.outputs["Max"], extent.inputs[0])
+    links.new(bounds.outputs["Min"], extent.inputs[1])
+    # Blender's vector divide gives 0 for z's zero extent; a FLOAT2 keeps x and y
+    share = node("ShaderNodeVectorMath", 200, -350, operation="DIVIDE")
+    links.new(offset.outputs[0], share.inputs[0])
+    links.new(extent.outputs[0], share.inputs[1])
+    store = node("GeometryNodeStoreNamedAttribute", 400, 0, data_type="FLOAT2", domain="CORNER")
+    store.inputs["Name"].default_value = DECAL_UV
+    links.new(subdivide.outputs["Mesh"], store.inputs["Geometry"])
+    links.new(share.outputs[0], next(s for s in store.inputs if s.name == "Value" and s.enabled))
+    links.new(store.outputs["Geometry"], group_out.inputs["Geometry"])
+    return tree
+
+
+def ensure_decal_preview_material() -> bpy.types.Material:
+    """A stand-in look (Blender can't read the atlas's KTX2 outputs): a dark stain whose alpha is
+    the engine's edge fade over DecalUV (a tenth at each edge), so a decal's shape and fade show
+    """
+    material = bpy.data.materials.get(DECAL_PREVIEW_MATERIAL)
+    if material is not None:
+        return material
+    material = bpy.data.materials.new(DECAL_PREVIEW_MATERIAL)
+    material.use_nodes = True
+    material.surface_render_method = "BLENDED"
+    tree = material.node_tree
+    nodes, links = tree.nodes, tree.links
+    shader = next(n for n in nodes if n.type == "BSDF_PRINCIPLED")
+    shader.inputs["Base Color"].default_value = (0.08, 0.06, 0.04, 1.0)
+    shader.inputs["Roughness"].default_value = 0.7
+    uv = nodes.new("ShaderNodeUVMap")
+    uv.uv_map = DECAL_UV
+    split = nodes.new("ShaderNodeSeparateXYZ")
+    links.new(uv.outputs["UV"], split.inputs[0])
+    fade = None
+    for axis in ("X", "Y"):
+        for flip in (False, True):
+            value = split.outputs[axis]
+            if flip:
+                minus = nodes.new("ShaderNodeMath")
+                minus.operation = "SUBTRACT"
+                minus.inputs[0].default_value = 1.0
+                links.new(value, minus.inputs[1])
+                value = minus.outputs[0]
+            edge = nodes.new("ShaderNodeMapRange")
+            edge.interpolation_type = "SMOOTHSTEP"
+            edge.inputs["From Max"].default_value = 0.1
+            links.new(value, edge.inputs["Value"])
+            if fade is None:
+                fade = edge.outputs["Result"]
+            else:
+                product = nodes.new("ShaderNodeMath")
+                product.operation = "MULTIPLY"
+                links.new(fade, product.inputs[0])
+                links.new(edge.outputs["Result"], product.inputs[1])
+                fade = product.outputs[0]
+    alpha = nodes.new("ShaderNodeMath")
+    alpha.operation = "MULTIPLY"
+    alpha.inputs[1].default_value = 0.85
+    links.new(fade, alpha.inputs[0])
+    links.new(alpha.outputs[0], shader.inputs["Alpha"])
+    return material
+
+
+def get_decal_level(block: bpy.types.Object | None, width: float, depth: float) -> int:
+    """Add Decal's subdivision: a face's longest edge at most half the block's grid spacing. At the
+    spacing itself a face spanning a fold of the block's triangles cut 6 mm into 0.25 m bumps 5 m
+    apart (p309 Phase 3, `buildDecalTest.py`); at half of it none did, and none floated 4 cm.
+    """
+    settings = get_block_settings(block)
+    spacing = get_spacing(int(settings.size), int(settings.resolution)) if settings else 0.5
+    longest = max(width, depth)
+    level = 0
+    while longest / 2**level > spacing / 2 and level < DECAL_MAX_LEVEL:
+        level += 1
+    return level
+
+
+def add_strip_path(name: str, location, collection: bpy.types.Collection) -> bpy.types.Object:
+    """A strip's path: a 3D Bézier curve of `STRIP_PATH`'s points (auto handles) at `location`"""
+    curve = bpy.data.curves.new(name, "CURVE")
+    curve.dimensions = "3D"
+    spline = curve.splines.new("BEZIER")
+    spline.bezier_points.add(len(STRIP_PATH) - 1)
+    for point, (x, y) in zip(spline.bezier_points, STRIP_PATH):
+        point.co = (x, y, 0.0)
+        point.handle_left_type = point.handle_right_type = "AUTO"
+    path = bpy.data.objects.new(name, curve)
+    path.location = location
+    collection.objects.link(path)
+    return path
+
+
+def add_decal(collection: bpy.types.Collection, block: bpy.types.Object, cell_id: str, cell: dict,
+              location, *, strip: bool) -> bpy.types.Object:
+    """Adds a decal of the cell at its `physicalSize` (1 m without) to the set's collection at
+    `location` (z: the block's): its mesh, the preview material and its modifiers (Array and Curve
+    along a new path for a strip, the AEK Decal group, Shrinkwrap onto the block)
+    """
+    width, depth = cell["size"] or (1.0, 1.0)
+    location = (location[0], location[1], block.location.z)
+    mesh = build_decal_mesh(cell_id, cell["uv"], width, depth, strip)
+    mesh.materials.append(ensure_decal_preview_material())
+    obj = bpy.data.objects.new(cell_id, mesh)
+    obj.location = location
+    collection.objects.link(obj)
+    if strip:
+        path = add_strip_path(f"{obj.name}_path", location, collection)
+        array = obj.modifiers.new("Array", "ARRAY")
+        array.fit_type = "FIT_CURVE"
+        array.curve = path
+        array.use_merge_vertices = True
+    decal = obj.modifiers.new(DECAL_GROUP, "NODES")
+    decal.node_group = ensure_decal_group()
+    level_socket = next(s for s in decal.node_group.interface.items_tree
+                        if getattr(s, "name", "") == "Level" and s.in_out == "INPUT")
+    # Blender 5's group inputs on a modifier: a struct per socket (4.x's ID properties are gone)
+    getattr(decal.properties.inputs, level_socket.identifier).value = get_decal_level(
+        block, width, depth
+    )
+    if strip:
+        curve = obj.modifiers.new("Curve", "CURVE")
+        curve.object = path
+        curve.deform_axis = "POS_X"
+    wrap = obj.modifiers.new("Shrinkwrap", "SHRINKWRAP")
+    wrap.target = block
+    wrap.wrap_method = "PROJECT"
+    wrap.use_project_z = True
+    wrap.use_negative_direction = True
+    wrap.use_positive_direction = True
+    wrap.wrap_mode = "ABOVE_SURFACE"
+    wrap.offset = DECAL_OFFSET
+    return obj
+
+
+#: Blender keeps no reference to a dynamic enum's items: these do
+_decal_atlas_item_list: list[tuple] = []
+_decal_cell_item_list: list[tuple] = []
+
+
+def get_enum_number(item_id: str) -> int:
+    """A dynamic enum item's number: a hash of its id, so a stored choice survives others added"""
+    return zlib.crc32(item_id.encode()) & 0x7FFFFFFF or 1
+
+
+def _decal_atlas_items(self, context: bpy.types.Context) -> list[tuple]:
+    root = get_repo_root(context) if context else None
+    atlases = get_decal_atlases(root) if root else {}
+    _decal_atlas_item_list[:] = [
+        (atlas_id, atlas_id, f"{len(info['cells'])} cells", get_enum_number(atlas_id))
+        for atlas_id, info in sorted(atlases.items())
+    ]
+    return _decal_atlas_item_list or [("NONE", "None", "No decal atlas found in the repo", 0)]
+
+
+def _is_block(self, obj: bpy.types.Object) -> bool:
+    return get_block_settings(obj) is not None
+
+
+class AEK_PG_decal_set(bpy.types.PropertyGroup):
+    """A decal set's settings, on its collection (`collection.aek_decal_set`)"""
+
+    set_id: StringProperty(  # type: ignore[valid-type]
+        name="Set ID", description="The decal set's id: its GLB, its importedAsset and "
+        "*.decalSet.json, and the id in the block's \"decals\"", default="",
+    )
+    block: PointerProperty(  # type: ignore[valid-type]
+        name="Block", description="The block the decals lie on: their Shrinkwrap target, and the "
+        "origin they're exported from", type=bpy.types.Object, poll=_is_block,
+    )
+    atlas: EnumProperty(  # type: ignore[valid-type]
+        name="Atlas", description="The decal atlas whose cells Add Decal offers",
+        items=_decal_atlas_items,
+    )
+    material: StringProperty(  # type: ignore[valid-type]
+        name="Material", description="The engine's decal material (the decal set JSON stub's): "
+        "<atlas>_blend or <atlas>_cutout", default="decalsGround_blend",
+    )
+    output_dir: StringProperty(  # type: ignore[valid-type]
+        name="Folder", description="Where Export Decal Set writes. Empty: the block's folder",
+        subtype="DIR_PATH", default="",
+    )
+
+
+def get_decal_set(collection: bpy.types.Collection | None) -> AEK_PG_decal_set | None:
+    """A collection's decal set settings, or None when it isn't a decal set"""
+    if collection is None:
+        return None
+    settings = collection.aek_decal_set
+    return settings if settings.set_id else None
+
+
+def get_active_decal_set(context: bpy.types.Context) -> bpy.types.Collection | None:
+    """The decal set being worked on: the active object's, else the active collection"""
+    obj = context.active_object
+    for collection in obj.users_collection if obj else ():
+        if get_decal_set(collection):
+            return collection
+    collection = context.view_layer.active_layer_collection.collection
+    return collection if get_decal_set(collection) else None
+
+
+def get_decal_set_folder(settings: AEK_PG_decal_set) -> str | None:
+    """Where the set exports: its folder, else its block's; None when relative to an unsaved file"""
+    if settings.output_dir:
+        if settings.output_dir.startswith("//") and not bpy.data.filepath:
+            return None
+        return os.path.normpath(bpy.path.abspath(settings.output_dir))
+    return get_block_folder(settings.block) if settings.block else None
+
+
+def check_exported_decal_glb(gltf: dict, node_names: list[str]) -> list[Issue]:
+    """What the engine needs of a decal set's GLB (D3): a mesh node per decal, each primitive with
+    positions, normals and both UV sets (TEXCOORD_1 the edge fade's), no tangents or colours, no
+    materials or images
+    """
+    issues: list[Issue] = []
+    nodes = [n for n in gltf.get("nodes", []) if "mesh" in n]
+    if sorted(n.get("name", "") for n in nodes) != sorted(node_names):
+        issues.append(("ERROR", f"The nodes are {sorted(n.get('name') for n in nodes)}, not the "
+                       f"decals {sorted(node_names)}"))
+    for mesh in gltf.get("meshes", []):
+        for primitive in mesh.get("primitives", []):
+            attributes = primitive.get("attributes", {})
+            for name in ("POSITION", "NORMAL", "TEXCOORD_0", "TEXCOORD_1"):
+                if name not in attributes:
+                    issues.append(("ERROR", f"{mesh.get('name')}: no {name}"))
+            for name in ("TANGENT", "COLOR_0"):
+                if name in attributes:
+                    issues.append(("ERROR", f"{mesh.get('name')}: a {name}: the export settings "
+                                   "weren't the locked ones"))
+    for key in ("materials", "images", "textures"):
+        if gltf.get(key):
+            issues.append(("ERROR", f"The GLB has {key}: the engine assigns the decal material"))
+    return issues
+
+
+def export_decal_set(context: bpy.types.Context, collection: bpy.types.Collection,
+                     folder: str) -> tuple[list[str], list[Issue]]:
+    """Exports the set's decals into `folder`: `<setId>.glb`, each decal's evaluated mesh (its
+    modifiers applied) as a node named by it, placed relative to the block's origin (the engine
+    spawns the set at the block's grid place), its custom props kept (`merge`); then the JSON stubs
+    where none are (`<setId>.importedAsset.json`, the default encode; `<setId>.decalSet.json` with
+    the set's material) and the GLB read back. Returns the files written and the findings.
+    """
+    settings = collection.aek_decal_set
+    set_id, block = settings.set_id, settings.block
+    issues: list[Issue] = []
+    decals = [obj for obj in collection.all_objects if obj.type == "MESH"]
+    depsgraph = context.evaluated_depsgraph_get()
+    os.makedirs(folder, exist_ok=True)
+    glb_path = os.path.join(folder, f"{set_id}.glb")
+    saved = {
+        "selected": list(context.selected_objects),
+        "active": context.view_layer.objects.active,
+        "names": {obj: obj.name for obj in decals},
+    }
+    copies: list[bpy.types.Object] = []
+    try:
+        for obj in decals:
+            mesh = bpy.data.meshes.new_from_object(obj.evaluated_get(depsgraph))
+            missing = [name for name in (DECAL_ATLAS_UV, DECAL_UV) if name not in mesh.uv_layers]
+            if missing or list(mesh.uv_layers.keys())[:2] != [DECAL_ATLAS_UV, DECAL_UV]:
+                issues.append(("ERROR", f'"{obj.name}" needs the UV maps {DECAL_ATLAS_UV} then '
+                               f"{DECAL_UV} (has {list(mesh.uv_layers.keys())})"))
+            mesh.materials.clear()
+            name = saved["names"][obj]
+            obj.name = f"{name}~"
+            copy = bpy.data.objects.new(name, mesh)
+            copy.matrix_world = obj.matrix_world.copy()
+            copy.location -= block.location
+            for key in obj.keys():
+                copy[key] = obj[key]
+            context.scene.collection.objects.link(copy)
+            copies.append(copy)
+        if any(level == "ERROR" for level, _ in issues):
+            return [], issues
+        for selected in saved["selected"]:
+            selected.select_set(False)
+        for copy in copies:
+            copy.select_set(True)
+        context.view_layer.objects.active = copies[0]
+        bpy.ops.export_scene.gltf(filepath=glb_path, **DECAL_EXPORT_SETTINGS)
+    finally:
+        for copy in copies:
+            mesh = copy.data
+            bpy.data.objects.remove(copy)
+            bpy.data.meshes.remove(mesh)
+        for obj, name in saved["names"].items():
+            obj.name = name
+        for selected in saved["selected"]:
+            selected.select_set(True)
+        context.view_layer.objects.active = saved["active"]
+
+    written = [glb_path]
+    block_id = block.aek_terrain_block.block_id
+    imported = {
+        "$schema": get_schema_ref(folder, "importedAsset.schema.json"),
+        "id": set_id,
+        "fileName": f"./{set_id}.glb",
+        "debugData": {
+            "name": f"Decal set {set_id}",
+            "description": f"{len(decals)} decals on the terrain block {block_id}, exported by the "
+            "Ækasha terrain add-on in the block's space. The default mesh encode (meshopt, "
+            "quantized) keeps them within about 2 mm of the export, well inside the 1.5 cm they "
+            "lie over the block, and their UVs within a quarter texel of a 2K atlas.",
+        },
+    }
+    decal_set = {
+        "$schema": get_schema_ref(folder, "decalSet.schema.json"),
+        "importedAsset": set_id,
+        "material": settings.material,
+        "debugData": {
+            "name": f"Decal set {set_id}",
+            "description": f'Decals on the terrain block {block_id}: list "{set_id}" in its '
+            "terrainBlock JSON's decals.",
+        },
+    }
+    for name, data in ((f"{set_id}.importedAsset.json", imported),
+                       (f"{set_id}.decalSet.json", decal_set)):
+        path = os.path.join(folder, name)
+        if write_json_if_missing(path, data):
+            written.append(path)
+    issues += check_exported_decal_glb(read_glb_json(glb_path), list(saved["names"].values()))
+    return written, issues
+
+
+def select_only(context: bpy.types.Context, obj: bpy.types.Object) -> None:
+    """Selects `obj` alone and makes it active"""
+    for other in context.selected_objects:
+        other.select_set(False)
+    obj.select_set(True)
+    context.view_layer.objects.active = obj
+
+
+class AEK_OT_add_decal_set(bpy.types.Operator):
+    """Add a decal set for the active block: a collection its decals go in, exported as one GLB"""
+
+    bl_idname = "aek.add_decal_set"
+    bl_label = "Add Decal Set"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context) -> bool:
+        return get_block_settings(context.active_object) is not None and context.mode == "OBJECT"
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        block = context.active_object
+        block_id = block.aek_terrain_block.block_id
+        set_id, number = f"{block_id}_decals", 1
+        taken = {c.aek_decal_set.set_id for c in bpy.data.collections}
+        while set_id in taken:
+            number += 1
+            set_id = f"{block_id}_decals{number}"
+        collection = bpy.data.collections.new(set_id)
+        context.scene.collection.children.link(collection)
+        settings = collection.aek_decal_set
+        settings.set_id, settings.block = set_id, block
+        root = get_repo_root(context)
+        atlases = get_decal_atlases(root, refresh=True) if root else {}
+        if atlases:
+            settings.atlas = "decalsGround" if "decalsGround" in atlases else sorted(atlases)[0]
+            settings.material = f"{settings.atlas}_blend"
+        layer = context.view_layer.layer_collection.children.get(collection.name)
+        if layer is not None:
+            context.view_layer.active_layer_collection = layer
+        self.report({"INFO"}, f"{set_id}: add its decals with Add Decal")
+        return {"FINISHED"}
+
+
+def _decal_cell_items(self, context: bpy.types.Context) -> list[tuple]:
+    collection = get_active_decal_set(context) if context else None
+    root = get_repo_root(context) if context else None
+    atlas = (get_decal_atlases(root).get(collection.aek_decal_set.atlas)
+             if collection and root else None)
+    _decal_cell_item_list[:] = [
+        (cell_id, cell_id,
+         f"{cell['size'][0]:g} × {cell['size'][1]:g} m" if cell["size"] else "No physicalSize: 1 m",
+         get_enum_number(cell_id))
+        for cell_id, cell in (atlas or {}).get("cells", {}).items()
+    ]
+    return _decal_cell_item_list or [("NONE", "None", "The set's atlas has no cells", 0)]
+
+
+class AEK_OT_add_decal(bpy.types.Operator):
+    """Add a decal of an atlas cell to the active decal set at the 3D cursor, shrinkwrapped onto
+    its block: a quad, or a strip along a new path curve (a cell that tiles along its length)
+    """
+
+    bl_idname = "aek.add_decal"
+    bl_label = "Add Decal"
+    bl_options = {"REGISTER", "UNDO"}
+    bl_property = "cell"
+
+    cell: EnumProperty(name="Cell", items=_decal_cell_items)  # type: ignore[valid-type]
+    strip: EnumProperty(  # type: ignore[valid-type]
+        name="Shape",
+        items=[
+            ("AUTO", "By the Cell", "A strip when the cell tiles along its length (tileAlong U)"),
+            ("QUAD", "Quad", "One quad of the cell's size"),
+            ("STRIP", "Strip", "The cell's tiles along a path curve (Array fitted to it)"),
+        ],
+        default="AUTO",
+    )
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context) -> bool:
+        collection = get_active_decal_set(context)
+        return (collection is not None and collection.aek_decal_set.block is not None
+                and context.mode == "OBJECT")
+
+    def invoke(self, context: bpy.types.Context, event) -> set[str]:
+        context.window_manager.invoke_search_popup(self)
+        return {"RUNNING_MODAL"}
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        collection = get_active_decal_set(context)
+        settings = collection.aek_decal_set
+        root = get_repo_root(context)
+        if root is None:
+            self.report({"ERROR"}, "No repo folder: set it in the add-on's preferences, or save "
+                        "the .blend inside the repo")
+            return {"CANCELLED"}
+        atlas = get_decal_atlases(root).get(settings.atlas)
+        cell = atlas["cells"].get(self.cell) if atlas else None
+        if cell is None:
+            self.report({"ERROR"}, f'No cell "{self.cell}" in the atlas "{settings.atlas}"')
+            return {"CANCELLED"}
+        strip = self.strip == "STRIP" or (self.strip == "AUTO" and cell["tile_along"] == "U")
+        obj = add_decal(collection, settings.block, self.cell, cell,
+                        context.scene.cursor.location, strip=strip)
+        select_only(context, obj)
+        return {"FINISHED"}
+
+
+class AEK_OT_export_decal_set(bpy.types.Operator):
+    """Export the active decal set into its folder (the block's by default): its GLB in the
+    block's space, and the JSON stubs it lacks
+    """
+
+    bl_idname = "aek.export_decal_set"
+    bl_label = "Export Decal Set"
+    bl_options = {"REGISTER"}
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context) -> bool:
+        return get_active_decal_set(context) is not None and context.mode == "OBJECT"
+
+    def execute(self, context: bpy.types.Context) -> set[str]:
+        collection = get_active_decal_set(context)
+        settings = collection.aek_decal_set
+        missing = check_exporter_options(DECAL_EXPORT_SETTINGS)
+        if missing:
+            self.report({"ERROR"}, "This Blender's glTF exporter lacks the locked settings "
+                        f"{', '.join(missing)}: the add-on was checked with Blender 5.3")
+            return {"CANCELLED"}
+        if settings.block is None:
+            self.report({"ERROR"}, f"{settings.set_id} has no block: set its Block")
+            return {"CANCELLED"}
+        if not any(obj.type == "MESH" for obj in collection.all_objects):
+            self.report({"ERROR"}, f"{settings.set_id} has no decals: Add Decal")
+            return {"CANCELLED"}
+        folder = get_decal_set_folder(settings)
+        if folder is None:
+            self.report({"ERROR"}, "The folder is relative to the .blend: save it first, or give "
+                        "the set (or its block) an absolute folder")
+            return {"CANCELLED"}
+        written, issues = export_decal_set(context, collection, folder)
+        for level, message in issues:
+            self.report({level}, message)
+        if any(level == "ERROR" for level, _ in issues):
+            return {"CANCELLED"}
+        self.report({"INFO"}, f"{settings.set_id}: {len(written)} files written to {folder}")
+        return {"FINISHED"}
+
+
 # --- The sidebar -------------------------------------------------------------------------------
 
 
@@ -2146,6 +2781,32 @@ class VIEW3D_PT_aek_terrain_preview(bpy.types.Panel):
         layout.operator(AEK_OT_update_terrain_preview.bl_idname, icon="FILE_REFRESH")
 
 
+class VIEW3D_PT_aek_decals(bpy.types.Panel):
+    """The Ækasha tab's decal set panel (p309 D3)"""
+
+    bl_label = "Decal Sets"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "Ækasha"
+
+    def draw(self, context: bpy.types.Context) -> None:
+        layout = self.layout
+        layout.operator(AEK_OT_add_decal_set.bl_idname, icon="ADD")
+        collection = get_active_decal_set(context)
+        if collection is None:
+            layout.label(text="Select a block, or a set's decal", icon="INFO")
+            return
+        settings = collection.aek_decal_set
+        box = layout.box()
+        box.prop(settings, "set_id")
+        box.prop(settings, "block")
+        box.prop(settings, "atlas")
+        box.prop(settings, "material")
+        box.prop(settings, "output_dir")
+        layout.operator(AEK_OT_add_decal.bl_idname, icon="MOD_UVPROJECT")
+        layout.operator(AEK_OT_export_decal_set.bl_idname, icon="EXPORT")
+
+
 # --- Registration ------------------------------------------------------------------------------
 
 CLASSES = (
@@ -2161,8 +2822,13 @@ CLASSES = (
     AEK_OT_new_splat_map,
     AEK_OT_export_terrain_block,
     AEK_OT_update_terrain_preview,
+    AEK_PG_decal_set,
+    AEK_OT_add_decal_set,
+    AEK_OT_add_decal,
+    AEK_OT_export_decal_set,
     VIEW3D_PT_aek_terrain,
     VIEW3D_PT_aek_terrain_preview,
+    VIEW3D_PT_aek_decals,
 )
 
 
@@ -2171,11 +2837,13 @@ def register() -> None:
         bpy.utils.register_class(cls)
     bpy.types.Object.aek_terrain_block = PointerProperty(type=AEK_PG_terrain_block)
     bpy.types.Scene.aek_terrain_preview = PointerProperty(type=AEK_PG_terrain_preview)
+    bpy.types.Collection.aek_decal_set = PointerProperty(type=AEK_PG_decal_set)
     bpy.types.VIEW3D_MT_mesh_add.append(draw_add_menu)
 
 
 def unregister() -> None:
     bpy.types.VIEW3D_MT_mesh_add.remove(draw_add_menu)
+    del bpy.types.Collection.aek_decal_set
     del bpy.types.Scene.aek_terrain_preview
     del bpy.types.Object.aek_terrain_block
     for cls in reversed(CLASSES):

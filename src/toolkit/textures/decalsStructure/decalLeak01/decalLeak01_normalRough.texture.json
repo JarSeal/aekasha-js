@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "decalLeak01_normalRough",
+  "sourceOnly": true,
+  "pack": {
+    "channels": {
+      "rg": {
+        "src": "./source/raw/normal.jpg",
+        "channel": "rg",
+        "normal": true
+      },
+      "b": {
+        "src": "./source/raw/roughness.jpg"
+      },
+      "a": 0
+    }
+  },
+  "debugData": {
+    "name": "decalLeak01 normalRough",
+    "description": "p309 D1 DECAL normalRough of ambientCG Leaking012A (CC0): normal XY, roughness (low: wet streaks), no puddle mask. An atlas cell's source only."
+  }
+}

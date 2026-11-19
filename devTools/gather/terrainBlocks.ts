@@ -1,10 +1,10 @@
 /**
  * Terrain blocks (p306 D2): pass 1 registers each `*.terrainBlock.json` with its defaults filled in
- * (`TERRAIN_BLOCK_DEFAULTS`), after checking that its import and its material are asset JSONs'
- * ids; the scene pass writes the blocks a scene lists into its data (where the `terrain()`
- * feature's `spawnTerrainBlock` finds them) and adds each one's import, material and scatters to
- * the scene's `importedAssets`, `materials` and `scatters`, so they load with the scene (the texture closure adds
- * the textures its `materialInputs` name). A scene listing a block with a collider names `physics`
+ * (`TERRAIN_BLOCK_DEFAULTS`), after checking that its import, material, scatters and decal sets are
+ * asset JSONs' ids; the scene pass writes the blocks a scene lists into its data (where the
+ * `terrain()` feature's `spawnTerrainBlock` finds them) and adds each one's import, material,
+ * scatters and decal sets to the scene's `importedAssets`, `materials`, `scatters` and `decalSets`,
+ * so they load with the scene (the texture closure adds the textures its `materialInputs` name). A scene listing a block with a collider names `physics`
  * in its manifest (`getTerrainBlockFeatureIds`), so a missing `physics()` fails the boot.
  */
 import {
@@ -23,13 +23,18 @@ import {
 import { getIdFromFileName } from './gatheredJson';
 import type { SceneJSON, SceneRun } from './sceneAssets';
 
-/** What's wrong with a block's import, material and scatter ids: none when all are asset JSONs' */
+/** What's wrong with a block's import, material, scatter and decal set ids: none when all are
+ * asset JSONs' */
 const getBlockErrors = (reg: Registries, block: TerrainBlockAsset) => {
   const errors: string[] = [];
-  const { geometry, material, scatter } = block;
+  const { geometry, material, scatter, decals } = block;
   for (const scatterId of scatter ?? []) {
     if (!reg.scatters[scatterId])
       errors.push(`scatter: no *.scatter.json has the id "${scatterId}"`);
+  }
+  for (const decalSetId of decals ?? []) {
+    if (!reg.decalSets[decalSetId])
+      errors.push(`decals: no *.decalSet.json has the id "${decalSetId}"`);
   }
   if ('importedAsset' in geometry && !reg.importedAssets[geometry.importedAsset]) {
     errors.push(
@@ -48,7 +53,17 @@ const getBlockErrors = (reg: Registries, block: TerrainBlockAsset) => {
 
 /** The block with its defaults filled in, as scenes get it */
 const toTerrainBlockDef = (block: TerrainBlockAsset, id: string): TerrainBlockDef => {
-  const { geometry, material, materialInputs, grid, collider, shadows, scatter, debugData } = block;
+  const {
+    geometry,
+    material,
+    materialInputs,
+    grid,
+    collider,
+    shadows,
+    scatter,
+    decals,
+    debugData,
+  } = block;
   const { friction, restitution } = collider ?? {};
   return {
     id,
@@ -81,12 +96,13 @@ const toTerrainBlockDef = (block: TerrainBlockAsset, id: string): TerrainBlockDe
       receive: shadows?.receive ?? TERRAIN_BLOCK_DEFAULTS.shadows.receive,
     },
     ...(scatter?.length ? { scatter: [...new Set(scatter)] } : {}),
+    ...(decals?.length ? { decals: [...new Set(decals)] } : {}),
     ...(debugData ? { debugData } : {}),
   };
 };
 
-/** Pass 1's terrain blocks (after the materials, the imports and the scatters: a block names
- * them) */
+/** Pass 1's terrain blocks (after the materials, the imports, the scatters and the decal sets: a
+ * block names them) */
 export const readTerrainBlocks = (ctx: GatherContext, reg: Registries, taken: TakenIds) =>
   readAssetJsons(
     ctx,
@@ -110,7 +126,7 @@ export const readTerrainBlocks = (ctx: GatherContext, reg: Registries, taken: Ta
 /** Appends an id to one of a scene's lists, unless the list names it already (by id or inline) */
 export const appendSceneListId = (
   scene: SceneJSON,
-  key: 'importedAssets' | 'materials' | 'geometries' | 'scatters',
+  key: 'importedAssets' | 'materials' | 'geometries' | 'scatters' | 'decalSets',
   id: string
 ) => {
   const list = (scene[key] ?? []) as readonly (string | { id?: string })[];
@@ -120,9 +136,9 @@ export const appendSceneListId = (
 
 /**
  * The scene pass's terrain blocks: each id a scene lists replaced by the block's data (each once),
- * its import, material and scatters appended to the scene's `importedAssets`, `materials` and
- * `scatters` (unless listed). An id no block has fails the gather. Before the scatters, materials
- * and imports are resolved (the appended ids resolve as listed ones) and the texture closure (it
+ * its import, material, scatters and decal sets appended to the scene's `importedAssets`,
+ * `materials`, `scatters` and `decalSets` (unless listed). An id no block has fails the gather.
+ * Before the scatters, decal sets, materials and imports are resolved (the appended ids resolve as listed ones) and the texture closure (it
  * reads the blocks' `materialInputs`).
  */
 export const resolveTerrainBlocks = ({ ctx, reg, scene, reportUnknownId }: SceneRun) => {
@@ -142,6 +158,7 @@ export const resolveTerrainBlocks = ({ ctx, reg, scene, reportUnknownId }: Scene
     }
     appendSceneListId(scene, 'materials', def.material);
     for (const scatterId of def.scatter ?? []) appendSceneListId(scene, 'scatters', scatterId);
+    for (const decalSetId of def.decals ?? []) appendSceneListId(scene, 'decalSets', decalSetId);
   }
   // The generated data's shape: the definitions in place of the ids
   scene.terrainBlocks = defs as unknown as string[];

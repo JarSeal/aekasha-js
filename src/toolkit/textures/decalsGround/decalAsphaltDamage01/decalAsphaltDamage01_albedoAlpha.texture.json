@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../../../.schemas/texture.schema.json",
+  "id": "decalAsphaltDamage01_albedoAlpha",
+  "sourceOnly": true,
+  "texOpts": {
+    "colorSpace": "srgb"
+  },
+  "pack": {
+    "channels": {
+      "rgb": {
+        "src": "./source/raw/color.jpg"
+      },
+      "a": {
+        "src": "./source/raw/opacity.jpg",
+        "channel": "r"
+      }
+    }
+  },
+  "debugData": {
+    "name": "decalAsphaltDamage01 albedoAlpha",
+    "description": "p309 D1 DECAL albedoAlpha of ambientCG AsphaltDamage001 (CC0): colour, its opacity map. An atlas cell's source only."
+  }
+}
