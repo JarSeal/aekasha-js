@@ -1197,6 +1197,10 @@ The workflow
 6. Into Ækasha: yarn assets --only <setId>, then add "<setId>" to the block's terrainBlock JSON "decals": the set spawns with the block. A decal set of a scene's own: the scene's "decalSets" and spawnDecalSet('<setId>').
 
 Merging: a node's custom prop merge (Object Properties > Custom Properties) puts the decal in a merge group: CUTOUT decals in a BAKED group, BLEND ones in a BATCHED group.
+
+In the engine
+- A decal's albedo replaces the ground's, so it reads only on grounds it suits: the tyre tracks' sand reads pressed into a light mud but as pale strips on a dark one. Tint the set to its ground: a material JSON of your own, decalsGround_blend's with an input "tint" ("#666666" on the dark mud), named by the set's decalSet.json. Check it on that ground.
+- The edge fade is a tenth of DecalUV at each edge, so a 35 m strip fades over 3.5 m at each end. That material's input "edgeFade": [0.01, 0.1] fades it over 35 cm.
 """
 
 
