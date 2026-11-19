@@ -18,9 +18,10 @@ const FLIGHT_SEC = 0.8;
 /** Where the camera stops: in front of the block (+z) and above it, looking at its ramp side */
 const VIEW_OFFSET = { y: BLOCK_SIZE * 0.6, z: BLOCK_SIZE * 1.05 };
 const LOOK_OFFSET = { y: 0.5, z: -BLOCK_SIZE * 0.1 };
-/** The measurement's pose: closer and steeper, the block across the canvas's height */
-const MEASURE_OFFSET = { y: BLOCK_SIZE * 0.8, z: BLOCK_SIZE * 0.42 };
-const MEASURE_LOOK_OFFSET = { y: 0, z: -BLOCK_SIZE * 0.06 };
+/** The measurement's pose, in block sides: closer and steeper, the block across the canvas's
+ * height */
+const MEASURE_OFFSET = { y: 0.8, z: 0.42 };
+const MEASURE_LOOK_Z = -0.06;
 
 /** The scene camera's FOV (`terrainGalleryCamera.camera.json`): a flight without one eases back
  * to it */
@@ -198,13 +199,31 @@ export const holdGalleryCameraPose = (pose: GalleryCameraPose) => {
 };
 
 /**
+ * The measurement's pose over a block: in front of it (+z) and steeply above, the block across
+ * the canvas's height, at the default FOV
+ * @param block its centre, its ground's height (default 0) and its side (default a library
+ * block's)
+ * @returns where the camera stands and what it looks at
+ */
+export const getMeasurePose = (block: {
+  x: number;
+  y?: number;
+  z: number;
+  size?: number;
+}): GalleryCameraPose => {
+  const size = block.size ?? BLOCK_SIZE;
+  const y = block.y ?? 0;
+  return {
+    pos: { x: block.x, y: y + size * MEASURE_OFFSET.y, z: block.z + size * MEASURE_OFFSET.z },
+    look: { x: block.x, y, z: block.z + size * MEASURE_LOOK_Z },
+  };
+};
+
+/**
  * Puts the scene's camera in the measurement's pose over a block at once (a running flight
  * stops).
- * @param block the block's centre on the ground
+ * @param block the block's centre on the ground (a library block's size)
  * @returns a function that puts the camera back where it was, or null without the camera
  */
 export const holdMeasurePose = (block: { x: number; z: number }) =>
-  holdGalleryCameraPose({
-    pos: { x: block.x, y: MEASURE_OFFSET.y, z: block.z + MEASURE_OFFSET.z },
-    look: { x: block.x, y: MEASURE_LOOK_OFFSET.y, z: block.z + MEASURE_LOOK_OFFSET.z },
-  });
+  holdGalleryCameraPose(getMeasurePose(block));

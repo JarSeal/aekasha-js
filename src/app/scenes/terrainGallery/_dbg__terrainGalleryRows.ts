@@ -62,6 +62,8 @@ export type GalleryRow = {
   /** What it shows, one line */
   shows: string;
   bounds: GalleryBounds;
+  /** Whether the tab's quality tiers apply to its blocks (the measurement runs each) */
+  takesTiers: boolean;
   /** The height its blocks stand at (a signpost's foot) */
   getY: () => number;
   /** Its blocks, read when asked (the Rules row's lift is its load's) */
@@ -107,6 +109,7 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
     letter: 'A',
     title: 'Library',
     shows: 'Every texture set alone, 12 m blocks',
+    takesTiers: true,
     bounds: boundsOf(GALLERY_BLOCKS.map(({ x, z }) => ({ x, z, size: BLOCK_SIZE }))),
     getY: () => 0,
     getBlocks: () =>
@@ -124,6 +127,7 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
     letter: 'B',
     title: 'Packing',
     shows: 'sand01, grass01 and cliffs01 in FULL, LITE and MINIMAL, left to right',
+    takesTiers: true,
     bounds: PACKING_ROW_BOUNDS,
     getY: () => 0,
     getBlocks: () =>
@@ -141,6 +145,7 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
     letter: 'C',
     title: 'Anti-tiling',
     shows: 'NONE, DUAL_SCALE and HEX on 48 m of grass01, the macro variation',
+    takesTiers: false,
     bounds: ANTI_TILING_ROW_BOUNDS,
     getY: () => 0,
     getBlocks: () =>
@@ -158,6 +163,7 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
     letter: 'D',
     title: 'Splatting',
     shows: 'Vertex colour and splat map, LINEAR against HEIGHT, RGB_AO, 9 layers',
+    takesTiers: true,
     bounds: SPLATTING_ROW_BOUNDS,
     getY: () => SPLATTING_BLOCK_Y,
     getBlocks: () =>
@@ -175,6 +181,7 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
     letter: 'E',
     title: 'Rules',
     shows: 'Layers laid by procedural rules on 64 m blocks',
+    takesTiers: true,
     bounds: RULES_ROW_BOUNDS,
     getY: () => getRulesTerrain().y,
     getBlocks: () =>
@@ -192,6 +199,7 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
     letter: 'E',
     title: 'Blocks patch',
     shows: 'rulesTerrain blocks: the rules on the CPU against in the shader',
+    takesTiers: false,
     bounds: PATCH_BOUNDS,
     getY: () => 0,
     getBlocks: getPatchBlocks,
@@ -201,6 +209,7 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
     letter: 'F',
     title: 'Cliffs',
     shows: 'PLANAR, BIPLANAR, TRIPLANAR and slope-gated on a mesa',
+    takesTiers: false,
     bounds: CLIFFS_ROW_BOUNDS,
     getY: () => CLIFFS_BLOCK_Y,
     getBlocks: () =>
@@ -218,6 +227,7 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
     letter: 'G',
     title: 'Procedural',
     shows: 'A block per surface generator: imported, baked or live',
+    takesTiers: false,
     bounds: {
       ...PROCEDURAL_BOUNDS,
       maxX: PROCEDURAL_ROW_EDGE_X,
@@ -239,6 +249,7 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
     letter: 'G',
     title: 'Live block',
     shows: 'A procedural set run live in the terrain material, or baked',
+    takesTiers: true,
     bounds: LIVE_BLOCK_BOUNDS,
     getY: () => GROUND_TOP_Y,
     getBlocks: () => [
@@ -250,6 +261,7 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
     letter: 'H',
     title: 'Colour map',
     shows: 'The 8 layers, DETAIL, far COLOR_MAP and far AVERAGE_COLOR',
+    takesTiers: true,
     bounds: COLOR_MAP_ROW_BOUNDS,
     getY: () => getRulesTerrain().y,
     getBlocks: () =>
@@ -267,6 +279,7 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
     letter: 'I',
     title: 'Structures',
     shows: 'Structure materials in world and object space, worn by vertex colour',
+    takesTiers: false,
     bounds: STRUCTURES_ROW_BOUNDS,
     getY: () => GROUND_TOP_Y,
     getBlocks: () =>
@@ -284,6 +297,7 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
     letter: 'J',
     title: 'Wet/dry',
     shows: 'A set of each category and a beach under the surface conditions',
+    takesTiers: false,
     bounds: WET_ROW_BOUNDS,
     getY: () => 0,
     getBlocks: () =>
@@ -301,6 +315,7 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
     letter: 'K',
     title: 'Scatter',
     shows: 'Procedural against imported rocks, leaf cards',
+    takesTiers: false,
     bounds: SCATTER_ROW_BOUNDS,
     getY: () => 0,
     getBlocks: () => [
@@ -313,6 +328,7 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
     letter: 'L',
     title: 'Decals',
     shows: 'The atlases, BLEND and CUTOUT decals on the stage, the bake bench, the footprint pad',
+    takesTiers: false,
     bounds: {
       minX: Math.min(DECALS_ROW_BOUNDS.minX, DECALS_STAGE_BOUNDS.minX, PAD_BOUNDS.minX),
       maxX: Math.max(
@@ -348,6 +364,7 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
     letter: '—',
     title: 'Orientation',
     shows: 'terrainBlockTest’s Blender block: its corner markers by vertex colour and by splat map',
+    takesTiers: false,
     bounds: ORIENTATION_BOUNDS,
     getY: () => 0,
     getBlocks: () => [{ key: 'block', label: 'Orientation block', ...ORIENTATION_BLOCK, y: 0 }],

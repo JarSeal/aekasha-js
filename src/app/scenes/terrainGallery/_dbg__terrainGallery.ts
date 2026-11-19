@@ -69,6 +69,11 @@ import { startDecalBakeTab } from './_dbg__terrainGalleryDecalBakes';
 import { getPadSections, startPadTab } from './_dbg__terrainGalleryPad';
 import { PAD_BLOCK_ID } from './padBlock';
 import { getOrientationSections, startOrientationTab } from './_dbg__terrainGalleryOrientation';
+import {
+  getMeasureSections,
+  startMeasureTab,
+  type MeasureSectionOpts,
+} from './_dbg__terrainGalleryMeasure';
 import { ORIENTATION_APP_ID } from './orientationBlock';
 import { clearWetSelection, getWetSections, startWetTab } from './_dbg__terrainGalleryWet';
 import { getLiveSections, startLiveTab, type LiveSectionOpts } from './_dbg__terrainGalleryLive';
@@ -501,6 +506,23 @@ const proceduralOpts: ProceduralSectionsOpts = {
   getOtherAppIds,
 };
 
+/** What the measurement needs of this tab: the tier through its Quality, a block's packing */
+const measureOpts: MeasureSectionOpts = {
+  tabId: TAB_ID,
+  getQuality: () => state.quality,
+  setQuality: (quality) => {
+    state.quality = quality;
+    applyMaterial();
+    updateDebuggerTab(TAB_ID);
+  },
+  getPacking: (rowId, blockKey) => {
+    if (rowId === 'library') return getBlockPacking(blockKey) ?? '';
+    if (rowId === 'packing')
+      return PACKING_BLOCKS.find(({ key }) => key === blockKey)?.packing ?? '';
+    return '';
+  },
+};
+
 /** What the Live block's section needs of this tab */
 const liveOpts: LiveSectionOpts = { tabId: TAB_ID, getOtherAppIds: getAllButLiveAppIds };
 
@@ -532,6 +554,7 @@ export const createTerrainGalleryTab = () => {
   const endDecalBakeTab = startDecalBakeTab();
   const endPadTab = startPadTab();
   startOrientationTab();
+  const endMeasureTab = startMeasureTab(measureOpts);
   addGalleryExitCleanup(() => {
     thisVisit.isCurrent = false;
     stopGalleryFlight(true);
@@ -540,6 +563,7 @@ export const createTerrainGalleryTab = () => {
     endLiveTab();
     endDecalBakeTab();
     endPadTab();
+    endMeasureTab();
   });
 
   createDebuggerTab({
@@ -647,6 +671,7 @@ export const createTerrainGalleryTab = () => {
       }),
       // Its fields bind their own targets, none of this tab's state keys
       ...(getPresetSections(TAB_ID) as DebuggerTabSection<GalleryTabState>[]),
+      ...(getMeasureSections(measureOpts) as DebuggerTabSection<GalleryTabState>[]),
       debuggerListCMP({
         id: 'terrainGallerySets',
         heading: 'Texture sets',

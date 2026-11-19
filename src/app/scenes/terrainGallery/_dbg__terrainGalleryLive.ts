@@ -4,14 +4,20 @@
 // pose, nothing then baked then live, the frame's GPU time averaged (the tab's Quality select sets
 // the tier measured). Scripts drive it through `window.__terrainGalleryLive`.
 import { addDebugToast, updateDebuggerTab, type DebuggerTabSection } from 'aekasha/debug';
-import { getMeshByAppId, getRenderer } from 'aekasha';
+import { getMeshByAppId } from 'aekasha';
 import { sandRipples } from 'aekasha/toolkit/terrain';
 import {
   flyGalleryCamera,
   holdGalleryCameraPose,
   type GalleryCameraPose,
 } from './_dbg__terrainGalleryCamera';
-import { hideMeshes, sampleFrameGpuMsAsync } from './_dbg__terrainGalleryProcedural';
+import {
+  getMeasureHeading,
+  hideMeshes,
+  sampleFrameGpuMsAsync,
+  startMeasureConditions,
+  warnNoFrameTimes,
+} from './_dbg__terrainGalleryMeasure';
 import {
   applyLiveValues,
   getDefaultLiveValues,
@@ -82,13 +88,8 @@ const formatMs = (ms: number | null | undefined) =>
 
 /** The measurements as a markdown table, the machine's part of its heading */
 const buildTable = (results: Map<LivePose, PoseMeasurement>) => {
-  const renderer = getRenderer();
-  const canvas = renderer?.domElement;
-  const backend = (renderer?.backend as { isWebGPUBackend?: boolean } | undefined)?.isWebGPUBackend
-    ? 'WebGPU'
-    : 'WebGL2';
   const lines = [
-    `Frame GPU ms, the Live block alone (${backend}, ${canvas?.width} × ${canvas?.height} px canvas):`,
+    ...getMeasureHeading('the Live block alone'),
     '',
     `| Pose | ${MEASURE_STEPS.map((step) => (step === 'EMPTY' ? 'Empty frame' : MODE_LABELS[step])).join(' | ')} |`,
     '| --- | --- | --- | --- |',
@@ -114,6 +115,7 @@ const measureAsync = async (opts: LiveSectionOpts) => {
   figures.measure = 'measuring…';
   const startedOn = visit;
   const shownMode = getLiveMode();
+  const endConditions = startMeasureConditions();
   const showOthers = hideMeshes(opts.getOtherAppIds());
   const results = new Map<LivePose, PoseMeasurement>();
   let restoreCamera: (() => void) | null = null;
@@ -141,17 +143,12 @@ const measureAsync = async (opts: LiveSectionOpts) => {
       setLiveMode(shownMode);
       showOthers();
       restoreCamera?.();
+      endConditions();
     }
   }
   if (!hasFrameTimes) {
     figures.measure = '-';
-    addDebugToast({
-      type: 'warning',
-      title: 'No GPU frame times',
-      message:
-        'The measurement needs GPU timer queries (WebGPU with timestamp-query) and a running main loop.',
-      showingTime: 10000,
-    });
+    warnNoFrameTimes();
     return null;
   }
   lastTable = buildTable(results);

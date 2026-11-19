@@ -171,14 +171,20 @@ const getBlockOptions = () =>
   );
 
 /** The selected block, or the first row's first when the value names none (a removed row) */
-const getSelectedBlock = () => {
+/**
+ * The presets' selected block and its row's id (the measurement's block too), or the first row's
+ * first block when the value names none (a removed row)
+ */
+export const getPresetSelection = () => {
   for (const row of GALLERY_ROWS) {
     for (const block of row.getBlocks()) {
-      if (getBlockValue(row.id, block.key) === presetState.block) return block;
+      if (getBlockValue(row.id, block.key) === presetState.block) return { rowId: row.id, block };
     }
   }
-  return GALLERY_ROWS[0].getBlocks()[0];
+  return { rowId: GALLERY_ROWS[0].id, block: GALLERY_ROWS[0].getBlocks()[0] };
 };
+
+const getSelectedBlock = () => getPresetSelection().block;
 
 /**
  * Makes a block the presets' (a list flew to it)

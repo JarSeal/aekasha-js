@@ -2,19 +2,25 @@
 // the generators' list, the selected generator's values (a field per param from its spec, so a
 // slider tunes the bake and the live surface together), its bake's stats, its export, and the GPU
 // measurement: a block alone in the measurement pose, each mode in turn, the frame's GPU time
-// averaged (p310 standardizes the canvas and the tiers; this is the figure for the handbook's
-// baked against live rows).
-import { getMeshByAppId, getRenderer, getTextureBakeStats, lerror } from 'aekasha';
+// averaged on the gallery's sampler and conditions (`_dbg__terrainGalleryMeasure.ts`, p310: the
+// figure for the handbook's baked against live rows).
+import { getTextureBakeStats, lerror } from 'aekasha';
 import {
   addDebugToast,
   debuggerListCMP,
-  onGpuFrameTime,
   updateDebuggerTab,
   type DebuggerPaneItem,
   type DebuggerTabSection,
 } from 'aekasha/debug';
 import { exportBakeOutputsAsync } from '../../shared/_dbg__exportBake';
 import { flyToGalleryBlock, holdMeasurePose } from './_dbg__terrainGalleryCamera';
+import {
+  getMeasureHeading,
+  hideMeshes,
+  sampleFrameGpuMsAsync,
+  startMeasureConditions,
+  warnNoFrameTimes,
+} from './_dbg__terrainGalleryMeasure';
 import {
   applyProceduralValues,
   getProceduralBake,
@@ -45,13 +51,6 @@ const MODE_LABELS: Record<ProceduralMode, string> = {
 /** What a measurement shows a block as: nothing (the frame's floor), then each mode */
 const MEASURE_STEPS = ['EMPTY', ...PROCEDURAL_MODES] as const;
 type MeasureStep = (typeof MEASURE_STEPS)[number];
-/** The frames a step lets pass (a mode's compile, the frames of the step before it), then
- * averages: p310's figures */
-const WARM_UP_FRAMES = 30;
-const SAMPLE_FRAMES = 120;
-/** How long a step waits for its first frame time, and for all of them, ms */
-const FIRST_FRAME_TIMEOUT_MS = 4000;
-const STEP_TIMEOUT_MS = 30000;
 
 /** A block's measurement: the frame's mean GPU ms per step (null: no figure) */
 export type BlockMeasurement = Partial<Record<MeasureStep, number | null>>;
@@ -124,51 +123,11 @@ export const refreshProceduralFigures = () => {
     : describeMeasurement(measurements.get(selectedGeneratorId ?? ''));
 };
 
-/** The mean GPU ms of `SAMPLE_FRAMES` frames after `WARM_UP_FRAMES`, or null when no frame time
- * comes (no timer queries, a paused loop): the gallery's measurements' figure */
-export const sampleFrameGpuMsAsync = () =>
-  new Promise<number | null>((resolve) => {
-    let seen = 0;
-    let sum = 0;
-    const end = (value: number | null) => {
-      clearTimeout(firstFrameTimer);
-      clearTimeout(stepTimer);
-      stop();
-      resolve(value);
-    };
-    const stop = onGpuFrameTime((gpuMs) => {
-      if (seen++ === 0) clearTimeout(firstFrameTimer);
-      if (seen <= WARM_UP_FRAMES) return;
-      sum += gpuMs;
-      if (seen === WARM_UP_FRAMES + SAMPLE_FRAMES) end(sum / SAMPLE_FRAMES);
-    });
-    const firstFrameTimer = setTimeout(() => end(null), FIRST_FRAME_TIMEOUT_MS);
-    const stepTimer = setTimeout(() => end(null), STEP_TIMEOUT_MS);
-  });
-
-/** Hides the meshes of the app ids and returns the function that shows those it hid again */
-export const hideMeshes = (appIds: string[]) => {
-  const hidden = appIds.flatMap((appId) => {
-    const mesh = getMeshByAppId(appId);
-    if (!mesh?.visible) return [];
-    mesh.visible = false;
-    return [mesh];
-  });
-  return () => {
-    for (const mesh of hidden) mesh.visible = true;
-  };
-};
-
 /** The measurements as a markdown table, the machine's part of its heading */
 const buildTable = (generatorIds: string[]) => {
-  const renderer = getRenderer();
-  const canvas = renderer?.domElement;
-  const backend = (renderer?.backend as { isWebGPUBackend?: boolean } | undefined)?.isWebGPUBackend
-    ? 'WebGPU'
-    : 'WebGL2';
   const { packing, size } = getProceduralBakeSettings();
   const lines = [
-    `Frame GPU ms, a block alone (${backend}, ${canvas?.width} × ${canvas?.height} px canvas, bakes ${size}² ${packing}, mean of ${SAMPLE_FRAMES} frames):`,
+    ...getMeasureHeading(`a block alone, the bakes ${size}² ${packing}`),
     '',
     '| Generator | Empty frame | Imported | Baked | Live | Live + taps |',
     '| --- | --- | --- | --- | --- | --- |',
@@ -195,6 +154,7 @@ export const measureBlocksAsync = async (generatorIds: string[], opts: Procedura
   if (isMeasuring) return null;
   isMeasuring = true;
   const startedOn = visit;
+  const endConditions = startMeasureConditions();
   const showOthers = hideMeshes(opts.getOtherAppIds());
   for (const block of PROCEDURAL_BLOCKS) setProceduralBlockMode(block.generator.id, 'HIDDEN');
   let restoreCamera: (() => void) | null = null;
@@ -224,17 +184,12 @@ export const measureBlocksAsync = async (generatorIds: string[], opts: Procedura
       for (const block of PROCEDURAL_BLOCKS) setProceduralBlockMode(block.generator.id, null);
       showOthers();
       restoreCamera?.();
+      endConditions();
       updateDebuggerTab(opts.tabId);
     }
   }
   if (!hasFrameTimes) {
-    addDebugToast({
-      type: 'warning',
-      title: 'No GPU frame times',
-      message:
-        'The measurement needs GPU timer queries (WebGPU with timestamp-query) and a running main loop.',
-      showingTime: 10000,
-    });
+    warnNoFrameTimes();
     return null;
   }
   lastTable = buildTable(generatorIds);
