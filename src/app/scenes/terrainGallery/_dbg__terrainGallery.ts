@@ -39,6 +39,7 @@ import {
   hideGallerySignposts,
   setGallerySignposts,
 } from './_dbg__terrainGalleryRows';
+import { getPresetSections, setPresetBlock, startPresetsTab } from './_dbg__terrainGalleryPresets';
 import {
   clearSplattingSelection,
   getSplattingSections,
@@ -442,6 +443,7 @@ const clearSelectionsBut = (row: keyof typeof SELECTION_CLEARERS) => {
 const flyToBlock = (block: GalleryBlock) => {
   selectedSetId = block.setId;
   clearSelectionsBut('library');
+  setPresetBlock('library', block.setId);
   flyToGalleryBlock(block);
 };
 
@@ -484,6 +486,7 @@ export const createTerrainGalleryTab = () => {
   selectedSetId = null;
   selectedRowId = null;
   stopGalleryFlight(true);
+  startPresetsTab();
   startAntiTilingTab();
   startSplattingTab();
   startRulesTab();
@@ -582,6 +585,7 @@ export const createTerrainGalleryTab = () => {
             if (!row) return;
             selectedRowId = rowId;
             clearSelectionsBut('rows');
+            setPresetBlock(rowId);
             flyGalleryCamera(getRowPose(row));
             updateDebuggerTab(TAB_ID, { rebuild: true });
           },
@@ -595,6 +599,8 @@ export const createTerrainGalleryTab = () => {
             suffix: String(row.getBlocks().length),
           })),
       }),
+      // Its fields bind their own targets, none of this tab's state keys
+      ...(getPresetSections(TAB_ID) as DebuggerTabSection<GalleryTabState>[]),
       debuggerListCMP({
         id: 'terrainGallerySets',
         heading: 'Texture sets',
