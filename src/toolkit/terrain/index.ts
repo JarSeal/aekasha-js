@@ -81,6 +81,8 @@ export { createStructureMaterial, getStructureMaterialConfig } from './material/
 export type { StructureMaterialOpts } from './material/StructureMaterial';
 export { setupDecalMaterial } from './decals/DecalMaterial';
 export type { DecalMaterialInputs } from './decals/DecalMaterial';
+export { createDecalPool, spawnDecal } from './decals/RuntimeDecals';
+export type { CreateDecalPoolOpts, DecalPool, SpawnDecalOpts } from './decals/RuntimeDecals';
 export { setupRockMaterial } from './material/RockMaterial';
 export type { RockMaterialInputs } from './material/RockMaterial';
 export { getTerrainQualityPreset } from './material/TerrainQualityPreset';
