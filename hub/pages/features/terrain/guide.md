@@ -1,3 +1,43 @@
+## Where to start
+
+The handbook (`docs/techniques/`) has a page per technique, each with its Blender steps, its
+JSON, its parameters, its pitfalls and what it costs. Read it in this order:
+
+1. [Asset optimization](repo:docs/techniques/asset-optimization.md) and
+   [Texture sets](repo:docs/techniques/texture-sets.md): how a texture reaches the GPU, and the
+   surfaces themselves.
+2. [Single-layer terrain](repo:docs/techniques/terrain-single-layer.md): the terrain material,
+   its two routes, anti-tiling, the tiers and the debug views, which every other page builds on.
+3. **Pick your camera** in the
+   [matrix](repo:docs/techniques/README.md#which-technique-for-my-game) and read the pages its
+   row links: the blend ([vertex colour](repo:docs/techniques/terrain-vertex-color-splat.md),
+   [splat map](repo:docs/techniques/terrain-splat-map.md) or
+   [rules](repo:docs/techniques/terrain-procedural-rules.md)), the
+   [cliffs](repo:docs/techniques/terrain-triplanar-cliffs.md), the
+   [far surface](repo:docs/techniques/terrain-colormap-detail.md) and, for walls,
+   [structures](repo:docs/techniques/structure-materials.md).
+4. The geometry: blocks [from Blender](repo:docs/techniques/terrain-blocks-blender.md) or
+   [generated](repo:docs/techniques/terrain-procedural-meshes.md).
+5. The dressing and the weather: [scatter](repo:docs/techniques/terrain-scatter.md),
+   [decals](repo:docs/techniques/terrain-decals.md),
+   [wet and dry surfaces](repo:docs/techniques/wet-dry-surfaces.md).
+
+The matrix in short, with what each game type's ground measured from its camera (the gallery's
+[measurement](repo:docs/techniques/README.md#how-the-figures-are-measured): an AMD RDNA 3 GPU,
+WebGPU, 1920 × 1080; the block's own GPU time, so compare within one machine only):
+
+| Game type and camera     | The material                                                   | Measured                       |
+| ------------------------ | -------------------------------------------------------------- | ------------------------------ |
+| First person             | Splat map + rules, `HEX` on the dominant layer, gated cliffs   | 0.98 ms `MEDIUM`, 1.29 `HIGH`  |
+| Third person             | Vertex colour or splat map + rules, gated cliffs               | 0.56 `MEDIUM`, 0.72 `HIGH`     |
+| Top-down, isometric, RTS | A colour map + detail, or vertex colour; a `COLOR_MAP` far     | 0.83–0.92 own, 0.41–0.42 `LOW` |
+| Side-view platformer     | One layer or vertex colour; structures, triplanar on the faces | 0.15 (a slope-gated cliff)     |
+| Racing, flight           | Rules or paint, the far surface early                          | 0.17 own, 0.18 `MEDIUM`        |
+| Stylized, low-end        | Vertex colour, `MINIMAL`, the `LOW` tier                       | 0.27 `LOW`                     |
+
+The tiers are the GPU's knob (`LOW` halves a many-layer material); the packing is memory, not GPU
+time; the wettest weather costs what dry does.
+
 ## Installing it
 
 List [`textureSets()`](api:textureSets), from `aekasha/texturesets`, in `InitEngine`'s `features`
@@ -777,7 +817,22 @@ the pitfalls: [Terrain decals](repo:docs/techniques/terrain-decals.md).
 
 ## Debugging
 
-- **The gallery** (above): `?isDebug=true&startScene=terrainGallery`. Its packing switch is also
+::: scene terrainGallery
+Every set of the toolkit's library on a 12 m block of generated terrain with a 35° ramp, the cliffs
+with a wall, under a still 10:00 sky. Its debug tab ("Terrain gallery") flies the camera to a
+set, switches `sand01`, `grass01` and `cliffs01` between their three packings, and lays a 1 m
+checker over the ground for judging each set's scale. Around the library, a row per technique of
+the terrain material (packing, anti-tiling, splatting, rules, cliffs, colour maps, structures, a
+live procedural layer, wet and dry), each with its sliders and measurement, the Procedural row: each generator on a
+block, baked, live or beside an imported set of its category, and the Scatter row: procedural and
+imported rocks on one block, and leaf litter beside it, and the Decals row and stage: both decal
+atlases, and every cell on mud and concrete, blended and cut out. The tab's Quality and Debug
+view selects switch every terrain block to a tier or a debug view; its Camera presets put the
+camera where each game type's would be, and its Measurement times a block, a row or the
+handbook's matrix.
+:::
+
+- **The gallery:** `?isDebug=true&startScene=terrainGallery`. Its packing switch is also
   the check that a normal map is lit from the right side: `MINIMAL`'s bump has no tangent frame,
   so `FULL` and `MINIMAL` disagreeing means a mirrored map or frame.
 - **The gallery's Procedural row:** click a generator in its tab's "Procedural surfaces" list to
@@ -795,6 +850,17 @@ the pitfalls: [Terrain decals](repo:docs/techniques/terrain-decals.md).
   under the [surface conditions](hub:features/surface-conditions), with streaking pieces and a
   canopy). The tab's Quality select switches every terrain
   block to a tier, and its Debug view select to a view.
+- **The gallery's camera presets and measurement:** the tab's Camera presets pose the camera over
+  the selected block as each game type's would (first person, third person, top-down,
+  isometric, side view, a flyover). Its Measurement shows the block alone (Solo) and measures
+  its frame's GPU time and draw calls, hidden and then at each tier, from its own pose or a
+  preset's; Measure row does a row, Measure matrix the handbook's game types. The table goes to
+  the clipboard with the machine in its heading (WebGPU only: on WebGL2 the frame times are
+  missing about one frame in three).
+- **The showcase** (above): `?isDebug=true&startScene=terrainShowcase`. Its tab puts the player on
+  a block, plays a rain shower, a snowfall or the day, measures each block's weather cost, and
+  switches every block's debug view and tier and the generated block's rules between its vertex
+  colours and the shader.
 - **The debug views** (a config's `debugView`, debug builds only; from code, after
   [`loadTerrainDebugViewsAsync`](api:loadTerrainDebugViewsAsync)): `TEXEL_DENSITY` (texels a metre
   in colour bands over a 1 m checker), `NORMALS`, `WEIGHTS` (each layer's false colour),
