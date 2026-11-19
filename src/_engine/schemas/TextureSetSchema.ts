@@ -118,7 +118,9 @@ export type TextureSetWetResponse = Pick<
 /**
  * Each category's wet response (p307 S3): what the gatherer writes for a field the set's
  * `surface` doesn't give. Sand darkens strongly and dries fast, mud glosses quickly and dries
- * slowly, ice films at once; `OTHER` is {@link TEXTURE_SET_SURFACE_DEFAULTS}'.
+ * slowly, ice films at once; wet snow greys to slush, wet grass stays rough (its water beads, no
+ * film); `OTHER` is {@link TEXTURE_SET_SURFACE_DEFAULTS}'. Judged against CC0 photos (p310 Phase 3,
+ * `docs/techniques/wet-dry-surfaces.md`' references).
  */
 export const TEXTURE_SET_WET_RESPONSES = {
   SAND: {
@@ -151,7 +153,7 @@ export const TEXTURE_SET_WET_RESPONSES = {
   },
   SNOW: {
     porosity: 0.5,
-    wetDarkening: 0.25,
+    wetDarkening: 0.45,
     wetRoughness: 0.3,
     puddleResponse: 0.5,
     dryingSpeed: 0.6,
@@ -160,7 +162,7 @@ export const TEXTURE_SET_WET_RESPONSES = {
   GRASS: {
     porosity: 0.6,
     wetDarkening: 0.35,
-    wetRoughness: 0.35,
+    wetRoughness: 0.55,
     puddleResponse: 0.2,
     dryingSpeed: 0.8,
   },

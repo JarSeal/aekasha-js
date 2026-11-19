@@ -21368,7 +21368,7 @@
             "heightContrast": 1,
             "porosity": 0.6,
             "wetDarkening": 0.35,
-            "wetRoughness": 0.35,
+            "wetRoughness": 0.55,
             "puddleResponse": 0.2,
             "dryingSpeed": 0.8
           },
@@ -21400,7 +21400,7 @@
             "aoStrength": 1,
             "heightContrast": 1,
             "porosity": 0.5,
-            "wetDarkening": 0.25,
+            "wetDarkening": 0.45,
             "wetRoughness": 0.3,
             "puddleResponse": 0.5,
             "dryingSpeed": 0.6
@@ -25660,7 +25660,7 @@
             "aoStrength": 1,
             "heightContrast": 1,
             "porosity": 0.5,
-            "wetDarkening": 0.25,
+            "wetDarkening": 0.45,
             "wetRoughness": 0.3,
             "puddleResponse": 0.5,
             "dryingSpeed": 0.6
@@ -25693,7 +25693,7 @@
             "aoStrength": 1,
             "heightContrast": 1,
             "porosity": 0.5,
-            "wetDarkening": 0.25,
+            "wetDarkening": 0.45,
             "wetRoughness": 0.3,
             "puddleResponse": 0.5,
             "dryingSpeed": 0.6
@@ -25801,7 +25801,7 @@
             "heightContrast": 1,
             "porosity": 0.6,
             "wetDarkening": 0.35,
-            "wetRoughness": 0.35,
+            "wetRoughness": 0.55,
             "puddleResponse": 0.2,
             "dryingSpeed": 0.8
           },
@@ -25834,7 +25834,7 @@
             "heightContrast": 1,
             "porosity": 0.6,
             "wetDarkening": 0.35,
-            "wetRoughness": 0.35,
+            "wetRoughness": 0.55,
             "puddleResponse": 0.2,
             "dryingSpeed": 0.8
           },
@@ -29585,7 +29585,7 @@
             "aoStrength": 1,
             "heightContrast": 1,
             "porosity": 0.5,
-            "wetDarkening": 0.25,
+            "wetDarkening": 0.45,
             "wetRoughness": 0.3,
             "puddleResponse": 0.5,
             "dryingSpeed": 0.6
@@ -29809,7 +29809,7 @@
             "heightContrast": 1,
             "porosity": 0.6,
             "wetDarkening": 0.35,
-            "wetRoughness": 0.35,
+            "wetRoughness": 0.55,
             "puddleResponse": 0.2,
             "dryingSpeed": 0.8
           },
@@ -29842,7 +29842,7 @@
             "heightContrast": 1,
             "porosity": 0.6,
             "wetDarkening": 0.35,
-            "wetRoughness": 0.35,
+            "wetRoughness": 0.55,
             "puddleResponse": 0.2,
             "dryingSpeed": 0.8
           },
@@ -29907,7 +29907,7 @@
             "aoStrength": 1,
             "heightContrast": 1,
             "porosity": 0.5,
-            "wetDarkening": 0.25,
+            "wetDarkening": 0.45,
             "wetRoughness": 0.3,
             "puddleResponse": 0.5,
             "dryingSpeed": 0.6
@@ -48744,7 +48744,7 @@
         "heightContrast": 1,
         "porosity": 0.6,
         "wetDarkening": 0.35,
-        "wetRoughness": 0.35,
+        "wetRoughness": 0.55,
         "puddleResponse": 0.2,
         "dryingSpeed": 0.8
       },
@@ -48778,7 +48778,7 @@
         "heightContrast": 1,
         "porosity": 0.6,
         "wetDarkening": 0.35,
-        "wetRoughness": 0.35,
+        "wetRoughness": 0.55,
         "puddleResponse": 0.2,
         "dryingSpeed": 0.8
       },
@@ -49161,7 +49161,7 @@
         "aoStrength": 1,
         "heightContrast": 1,
         "porosity": 0.5,
-        "wetDarkening": 0.25,
+        "wetDarkening": 0.45,
         "wetRoughness": 0.3,
         "puddleResponse": 0.5,
         "dryingSpeed": 0.6
@@ -49195,7 +49195,7 @@
         "aoStrength": 1,
         "heightContrast": 1,
         "porosity": 0.5,
-        "wetDarkening": 0.25,
+        "wetDarkening": 0.45,
         "wetRoughness": 0.3,
         "puddleResponse": 0.5,
         "dryingSpeed": 0.6
