@@ -112,9 +112,13 @@ export const scene = async () => {
     if (!block) return; // the scene was left meanwhile: nothing was kept
     blocks.push(block);
   }
+  // Casting shadows makes its pieces the rain occlusion map's occluders: the wetlands' ground
+  // inside the doorway stays dry in the rain
   await spawnImportedAsset('showcaseBunker', {
     transform: { position: BUNKER_POSITION },
     material: 'structureBunker',
+    castShadow: true,
+    receiveShadow: true,
   });
   const leaks = await spawnDecalSet('showcaseBunker_leaks', {
     transform: { position: BUNKER_POSITION },

@@ -13,7 +13,14 @@
       },
       "ao": { "vertex": true },
       "antiTiling": { "mode": "DUAL_SCALE" },
-      "wet": { "puddles": { "maxSlope": 8 }, "ripples": {}, "regional": {} }
+      "wet": {
+        "puddles": { "maxSlope": 8, "patches": { "scale": 20 } },
+        "ripples": {},
+        "regional": {},
+        "snow": {},
+        "frost": {},
+        "rainOcclusion": "MAP"
+      }
     }
   },
   "inputs": {
@@ -21,10 +28,12 @@
       "textureSetArray": ["mud01", "mud02", "grass02", "rocks01"],
       "packing": "LITE"
     },
-    "ripples": { "texture": "rippleAtlas" }
+    "macro": { "texture": "macroNoise" },
+    "ripples": { "texture": "rippleAtlas" },
+    "snow": { "textureSet": "snow01" }
   },
   "debugData": {
     "name": "Showcase wetlands terrain",
-    "description": "terrainShowcase's wetlands (p310 §3.5): mud01 (the base), mud02 (the channel, its banks and the hollows), grass02 (the raised ground) and rocks01 (the path and the bunker's pad) weighed by the block's COLOR_0 (RGB_AO, the AO on indirect light) through the height blend, DUAL_SCALE, the sets as one array (ARRAY storage: the quality tiers sample in slots), and wet: puddles on ground flatter than 8°, rain ripples, and the regional wetness of the block's _WETNESS attribute (the default _wetness: three's GLTFLoader lowercases it), so the channel and the hollows stay wet in any weather."
+    "description": "terrainShowcase's wetlands (p310 §3.5): mud01 (the base), mud02 (the channel, its banks and the hollows), grass02 (the raised ground) and rocks01 (the path and the bunker's pad) weighed by the block's COLOR_0 (RGB_AO, the AO on indirect light) through the height blend, DUAL_SCALE, the sets as one array (ARRAY storage: the quality tiers sample in slots), and wet: puddles on ground flatter than 8° in patches (the macro noise's B at 20 m), rain ripples, and the regional wetness of the block's _WETNESS attribute (the default _wetness: three's GLTFLoader lowercases it), so the channel and the hollows stay wet in any weather; snow (snow01) and frost; and the rain occlusion map (MAP), so the ground inside the bunker's doorway stays dry in the rain."
   }
 }

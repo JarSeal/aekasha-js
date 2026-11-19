@@ -17,7 +17,9 @@
       "wet": {
         "shoreline": { "band": 1.5, "noise": 0.5, "runUp": {} },
         "puddles": {},
-        "ripples": {}
+        "ripples": {},
+        "snow": {},
+        "frost": {}
       }
     }
   },
@@ -27,10 +29,11 @@
       "packing": "LITE"
     },
     "macro": { "texture": "macroNoise" },
-    "ripples": { "texture": "rippleAtlas" }
+    "ripples": { "texture": "rippleAtlas" },
+    "snow": { "textureSet": "snow01" }
   },
   "debugData": {
     "name": "Showcase coast terrain",
-    "description": "terrainShowcase's coast (p310 §3.3): sand01 (the dunes), sand02 (the beach along the waterline), rocks01 (gravel at the cliff foot) and cliffs01 (the cliff face, triplanar past a 35-50° slope gate) weighed by the block's COLOR_0 (RGB_AO, the AO on indirect light) through the height blend, HEX on the dominant layer and DUAL_SCALE on the others (which samples in slots: a set array, the scene's textureSetArrays entry), the macro variation, and wet: the shoreline along the scene's water level with waves running up, puddles and rain ripples."
+    "description": "terrainShowcase's coast (p310 §3.3): sand01 (the dunes), sand02 (the beach along the waterline), rocks01 (gravel at the cliff foot) and cliffs01 (the cliff face, triplanar past a 35-50° slope gate) weighed by the block's COLOR_0 (RGB_AO, the AO on indirect light) through the height blend, HEX on the dominant layer and DUAL_SCALE on the others (which samples in slots: a set array, the scene's textureSetArrays entry), the macro variation, and wet: the shoreline along the scene's water level with waves running up, puddles and rain ripples, snow (snow01) by the surface conditions' snow cover and frost below freezing."
   }
 }

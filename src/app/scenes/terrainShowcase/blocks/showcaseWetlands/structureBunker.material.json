@@ -11,7 +11,8 @@
       "antiTiling": { "mode": "DUAL_SCALE" },
       "macro": { "scale": 12 },
       "blend": { "source": "VERTEX_COLOR", "vertexColor": { "layout": "RGBA" } },
-      "wet": { "streaks": {} }
+      "wet": { "streaks": {}, "snow": {}, "frost": {} },
+      "reservedTextures": 5
     }
   },
   "inputs": {
@@ -19,10 +20,11 @@
     "layer1": { "textureSet": "concrete02" },
     "layer2": { "textureSet": "mud01" },
     "layer3": { "textureSet": "rocks02" },
-    "macro": { "texture": "macroNoise" }
+    "macro": { "texture": "macroNoise" },
+    "snow": { "textureSet": "snow01" }
   },
   "debugData": {
     "name": "Showcase bunker concrete",
-    "description": "terrainShowcase's bunker and wall (p310 §3.6), a structure material through the terrain material's JSON route (the structure preset's defaults written into the define: triplanar, DUAL_SCALE, a 12 m macro): concrete01 clean, concrete02 on the damaged edges, mud01 in the stains running down from the roof edge and the grime at the foot, rocks02 in the chips, weighed by the pieces' vertex colour (Wear, RGBA), in world space (static pieces), with the wet response's rain streaks down the walls."
+    "description": "terrainShowcase's bunker and wall (p310 §3.6), a structure material through the terrain material's JSON route (the structure preset's defaults written into the define: triplanar, DUAL_SCALE, a 12 m macro): concrete01 clean, concrete02 on the damaged edges, mud01 in the stains running down from the roof edge and the grime at the foot, rocks02 in the chips, weighed by the pieces' vertex colour (Wear, RGBA), in world space (static pieces), the sets bound separately with one texture fewer reserved for the rest of the shader (reservedTextures 5: the scene has one shadow-casting sun; the snow set's two bindings put the default 6 over the budget, and concrete01's 1024 × 512 maps can't join a set array of 1024² ones), with the wet response's rain streaks down the walls, snow on the roof and frost."
   }
 }

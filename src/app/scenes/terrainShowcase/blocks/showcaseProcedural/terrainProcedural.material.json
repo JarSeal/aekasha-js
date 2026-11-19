@@ -14,7 +14,7 @@
       "ao": { "vertex": true },
       "antiTiling": { "mode": "DUAL_SCALE" },
       "macro": { "scale": 64 },
-      "wet": { "snow": {} }
+      "wet": { "puddles": {}, "ripples": {}, "snow": {}, "frost": {} }
     }
   },
   "inputs": {
@@ -23,10 +23,11 @@
       "packing": "LITE"
     },
     "macro": { "texture": "macroNoise" },
+    "ripples": { "texture": "rippleAtlas" },
     "snow": { "textureSet": "snow01" }
   },
   "debugData": {
     "name": "Showcase procedural terrain",
-    "description": "terrainShowcase's procedural block (p310 §3): the alpine block's grass01, rocks02, snow01 and cliffs02 weighed by the vertex colours the rulesTerrain generator laid from its rules on the CPU (RGB_AO, the horizon AO in A on the indirect light) through the height blend, DUAL_SCALE, the sets as one array (ARRAY storage), cliffs02 triplanar past a 35-50° slope gate, the macro variation, and the wet response's snow (snow01) by the surface conditions' snow cover. The tab's shader variant evaluates the block's rules per pixel (RULES) instead."
+    "description": "terrainShowcase's procedural block (p310 §3): the alpine block's grass01, rocks02, snow01 and cliffs02 weighed by the vertex colours the rulesTerrain generator laid from its rules on the CPU (RGB_AO, the horizon AO in A on the indirect light) through the height blend, DUAL_SCALE, the sets as one array (ARRAY storage), cliffs02 triplanar past a 35-50° slope gate, the macro variation, and the wet response: puddles on the flats, rain ripples, snow (snow01) by the surface conditions' snow cover, frost below freezing. The tab's shader variant evaluates the block's rules per pixel (RULES) instead."
   }
 }

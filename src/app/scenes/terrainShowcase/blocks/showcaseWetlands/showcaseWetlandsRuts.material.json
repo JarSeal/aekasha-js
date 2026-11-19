@@ -24,10 +24,13 @@
     "ripples": {
       "texture": "rippleAtlas"
     },
+    "snow": {
+      "textureSet": "snow01"
+    },
     "tint": "#7a6e60"
   },
   "debugData": {
     "name": "Wetlands ruts' decal material",
-    "description": "decalsGround_blend (the toolkit's ground decals, BLEND, wet: the ruts' puddle mask fills in the rain) tinted darker: the tyre tracks' own albedo barely shows on the pale rocks01 path (a decal's albedo replaces the ground's; docs/techniques/terrain-decals.md, A tint, not another atlas). The set's mud splatters share it."
+    "description": "decalsGround_blend (the toolkit's ground decals, BLEND, wet: the ruts' puddle mask fills in the rain) tinted darker: the tyre tracks' own albedo barely shows on the pale rocks01 path (a decal's albedo replaces the ground's; docs/techniques/terrain-decals.md, A tint, not another atlas). The set's mud splatters share it. Its snow input (snow01) covers them as the ground's snow covers the path."
   }
 }

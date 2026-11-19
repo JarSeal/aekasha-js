@@ -17,7 +17,7 @@ import {
   sampleFrameGpuMsAsync,
   startMeasureConditions,
   warnNoFrameTimes,
-} from './_dbg__terrainGalleryMeasure';
+} from '../../shared/_dbg__gpuFrameMeasure';
 import {
   applyLiveValues,
   getDefaultLiveValues,

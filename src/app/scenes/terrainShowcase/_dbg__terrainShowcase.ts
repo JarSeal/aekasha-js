@@ -1,6 +1,7 @@
 // The terrain showcase's tab (p310 Phase 3, §3.7 without the camera presets: the follow camera on
 // the player is the showcase's view, the gallery has the presets): the blocks (the player put on
-// one), the day (its hour, playing, its speed), and the blocks' materials: a debug view and a
+// one), the weather (`_dbg__terrainShowcaseWeather.ts`: the scenarios and the weather's GPU cost),
+// the day (its hour, playing, its speed), and the blocks' materials: a debug view and a
 // quality tier on every block (the bunker's structure material takes the views), and the
 // procedural block's rules on the CPU (its vertex colours) or in the shader. Each is a variant of
 // the block's own material over its define, one shader per combination used.
@@ -16,7 +17,12 @@ import {
   setMeshMaterial,
 } from 'aekasha';
 import { getCharacterById } from 'aekasha/character';
-import { createDebuggerTab, debuggerListCMP, updateDebuggerTab } from 'aekasha/debug';
+import {
+  createDebuggerTab,
+  debuggerListCMP,
+  updateDebuggerTab,
+  type DebuggerTabSection,
+} from 'aekasha/debug';
 import {
   getDayNightSpeed,
   getTimeOfDay,
@@ -33,6 +39,11 @@ import {
   type TerrainQualityLevel,
 } from 'aekasha/toolkit/terrain';
 import { addShowcaseExitCleanup, TERRAIN_SHOWCASE_SCENE_ID } from './terrainShowcase';
+import {
+  getWeatherSections,
+  startWeatherTab,
+  type WeatherBlock,
+} from './_dbg__terrainShowcaseWeather';
 
 const TAB_ID = 'terrainShowcase';
 const MOVE_SYSTEM_ID = 'terrainShowcasePlayerMove';
@@ -226,6 +237,15 @@ const applyPendingMove = () => {
   body?.setLinvel(ZERO_VELOCITY, true);
 };
 
+/** The blocks as the weather measurement takes them: each grid place's centre and edge */
+const getWeatherBlocks = (): WeatherBlock[] =>
+  BLOCKS.flatMap(({ id, title }) => {
+    const grid = getTerrainBlock(id)?.grid;
+    return grid
+      ? [{ id, title, x: grid.x * grid.size, z: grid.z * grid.size, size: grid.size }]
+      : [];
+  });
+
 /** The bunker's pieces: the scene's meshes in its structure material */
 const findBunkerMeshes = () => {
   const material = getMaterial(BUNKER_MATERIAL_ID);
@@ -250,10 +270,13 @@ export const createTerrainShowcaseTab = () => {
   bunkerMeshes = findBunkerMeshes();
   const world = getECSWorld();
   world.addSystem(ECSSystemStage.APP_PHYSICS_STEP, MOVE_SYSTEM_ID, applyPendingMove);
+  const weatherBlocks = getWeatherBlocks();
+  const endWeatherTab = startWeatherTab(weatherBlocks, TAB_ID);
   addShowcaseExitCleanup(() => {
     thisVisit.isCurrent = false;
     world.removeSystem(MOVE_SYSTEM_ID);
     bunkerMeshes = [];
+    endWeatherTab();
   });
 
   createDebuggerTab({
@@ -292,6 +315,8 @@ export const createTerrainShowcaseTab = () => {
             suffix: block.id === PROCEDURAL_BLOCK_ID ? 'engine' : 'Blender',
           })),
       }),
+      // Its fields bind their own targets, none of this tab's state keys
+      ...(getWeatherSections(weatherBlocks, TAB_ID) as DebuggerTabSection<ShowcaseTabState>[]),
       {
         pane: true,
         title: 'Day',

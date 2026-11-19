@@ -3,7 +3,11 @@ import { createDynamicCharacter } from 'aekasha/character';
 import type { DynamicCharacter } from 'aekasha/character';
 import { getTerrainBlock } from 'aekasha/terrain';
 import type { TerrainBlock } from 'aekasha/terrain';
-import { createFollowObjectCameraRig } from 'aekasha/toolkit/ecs';
+import {
+  createFollowObjectCameraRig,
+  deleteFollowObjectCameraRig,
+  type FollowObjectCameraParams,
+} from 'aekasha/toolkit/ecs';
 import { createDecalPool, spawnDecal } from 'aekasha/toolkit/terrain';
 import { createCharacterVisualAsync } from '../../shared/characterVisual';
 
@@ -36,11 +40,27 @@ const PRINT_LIFETIME_SEC = 60;
 
 const getGridKey = (gridX: number, gridZ: number) => `${gridX},${gridZ}`;
 
+/** The follow camera's params while the player exists (the visit's), for its pause */
+let followCameraParams: FollowObjectCameraParams | null = null;
+
+/**
+ * Takes the follow camera off the scene camera (a measurement's fixed pose)
+ * @returns the function that puts it back (the same visit's only; a no-op without the player)
+ */
+export const pauseShowcaseFollowCamera = () => {
+  const params = followCameraParams;
+  if (!params) return () => undefined;
+  deleteFollowObjectCameraRig(params.id);
+  return () => {
+    if (followCameraParams === params) createFollowObjectCameraRig(params);
+  };
+};
+
 /**
  * Creates the player on the coast's beach, the follow camera on the scene camera
  * (`terrainShowcaseCamera`), and the footprints' pool and system over `blocks` (the scene's spawn
  * results). The camera rig goes with the scene (its `sceneId`), the pool and its decals with the
- * scene's exit; the returned function removes the footprints' system.
+ * scene's exit; the returned function removes the footprints' system (the scene's exit calls it).
  */
 export const createShowcasePlayerAsync = async (sceneId: string, blocks: TerrainBlock[]) => {
   const visual = await createCharacterVisualAsync({
@@ -83,7 +103,7 @@ export const createShowcasePlayerAsync = async (sceneId: string, blocks: Terrain
   });
   // A scene-load write: the load's physics hold covers it (p101)
   getECSWorld().getRigidBody(player.character.entityId)?.setTranslation(START, true);
-  createFollowObjectCameraRig({
+  const params: FollowObjectCameraParams = {
     id: 'terrainShowcaseFollowCam',
     sceneId,
     camera: existsOrThrow(
@@ -93,8 +113,14 @@ export const createShowcasePlayerAsync = async (sceneId: string, blocks: Terrain
     targetMesh: visual,
     offset: CAMERA_OFFSET,
     smoothingTime: 0.2,
-  });
-  return startFootprints(player, blocks);
+  };
+  createFollowObjectCameraRig(params);
+  followCameraParams = params;
+  const stopFootprints = startFootprints(player, blocks);
+  return () => {
+    followCameraParams = null;
+    stopFootprints();
+  };
 };
 
 /**
