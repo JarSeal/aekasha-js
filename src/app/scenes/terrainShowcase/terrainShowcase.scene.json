@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../../.schemas/scene.schema.json",
+  "id": "terrainShowcase",
+  "sceneFile": "./scenes/terrainShowcase/terrainShowcase.ts",
+  "name": "Terrain showcase (p310)",
+  "description": "The terrain epic's showcase (p310 §3): art-directed terrain blocks built in Blender with the toolkit's terrain add-on (devTools/blender/buildShowcaseBlocks.py), each spawned from its *.terrainBlock.json with its collider, scatter and decals. The coast (grid 0, 0): dunes falling toward a sea at the surface conditions' 0.5 m water level and a cliff band along its north edge, painted in its vertex colours (sand, beach sand along the waterline, gravel, the cliff face triplanar past a slope gate) with the AO baked in, the shoreline's waves on its beach, pebbles and rocks scattered on its gravel and at the cliff foot, two tyre tracks across the beach. The alpine slope (grid 2, 0): a ridge rising toward +x with a north-facing rock band and a flat south part with a frozen pond, painted in two splat maps (seven layers: grass, forest floor, scree, the rock band triplanar past a slope gate, snow drifts, the wind-swept crest, ice) and laid over by rules (snow on the high north faces, cliffs on the steepest), the sets one array sampled sparsely, the snow cover over it; boulders with colliders scattered in Blender on the scree (its imported scatter), ice cracks on the pond. The wetlands (grid 0, 2): almost flat ground with a meandering channel, two hollows and a pad for the bunker, painted in its vertex colours (mud, the channel's mud, grass, a gravel path crossing the channel at a ford) with the AO baked in and a regional wetness painted in Blender (its _WETNESS attribute), so the channel and the hollows stay wet in any weather; leaf litter and pebbles scattered on it, tyre ruts along the path through the ford, mud splatters on the banks. On the wetlands' pad, a concrete bunker and a wall (an import with box colliders) in a structure material worn by their vertex colours, rain streaking down them, with leak decals under the roof edge. A third-person character (the gym's dynamic controller: WASD, Space, Shift, Ctrl) starts on the coast's beach with the camera following it, and its steps stamp footprints on the block under it. The DAY_NIGHT sky stands still at 10:30 and lights them.",
+  "cameras": ["terrainShowcaseCamera"],
+  "skyboxes": ["terrainShowcaseSky"],
+  "surfaceConditions": {
+    "mode": "SIMULATED",
+    "wetness": 0,
+    "waterLevel": 0.5
+  },
+  "terrainBlocks": ["showcaseCoast", "showcaseAlpine", "showcaseWetlands"],
+  "textureSetArrays": [
+    {
+      "sets": ["sand01", "sand02", "rocks01", "cliffs01"],
+      "packing": "LITE"
+    },
+    {
+      "sets": ["grass01", "grass02", "rocks02", "cliffs02", "snow01", "snow02", "ice01"],
+      "packing": "LITE"
+    }
+  ],
+  "importedAssets": ["showcaseBunker"],
+  "decalSets": ["showcaseBunker_leaks"],
+  "materials": ["structureBunker", "decalsGround_blend"]
+}

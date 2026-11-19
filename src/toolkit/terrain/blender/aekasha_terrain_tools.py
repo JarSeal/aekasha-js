@@ -41,7 +41,7 @@ from bpy.props import (
 bl_info = {
     "name": "Ækasha Terrain Tools",
     "author": "Ækasha",
-    "version": (1, 1, 0),
+    "version": (1, 2, 0),
     "blender": (5, 3, 0),
     "location": "3D Viewport → Sidebar → Ækasha",
     "description": "Terrain blocks for Ækasha: add, paint, bake, validate and export; their decal "
@@ -1371,7 +1371,14 @@ def save_block_images(block_id: str, folder: str) -> tuple[list[str], list[Issue
     for suffix, kind in BLOCK_IMAGES.items():
         name = block_id + suffix
         image = bpy.data.images.get(name)
-        if image is None or not image.has_data:
+        if image is None:
+            continue
+        if not image.has_data:
+            # Not in memory: a file image nothing has drawn since the .blend opened (reading its
+            # pixels loads it; one in memory, with unsaved paint, is never reloaded)
+            image.pixels[:1]
+        if not image.has_data:
+            issues.append(("WARNING", f'"{name}" has no pixels (its file is missing?): not saved'))
             continue
         if image.is_float:
             issues.append(("WARNING", f'"{name}" is a float image: an 8-bit one is the size the '
@@ -1543,14 +1550,21 @@ class AEK_OT_export_terrain_block(bpy.types.Operator):
 TEXTURE_SET_FOLDERS = (("src", "toolkit", "textures"), ("src", "app"))
 #: A set's fetched maps (`yarn fetchTextureSources`): `source/raw/<map>.<ext>`
 RAW_EXTENSIONS = (".jpg", ".jpeg", ".png")
-#: The flat colours of the layers whose set has no fetched colour map: the base, then layers 1-4
+#: The flat colours of the layers whose set has no fetched colour map: the base, then layers 1-8
 FALLBACK_COLORS = (
     (0.18, 0.3, 0.08),
     (0.35, 0.32, 0.28),
     (0.85, 0.87, 0.9),
     (0.62, 0.5, 0.3),
     (0.25, 0.16, 0.09),
+    (0.5, 0.12, 0.1),
+    (0.1, 0.35, 0.45),
+    (0.7, 0.7, 0.2),
+    (0.45, 0.2, 0.5),
 )
+#: The preview's layers: the base, layers 1-4 (the splat, or a block's first splat map) and 5-8
+#: (a block's second splat map, `<id>_splat1`)
+PREVIEW_LAYERS = 9
 #: A layer that isn't used
 NO_SET = "NONE"
 #: The engine's height blend floors (`HeightBlend.ts`)
@@ -1673,6 +1687,10 @@ class AEK_PG_terrain_preview(bpy.types.PropertyGroup):
     layer2: _layer_property("Layer 2 (G)", "Painted in the splat's green")  # type: ignore
     layer3: _layer_property("Layer 3 (B)", "Painted in the splat's blue")  # type: ignore
     layer4: _layer_property("Layer 4 (A)", "Painted in the splat's alpha (RGBA)")  # type: ignore
+    layer5: _layer_property("Layer 5 (R)", "Painted in a block's second splat map's red")  # type: ignore
+    layer6: _layer_property("Layer 6 (G)", "Painted in a block's second splat map's green")  # type: ignore
+    layer7: _layer_property("Layer 7 (B)", "Painted in a block's second splat map's blue")  # type: ignore
+    layer8: _layer_property("Layer 8 (A)", "Painted in a block's second splat map's alpha")  # type: ignore
     layout: EnumProperty(  # type: ignore[valid-type]
         name="Splat Layout", description="The blocks' splat layout", items=LAYOUT_ITEMS,
         default="RGB_AO",
@@ -1692,18 +1710,20 @@ class AEK_PG_terrain_preview(bpy.types.PropertyGroup):
     )
 
     def get_layer_ids(self) -> list[str]:
-        return [self.base, self.layer1, self.layer2, self.layer3, self.layer4]
+        return [self.base] + [getattr(self, f"layer{i}") for i in range(1, PREVIEW_LAYERS)]
 
 
 def build_preview_group(
     layer_ids: list[str], sets: dict[str, dict], *, layout: str = "RGB_AO",
     height_blend: bool = True, blend_depth: float = 0.2,
 ) -> tuple[bpy.types.ShaderNodeTree, list[str]]:
-    """(Re)builds the preview node group: `layer_ids` the base, then layers 1-4 (`NONE` unused;
-    the base is always there, a flat colour without a set). Its inputs: "Splat" and "Splat Alpha",
-    the weights (the material links the `Splat` colour attribute, or a block's splat map), and
-    "AO Strength" (the material's group node holds the scene's), which scales `RGB_AO`'s AO.
-    Returns the group and notes (a set not found, maps not fetched).
+    """(Re)builds the preview node group: `layer_ids` the base, then layers 1-8 (`NONE` or missing
+    unused; the base is always there, a flat colour without a set). Its inputs: "Splat" and
+    "Splat Alpha", the weights of layers 1-4 (the material links the `Splat` colour attribute, or
+    a block's splat map; A weighs layer 4 with `RGBA`), "Splat 2" and "Splat 2 Alpha", layers 5-8
+    (a block's second splat map, `<id>_splat1`; black and 0 without one), and "AO Strength" (the
+    material's group node holds the scene's), which scales `RGB_AO`'s AO. Returns the group and
+    notes (a set not found, maps not fetched).
     """
     group = bpy.data.node_groups.get(PREVIEW_GROUP)
     if group is None:
@@ -1721,6 +1741,14 @@ def build_preview_group(
         alpha = group.interface.new_socket("Splat Alpha", in_out="INPUT",
                                            socket_type="NodeSocketFloat")
         alpha.default_value, alpha.min_value, alpha.max_value = 1.0, 0.0, 1.0
+    if "Splat 2" not in sockets:
+        weights = group.interface.new_socket("Splat 2", in_out="INPUT",
+                                             socket_type="NodeSocketColor")
+        weights.default_value = (0.0, 0.0, 0.0, 1.0)
+    if "Splat 2 Alpha" not in sockets:
+        alpha = group.interface.new_socket("Splat 2 Alpha", in_out="INPUT",
+                                           socket_type="NodeSocketFloat")
+        alpha.default_value, alpha.min_value, alpha.max_value = 0.0, 0.0, 1.0
     if "AO Strength" not in sockets:
         strength = group.interface.new_socket("AO Strength", in_out="INPUT",
                                               socket_type="NodeSocketFloat")
@@ -1763,16 +1791,23 @@ def build_preview_group(
     group_input = node("NodeGroupInput")
     channels = node("ShaderNodeSeparateColor")
     links.new(group_input.outputs["Splat"], channels.inputs[0])
-    painted = [channels.outputs[0], channels.outputs[1], channels.outputs[2]]
-    if layout == "RGBA":
-        painted.append(group_input.outputs["Splat Alpha"])
+    # Each painted layer's weight by its index (1-8): None where nothing weighs it (layer 4 with
+    # RGB + AO, whose A is the AO)
+    painted = [channels.outputs[0], channels.outputs[1], channels.outputs[2],
+               group_input.outputs["Splat Alpha"] if layout == "RGBA" else None]
+    layer_ids = list(layer_ids) + [NO_SET] * (PREVIEW_LAYERS - len(layer_ids))
+    if any(set_id != NO_SET for set_id in layer_ids[5:]):
+        second = node("ShaderNodeSeparateColor")
+        links.new(group_input.outputs["Splat 2"], second.inputs[0])
+        painted += [second.outputs[0], second.outputs[1], second.outputs[2],
+                    group_input.outputs["Splat 2 Alpha"]]
     position = node("ShaderNodeNewGeometry").outputs["Position"]
 
     # Each layer: its colour and height (a texture set's fetched maps, else a flat colour)
     column[0] = 1
     layers = []
     for index, set_id in enumerate(layer_ids[: 1 + len(painted)]):
-        if index > 0 and set_id == NO_SET:
+        if index > 0 and (set_id == NO_SET or painted[index - 1] is None):
             continue
         info = sets.get(set_id)
         if set_id != NO_SET and info is None:
@@ -1925,24 +1960,39 @@ def set_preview_ao_strength(value: float) -> None:
 
 # --- Splat maps ---------------------------------------------------------------------------------
 #
-# A block painted in Texture Paint: its splat map `<id>_splat0` (RGBA weigh layers 1-4, the
-# engine's `SPLAT_MAP`), drawn by a preview material of the block's own whose weights come from
-# the image through the UVs. Export saves the image as a PNG with its texture JSON stub.
+# A block painted in Texture Paint: its splat maps `<id>_splat0` (RGBA weigh layers 1-4, the
+# engine's `SPLAT_MAP`) and `<id>_splat1` (layers 5-8, `splatMaps: 2`), drawn by a preview
+# material of the block's own whose weights come from the images through the UVs. Export saves
+# each image as a PNG with its texture JSON stub.
 
-#: The splat map's name suffix (`BLOCK_IMAGES`' first splat map)
-SPLAT_MAP_SUFFIX = "_splat0"
-#: The material's custom prop naming its splat map, so Update Preview finds it
-SPLAT_MAP_PROP = "aekSplatMap"
+#: The splat maps' name suffixes (`BLOCK_IMAGES`' splat maps), by map
+SPLAT_MAP_SUFFIXES = ("_splat0", "_splat1")
+#: The first map's suffix
+SPLAT_MAP_SUFFIX = SPLAT_MAP_SUFFIXES[0]
+#: The material's custom props naming its splat maps, by map, so Update Preview finds them
+SPLAT_MAP_PROPS = ("aekSplatMap", "aekSplatMap1")
+#: The first map's prop
+SPLAT_MAP_PROP = SPLAT_MAP_PROPS[0]
+#: The image node's custom prop holding the map it draws (0 or 1)
+SPLAT_MAP_NODE_PROP = "aekSplatMapIndex"
+#: The preview group's weight inputs a map feeds (its RGB, its A), by map
+SPLAT_MAP_INPUTS = (("Splat", "Splat Alpha"), ("Splat 2", "Splat 2 Alpha"))
 SPLAT_MAP_SIZE_ITEMS = [(str(s), f"{s} px", f"{s} × {s} pixels") for s in (256, 512, 1024, 2048,
                                                                             4096)]
+SPLAT_MAP_ITEMS = [
+    ("0", "Layers 1-4", "<id>_splat0: RGBA weigh layers 1-4"),
+    ("1", "Layers 5-8", "<id>_splat1: RGBA weigh layers 5-8 (the material's splatMaps: 2)"),
+]
 
 
-def ensure_splat_map_material(scene: bpy.types.Scene, block_id: str,
-                              image: bpy.types.Image) -> bpy.types.Material:
+def ensure_splat_map_material(scene: bpy.types.Scene, block_id: str, image: bpy.types.Image,
+                              index: int = 0) -> bpy.types.Material:
     """The block's own preview material (`AEK Terrain Preview <id>`, a copy of the shared one)
-    with its weights from `image` through the UVs: RGB weigh layers 1-3, and A layer 4 when the
-    scene's preview layout is `RGBA` (with `RGB + AO` the preview shows no AO: the engine has no
-    vertex AO on a splat map). The image node is the active one, which Texture Paint paints.
+    with its weights from its splat maps through the UVs: `image` its map `index` (0: RGB weigh
+    layers 1-3, and A layer 4 when the scene's preview layout is `RGBA`; 1: RGBA layers 5-8), the
+    other map kept as it was (the material's props name them). With `RGB + AO` the preview shows
+    no AO: the engine has no vertex AO on a splat map. `image`'s node is the active one, which
+    Texture Paint paints.
     """
     base = ensure_preview_material(scene)
     name = f"{PREVIEW_MATERIAL} {block_id}"
@@ -1950,42 +2000,66 @@ def ensure_splat_map_material(scene: bpy.types.Scene, block_id: str,
     if material is None:
         material = base.copy()
         material.name = name
-    material[SPLAT_MAP_PROP] = image.name
+    material[SPLAT_MAP_PROPS[index]] = image.name
     tree = material.node_tree
     preview = get_preview_group_node(material)
-    for socket in (preview.inputs["Splat"], preview.inputs["Splat Alpha"]):
-        for link in list(socket.links):
-            tree.links.remove(link)
+    for inputs in SPLAT_MAP_INPUTS:
+        for socket in (preview.inputs[inputs[0]], preview.inputs[inputs[1]]):
+            for link in list(socket.links):
+                tree.links.remove(link)
     for stale in [n for n in tree.nodes if n.type == "VERTEX_COLOR"]:
         tree.nodes.remove(stale)
-    texture = next((n for n in tree.nodes if n.type == "TEX_IMAGE"), None)
-    if texture is None:
-        texture = tree.nodes.new("ShaderNodeTexImage")
-        texture.location = (preview.location.x - 300, preview.location.y)
-    texture.image = image
-    texture.interpolation = "Linear"
-    texture.extension = "EXTEND"
-    tree.links.new(texture.outputs["Color"], preview.inputs["Splat"])
-    if scene.aek_terrain_preview.layout == "RGBA":
-        tree.links.new(texture.outputs["Alpha"], preview.inputs["Splat Alpha"])
-    else:
-        preview.inputs["Splat Alpha"].default_value = 1.0
-    tree.nodes.active = texture
+    textures = [n for n in tree.nodes if n.type == "TEX_IMAGE"]
+    painted = None
+    for map_index, (prop, (rgb, alpha)) in enumerate(zip(SPLAT_MAP_PROPS, SPLAT_MAP_INPUTS)):
+        map_image = image if map_index == index else bpy.data.images.get(material.get(prop, ""))
+        texture = next((n for n in textures if n.get(SPLAT_MAP_NODE_PROP) == map_index), None)
+        # A material made before the second map: its one image node is the first map's
+        if texture is None and map_index == 0:
+            texture = next((n for n in textures if SPLAT_MAP_NODE_PROP not in n), None)
+        if map_image is None:
+            if texture is not None:
+                tree.nodes.remove(texture)
+            continue
+        if texture is None:
+            texture = tree.nodes.new("ShaderNodeTexImage")
+            texture.location = (preview.location.x - 300, preview.location.y - 280 * map_index)
+        texture[SPLAT_MAP_NODE_PROP] = map_index
+        texture.image = map_image
+        texture.interpolation = "Linear"
+        texture.extension = "EXTEND"
+        tree.links.new(texture.outputs["Color"], preview.inputs[rgb])
+        if map_index == 1 or scene.aek_terrain_preview.layout == "RGBA":
+            tree.links.new(texture.outputs["Alpha"], preview.inputs[alpha])
+        else:
+            preview.inputs[alpha].default_value = 1.0
+        if map_index == index:
+            painted = texture
+    tree.nodes.active = painted
     return material
 
 
 def update_splat_map_materials(scene: bpy.types.Scene) -> None:
-    """Relinks every block's splat map material for the scene's preview layout"""
+    """Relinks every block's splat map material for the scene's preview layout, the image painted
+    kept the paint target
+    """
     for material in list(bpy.data.materials):
-        image = bpy.data.images.get(material.get(SPLAT_MAP_PROP, ""))
-        if image is not None and get_preview_group_node(material) is not None:
+        if get_preview_group_node(material) is None:
+            continue
+        active = material.node_tree.nodes.active
+        index = active.get(SPLAT_MAP_NODE_PROP, 0) if active is not None else 0
+        image = bpy.data.images.get(material.get(SPLAT_MAP_PROPS[index], ""))
+        if image is None:
+            index, image = 0, bpy.data.images.get(material.get(SPLAT_MAP_PROPS[0], ""))
+        if image is not None:
             block_id = material.name[len(PREVIEW_MATERIAL) + 1 :]
-            ensure_splat_map_material(scene, block_id, image)
+            ensure_splat_map_material(scene, block_id, image, index)
 
 
 class AEK_OT_new_splat_map(bpy.types.Operator):
-    """Give the active block a splat map to paint in Texture Paint: <id>_splat0, a Non-Color
-    RGBA image (layers 1-4), drawn by a preview material of the block's own
+    """Give the active block a splat map to paint in Texture Paint: <id>_splat0 (layers 1-4) or
+    <id>_splat1 (layers 5-8), a Non-Color RGBA image, drawn by a preview material of the block's
+    own with its other map
     """
 
     bl_idname = "aek.new_splat_map"
@@ -1995,6 +2069,10 @@ class AEK_OT_new_splat_map(bpy.types.Operator):
     size: EnumProperty(  # type: ignore[valid-type]
         name="Size", description="About 1K for a 64 m block: 6 cm a texel",
         items=SPLAT_MAP_SIZE_ITEMS, default="1024",
+    )
+    map: EnumProperty(  # type: ignore[valid-type]
+        name="Map", description="Which map: a second map weighs layers 5-8 (Preview Material's "
+        "layers 5-8)", items=SPLAT_MAP_ITEMS, default="0",
     )
 
     @classmethod
@@ -2007,25 +2085,30 @@ class AEK_OT_new_splat_map(bpy.types.Operator):
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         obj = context.active_object
-        name = obj.aek_terrain_block.block_id + SPLAT_MAP_SUFFIX
+        index = int(self.map)
+        name = obj.aek_terrain_block.block_id + SPLAT_MAP_SUFFIXES[index]
         image = bpy.data.images.get(name)
         if image is None:
             size = int(self.size)
             # Non-Color from the start: setting the colour space later reloads the image, blank
             image = bpy.data.images.new(name, size, size, alpha=True, is_data=True)
-            # A weighs layer 4: kept apart from RGB, not as transparency
+            # A weighs a layer (4 or 8): kept apart from RGB, not as transparency
             image.alpha_mode = "CHANNEL_PACKED"
             image.generated_color = (0.0, 0.0, 0.0, 0.0)
             self.report({"INFO"}, f"{name}: {size}² pixels, black (the base layer)")
         else:
             self.report({"INFO"}, f"{name} is there already ({image.size[0]}² pixels): drawn by "
                         "the block's material")
-        material = ensure_splat_map_material(context.scene, obj.aek_terrain_block.block_id, image)
+        material = ensure_splat_map_material(context.scene, obj.aek_terrain_block.block_id, image,
+                                             index)
         if obj.data.materials:
             obj.data.materials[0] = material
         else:
             obj.data.materials.append(material)
-        if context.scene.aek_terrain_preview.layout != "RGBA":
+        if index == 1 and context.scene.aek_terrain_preview.layout != "RGBA":
+            self.report({"WARNING"}, "Two maps weigh 8 layers: set the Preview Material's layout "
+                        "to RGBA, so the first map's alpha is layer 4")
+        elif context.scene.aek_terrain_preview.layout != "RGBA":
             self.report({"WARNING"}, "The preview shows layers 1-3 (RGB + AO): set the Preview "
                         "Material's layout to RGBA to see layer 4, the map's alpha")
         return {"FINISHED"}
@@ -2772,6 +2855,11 @@ class VIEW3D_PT_aek_terrain_preview(bpy.types.Panel):
         layers = 4 if settings.layout == "RGBA" else 3
         for index in range(1, layers + 1):
             layout.prop(settings, f"layer{index}")
+        if settings.layout == "RGBA":
+            box = layout.box()
+            box.label(text="A block's second splat map")
+            for index in range(5, PREVIEW_LAYERS):
+                box.prop(settings, f"layer{index}")
         layout.prop(settings, "height_blend")
         row = layout.row()
         row.enabled = settings.height_blend

@@ -1,0 +1,51 @@
+{
+  "$schema": "../../../../../../.schemas/material.schema.json",
+  "id": "terrainAlpine",
+  "tslFile": "scenes/terrainShowcase/blocks/showcaseAlpine/terrainAlpine.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "staticDefines": {
+    "terrain": {
+      "layers": [
+        {},
+        {},
+        {},
+        { "projection": { "mode": "TRIPLANAR", "slopeGate": [35, 50] } },
+        {},
+        {},
+        {}
+      ],
+      "blend": {
+        "source": "SPLAT_MAP_AND_RULES",
+        "mode": "HEIGHT",
+        "rules": [
+          {
+            "layer": 4,
+            "height": { "min": 18, "softness": 2 },
+            "slope": { "max": 35 },
+            "aspect": { "direction": [0, -1], "range": 70 },
+            "noise": { "scale": 24, "amount": 0.3 }
+          },
+          { "layer": 3, "slope": { "min": 45 } }
+        ]
+      },
+      "antiTiling": { "mode": "DUAL_SCALE" },
+      "sparse": { "maxLayers": 3 },
+      "macro": { "scale": 64 },
+      "wet": { "snow": {} }
+    }
+  },
+  "inputs": {
+    "layers": {
+      "textureSetArray": ["grass01", "grass02", "rocks02", "cliffs02", "snow01", "snow02", "ice01"],
+      "packing": "LITE"
+    },
+    "splat0": { "texture": "showcaseAlpine_splat0" },
+    "splat1": { "texture": "showcaseAlpine_splat1" },
+    "macro": { "texture": "macroNoise" },
+    "snow": { "textureSet": "snow01" }
+  },
+  "debugData": {
+    "name": "Showcase alpine terrain",
+    "description": "terrainShowcase's alpine block (p310 §3.4): seven layers (grass01 the base; grass02, rocks02, cliffs02 and snow01 in the first splat map, snow02 and ice01 in the second) weighed by its two painted splat maps and two rules over them (snow01 above 18 m on slopes under 35° facing north within 70°, broken by the macro noise; cliffs02 past 45°) through the height blend, DUAL_SCALE, the sets as one array (ARRAY storage) sampled sparsely (the top 3 layers a pixel), cliffs02 triplanar past a 35-50° slope gate, the macro variation, and the wet response's snow (snow01) over it by the surface conditions' snow cover."
+  }
+}

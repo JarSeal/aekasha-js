@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../../../../.schemas/importedAsset.schema.json",
+  "id": "showcaseWetlands_decals",
+  "fileName": "./showcaseWetlands_decals.glb",
+  "debugData": {
+    "name": "Wetlands ruts and splatters",
+    "description": "5 decals on the terrain block showcaseWetlands, exported by the Ækasha terrain add-on in the block's space. The default mesh encode (meshopt, quantized) keeps them within about 2 mm of the export, well inside the 1.5 cm they lie over the block, and their UVs within a quarter texel of a 2K atlas."
+  }
+}

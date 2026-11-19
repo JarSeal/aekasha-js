@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../../../../.schemas/decalSet.schema.json",
+  "importedAsset": "showcaseCoast_decals",
+  "material": "showcaseCoastTracks",
+  "debugData": {
+    "name": "Coast tyre tracks",
+    "description": "The coast's decal set (p310 §3.3): two tireTracks strips of the decalsGround atlas 1.7 m apart, curving across the beach above the waterline, conformed to showcaseCoast by the terrain add-on (devTools/blender/buildShowcaseBlocks.py), in decalsGround_blend tinted toward the sand (showcaseCoastTracks)."
+  }
+}

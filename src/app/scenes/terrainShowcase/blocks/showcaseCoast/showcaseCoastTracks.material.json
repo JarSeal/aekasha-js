@@ -1,0 +1,33 @@
+{
+  "$schema": "../../../../../../.schemas/material.schema.json",
+  "id": "showcaseCoastTracks",
+  "tslFile": "scenes/terrainShowcase/blocks/showcaseCoast/showcaseCoastTracks.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "params": {
+    "polygonOffsetFactor": -1,
+    "polygonOffsetUnits": -4
+  },
+  "staticDefines": {
+    "mode": "BLEND",
+    "edgeFade": "UV1",
+    "wet": "FULL",
+    "frost": true,
+    "rainOcclusion": "NORMAL_Y"
+  },
+  "inputs": {
+    "albedoAlpha": {
+      "texture": "decalsGround.albedoAlpha"
+    },
+    "normalRough": {
+      "texture": "decalsGround.normalRough"
+    },
+    "ripples": {
+      "texture": "rippleAtlas"
+    },
+    "tint": "#d2ad7c"
+  },
+  "debugData": {
+    "name": "Coast tyre tracks' decal material",
+    "description": "decalsGround_blend (the toolkit's ground decals, BLEND, wet) tinted toward the coast's sand: a decal's albedo replaces the ground's, and the tyre tracks' own read blue-grey on sand01 (docs/techniques/terrain-decals.md, A tint, not another atlas)."
+  }
+}

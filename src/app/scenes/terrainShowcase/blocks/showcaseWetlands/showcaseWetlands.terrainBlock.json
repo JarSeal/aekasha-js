@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../../../../.schemas/terrainBlock.schema.json",
+  "geometry": {
+    "importedAsset": "showcaseWetlands",
+    "node": "showcaseWetlands"
+  },
+  "material": "terrainWetlands",
+  "grid": {
+    "x": 0,
+    "z": 2,
+    "size": 64,
+    "resolution": 129
+  },
+  "collider": {
+    "type": "HEIGHTFIELD"
+  },
+  "scatter": ["showcaseWetlands_litter", "showcaseWetlands_rocks"],
+  "decals": ["showcaseWetlands_decals"],
+  "debugData": {
+    "name": "Showcase wetlands",
+    "description": "terrainShowcase's wetlands block (p310 §3.5): the terrain add-on's export (devTools/blender/buildShowcaseBlocks.py), 64 m / 129, almost flat ground (0-0.7 m) with a meandering channel, two hollows and a flattened pad for the bunker, its COLOR_0 painted (mud02 in the channel and hollows, grass02 on the raised ground, rocks01 on the path and the pad) with the AO baked into its A, and a regional wetness _WETNESS (painted in Blender, the first loaded from a GLB) wet along the channel and in the hollows; leaf litter on the grass and mud and pebbles on the gravel scattered by terrainScatter, tyre ruts along the path through the ford and mud splatters on the banks (its decal set)."
+  }
+}

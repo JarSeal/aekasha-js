@@ -272,6 +272,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  terrainShowcase: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/terrainShowcase/terrainShowcase.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   testDebugScene: async ({ sceneData, assets }) => {
     const module = await import('../app/scenes/testDebugScene/testDebugScene.ts');
     await (
@@ -351,6 +359,12 @@ export const tslMaterialFileObjects = {
   terrainGalleryPad: () => import('../app/scenes/terrainGallery/pad/terrainGalleryPad.tsl.ts'),
   rockScatterNamaqualandBoulder02: () => import('../toolkit/materials/rockScatter/rockScatter.tsl.ts'),
   rockScatterNamaqualandStones01: () => import('../toolkit/materials/rockScatter/rockScatter.tsl.ts'),
+  terrainAlpine: () => import('../app/scenes/terrainShowcase/blocks/showcaseAlpine/terrainAlpine.tsl.ts'),
+  showcaseCoastTracks: () => import('../app/scenes/terrainShowcase/blocks/showcaseCoast/showcaseCoastTracks.tsl.ts'),
+  terrainCoast: () => import('../app/scenes/terrainShowcase/blocks/showcaseCoast/terrainCoast.tsl.ts'),
+  showcaseWetlandsRuts: () => import('../app/scenes/terrainShowcase/blocks/showcaseWetlands/showcaseWetlandsRuts.tsl.ts'),
+  structureBunker: () => import('../app/scenes/terrainShowcase/blocks/showcaseWetlands/structureBunker.tsl.ts'),
+  terrainWetlands: () => import('../app/scenes/terrainShowcase/blocks/showcaseWetlands/terrainWetlands.tsl.ts'),
 };
 
 export const postFxFileObjects = {

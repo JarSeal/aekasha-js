@@ -101,9 +101,9 @@ Only the regional wetness is authored: riverbanks, a swamp's floor, the ground u
 
 ## Export
 
-The add-on's _Export Block_ ([the locked settings](terrain-blocks-blender.md#export)) applies the modifiers and exports `_`-prefixed attributes. By hand: _Data → Mesh_: Apply Modifiers ✓, Attributes ✓. The attribute is `_WETNESS` in the glTF; three's GLTFLoader names it `_wetness` (it lowercases a custom attribute's name), which is the material's default. The asset pipeline keeps it, quantized to a normalized 16-bit integer (a value outside −1..1 is left as a float, with a warning).
+The add-on's _Export Block_ ([the locked settings](terrain-blocks-blender.md#export)) applies the modifiers and exports `_`-prefixed attributes. By hand: _Data → Mesh_: Apply Modifiers ✓, Attributes ✓. The attribute is `_WETNESS` in the glTF; three's GLTFLoader names it `_wetness` (it lowercases a custom attribute's name), which is the material's default. The asset pipeline keeps it: a float under the `terrainBlock` profile (lossless, 4 bytes a vertex: 66 KB on a 129² block), quantized to a normalized 16-bit integer under the default mesh encode (a value outside −1..1 is left as a float, with a warning).
 
-**Not checked yet:** no scene loads a `_WETNESS` from a GLB yet: the gallery's riverbank band is written into its generated geometry in code. Check the first painted block with the `WETNESS` view.
+**Checked** on `terrainShowcase`'s wetlands (`showcaseWetlands`, built by `devTools/blender/buildShowcaseBlocks.py` with exactly these steps): the GLB's `_WETNESS` arrives as `_wetness` (a `Float32Array`, a value a vertex), and the `WETNESS` view shows it along the channel and in the hollows, fading over the painted blur.
 
 ## Import into Ækasha
 
@@ -337,7 +337,7 @@ Every number is a uniform in the material's `userData.uniforms` (`terrain_wetShe
 
 ## Template file and example asset ids
 
-- **Blender template:** none of its own; any block and the steps above. The add-on's _Export Block_ exports the attribute.
+- **Blender template:** none of its own; any block and the steps above. The add-on's _Export Block_ exports the attribute. A worked block: `src/app/scenes/terrainShowcase/blocks/showcaseWetlands/showcaseWetlands.blend` (the vertex group `Wet` and the modifier "AEK Wetness"; its material `terrainWetlands`, `wet: { puddles: { maxSlope: 8 }, ripples: {}, regional: {} }`).
 - **The gallery's Wet/dry row** (`terrainGallery`, `?isDebug=true&startScene=terrainGallery`; `src/app/scenes/terrainGallery/wetRow.ts`): a 3 × 3 of library blocks left of the Splatting row, `sand02`, `mud02`, `rocks01` / `cliffs01`, `snow01`, `ice01` / `grass01`, `concrete02` and a beach (`sand02` with `rocks01` on slopes past 22°), each with puddles in patches, ripples, snow, frost and the map, a `LOW` tier with `SIMPLE`. The grass block has a regional riverbank band, the beach a shoreline under a water plane; a concrete wall and a cliff boulder streak; a concrete canopy over the mud keeps it dry. Its tab section ("Wet/dry row") has the wetness, rain, puddle level, snow cover, temperature and water level, the row's quality and view (shaded, `WETNESS`, `TAPS`), the map's switch and each block's response.
 - **The debug drawer's Surface conditions tab:** a rain shower (10 s up, 60 s, 10 s down), stop rain, dry now, soak, snowfall; every value and the mode; the surface clock, the sun and wind factors; the map's switch, update frames and its render's CPU and GPU time.
 - **Assets:** `rippleAtlas`, `macroNoise` and `snow01` (the toolkit's); every library set's category gives its response.

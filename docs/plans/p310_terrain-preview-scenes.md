@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: App, Terrain, Docs
 Epic: p301_terrain-texturing-epic.md
 Related: \_DONE_p309_terrain-decals.md (the decals this plan's scenes and blocks use; its As built lists have what landed, which differs from this plan's text in places: the strip cell is `tireTracks`, the structure leaks `leak01`-`leak03`; the add-on's Add Decal conforms with a 0.015 m offset and a subdivision level of its own, Export Decal Set writes the GLB and stubs; the gallery already has a Decals row, a Decals stage with the weathers and a bake bench for the decal generators, and `terrainBlockTest` a runtime decal walk; the handbook is `docs/techniques/terrain-decals.md`), \_DONE_p307_wet-and-dry-surface-states.md (the surface conditions and the wet response this plan's scenes show: its As built lists have the API that landed, the gallery's Wet/dry row and the measurements; the handbook's `wet-dry-surfaces.md`), \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (merged dressing and modular kit terrain, for the matrix and the measurements)
@@ -96,7 +96,7 @@ Buttons in the gallery tab (the scene-scoped `src/app/scenes/terrainGallery/_dbg
 
 **Scene:**
 
-- `src/app/scenes/terrainShowcase/terrainShowcase.scene.json` + `terrainShowcase.ts`, sky box `dayNight` (the shared `src/app/skyboxes/` one, 5-minute day, playing).
+- `src/app/scenes/terrainShowcase/terrainShowcase.scene.json` + `terrainShowcase.ts`, sky box `terrainShowcaseSky` (the DAY_NIGHT preset as the shared `dayNight`, standing still at 10:30 for the snapshot; the shared one starts at 17:30 playing, dusk within seconds; Phase 3's tab plays the day).
 - Surface conditions `SIMULATED` (the scene JSON's `surfaceConditions`), with a scenario button "Rain shower" (p307).
 - Optional: a third-person character as the gym has one (the `character()` feature's dynamic controller and player brain, `src/_engine/features/character/CLAUDE.md`, with the toolkit's `FollowObjectCameraRig`; the visual from `src/app/shared/characterVisual.ts`) to walk on the heightfield colliders, stamp footprints (p309 runtime decals) and test the blocks the way a game would.
 
@@ -121,8 +121,9 @@ src/app/scenes/terrainShowcase/
     showcaseCoast.importedAsset.json
     showcaseCoast.terrainBlock.json
     showcaseCoast_decals.glb + .importedAsset.json + .decalSet.json
-    showcaseCoast_rocks.scatter.json
-    terrainCoast.material.json              (terrain material: layers, techniques, wet)
+    showcaseCoastTracks.material.json + .tsl.ts  (the tracks' decal material, tinted)
+    showcaseCoast_pebbles.scatter.json, showcaseCoast_rocks.scatter.json
+    terrainCoast.material.json + .tsl.ts    (terrain material: layers, techniques, wet)
 ```
 
 A block another scene starts using moves to a shared `src/app/terrainBlocks/` (p306 D2), keeping its ids.
@@ -133,125 +134,131 @@ The Alpine block adds `showcaseAlpine_splat0.png` / `_splat1.png` + `.texture.js
 
 These follow `docs/techniques/terrain-blocks-blender.md` (p306). Summary:
 
+`devTools/blender/buildShowcaseBlocks.py` follows these steps (a block per name argument; its header has the command).
+
 1. **Open the template:** `src/toolkit/terrain/blender/terrain_blockTemplate.blend`. _Save As_ into the block folder in `src/app/scenes/terrainShowcase/blocks/<id>/<id>.blend`. Run `yarn fetchTextureSources` first so the preview material finds its images.
-2. **Add the block:** Ækasha sidebar → _Add Terrain Block_: size 64, resolution 129, grid (x, z) per the table. The object is `TerrainBlock`.
-3. **Set the preview material's layers** to the block's sets (the node group's image slots are pre-wired to the `source/raw/` folders).
+2. **Add the block:** delete the template's empty block first (`terrainBlock`, at grid (0, 0): _Add_ refuses a grid place a block has). Ækasha sidebar → _Add Terrain Block_: its id, size 64, resolution 129, grid (x, z) per the table. The object is named by its id.
+3. **Set the preview material's layers** to the block's sets (sidebar → Preview Material, then _Update Preview_; it finds the sets' fetched `source/raw/` maps).
 4. **Shape, paint and bake** (per-block steps below).
 5. **Finish:** _Validate Block_, then _Export Block_. It writes the GLB and the JSON stubs.
-6. **Fill in the JSON stubs** (`material`, `materialInputs`, `scatter`, `decals`) and create the terrain material JSON.
+6. **Fill in the JSON stubs** (`material`, `materialInputs`, `scatter`, `decals`) and create the terrain material JSON. An app material JSON (a terrain material, a tinted decal material) needs its own two-line TSL file beside it (`export const setup = setupTerrainMaterial;`, or `setupDecalMaterial`, from `aekasha/toolkit/terrain`): its `tslFile` resolves from `src/app/`. A `macro` in the define needs its `scale`.
 
 ### 3.3 `showcaseCoast`: step by step
 
-1. **Shape** (Displace modifier, _Global_ coordinates):
-   - Texture 1: _Noise_/_Clouds_, size 18 m, strength 2.5 m (dune swells).
-   - Texture 2: a second Displace with _Clouds_ size 4 m, strength 0.4 m.
-   - Tilt toward the sea: _Proportional Edit_ is fine before the grid lock. Or, better, a Displace with a _Blend_ texture (linear gradient along −Y, strength −3 m) so the south edge sits about 1 m below `waterLevel` (0.5 m).
+1. **Shape** (Displace modifiers: Direction _Z_, Midlevel 0, _Global_ coordinates):
+   - Dune swells: a _Clouds_ texture, size 18 m, depth 3, **contrast 1.6** (Clouds stays near its middle, 0.3-0.7, so 2.5 m read flat), strength 3 m, its _Vertex Group_ `Dunes` (Weight Paint's _Gradient_: 1 inland, fading to 0 over the 14 m before the south edge), so the beach under them stays smooth (without it the dunes reached the waterline and broke the beach band into blotches).
+   - A second Displace with _Clouds_ size 4 m, strength 0.4 m.
+   - Tilt toward the sea (the engine's +z, Blender's −Y): a Displace with a _Blend_ texture, **_Quadratic_**, strength −2 m, its _Texture Coordinates_ an **empty** scaled 32 and turned −90° about Z (a Blend texture spans −1..1 of its coordinates, which _Global_ can't scale; the empty's +x along −Y). The south edge sits about 1.8 m below the water level (0.5 m), the waterline about 22 m from it; a dune trough opened into an inlet that crosses the waterline, kept (the sea fills it).
    - Apply all modifiers.
 2. **Cliff band** along the north edge:
-   - Sculpt mode, Symmetry popover: **Lock X and Y**.
-   - _Draw_ / _Clay Strips_ upward to 6–9 m over about 4 m of run (steep, ≈ 60–70°, but no overhang, so the heightfield stays valid).
+   - Sculpt mode, Symmetry popover: **Lock X and Y** (checked in Blender 5.3: a _Draw_ stroke over a slope moved vertices 4.4 cm sideways unlocked, none locked).
+   - _Draw_ / _Clay Strips_ upward to 6–9 m over about 4 m of run (its foot about 12 m from the north edge, winding; steep, but no overhang, so the heightfield stays valid). Built: 69° at the face's middle, 74° at its steepest.
    - _Smooth_ the top lip.
-3. **Paint `Splat`** (Vertex Paint, _Mix_ blend, pure colours; the preview material shows the result):
-   - **R (`sand02`, beach sand):** a 6–10 m band along the waterline, soft edge.
-   - **G (`rocks01`, gravel):** patches at the cliff foot and two or three islands in the dunes; strength 0.6 for broken edges.
+3. **Paint `Splat`** (Vertex Paint, _Mix_ blend, pure colours; the preview material shows the result; checked: pure red at strength 1 stores exactly 1 in the stroke's core, the other channels 0):
+   - **R (`sand02`, beach sand):** a band from about 0.45 m over the water level to 0.35 m under it, soft edged: 6–10 m wide on this beach (about 0.1 m a metre).
+   - **G (`rocks01`, gravel):** patches at the cliff foot and three islands in the dunes; strength 0.6–1 for broken edges.
    - **B (`cliffs01`):** the whole cliff face. Cliffs also get triplanar by slope, so paint loosely; the slope gate does the rest.
    - Leave everything else black (= `sand01`, dunes).
    - _Normalize Splat_.
 4. **AO:** _Bake AO → Splat Alpha_ (distance 8 m, 64 samples). It darkens the cliff foot and the dune troughs.
 5. **Custom props:** already set by the add-on. Add friction 1.0 in the `terrainBlock.json` collider.
-6. **Decals** (separate object, `showcaseCoast_decals`):
-   - Draw a Bézier curve across the beach.
-   - Add a plane 0.4 × 1 m, UV'd to the `tyreTracks` atlas cell (duplicate it from the template's atlas quads).
-   - Array (fit curve) + Curve modifiers, subdivided to 0.25 m.
-   - Shrinkwrap (Project −Z, offset 0.015 m) onto `TerrainBlock`, then apply.
-   - Export as `showcaseCoast_decals.glb` (geometry only).
-7. **Scatter:** no Blender scatter here. It's procedural (`showcaseCoast_rocks.scatter.json`): pebbles on `rocks01` weight > 0.3, a few rocks at the cliff foot (slope 20–45°).
+6. **Decals** (the add-on's Decal Sets panel):
+   - Select the block, _Add Decal Set_ (`showcaseCoast_decals`, atlas `decalsGround`).
+   - _Add Decal_ → `tireTracks`, twice: each a strip along its own path; give the second the first's path (its Array's and Curve's object) and move each strip's mesh 0.85 m aside in Edit mode. The path runs out of the dunes onto the beach and ends at the waterline, west of the inlet (lowest ground under it 0.55 m).
+   - The tracks' own albedo read blue-grey on `sand01` (a decal's albedo replaces the ground's): the set's material is `showcaseCoastTracks`, `decalsGround_blend` with `"tint": "#d2ad7c"` (and its TSL file).
+   - _Export Decal Set_: `showcaseCoast_decals.glb` and its stubs.
+7. **Scatter:** no Blender scatter here. It's procedural, two scatters (a scatter has one source): `showcaseCoast_pebbles` (pebbles on layer 2, `rocks01`, slopes under 30°, in clusters) and `showcaseCoast_rocks` (rocks where the ground turns up into the cliff: slope 24–45°, 1.2–5 m high, so not on the dunes' flanks or the waterline; casting shadows), both `rockScatter` over `rocks01`.
 8. **Material** `terrainCoast.material.json`:
-   - layers `sand01`, `sand02`, `rocks01`, `cliffs01`;
-   - `blend.source: VERTEX_COLOR`, `RGB_AO`, HEIGHT blend;
-   - DUAL_SCALE, HEX on DOMINANT;
+   - layers `sand01`, `sand02`, `rocks01`, `cliffs01`, as a set array (`inputs.layers`: `{ textureSetArray, packing: LITE }`, and the scene's `textureSetArrays` entry): `HEX` on `DOMINANT` samples in slots, which needs `ARRAY`;
+   - `blend.source: VERTEX_COLOR`, `RGB_AO`, HEIGHT blend; `ao.vertex`;
+   - `antiTiling: { mode: HEX, apply: DOMINANT }` (the other layers `DUAL_SCALE`);
    - cliffs layer `projection: TRIPLANAR` with `slopeGate: [35, 50]`;
-   - macro on;
-   - `wet: { shoreline: { band: 1.5, noise: 0.5, runUp: {} }, puddles: {}, ripples: {} }`.
-9. **Scene:** `waterLevel: 0.5`, plus a flat sea plane (a simple dark material). Water rendering is out of scope; the plane only shows the shoreline.
+   - `macro: { scale: 64 }` (the input `macro`: `macroNoise`);
+   - `wet: { shoreline: { band: 1.5, noise: 0.5, runUp: {} }, puddles: {}, ripples: {} }` (the input `ripples`: `rippleAtlas`).
+9. **Scene:** `waterLevel: 0.5`, plus a still sea plane (a simple dark material) 160 m square around the coast (its inlet included; the plateau stands over it), short of the other blocks. Water rendering is out of scope; the plane only shows the shoreline.
 
 ### 3.4 `showcaseAlpine`: step by step
 
-1. **Shape:**
-   - A Displace with a large _Clouds_ (size 40 m, strength 18 m) for one main ridge rising toward +X.
-   - A second Displace (size 8 m, strength 2 m).
+1. **Shape** (_Add Terrain Block_ with Splat Layout **RGBA**: two splat maps make 8 painted layers, the first map's A layer 4):
+   - A Displace with a large _Clouds_ (size 40 m, contrast 1.4, strength 18 m) and a _Blend_ (_Linear_ through an empty, the Coast's way, strength 8 m) for one main ridge rising toward +X, both with the _Vertex Group_ `Ridge` (1 north of z −2, fading to 0 by z +26: a slope of about 28 m down to a flat south part; a fade over 12 m made a cliff wall across the block, which the cliff rule painted).
+   - A second Displace (size 8 m, strength 2 m), its group `Relief` (0.3 on the flat part).
    - Sculpt (X/Y locked):
-     - a steep rock band (20–30 m long, 8 m high) on the north-facing side;
-     - a shallow bowl (≈ 12 m across, 0.6 m deep) on the flat south part for the frozen pond.
+     - a steep rock band (26 m long, 8 m high) facing north: a **scarp**, the ground north of it lowered to the north edge, its ends ramping back up over 12 m (a carve that faded out on every side made a rectangular quarry walled by cliffs). Built: 69° on its face, 74° at its steepest;
+     - a shallow bowl (12 m across, 0.6 m deep, flat-bottomed with a sharp rim) on the flat south part for the frozen pond.
 2. **UVs:** done by the add-on. Verify against the orientation block.
 3. **Splat maps** (Texture Paint):
-   - Create `showcaseAlpine_splat0` and `_splat1`: 1024², Non-Color, black, RGBA, alpha 0.
-   - In the template, two _Image Texture_ nodes on the preview material read them (`splat0` = layers 1–4, `splat1` = layers 5–8).
+   - _New Splat Map_ (1024²), then _New Splat Map_ with _Map_ **Layers 5-8**: `showcaseAlpine_splat0` and `_splat1`, Non-Color, black, RGBA, alpha 0, both drawn by the block's preview material (the add-on's second map, this phase's addition; the preview's layers 5-8 under layer 4).
    - Paint with pure-colour brushes, one channel per layer:
      - **`splat0.R` (`grass02`):** forest-floor patches on the lower slope.
      - **`splat0.G` (`rocks02`):** scree below the rock band.
      - **`splat0.B` (`cliffs02`):** the rock band.
-     - **`splat0.A` (`snow01`):** snow drifts in a few hollows. Painting alpha: brush blend _Add Alpha_. The rest of the snow comes from rules.
+     - **`splat0.A` (`snow01`):** snow drifts in a few hollows. Painting alpha: brush blend _Add Alpha_ (checked in Blender 5.3: A to 1, RGB untouched). The rest of the snow comes from rules.
      - **`splat1.R` (`snow02`):** wind-swept crest.
      - **`splat1.G` (`ice01`):** the pond bowl, sharp edge.
-   - **Save as 8-bit PNG** next to the `.blend`. The add-on's export saves them.
+   - **Save as 8-bit PNG** next to the `.blend` (_Image → Save As_): Export writes the PNGs beside the GLB too, but the `.blend` keeps a map's paint only as a file.
 4. **No vertex AO** on this block. The splat technique demo keeps vertex colours empty; the colour-map variation (§5) bakes AO into a colour map instead.
-5. **Scatter** (Blender GN, to demonstrate the imported path):
-   - A collection of 3 boulders (Poly Haven `boulder_01` decimated to 1.5k tris, or `generateRock` exports).
-   - GN on `TerrainBlock`:
-     - _Distribute Points on Faces_ (Poisson, min 6 m), density from `splat0.G` (scree) via _Image Texture_ in GN, × 0.02;
+5. **Scatter** (Blender GN, to demonstrate the imported path; the handbook's way: a scatter object of its own, not a modifier on the block, which Export writes as it is):
+   - A collection of 3 boulders: the toolkit's `namaqualandBoulder02` (its GLB imported, 1,500 triangles, its own maps) in three shapes (scaled and applied: as is, 0.8 × 1.35 × 1.4, 1.25 × 0.9 × 1.2).
+   - The template's `AekTerrainScatter` group (`terrain_scatter.blend`) on an empty mesh object at the block's place, its `Splat` read swapped for an _Image Texture_ of `splat0` at the `UVMap` (Layer G 1, R 0):
+     - _Distribute Points on Faces_ (Poisson, min 2.5 m, density 0.3 where the scree is 1);
      - _Instance on Points_ (random pick);
      - random Z rotation, scale 0.8–1.6;
-     - _Align Euler to Vector_ (normal, factor 0.5);
-     - translate −0.3 m.
-   - Set `aekScatterCollider: "CONVEXHULL"` on the collection's objects.
-   - Export with GPU instances as `showcaseAlpine_scatter.glb` (or the point-cloud fallback, p308 D3).
-6. **Decals:** two ice-crack quads (`iceCrack` cell) on the pond, Shrinkwrapped, exported as `showcaseAlpine_decals.glb`.
+     - aligned to the normal by 0.5;
+     - sunk 0.3 m × the scale.
+     - 13 boulders.
+   - The colliders are the scatter JSON's items' `collider: "CONVEXHULL"` (there's no custom prop for it).
+   - Export with GPU instances as `showcaseAlpine_scatter.glb` (UVs on: the boulder's own maps), the block and the scatter object moved to the origin for it (the block's at x 128 in the file).
+6. **Decals:** _Add Decal Set_, two `iceCrack` quads (_Add Decal_) on the pond, exported as `showcaseAlpine_decals.glb`.
 7. **Material** `terrainAlpine.material.json`:
-   - 7 layers, `SPLAT_MAP_AND_RULES` (`splatMaps: 2`);
-   - rule: `snow01` above 18 m, slope < 35°, aspect north ±70°, noise 0.3;
+   - 7 layers, `SPLAT_MAP_AND_RULES` (two maps: the inputs `splat0`, `splat1`), HEIGHT blend;
+   - rule: `snow01` above 18 m, slope < 35°, aspect north ±70°, noise 0.3 (scale 24 m);
    - rule: `cliffs02` above 45° slope;
-   - `storage: ARRAY`, `sparse: { maxLayers: 3 }`;
-   - TRIPLANAR slope-gated on `cliffs02`;
+   - `ARRAY` storage (the input `layers`, a set array of the 7, and the scene's `textureSetArrays` entry), `sparse: { maxLayers: 3 }`, `DUAL_SCALE` (sparse sampling takes one anti-tiling mode for every layer);
+   - TRIPLANAR slope-gated (35-50°) on `cliffs02`;
+   - `macro: { scale: 64 }` (the rule's noise reads it);
    - `wet: { snow: {} }` with the input `snow: { textureSet: 'snow01' }` (the code route's `snowSet`, default `snow01`), so `snowCoverage` (p307) adds snow everywhere.
 
 ### 3.5 `showcaseWetlands`: step by step
 
 1. **Shape:**
-   - Almost flat: Displace _Clouds_ 25 m / 0.8 m plus 5 m / 0.15 m.
-   - Sculpt (locked) a meandering shallow channel (0.3–0.5 m deep, 2–3 m wide) and two hollows for puddles.
+   - Almost flat: Displace _Clouds_ 25 m / 0.8 m plus 5 m / 0.15 m (applied: 0-0.7 m).
+   - Sculpt (locked) a meandering shallow channel (0.3–0.5 m deep, 2–3 m wide, north to south) and two hollows for puddles (0.25 m deep).
+   - Flatten a pad for the bunker (§3.6; Sculpt's _Flatten_, locked): 18 × 12 m at the engine's local (15, −15), 9 m from the channel, 0.58 m high.
 2. **Paint `Splat`:**
-   - **R (`mud02`):** the channel and its banks.
+   - **R (`mud02`):** the channel, its banks and the hollows.
    - **G (`grass02`):** the raised areas.
-   - **B (`rocks01`):** a gravel path crossing the channel.
+   - **B (`rocks01`):** a gravel path crossing the channel (a ford), west to east, and the bunker's pad.
    - Base: `mud01`.
    - _Normalize Splat_.
 3. **AO:** _Bake AO → Splat Alpha_ (distance 4 m).
-4. **Regional wetness** (`_WETNESS`, float, point domain):
-   - Geometry Nodes → _Store Named Attribute_ `_WETNESS` = a smoothstep of the distance to the channel. Or, simpler: paint a second colour attribute `WetPaint` and use GN to copy its R into `_WETNESS`.
-   - Apply the GN modifier, delete `WetPaint`.
-   - Export keeps `_`-prefixed attributes (_Attributes_ ✓).
+4. **Regional wetness** (`_WETNESS`, float, point domain; `wet-dry-surfaces.md`'s way, not a colour attribute):
+   - Weight Paint a vertex group `Wet`: 1 in and by the channel and the hollows, blurred out over 3-4 m.
+   - Geometry Nodes modifier, last in the stack: _Store Named Attribute_ (_Float_, _Point_) `_WETNESS` from a _Named Attribute_ `Wet` (Float). Keep it: Validate warns of an unapplied modifier and accepts it, Export applies it.
+   - Export keeps `_`-prefixed attributes (_Attributes_ ✓): the GLB's `_WETNESS` a float scalar a vertex, kept a float by the lossless `terrainBlock` profile.
 5. **Decals:**
-   - Tyre ruts across the path (strip decals, `tyreTracks` cell, the puddle mask in the cell's A channel makes them fill with water).
-   - Three mud-splatter quads.
-   - Export as `showcaseWetlands_decals.glb`.
-6. **Scatter:** procedural `showcaseWetlands_litter.scatter.json` (leaf cards on `grass02` and `mud02`) and `_rocks.scatter.json` (small rocks along the path).
+   - _Add Decal Set_; tyre ruts along the path through the ford (two `tireTracks` strips on one path, as the Coast's; the puddle mask in the cell's A makes them fill with water).
+   - Three `mudSplatter` quads on the channel's banks.
+   - The ruts' own albedo barely showed on the pale `rocks01`: the set's material is `showcaseWetlandsRuts`, `decalsGround_blend` with `"tint": "#7a6e60"` (the splatters share it).
+   - _Export Decal Set_: `showcaseWetlands_decals.glb`.
+6. **Scatter:** procedural `showcaseWetlands_litter.scatter.json` (leaf cards on `grass02`, layer 2, and thinner on `mud02`, layer 1; `minSpacing` 0.3, 8 m cells) and `_rocks.scatter.json` (pebbles and a few small rocks on `rocks01`, layer 3: the path and the pad).
 7. **Material** `terrainWetlands.material.json`:
-   - `VERTEX_COLOR` `RGB_AO`, HEIGHT blend, DUAL_SCALE;
-   - `wet: { puddles: { maxSlope: 8 }, ripples: {}, regional: {} }`: the attribute is `_wetness`, the default (three's GLTFLoader lowercases glTF's `_WETNESS`, so naming it `_WETNESS` would read nothing). This block is the first `_WETNESS` loaded from a GLB (the gallery's band is made in code): check it in the `WETNESS` view.
+   - `VERTEX_COLOR` `RGB_AO`, HEIGHT blend, `ao.vertex`, DUAL_SCALE;
+   - `wet: { puddles: { maxSlope: 8 }, ripples: {}, regional: {} }` (the input `ripples`: `rippleAtlas`): the attribute is `_wetness`, the default (three's GLTFLoader lowercases glTF's `_WETNESS`, so naming it `_WETNESS` would read nothing). This block is the first `_WETNESS` loaded from a GLB (the gallery's band is made in code): checked in the `WETNESS` view (section 3's As built).
 
 ### 3.6 `showcaseBunker`: step by step (structure)
 
-1. **Open** `src/toolkit/terrain/blender/structure_concrete.blend` and _Save As_ `src/app/scenes/terrainShowcase/blocks/showcaseWetlands/showcaseBunker.blend`.
-2. **Model** a 6 × 4 × 2.6 m bunker (walls 0.4 m) and a 12 m wall segment, with simple bevels (Bevel modifier, 0.03 m, 2 segments, then apply).
+1. **Open** `src/toolkit/terrain/blender/structure_concrete.blend` and _Save As_ `src/app/scenes/terrainShowcase/blocks/showcaseWetlands/showcaseBunker.blend`; delete the template's pieces (its preview materials stay).
+2. **Model** a 6 × 4 × 2.6 m bunker (walls and roof 0.4 m, a 1 × 2 m doorway toward −Y, the engine's +z) and a 12 m wall segment (0.4 m thick, 2.5 m high), with simple bevels (Bevel modifier, 0.03 m, 2 segments, limit by angle, then apply).
+   - **Vertices for the wear** (`structure-materials.md` step 3): faces cut every 0.35 m, as the template's pieces (built from its extruded profiles, `extrude_piece`, joined).
    - **No UVs needed:** world/object triplanar.
    - Apply scale; origin at the bottom centre.
-3. **Wear** (vertex colours, `RGBA`, a separate `Splat` attribute per object):
-   - **R (`concrete02`, damaged):** corners and edges. Use _Dirty Vertex Colors_ as a starting point, then paint.
-   - **G:** leak stains below the roof edge (a multiply tint in the structure preset).
-4. **Decals:** two leak quads under the roof edge (`leak` cells from `decalsStructure`), offset 0.01 m.
-5. **Collider:** custom props `colliderType: "TRIMESH"` (or boxes per wall for cheaper physics, recommended: `CUBOID` children).
-6. **Export** both objects (_Selected Objects_) as `showcaseBunker.glb`. They're placed on the Wetlands block by the scene code (or with a `parentBlock` in a structures list, a follow-up).
+3. **Wear** (vertex colours: the template's `Wear`, byte, on vertices, the active colour; its layers `concrete01`, then R, G, B):
+   - **R (`concrete02`, damaged):** corners and edges. _Dirty Vertex Colors_ as a starting point (its brightest tenth, the convex edges: the colour reads back linear, so take its own percentiles), broken up, then paint.
+   - **G (`mud01`):** stains running down from the roof edge and grime at the foot. A layer, not a "multiply tint" (the structure material has none), at partial weights (0.75 at most): full weights read as black rot, half ones vanish under the height blend.
+   - **B (`rocks02`):** a few chips.
+4. **Decals:** two leak quads under the roof edge (`leak01`, `leak03` from `decalsStructure`, 2 × 2 m), 0.01 m off the front wall. Not _Add Decal_ (it needs a block and projects along Z): the add-on's decal mesh by hand, a plane with `UVMap` in the cell and `DecalUV` 0..1, turned onto the wall; exported with the decal sets' settings in the bunker's space (`showcaseBunker_leaks.glb`), a decal set of the scene's own spawned at the bunker's transform.
+5. **Collider:** box nodes under each piece, colliders only (custom props `isPhysObj`, `colliderType: "CUBOID"`, `index`; the first of each index `rigidType: "FIXED"`): the bunker's roof, back, sides, the front either side of the doorway and its lintel (index 0, the doorway open), the wall's (index 1). Not the pieces themselves: a box is centred on its node's origin, at the piece's foot.
+6. **Export** the pieces and their boxes (_Selected Objects_; the add-on's locked settings without UVs) as `showcaseBunker.glb`. They're placed on the Wetlands block's pad by the scene code (`spawnImportedAsset` with `structureBunker`; or with a `parentBlock` in a structures list, a follow-up).
 
 ### 3.7 Scene code (outline)
 
@@ -340,7 +347,7 @@ Sections:
 
 3. The missing rows: B Packing (3 sets × 3 packings side by side), I's leak decals, L's footprint pad (click to stamp, wet toggle), the Orientation block (moved to `src/app/terrainBlocks/`) — done. As built:
    - **B Packing** (`packingRow.ts`): sand01, grass01 and cliffs01 (a row each from the back) in `FULL`, `LITE` and `MINIMAL` (left to right) on 12 m library blocks, one seed a set (310-312), cliffs01 with the library's wall, at x −144…−96, z −96…−48 (left of the Anti-tiling row, behind the Wet/dry row; the ground's back edge follows it). The scene's load loads the six other packings (`loadTextureSetAsync`: the scene's). The tab swaps their variants with the library's (material, debug view, tier; `swapSurface` takes the block's packing) and covers them with the checker. A **Time of day** slider (5-20 h, the scene's 10:00 on each visit) in the main pane shows the AO-in-albedo difference under a low sun: at 17:30 `MINIMAL` reads flattest, `FULL` deepest.
-   - **I's leaks** (`structuresRow.ts`): `decalsStructure`'s leak01-03 on the wall's front under its top (2 m, the cells' size; across the joint) and leak02-03 at 1.5 m beside the bunker's doorway under its roof (its front narrows), quads from the Decals stage (`getDecalQuadGeometry`, `getDecalCellSize` now exported, `DECAL_RENDER_ORDER`) in `decalsStructure_blend`, coplanar with the faces (the wear's impacts paint colour only). Their own app ids (`getStructuresLeakAppIds`), so the row's material swap leaves them alone.
+   - **I's leaks** (`structuresRow.ts`): `decalsStructure`'s leak01-03 on the wall's front under its top (2 m, the cells' size; across the joint) and leak02-03 at 1.5 m beside the bunker's doorway under its roof (its front narrows), quads from the Decals stage (`getDecalQuadGeometry`, `getDecalCellSize` now exported, `DECAL_RENDER_ORDER`) in `decalsStructure_blend`, coplanar with the faces (the wear's impacts paint colour only). Their own app ids (`getStructuresLeakAppIds`), so the row's material swap leaves them alone. (Invisible, it turned out: the grey streaks taken for them were the wall's wear; the atlas's leak cells were nearly transparent until Phase 2 section 4 fixed their recipes.)
    - **L's footprint pad** (`padBlock.ts`, `pad/terrainGalleryPad.terrainBlock.json`, `pad/terrainGalleryPad.material.json` and its TSL file; `_dbg__terrainGalleryPad.ts`): `spawnDecal` needs a terrain block, so the pad is one: a 16 m `noiseTerrain` block (0.5 m, 65 vertices a side, no collider) at grid (9, 2), in front of the Decals stage, in a terrain material of mud02 with puddles and ripples (the JSON route needs the `ripples` input named). The tab's Footprint pad section: "Stamp on click" (a press and release within 4 px on the canvas, a ray onto the pad's mesh; the toe away from the camera, the walk's rotation), the cell (the four footprints), Wet (the Decals section's dry and wet), the count of a 64-decal pool made with the first stamp, Clear, and the camera over the pad.
    - **The Orientation block** (`orientationBlock.ts`, `_dbg__terrainGalleryOrientation.ts`): `terrainBlockTest`'s `blenderBlock/` moved to `src/app/terrainBlocks/terrainBlockTestBlender/` (`git mv`; `terrainBlocks` in `APP_ASSET_FOLDERS`; the JSONs' `$schema` and `tslFile`, `exportOrientationBlock.py`'s folder, the comments, the terrain feature's `CLAUDE.md`, `terrain-blocks-blender.md` and the root `CLAUDE.md`'s app layout updated; `yarn assets` moved the outputs, same hashes, and pruned the old). A block has no spawn place but its grid, and the splat map twin's (−2, 3) is on the Rules row, so the gallery spawns the vertex colour block alone at (−3, 3) (x −112…−80, z 80…112, free) and the section switches its material to the twin's (`terrainBlockTestBlenderSplat`, which the scene lists); `terrainBlockTest` is unchanged. Its registry row is `—` Orientation.
    - Checked on WebGPU (`.cache/look/p310s3.mts`, `p310s3pad.mts`, `p310s3orient.mts`): the Packing row at 10:00 and 17:30; the leaks on the wall and the bunker; six clicks stamp six prints where they land and a drag none, dry and wet; the Orientation block from above in both sources, the markers on the same corners; `terrainBlockTest` loads its moved block. No new console messages. `yarn test` passes.
@@ -357,14 +364,63 @@ Sections:
 
 **Exit:** every row renders on WebGPU and WebGL2, and a full row measurement completes and copies a table. Met: every row on WebGPU (sections 1-4's shots, the scene runner) and WebGL2 (section 5); the Packing row's full measurement (9 blocks × the empty frame and 5 tiers) completed in 61 s and copied its table (section 4).
 
-### Phase 2 — Showcase Blender blocks (§3.3–3.6)
+### Phase 2 — Showcase Blender blocks (§3.3–3.6) — done
 
 1. Build Coast, Alpine, Wetlands and Bunker in Blender exactly as written. Where a step proves wrong, fix both this plan and the handbook page.
 2. Export, JSONs, materials, scatter, decals.
 
 3. `terrainShowcase` in `scenes.config.ts` with its baseline (sky paused, rain off, so the snapshot is stable; `?physicsProbe=N` checks the blocks' determinism).
 
-**Exit:** all blocks spawn with colliders matching the wireframe; the character (if added) walks every block; `yarn verify:scenes --only terrainShowcase` passes in both worker targets.
+**Exit:** all blocks spawn with colliders matching the wireframe; the character (if added) walks every block; `yarn verify:scenes --only terrainShowcase` passes in both worker targets. Met: the colliders match the meshes within 0.02 mm (rays, section 5; the boulders' hulls and the bunker's boxes where they should be); the player lands and walks on every block; the scene runner passes in all four configurations.
+
+Found when it started (2026-11-19), and decided:
+
+- **Every Blender asset so far is a build script** (the templates, `buildTerrainTemplates.py`; `terrainBlockTest`'s orientation and decal blocks, `exportOrientationBlock.py`, `buildDecalTest.py`; `buildScatterTest.py`): a background Blender (`.tools/blender-mcp/blender-path`, the Windows Blender 5.3) running the add-on's operators as an artist would, its sculpt and paint strokes as height and colour functions, so the asset can be made again. **Decided (asked):** the showcase blocks are built the same way, by `devTools/blender/buildShowcaseBlocks.py` (a block per name argument, as the template builder's), following §3.3-3.6 (the add-on's Add, Displace modifiers with Blender's textures, Normalize, Bake AO, Validate, Export, the decal operators; the strokes as functions), saving each `.blend` beside its block. The steps only a person does (Sculpt with X and Y locked, Vertex Paint, Texture Paint's _Add Alpha_, a Geometry Nodes density from an image) are tried once in the open Blender through the MCP on a scratch file (the open file was empty and unsaved), and a step that fails is fixed in this plan and its handbook page.
+- **§3.3-3.6 predate p309's decal tools:** the add-on's _Add Decal Set_ / _Add Decal_ (a strip along its own path for `tireTracks`, the Array, AEK Decal, Curve and Shrinkwrap made for you) / _Export Decal Set_ replace "a plane UV'd to the cell, Array, Curve, Shrinkwrap, apply". The cells are `tireTracks` (not `tyreTracks`), `iceCrack`, `mudSplatter`, `leak01`-`leak03`. The decal set exports in its block's space; a wall's decals (the bunker's leaks) aren't what Add Decal makes (it projects along Z onto the block): the handbook's structure route is a set of the scene's own, exported by hand.
+- **The add-on makes one splat map:** _New Splat Map_ makes `<id>_splat0` and the preview draws the base and four layers; Export already saves an `<id>_splat1` when the file has one (`BLOCK_IMAGES`). §3.4's "two _Image Texture_ nodes on the preview material" don't exist. **Decided (asked):** the add-on grows a second map: _New Splat Map_ takes the map (`splat0`, `splat1`), and a block with both draws layers 5-8 from the second (a toolkit patch; `verify:blender`'s splat map check covers it).
+- **Material facts against §3.3-3.6:** `HEX` with `apply: 'DOMINANT'` (Coast) samples in slots, which needs `ARRAY` storage, so Coast's material is an array material too (a `layers` `{ textureSetArray, packing }` input and the scene's `textureSetArrays` entry, as the gallery's); one projected layer (`cliffs01`'s slope-gated `TRIPLANAR`) beside planar ones is allowed under slots. Rules have `aspect` (`{ direction, … }`), so Alpine's north-facing snow rule is expressible. There's no `aekScatterCollider` custom prop: a scatter item's collider is its `collider` in the `*.scatter.json` (`CONVEXHULL`). The structure material has no "multiply tint": the wear's channels are layers (§3.6's G becomes a stain layer, as the template's `Wear`: concrete, then stains, grime, chips).
+- **Boulders:** Poly Haven's `boulder_01` doesn't decimate (`terrain-scatter.md`: 84 % of its vertices on UV seams); the toolkit's `namaqualandBoulder02` (1,500 triangles, its own maps, `rockScatterNamaqualandBoulder02`) is Alpine's boulder, imported into the `.blend` from its committed GLB, its scatter GLB exported with UVs.
+- **Regional wetness:** §3.5 paints a `WetPaint` colour and applies a GN modifier; `wet-dry-surfaces.md` paints a vertex group `Wet` and keeps the modifier last (Export applies it). The handbook's is the one built and checked; this plan's text follows it. The block profile's handling of `_WETNESS` (`terrainBlock`, lossless) is checked on the output.
+- **Texture sources:** `sand02`, `cliffs02`, `snow02`, `ice01` and `mud02` aren't fetched on this machine; `yarn fetchTextureSources --only …` first (§3.2 step 1), for the previews.
+- **The scene** (§3.7) is made in this phase as far as the exit needs it: the blocks, the bunker, the sea plane and `waterLevel`, the sky box (`dayNight`, standing still for the snapshot), the surface conditions dry; the scenarios, the procedural block and the day-night playing are Phase 3's. **Decided (asked):** the third-person character comes in this phase (the gym's dynamic controller, player brain and `FollowObjectCameraRig`, `src/app/shared/characterVisual.ts`), walking every block and stamping footprints into a pool on the block under it; its determinism checked on `MAIN_THREAD` as the gym's.
+- **Where:** `src/app/scenes/terrainShowcase/blocks/<id>/` as §3.1 (the layout's scene rule covers any depth inside the scene's folder); the bunker in `blocks/showcaseWetlands/`.
+
+Sections:
+
+1. The build script's frame (§3.2: the template, Add, the preview's layers, Validate, Export, the stubs) and **`showcaseCoast`** (§3.3): shaped, the cliff band, the splat, the AO, its tyre-track decal set; its import, block, `terrainCoast` material (array, `HEX` dominant, the slope-gated cliffs, shoreline, puddles, ripples) and TSL file, the pebble and rock scatter; the interactive steps tried in the open Blender; the scene's first form (the Coast block, the sea plane, `waterLevel` 0.5) to look at it in the engine. §3.3 and the handbook pages corrected where a step proved wrong. As built:
+   - **`devTools/blender/buildShowcaseBlocks.py`** (`blender -b --factory-startup --python-exit-code 1 --python buildShowcaseBlocks.py -- <addon.py> <repo root> <renders dir> [<block>...]`, about 20 s for the Coast): imports the template builder's helpers (`Grid`, `fbm`, `set_preview`, `validate`, `save`, `render`, `set_up_views`), so `buildTerrainTemplates.py`'s `main()` now runs only as the script (`if __name__ == "__main__"`; its arguments start as this script's). Per block: the template opened and saved as `<id>.blend` in its folder (its block and README dropped, its images no layer uses dropped, `//` paths with `/`: a Windows Blender's relative remap wrote `\`), Add, Update Preview, the plan's steps, Validate, a README text block, save, Export Block and Export Decal Set, a render pair into the renders folder. It prints the heights by row, the cliff's slopes, the splat's coverage and the lowest ground under a track's path. The block's GLB comes out byte for byte the same on a rebuild (the asset pipeline's cache hit).
+   - **§3.2 and §3.3 corrected** to what was built (above): the template's block in the way of Add; the dunes' contrast and their vertex group; the tilt's Blend texture through an empty (Quadratic); the beach band's heights; the decal tools; the tracks' tint; two scatters; the array, the macro's scale; the TSL files. The Coast's numbers: 0.77 MB `.blend`, the GLB 864 KB → 303 KB (lossless meshopt), its decal set 133 KB → 30 KB; the splat over 0.5 on 11 % (sand02), 5 % (rocks01), 6 % (cliffs01) of its vertices.
+   - **Checked in the open Blender 5.3** (a fresh empty file, put back empty): a Sculpt _Draw_ stroke with X and Y locked moves vertices in Z only, unlocked it moved them 4.4 cm sideways on a slope; a Vertex Paint stroke of pure red, _Mix_, strength 1 stores exactly 1 in R and 0 in G and B (the brush's falloff at the edge).
+   - **The scene's first form:** `terrainShowcase.scene.json` (not a debug scene: the Hub shows it), `terrainShowcaseCamera`, `terrainShowcaseSky` (DAY_NIGHT still at 10:30: the shared `dayNight` starts at 17:30 and plays, so the coast was at dusk within seconds), `surfaceConditions` `SIMULATED`, dry, `waterLevel` 0.5, the Coast's set array; `terrainShowcase.ts` registers the toolkit's pebbles and rocks, spawns the block and lays the sea plane (160 m square, 0.75 opaque, no shadows).
+   - **Looked at on WebGPU** (Windows Chrome 157, RDNA 3; `.cache/look/p310p2s1.mts`): the block loads without a warning of its own; the cliff triplanar, the shoreline's waves running up the beach and the inlet, the pebbles on the gravel and the rocks at the cliff foot, the tracks pressed into the sand to the waterline. `yarn test` passes.
+   - **Handbook:** `terrain-blocks-blender.md` (a template's block at grid (0, 0) in the way of Add; a Displace masked by a vertex group, a Blend texture through an empty), `terrain-decals.md` (a tinted decal set material needs its own TSL file).
+   - **The edges:** the blocks aren't "islands with sunk edges" (§3): the Coast's plateau ends in a 9 m cut at its north edge, seen from the north or above; the plan has no step for it. Decided in section 3: they stay as they are.
+2. **The add-on's second splat map** (New Splat Map's map choice, the preview's layers 5-8, `verify:blender`) and **`showcaseAlpine`** (§3.4): the ridge, the rock band and the pond bowl, both splat maps, the Geometry Nodes boulder scatter exported as GPU instances (`namaqualandBoulder02`, colliders), the ice-crack decals, `terrainAlpine` (7 layers, `SPLAT_MAP_AND_RULES`, `ARRAY`, sparse top 3, snow). As built:
+   - **The add-on (1.2.0, a toolkit change):** the preview's layers 5-8 (`layer5`-`layer8`, shown under layer 4 with the `RGBA` layout; `PREVIEW_LAYERS`, four more `FALLBACK_COLORS`), the preview group's inputs `Splat 2` and `Splat 2 Alpha` (its nodes for layers 5-8 built only when one is set); _New Splat Map_'s _Map_ (`Layers 1-4` → `<id>_splat0`, `Layers 5-8` → `<id>_splat1`; warns when the layout isn't `RGBA`); `ensure_splat_map_material` links both maps (the material's props `aekSplatMap`, `aekSplatMap1`, each image node tagged `aekSplatMapIndex`; a material made before keeps its one node as the first map's), the map just made the paint target, a relink (`update_splat_map_materials`) keeping the target. **A bug fixed:** Export skipped a block image that wasn't in memory (`has_data` false: a map saved as a file that nothing drew since, eg. a reopened `.blend`), silently: the second map and its stub weren't written. It reads the pixels first now, and warns of an image without any.
+   - **`verify:blender`:** `check_splat_map` adds the second map (its stub, both maps feeding their inputs, the layer 6 quarter rendered beside the first map's layers, the target across a relink) and its export from its file with its buffers freed (fails without the fix). All checks pass, 13 s.
+   - **`showcaseAlpine`** (`build_alpine`, about 25 s): its numbers in §3.4; the ridge to 22.4 m, 9 % of the block over 18 m; the splat maps over 0.5 on 10 % (grass02), 2 % (rocks02), 3 % (cliffs02), 2 % (snow01), 7 % (snow02), 2 % (ice01); 13 boulders. The GLB 864 KB → 272 KB, the scatter 296 KB → 255 KB (lossless; three boulder meshes and their GPU-instanced copies), the decals 10 → 5 KB, the maps 215 and 94 KB as they are (`data`, no codec; 5.6 MB VRAM each with mips).
+   - **Its JSONs:** the material (`terrainAlpine`, its TSL file; the splat maps as the material's own inputs, not the block's `materialInputs`: one block draws it), the block (`scatter`, `decals`), the scatter (`IMPORTED`, `showcaseAlpine_scatter`'s node `showcaseAlpineBoulders`, three items in `rockScatterNamaqualandBoulder02` with `CONVEXHULL` colliders and shadows) and its lossless import, the decal set (`decalsGround_blend`), the maps' texture stubs. The scene lists the block and its set array; the scene file spawns it (`BLOCK_IDS`).
+   - **Looked at on WebGPU** (`.cache/look/p310p2s2.mts`): the scarp in triplanar `cliffs02` with the scree and boulders at its foot, the rule's snow on the high north-facing slopes and the crest's `snow02`, the forest floor patches, the frozen pond; no warning of its own. `yarn test` passes.
+   - **Checked in the open Blender 5.3:** Texture Paint's _Add Alpha_ on a Non-Color channel-packed map raises A to 1 and leaves RGB at 0.
+   - **Handbook and docs:** `terrain-splat-map.md` (the second map's steps; save a painted map as a file), `terrain-scatter.md` (a splat-mapped block's mask in Geometry Nodes; rocks with their own maps; which objects move for the export), `terrain-blocks-blender.md` (eight preview layers), the Hub's terrain guide (the second map), the terrain feature's `CLAUDE.md` (New Splat Map's map, Export's fix), `devTools/verify/CLAUDE.md` (the check).
+3. **`showcaseWetlands`** (§3.5): the channel and hollows, the splat and AO, `_WETNESS` from a painted vertex group (checked in the `WETNESS` view: the first one loaded from a GLB), the ruts and mud-splatter decals, the leaf litter and path rocks, `terrainWetlands`. As built:
+   - **Decided (asked):** the blocks' edges stay as they are (no sunk edges; §3's "islands with sunk edges" isn't built).
+   - **`build_wetlands`** (about 20 s; `add_track_pair` now takes the block's centre as the 3D cursor, since a strip's path sits there): §3.5 as written above, plus the bunker's pad (§3.6 needs a flat place). Its numbers: heights −0.17-0.70 m, the splat over 0.5 on 12 % (mud02), 15 % (grass02), 12 % (rocks01), `_WETNESS` over 0.5 on 15 % of the vertices and over 0 on 23 %. The GLB 930 KB → 317 KB (lossless; `_WETNESS` 66 KB of it), the decals 255 KB → 52 KB.
+   - **Its JSONs:** the material and its TSL file, the block (`scatter`, `decals`), the litter and rocks scatters, the decal set in `showcaseWetlandsRuts` (its JSON and TSL file). The scene lists the block; its file registers the leaf card (`saveLeafCardGeometry`) and spawns it.
+   - **Looked at on WebGPU** (`.cache/look/p310p2s3.mts`, which also swaps the block to its `WETNESS` variant): `_wetness` arrives as a `Float32Array` of 16 641 values, the view wet along the channel and in the hollows, fading; shaded, the channel stays glossy with standing water in dry weather; the leaf cards on the grass, pebbles on the path, the ruts through the ford, the splatters on the banks; no warning of its own.
+   - **Handbook:** `wet-dry-surfaces.md` (the regional wetness checked from Blender to the engine; the encode keeps a float under `terrainBlock`, 16-bit only under the default encode; the worked block).
+4. **`showcaseBunker`** (§3.6): from `structure_concrete.blend`, the bunker and the wall segment with their wear, the leak decals (a set of the scene's own), the colliders, its structure material, placed on the Wetlands block. As built:
+   - **`build_bunker`** (about 15 s): §3.6 as written above. The bunker's wear over 0.25 on 5 % (damage), 24 % (stains), 3 % (chips) of its vertices, the wall's 5, 36, 1 %. The GLB 296 KB → 49 KB (the default encode), the leaks 2 KB.
+   - **Its JSONs:** `structureBunker` (the JSON route with the structure preset's defaults written out: `WORLD`, `TRIPLANAR`, `DUAL_SCALE`, a 12 m macro; `VERTEX_COLOR` `RGBA` over `concrete01`, `concrete02`, `mud01`, `rocks02`; `wet: { streaks: {} }`) and its TSL file, the two imports, the leaks' decal set (`decalsStructure_blend`). The scene lists them (`importedAssets`, `decalSets`, `materials`); its file spawns the bunker at (12, 0.58, 114), 3 m left of and 1 m in front of the pad's middle, and the leaks at the same transform.
+   - **A toolkit bug fixed (asked):** the `decalsStructure` leak cells were nearly transparent, here and in the gallery (Phase 1's check took the wall's wear for them). Their opacity came from ambientCG height maps that are almost black (at the 480 px cell, 97 % of the texels ≤ 6-11 of 255, maxima 11-87) through `remap: "auto"` over the full range. Found by elimination: the quads drew (an opaque test material), their UVs were the cell table's, forcing the opacity to 1 showed the leak's streaks. `decalLeak01`-`03_albedoAlpha` now remap `[0, 0.05]`, `[0, 0.09]`, `[0, 0.02]` (about the 99th percentile at the cell's size; past it clamps after the resize, which keeps a streak some width); `decalsStructure.albedoAlpha` re-encoded (393 KB; the `normalRough` slot unchanged). The leaks show as dark drips under the bunker's roof edge and on the gallery's wall. A toolkit patch for Phase 5.
+   - **Looked at on WebGPU** (`.cache/look/p310p2s4.mts`; `p310p2s4dbg.mts` and `p310p2s4gal.mts` the leak hunt): the bunker and the wall on the pad, the stains from the roof edge, the grime, the chipped edges, the leaks, and in rain (`MANUAL`, wetness 1, rain 0.9) the streaks down the walls; no warning of its own. The colliders are checked with the others in section 5.
+   - **Handbook:** `terrain-decals.md` (a faint scan's height range at the cell's size; a structure's decals by hand), `structure-materials.md` (the bunker as a worked import: its wear, material, colliders and leaks).
+5. **The scene and the exit:** the character (walk, footprints), the colliders against the wireframes on every block, `terrainShowcase` in `scenes.config.ts` (the sky and the rain still, `?physicsProbe`), its baseline in both worker targets; the scene's description, the handbook pages' "Template file" lines naming the showcase blocks. As built:
+   - **The player** (`showcasePlayer.ts`, `createShowcasePlayerAsync`): the gym's dynamic character (1.6 m, radius 0.5, `TANK` brain on WASD, Space, Shift, Ctrl and a gamepad), dropped onto the coast's beach at (−14, 3.5, 6) at the load (a load write: the physics hold covers it), `createFollowObjectCameraRig` on `terrainShowcaseCamera` (world offset (0, 4.5, 9) behind it from the south, with the scene). Its footprints: a pool of 128 (`decalsGround_blend`, which the scene JSON lists) and an `APP_LOGIC` system stamping a `footprintBoot` every 0.7 m it walks on the ground, left and right across its heading, on the block under it (by grid place from `getTerrainBlock`), tinted per block (the coast's `#d2ad7c`, the wetlands' `#666666`), gone after 60 s; nothing per frame allocated; the system removed on the scene's exit. The scene file keeps its blocks' spawn results for it.
+   - **The colliders against the meshes** (`.cache/look/p310p2s5.mts`, not by eye: the wireframes are per entity now, the physics entity window's "Show wireframe"): 400 rays down each block through the physics world (`castRay`, both worker targets) against three's raycast on its mesh: the coast's and the wetlands' heightfields within 0.02 mm, the alpine slope's too but for one ray 12.7 mm over it on its scree (a boulder's convex hull rising over the ground at its rim); one wetlands ray on the bunker. The bunker's boxes: its roof at 3.18 m, the wall's top at 3.08 m, a ray through the doorway on the back wall's inside (z 112.4) and one at the front wall on its face (z 116).
+   - **The player walked:** on the coast's beach (its prints trailing behind it), and dropped onto the alpine slope, the wetlands and the coast's plateau: landed and grounded on each (walked on the first two). The blocks are islands with nothing between them (the edges stay, decided in section 3): walking off one falls, as the first try at the plateau did.
+   - **The scene runner:** `terrainShowcase` in `scenes.config.ts` with `probeSteps: 180` (the player lands and settles before the freeze). Its WebGPU baselines recorded (`--update`) and then passed against them in all four configurations, both worker targets included (37 s). The probe hash is FNV-1a's empty `811c9dc5`: every body is fixed and the character isn't in the hash, so the probe has nothing moving to check; the snapshot is the follow camera on the player.
+   - **Docs:** the scene JSON's description and the scene file's header (each block, the bunker, the player); the handbook pages' "Template file" sections (`terrain-blocks-blender.md`, `terrain-splat-map.md`, `terrain-scatter.md`, `terrain-decals.md`, `terrain-vertex-color-splat.md`, `terrain-triplanar-cliffs.md`, `terrain-procedural-rules.md`) name the showcase's blocks as worked examples.
 
 ### Phase 3 — Procedural block and scenarios
 

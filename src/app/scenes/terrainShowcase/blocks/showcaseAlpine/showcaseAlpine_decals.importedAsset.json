@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../../../../.schemas/importedAsset.schema.json",
+  "id": "showcaseAlpine_decals",
+  "fileName": "./showcaseAlpine_decals.glb",
+  "debugData": {
+    "name": "Alpine ice cracks",
+    "description": "2 decals on the terrain block showcaseAlpine, exported by the Ækasha terrain add-on in the block's space. The default mesh encode (meshopt, quantized) keeps them within about 2 mm of the export, well inside the 1.5 cm they lie over the block, and their UVs within a quarter texel of a 2K atlas."
+  }
+}

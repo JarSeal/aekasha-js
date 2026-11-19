@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../../../../.schemas/importedAsset.schema.json",
+  "id": "showcaseBunker",
+  "fileName": "./showcaseBunker.glb",
+  "debugData": {
+    "name": "Showcase bunker",
+    "description": "terrainShowcase's bunker and wall segment on the wetlands' pad (p310 §3.6; devTools/blender/buildShowcaseBlocks.py, from the add-on's structure_concrete.blend): a 6 × 4 × 2.6 m bunker with a doorway and a 12 m wall, no UVs (the structure material is triplanar), their wear in COLOR_0 (RGBA), and box colliders as child nodes (CUBOID, a FIXED compound body each: index 0 the bunker, 1 the wall)."
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "$schema": "../../../../../../.schemas/scatter.schema.json",
+  "items": [
+    { "geometry": "rockPebble_a", "material": "rockScatter" },
+    { "geometry": "rockPebble_b", "material": "rockScatter" },
+    { "geometry": "rockPebble_c", "material": "rockScatter" }
+  ],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "terrainScatter",
+    "params": {
+      "minSpacing": 0.45,
+      "density": 0.7,
+      "mask": {
+        "layers": { "2": 1 },
+        "slope": { "max": 30 },
+        "noise": { "scale": 4, "amount": 0.6 }
+      },
+      "scale": [0.8, 1.6],
+      "alignToNormal": 0.8,
+      "sink": 0.3,
+      "tint": 0.2
+    },
+    "seed": 1
+  },
+  "lod": { "levels": [{ "screenSize": 0 }], "cullScreenSize": 0.4 },
+  "debugData": {
+    "name": "Coast pebbles",
+    "description": "The coast's pebbles (p310 §3.3): the toolkit's procedural pebbles in rockScatter over rocks01 (the gravel's own set) on the block's rocks01 layer (layer 2: the cliff foot and the dunes' islands), thinned in clusters, hidden past about 50 m."
+  }
+}

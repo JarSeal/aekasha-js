@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../../../../.schemas/texture.schema.json",
+  "id": "showcaseAlpine_splat1",
+  "fileName": "./showcaseAlpine_splat1.png",
+  "optimize": {
+    "slot": "data"
+  },
+  "texOpts": {
+    "flipY": false,
+    "colorSpace": ""
+  },
+  "debugData": {
+    "name": "Alpine splat map 1",
+    "description": "showcaseAlpine's second splat map (p310 §3.4), the terrain add-on's export: R weighs snow02 (the wind-swept crest), G ice01 (the pond), over the block's UVs (flipY false)."
+  }
+}

@@ -525,7 +525,7 @@ The toolkit's Blender add-on (`src/toolkit/terrain/blender/aekasha_terrain_tools
 _Install from Disk_, Blender 5.3) makes blocks that follow the conventions: _Add Terrain Block_
 (the exact grid, triangles along the heightfield's diagonal, top-down UVs, the vertex colour
 `Splat`, the custom props), a preview material of the terrain material's layers, _New Splat Map_
-for Texture Paint, _Bake AO → Splat Alpha_, _Bake Colour Map_, _Split Into Blocks_ (one large
+for Texture Paint (a second map for layers 5-8), _Bake AO → Splat Alpha_, _Bake Colour Map_, _Split Into Blocks_ (one large
 grid into neighbours with shared edges and normals), _Validate_ and _Export Block_ (the glTF
 settings locked, the images, and the JSON stubs), and the [decal](#decal-sets-from-blender) tools
 (_Add Decal Set_, _Add Decal_, _Export Decal Set_). Nine templates beside it start a block or a

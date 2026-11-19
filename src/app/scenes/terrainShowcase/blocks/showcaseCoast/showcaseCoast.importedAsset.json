@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../../../../.schemas/importedAsset.schema.json",
+  "id": "showcaseCoast",
+  "fileName": "./showcaseCoast.glb",
+  "optimize": {
+    "profile": "terrainBlock"
+  },
+  "debugData": {
+    "name": "Showcase coast",
+    "description": "terrainShowcase's coast block, the terrain add-on's export (devTools/blender/buildShowcaseBlocks.py; p310 §3.3): 64 m / 129, COLOR_0 RGB_AO. The terrainBlock profile keeps its positions lossless."
+  }
+}

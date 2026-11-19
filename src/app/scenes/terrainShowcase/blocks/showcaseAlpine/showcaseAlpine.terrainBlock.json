@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../../../../.schemas/terrainBlock.schema.json",
+  "geometry": {
+    "importedAsset": "showcaseAlpine",
+    "node": "showcaseAlpine"
+  },
+  "material": "terrainAlpine",
+  "grid": {
+    "x": 2,
+    "z": 0,
+    "size": 64,
+    "resolution": 129
+  },
+  "collider": {
+    "type": "HEIGHTFIELD"
+  },
+  "scatter": ["showcaseAlpine_boulders"],
+  "decals": ["showcaseAlpine_decals"],
+  "debugData": {
+    "name": "Showcase alpine slope",
+    "description": "terrainShowcase's alpine block (p310 §3.4): the terrain add-on's export (devTools/blender/buildShowcaseBlocks.py), 64 m / 129, a ridge rising toward +x to 22 m with a north-facing rock band 8 m high and a flat south part with a shallow pond bowl, painted in two splat maps (showcaseAlpine_splat0, _splat1; no vertex colour or AO), drawn by terrainAlpine; boulders with colliders scattered in Blender over the scree (its imported scatter) and two ice cracks on the pond (its decal set)."
+  }
+}

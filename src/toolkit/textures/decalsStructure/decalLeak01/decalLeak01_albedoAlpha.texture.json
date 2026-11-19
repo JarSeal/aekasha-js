@@ -13,13 +13,13 @@
       "a": {
         "src": "./source/raw/height.jpg",
         "channel": "r",
-        "remap": "auto",
+        "remap": [0, 0.05],
         "multiply": 0.85
       }
     }
   },
   "debugData": {
     "name": "decalLeak01 albedoAlpha",
-    "description": "p309 D1 DECAL albedoAlpha of ambientCG Leaking012A (CC0): a constant dark stain colour (the download's colour is near white and its metalness 1: the streaks are only in its displacement), opacity from the displacement over its full range \u00d7 0.85. An atlas cell's source only."
+    "description": "p309 D1 DECAL albedoAlpha of ambientCG Leaking012A (CC0): a constant dark stain colour (the download's colour is near white and its metalness 1: the streaks are only in its displacement), opacity from the displacement × 0.85, its 0-0.05 remapped to 0-1 (p310: the height map is almost black, 97 % of it under 0.03 at the cell's size, so an auto remap over its full range left the leak nearly transparent). An atlas cell's source only."
   }
 }

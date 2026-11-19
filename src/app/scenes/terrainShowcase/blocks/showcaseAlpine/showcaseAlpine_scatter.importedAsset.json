@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../../../.schemas/importedAsset.schema.json",
+  "id": "showcaseAlpine_scatter",
+  "fileName": "./showcaseAlpine_scatter.glb",
+  "optimize": {
+    "mesh": {
+      "quantize": false
+    }
+  },
+  "debugData": {
+    "name": "Alpine boulders (Blender scatter)",
+    "description": "showcaseAlpine's boulders (p310 §3.4), the Blender scatter (devTools/blender/buildShowcaseBlocks.py: the template's AekTerrainScatter group over the first splat map's scree) exported with GPU instances in the block's space: the node showcaseAlpineBoulders, its children the instanced copies of BoulderA-C (the toolkit's namaqualandBoulder02, CC0 from Poly Haven, in three shapes, its UVs kept for its own maps). Lossless: a scatter draws its items without their nodes."
+  }
+}
