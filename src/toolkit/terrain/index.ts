@@ -79,6 +79,15 @@ export { bakeTerrainColorMap } from './material/TerrainColorMapBake';
 export type { BakeTerrainColorMapOpts } from './material/TerrainColorMapBake';
 export { createStructureMaterial, getStructureMaterialConfig } from './material/StructureMaterial';
 export type { StructureMaterialOpts } from './material/StructureMaterial';
+export { bakeDecalGenerator } from './decals/BakeDecal';
+export type { BakeDecalGeneratorOpts, BakedDecal } from './decals/BakeDecal';
+export { defineDecalGenerator } from './decals/DecalGenerator';
+export type {
+  DecalBuildContext,
+  DecalGenerator,
+  DecalGeneratorDef,
+  DecalOutputs,
+} from './decals/DecalGenerator';
 export { setupDecalMaterial } from './decals/DecalMaterial';
 export type { DecalMaterialInputs } from './decals/DecalMaterial';
 export { createDecalTrail, spawnRibbonDecal } from './decals/DecalRibbons';
