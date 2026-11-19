@@ -58,7 +58,7 @@ The material is the toolkit's terrain material generator, `createTerrainMaterial
 
   The quality tiers on one layer (p305 Phase 6: Windows Chrome 157 on an AMD RDNA 3 GPU, WebGPU, 1280 × 800, a 12 m block of `rocks01` close up, the median of 90 frames; empty frame 0.12 ms): the block's own fields (`NONE`) 0.19 ms, `LOW` 0.19, `MEDIUM` 0.20, `HIGH` 0.25, `ULTRA` 0.25 (both `HEX`: with one layer `DOMINANT` is `HEX`).
 
-  Numbers compare within one machine only. p310 measures every page in the gallery with fixed camera presets.
+  Measured in the gallery ([how](README.md#how-the-figures-are-measured): RDNA 3, WebGPU, 1920 × 1080; the block's own GPU ms, the frame less the frame without it): the Anti-tiling row's 48 m `grass01` blocks `NONE` 0.09 ms, `DUAL_SCALE` 0.10, `HEX` 0.15; the library's 12 m `rocks01` at its own fields, `LOW`, `MEDIUM`, `HIGH` and `ULTRA` 0.12, 0.13, 0.14, 0.23, 0.23. On a block's share of the frame `HEX` costs about 0.05–0.1 ms more than the others. Numbers compare within one machine only.
 
 - **VRAM:** the set (a `LITE` set at 1K is 2.67 MB with its mips, `FULL` 4.00 MB, `MINIMAL` 1.33 MB) and the macro texture (`macroNoise`, 0.35 MB). Anti-tiling costs no memory.
 - **Bindings:** the packing's textures plus the macro: 2–4 of a shader stage's 16.

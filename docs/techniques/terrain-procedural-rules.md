@@ -44,7 +44,9 @@ Everything on [Single-layer terrain](terrain-single-layer.md) applies to each la
   | `RULES`, 4 layers, 3 rules (2 noise fetches)       | 0.15   | 0.16   |
   | `SPLAT_MAP_AND_RULES`, 6 layers (`ARRAY`), 3 rules | 0.19   | 0.19   |
 
-  **The rules cost about 0.01 ms over the same layers painted**: per-pixel rules against rules baked into vertex colours on the CPU (the second row is what such a bake costs) are a wash on the GPU. The tiers on the rules blocks and the 8-layer combo (sparse sampling, anti-tiling, gated cliffs): [Splat map's Performance](terrain-splat-map.md#performance); `MEDIUM` costs what the dense layers do, the 8-layer `HIGH` terrain 1.68 ms of a 1080p frame. p310 measures every page with fixed camera presets.
+  **The rules cost about 0.01 ms over the same layers painted**: per-pixel rules against rules baked into vertex colours on the CPU (the second row is what such a bake costs) are a wash on the GPU. The tiers on the rules blocks and the 8-layer combo (sparse sampling, anti-tiling, gated cliffs): [Splat map's Performance](terrain-splat-map.md#performance); `MEDIUM` costs what the dense layers do, the 8-layer `HIGH` terrain 1.68 ms of a 1080p frame.
+
+  Measured in the gallery's Rules row ([how](README.md#how-the-figures-are-measured): RDNA 3, WebGPU, 1920 × 1080; the block's own GPU ms, the frame less the frame without it), 64 m blocks; own fields, `LOW`, `MEDIUM`, `HIGH`, `ULTRA`: `RULES` (4 layers) 0.35, 0.25, 0.60, 0.88, 2.24 ms; `SPLAT_MAP_AND_RULES` (6 layers) 0.48, 0.28, 0.66, 0.96, 1.77; the 8-layer combo 0.62, 0.32, 0.85, 1.11, 1.96. The Blocks patch (nine 32 m `rulesTerrain` blocks, the rules baked into their vertex colours) 0.16–0.29 a block.
 
 - **VRAM:** the layers' sets and the macro noise (0.35 MB, shared with the macro variation); no per-block texture.
 - **Bindings:** the layers' plus the macro texture. 4 `LITE` layers bind 9 separately; more need a set array.

@@ -34,7 +34,19 @@ Everything on [Single-layer terrain](terrain-single-layer.md) applies to each la
 
 - **Fetches per pixel** ([the formula](README.md#the-performance-formula)): `P × L × A + M`, no splat fetch. `LITE`, 5 layers, no anti-tiling: 2·5 = **10**; with `DUAL_SCALE` and the macro 2·5·2 + 1 = **21**. Every layer is sampled on every pixel unless [sparse sampling](terrain-splat-map.md#sparse-sampling) keeps the top few.
 - **ALU:** the height blend is a few operations per layer, measured as free (below). The vertex AO is one multiply.
-- **Measured GPU time** (p305 Phase 3, 2026-11-16: Windows Chrome 157 on an AMD RDNA 3 GPU, WebGPU, 1280 × 800, a 24 m block filling the frame from 17 m up, the median of 90 frames; empty frame 0.14 ms): 5 layers `RGBA` 0.24 ms, `LINEAR` and `HEIGHT` alike; 4 layers `RGB_AO` with the vertex AO 0.22 ms. The tiers on the 5-layer block (Phase 6, the same machine; the block's own fields 0.23 ms): `LOW` 0.20, `MEDIUM` 0.31, `HIGH` 0.37, `ULTRA` 0.82. WebGL2 renders within 0.6 / 255 of WebGPU at the same cost. p310 measures every page with fixed camera presets.
+- **Measured GPU time** (p305 Phase 3, 2026-11-16: Windows Chrome 157 on an AMD RDNA 3 GPU, WebGPU, 1280 × 800, a 24 m block filling the frame from 17 m up, the median of 90 frames; empty frame 0.14 ms): 5 layers `RGBA` 0.24 ms, `LINEAR` and `HEIGHT` alike; 4 layers `RGB_AO` with the vertex AO 0.22 ms. The tiers on the 5-layer block (Phase 6, the same machine; the block's own fields 0.23 ms): `LOW` 0.20, `MEDIUM` 0.31, `HIGH` 0.37, `ULTRA` 0.82. WebGL2 renders within 0.6 / 255 of WebGPU at the same cost.
+
+  Measured in the gallery's Splatting row ([how](README.md#how-the-figures-are-measured): RDNA 3, WebGPU, 1920 × 1080; the block's own GPU ms, the frame less the frame without it), 24 m blocks; own fields, `LOW`, `MEDIUM`, `HIGH`, `ULTRA`:
+
+  | ms                        | Own  | `LOW` | `MEDIUM` | `HIGH` | `ULTRA` |
+  | ------------------------- | ---- | ----- | -------- | ------ | ------- |
+  | 5 layers `RGBA`, `LINEAR` | 0.23 | 0.17  | 0.36     | 0.48   | 0.94    |
+  | 5 layers `RGBA`, `HEIGHT` | 0.23 | 0.17  | 0.32     | 0.40   | 0.95    |
+  | 4 layers `RGB_AO` + AO    | 0.19 | 0.18  | 0.32     | 0.40   | 0.75    |
+  | The same, third person    | –    | –     | 0.56     | 0.72   | –       |
+
+  The third person row is the [matrix](README.md#which-technique-for-my-game)'s (the camera 6 m behind and 2.5 m over a player, 60°): the third person's recommendation at `MEDIUM` and `HIGH`; a stylized low-end game's 5-layer block at `LOW` from there is 0.27 ms.
+
 - **VRAM:** the layers' sets (2.67 MB each for 1K `LITE`: 13.3 MB for five) and the mesh's colour attribute (4 bytes a vertex as unsigned bytes, 16 as floats).
 - **Bindings:** `P` per layer, plus the macro: 5 `LITE` layers bind 10, the default budget ([Storage](terrain-splat-map.md#storage-and-the-binding-budget)). More and the code route's `AUTO` storage uses a set array.
 - **Draw calls:** one per block per material.
@@ -175,7 +187,7 @@ The height a layer blends with is `(h − 0.5) × contrast + 0.5 + offset`, mult
 
 ## Template file and example asset ids
 
-- **Blender template:** `src/toolkit/terrain/blender/terrain_vertexColorSplat.blend` (its README text block mirrors this page's Blender steps; the block workflow: [Terrain blocks from Blender](terrain-blocks-blender.md)). `terrainBlockTest`'s orientation block (`blenderBlock/`) is an add-on export drawn through its `COLOR_0`.
+- **Blender template:** `src/toolkit/terrain/blender/terrain_vertexColorSplat.blend` (its README text block mirrors this page's Blender steps; the block workflow: [Terrain blocks from Blender](terrain-blocks-blender.md)). The orientation block (`src/app/terrainBlocks/terrainBlockTestBlender/`, `terrainBlockTest`'s and the gallery's) is an add-on export drawn through its `COLOR_0`.
 - **The material:** `terrain` (a mesh variant), or `createTerrainMaterial` with `blend.source: 'VERTEX_COLOR'`.
 - **The gallery's Splatting row** (`terrainGallery`, `?isDebug=true&startScene=terrainGallery`; `src/app/scenes/terrainGallery/splattingRow.ts`): 24 m generated blocks with one painted pattern, `LINEAR` left of `HEIGHT`: 5 layers `RGBA` (`grass01`, `rocks01`, `sand01`, `mud01`, `snow01`) and 4 layers `RGB_AO` with the vertex AO darker in the hollows. Its tab section has sliders for the height blend depth, `rocks01`'s `heightOffset` and the vertex AO's influence, and the Debug view select shows `WEIGHTS`.
 - **Worked blocks:** `terrainShowcase`'s coast and wetlands (`src/app/scenes/terrainShowcase/blocks/showcaseCoast/`, `showcaseWetlands/`): `RGB_AO` vertex colours painted by `devTools/blender/buildShowcaseBlocks.py`, the AO baked.

@@ -44,7 +44,19 @@ Everything on [Single-layer terrain](terrain-single-layer.md) applies to each la
   | 1920 × 1080, 8 layers, from above   | 0.15  | 0.76 | 0.55  | 1.12     | **1.38** | 2.36    |
   | 1920 × 1080, 8 layers, third person | 0.19  | 1.53 | 0.70  | 1.37     | **1.68** | 2.90    |
 
-  "Own" is dense, no anti-tiling. Sparse sampling pays for the anti-tiling: `MEDIUM` (top 3, `DUAL_SCALE`) costs what the dense 8 layers without anti-tiling do, `LOW` (top 2, none) half of it; `HIGH` adds `HEX` on the dominant layer for 0.15–0.2 ms; `ULTRA` (top 4, `HEX` on all) is 1.7–2.6 × `HIGH`. The 8-layer `HIGH` terrain at 1080p stays under p305's 3 ms budget at 1.68 ms. WebGL2 is within about 0.1 ms. p310 measures every page with fixed camera presets.
+  "Own" is dense, no anti-tiling. Sparse sampling pays for the anti-tiling: `MEDIUM` (top 3, `DUAL_SCALE`) costs what the dense 8 layers without anti-tiling do, `LOW` (top 2, none) half of it; `HIGH` adds `HEX` on the dominant layer for 0.15–0.2 ms; `ULTRA` (top 4, `HEX` on all) is 1.7–2.6 × `HIGH`. The 8-layer `HIGH` terrain at 1080p stays under p305's 3 ms budget at 1.68 ms. WebGL2 is within about 0.1 ms.
+
+  Measured in the gallery ([how](README.md#how-the-figures-are-measured): RDNA 3, WebGPU, 1920 × 1080; the block's own GPU ms, the frame less the frame without it); own fields, `LOW`, `MEDIUM`, `HIGH`, `ULTRA`:
+
+  | ms                                             | Own  | `LOW` | `MEDIUM` | `HIGH` | `ULTRA` |
+  | ---------------------------------------------- | ---- | ----- | -------- | ------ | ------- |
+  | 24 m, 5 layers, one map, `LINEAR`              | 0.23 | 0.17  | 0.36     | 0.46   | 0.90    |
+  | 24 m, 5 layers, one map, `HEIGHT`              | 0.23 | 0.18  | 0.34     | 0.41   | 0.95    |
+  | 24 m, 9 layers, two maps, a set array          | 0.40 | 0.20  | 0.36     | 0.45   | 1.26    |
+  | 64 m, 8 layers, splat map + rules, from above  | 0.62 | 0.32  | 0.85     | 1.11   | 1.96    |
+  | The same, first person (75°, the eye at 1.7 m) | –    | –     | 0.98     | 1.29   | –       |
+
+  A splat map costs what the vertex colours do (one fetch). The first person row is the [matrix](README.md#which-technique-for-my-game)'s: its recommendation at `MEDIUM` and `HIGH`.
 
 - **VRAM:** the layers (2.67 MB per 1K `LITE` set: 24 MB for nine, alike in an array or separate; an array holds its layers once whatever binds it) and the splat maps, per block:
 

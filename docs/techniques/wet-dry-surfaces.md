@@ -73,7 +73,21 @@ How the material composes it, per pixel, after the layers are blended:
 - **CPU:** the state's system runs once a frame in `MAIN`, allocating nothing; the uniforms are written in place.
 - **VRAM:** the ripple atlas (256², about 0.09 MB), the macro noise (0.35 MB, shared with the macro variation and the rules' noise) and the snow set (`snow01`, about 2.7 MB at 1K `LITE`).
 - **Bindings:** the macro texture 1 (shared), the ripple atlas 1, the snow set `P`; all in the material's [budget](terrain-splat-map.md#storage-and-the-binding-budget). The map's depth texture isn't in that count: leave room for it in `reservedTextures` (default 6, with the shadow maps and the environment).
-- **Measured GPU time:** not yet. p310's camera presets time every page.
+- **Measured GPU time** ([how](README.md#how-the-figures-are-measured): RDNA 3, WebGPU, 1920 × 1080; the block's own GPU ms, the frame less the frame without it). The gallery's Wet/dry row (a 12 m block per category and the two-layer beach), dry against the wettest state (`MANUAL`: wetness, rain and puddle level 1), from the measurement's pose above and a first person's eye: every category 0.19–0.25 ms dry from above and **+0.00 to +0.02 ms** wettest; the beach (the shoreline too) 0.35 and 0.36. From the eye 0.11–0.23 dry, the same +0.00 to +0.02. The showcase's four 64 m blocks (`terrainShowcase`'s tab, Measure; p310 Phase 3), each with puddles, ripples, snow, frost and its own parts, in their wettest state and under full snow:
+
+  | Block        | Pose         | Dry  | Wettest | Snow | Wettest − dry | Snow − dry |
+  | ------------ | ------------ | ---- | ------- | ---- | ------------- | ---------- |
+  | Coast        | overview     | 0.86 | 0.86    | 0.93 | −0.00         | 0.07       |
+  | Coast        | first person | 1.70 | 1.74    | 1.94 | 0.05          | 0.24       |
+  | Alpine slope | overview     | 0.67 | 0.67    | 0.74 | −0.01         | 0.06       |
+  | Alpine slope | first person | 1.04 | 1.05    | 1.23 | 0.01          | 0.19       |
+  | Wetlands     | overview     | 0.91 | 0.92    | 0.96 | 0.01          | 0.05       |
+  | Wetlands     | first person | 1.92 | 1.94    | 2.18 | 0.02          | 0.27       |
+  | Procedural   | overview     | 0.65 | 0.64    | 0.68 | −0.00         | 0.04       |
+  | Procedural   | first person | 0.88 | 0.88    | 1.03 | −0.00         | 0.14       |
+
+  (The block's own ms: the frame less the frame without it; the showcase casts its sun's shadows.) **The wettest state costs what the dry one does:** the wet response's arithmetic runs on every pixel in either state, and the ripples' two taps where water stands near the camera are within the noise. **Snow costs 0.04–0.27 ms**, the most from a first person's eye, where the snow set's taps run under the cover on most of the frame.
+
 - **Quality tier:** `SIMPLE` for `LOW` (see Variations).
 
 ## Maps

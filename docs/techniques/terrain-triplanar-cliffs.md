@@ -41,7 +41,18 @@ Everything on [Single-layer terrain](terrain-single-layer.md) applies to each la
   | `TRIPLANAR`                  | 0.21         | 0.24        | 0.27         | 0.32        |
   | `TRIPLANAR` gated `[30, 50]` | 0.17         | 0.22        | 0.21         | 0.26        |
 
-  From above the gate costs about what `PLANAR` does and `TRIPLANAR` the most; at the face the gate lies between `BIPLANAR` and `TRIPLANAR` (its planar tap plus two planes). In the shader, a gated `TRIPLANAR` `LITE` layer has 2 plain samples before its branch and 4 `textureSampleGrad` inside; ungated `TRIPLANAR` 6, `BIPLANAR` 4. p310 measures every page with fixed camera presets.
+  From above the gate costs about what `PLANAR` does and `TRIPLANAR` the most; at the face the gate lies between `BIPLANAR` and `TRIPLANAR` (its planar tap plus two planes). In the shader, a gated `TRIPLANAR` `LITE` layer has 2 plain samples before its branch and 4 `textureSampleGrad` inside; ungated `TRIPLANAR` 6, `BIPLANAR` 4.
+
+  Measured in the gallery's Cliffs row ([how](README.md#how-the-figures-are-measured): RDNA 3, WebGPU, 1920 × 1080; the block's own GPU ms, the frame less the frame without it), the 40 m mesa from above (the measurement's pose) and from the side view (level, 15 m out from the steep face, 45°: the [matrix](README.md#which-technique-for-my-game)'s side-view camera):
+
+  | ms                | Above | Side view |
+  | ----------------- | ----- | --------- |
+  | `PLANAR`          | 0.10  | 0.16      |
+  | `BIPLANAR`        | 0.17  | 0.31      |
+  | `TRIPLANAR`       | 0.24  | 0.39      |
+  | `TRIPLANAR` gated | 0.16  | 0.15      |
+
+  Facing the cliff the gate costs what `PLANAR` does and less than half of ungated `TRIPLANAR`: the side view sees the face and the flat top beyond it, and only the face's pixels take the three planes.
 
 - **VRAM, bindings:** none of its own: the layer's set.
 - **Draw calls:** none of its own.

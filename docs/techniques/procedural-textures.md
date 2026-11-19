@@ -68,6 +68,8 @@ The usual path: tune a generator baked (the gallery does it with sliders), ship 
 
   A baked surface costs what an imported one does, about 1 ms over the empty frame. A live one costs 8–20 ms: a 60 fps frame's whole budget on this machine, for one layer. Numbers compare within one machine only; measure yours with the gallery's "Measure block".
 
+  The same row on another machine ([how](README.md#how-the-figures-are-measured): RDNA 3, WebGPU, 1920 × 1080; the block's own GPU ms, the frame less the frame without it), empty 0.11 ms: imported and baked 0.24–0.27 ms (the block's own about 0.13–0.16) for every generator; live 0.46–1.02 (`sandFlat` 0.46, `sandRipples` 0.48, `iceSheet` 1.02); live with taps 2.38–5.10. A live layer costs 2–7 times a baked one there; with taps, 17–36 times.
+
 - **VRAM** (a bake is uncompressed RGBA8, 4 bytes a texel; the mip chain adds a third; an exported set transcodes to 1 byte a texel):
 
   | One set at 1024²                     | Baked    | Exported (KTX2) |

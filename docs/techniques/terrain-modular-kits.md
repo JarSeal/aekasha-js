@@ -33,7 +33,7 @@ Poor fits also: transparent kits (glass, water: refused, drawn sorted per object
 - **Draw calls**: one per group per pass: the main pass, and every shadow pass whose light reaches the group. Unmerged, one per piece per pass.
 - **CPU**: fewer render objects to sort and submit. A move (`updateMergeMember`) rewrites one piece's range; adding or removing pieces in bulk rebuilds the group (a merge, in the assets worker above 65 536 vertices).
 - **Quality tier**: none. Merging changes no shader, unless the group is on a palette (the variation below), whose merge material costs more per pixel.
-- **Measured** (CPU, not GPU: p310's gallery hasn't measured this technique): `largeWorld`'s 409 static pieces in 28 groups take the main camera's draws from 381 to 38 per pass and the day-night sun's shadow pass from 53 to 15, and the CPU frame from 3.2-3.8 ms to 2.3-2.5 ms, on WebGPU and WebGL2 (Chrome on macOS; the table is on the Hub page). The `exampleMerging` courtyard: 423 draws a frame on its own, 16 merged.
+- **Measured** (the CPU and the draws: merging changes no shader, so the GPU's work per pixel is the same; the terrain gallery has no merged row, p310): `largeWorld`'s 409 static pieces in 28 groups take the main camera's draws from 381 to 38 per pass and the day-night sun's shadow pass from 53 to 15, and the CPU frame from 3.2-3.8 ms to 2.3-2.5 ms, on WebGPU and WebGL2 (Chrome on macOS; the table is on the Hub page). The `exampleMerging` courtyard: 423 draws a frame on its own, 16 merged.
 
 ## Maps
 
