@@ -84,11 +84,19 @@ const createPool = (opts: Partial<CreateDecalPoolOpts> = {}) => {
 
 const getGeometry = (index: number) => kernel.meshes[index].props.geo as THREE.BufferGeometry;
 
+/** The vertices a ribbon draws: its index's largest + 1 (its attributes span the place's arrays) */
+const getDrawnVertexCount = (geometry: THREE.BufferGeometry) => {
+  const index = geometry.index!;
+  let largest = -1;
+  for (let i = 0; i < index.count; i++) largest = Math.max(largest, index.getX(i));
+  return largest + 1;
+};
+
 /** A geometry's vertices (world space) whose x is `x` */
 const getRowAt = (geometry: THREE.BufferGeometry, x: number) => {
   const position = geometry.getAttribute('position');
   const row: number[] = [];
-  for (let i = 0; i < position.count; i++) {
+  for (let i = 0; i < getDrawnVertexCount(geometry); i++) {
     if (Math.abs(position.getX(i) - x) < 1e-4) row.push(i);
   }
   return row;

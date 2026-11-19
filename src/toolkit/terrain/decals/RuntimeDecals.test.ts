@@ -124,6 +124,14 @@ const createWorld = () => {
 const createPool = (world: ECSWorld, opts: Partial<CreateDecalPoolOpts> = {}) =>
   createDecalPool({ id: 'prints', material: 'decals_blend', atlas: 'ground', world, ...opts });
 
+/** The vertices a patch draws: its index's largest + 1 (its attributes span the place's arrays) */
+const getDrawnVertexCount = (geometry: THREE.BufferGeometry) => {
+  const index = geometry.index!;
+  let largest = -1;
+  for (let i = 0; i < index.count; i++) largest = Math.max(largest, index.getX(i));
+  return largest + 1;
+};
+
 /** The opacity last written for an entity */
 const getOpacity = (entityId: number) =>
   merging.colors.filter((write) => write.entityId === entityId).at(-1)?.opacity;
@@ -193,7 +201,7 @@ describe('spawnDecal', () => {
     expect(box.max.z).toBeLessThan(-6.8);
     const uv1 = geometry.getAttribute('uv1');
     const centre = { u: 0, n: 0 };
-    for (let i = 0; i < uv1.count; i++) {
+    for (let i = 0; i < getDrawnVertexCount(geometry); i++) {
       if (uv1.getX(i) < 0 || uv1.getX(i) > 1) continue;
       centre.u += geometry.getAttribute('uv').getX(i);
       centre.n++;
@@ -268,6 +276,35 @@ describe('spawnDecal', () => {
     expect(geometry.getAttribute('position').array.buffer).toBe(buffer);
     expect(geometry.boundingBox!.min.x).toBeGreaterThan(9.4);
     expect(pool.getDecalCount()).toBe(4);
+
+    // A respawn whose patch has other counts keeps its place's attributes: none made per spawn
+    const second = kernel.meshes[1].props.geo as THREE.BufferGeometry;
+    const names = ['position', 'normal', 'uv', 'uv1'];
+    const attributes = names.map((name) => second.getAttribute(name));
+    const index = second.index!;
+    const indexCount = index.count;
+    expect(
+      spawnDecal(pool, {
+        target: block,
+        position: { x: 7, z: -8 },
+        cell: 'footprint',
+        rotation: Math.PI / 4,
+        size: 1.3,
+      })
+    ).toBe(ids[1]);
+    names.forEach((name, i) => expect(second.getAttribute(name)).toBe(attributes[i]));
+    expect(second.index).toBe(index);
+    expect(index.count).not.toBe(indexCount);
+    expect(second.boundingSphere!.containsPoint(second.boundingBox!.max)).toBe(true);
+    // Every vertex of the attribute within the patch's bounds: three bounds a batch's slot by
+    // all of them, so a tail elsewhere (the origin, an older patch) would stretch the decal's
+    const position = second.getAttribute('position');
+    expect(getDrawnVertexCount(second)).toBeLessThan(position.count);
+    const bounds = second.boundingBox!.clone().expandByScalar(1e-5);
+    const point = new THREE.Vector3();
+    for (let i = 0; i < position.count; i++) {
+      expect(bounds.containsPoint(point.fromBufferAttribute(position, i))).toBe(true);
+    }
   });
 
   it("fades a lifetime's end by time, hides the decal when it ends and gives its place to the next spawn", () => {
@@ -380,8 +417,9 @@ describe('spawnMeshDecalAsync', () => {
     const geometry = kernel.meshes[0].props.geo as THREE.BufferGeometry;
     const position = geometry.getAttribute('position');
     const uv1 = geometry.getAttribute('uv1');
-    expect(geometry.index!.count).toBe(position.count);
-    for (let i = 0; i < position.count; i++) {
+    const vertexCount = getDrawnVertexCount(geometry);
+    expect(geometry.index!.count).toBe(vertexCount);
+    for (let i = 0; i < vertexCount; i++) {
       expect(position.getZ(i)).toBeCloseTo(0.505, 5);
       expect(position.getX(i)).toBeGreaterThanOrEqual(1.8 - 1e-6);
       expect(position.getX(i)).toBeLessThanOrEqual(2.2 + 1e-6);

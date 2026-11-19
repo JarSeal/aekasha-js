@@ -11,8 +11,8 @@
 // at the path's points along the bisector, widened to keep the width (a miter, at most twice), and
 // at its ends along a given direction at their own width, so two ribbons joined at a point (the
 // first's own last direction the second's start) share that row and meet without a gap. A path
-// too long for the arrays takes longer steps. The stations go into reused lists, so a spawn
-// allocates nothing here once they've grown.
+// too long for the arrays takes longer steps. The path and the rows go into typed arrays, grown to
+// the longest path and the largest arrays seen and then kept, so a stamp allocates nothing here.
 import type { AtlasCellRect } from 'aekasha';
 import { createBlockSurfaceSample, sampleBlockSurface } from '../blocks/BlockSurface';
 import type { BlockSurface } from '../blocks/BlockSurface';
@@ -67,14 +67,23 @@ export type DecalRibbonSpec = {
  */
 export type DecalRibbonCounts = DecalPatchCounts & { length: number };
 
-/** The path's per-point distances and per-segment directions, and the rows, reused */
-const cumulative: number[] = [];
-const dirX: number[] = [];
-const dirZ: number[] = [];
-const rowS: number[] = [];
-const rowFrac: number[] = [];
-const rowSegment: number[] = [];
+/** The path's per-point distances and per-segment directions, and the rows (each one's distance,
+ * tile fraction and segment): grown when a path or the arrays need more, else kept */
+let cumulative = new Float64Array(64);
+let dirX = new Float64Array(64);
+let dirZ = new Float64Array(64);
+let rowS = new Float64Array(64);
+let rowFrac = new Float64Array(64);
+let rowSegment = new Int32Array(64);
+/** The rows collected for the step being tried; past `rowCapacity` they're only counted (they
+ * can't fit the arrays: a ribbon has two columns at least) */
+let rowCount = 0;
+let rowCapacity = 0;
 const sample = createBlockSurfaceSample();
+
+/** `array` when it holds `size`, else a new one of twice its length at least */
+const growFloat = (array: Float64Array, size: number) =>
+  array.length >= size ? array : new Float64Array(Math.max(size, array.length * 2));
 
 /** The tile fraction at a distance along the path */
 const getFraction = (spec: DecalRibbonSpec, s: number) => {
@@ -83,9 +92,12 @@ const getFraction = (spec: DecalRibbonSpec, s: number) => {
 };
 
 const pushRow = (s: number, frac: number, segment: number) => {
-  rowS.push(s);
-  rowFrac.push(frac);
-  rowSegment.push(segment);
+  if (rowCount < rowCapacity) {
+    rowS[rowCount] = s;
+    rowFrac[rowCount] = frac;
+    rowSegment[rowCount] = segment;
+  }
+  rowCount++;
 };
 
 /** A station's rows: two at a tile's end inside the path (the end, then the next tile's start),
@@ -93,7 +105,7 @@ const pushRow = (s: number, frac: number, segment: number) => {
 const pushStation = (spec: DecalRibbonSpec, s: number, segment: number, length: number) => {
   const frac = getFraction(spec, s);
   const atSeam = frac < 1e-6 || frac > 1 - 1e-6;
-  if (rowS.length === 0) pushRow(s, atSeam ? 0 : frac, segment);
+  if (rowCount === 0) pushRow(s, atSeam ? 0 : frac, segment);
   else if (s >= length - EPSILON) pushRow(s, atSeam ? 1 : frac, segment);
   else if (atSeam) {
     pushRow(s, 1, segment);
@@ -101,21 +113,22 @@ const pushStation = (spec: DecalRibbonSpec, s: number, segment: number, length: 
   } else pushRow(s, frac, segment);
 };
 
-/** Fills the rows for a step: each segment's stations, the tiles' ends doubled */
+/** Fills the rows for a step: each segment's stations, the tiles' ends doubled; stops once they
+ * can't fit (`rowCount` past `rowCapacity`) */
 const collectRows = (spec: DecalRibbonSpec, step: number, length: number, segments: number) => {
-  rowS.length = 0;
-  rowFrac.length = 0;
-  rowSegment.length = 0;
+  rowCount = 0;
   const { tileLength, along } = spec;
   for (let i = 0; i < segments; i++) {
+    if (rowCount > rowCapacity) return;
     const s0 = cumulative[i];
     const span = cumulative[i + 1] - s0;
     if (span < EPSILON) continue;
     const count = Math.max(1, Math.ceil(span / step));
     for (let j = 0; j < count; j++) {
+      if (rowCount > rowCapacity) return;
       const s = s0 + (span * j) / count;
       const next = s0 + (span * (j + 1)) / count;
-      if (rowS.length === 0 || s > rowS[rowS.length - 1] + EPSILON) {
+      if (rowCount === 0 || s > rowS[rowCount - 1] + EPSILON) {
         pushStation(spec, s, i, length);
       }
       // The tiles' ends strictly between this station and the next
@@ -157,18 +170,18 @@ export const writeRibbonPatch = (
 
   // The path: each point's distance along it, each segment's direction (a point repeated takes
   // its neighbour's)
-  cumulative.length = 0;
-  dirX.length = 0;
-  dirZ.length = 0;
-  cumulative.push(0);
   const segments = pointCount - 1;
+  cumulative = growFloat(cumulative, pointCount);
+  dirX = growFloat(dirX, segments);
+  dirZ = growFloat(dirZ, segments);
+  cumulative[0] = 0;
   for (let i = 0; i < segments; i++) {
     const dx = points[i + 1].x - points[i].x;
     const dz = points[i + 1].z - points[i].z;
     const span = Math.sqrt(dx * dx + dz * dz);
-    cumulative.push(cumulative[i] + span);
-    dirX.push(span < EPSILON ? NaN : dx / span);
-    dirZ.push(span < EPSILON ? NaN : dz / span);
+    cumulative[i + 1] = cumulative[i] + span;
+    dirX[i] = span < EPSILON ? NaN : dx / span;
+    dirZ[i] = span < EPSILON ? NaN : dz / span;
   }
   const length = cumulative[segments];
   if (length < EPSILON) return out;
@@ -182,22 +195,32 @@ export const writeRibbonPatch = (
     }
   }
 
+  // A ribbon that fits has half the arrays' vertices as rows at most (two columns at least)
+  rowCapacity = Math.floor(maxVertices / 2);
+  rowS = growFloat(rowS, rowCapacity);
+  rowFrac = growFloat(rowFrac, rowCapacity);
+  if (rowSegment.length < rowCapacity) {
+    rowSegment = new Int32Array(Math.max(rowCapacity, rowSegment.length * 2));
+  }
   let step = spec.step;
   let columns = 0;
   for (;;) {
     columns = Math.max(1, Math.ceil(width / step)) + 1;
     collectRows(spec, step, length, segments);
-    if (rowS.length * columns <= maxVertices) break;
+    if (rowCount * columns <= maxVertices) break;
     if (step > length + width) return out;
     step *= STEP_GROWTH;
   }
   out.stride = Math.ceil(step / spec.step - 1e-9);
 
-  const [u0, v0, u1, v1] = cellRect;
+  const u0 = cellRect[0];
+  const v0 = cellRect[1];
+  const u1 = cellRect[2];
+  const v1 = cellRect[3];
   const share = spec.edgeShareU;
   const fade = spec.endFadeMeters;
   let vertex = 0;
-  for (let r = 0; r < rowS.length; r++) {
+  for (let r = 0; r < rowCount; r++) {
     const s = rowS[r];
     const segment = rowSegment[r];
     let dx = dirX[segment];
@@ -254,7 +277,7 @@ export const writeRibbonPatch = (
   }
 
   let index = 0;
-  for (let r = 0; r < rowS.length - 1; r++) {
+  for (let r = 0; r < rowCount - 1; r++) {
     // A tile's end and the next one's start share a place: no faces between them
     if (rowS[r + 1] - rowS[r] < EPSILON) continue;
     for (let j = 0; j < columns - 1; j++) {

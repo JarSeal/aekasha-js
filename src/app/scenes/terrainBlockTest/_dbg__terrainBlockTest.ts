@@ -2,6 +2,7 @@ import { getActiveCamera, llog } from 'aekasha';
 import { createDebuggerTab } from 'aekasha/debug';
 import { spawnTerrainBlock } from 'aekasha/terrain';
 import { generateTerrainAsync, type TerrainAsyncOptions } from 'aekasha/toolkit/geometry';
+import { createDecalPane, installDecalProbe } from './decalBlock/_dbg__terrainBlockTestDecals';
 
 // The terrain block scene's tab (debug env), p306 Phase 4's exit: the frames while a 257² block
 // with AO generates, on the toolkit's terrain worker and on the main thread, and while the
@@ -9,6 +10,8 @@ import { generateTerrainAsync, type TerrainAsyncOptions } from 'aekasha/toolkit/
 // run records every frame's delta from its start until `FRAMES_AFTER` frames after its work
 // resolved, beside an idle stretch measured first. `window.__terrainBlockTest.measureAsync(run)`
 // runs one from a script (`devTools/bench/` style) and resolves with its figures.
+// p309 Phase 4's runtime decals have a pane and a probe of their own
+// (`decalBlock/_dbg__terrainBlockTestDecals.ts`).
 
 const TAB_ID = 'terrainBlockTest';
 const SCENE_ID = 'terrainBlockTest';
@@ -152,9 +155,13 @@ const lookAtDecalTracks = () => {
   camera.lookAt(...DECAL_VIEW.target);
 };
 
-/** Creates the scene's tab (removed on its exit) and the script's `measureAsync`. */
+/**
+ * Creates the scene's tab (removed on its exit), the script's `measureAsync` and the decal probe.
+ * @returns the probe's remover, for the scene's exit
+ */
 export const createTerrainBlockTestTab = (state: object) => {
   Object.assign(state, { measureAsync });
+  const removeDecalProbe = installDecalProbe(state);
   const button = (title: string, run: TerrainBlockTestRun) => ({
     type: 'button' as const,
     title,
@@ -179,6 +186,8 @@ export const createTerrainBlockTestTab = (state: object) => {
           },
         ],
       },
+      createDecalPane(),
     ],
   });
+  return removeDecalProbe;
 };

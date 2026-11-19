@@ -13,6 +13,7 @@ import { createPhysicsEntity, getPhysicsSimClock } from 'aekasha/physics';
 import { spawnTerrainBlock, type TerrainBlock } from 'aekasha/terrain';
 import { generateTerrainAsync, loadTerrainHeightmapAsync } from 'aekasha/toolkit/geometry';
 import { nextFrames } from '../../shared/verifyHarness';
+import { decalWalkState, startDecalWalk } from './decalBlock/terrainBlockTestDecalWalk';
 import {
   getHeightmapTexel,
   HEIGHTMAP_EXTENT,
@@ -55,6 +56,9 @@ import {
  *   crack decal of the `decalsGround` atlas, `BLEND`), conformed to the block in Blender by the
  *   add-on's Shrinkwrap and spawned with it. A block whose decal set brings no meshes logs an
  *   error. No boxes fall on it. The tab's "Look at the decal tracks" flies the camera there.
+ *   p309 Phase 4's runtime decals walk on it (`decalBlock/terrainBlockTestDecalWalk.ts`): a walker's
+ *   footprints in a pool of 128 and a cart's two wheel tracks beside them, driven by the fixed
+ *   steps (`?tbtDecals=blend|cutout|off`, `?tbtDecalRate`); `decals` in the window global.
  *
  * A 3 × 3 grid of boxes falls on each block. `window.__terrainBlockTest` holds the spawn results
  * and, after `SETTLE_STEPS` fixed steps, where each box is; a block without its collider, or a box
@@ -110,7 +114,9 @@ const state: {
   heightmapBlock: { meshEntityId: number; maxGap: number } | null;
   boxes: BoxResult[];
   isSettled: boolean;
-} = { blocks: [], heightmapBlock: null, boxes: [], isSettled: false };
+  /** The runtime decals' walk (p309 Phase 4) */
+  decals: typeof decalWalkState;
+} = { blocks: [], heightmapBlock: null, boxes: [], isSettled: false, decals: decalWalkState };
 
 /**
  * The 3 × 3 boxes over a block, `spacing` apart and `height` up, each a dynamic body on its mesh
@@ -253,8 +259,12 @@ export const scene = async () => {
   state.boxes = [];
   state.isSettled = false;
   let isLoaded = true;
+  let stopDecalWalk = () => {};
+  let removeDebug = () => {};
   registerOnSceneExit(SCENE_ID, () => {
     isLoaded = false;
+    stopDecalWalk();
+    removeDebug();
   });
   const isCurrent = () => isLoaded;
 
@@ -291,12 +301,14 @@ export const scene = async () => {
   if (IS_DEBUG_ENV) {
     const { createTerrainBlockTestTab } = await import('./_dbg__terrainBlockTest');
     if (!isCurrent()) return;
-    createTerrainBlockTestTab(state);
+    removeDebug = createTerrainBlockTestTab(state);
   }
 
+  let decalBlock: TerrainBlock | undefined;
   for (const id of BLOCK_IDS) {
     const block = await spawnTerrainBlock(id);
     if (!block || !isCurrent()) return;
+    if (id === DECAL_BLOCK_ID) decalBlock = block;
     state.blocks.push({
       id: block.id,
       meshEntityId: block.meshEntityId,
@@ -307,6 +319,7 @@ export const scene = async () => {
   if (!state.blocks.find((block) => block.id === DECAL_BLOCK_ID)?.decalIds.length) {
     lerror(`terrainBlockTest: the decal block "${DECAL_BLOCK_ID}" spawned no decals.`);
   }
+  if (decalBlock) stopDecalWalk = startDecalWalk(decalBlock);
   const withoutCollider = state.blocks.filter((block) => block.physicsEntityId === undefined);
   if (withoutCollider.length) {
     lerror(

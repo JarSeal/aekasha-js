@@ -156,6 +156,16 @@ export type DecalPlace = {
 };
 
 /**
+ * An atlas cell as a pool reads it once: its id, UV rect and physical size (none without one).
+ * @internal
+ */
+export type DecalCell = {
+  id: string;
+  rect: AtlasCellRect;
+  size: readonly [number, number] | undefined;
+};
+
+/**
  * A pool's state: its settings, places, line and fades.
  * @internal
  */
@@ -186,7 +196,7 @@ export type PoolState = {
   written: Float32Array;
   /** The places drawn with a finite lifetime */
   timedCount: number;
-  cells: Map<string, { rect: AtlasCellRect; size: readonly [number, number] | undefined }>;
+  cells: Map<string, DecalCell>;
   isStrideWarned: boolean;
   /** Whether a ribbon too long for `maxPatchVertices` warned */
   isRibbonWarned: boolean;
@@ -489,7 +499,7 @@ export const pickCell = (state: PoolState, cell: SpawnDecalOpts['cell'], where: 
     typeof cell === 'string'
       ? cell
       : cell[Math.floor(getRandomStream(state.randomStream)() * cell.length)];
-  return { id, ...getCell(state, id, where) };
+  return getCell(state, id, where);
 };
 
 /**
@@ -551,7 +561,8 @@ export const finishSpawn = (
   return place.entityId;
 };
 
-/** A cell's UV rect and physical size, from the atlas's table once */
+/** A cell's id, UV rect and physical size, from the atlas's table once (the record kept and
+ * returned: a spawn allocates nothing for it) */
 const getCell = (state: PoolState, cellId: string, where: string) => {
   let cell = state.cells.get(cellId);
   if (cell) return cell;
@@ -563,6 +574,7 @@ const getCell = (state: PoolState, cellId: string, where: string) => {
   }
   const physicalSize = (info.data as { physicalSize?: unknown } | undefined)?.physicalSize;
   cell = {
+    id: cellId,
     rect: info.uv,
     size:
       typeof physicalSize === 'number'
@@ -633,39 +645,97 @@ const removeFromOrder = (state: PoolState, rank: number) => {
   state.orderCount--;
 };
 
-/** One attribute over its array's used part: the same attribute when its count is (the data is
- * written in place), else a new view (three's batch copies a source's whole array) */
-const setView = (
+/** An attribute over its place's whole array, made once per array (a mesh decal past the arrays
+ * gets new ones): the batch copies a vertex attribute's whole array into its slot anyway (three
+ * r187's `setGeometryAt`, the rest of the slot zeroed), and only the index's range is drawn; but
+ * three bounds a slot by all its vertices, so the tail's positions are the patch's first (see
+ * `fillPositionTail`) */
+const setAttribute = (
   geometry: THREE.BufferGeometry,
   name: string,
   array: Float32Array,
-  itemSize: number,
-  count: number
+  itemSize: number
 ) => {
   const attribute = geometry.getAttribute(name) as THREE.BufferAttribute | undefined;
-  if (attribute?.count === count) {
-    attribute.needsUpdate = true;
-    return;
-  }
-  geometry.setAttribute(
-    name,
-    new THREE.BufferAttribute(array.subarray(0, count * itemSize), itemSize)
-  );
+  if (attribute?.array === array) attribute.needsUpdate = true;
+  else geometry.setAttribute(name, new THREE.BufferAttribute(array, itemSize));
 };
 
+/** The positions past the patch's set to its first vertex: three bounds a batch's slot (and so
+ * culls its instance, and places it in a shadow camera's view) by every vertex of the source's
+ * position attribute, so a tail left at the origin, or at an older patch's place, would stretch
+ * it there; never indexed, so never drawn */
+const fillPositionTail = (positions: Float32Array, vertexCount: number) => {
+  if (vertexCount === 0) return;
+  const x = positions[0];
+  const y = positions[1];
+  const z = positions[2];
+  for (let i = vertexCount * 3; i < positions.length; i += 3) {
+    positions[i] = x;
+    positions[i + 1] = y;
+    positions[i + 2] = z;
+  }
+};
+
+/** The patch's bounds from its vertices, into the geometry's own box and sphere */
+const setPatchBounds = (
+  geometry: THREE.BufferGeometry,
+  positions: Float32Array,
+  vertexCount: number
+) => {
+  const box = (geometry.boundingBox ??= new THREE.Box3());
+  const sphere = (geometry.boundingSphere ??= new THREE.Sphere());
+  box.makeEmpty();
+  if (vertexCount === 0) {
+    sphere.makeEmpty();
+    return;
+  }
+  const { min, max } = box;
+  for (let i = 0; i < vertexCount * 3; i += 3) {
+    const x = positions[i];
+    const y = positions[i + 1];
+    const z = positions[i + 2];
+    if (x < min.x) min.x = x;
+    if (y < min.y) min.y = y;
+    if (z < min.z) min.z = z;
+    if (x > max.x) max.x = x;
+    if (y > max.y) max.y = y;
+    if (z > max.z) max.z = z;
+  }
+  box.getCenter(sphere.center);
+  const { x: cx, y: cy, z: cz } = sphere.center;
+  let radiusSq = 0;
+  for (let i = 0; i < vertexCount * 3; i += 3) {
+    const dx = positions[i] - cx;
+    const dy = positions[i + 1] - cy;
+    const dz = positions[i + 2] - cz;
+    radiusSq = Math.max(radiusSq, dx * dx + dy * dy + dz * dz);
+  }
+  sphere.radius = Math.sqrt(radiusSq);
+};
+
+/** The place's geometry from its arrays, allocating nothing unless the arrays are new: the vertex
+ * attributes over the whole arrays, the index's `count` the patch's (three documents it read-only,
+ * but both the batch's copy and a draw read it, and a new view per spawn is what this avoids) */
 const setPatchAttributes = (
   geometry: THREE.BufferGeometry,
   arrays: DecalPatchArrays,
   { vertexCount, indexCount }: DecalPatchCounts
 ) => {
-  setView(geometry, 'position', arrays.positions, 3, vertexCount);
-  setView(geometry, 'normal', arrays.normals, 3, vertexCount);
-  setView(geometry, 'uv', arrays.uvs, 2, vertexCount);
-  setView(geometry, 'uv1', arrays.decalUvs, 2, vertexCount);
-  if (geometry.index?.count === indexCount) geometry.index.needsUpdate = true;
-  else geometry.setIndex(new THREE.BufferAttribute(arrays.indices.subarray(0, indexCount), 1));
-  geometry.computeBoundingBox();
-  geometry.computeBoundingSphere();
+  fillPositionTail(arrays.positions, vertexCount);
+  setAttribute(geometry, 'position', arrays.positions, 3);
+  setAttribute(geometry, 'normal', arrays.normals, 3);
+  setAttribute(geometry, 'uv', arrays.uvs, 2);
+  setAttribute(geometry, 'uv1', arrays.decalUvs, 2);
+  let index = geometry.index;
+  if (index?.array !== arrays.indices) {
+    index = new THREE.BufferAttribute(arrays.indices, 1);
+    geometry.setIndex(index);
+  }
+  // A plain field in three r187, typed read-only: re-check on a three upgrade
+  (index as { count: number }).count = indexCount;
+  index.needsUpdate = true;
+  setPatchBounds(geometry, arrays.positions, vertexCount);
 };
 
 /** A decal's opacity: its own × its FIFO factor × its lifetime's fade; written on a change (or

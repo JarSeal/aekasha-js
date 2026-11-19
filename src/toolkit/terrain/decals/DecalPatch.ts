@@ -207,7 +207,10 @@ export const writeDecalPatch = (
   const pointCols = countPoints(colMax - colMin, stride);
   const pointRows = countPoints(rowMax - rowMin, stride);
 
-  const [u0, v0, u1, v1] = cellRect;
+  const u0 = cellRect[0];
+  const v0 = cellRect[1];
+  const u1 = cellRect[2];
+  const v1 = cellRect[3];
   let vertex = 0;
   for (let j = 0; j < pointRows; j++) {
     const row = Math.min(rowMin + j * stride, rowMax);
@@ -298,7 +301,10 @@ export const writeMeshDecalPatch = (
       `writeMeshDecalPatch: the decal's ${count} vertices don't fit arrays of ${positions.length / 3}.`
     );
   }
-  const [u0, v0, u1, v1] = cellRect;
+  const u0 = cellRect[0];
+  const v0 = cellRect[1];
+  const u1 = cellRect[2];
+  const v1 = cellRect[3];
   let nx = 0;
   let ny = 1;
   let nz = 0;

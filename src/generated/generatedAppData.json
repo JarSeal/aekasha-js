@@ -20784,7 +20784,163 @@
     "terrainBlockTest": {
       "isDebugScene": true,
       "name": "Terrain blocks (p306, p309)",
-      "description": "p306 Phase 2's verification scene: three 100 m terrain blocks side by side, spawned with spawnTerrainBlock. Middle: the Gym's terrainSmooth.glb as a JSON-only block (an imported node, a HEIGHTFIELD read from its geometry, grass through its materialInputs' variant of textureSetSurface). Right: a generated block (the toolkit's noiseTerrain) with the generator's heightfield. Left: a generated block with a TRIMESH collider. Front (p306 Phase 4): a 64 m block from a committed .r16 heightmap (loadTerrainHeightmapAsync, generated on the toolkit's terrain worker with its heightfield), its heights checked against the map's texels. Front left (p306 Phase 5): the terrain add-on's orientation block, a 32 m Blender export with corner markers (snow at the engine's -x, -z corner, mud at +x, -z) and baked AO, twice: through its COLOR_0 and, beside it, through its painted splat map; both must look alike. Further left (p309 Phase 3): the add-on's decal block, a 32 m Blender export with a ridge and small bumps, its decal set (two tyre tracks curving over the ridge, an asphalt damage and a crack decal, conformed to it in Blender by the add-on's Shrinkwrap) spawned with it through its decals: no track floats or cuts in. A 3 × 3 grid of boxes falls on each but the decal block. The tab (p306 Phase 4) spawns a fourth, a 256 m / 257² rulesTerrain block with AO behind them, and generates the same on the toolkit's terrain worker or the main thread, logging the frames. window.__terrainBlockTest holds the spawn results and, after the boxes settle, each box's height above the terrain under it.",
+      "description": "p306 Phase 2's verification scene: three 100 m terrain blocks side by side, spawned with spawnTerrainBlock. Middle: the Gym's terrainSmooth.glb as a JSON-only block (an imported node, a HEIGHTFIELD read from its geometry, grass through its materialInputs' variant of textureSetSurface). Right: a generated block (the toolkit's noiseTerrain) with the generator's heightfield. Left: a generated block with a TRIMESH collider. Front (p306 Phase 4): a 64 m block from a committed .r16 heightmap (loadTerrainHeightmapAsync, generated on the toolkit's terrain worker with its heightfield), its heights checked against the map's texels. Front left (p306 Phase 5): the terrain add-on's orientation block, a 32 m Blender export with corner markers (snow at the engine's -x, -z corner, mud at +x, -z) and baked AO, twice: through its COLOR_0 and, beside it, through its painted splat map; both must look alike. Further left (p309 Phase 3): the add-on's decal block, a 32 m Blender export with a ridge and small bumps, its decal set (two tyre tracks curving over the ridge, an asphalt damage and a crack decal, conformed to it in Blender by the add-on's Shrinkwrap) spawned with it through its decals: no track floats or cuts in. On it, p309 Phase 4's runtime decals: a walker on a seeded loop stamps footprints into a pool of 128 (the FIFO fading its oldest), and a cart's two wheel tracks follow it (createDecalTrail), both driven by the fixed steps (?tbtDecals=blend|cutout|off, ?tbtDecalRate). A 3 × 3 grid of boxes falls on each but the decal block. The tab (p306 Phase 4) spawns a fourth, a 256 m / 257² rulesTerrain block with AO behind them, and generates the same on the toolkit's terrain worker or the main thread, logging the frames. window.__terrainBlockTest holds the spawn results and, after the boxes settle, each box's height above the terrain under it.",
+      "materials": [
+        {
+          "id": "decalsGround_cutout",
+          "debugData": {
+            "name": "Ground decals, CUTOUT",
+            "description": "Decals (p309 D2) of the decalsGround atlas (tyre tracks, cracks, stains, footprints) in its DECAL packing: the mesh's UV in the atlas's space, its second UV set 0..1 over the decal for the edge fade (edgeFade UV1: a mesh without it draws nothing). CUTOUT: alpha-tested at 0.5 with alphaToCoverage under MSAA, in the opaque pass; polygon offset -1, -4 (params). Wet by the surface conditions (FULL: puddles fill the puddle mask first, rain ripples from rippleAtlas) with frost. Static defines: mode (BLEND, CUTOUT), edgeFade (UV1, NONE), wet (FULL, SIMPLE, NONE), frost, rainOcclusion (NORMAL_Y, MAP). Numbers and colours (optional inputs): tint, opacity, normalStrength, roughnessScale, edgeFade, puddleDepth, porosity, wetDarkening, wetRoughness, puddleResponse; optional snow ({ textureSet }). Draw it after the surface (the mesh's renderOrder, eg. 10), castShadow false, receiveShadow true."
+          },
+          "params": {
+            "polygonOffsetFactor": -1,
+            "polygonOffsetUnits": -4,
+            "alphaTest": 0.5
+          },
+          "tslFile": "materials/decal/decal.tsl.ts",
+          "staticDefines": {
+            "mode": "CUTOUT",
+            "edgeFade": "UV1",
+            "wet": "FULL",
+            "frost": true,
+            "rainOcclusion": "NORMAL_Y"
+          },
+          "inputs": {
+            "albedoAlpha": {
+              "texture": "decalsGround.albedoAlpha"
+            },
+            "normalRough": {
+              "texture": "decalsGround.normalRough"
+            },
+            "ripples": {
+              "texture": "rippleAtlas"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "textureSetSurface",
+          "debugData": {
+            "name": "Texture set surface",
+            "description": "One texture set on a surface, any packing (p303 D7): the baseline of the terrain techniques, no anti-tiling or splat. Give a mesh its set with matOverrides.inputs.surface ({ textureSet, packing? }). Static defines: tiling (WORLD_XZ: the world's (x, -z) over physicalSize, for terrain; UV: the mesh's UV in metres, for walls and structures), minimalNormal (BUMP or FLAT)."
+          },
+          "tslFile": "materials/textureSetSurface/textureSetSurface.tsl.ts",
+          "staticDefines": {
+            "tiling": "WORLD_XZ",
+            "minimalNormal": "BUMP"
+          },
+          "inputs": {
+            "surface": {
+              "textureSet": "sand01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "terrainBlockTestBlenderVertex",
+          "debugData": {
+            "name": "Orientation block (vertex colour)",
+            "description": "p306 Phase 5's orientation block through its COLOR_0 (RGB_AO): grass, snow on the red marker (the engine's -x, -z corner, the top view's top left), mud on the green one (+x, -z, top right); A the baked AO."
+          },
+          "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
+          "staticDefines": {
+            "terrain": {
+              "layers": [
+                {},
+                {},
+                {}
+              ],
+              "blend": {
+                "source": "VERTEX_COLOR",
+                "vertexColor": {
+                  "layout": "RGB_AO"
+                }
+              },
+              "ao": {
+                "vertex": true
+              }
+            }
+          },
+          "inputs": {
+            "layer0": {
+              "textureSet": "grass01"
+            },
+            "layer1": {
+              "textureSet": "snow01"
+            },
+            "layer2": {
+              "textureSet": "mud01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "terrainBlockTestBlenderSplat",
+          "debugData": {
+            "name": "Orientation block (splat map)",
+            "description": "p306 Phase 5's orientation block through its painted splat map (flipY false): the same sets and corners as the vertex colour material, so both blocks look alike."
+          },
+          "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
+          "staticDefines": {
+            "terrain": {
+              "layers": [
+                {},
+                {},
+                {}
+              ],
+              "blend": {
+                "source": "SPLAT_MAP"
+              }
+            }
+          },
+          "inputs": {
+            "layer0": {
+              "textureSet": "grass01"
+            },
+            "layer1": {
+              "textureSet": "snow01"
+            },
+            "layer2": {
+              "textureSet": "mud01"
+            },
+            "splat0": {
+              "texture": "terrainBlockTestBlender_splat0"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "decalsGround_blend",
+          "debugData": {
+            "name": "Ground decals, BLEND",
+            "description": "Decals (p309 D2) of the decalsGround atlas (tyre tracks, cracks, stains, footprints) in its DECAL packing: the mesh's UV in the atlas's space, its second UV set 0..1 over the decal for the edge fade (edgeFade UV1: a mesh without it draws nothing). BLEND: alpha-blended in the transparent pass, no depth writes (soft decals); polygon offset -1, -4 (params). Wet by the surface conditions (FULL: puddles fill the puddle mask first, rain ripples from rippleAtlas) with frost. Static defines: mode (BLEND, CUTOUT), edgeFade (UV1, NONE), wet (FULL, SIMPLE, NONE), frost, rainOcclusion (NORMAL_Y, MAP). Numbers and colours (optional inputs): tint, opacity, normalStrength, roughnessScale, edgeFade, puddleDepth, porosity, wetDarkening, wetRoughness, puddleResponse; optional snow ({ textureSet }). Draw it after the surface (the mesh's renderOrder, eg. 10), castShadow false, receiveShadow true."
+          },
+          "params": {
+            "polygonOffsetFactor": -1,
+            "polygonOffsetUnits": -4
+          },
+          "tslFile": "materials/decal/decal.tsl.ts",
+          "staticDefines": {
+            "mode": "BLEND",
+            "edgeFade": "UV1",
+            "wet": "FULL",
+            "frost": true,
+            "rainOcclusion": "NORMAL_Y"
+          },
+          "inputs": {
+            "albedoAlpha": {
+              "texture": "decalsGround.albedoAlpha"
+            },
+            "normalRough": {
+              "texture": "decalsGround.normalRough"
+            },
+            "ripples": {
+              "texture": "rippleAtlas"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        }
+      ],
       "terrainBlocks": [
         {
           "id": "terrainBlockTestSmooth",
@@ -21122,130 +21278,6 @@
           }
         }
       ],
-      "materials": [
-        {
-          "id": "textureSetSurface",
-          "debugData": {
-            "name": "Texture set surface",
-            "description": "One texture set on a surface, any packing (p303 D7): the baseline of the terrain techniques, no anti-tiling or splat. Give a mesh its set with matOverrides.inputs.surface ({ textureSet, packing? }). Static defines: tiling (WORLD_XZ: the world's (x, -z) over physicalSize, for terrain; UV: the mesh's UV in metres, for walls and structures), minimalNormal (BUMP or FLAT)."
-          },
-          "tslFile": "materials/textureSetSurface/textureSetSurface.tsl.ts",
-          "staticDefines": {
-            "tiling": "WORLD_XZ",
-            "minimalNormal": "BUMP"
-          },
-          "inputs": {
-            "surface": {
-              "textureSet": "sand01"
-            }
-          },
-          "type": "STANDARDNODEMATERIAL"
-        },
-        {
-          "id": "terrainBlockTestBlenderVertex",
-          "debugData": {
-            "name": "Orientation block (vertex colour)",
-            "description": "p306 Phase 5's orientation block through its COLOR_0 (RGB_AO): grass, snow on the red marker (the engine's -x, -z corner, the top view's top left), mud on the green one (+x, -z, top right); A the baked AO."
-          },
-          "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
-          "staticDefines": {
-            "terrain": {
-              "layers": [
-                {},
-                {},
-                {}
-              ],
-              "blend": {
-                "source": "VERTEX_COLOR",
-                "vertexColor": {
-                  "layout": "RGB_AO"
-                }
-              },
-              "ao": {
-                "vertex": true
-              }
-            }
-          },
-          "inputs": {
-            "layer0": {
-              "textureSet": "grass01"
-            },
-            "layer1": {
-              "textureSet": "snow01"
-            },
-            "layer2": {
-              "textureSet": "mud01"
-            }
-          },
-          "type": "STANDARDNODEMATERIAL"
-        },
-        {
-          "id": "terrainBlockTestBlenderSplat",
-          "debugData": {
-            "name": "Orientation block (splat map)",
-            "description": "p306 Phase 5's orientation block through its painted splat map (flipY false): the same sets and corners as the vertex colour material, so both blocks look alike."
-          },
-          "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
-          "staticDefines": {
-            "terrain": {
-              "layers": [
-                {},
-                {},
-                {}
-              ],
-              "blend": {
-                "source": "SPLAT_MAP"
-              }
-            }
-          },
-          "inputs": {
-            "layer0": {
-              "textureSet": "grass01"
-            },
-            "layer1": {
-              "textureSet": "snow01"
-            },
-            "layer2": {
-              "textureSet": "mud01"
-            },
-            "splat0": {
-              "texture": "terrainBlockTestBlender_splat0"
-            }
-          },
-          "type": "STANDARDNODEMATERIAL"
-        },
-        {
-          "id": "decalsGround_blend",
-          "debugData": {
-            "name": "Ground decals, BLEND",
-            "description": "Decals (p309 D2) of the decalsGround atlas (tyre tracks, cracks, stains, footprints) in its DECAL packing: the mesh's UV in the atlas's space, its second UV set 0..1 over the decal for the edge fade (edgeFade UV1: a mesh without it draws nothing). BLEND: alpha-blended in the transparent pass, no depth writes (soft decals); polygon offset -1, -4 (params). Wet by the surface conditions (FULL: puddles fill the puddle mask first, rain ripples from rippleAtlas) with frost. Static defines: mode (BLEND, CUTOUT), edgeFade (UV1, NONE), wet (FULL, SIMPLE, NONE), frost, rainOcclusion (NORMAL_Y, MAP). Numbers and colours (optional inputs): tint, opacity, normalStrength, roughnessScale, edgeFade, puddleDepth, porosity, wetDarkening, wetRoughness, puddleResponse; optional snow ({ textureSet }). Draw it after the surface (the mesh's renderOrder, eg. 10), castShadow false, receiveShadow true."
-          },
-          "params": {
-            "polygonOffsetFactor": -1,
-            "polygonOffsetUnits": -4
-          },
-          "tslFile": "materials/decal/decal.tsl.ts",
-          "staticDefines": {
-            "mode": "BLEND",
-            "edgeFade": "UV1",
-            "wet": "FULL",
-            "frost": true,
-            "rainOcclusion": "NORMAL_Y"
-          },
-          "inputs": {
-            "albedoAlpha": {
-              "texture": "decalsGround.albedoAlpha"
-            },
-            "normalRough": {
-              "texture": "decalsGround.normalRough"
-            },
-            "ripples": {
-              "texture": "rippleAtlas"
-            }
-          },
-          "type": "STANDARDNODEMATERIAL"
-        }
-      ],
       "decalSets": [
         {
           "id": "terrainBlockTestDecals_decals",
@@ -21443,230 +21475,6 @@
         }
       ],
       "textures": [
-        {
-          "id": "sand01_albedoRough",
-          "texOpts": {
-            "wrapS": 1000,
-            "wrapT": 1000,
-            "anisotropy": "MAX",
-            "colorSpace": "srgb"
-          },
-          "debugData": {
-            "name": "sand01 albedoRough (LITE)",
-            "description": "The texture set sand01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
-          },
-          "__url": "/aek-assets/toolkit/textures/sand01/sand01_albedoRough.pack.42c89ed4.ktx2",
-          "__bytes": {
-            "in": 9086447,
-            "out": 861827
-          },
-          "__vramBytes": {
-            "in": 22369620,
-            "out": 1398128
-          },
-          "__codec": "uastc",
-          "__averageColor": [
-            0.4077,
-            0.303,
-            0.1458
-          ]
-        },
-        {
-          "id": "sand01_normalHeight",
-          "texOpts": {
-            "wrapS": 1000,
-            "wrapT": 1000,
-            "anisotropy": "MAX"
-          },
-          "debugData": {
-            "name": "sand01 normalHeight (LITE)",
-            "description": "The texture set sand01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
-          },
-          "__url": "/aek-assets/toolkit/textures/sand01/sand01_normalHeight.pack.448c5a53.ktx2",
-          "__bytes": {
-            "in": 7695457,
-            "out": 1166404
-          },
-          "__vramBytes": {
-            "in": 22369620,
-            "out": 1398128
-          },
-          "__codec": "uastc"
-        },
-        {
-          "id": "grass01_albedoRough",
-          "texOpts": {
-            "wrapS": 1000,
-            "wrapT": 1000,
-            "anisotropy": "MAX",
-            "colorSpace": "srgb"
-          },
-          "debugData": {
-            "name": "grass01 albedoRough (LITE)",
-            "description": "The texture set grass01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
-          },
-          "__url": "/aek-assets/toolkit/textures/grass01/grass01_albedoRough.pack.50a0bb8d.ktx2",
-          "__bytes": {
-            "in": 14718033,
-            "out": 1310929
-          },
-          "__vramBytes": {
-            "in": 22369620,
-            "out": 1398128
-          },
-          "__codec": "uastc",
-          "__averageColor": [
-            0.1071,
-            0.1347,
-            0.0293
-          ]
-        },
-        {
-          "id": "grass01_normalHeight",
-          "texOpts": {
-            "wrapS": 1000,
-            "wrapT": 1000,
-            "anisotropy": "MAX"
-          },
-          "debugData": {
-            "name": "grass01 normalHeight (LITE)",
-            "description": "The texture set grass01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
-          },
-          "__url": "/aek-assets/toolkit/textures/grass01/grass01_normalHeight.pack.59a4f2a1.ktx2",
-          "__bytes": {
-            "in": 13506245,
-            "out": 1321146
-          },
-          "__vramBytes": {
-            "in": 22369620,
-            "out": 1398128
-          },
-          "__codec": "uastc"
-        },
-        {
-          "id": "snow01_albedoRough",
-          "texOpts": {
-            "wrapS": 1000,
-            "wrapT": 1000,
-            "anisotropy": "MAX",
-            "colorSpace": "srgb"
-          },
-          "debugData": {
-            "name": "snow01 albedoRough (LITE)",
-            "description": "The texture set snow01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Snow010A's maps (yarn fetchTextureSources)."
-          },
-          "__url": "/aek-assets/toolkit/textures/snow01/snow01_albedoRough.pack.da33b5ed.ktx2",
-          "__bytes": {
-            "in": 9647460,
-            "out": 957546
-          },
-          "__vramBytes": {
-            "in": 22369620,
-            "out": 1398128
-          },
-          "__codec": "uastc",
-          "__averageColor": [
-            0.7076,
-            0.8269,
-            0.9346
-          ]
-        },
-        {
-          "id": "snow01_normalHeight",
-          "texOpts": {
-            "wrapS": 1000,
-            "wrapT": 1000,
-            "anisotropy": "MAX"
-          },
-          "debugData": {
-            "name": "snow01 normalHeight (LITE)",
-            "description": "The texture set snow01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Snow010A's maps (yarn fetchTextureSources)."
-          },
-          "__url": "/aek-assets/toolkit/textures/snow01/snow01_normalHeight.pack.28ae055f.ktx2",
-          "__bytes": {
-            "in": 7144752,
-            "out": 1145427
-          },
-          "__vramBytes": {
-            "in": 22369620,
-            "out": 1398128
-          },
-          "__codec": "uastc"
-        },
-        {
-          "id": "mud01_albedoRough",
-          "texOpts": {
-            "wrapS": 1000,
-            "wrapT": 1000,
-            "anisotropy": "MAX",
-            "colorSpace": "srgb"
-          },
-          "debugData": {
-            "name": "mud01 albedoRough (LITE)",
-            "description": "The texture set mud01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from polyHaven brown_mud_02's maps (yarn fetchTextureSources)."
-          },
-          "__url": "/aek-assets/toolkit/textures/mud01/mud01_albedoRough.pack.0f09f635.ktx2",
-          "__bytes": {
-            "in": 5438406,
-            "out": 1096951
-          },
-          "__vramBytes": {
-            "in": 22369620,
-            "out": 1398128
-          },
-          "__codec": "uastc",
-          "__averageColor": [
-            0.0646,
-            0.0509,
-            0.0339
-          ]
-        },
-        {
-          "id": "mud01_normalHeight",
-          "texOpts": {
-            "wrapS": 1000,
-            "wrapT": 1000,
-            "anisotropy": "MAX"
-          },
-          "debugData": {
-            "name": "mud01 normalHeight (LITE)",
-            "description": "The texture set mud01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from polyHaven brown_mud_02's maps (yarn fetchTextureSources)."
-          },
-          "__url": "/aek-assets/toolkit/textures/mud01/mud01_normalHeight.pack.37d9ac74.ktx2",
-          "__bytes": {
-            "in": 4820521,
-            "out": 1301764
-          },
-          "__vramBytes": {
-            "in": 22369620,
-            "out": 1398128
-          },
-          "__codec": "uastc"
-        },
-        {
-          "id": "terrainBlockTestBlender_splat0",
-          "fileName": "./terrainBlockTestBlender_splat0.png",
-          "texOpts": {
-            "flipY": false,
-            "colorSpace": ""
-          },
-          "debugData": {
-            "name": "Orientation block's splat map",
-            "description": "The add-on's export: the corner markers painted over the block's UVs (red at the top left: the engine's -x, -z corner), layers 1 and 2 of the splat map material. flipY false: the glTF UVs start at the image's top row."
-          },
-          "__fileSize": 584,
-          "__sourceUrl": "/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.png",
-          "__url": "/aek-assets/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.98f9f948.png",
-          "__bytes": {
-            "in": 584,
-            "out": 584
-          },
-          "__vramBytes": {
-            "in": 87380,
-            "out": 87380
-          },
-          "__codec": "none"
-        },
         {
           "id": "decalsGround.albedoAlpha",
           "texOpts": {
@@ -22335,6 +22143,230 @@
             "out": 87408
           },
           "__codec": "uastc"
+        },
+        {
+          "id": "sand01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "sand01 albedoRough (LITE)",
+            "description": "The texture set sand01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/sand01/sand01_albedoRough.pack.42c89ed4.ktx2",
+          "__bytes": {
+            "in": 9086447,
+            "out": 861827
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.4077,
+            0.303,
+            0.1458
+          ]
+        },
+        {
+          "id": "sand01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "sand01 normalHeight (LITE)",
+            "description": "The texture set sand01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/sand01/sand01_normalHeight.pack.448c5a53.ktx2",
+          "__bytes": {
+            "in": 7695457,
+            "out": 1166404
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "grass01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "grass01 albedoRough (LITE)",
+            "description": "The texture set grass01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/grass01/grass01_albedoRough.pack.50a0bb8d.ktx2",
+          "__bytes": {
+            "in": 14718033,
+            "out": 1310929
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.1071,
+            0.1347,
+            0.0293
+          ]
+        },
+        {
+          "id": "grass01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "grass01 normalHeight (LITE)",
+            "description": "The texture set grass01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/grass01/grass01_normalHeight.pack.59a4f2a1.ktx2",
+          "__bytes": {
+            "in": 13506245,
+            "out": 1321146
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "snow01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "snow01 albedoRough (LITE)",
+            "description": "The texture set snow01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Snow010A's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/snow01/snow01_albedoRough.pack.da33b5ed.ktx2",
+          "__bytes": {
+            "in": 9647460,
+            "out": 957546
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.7076,
+            0.8269,
+            0.9346
+          ]
+        },
+        {
+          "id": "snow01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "snow01 normalHeight (LITE)",
+            "description": "The texture set snow01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Snow010A's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/snow01/snow01_normalHeight.pack.28ae055f.ktx2",
+          "__bytes": {
+            "in": 7144752,
+            "out": 1145427
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "mud01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "mud01 albedoRough (LITE)",
+            "description": "The texture set mud01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from polyHaven brown_mud_02's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/mud01/mud01_albedoRough.pack.0f09f635.ktx2",
+          "__bytes": {
+            "in": 5438406,
+            "out": 1096951
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.0646,
+            0.0509,
+            0.0339
+          ]
+        },
+        {
+          "id": "mud01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "mud01 normalHeight (LITE)",
+            "description": "The texture set mud01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from polyHaven brown_mud_02's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/mud01/mud01_normalHeight.pack.37d9ac74.ktx2",
+          "__bytes": {
+            "in": 4820521,
+            "out": 1301764
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "terrainBlockTestBlender_splat0",
+          "fileName": "./terrainBlockTestBlender_splat0.png",
+          "texOpts": {
+            "flipY": false,
+            "colorSpace": ""
+          },
+          "debugData": {
+            "name": "Orientation block's splat map",
+            "description": "The add-on's export: the corner markers painted over the block's UVs (red at the top left: the engine's -x, -z corner), layers 1 and 2 of the splat map material. flipY false: the glTF UVs start at the image's top row."
+          },
+          "__fileSize": 584,
+          "__sourceUrl": "/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.png",
+          "__url": "/aek-assets/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.98f9f948.png",
+          "__bytes": {
+            "in": 584,
+            "out": 584
+          },
+          "__vramBytes": {
+            "in": 87380,
+            "out": 87380
+          },
+          "__codec": "none"
         },
         {
           "id": "rocks01_albedoRough",
