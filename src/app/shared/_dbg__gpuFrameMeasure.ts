@@ -1,11 +1,18 @@
 // The frame GPU measurement two terrain scenes share (p310 §2.3; the terrain gallery's measurement
 // mode and the terrain showcase's weather measurement): the sampler (the mean GPU ms of
-// `SAMPLE_FRAMES` frames after `WARM_UP_FRAMES` from the engine's frame record, `onGpuFrameTime`),
-// the conditions every measurement sets (the pixel ratio 1, the day-night cycle paused) and a
-// table's heading naming the machine, the canvas and what's off, with a warning when the canvas
-// isn't 1920 × 1080. The figures are WebGPU's: on WebGL2 three's timer pool times one context at a
-// time and loses the queries opened while a resolve polls (about two frames in three get a figure).
-import { getMeshByAppId, getRenderer, isWebGPURenderer } from 'aekasha';
+// `SAMPLE_FRAMES` frames after `WARM_UP_FRAMES` from the engine's frame record, `onGpuFrameTime`,
+// and the mean draw calls of the frames meanwhile, read in `LATE_MAIN`, after the render), the
+// conditions every measurement sets (the pixel ratio 1, the day-night cycle paused) and a table's
+// heading naming the machine, the canvas and what's off, with a warning when the canvas isn't
+// 1920 × 1080. The figures are WebGPU's: on WebGL2 three's timer pool times one context at a time
+// and loses the queries opened while a resolve polls (about two frames in three get a figure).
+import {
+  ECSSystemStage,
+  getECSWorld,
+  getMeshByAppId,
+  getRenderer,
+  isWebGPURenderer,
+} from 'aekasha';
 import { addDebugToast, onGpuFrameTime } from 'aekasha/debug';
 import { isDayNightPlaying, pauseDayNight, playDayNight } from 'aekasha/skybox';
 
@@ -18,20 +25,37 @@ const SAMPLE_TIMEOUT_MS = 30000;
 /** The canvas the tables are measured on */
 export const TABLE_CANVAS = { width: 1920, height: 1080 };
 
+/** The draw counter's system, removed when its sample ends */
+const DRAWS_SYSTEM_ID = 'gpuFrameMeasureDraws';
+
+/** A sample: the frame's mean GPU ms and its mean draw calls (every pass: shadows, the sky) */
+export type FrameSample = { gpuMs: number; draws: number };
+
 /**
- * The mean GPU ms of `SAMPLE_FRAMES` frames after `WARM_UP_FRAMES`, or null when no frame time
- * comes (no timer queries, a paused loop): every gallery measurement's figure
+ * The mean GPU ms of `SAMPLE_FRAMES` frames after `WARM_UP_FRAMES` and the mean draw calls of the
+ * frames rendered after the warm-up meanwhile (the GPU times arrive frames late, so the two
+ * windows overlap rather than match: alike while nothing changes), or null when no frame time
+ * comes (no timer queries, a paused loop). One sample at a time.
  */
-export const sampleFrameGpuMsAsync = () =>
-  new Promise<number | null>((resolve) => {
+export const sampleFrameAsync = () =>
+  new Promise<FrameSample | null>((resolve) => {
+    const world = getECSWorld();
     let seen = 0;
     let sum = 0;
-    const end = (value: number | null) => {
+    let drawFrames = 0;
+    let drawSum = 0;
+    const end = (gpuMs: number | null) => {
       clearTimeout(firstFrameTimer);
       clearTimeout(sampleTimer);
       stop();
-      resolve(value);
+      world.removeSystem(DRAWS_SYSTEM_ID);
+      resolve(gpuMs === null ? null : { gpuMs, draws: drawFrames ? drawSum / drawFrames : 0 });
     };
+    world.addSystem(ECSSystemStage.LATE_MAIN, DRAWS_SYSTEM_ID, () => {
+      if (seen <= WARM_UP_FRAMES) return;
+      drawSum += getRenderer()?.info.render.drawCalls ?? 0;
+      drawFrames++;
+    });
     const stop = onGpuFrameTime((gpuMs) => {
       if (seen++ === 0) clearTimeout(firstFrameTimer);
       if (seen <= WARM_UP_FRAMES) return;
@@ -41,6 +65,12 @@ export const sampleFrameGpuMsAsync = () =>
     const firstFrameTimer = setTimeout(() => end(null), FIRST_FRAME_TIMEOUT_MS);
     const sampleTimer = setTimeout(() => end(null), SAMPLE_TIMEOUT_MS);
   });
+
+/**
+ * The mean GPU ms of `SAMPLE_FRAMES` frames after `WARM_UP_FRAMES` (`sampleFrameAsync`'s), or
+ * null when no frame time comes: the measurements that don't count draws
+ */
+export const sampleFrameGpuMsAsync = async () => (await sampleFrameAsync())?.gpuMs ?? null;
 
 /** Hides the meshes of the app ids and returns the function that shows those it hid again */
 export const hideMeshes = (appIds: string[]) => {

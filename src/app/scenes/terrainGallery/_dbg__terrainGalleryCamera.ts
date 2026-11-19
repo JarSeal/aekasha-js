@@ -143,7 +143,7 @@ export type GalleryFlyover = {
 };
 
 /** How far ahead of the camera a flyover looks, metres (its pitch: about 15 m down over 60) */
-const FLYOVER_LOOK_AHEAD = 60;
+export const FLYOVER_LOOK_AHEAD = 60;
 
 /**
  * Starts a flyover: the scene's camera on its line at its speed, looking ahead and down to the

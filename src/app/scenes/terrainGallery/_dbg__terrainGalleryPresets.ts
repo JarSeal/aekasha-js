@@ -1,26 +1,43 @@
 // The terrain gallery tab's camera presets (p310 §2.2): a camera per game type, posed relative to
 // the selected block (the presets' Block select, or the last block or row a list flew to) at its
 // FOV, with a line on why it matters. The flight preset loops a flyover along the block's column
-// until another flight. They move the scene's camera; movement is the debug camera's (F1).
+// until another flight. They move the scene's camera; movement is the debug camera's (F1). The
+// measurement holds one at once (`holdGalleryPreset`: the matrix's figures, from each game type's
+// camera; the flight preset's flyover as the pose looking at the block).
 import * as THREE from 'three/webgpu';
 import { getRootScene } from 'aekasha';
 import { updateDebuggerTab, type DebuggerTabSection } from 'aekasha/debug';
 import {
   flyGalleryCamera,
   GALLERY_DEFAULT_FOV,
+  FLYOVER_LOOK_AHEAD,
+  holdGalleryCameraPose,
   startGalleryFlyover,
   type GalleryCameraPose,
+  type GalleryFlyover,
 } from './_dbg__terrainGalleryCamera';
 import { GALLERY_ROWS, type GalleryRowBlock } from './_dbg__terrainGalleryRows';
 
+/** Where a preset puts the camera: a pose, or the flight preset's flyover */
+type GalleryPresetView = { pose: GalleryCameraPose } | { flyover: GalleryFlyover };
+
 /** A preset: its label, FOV, why it matters, and its pose or flyover from the block */
 type GalleryPreset = {
-  id: string;
+  id: GalleryPresetId;
   label: string;
   fov: number;
   why: string;
-  start: (block: GalleryRowBlock) => void;
+  getView: (block: GalleryRowBlock) => GalleryPresetView;
 };
+
+/** The presets' ids (§2.2's game types) */
+export type GalleryPresetId =
+  | 'firstPerson'
+  | 'thirdPerson'
+  | 'topDown'
+  | 'isometric'
+  | 'sideView'
+  | 'flight';
 
 const DEG = Math.PI / 180;
 /** Above every block, for the ground ray, metres */
@@ -74,11 +91,11 @@ const PRESETS: readonly GalleryPreset[] = [
     label: 'First person',
     fov: 75,
     why: 'Eye 1.7 m above the ground near the block’s front, 10° down: texel density, anti-tiling and HEX matter most',
-    start: (block) => {
+    getView: (block) => {
       const z = block.z + block.size * 0.35;
       const eye = { x: block.x, y: getGroundY(block.x, z, block.y) + 1.7, z };
       const look = { x: eye.x, y: eye.y - 10 * Math.sin(10 * DEG), z: z - 10 * Math.cos(10 * DEG) };
-      flyGalleryCamera({ pos: eye, look, fov: 75 });
+      return { pose: { pos: eye, look, fov: 75 } };
     },
   },
   {
@@ -86,14 +103,16 @@ const PRESETS: readonly GalleryPreset[] = [
     label: 'Third person',
     fov: 60,
     why: '6 m behind and 2.5 m above a player near the front, looking 1 m above its feet: the common open-world view',
-    start: (block) => {
+    getView: (block) => {
       const z = block.z + block.size * 0.15;
       const ground = getGroundY(block.x, z, block.y);
-      flyGalleryCamera({
-        pos: { x: block.x, y: ground + 2.5, z: z + 6 },
-        look: { x: block.x, y: ground + 1, z },
-        fov: 60,
-      });
+      return {
+        pose: {
+          pos: { x: block.x, y: ground + 2.5, z: z + 6 },
+          look: { x: block.x, y: ground + 1, z },
+          fov: 60,
+        },
+      };
     },
   },
   {
@@ -101,14 +120,16 @@ const PRESETS: readonly GalleryPreset[] = [
     label: 'Top-down',
     fov: 50,
     why: '30 m above the block’s centre at 55° pitch: ARPG and twin-stick',
-    start: (block) => {
+    getView: (block) => {
       const look = { x: block.x, y: getGroundY(block.x, block.z, block.y), z: block.z };
       const height = 30;
-      flyGalleryCamera({
-        pos: { x: look.x, y: look.y + height, z: look.z + height / Math.tan(55 * DEG) },
-        look,
-        fov: 50,
-      });
+      return {
+        pose: {
+          pos: { x: look.x, y: look.y + height, z: look.z + height / Math.tan(55 * DEG) },
+          look,
+          fov: 50,
+        },
+      };
     },
   },
   {
@@ -116,9 +137,9 @@ const PRESETS: readonly GalleryPreset[] = [
     label: 'Isometric / RTS',
     fov: 20,
     why: '120 m away at 35° pitch, turned 45°: the colour map, far modes and MINIMAL packing',
-    start: (block) => {
+    getView: (block) => {
       const look = { x: block.x, y: getGroundY(block.x, block.z, block.y), z: block.z };
-      flyGalleryCamera({ pos: orbit(look, 120, 35, 45), look, fov: 20 });
+      return { pose: { pos: orbit(look, 120, 35, 45), look, fov: 20 } };
     },
   },
   {
@@ -126,16 +147,18 @@ const PRESETS: readonly GalleryPreset[] = [
     label: 'Side view',
     fov: 45,
     why: 'Level, 15 m out from the block’s +x edge (the Cliffs row’s steep face): a 2.5D platformer, where vertical faces dominate',
-    start: (block) => {
+    getView: (block) => {
       const edgeX = block.x + block.size / 2;
       const top = getGroundY(block.x, block.z, block.y);
       const foot = getGroundY(edgeX, block.z, block.y);
       const y = (top + foot) / 2 + 1;
-      flyGalleryCamera({
-        pos: { x: edgeX + 15, y, z: block.z },
-        look: { x: block.x, y, z: block.z },
-        fov: 45,
-      });
+      return {
+        pose: {
+          pos: { x: edgeX + 15, y, z: block.z },
+          look: { x: block.x, y, z: block.z },
+          fov: 45,
+        },
+      };
     },
   },
   {
@@ -143,8 +166,8 @@ const PRESETS: readonly GalleryPreset[] = [
     label: 'Flight / racing',
     fov: 70,
     why: 'A flyover along the block’s column at 60 m/s, 15 m up, looping: far tiling, distance modes, temporal stability',
-    start: (block) =>
-      startGalleryFlyover({
+    getView: (block) => ({
+      flyover: {
         x: block.x,
         y: getGroundY(block.x, block.z, block.y),
         fromZ: block.z + FLYOVER.run,
@@ -152,9 +175,36 @@ const PRESETS: readonly GalleryPreset[] = [
         height: FLYOVER.height,
         speed: FLYOVER.speed,
         fov: 70,
-      }),
+      },
+    }),
   },
 ];
+
+/** A preset's label, or null when the id names none */
+export const getGalleryPresetLabel = (presetId: GalleryPresetId) =>
+  PRESETS.find(({ id }) => id === presetId)?.label ?? null;
+
+/**
+ * Puts the scene's camera at a preset over a block at once, for a measurement: the ground under
+ * the pose is read from what's visible now. The flight preset holds its flyover's pose looking at
+ * the block's centre (`FLYOVER_LOOK_AHEAD` before it, at its height), not the moving flyover:
+ * a sample's frames are a different stretch of the loop each time
+ * @param presetId which game type's camera
+ * @param block the block it poses from
+ * @returns a function that puts the camera back, or null without the camera or the preset
+ */
+export const holdGalleryPreset = (presetId: GalleryPresetId, block: GalleryRowBlock) => {
+  const preset = PRESETS.find(({ id }) => id === presetId);
+  if (!preset) return null;
+  const view = preset.getView(block);
+  if ('pose' in view) return holdGalleryCameraPose(view.pose);
+  const { x, y, height, fov } = view.flyover;
+  return holdGalleryCameraPose({
+    pos: { x, y: y + height, z: block.z + FLYOVER_LOOK_AHEAD },
+    look: { x, y, z: block.z },
+    fov,
+  });
+};
 
 /** The presets' state: the block they pose from (`<row id>/<block key>`), the last preset's line */
 const presetState = { block: 'library/grass01', why: '-' };
@@ -229,7 +279,9 @@ export const getPresetSections = (tabId: string): DebuggerTabSection[] => [
         title: `${preset.label} (${preset.fov}°)`,
         onClick: () => {
           presetState.why = preset.why;
-          preset.start(getSelectedBlock());
+          const view = preset.getView(getSelectedBlock());
+          if ('pose' in view) flyGalleryCamera(view.pose);
+          else startGalleryFlyover(view.flyover);
           updateDebuggerTab(tabId);
         },
       })),
