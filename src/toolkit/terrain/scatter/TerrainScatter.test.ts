@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ScatterGenerator, ScatterGeneratorInput, ScatterItemDef } from 'aekasha/instancing';
 import { generateTerrain } from 'aekasha/toolkit/geometry';
 import {
-  createScatterSurfaceSample,
-  readScatterSurface,
-  sampleScatterSurface,
-} from './ScatterSurface';
+  createBlockSurfaceSample,
+  readBlockSurface,
+  sampleBlockSurface,
+} from '../blocks/BlockSurface';
 import { generateTerrainScatterAsync } from './TerrainScatter';
 import { registerTerrainScatter } from './RegisterTerrainScatter';
 
@@ -185,8 +185,8 @@ describe('terrainScatter', () => {
   it("thins by slope and height, sits on the block's mesh and tilts toward its normal", async () => {
     // A slope rising along +x: 45° on the right half, flat on the left
     const { terrain, mesh } = createPaintedBlock({ heightFn: (x) => Math.max(0, x) });
-    const surface = readScatterSurface(terrain.geometry, 16, 'test');
-    const sample = createScatterSurfaceSample();
+    const surface = readBlockSurface(terrain.geometry, 16, 'test');
+    const sample = createBlockSurfaceSample();
     const flat = await generateTerrainScatterAsync(
       inputOf({ minSpacing: 0.5, mask: { slope: { max: 20, softness: 1 } } }, { mesh })
     );
@@ -211,7 +211,7 @@ describe('terrainScatter', () => {
       const lift = high.items![i] === 0 ? 0.5 : 0;
       // The surface point under it is in the height range (4 m and up, softened by 0.1)
       expect(position.x - up.x * lift).toBeGreaterThan(3.9 - 1e-4);
-      sampleScatterSurface(surface, position.x - up.x * lift, position.z - up.z * lift, sample);
+      sampleBlockSurface(surface, position.x - up.x * lift, position.z - up.z * lift, sample);
       expect(position.y - up.y * lift).toBeCloseTo(sample.height, 3);
     });
   });
