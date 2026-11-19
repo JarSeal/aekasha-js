@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 started
+Status: in progress | Phase 1 implemented
 Category: App, Terrain, Docs
 Epic: p301_terrain-texturing-epic.md
 Related: \_DONE_p309_terrain-decals.md (the decals this plan's scenes and blocks use; its As built lists have what landed, which differs from this plan's text in places: the strip cell is `tireTracks`, the structure leaks `leak01`-`leak03`; the add-on's Add Decal conforms with a 0.015 m offset and a subdivision level of its own, Export Decal Set writes the GLB and stubs; the gallery already has a Decals row, a Decals stage with the weathers and a bake bench for the decal generators, and `terrainBlockTest` a runtime decal walk; the handbook is `docs/techniques/terrain-decals.md`), \_DONE_p307_wet-and-dry-surface-states.md (the surface conditions and the wet response this plan's scenes show: its As built lists have the API that landed, the gallery's Wet/dry row and the measurements; the handbook's `wet-dry-surfaces.md`), \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (merged dressing and modular kit terrain, for the matrix and the measurements)
@@ -311,7 +311,7 @@ If p372 has landed, the matrix gets a "Static dressing" note (merge a block's pr
 
 ## Phases
 
-### Phase 1 — Gallery completion (§2)
+### Phase 1 — Gallery completion (§2) — done
 
 1. Rows A–L (whatever previous plans haven't added), signposts, camera presets, solo + measurement mode with copy-out.
 2. The scene runner: `terrainGallery` in `devTools/verify/scenes.config.ts` (its camera poses, the tab it opens), its baseline recorded (`yarn verify:scenes --only terrainGallery --update`).
@@ -350,9 +350,12 @@ Sections:
    - **The section** (after the camera presets; its block is the presets' Block): Solo (the block alone in its pose, all put back when off), Measure block and Measure row (each block: the frame with it hidden, then shown at each tier when its row `takesTiers`, the library, Packing, Splatting, Rules, Colour map and Live rows, through the tab's own Quality, put back after; the others once at their own), Copy results and Clear results (every result of the visit as one table: row, block, tier, packing, the frame, the empty frame and the block's difference; a block measured again replaces its rows), the status, and the backend: on WebGL2 the buttons are disabled with why (the GPU timing notes: about two frames in three get a figure). `window.__terrainGalleryMeasure` (`measureBlockAsync(rowId, key)`, `measureRowAsync(rowId)`, `getTable()`, `results`) runs on either backend, for a bench.
    - **No taps column:** `estimateTerrainFetches` builds the `TAPS` view's node, not a CPU figure; the section's hint points at the view.
    - **Measured** (the exit's check; Windows Chrome 157, RDNA 3, 1920 × 1080; `.cache/look/p310s4.mts`): the Packing row's nine blocks × the empty frame and five tiers in 61 s, the table returned and copied. A 12 m block in its pose costs 0.12-0.17 ms at Own, LOW and MEDIUM whatever its packing, 0.21-0.27 ms at HIGH and ULTRA (`HEX`); the empty frame 0.21. Phase 4's tables come from these runs. The Anti-tiling `HEX` block alone 0.15; the Procedural row's `sandRipples` on the moved sampler (imported and baked 0.23, live 0.46, live with taps 3.10). Solo on the Rules row's 8-layer block shows it alone, and off puts the rest and the camera back. `yarn test` passes.
-5. The scene runner's entry and baseline, the exit's checks on WebGPU and WebGL2, the docs (the scene's description, `src/toolkit/terrain/CLAUDE.md`'s verification line).
+5. The scene runner's entry and baseline, the exit's checks on WebGPU and WebGL2, the docs (the scene's description, `src/toolkit/terrain/CLAUDE.md`'s verification line) — done. As built:
+   - **The scene runner:** `terrainGallery`'s entry was there (p303: `debugger: { tabs: ['terrainGallery'] }`); the runner has no camera poses of its own (the snapshot is the scene camera's overview), so nothing was added. The local WebGPU baselines dated from 2026-11-17, before p309's last sections, so they were recorded on this branch: `yarn verify:scenes --only terrainGallery,terrainBlockTest --update`, all nine configurations without an error or an axe violation (the `debugger` configuration's shot and axe check of the longer tab), 186 s. `terrainBlockTest`'s probe hash is its 11-17 one (`97177281`): the moved block changed nothing there. Main's baselines weren't recorded first: a PR run compares against these.
+   - **WebGL2:** every row's overview on three's WebGL2 backend, forced in the Windows Chrome (the localStorage key `debugRenderer`, `{ forceWebGL: true }`; `Renderer.ts`' JSDoc says `AEK_debugRenderer`) on the real GPU: all 15 render, no console error, the measure buttons disabled with the reason (`.cache/look/p310s5gl.mts`). The Procedural row's own Measure row stays enabled there (p304's, which warns when no frame times come).
+   - **Docs:** the scene JSON's name and description (the Packing row, the leaks, the pad, the Orientation block, the tab's additions), the scene file's header, and `src/toolkit/terrain/CLAUDE.md`'s Verification line (the rows by letter, the presets, the measurement mode and its handle).
 
-**Exit:** every row renders on WebGPU and WebGL2, and a full row measurement completes and copies a table.
+**Exit:** every row renders on WebGPU and WebGL2, and a full row measurement completes and copies a table. Met: every row on WebGPU (sections 1-4's shots, the scene runner) and WebGL2 (section 5); the Packing row's full measurement (9 blocks × the empty frame and 5 tiers) completed in 61 s and copied its table (section 4).
 
 ### Phase 2 — Showcase Blender blocks (§3.3–3.6)
 

@@ -146,7 +146,11 @@ import {
  * list flying the camera, the packing of the sets that ship every packing, a 1 m checker over the
  * blocks, the quality tier (p305 Phase 6: the library, the Splatting and the Rules rows), and the
  * Procedural row's controls (its mode, bake size, each generator's params, its export and the GPU
- * measurement).
+ * measurement). p310 adds the rows' signposts and the Rows list (`_dbg__terrainGalleryRows.ts`, the
+ * rows as data with the plan's letters), the camera presets per game type
+ * (`_dbg__terrainGalleryPresets.ts`), the measurement mode (`_dbg__terrainGalleryMeasure.ts`: solo,
+ * a block or a row at each quality tier, the table copied), the time of day, the footprint pad's
+ * and the Orientation block's sections.
  */
 
 export const TERRAIN_GALLERY_SCENE_ID = 'terrainGallery';
