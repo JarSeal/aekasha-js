@@ -14,7 +14,9 @@ toolkit's block generators register from an install with
 [`registerTerrainGenerators()`](api:registerTerrainGenerators) (the template's `appECSPlugins`).
 A block with a [scatter](#terrain-scatter) needs [`instancing()`](api:instancing) too, and the
 toolkit's scatter generator registers the same way, with
-[`registerTerrainScatter()`](api:registerTerrainScatter).
+[`registerTerrainScatter()`](api:registerTerrainScatter). [Decal sets](#terrain-decals) are
+`terrain()`'s; the toolkit's runtime decal pools are merge groups, so they need
+[`merging()`](api:merging).
 
 ## A texture set
 
@@ -489,6 +491,8 @@ of one biome share the shader), its grid, its collider and its shadows:
   The collider is a `FIXED` body on the block's mesh entity.
 - **`scatter`:** the block's [scatters](#terrain-scatter) (`*.scatter.json` ids), spawned on it
   after its collider and owned by it.
+- **`decals`:** the block's [decal sets](#decal-sets-from-blender) (`*.decalSet.json` ids),
+  spawned last at its place and owned by it (`block.decalIds`).
 - **The gather** writes each block a scene lists into its data and adds its import, material and
   textures to the scene's lists, so the load brings everything the block needs. Its id is its file
   name.
@@ -523,7 +527,8 @@ _Install from Disk_, Blender 5.3) makes blocks that follow the conventions: _Add
 `Splat`, the custom props), a preview material of the terrain material's layers, _New Splat Map_
 for Texture Paint, _Bake AO → Splat Alpha_, _Bake Colour Map_, _Split Into Blocks_ (one large
 grid into neighbours with shared edges and normals), _Validate_ and _Export Block_ (the glTF
-settings locked, the images, and the JSON stubs). Eight templates beside it start a block or a
+settings locked, the images, and the JSON stubs), and the [decal](#decal-sets-from-blender) tools
+(_Add Decal Set_, _Add Decal_, _Export Decal Set_). Nine templates beside it start a block or a
 technique, each with a README:
 
 | Template                         | What it shows                                                         |
@@ -535,6 +540,7 @@ technique, each with a README:
 | `terrain_triplanarCliff.blend`   | A heightfield cliff, and a `TRIMESH` neighbour with an overhang       |
 | `terrain_colormapDetail.blend`   | A painted block ready to bake its colour map                          |
 | `terrain_scatter.blend`          | Rocks scattered by Geometry Nodes on a block's paint, both exports    |
+| `terrain_decals.blend`           | A block's decal set: tyre tracks along a curve, quads of nine cells   |
 | `structure_concrete.blend`       | Walls and a bunker worn by a vertex colour (structures, not blocks)   |
 
 The workflow step by step, from the set-up to the collider check in the engine, is the
@@ -647,6 +653,128 @@ Without a block, a scene lists a scatter in its `scatters` and spawns it with
 cells, colliders, the Blender steps and the pitfalls: [Terrain
 scatter](repo:docs/techniques/terrain-scatter.md).
 
+## Terrain decals
+
+Decals add the unique detail no tiling has, and cost only where they lie: tyre tracks, cracks,
+stains, scorch marks, footprints, wet patches. A decal is a small mesh on the surface, UV'd into a
+cell of a decal atlas, drawn after the ground (`renderOrder` 10) in a decal material. Ækasha
+renders forward, with no G-buffer to project screen-space decals into, so its decals are meshes:
+lit, shadowed, culled, merged and wet like any surface.
+
+### Decal atlases and the material
+
+A decal atlas is a [texture atlas](hub:features/asset-optimization) in the `DECAL` packing:
+`albedoAlpha` (the albedo in sRGB, the opacity in A) and `normalRough` (the normal's XY, the
+roughness, and a **puddle mask** in A: where water collects first, a rut or a print's heel). The
+toolkit ships two, each cell's `data` giving its `physicalSize`:
+
+- **`decalsGround`** (2048², 11.2 MB of VRAM): `tireTracks` and `asphaltDamage` from ambientCG
+  scans, and twelve generated cells: `crack`, `mudSplatter`, `wetPatch`, `stain01`, `stain02`,
+  `scorch`, `footprintBoot`, `footprintBare`, `footprintPaw`, `footprintSnowBoot`, `leafPatch`,
+  `iceCrack`.
+- **`decalsStructure`** (2048 × 1024): `leak01`-`leak03` from ambientCG, and `formworkMarks`,
+  `crack01`, `crack02`, `stain01`, `stain02` generated.
+
+The decal material ([`setupDecalMaterial`](api:setupDecalMaterial); the toolkit's
+`decalsGround_blend`, `decalsGround_cutout`, `decalsStructure_blend`, `decalsStructure_cutout`)
+samples the mesh's UV in atlas space, so one material draws every cell of its atlas:
+
+- **`BLEND`** (soft decals: stains, tracks): transparent, no depth writes, sorted.
+  **`CUTOUT`** (prints, cracks): opaque, alpha-tested, alpha to coverage under MSAA, no sort. Both
+  with a polygon offset (factor −1, units −4) against z-fighting.
+- **The edge fade** reads the mesh's second UV set, `uv1`, 0..1 over the decal, so a quad's edge
+  never shows: **a decal mesh without `uv1` draws nothing**.
+- **Wet** by the [surface conditions](hub:features/surface-conditions): its own darkening and
+  gloss, frost, rain ripples, and puddles that fill the puddle mask long before the ground's own
+  (a boot print 41 % under water at a puddle level of 0.81, the mud around it dry of puddles until
+  0.48).
+- **A decal's albedo replaces the ground's**, so tint it to its ground: a spawn's `color`, or a
+  material JSON of your own with a `tint` input.
+
+The procedural cells come from nine decal generators (`decalCracks`, `decalStain`,
+`decalScorch`, `decalMudSplatter`, [`decalFootprint`](api:decalFootprint), `decalWetPatch`,
+`decalIceCrack`, `decalLeafPatch`, `decalFormwork`): TSL graphs over the noise library, baked into
+both slots by [`bakeDecalGenerator`](api:bakeDecalGenerator) and exported as a cell's PNGs; a
+cell's `data` is its recipe (`generator`, `seed`, `params`). Write your own with
+[`defineDecalGenerator`](api:defineDecalGenerator).
+
+### Decal sets from Blender
+
+A `*.decalSet.json` is an import's meshes drawn as decals: the add-on's _Add Decal_ makes a plane
+UV'd into a cell (a strip along a curve for a cell that tiles, `tireTracks`), subdivided and
+shrinkwrapped onto the block, and _Export Decal Set_ writes the GLB and the stubs:
+
+```json
+{
+  "$schema": "../../../../../.schemas/decalSet.schema.json",
+  "importedAsset": "valley_decals",
+  "material": "decalsGround_blend"
+}
+```
+
+A block lists it in `decals` and spawns it with itself; a set of the scene's own goes in the
+scene's `decalSets` and spawns with [`spawnDecalSet`](api:spawnDecalSet). Its meshes draw at
+`renderOrder` (default 10), receive shadows and never cast; a node's `merge` custom prop merges
+them (`CUTOUT` into a `BAKED` group, `BLEND` into a `BATCHED` one).
+
+### Runtime decals
+
+A pool ([`createDecalPool`](api:createDecalPool)) is a [`BATCHED` merge
+group](hub:features/mesh-merging#pools-decals-and-other-short-lived-members) of up to `maxDecals`
+decals (128), drawn as **one render object**, which recycles its oldest decal when it's full:
+
+```ts
+import { spawnTerrainBlock } from 'aekasha/terrain';
+import { createDecalPool, createDecalTrail, spawnDecal } from 'aekasha/toolkit/terrain';
+
+const block = await spawnTerrainBlock('meadow');
+if (!block) return;
+const prints = createDecalPool({
+  id: 'prints',
+  material: 'decalsGround_blend',
+  atlas: 'decalsGround',
+});
+spawnDecal(prints, {
+  target: block,
+  position: foot,
+  rotation: heading,
+  cell: 'footprintBoot',
+  lifetimeSec: 20,
+});
+
+const tracks = createDecalPool({
+  id: 'tracks',
+  material: 'decalsGround_blend',
+  atlas: 'decalsGround',
+  maxDecals: 64,
+});
+const wheel = createDecalTrail(tracks, {
+  target: block,
+  cell: 'tireTracks',
+  color: '#666666',
+  lifetimeSec: 30,
+});
+// each frame: wheel.addPoint(x, z)
+```
+
+- [`spawnDecal`](api:spawnDecal) stamps a patch of the block's own grid under the decal, so it
+  follows the ground exactly, without reading more than the cells under it.
+  [`spawnRibbonDecal`](api:spawnRibbonDecal) lays a strip along a path, its cell repeating along
+  it, and [`createDecalTrail`](api:createDecalTrail) stamps one every 2 m behind a moving point.
+  [`spawnMeshDecalAsync`](api:spawnMeshDecalAsync) projects onto any plain mesh with three's
+  `DecalGeometry` (loaded on first use; fine on props, costly on large meshes).
+- A decal with `lifetimeSec` fades out over its last `fadeSec`; a full pool fades its oldest
+  eighth out by their place in line. The pool belongs to its scene: the exit deletes it.
+- Visual only: a cell drawn from a list and a missing rotation come from the named stream
+  `decals`, so a replayed scene stamps the same decals.
+- **Measured** (Windows Chrome, RDNA 3): 128 footprints and 64 track segments are 2 render
+  objects; the CPU frame 0.75 ms against 1.74 with a mesh per decal (WebGPU), 0.61 against 1.66
+  (WebGL2, one multi-draw a pool); the batch's buffers the same size after 10 minutes of 60
+  spawns a second.
+
+Choosing a mode, the atlases' maps and your own decals, the Blender steps, the parameters and
+the pitfalls: [Terrain decals](repo:docs/techniques/terrain-decals.md).
+
 ## Debugging
 
 - **The gallery** (above): `?isDebug=true&startScene=terrainGallery`. Its packing switch is also
@@ -701,6 +829,16 @@ scatter](repo:docs/techniques/terrain-scatter.md).
   culling. `?isDebug=true&startScene=scatterTest` checks scatters as it loads: 20,000 pebbles in
   cells, a Blender scatter exported both ways compared instance by instance, `terrainScatter` on a
   rules block's rock, and a box dropped on a slab's collider.
+- **The gallery's decals** (its tab's Decals sections): the Decals row (both atlases' slots, each
+  cell outlined and named), the Decals stage (every cell on a mud block and a concrete wall,
+  `BLEND` beside `CUTOUT`, with the weathers, switches for the polygon offset and the edge fade,
+  and cameras at 1, 50 and 200 m), and the bake bench: a generated cell baked from its data as
+  decals on wet mud beside the atlas's copy, its seed and params edited, its data copied and its
+  PNGs exported.
+- **`terrainBlockTest`'s decal block:** its Blender decal set (two tyre tracks over a ridge) and a
+  walk stamping boot prints and cart tracks into two pools (`?tbtDecals=blend|cutout|off`); its
+  tab's Runtime decals pane shows each pool's decals and batch. The Merging tab shows a pool as
+  any batched group (and unmerged, a mesh per decal).
 - **The Assets tab**'s texture info window names the sets, packings and slots a texture fills.
 - **The material editor** builds a material's set arrays before previewing it, so a
   `{ textureSetArray }` material shows outside the scene that builds them.
@@ -740,6 +878,13 @@ scatter](repo:docs/techniques/terrain-scatter.md).
   [`generateRock`](api:generateRock), [`saveRockGeometries`](api:saveRockGeometries),
   [`generateLeafCard`](api:generateLeafCard) and
   [`saveLeafCardGeometry`](api:saveLeafCardGeometry): the items.
+- [`spawnDecalSet`](api:spawnDecalSet) and [`getDecalSet`](api:getDecalSet) (`aekasha/terrain`):
+  decal sets; [`createDecalPool`](api:createDecalPool), [`spawnDecal`](api:spawnDecal),
+  [`spawnRibbonDecal`](api:spawnRibbonDecal), [`createDecalTrail`](api:createDecalTrail) and
+  [`spawnMeshDecalAsync`](api:spawnMeshDecalAsync): runtime decals;
+  [`setupDecalMaterial`](api:setupDecalMaterial): the decal material;
+  [`defineDecalGenerator`](api:defineDecalGenerator) and
+  [`bakeDecalGenerator`](api:bakeDecalGenerator): decal generators.
 - [`getTerrainQualityPreset`](api:getTerrainQualityPreset): the tiers;
   [`bakeTerrainColorMap`](api:bakeTerrainColorMap): a block's colour map;
   [`createStructureMaterial`](api:createStructureMaterial): structures;
@@ -775,7 +920,8 @@ scatter](repo:docs/techniques/terrain-scatter.md).
   ([wet and dry surfaces](repo:docs/techniques/wet-dry-surfaces.md)), the geometry
   ([terrain blocks from Blender](repo:docs/techniques/terrain-blocks-blender.md) and
   [procedural terrain meshes](repo:docs/techniques/terrain-procedural-meshes.md)), its dressing
-  ([terrain scatter](repo:docs/techniques/terrain-scatter.md)) and the
+  ([terrain scatter](repo:docs/techniques/terrain-scatter.md),
+  [terrain decals](repo:docs/techniques/terrain-decals.md)) and the
   [techniques index](repo:docs/techniques/README.md) (which technique for which game).
 - The API reference: [`aekasha/texturesets`](hub:documentation/aekasha/texturesets),
   [`aekasha/terrain`](hub:documentation/aekasha/terrain),

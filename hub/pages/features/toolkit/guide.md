@@ -22,11 +22,12 @@ src/toolkit/
     debug/                  the terrain material's debug views (debug builds only)
     procedural/             the surface generators' API; <id>/<id>.generator.ts, ten of them
     scatter/                terrainScatter: the terrain scatter generator
+    decals/                 the decal material, runtime decals; generators/: nine decal generators
     textures/               MacroNoise, RippleAtlas: the shared textures' bakes
   models/<category>/<id>/   the model next to its *.importedAsset.json
   textures/<setId>/         a texture set: its JSON, recipes and source.json; CREDITS.md
   textures/<id>/            macroNoise, rippleAtlas: a texture JSON over its committed PNG;
-                            leafLitter: a texture atlas
+                            leafLitter, decalsGround, decalsStructure: texture atlases
 ```
 
 A piece that grows a second file gets a folder of its own inside its kind, as the moving
@@ -126,6 +127,12 @@ any material:
 - **`leafLitter`**: leaf cards. A leaf of the `leafLitter` atlas per instance (one material and
   one draw a scatter cell), fitted at its aspect, a share of them turned brown (`autumn`),
   alpha-tested with `alphaToCoverage`, wet by the surface conditions.
+- **`decalsGround_blend`**, **`decalsGround_cutout`**, **`decalsStructure_blend`** and
+  **`decalsStructure_cutout`**: [decals](hub:features/terrain#terrain-decals)
+  ([`setupDecalMaterial`](api:setupDecalMaterial), one TSL file) of the two decal atlases, any cell
+  at the mesh's UV, faded at its edges by its second UV set, wet by the surface conditions with
+  their puddles in the decal's puddle mask; `BLEND` sorted and soft, `CUTOUT` opaque and
+  alpha-tested.
 
 The [material editor](hub:features/debug-suite#editor-views) edits their inputs live. Writing
 one of your own is [below](hub:features/toolkit#writing-a-tsl-material).
@@ -194,9 +201,18 @@ The surfaces and the TSL pieces terrain materials are built from (the
 - **Terrain blocks** (`blocks/`, `blender/`): the block generators `noiseTerrain` and
   `rulesTerrain`, which [`registerTerrainGenerators`](api:registerTerrainGenerators) registers
   for the [`terrain()`](hub:features/terrain#terrain-blocks) feature's JSON blocks (from an
-  install); and the Blender add-on `aekasha_terrain_tools.py` with eight templates, which make
+  install); and the Blender add-on `aekasha_terrain_tools.py` with nine templates, which make
   blocks by the conventions and export them ([the
-  workflow](repo:docs/techniques/terrain-blocks-blender.md)), and scatter rocks on them.
+  workflow](repo:docs/techniques/terrain-blocks-blender.md)), and scatter rocks and lay decals on
+  them.
+- **Decals** (`decals/`): the decal material, runtime decal pools
+  ([`createDecalPool`](api:createDecalPool), [`spawnDecal`](api:spawnDecal),
+  [`spawnRibbonDecal`](api:spawnRibbonDecal), [`createDecalTrail`](api:createDecalTrail),
+  [`spawnMeshDecalAsync`](api:spawnMeshDecalAsync)) and nine decal generators
+  ([`defineDecalGenerator`](api:defineDecalGenerator), [`bakeDecalGenerator`](api:bakeDecalGenerator)),
+  over the decal atlases `decalsGround` and `decalsStructure` (ambientCG scans and generated cells)
+  ([Terrain decals](hub:features/terrain#terrain-decals),
+  [the handbook](repo:docs/techniques/terrain-decals.md)).
 - **Terrain scatter** (`scatter/`): the generator `terrainScatter`, which
   [`registerTerrainScatter`](api:registerTerrainScatter) registers (from an install) for the
   `instancing()` feature's `*.scatter.json`s: Poisson-disk points on a block, kept by its painted

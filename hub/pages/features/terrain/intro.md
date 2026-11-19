@@ -23,6 +23,12 @@ cells, placed by the block's own paint and slope or by Blender's Geometry Nodes,
 and owned by the block. The toolkit brings procedural and scanned rocks in a material that
 matches the ground and gets wet with it.
 
+Decals add the unique detail no tiling has: tyre tracks, cracks, stains, scorch marks and
+footprints, each a small mesh UV'd into a cell of a decal atlas and drawn over the ground in a
+decal material that gets wet with it, its ruts and prints filling with water first. A block's
+decals are made in Blender and spawn with it; during play a pool stamps footprints and tyre
+tracks that follow the ground exactly, all of them one render object, the oldest recycled.
+
 ::: scene terrainGallery
 Every set of the toolkit's library on a 12 m block of generated terrain with a 35° ramp, the cliffs
 with a wall, under a still 10:00 sky. Its debug tab ("Terrain gallery") flies the camera to a
@@ -31,6 +37,7 @@ checker over the ground for judging each set's scale. Around the library, a row 
 the terrain material (anti-tiling, splatting, rules, cliffs, colour maps, structures, a live
 procedural layer), each with its sliders and measurement, the Procedural row: each generator on a
 block, baked, live or beside an imported set of its category, and the Scatter row: procedural and
-imported rocks on one block, and leaf litter beside it. The tab's Quality and Debug
+imported rocks on one block, and leaf litter beside it, and the Decals row and stage: both decal
+atlases, and every cell on mud and concrete, blended and cut out. The tab's Quality and Debug
 view selects switch every terrain block to a tier or a debug view.
 :::

@@ -13,6 +13,12 @@ The app creates the renderer once, first thing in its start callback (`src/index
   type (three's PCF by default).
 - In the debug env, the drawer's Renderer tab changes them and keeps the change for the next
   reload.
+- **Draw order:** a mesh's `renderOrder` ([`MeshProps`](api:MeshProps), and a mesh JSON's
+  `props`; default 0) orders it within its pass (the opaque meshes, then the transparent ones)
+  before three's own sort, and its LOD's level swaps and fades keep it. Ækasha's bands: terrain 0,
+  [decals](hub:features/terrain#terrain-decals) 10, other transparents 20 and up, so a decal draws
+  over the ground and under water or particles. A batched merge group draws at one place in the
+  order, so its members share it.
 
 ## Post effects
 
