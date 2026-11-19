@@ -23,12 +23,12 @@ export const decalMudSplatter = defineDecalGenerator({
   description:
     'A splat of mud: a blob reaching out in fingers with drops around it, raised and glossier where it lies thick.',
   physicalSize: [1, 1],
-  heightScale: 0.008,
+  heightScale: 0.015,
   params: {
-    drops: { default: 9, min: 3, max: 20, isStatic: true, isInteger: true, label: 'Drop cells' },
+    drops: { default: 7, min: 3, max: 20, isStatic: true, isInteger: true, label: 'Drop cells' },
     size: { default: 0.2, min: 0.05, max: 0.3, step: 0.01, label: 'Blob radius' },
     fingers: { default: 0.6, min: 0, max: 1, step: 0.05, label: 'Fingers' },
-    dropSize: { default: 0.2, min: 0.05, max: 0.4, step: 0.01, label: 'Drop size (cells)' },
+    dropSize: { default: 0.32, min: 0.05, max: 0.45, step: 0.01, label: 'Drop size (cells)' },
     spread: { default: 0.42, min: 0.2, max: 0.45, step: 0.01, label: 'Spread' },
     relief: { default: 0.6, min: 0, max: 1, step: 0.05, label: 'Relief' },
     roughness: { default: 0.55, min: 0, max: 1, step: 0.05, label: 'Roughness' },
@@ -61,7 +61,7 @@ export const decalMudSplatter = defineDecalGenerator({
       params.size.add(params.spread).mul(0.5),
       params.spread.sub(params.size).mul(0.5)
     );
-    const keep = step(perCell(cells.cellId, 9.1), chance.mul(0.7));
+    const keep = step(perCell(cells.cellId, 9.1), chance.mul(0.9));
     const splat = max(blob, drop.mul(keep)) as unknown as Node<'float'>;
 
     const fine = ctx.cells(14);

@@ -39,12 +39,12 @@ const leafLayer = (
   const cell = floor(p) as unknown as Node<'vec2'>;
   const jitter = hash22(cell, { seed: ctx.seed(seedIndex), period });
   const look = hash22(cell, { seed: ctx.seed(seedIndex + 1), period });
-  const local = fract(p).sub(0.5).sub(jitter.sub(0.5).mul(0.3)) as Node<'vec2'>;
+  const local = fract(p).sub(0.5).sub(jitter.sub(0.5).mul(0.2)) as Node<'vec2'>;
   const q = rotatePoint(local, look.x.mul(Math.PI * 2) as unknown as Float);
   const size = look.y.mul(0.3).add(0.7);
-  const rx = size.mul(0.42);
+  const rx = size.mul(0.38);
   // Egg-shaped: wider at the stem (−x) than at the tip
-  const ry = size.mul(0.17).mul(float(1).sub(q.x.div(rx).mul(0.35)));
+  const ry = size.mul(0.22).mul(float(1).sub(q.x.div(rx).mul(0.35)));
   const distance = length(vec2(q.x.div(rx), q.y.div(ry)))
     .sub(1)
     .mul(ry) as unknown as Float;
@@ -86,7 +86,7 @@ export const decalLeafPatch = defineDecalGenerator({
   heightScale: 0.006,
   params: {
     cells: {
-      default: 14,
+      default: 9,
       min: 4,
       max: 32,
       isStatic: true,

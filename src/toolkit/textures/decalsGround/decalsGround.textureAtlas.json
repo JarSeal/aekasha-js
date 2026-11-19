@@ -38,7 +38,7 @@
       "data": {
         "physicalSize": [1.8, 0.45],
         "tileAlong": "U",
-        "opacitySource": "CONSTANT"
+        "opacitySource": "HEIGHT"
       }
     },
     {
@@ -58,7 +58,8 @@
       "id": "crack",
       "rect": [1536, 0, 512, 512],
       "sources": {
-        "albedoAlpha": "./source/placeholder.png"
+        "albedoAlpha": "./source/crack_albedoAlpha.png",
+        "normalRough": "./source/crack_normalRough.png"
       },
       "data": {
         "physicalSize": [1, 1],
@@ -73,7 +74,8 @@
       "id": "mudSplatter",
       "rect": [0, 512, 512, 512],
       "sources": {
-        "albedoAlpha": "./source/placeholder.png"
+        "albedoAlpha": "./source/mudSplatter_albedoAlpha.png",
+        "normalRough": "./source/mudSplatter_normalRough.png"
       },
       "data": {
         "physicalSize": [1, 1],
@@ -88,7 +90,8 @@
       "id": "wetPatch",
       "rect": [512, 512, 512, 512],
       "sources": {
-        "albedoAlpha": "./source/placeholder.png"
+        "albedoAlpha": "./source/wetPatch_albedoAlpha.png",
+        "normalRough": "./source/wetPatch_normalRough.png"
       },
       "data": {
         "physicalSize": [2, 2],
@@ -103,7 +106,8 @@
       "id": "stain01",
       "rect": [1024, 512, 512, 512],
       "sources": {
-        "albedoAlpha": "./source/placeholder.png"
+        "albedoAlpha": "./source/stain01_albedoAlpha.png",
+        "normalRough": "./source/stain01_normalRough.png"
       },
       "data": {
         "physicalSize": [1.5, 1.5],
@@ -118,7 +122,8 @@
       "id": "stain02",
       "rect": [1536, 512, 512, 512],
       "sources": {
-        "albedoAlpha": "./source/placeholder.png"
+        "albedoAlpha": "./source/stain02_albedoAlpha.png",
+        "normalRough": "./source/stain02_normalRough.png"
       },
       "data": {
         "physicalSize": [1.5, 1.5],
@@ -137,7 +142,8 @@
       "id": "scorch",
       "rect": [0, 1024, 512, 512],
       "sources": {
-        "albedoAlpha": "./source/placeholder.png"
+        "albedoAlpha": "./source/scorch_albedoAlpha.png",
+        "normalRough": "./source/scorch_normalRough.png"
       },
       "data": {
         "physicalSize": [2, 2],
@@ -152,7 +158,8 @@
       "id": "footprintBoot",
       "rect": [512, 1024, 512, 512],
       "sources": {
-        "albedoAlpha": "./source/placeholder.png"
+        "albedoAlpha": "./source/footprintBoot_albedoAlpha.png",
+        "normalRough": "./source/footprintBoot_normalRough.png"
       },
       "data": {
         "physicalSize": [0.35, 0.35],
@@ -169,7 +176,8 @@
       "id": "footprintBare",
       "rect": [1024, 1024, 512, 512],
       "sources": {
-        "albedoAlpha": "./source/placeholder.png"
+        "albedoAlpha": "./source/footprintBare_albedoAlpha.png",
+        "normalRough": "./source/footprintBare_normalRough.png"
       },
       "data": {
         "physicalSize": [0.3, 0.3],
@@ -186,7 +194,8 @@
       "id": "footprintPaw",
       "rect": [1536, 1024, 512, 512],
       "sources": {
-        "albedoAlpha": "./source/placeholder.png"
+        "albedoAlpha": "./source/footprintPaw_albedoAlpha.png",
+        "normalRough": "./source/footprintPaw_normalRough.png"
       },
       "data": {
         "physicalSize": [0.12, 0.12],
@@ -203,7 +212,8 @@
       "id": "footprintSnowBoot",
       "rect": [0, 1536, 512, 512],
       "sources": {
-        "albedoAlpha": "./source/placeholder.png"
+        "albedoAlpha": "./source/footprintSnowBoot_albedoAlpha.png",
+        "normalRough": "./source/footprintSnowBoot_normalRough.png"
       },
       "data": {
         "physicalSize": [0.35, 0.35],
@@ -220,7 +230,8 @@
       "id": "leafPatch",
       "rect": [512, 1536, 512, 512],
       "sources": {
-        "albedoAlpha": "./source/placeholder.png"
+        "albedoAlpha": "./source/leafPatch_albedoAlpha.png",
+        "normalRough": "./source/leafPatch_normalRough.png"
       },
       "data": {
         "physicalSize": [1.5, 1.5],
@@ -235,7 +246,8 @@
       "id": "iceCrack",
       "rect": [1024, 1536, 512, 512],
       "sources": {
-        "albedoAlpha": "./source/placeholder.png"
+        "albedoAlpha": "./source/iceCrack_albedoAlpha.png",
+        "normalRough": "./source/iceCrack_normalRough.png"
       },
       "data": {
         "physicalSize": [1.5, 1.5],
@@ -249,6 +261,6 @@
   ],
   "debugData": {
     "name": "Ground decals",
-    "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 \u00d7 4 grid of 512 cells with 16 px of padding (480\u00b2 of content; levels 0-4), but tireTracks, a 1024 \u00d7 256 strip at its source's 4:1 (992 \u00d7 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. A cell's data: physicalSize in m, tileAlong, opacitySource, and a placeholder's generator."
+    "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 \u00d7 4 grid of 512 cells with 16 px of padding (480\u00b2 of content; levels 0-4), but tireTracks, a 1024 \u00d7 256 strip at its source's 4:1 (992 \u00d7 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are procedural (p309 D5): a generator's bake exported as source/<cellId>_albedoAlpha.png and _normalRough.png (480\u00b2, the content size; the terrain gallery tab's procedural decals), the cell's data its recipe (generator, seed, params; params left out are the generator's defaults). A cell's data: physicalSize in m, tileAlong, opacitySource, and a procedural cell's generator, seed and params."
   }
 }

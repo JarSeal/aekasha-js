@@ -21482,7 +21482,7 @@
           },
           "debugData": {
             "name": "Ground decals",
-            "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 × 4 grid of 512 cells with 16 px of padding (480² of content; levels 0-4), but tireTracks, a 1024 × 256 strip at its source's 4:1 (992 × 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. A cell's data: physicalSize in m, tileAlong, opacitySource, and a placeholder's generator."
+            "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 × 4 grid of 512 cells with 16 px of padding (480² of content; levels 0-4), but tireTracks, a 1024 × 256 strip at its source's 4:1 (992 × 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are procedural (p309 D5): a generator's bake exported as source/<cellId>_albedoAlpha.png and _normalRough.png (480², the content size; the terrain gallery tab's procedural decals), the cell's data its recipe (generator, seed, params; params left out are the generator's defaults). A cell's data: physicalSize in m, tileAlong, opacitySource, and a procedural cell's generator, seed and params."
           },
           "__atlas": {
             "id": "decalsGround",
@@ -21511,7 +21511,7 @@
                     0.45
                   ],
                   "tileAlong": "U",
-                  "opacitySource": "CONSTANT"
+                  "opacitySource": "HEIGHT"
                 }
               },
               "asphaltDamage": {
@@ -21824,10 +21824,10 @@
               }
             }
           },
-          "__url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.albedoAlpha.ad402bf1.ktx2",
+          "__url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.albedoAlpha.85bafc21.ktx2",
           "__bytes": {
-            "in": 7342225,
-            "out": 437502
+            "in": 8220017,
+            "out": 887768
           },
           "__vramBytes": {
             "in": 22369620,
@@ -21839,7 +21839,7 @@
           "id": "decalsGround.normalRough",
           "debugData": {
             "name": "Ground decals",
-            "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 × 4 grid of 512 cells with 16 px of padding (480² of content; levels 0-4), but tireTracks, a 1024 × 256 strip at its source's 4:1 (992 × 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. A cell's data: physicalSize in m, tileAlong, opacitySource, and a placeholder's generator."
+            "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 × 4 grid of 512 cells with 16 px of padding (480² of content; levels 0-4), but tireTracks, a 1024 × 256 strip at its source's 4:1 (992 × 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are procedural (p309 D5): a generator's bake exported as source/<cellId>_albedoAlpha.png and _normalRough.png (480², the content size; the terrain gallery tab's procedural decals), the cell's data its recipe (generator, seed, params; params left out are the generator's defaults). A cell's data: physicalSize in m, tileAlong, opacitySource, and a procedural cell's generator, seed and params."
           },
           "__atlas": {
             "id": "decalsGround",
@@ -21868,7 +21868,7 @@
                     0.45
                   ],
                   "tileAlong": "U",
-                  "opacitySource": "CONSTANT"
+                  "opacitySource": "HEIGHT"
                 }
               },
               "asphaltDamage": {
@@ -22181,10 +22181,10 @@
               }
             }
           },
-          "__url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.normalRough.5df54d1b.ktx2",
+          "__url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.normalRough.0355dd9b.ktx2",
           "__bytes": {
-            "in": 13502722,
-            "out": 448033
+            "in": 14266219,
+            "out": 1000236
           },
           "__vramBytes": {
             "in": 22369620,
@@ -22586,7 +22586,7 @@
           },
           "debugData": {
             "name": "Ground decals",
-            "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 × 4 grid of 512 cells with 16 px of padding (480² of content; levels 0-4), but tireTracks, a 1024 × 256 strip at its source's 4:1 (992 × 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. A cell's data: physicalSize in m, tileAlong, opacitySource, and a placeholder's generator."
+            "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 × 4 grid of 512 cells with 16 px of padding (480² of content; levels 0-4), but tireTracks, a 1024 × 256 strip at its source's 4:1 (992 × 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are procedural (p309 D5): a generator's bake exported as source/<cellId>_albedoAlpha.png and _normalRough.png (480², the content size; the terrain gallery tab's procedural decals), the cell's data its recipe (generator, seed, params; params left out are the generator's defaults). A cell's data: physicalSize in m, tileAlong, opacitySource, and a procedural cell's generator, seed and params."
           },
           "__atlas": {
             "id": "decalsGround",
@@ -22615,7 +22615,7 @@
                     0.45
                   ],
                   "tileAlong": "U",
-                  "opacitySource": "CONSTANT"
+                  "opacitySource": "HEIGHT"
                 }
               },
               "asphaltDamage": {
@@ -22928,10 +22928,10 @@
               }
             }
           },
-          "__url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.albedoAlpha.ad402bf1.ktx2",
+          "__url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.albedoAlpha.85bafc21.ktx2",
           "__bytes": {
-            "in": 7342225,
-            "out": 437502
+            "in": 8220017,
+            "out": 887768
           },
           "__vramBytes": {
             "in": 22369620,
@@ -22943,7 +22943,7 @@
           "id": "decalsGround.normalRough",
           "debugData": {
             "name": "Ground decals",
-            "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 × 4 grid of 512 cells with 16 px of padding (480² of content; levels 0-4), but tireTracks, a 1024 × 256 strip at its source's 4:1 (992 × 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. A cell's data: physicalSize in m, tileAlong, opacitySource, and a placeholder's generator."
+            "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 × 4 grid of 512 cells with 16 px of padding (480² of content; levels 0-4), but tireTracks, a 1024 × 256 strip at its source's 4:1 (992 × 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are procedural (p309 D5): a generator's bake exported as source/<cellId>_albedoAlpha.png and _normalRough.png (480², the content size; the terrain gallery tab's procedural decals), the cell's data its recipe (generator, seed, params; params left out are the generator's defaults). A cell's data: physicalSize in m, tileAlong, opacitySource, and a procedural cell's generator, seed and params."
           },
           "__atlas": {
             "id": "decalsGround",
@@ -22972,7 +22972,7 @@
                     0.45
                   ],
                   "tileAlong": "U",
-                  "opacitySource": "CONSTANT"
+                  "opacitySource": "HEIGHT"
                 }
               },
               "asphaltDamage": {
@@ -23285,10 +23285,10 @@
               }
             }
           },
-          "__url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.normalRough.5df54d1b.ktx2",
+          "__url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.normalRough.0355dd9b.ktx2",
           "__bytes": {
-            "in": 13502722,
-            "out": 448033
+            "in": 14266219,
+            "out": 1000236
           },
           "__vramBytes": {
             "in": 22369620,
@@ -23303,7 +23303,7 @@
           },
           "debugData": {
             "name": "Structure decals",
-            "description": "p309 D1: the toolkit's structure decals in the DECAL packing (see decalsGround), 4 × 2 cells of 512 with 16 px of padding. leak01-03 (ambientCG Leaking012A, 017B, 019A) from their pack recipes (decalLeak01-03/: a constant stain colour, opacity from the displacement); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. Physical sizes are estimates (the leaks' downloads give none)."
+            "description": "p309 D1: the toolkit's structure decals in the DECAL packing (see decalsGround), 4 × 2 cells of 512 with 16 px of padding. leak01-03 (ambientCG Leaking012A, 017B, 019A) from their pack recipes (decalLeak01-03/: a constant stain colour, opacity from the displacement); the other cells are procedural (p309 D5): a generator's bake exported as source/<cellId>_albedoAlpha.png and _normalRough.png (480², the content size; the terrain gallery tab's procedural decals), the cell's data its recipe (generator, seed, params; params left out are the generator's defaults). Physical sizes are estimates (the leaks' downloads give none)."
           },
           "__atlas": {
             "id": "decalsStructure",
@@ -23507,10 +23507,10 @@
               }
             }
           },
-          "__url": "/aek-assets/toolkit/textures/decalsStructure/decalsStructure.atlas.albedoAlpha.004439fe.ktx2",
+          "__url": "/aek-assets/toolkit/textures/decalsStructure/decalsStructure.atlas.albedoAlpha.149c7cfe.ktx2",
           "__bytes": {
-            "in": 562800,
-            "out": 159055
+            "in": 757425,
+            "out": 323217
           },
           "__vramBytes": {
             "in": 11184812,
@@ -23522,7 +23522,7 @@
           "id": "decalsStructure.normalRough",
           "debugData": {
             "name": "Structure decals",
-            "description": "p309 D1: the toolkit's structure decals in the DECAL packing (see decalsGround), 4 × 2 cells of 512 with 16 px of padding. leak01-03 (ambientCG Leaking012A, 017B, 019A) from their pack recipes (decalLeak01-03/: a constant stain colour, opacity from the displacement); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. Physical sizes are estimates (the leaks' downloads give none)."
+            "description": "p309 D1: the toolkit's structure decals in the DECAL packing (see decalsGround), 4 × 2 cells of 512 with 16 px of padding. leak01-03 (ambientCG Leaking012A, 017B, 019A) from their pack recipes (decalLeak01-03/: a constant stain colour, opacity from the displacement); the other cells are procedural (p309 D5): a generator's bake exported as source/<cellId>_albedoAlpha.png and _normalRough.png (480², the content size; the terrain gallery tab's procedural decals), the cell's data its recipe (generator, seed, params; params left out are the generator's defaults). Physical sizes are estimates (the leaks' downloads give none)."
           },
           "__atlas": {
             "id": "decalsStructure",
@@ -23726,10 +23726,10 @@
               }
             }
           },
-          "__url": "/aek-assets/toolkit/textures/decalsStructure/decalsStructure.atlas.normalRough.9657dc14.ktx2",
+          "__url": "/aek-assets/toolkit/textures/decalsStructure/decalsStructure.atlas.normalRough.d2371b96.ktx2",
           "__bytes": {
-            "in": 4796067,
-            "out": 188941
+            "in": 4853782,
+            "out": 231927
           },
           "__vramBytes": {
             "in": 11184812,
@@ -42348,7 +42348,7 @@
       },
       "debugData": {
         "name": "Ground decals",
-        "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 × 4 grid of 512 cells with 16 px of padding (480² of content; levels 0-4), but tireTracks, a 1024 × 256 strip at its source's 4:1 (992 × 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. A cell's data: physicalSize in m, tileAlong, opacitySource, and a placeholder's generator."
+        "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 × 4 grid of 512 cells with 16 px of padding (480² of content; levels 0-4), but tireTracks, a 1024 × 256 strip at its source's 4:1 (992 × 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are procedural (p309 D5): a generator's bake exported as source/<cellId>_albedoAlpha.png and _normalRough.png (480², the content size; the terrain gallery tab's procedural decals), the cell's data its recipe (generator, seed, params; params left out are the generator's defaults). A cell's data: physicalSize in m, tileAlong, opacitySource, and a procedural cell's generator, seed and params."
       },
       "__sourcePath": "src/toolkit/textures/decalsGround/decalsGround.textureAtlas.json",
       "__atlas": {
@@ -42378,7 +42378,7 @@
                 0.45
               ],
               "tileAlong": "U",
-              "opacitySource": "CONSTANT"
+              "opacitySource": "HEIGHT"
             }
           },
           "asphaltDamage": {
@@ -42691,10 +42691,10 @@
           }
         }
       },
-      "__url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.albedoAlpha.ad402bf1.ktx2",
+      "__url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.albedoAlpha.85bafc21.ktx2",
       "__bytes": {
-        "in": 7342225,
-        "out": 437502
+        "in": 8220017,
+        "out": 887768
       },
       "__vramBytes": {
         "in": 22369620,
@@ -42706,7 +42706,7 @@
       "id": "decalsGround.normalRough",
       "debugData": {
         "name": "Ground decals",
-        "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 × 4 grid of 512 cells with 16 px of padding (480² of content; levels 0-4), but tireTracks, a 1024 × 256 strip at its source's 4:1 (992 × 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. A cell's data: physicalSize in m, tileAlong, opacitySource, and a placeholder's generator."
+        "description": "p309 D1: the toolkit's ground decals in the DECAL packing (albedoAlpha: sRGB albedo, A opacity; normalRough: normal XY, roughness, A the puddle mask), a 4 × 4 grid of 512 cells with 16 px of padding (480² of content; levels 0-4), but tireTracks, a 1024 × 256 strip at its source's 4:1 (992 × 224 of content), the grid cell under it and the last one free. tireTracks (ambientCG TireTracks001) and asphaltDamage (AsphaltDamage001) from their pack recipes (decalTireTracks01/, decalAsphaltDamage01/); the other cells are procedural (p309 D5): a generator's bake exported as source/<cellId>_albedoAlpha.png and _normalRough.png (480², the content size; the terrain gallery tab's procedural decals), the cell's data its recipe (generator, seed, params; params left out are the generator's defaults). A cell's data: physicalSize in m, tileAlong, opacitySource, and a procedural cell's generator, seed and params."
       },
       "__sourcePath": "src/toolkit/textures/decalsGround/decalsGround.textureAtlas.json",
       "__atlas": {
@@ -42736,7 +42736,7 @@
                 0.45
               ],
               "tileAlong": "U",
-              "opacitySource": "CONSTANT"
+              "opacitySource": "HEIGHT"
             }
           },
           "asphaltDamage": {
@@ -43049,10 +43049,10 @@
           }
         }
       },
-      "__url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.normalRough.5df54d1b.ktx2",
+      "__url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.normalRough.0355dd9b.ktx2",
       "__bytes": {
-        "in": 13502722,
-        "out": 448033
+        "in": 14266219,
+        "out": 1000236
       },
       "__vramBytes": {
         "in": 22369620,
@@ -43067,7 +43067,7 @@
       },
       "debugData": {
         "name": "Structure decals",
-        "description": "p309 D1: the toolkit's structure decals in the DECAL packing (see decalsGround), 4 × 2 cells of 512 with 16 px of padding. leak01-03 (ambientCG Leaking012A, 017B, 019A) from their pack recipes (decalLeak01-03/: a constant stain colour, opacity from the displacement); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. Physical sizes are estimates (the leaks' downloads give none)."
+        "description": "p309 D1: the toolkit's structure decals in the DECAL packing (see decalsGround), 4 × 2 cells of 512 with 16 px of padding. leak01-03 (ambientCG Leaking012A, 017B, 019A) from their pack recipes (decalLeak01-03/: a constant stain colour, opacity from the displacement); the other cells are procedural (p309 D5): a generator's bake exported as source/<cellId>_albedoAlpha.png and _normalRough.png (480², the content size; the terrain gallery tab's procedural decals), the cell's data its recipe (generator, seed, params; params left out are the generator's defaults). Physical sizes are estimates (the leaks' downloads give none)."
       },
       "__sourcePath": "src/toolkit/textures/decalsStructure/decalsStructure.textureAtlas.json",
       "__atlas": {
@@ -43272,10 +43272,10 @@
           }
         }
       },
-      "__url": "/aek-assets/toolkit/textures/decalsStructure/decalsStructure.atlas.albedoAlpha.004439fe.ktx2",
+      "__url": "/aek-assets/toolkit/textures/decalsStructure/decalsStructure.atlas.albedoAlpha.149c7cfe.ktx2",
       "__bytes": {
-        "in": 562800,
-        "out": 159055
+        "in": 757425,
+        "out": 323217
       },
       "__vramBytes": {
         "in": 11184812,
@@ -43287,7 +43287,7 @@
       "id": "decalsStructure.normalRough",
       "debugData": {
         "name": "Structure decals",
-        "description": "p309 D1: the toolkit's structure decals in the DECAL packing (see decalsGround), 4 × 2 cells of 512 with 16 px of padding. leak01-03 (ambientCG Leaking012A, 017B, 019A) from their pack recipes (decalLeak01-03/: a constant stain colour, opacity from the displacement); the other cells are placeholders (source/placeholder.png, a grey crossed square, in albedoAlpha; normalRough's fill) until p309 Phase 5's generators. Physical sizes are estimates (the leaks' downloads give none)."
+        "description": "p309 D1: the toolkit's structure decals in the DECAL packing (see decalsGround), 4 × 2 cells of 512 with 16 px of padding. leak01-03 (ambientCG Leaking012A, 017B, 019A) from their pack recipes (decalLeak01-03/: a constant stain colour, opacity from the displacement); the other cells are procedural (p309 D5): a generator's bake exported as source/<cellId>_albedoAlpha.png and _normalRough.png (480², the content size; the terrain gallery tab's procedural decals), the cell's data its recipe (generator, seed, params; params left out are the generator's defaults). Physical sizes are estimates (the leaks' downloads give none)."
       },
       "__sourcePath": "src/toolkit/textures/decalsStructure/decalsStructure.textureAtlas.json",
       "__atlas": {
@@ -43492,10 +43492,10 @@
           }
         }
       },
-      "__url": "/aek-assets/toolkit/textures/decalsStructure/decalsStructure.atlas.normalRough.9657dc14.ktx2",
+      "__url": "/aek-assets/toolkit/textures/decalsStructure/decalsStructure.atlas.normalRough.d2371b96.ktx2",
       "__bytes": {
-        "in": 4796067,
-        "out": 188941
+        "in": 4853782,
+        "out": 231927
       },
       "__vramBytes": {
         "in": 11184812,

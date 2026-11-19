@@ -42,9 +42,9 @@ export const decalStain = defineDecalGenerator({
     const coarse = ctx.cells(params.blotches);
     const wobble = fbm(coarse.p, { period: coarse.period, octaves: 4, seed: ctx.seed(1) });
     const distance = length(point).add(wobble.mul(params.wobble)) as unknown as Node<'float'>;
-    const blot = under(distance, params.radius.sub(0.03), 0.03);
-    // The tide mark: a band inside the edge, where the stain dried last
-    const rim = under(distance, params.radius.sub(0.035), 0.025)
+    const blot = under(distance, params.radius.sub(0.008), 0.008);
+    // The tide mark: a band within 0.05 decal widths inside the edge, where the stain dried last
+    const rim = under(distance, params.radius.sub(0.05), 0.012)
       .oneMinus()
       .mul(blot)
       .mul(params.rim) as unknown as Node<'float'>;
@@ -53,11 +53,8 @@ export const decalStain = defineDecalGenerator({
     const body = blot.mul(params.density).mul(float(1).sub(params.mottle.mul(mottle)));
 
     return {
-      albedo: params.color.mul(float(1).sub(rim.mul(0.45))) as unknown as Node<'vec3'>,
-      opacity: body
-        .add(rim.mul(0.35))
-        .clamp(0, 1)
-        .mul(edgeGuard(point)) as unknown as Node<'float'>,
+      albedo: params.color.mul(float(1).sub(rim.mul(0.55))) as unknown as Node<'vec3'>,
+      opacity: body.add(rim.mul(0.5)).clamp(0, 1).mul(edgeGuard(point)) as unknown as Node<'float'>,
       height: float(0.5) as unknown as Node<'float'>,
       roughness: params.roughness,
       // Flat: no relief to tap

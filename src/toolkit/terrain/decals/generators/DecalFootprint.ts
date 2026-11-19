@@ -35,13 +35,21 @@ const pressedAt = (point: Vec2, c: readonly [number, number], radius: number) =>
 const smoothStepAt = (value: Float, edge: number, width: number) =>
   smoothstep(edge - width, edge + width, value) as unknown as Float;
 
+/** A sole's outline: a forefoot and a heel joined through the waist (`widen` its scale) */
+const soleOutline = (point: Vec2, widen: number) =>
+  smoothUnion(
+    smoothUnion(
+      sdEllipse(point, [0, 0.13], [0.145 * widen, 0.19]),
+      sdEllipse(point, [0, -0.25], [0.11 * widen, 0.125]),
+      0.1
+    ),
+    sdCapsule(point, [0, -0.2], [0, 0.04], 0.075 * widen),
+    0.06
+  );
+
 /** A boot's sole: a forefoot and a heel joined at the waist; chevron lugs ahead, bars at the heel. */
 const bootPrint = (point: Vec2): Print => {
-  const distance = smoothUnion(
-    sdEllipse(point, [0, 0.13], [0.145, 0.19]),
-    sdEllipse(point, [0, -0.25], [0.11, 0.125]),
-    0.1
-  );
+  const distance = soleOutline(point, 1);
   const pressure = max(pressedAt(point, [0, -0.25], 0.12), pressedAt(point, [0, 0.16], 0.16));
   const chevron = abs(fract(point.y.mul(16).sub(abs(point.x).mul(4))).sub(0.5));
   const bar = abs(fract(point.y.mul(18)).sub(0.5));
@@ -56,11 +64,7 @@ const bootPrint = (point: Vec2): Print => {
 
 /** A snow boot's sole: a boot's, a little wider, with round square lugs on a grid. */
 const snowBootPrint = (point: Vec2): Print => {
-  const distance = smoothUnion(
-    sdEllipse(point, [0, 0.13], [0.155, 0.195]),
-    sdEllipse(point, [0, -0.25], [0.12, 0.13]),
-    0.1
-  );
+  const distance = soleOutline(point, 1.07);
   const pressure = max(pressedAt(point, [0, -0.25], 0.12), pressedAt(point, [0, 0.16], 0.16));
   const local = abs(fract(point.mul(vec2(9, 11))).sub(0.5));
   const lugs = under(max(local.x, local.y) as unknown as Float, 0.27, 0.06);
