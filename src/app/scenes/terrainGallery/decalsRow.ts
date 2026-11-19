@@ -21,9 +21,10 @@ import { BLOCK_GAP, NO_SHADOWS } from './galleryBlocks';
 import { LIVE_BLOCK_BOUNDS } from './liveBlock';
 
 /** A panel's view of an atlas's slots */
-type DecalsView = 'ALBEDO' | 'OPACITY' | 'NORMAL_ROUGH' | 'PUDDLE';
+export type DecalsView = 'ALBEDO' | 'OPACITY' | 'NORMAL_ROUGH' | 'PUDDLE';
 
-const VIEWS: readonly { view: DecalsView; title: string }[] = [
+/** The views, in the row's order (left to right) */
+export const DECALS_VIEWS: readonly { view: DecalsView; title: string }[] = [
   { view: 'ALBEDO', title: 'albedo over ground' },
   { view: 'OPACITY', title: 'opacity' },
   { view: 'NORMAL_ROUGH', title: 'normal XY, roughness' },
@@ -50,7 +51,7 @@ const LABELS_WIDTH = 1024;
 /** The row's first panel's left edge: right of the Live block */
 const ROW_MIN_X = LIVE_BLOCK_BOUNDS.maxX + 2 * BLOCK_GAP;
 const ROW_MIN_Z = LIVE_BLOCK_BOUNDS.minZ;
-const ROW_WIDTH = VIEWS.length * ATLASES[0].width + (VIEWS.length - 1) * PANEL_GAP;
+const ROW_WIDTH = DECALS_VIEWS.length * ATLASES[0].width + (DECALS_VIEWS.length - 1) * PANEL_GAP;
 const ROW_DEPTH =
   ATLASES.reduce((sum, atlas) => sum + atlas.depth, 0) + (ATLASES.length - 1) * PANEL_GAP;
 
@@ -77,7 +78,7 @@ export const DECALS_PANELS: readonly DecalsPanel[] = ATLASES.flatMap((atlas, row
     ROW_MIN_Z +
     ATLASES.slice(0, row).reduce((sum, { depth }) => sum + depth + PANEL_GAP, 0) +
     atlas.depth / 2;
-  return VIEWS.map(({ view, title }, col) => ({
+  return DECALS_VIEWS.map(({ view, title }, col) => ({
     atlas,
     view,
     title: `${atlas.title}: ${title}`,
@@ -147,11 +148,16 @@ const getLabelsTexture = (atlas: DecalsAtlas) => {
 const sampleVec4 = (tex: THREE.Texture) => texture(tex) as unknown as Node<'vec4'>;
 const toStored = (value: Node<'vec3'>) => sRGBTransferEOTF(value) as unknown as Node<'vec3'>;
 
-/** A view's colour: the stored values shown as they are (data through the output's sRGB curve's
- * inverse, so a grey of 0.5 reads 128) */
-const getViewColor = (atlasId: string, view: DecalsView): Node<'vec3'> => {
-  const albedoAlpha = sampleVec4(getSlot(atlasId, 'albedoAlpha'));
-  const normalRough = sampleVec4(getSlot(atlasId, 'normalRough'));
+/**
+ * A view's colour of a `DECAL` packing's two samples: the stored values shown as they are (data
+ * through the output's sRGB curve's inverse, so a grey of 0.5 reads 128); the albedo over a ground
+ * colour by its alpha
+ */
+export const getDecalViewColor = (
+  albedoAlpha: Node<'vec4'>,
+  normalRough: Node<'vec4'>,
+  view: DecalsView
+): Node<'vec3'> => {
   if (view === 'ALBEDO') {
     const ground = new THREE.Color(ALBEDO_GROUND);
     return mix(vec3(ground.r, ground.g, ground.b), albedoAlpha.rgb, albedoAlpha.a);
@@ -168,7 +174,10 @@ const getPanelMaterial = (panel: DecalsPanel) => {
     params: {},
   }) as THREE.MeshBasicNodeMaterial;
   const labels = sampleVec4(getLabelsTexture(panel.atlas));
-  material.colorNode = mix(getViewColor(panel.atlas.id, panel.view), labels.rgb, labels.a);
+  const albedoAlpha = sampleVec4(getSlot(panel.atlas.id, 'albedoAlpha'));
+  const normalRough = sampleVec4(getSlot(panel.atlas.id, 'normalRough'));
+  const color = getDecalViewColor(albedoAlpha, normalRough, panel.view);
+  material.colorNode = mix(color, labels.rgb, labels.a);
   material.needsUpdate = true;
   return material;
 };

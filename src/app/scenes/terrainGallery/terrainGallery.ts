@@ -27,7 +27,7 @@ import { createPatchRowAsync } from './patchRow';
 import { createWetRow, WET_ROW_BOUNDS } from './wetRow';
 import { createScatterRowAsync, SCATTER_ROW_BOUNDS } from './scatterRow';
 import { createDecalsRow, DECALS_ROW_BOUNDS } from './decalsRow';
-import { createDecalsStage, DECALS_STAGE_BOUNDS } from './decalsStage';
+import { createDecalsStage, DECALS_BENCH_BOUNDS, DECALS_STAGE_BOUNDS } from './decalsStage';
 import {
   createProceduralRowAsync,
   PROCEDURAL_ROW_DEPTH,
@@ -120,7 +120,10 @@ import {
  *   mud02 blocks with a concrete wall behind each, every cell of both atlases on them as a decal
  *   quad in the toolkit's decal materials, `BLEND` on the left and `CUTOUT` on the right, wet with
  *   the ground; the tab sets the weather, flies the camera to 1, 50 and 200 m and switches the
- *   polygon offset and the edge fade off for comparison.
+ *   polygon offset and the edge fade off for comparison. Right of the stage the bake bench (p309
+ *   Phase 5, made by the tab with its first bake, `_dbg__terrainGalleryDecalBakes.ts`): a generated
+ *   cell baked from its generator, as decals on a third block and wall and on panels of the views
+ *   beside the atlas's copy; the tab sets its seed and params, copies its data and exports it.
  * - **The light:** the scene's own DAY_NIGHT sky box standing at 10:00 (`terrainGallerySky`); its
  *   sun and sky are the only lights. No shadows for now (`NO_SHADOWS`).
  *
@@ -250,6 +253,7 @@ export const scene = async () => {
       LIVE_BLOCK_BOUNDS.maxX,
       DECALS_ROW_BOUNDS.maxX,
       DECALS_STAGE_BOUNDS.maxX,
+      DECALS_BENCH_BOUNDS.maxX,
       ANTI_TILING_ROW_BOUNDS.maxX,
       CLIFFS_ROW_BOUNDS.maxX,
       COLOR_MAP_ROW_BOUNDS.maxX,

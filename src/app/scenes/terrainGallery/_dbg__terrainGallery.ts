@@ -52,6 +52,7 @@ import {
 import { getPatchSections, startPatchTab } from './_dbg__terrainGalleryPatch';
 import { getScatterSections } from './_dbg__terrainGalleryScatter';
 import { getDecalsSections } from './_dbg__terrainGalleryDecals';
+import { startDecalBakeTab } from './_dbg__terrainGalleryDecalBakes';
 import { clearWetSelection, getWetSections, startWetTab } from './_dbg__terrainGalleryWet';
 import { getLiveSections, startLiveTab, type LiveSectionOpts } from './_dbg__terrainGalleryLive';
 import {
@@ -474,11 +475,13 @@ export const createTerrainGalleryTab = () => {
   startPatchTab();
   const endProceduralTab = startProceduralTab(proceduralOpts);
   const endLiveTab = startLiveTab(liveOpts);
+  const endDecalBakeTab = startDecalBakeTab();
   addGalleryExitCleanup(() => {
     thisVisit.isCurrent = false;
     stopGalleryFlight(true);
     endProceduralTab();
     endLiveTab();
+    endDecalBakeTab();
   });
 
   createDebuggerTab({

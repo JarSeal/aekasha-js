@@ -27,17 +27,34 @@ export const DECAL_RENDER_ORDER = 10;
 export type DecalsStageBlock = { mode: 'BLEND' | 'CUTOUT'; title: string; x: number; z: number };
 
 /** The wall behind each block: as long as the block, from the gallery's ground to 4 m up */
-const WALL = { length: BLOCK_SIZE, height: 4.6, thickness: 1, baseY: -0.6 };
+export const DECALS_STAGE_WALL = { length: BLOCK_SIZE, height: 4.6, thickness: 1, baseY: -0.6 };
 const STAGE_MIN_X = DECALS_ROW_BOUNDS.minX;
 /** The walls' back, two gaps in front of the panels (+z) */
 const STAGE_MIN_Z = DECALS_ROW_BOUNDS.maxZ + 2 * BLOCK_GAP;
-const BLOCK_Z = STAGE_MIN_Z + WALL.thickness + BLOCK_SIZE / 2;
+const BLOCK_Z = STAGE_MIN_Z + DECALS_STAGE_WALL.thickness + BLOCK_SIZE / 2;
 
 /** The blocks, `BLEND` on the left */
 export const DECALS_STAGE_BLOCKS: readonly DecalsStageBlock[] = [
   { mode: 'BLEND', title: 'BLEND', x: STAGE_MIN_X + BLOCK_SIZE / 2, z: BLOCK_Z },
   { mode: 'CUTOUT', title: 'CUTOUT', x: STAGE_MIN_X + BLOCK_SIZE / 2 + BLOCK_PITCH, z: BLOCK_Z },
 ];
+
+/**
+ * The bake bench's block, right of the `CUTOUT` one (p309 Phase 5: the tab's procedural decals, a
+ * decal baked from a generator shown on it; made by the tab, `_dbg__terrainGalleryDecalBakes.ts`)
+ */
+export const DECALS_BENCH_BLOCK = {
+  x: STAGE_MIN_X + BLOCK_SIZE / 2 + 2 * BLOCK_PITCH,
+  z: BLOCK_Z,
+} as const;
+
+/** The bench's extent on the ground (with its wall), for the gallery's ground */
+export const DECALS_BENCH_BOUNDS = {
+  minX: DECALS_BENCH_BLOCK.x - BLOCK_SIZE / 2,
+  maxX: DECALS_BENCH_BLOCK.x + BLOCK_SIZE / 2,
+  minZ: STAGE_MIN_Z,
+  maxZ: BLOCK_Z + BLOCK_SIZE / 2,
+};
 
 /** The stage's extent on the ground, for the gallery's ground */
 export const DECALS_STAGE_BOUNDS = {
@@ -109,7 +126,12 @@ const WALL_DECALS: readonly DecalPlacement[] = [
  * `depth` across, the cell's UVs 0..1 on each of its `tiles` along x (v toward −z: the cell's top
  * at the back) and the second UV set 0..1 over the whole decal; registered
  */
-const getQuadGeometry = (width: number, depth: number, tiles: number, onWall: boolean) => {
+export const getDecalQuadGeometry = (
+  width: number,
+  depth: number,
+  tiles: number,
+  onWall: boolean
+) => {
   const id = `terrainGallery_decalQuad_${width}x${depth}x${tiles}${onWall ? '_wall' : ''}`;
   const registered = getGeometry(id);
   if (registered) return registered;
@@ -162,7 +184,7 @@ const createDecal = (
 ) => {
   const [width, depth] = getCellSize(atlasId, placement.cell);
   const tiles = placement.tiles ?? 1;
-  const quad = getQuadGeometry(width * tiles, depth, tiles, onWall);
+  const quad = getDecalQuadGeometry(width * tiles, depth, tiles, onWall);
   const materialIds = getDecalMaterialIds(block.mode);
   const position = onWall
     ? { x: block.x + placement.x, y: placement.y ?? 0, z: block.z - BLOCK_SIZE / 2 }
@@ -199,12 +221,19 @@ const getWallGeometry = () => {
   const id = 'terrainGallery_decalsWall';
   return (
     getGeometry(id) ??
-    saveBufferGeometry(new THREE.BoxGeometry(WALL.length, WALL.height, WALL.thickness), { id })
+    saveBufferGeometry(
+      new THREE.BoxGeometry(
+        DECALS_STAGE_WALL.length,
+        DECALS_STAGE_WALL.height,
+        DECALS_STAGE_WALL.thickness
+      ),
+      { id }
+    )
   );
 };
 
 /** The ground's and the wall's materials (an id registered already returns its material) */
-const createSurfaceMaterials = () => ({
+export const createDecalsSurfaceMaterials = () => ({
   ground: createTerrainMaterial({
     id: GROUND_MATERIAL_ID,
     layers: [{ set: GROUND_SET }],
@@ -213,38 +242,49 @@ const createSurfaceMaterials = () => ({
   wall: createStructureMaterial(WALL_SET, { id: WALL_MATERIAL_ID, wet: { streaks: {} } }),
 });
 
+/**
+ * A stage block's flat ground (its top at y = 0) and its wall behind it (−z), wet like the decals;
+ * `key` names their entities (`terrainGallery_decalsBlock_<key>`, `…Wall_<key>`)
+ */
+export const createDecalsStageSurface = (
+  block: { x: number; z: number; title: string },
+  key: string
+) => {
+  const materials = createDecalsSurfaceMaterials();
+  createMeshEntity(
+    {
+      geo: getGroundGeometry(),
+      mat: materials.ground,
+      position: { x: block.x, y: 0, z: block.z },
+      ...NO_SHADOWS,
+    },
+    {
+      appId: `terrainGallery_decalsBlock_${key}`,
+      debugData: { name: `Decals block: ${block.title}` },
+    }
+  );
+  createMeshEntity(
+    {
+      geo: getWallGeometry(),
+      mat: materials.wall,
+      position: {
+        x: block.x,
+        y: DECALS_STAGE_WALL.baseY + DECALS_STAGE_WALL.height / 2,
+        z: block.z - BLOCK_SIZE / 2 - DECALS_STAGE_WALL.thickness / 2,
+      },
+      ...NO_SHADOWS,
+    },
+    {
+      appId: `terrainGallery_decalsWall_${key}`,
+      debugData: { name: `Decals wall: ${block.title}` },
+    }
+  );
+};
+
 /** Creates the stage's blocks, walls and decals; the scene lists the decal materials and atlases */
 export const createDecalsStage = () => {
-  const materials = createSurfaceMaterials();
   for (const block of DECALS_STAGE_BLOCKS) {
-    createMeshEntity(
-      {
-        geo: getGroundGeometry(),
-        mat: materials.ground,
-        position: { x: block.x, y: 0, z: block.z },
-        ...NO_SHADOWS,
-      },
-      {
-        appId: `terrainGallery_decalsBlock_${block.mode}`,
-        debugData: { name: `Decals block: ${block.title}` },
-      }
-    );
-    createMeshEntity(
-      {
-        geo: getWallGeometry(),
-        mat: materials.wall,
-        position: {
-          x: block.x,
-          y: WALL.baseY + WALL.height / 2,
-          z: block.z - BLOCK_SIZE / 2 - WALL.thickness / 2,
-        },
-        ...NO_SHADOWS,
-      },
-      {
-        appId: `terrainGallery_decalsWall_${block.mode}`,
-        debugData: { name: `Decals wall: ${block.title}` },
-      }
-    );
+    createDecalsStageSurface(block, block.mode);
     GROUND_DECALS.forEach((placement, i) =>
       createDecal('decalsGround', placement, i, block, false)
     );

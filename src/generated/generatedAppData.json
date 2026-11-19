@@ -21552,7 +21552,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalCracks"
+                  "generator": "decalCracks",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "mudSplatter": {
@@ -21573,7 +21575,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalMudSplatter"
+                  "generator": "decalMudSplatter",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "wetPatch": {
@@ -21594,7 +21598,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalWetPatch"
+                  "generator": "decalWetPatch",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "stain01": {
@@ -21615,7 +21621,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalStain"
+                  "generator": "decalStain",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "stain02": {
@@ -21636,7 +21644,13 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalStain"
+                  "generator": "decalStain",
+                  "seed": 2,
+                  "params": {
+                    "color": "#4a3a2a",
+                    "roughness": 0.75,
+                    "rim": 0.7
+                  }
                 }
               },
               "scorch": {
@@ -21657,7 +21671,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalScorch"
+                  "generator": "decalScorch",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "footprintBoot": {
@@ -21678,7 +21694,11 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFootprint"
+                  "generator": "decalFootprint",
+                  "seed": 1,
+                  "params": {
+                    "shape": "BOOT"
+                  }
                 }
               },
               "footprintBare": {
@@ -21699,7 +21719,11 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFootprint"
+                  "generator": "decalFootprint",
+                  "seed": 1,
+                  "params": {
+                    "shape": "BARE"
+                  }
                 }
               },
               "footprintPaw": {
@@ -21720,7 +21744,11 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFootprint"
+                  "generator": "decalFootprint",
+                  "seed": 1,
+                  "params": {
+                    "shape": "PAW"
+                  }
                 }
               },
               "footprintSnowBoot": {
@@ -21741,7 +21769,11 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFootprint"
+                  "generator": "decalFootprint",
+                  "seed": 1,
+                  "params": {
+                    "shape": "SNOW_BOOT"
+                  }
                 }
               },
               "leafPatch": {
@@ -21762,7 +21794,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalLeafPatch"
+                  "generator": "decalLeafPatch",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "iceCrack": {
@@ -21783,7 +21817,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalIceCrack"
+                  "generator": "decalIceCrack",
+                  "seed": 1,
+                  "params": {}
                 }
               }
             }
@@ -21873,7 +21909,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalCracks"
+                  "generator": "decalCracks",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "mudSplatter": {
@@ -21894,7 +21932,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalMudSplatter"
+                  "generator": "decalMudSplatter",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "wetPatch": {
@@ -21915,7 +21955,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalWetPatch"
+                  "generator": "decalWetPatch",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "stain01": {
@@ -21936,7 +21978,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalStain"
+                  "generator": "decalStain",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "stain02": {
@@ -21957,7 +22001,13 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalStain"
+                  "generator": "decalStain",
+                  "seed": 2,
+                  "params": {
+                    "color": "#4a3a2a",
+                    "roughness": 0.75,
+                    "rim": 0.7
+                  }
                 }
               },
               "scorch": {
@@ -21978,7 +22028,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalScorch"
+                  "generator": "decalScorch",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "footprintBoot": {
@@ -21999,7 +22051,11 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFootprint"
+                  "generator": "decalFootprint",
+                  "seed": 1,
+                  "params": {
+                    "shape": "BOOT"
+                  }
                 }
               },
               "footprintBare": {
@@ -22020,7 +22076,11 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFootprint"
+                  "generator": "decalFootprint",
+                  "seed": 1,
+                  "params": {
+                    "shape": "BARE"
+                  }
                 }
               },
               "footprintPaw": {
@@ -22041,7 +22101,11 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFootprint"
+                  "generator": "decalFootprint",
+                  "seed": 1,
+                  "params": {
+                    "shape": "PAW"
+                  }
                 }
               },
               "footprintSnowBoot": {
@@ -22062,7 +22126,11 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFootprint"
+                  "generator": "decalFootprint",
+                  "seed": 1,
+                  "params": {
+                    "shape": "SNOW_BOOT"
+                  }
                 }
               },
               "leafPatch": {
@@ -22083,7 +22151,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalLeafPatch"
+                  "generator": "decalLeafPatch",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "iceCrack": {
@@ -22104,7 +22174,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalIceCrack"
+                  "generator": "decalIceCrack",
+                  "seed": 1,
+                  "params": {}
                 }
               }
             }
@@ -22428,7 +22500,7 @@
     "terrainGallery": {
       "isDebugScene": true,
       "name": "Terrain gallery (p303, p304, p305, p306, p307, p308, p309)",
-      "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the toolkit's terrain material (p305, its JSON route; one layer, world tiling) in the set's default packing, which the debug tab switches to the code route or to the baseline textureSetSurface (they look the same). Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). Behind the library, the Anti-tiling row (p305): three flat 48 × 48 m grass01 blocks with the terrain material's anti-tiling NONE, DUAL_SCALE and HEX, the macro variation (macroNoise) on, which the debug tab switches and tunes. Left of the library, the Splatting row (p305): six 24 × 24 m generated blocks blending several sets by weights painted in code, the vertex colour (RGBA, 5 layers) and a splat map (5 layers) each LINEAR beside HEIGHT, RGB_AO with the vertex AO (4 layers), and 9 layers with two splat maps (code route materials, storage AUTO: the splat blocks bind one texture too many for SEPARATE, so each takes a set array the scene lists), which the debug tab tunes. In front of the library, the Rules row (p305): two 64 × 64 m blocks on one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces, macroNoise breaking the borders), the rules alone beside a splat map's sandy path and mud under the same rules (its six sets a set array the scene lists), which the debug tab tunes. In front of the Cliffs row, the Colour map row (p305): the Rules row's 8-layer material on four 64 × 64 m blocks of its terrain, then with a DETAIL colour map (baked at the load from the source on the block's own mesh), with the far COLOR_MAP surface and with the far AVERAGE_COLOR one, which the debug tab tunes and bakes again. In front of that, the Structures row (p305): structure materials (createStructureMaterial: triplanar, dual-scale anti-tiling, a 12 m macro) on pieces made in code, a wall of two segments in world space and a bunker's passage piece in object space worn by their vertex colour (RGBA: clean and stained concrete, grime, damage), and two pillars turning and rising, concrete02 in object space beside world space, which the debug tab pauses. Left of the Splatting row, the Wet/dry row (p307): 3 × 3 library blocks, a set of each category (sand02, mud02, rocks01, cliffs01, snow01, ice01, grass01, concrete02) and a beach (sand02 with rocks01 on the ramp by slope), each the terrain material with wet over the surface conditions' wetness, which the scene holds (MANUAL, 0.6) and the debug tab sets, with puddles, rain ripples, streaks on a concrete wall and a cliff boulder, a shoreline on the beach, and snow (snow01) by the snow cover, slush above 0 °C, which the debug tab sets too, with the row's quality (FULL, SIMPLE) and the WETNESS and TAPS views. Right of the library, the Procedural row (p304): the toolkit's ten surface generators on a block each (five rows of two), baked at the load (1024² LITE), which the debug tab switches between the bake, the generator live in the material and an imported set of its category, with each generator's params, its export and a GPU measurement. Right of that, the Live block (p305): a 48 × 48 m generated terrain, grass, rocks by slope and snow on the tops by rules, sand ripples in the hollows from the gallery's procedural set terrainGalleryLiveDunes (sandRipples, baked at the load) run live in the terrain material or sampled baked (the imported sets in a set array, the procedural set beside it), which the debug tab switches, tunes and measures. Behind the Anti-tiling row, past the ground, the Blocks patch (p306): 3 × 3 terrain blocks of 32 m (*.terrainBlock.json) of the toolkit's rulesTerrain, one world-continuous noise with HEIGHT_FN normals, the rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces) laid into the vertex colours on the CPU with the horizon AO in their A, which the debug tab switches to the same rules in the shader (RULES) on the same blocks. In front of the Wet/dry row, the Scatter row (p308): one 24 m block, rocks01 patches over sand02 split down the middle (the vertex colour), the toolkit's procedural pebbles, rocks and boulders (generateRock) scattered on the left half's rock by terrainScatter in the rockScatter material over rocks01, and the toolkit's imported ones (Poly Haven namaqualand_stones_01 and namaqualand_boulder_02, decimated; models/nature/) on the right half's with the same params in rockScatter at their own maps' UV, and right of it a 12 m grass02 and mud02 patch under the toolkit's leaf litter cards (generateLeafCard, the leafLitter material over its LeafSet024 atlas), all wet with the ground by the surface conditions, which the debug tab switches between dry and wet. Right of the Live block, the Decals row (p309): the toolkit's decal atlases decalsGround and decalsStructure (the DECAL packing: albedoAlpha, normalRough) on flat unlit panels, an atlas per row and a panel per view (the albedo over a ground colour, the opacity, the normal and roughness, the puddle mask), each cell outlined and named; in front of it the Decals stage (p309 Phase 2): two flat 12 m mud02 blocks with a concrete wall behind each, every cell of both atlases on them as a decal quad in the toolkit's decal materials (decalsGround_blend, decalsStructure_blend on the left; the _cutout ones on the right), coplanar with the ground and the wall, wet with them, which the debug tab sets the weather for, flies the camera to 1, 50 and 200 m and switches the polygon offset and the edge fade off. The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
+      "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the toolkit's terrain material (p305, its JSON route; one layer, world tiling) in the set's default packing, which the debug tab switches to the code route or to the baseline textureSetSurface (they look the same). Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). Behind the library, the Anti-tiling row (p305): three flat 48 × 48 m grass01 blocks with the terrain material's anti-tiling NONE, DUAL_SCALE and HEX, the macro variation (macroNoise) on, which the debug tab switches and tunes. Left of the library, the Splatting row (p305): six 24 × 24 m generated blocks blending several sets by weights painted in code, the vertex colour (RGBA, 5 layers) and a splat map (5 layers) each LINEAR beside HEIGHT, RGB_AO with the vertex AO (4 layers), and 9 layers with two splat maps (code route materials, storage AUTO: the splat blocks bind one texture too many for SEPARATE, so each takes a set array the scene lists), which the debug tab tunes. In front of the library, the Rules row (p305): two 64 × 64 m blocks on one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces, macroNoise breaking the borders), the rules alone beside a splat map's sandy path and mud under the same rules (its six sets a set array the scene lists), which the debug tab tunes. In front of the Cliffs row, the Colour map row (p305): the Rules row's 8-layer material on four 64 × 64 m blocks of its terrain, then with a DETAIL colour map (baked at the load from the source on the block's own mesh), with the far COLOR_MAP surface and with the far AVERAGE_COLOR one, which the debug tab tunes and bakes again. In front of that, the Structures row (p305): structure materials (createStructureMaterial: triplanar, dual-scale anti-tiling, a 12 m macro) on pieces made in code, a wall of two segments in world space and a bunker's passage piece in object space worn by their vertex colour (RGBA: clean and stained concrete, grime, damage), and two pillars turning and rising, concrete02 in object space beside world space, which the debug tab pauses. Left of the Splatting row, the Wet/dry row (p307): 3 × 3 library blocks, a set of each category (sand02, mud02, rocks01, cliffs01, snow01, ice01, grass01, concrete02) and a beach (sand02 with rocks01 on the ramp by slope), each the terrain material with wet over the surface conditions' wetness, which the scene holds (MANUAL, 0.6) and the debug tab sets, with puddles, rain ripples, streaks on a concrete wall and a cliff boulder, a shoreline on the beach, and snow (snow01) by the snow cover, slush above 0 °C, which the debug tab sets too, with the row's quality (FULL, SIMPLE) and the WETNESS and TAPS views. Right of the library, the Procedural row (p304): the toolkit's ten surface generators on a block each (five rows of two), baked at the load (1024² LITE), which the debug tab switches between the bake, the generator live in the material and an imported set of its category, with each generator's params, its export and a GPU measurement. Right of that, the Live block (p305): a 48 × 48 m generated terrain, grass, rocks by slope and snow on the tops by rules, sand ripples in the hollows from the gallery's procedural set terrainGalleryLiveDunes (sandRipples, baked at the load) run live in the terrain material or sampled baked (the imported sets in a set array, the procedural set beside it), which the debug tab switches, tunes and measures. Behind the Anti-tiling row, past the ground, the Blocks patch (p306): 3 × 3 terrain blocks of 32 m (*.terrainBlock.json) of the toolkit's rulesTerrain, one world-continuous noise with HEIGHT_FN normals, the rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces) laid into the vertex colours on the CPU with the horizon AO in their A, which the debug tab switches to the same rules in the shader (RULES) on the same blocks. In front of the Wet/dry row, the Scatter row (p308): one 24 m block, rocks01 patches over sand02 split down the middle (the vertex colour), the toolkit's procedural pebbles, rocks and boulders (generateRock) scattered on the left half's rock by terrainScatter in the rockScatter material over rocks01, and the toolkit's imported ones (Poly Haven namaqualand_stones_01 and namaqualand_boulder_02, decimated; models/nature/) on the right half's with the same params in rockScatter at their own maps' UV, and right of it a 12 m grass02 and mud02 patch under the toolkit's leaf litter cards (generateLeafCard, the leafLitter material over its LeafSet024 atlas), all wet with the ground by the surface conditions, which the debug tab switches between dry and wet. Right of the Live block, the Decals row (p309): the toolkit's decal atlases decalsGround and decalsStructure (the DECAL packing: albedoAlpha, normalRough) on flat unlit panels, an atlas per row and a panel per view (the albedo over a ground colour, the opacity, the normal and roughness, the puddle mask), each cell outlined and named; in front of it the Decals stage (p309 Phase 2): two flat 12 m mud02 blocks with a concrete wall behind each, every cell of both atlases on them as a decal quad in the toolkit's decal materials (decalsGround_blend, decalsStructure_blend on the left; the _cutout ones on the right), coplanar with the ground and the wall, wet with them, which the debug tab sets the weather for, flies the camera to 1, 50 and 200 m and switches the polygon offset and the edge fade off; right of it the tab's bake bench (p309 Phase 5): a generated cell baked from its generator, its seed and params set in the tab, as decals on a third block and wall and on panels beside the atlas's copy, copied as the cell's data or exported as its PNGs. The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
       "cameras": [
         {
           "camProps": {
@@ -22584,7 +22656,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalCracks"
+                  "generator": "decalCracks",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "mudSplatter": {
@@ -22605,7 +22679,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalMudSplatter"
+                  "generator": "decalMudSplatter",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "wetPatch": {
@@ -22626,7 +22702,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalWetPatch"
+                  "generator": "decalWetPatch",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "stain01": {
@@ -22647,7 +22725,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalStain"
+                  "generator": "decalStain",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "stain02": {
@@ -22668,7 +22748,13 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalStain"
+                  "generator": "decalStain",
+                  "seed": 2,
+                  "params": {
+                    "color": "#4a3a2a",
+                    "roughness": 0.75,
+                    "rim": 0.7
+                  }
                 }
               },
               "scorch": {
@@ -22689,7 +22775,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalScorch"
+                  "generator": "decalScorch",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "footprintBoot": {
@@ -22710,7 +22798,11 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFootprint"
+                  "generator": "decalFootprint",
+                  "seed": 1,
+                  "params": {
+                    "shape": "BOOT"
+                  }
                 }
               },
               "footprintBare": {
@@ -22731,7 +22823,11 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFootprint"
+                  "generator": "decalFootprint",
+                  "seed": 1,
+                  "params": {
+                    "shape": "BARE"
+                  }
                 }
               },
               "footprintPaw": {
@@ -22752,7 +22848,11 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFootprint"
+                  "generator": "decalFootprint",
+                  "seed": 1,
+                  "params": {
+                    "shape": "PAW"
+                  }
                 }
               },
               "footprintSnowBoot": {
@@ -22773,7 +22873,11 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFootprint"
+                  "generator": "decalFootprint",
+                  "seed": 1,
+                  "params": {
+                    "shape": "SNOW_BOOT"
+                  }
                 }
               },
               "leafPatch": {
@@ -22794,7 +22898,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalLeafPatch"
+                  "generator": "decalLeafPatch",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "iceCrack": {
@@ -22815,7 +22921,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalIceCrack"
+                  "generator": "decalIceCrack",
+                  "seed": 1,
+                  "params": {}
                 }
               }
             }
@@ -22905,7 +23013,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalCracks"
+                  "generator": "decalCracks",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "mudSplatter": {
@@ -22926,7 +23036,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalMudSplatter"
+                  "generator": "decalMudSplatter",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "wetPatch": {
@@ -22947,7 +23059,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalWetPatch"
+                  "generator": "decalWetPatch",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "stain01": {
@@ -22968,7 +23082,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalStain"
+                  "generator": "decalStain",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "stain02": {
@@ -22989,7 +23105,13 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalStain"
+                  "generator": "decalStain",
+                  "seed": 2,
+                  "params": {
+                    "color": "#4a3a2a",
+                    "roughness": 0.75,
+                    "rim": 0.7
+                  }
                 }
               },
               "scorch": {
@@ -23010,7 +23132,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalScorch"
+                  "generator": "decalScorch",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "footprintBoot": {
@@ -23031,7 +23155,11 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFootprint"
+                  "generator": "decalFootprint",
+                  "seed": 1,
+                  "params": {
+                    "shape": "BOOT"
+                  }
                 }
               },
               "footprintBare": {
@@ -23052,7 +23180,11 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFootprint"
+                  "generator": "decalFootprint",
+                  "seed": 1,
+                  "params": {
+                    "shape": "BARE"
+                  }
                 }
               },
               "footprintPaw": {
@@ -23073,7 +23205,11 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFootprint"
+                  "generator": "decalFootprint",
+                  "seed": 1,
+                  "params": {
+                    "shape": "PAW"
+                  }
                 }
               },
               "footprintSnowBoot": {
@@ -23094,7 +23230,11 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFootprint"
+                  "generator": "decalFootprint",
+                  "seed": 1,
+                  "params": {
+                    "shape": "SNOW_BOOT"
+                  }
                 }
               },
               "leafPatch": {
@@ -23115,7 +23255,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalLeafPatch"
+                  "generator": "decalLeafPatch",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "iceCrack": {
@@ -23136,7 +23278,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalIceCrack"
+                  "generator": "decalIceCrack",
+                  "seed": 1,
+                  "params": {}
                 }
               }
             }
@@ -23249,7 +23393,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFormwork"
+                  "generator": "decalFormwork",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "crack01": {
@@ -23270,7 +23416,13 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalCracks"
+                  "generator": "decalCracks",
+                  "seed": 2,
+                  "params": {
+                    "cells": 4,
+                    "width": 0.03,
+                    "dustColor": "#8a857d"
+                  }
                 }
               },
               "crack02": {
@@ -23291,7 +23443,13 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalCracks"
+                  "generator": "decalCracks",
+                  "seed": 3,
+                  "params": {
+                    "cells": 6,
+                    "branching": 0.7,
+                    "width": 0.025
+                  }
                 }
               },
               "stain01": {
@@ -23312,7 +23470,12 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalStain"
+                  "generator": "decalStain",
+                  "seed": 3,
+                  "params": {
+                    "color": "#5a3a22",
+                    "roughness": 0.7
+                  }
                 }
               },
               "stain02": {
@@ -23333,7 +23496,13 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalStain"
+                  "generator": "decalStain",
+                  "seed": 4,
+                  "params": {
+                    "color": "#2b2b28",
+                    "roughness": 0.6,
+                    "rim": 0.3
+                  }
                 }
               }
             }
@@ -23443,7 +23612,9 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalFormwork"
+                  "generator": "decalFormwork",
+                  "seed": 1,
+                  "params": {}
                 }
               },
               "crack01": {
@@ -23464,7 +23635,13 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalCracks"
+                  "generator": "decalCracks",
+                  "seed": 2,
+                  "params": {
+                    "cells": 4,
+                    "width": 0.03,
+                    "dustColor": "#8a857d"
+                  }
                 }
               },
               "crack02": {
@@ -23485,7 +23662,13 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalCracks"
+                  "generator": "decalCracks",
+                  "seed": 3,
+                  "params": {
+                    "cells": 6,
+                    "branching": 0.7,
+                    "width": 0.025
+                  }
                 }
               },
               "stain01": {
@@ -23506,7 +23689,12 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalStain"
+                  "generator": "decalStain",
+                  "seed": 3,
+                  "params": {
+                    "color": "#5a3a22",
+                    "roughness": 0.7
+                  }
                 }
               },
               "stain02": {
@@ -23527,7 +23715,13 @@
                   ],
                   "tileAlong": "NONE",
                   "opacitySource": "GENERATED",
-                  "generator": "decalStain"
+                  "generator": "decalStain",
+                  "seed": 4,
+                  "params": {
+                    "color": "#2b2b28",
+                    "roughness": 0.6,
+                    "rim": 0.3
+                  }
                 }
               }
             }
@@ -42225,7 +42419,9 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalCracks"
+              "generator": "decalCracks",
+              "seed": 1,
+              "params": {}
             }
           },
           "mudSplatter": {
@@ -42246,7 +42442,9 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalMudSplatter"
+              "generator": "decalMudSplatter",
+              "seed": 1,
+              "params": {}
             }
           },
           "wetPatch": {
@@ -42267,7 +42465,9 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalWetPatch"
+              "generator": "decalWetPatch",
+              "seed": 1,
+              "params": {}
             }
           },
           "stain01": {
@@ -42288,7 +42488,9 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalStain"
+              "generator": "decalStain",
+              "seed": 1,
+              "params": {}
             }
           },
           "stain02": {
@@ -42309,7 +42511,13 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalStain"
+              "generator": "decalStain",
+              "seed": 2,
+              "params": {
+                "color": "#4a3a2a",
+                "roughness": 0.75,
+                "rim": 0.7
+              }
             }
           },
           "scorch": {
@@ -42330,7 +42538,9 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalScorch"
+              "generator": "decalScorch",
+              "seed": 1,
+              "params": {}
             }
           },
           "footprintBoot": {
@@ -42351,7 +42561,11 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalFootprint"
+              "generator": "decalFootprint",
+              "seed": 1,
+              "params": {
+                "shape": "BOOT"
+              }
             }
           },
           "footprintBare": {
@@ -42372,7 +42586,11 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalFootprint"
+              "generator": "decalFootprint",
+              "seed": 1,
+              "params": {
+                "shape": "BARE"
+              }
             }
           },
           "footprintPaw": {
@@ -42393,7 +42611,11 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalFootprint"
+              "generator": "decalFootprint",
+              "seed": 1,
+              "params": {
+                "shape": "PAW"
+              }
             }
           },
           "footprintSnowBoot": {
@@ -42414,7 +42636,11 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalFootprint"
+              "generator": "decalFootprint",
+              "seed": 1,
+              "params": {
+                "shape": "SNOW_BOOT"
+              }
             }
           },
           "leafPatch": {
@@ -42435,7 +42661,9 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalLeafPatch"
+              "generator": "decalLeafPatch",
+              "seed": 1,
+              "params": {}
             }
           },
           "iceCrack": {
@@ -42456,7 +42684,9 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalIceCrack"
+              "generator": "decalIceCrack",
+              "seed": 1,
+              "params": {}
             }
           }
         }
@@ -42547,7 +42777,9 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalCracks"
+              "generator": "decalCracks",
+              "seed": 1,
+              "params": {}
             }
           },
           "mudSplatter": {
@@ -42568,7 +42800,9 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalMudSplatter"
+              "generator": "decalMudSplatter",
+              "seed": 1,
+              "params": {}
             }
           },
           "wetPatch": {
@@ -42589,7 +42823,9 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalWetPatch"
+              "generator": "decalWetPatch",
+              "seed": 1,
+              "params": {}
             }
           },
           "stain01": {
@@ -42610,7 +42846,9 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalStain"
+              "generator": "decalStain",
+              "seed": 1,
+              "params": {}
             }
           },
           "stain02": {
@@ -42631,7 +42869,13 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalStain"
+              "generator": "decalStain",
+              "seed": 2,
+              "params": {
+                "color": "#4a3a2a",
+                "roughness": 0.75,
+                "rim": 0.7
+              }
             }
           },
           "scorch": {
@@ -42652,7 +42896,9 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalScorch"
+              "generator": "decalScorch",
+              "seed": 1,
+              "params": {}
             }
           },
           "footprintBoot": {
@@ -42673,7 +42919,11 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalFootprint"
+              "generator": "decalFootprint",
+              "seed": 1,
+              "params": {
+                "shape": "BOOT"
+              }
             }
           },
           "footprintBare": {
@@ -42694,7 +42944,11 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalFootprint"
+              "generator": "decalFootprint",
+              "seed": 1,
+              "params": {
+                "shape": "BARE"
+              }
             }
           },
           "footprintPaw": {
@@ -42715,7 +42969,11 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalFootprint"
+              "generator": "decalFootprint",
+              "seed": 1,
+              "params": {
+                "shape": "PAW"
+              }
             }
           },
           "footprintSnowBoot": {
@@ -42736,7 +42994,11 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalFootprint"
+              "generator": "decalFootprint",
+              "seed": 1,
+              "params": {
+                "shape": "SNOW_BOOT"
+              }
             }
           },
           "leafPatch": {
@@ -42757,7 +43019,9 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalLeafPatch"
+              "generator": "decalLeafPatch",
+              "seed": 1,
+              "params": {}
             }
           },
           "iceCrack": {
@@ -42778,7 +43042,9 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalIceCrack"
+              "generator": "decalIceCrack",
+              "seed": 1,
+              "params": {}
             }
           }
         }
@@ -42892,7 +43158,9 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalFormwork"
+              "generator": "decalFormwork",
+              "seed": 1,
+              "params": {}
             }
           },
           "crack01": {
@@ -42913,7 +43181,13 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalCracks"
+              "generator": "decalCracks",
+              "seed": 2,
+              "params": {
+                "cells": 4,
+                "width": 0.03,
+                "dustColor": "#8a857d"
+              }
             }
           },
           "crack02": {
@@ -42934,7 +43208,13 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalCracks"
+              "generator": "decalCracks",
+              "seed": 3,
+              "params": {
+                "cells": 6,
+                "branching": 0.7,
+                "width": 0.025
+              }
             }
           },
           "stain01": {
@@ -42955,7 +43235,12 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalStain"
+              "generator": "decalStain",
+              "seed": 3,
+              "params": {
+                "color": "#5a3a22",
+                "roughness": 0.7
+              }
             }
           },
           "stain02": {
@@ -42976,7 +43261,13 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalStain"
+              "generator": "decalStain",
+              "seed": 4,
+              "params": {
+                "color": "#2b2b28",
+                "roughness": 0.6,
+                "rim": 0.3
+              }
             }
           }
         }
@@ -43087,7 +43378,9 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalFormwork"
+              "generator": "decalFormwork",
+              "seed": 1,
+              "params": {}
             }
           },
           "crack01": {
@@ -43108,7 +43401,13 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalCracks"
+              "generator": "decalCracks",
+              "seed": 2,
+              "params": {
+                "cells": 4,
+                "width": 0.03,
+                "dustColor": "#8a857d"
+              }
             }
           },
           "crack02": {
@@ -43129,7 +43428,13 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalCracks"
+              "generator": "decalCracks",
+              "seed": 3,
+              "params": {
+                "cells": 6,
+                "branching": 0.7,
+                "width": 0.025
+              }
             }
           },
           "stain01": {
@@ -43150,7 +43455,12 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalStain"
+              "generator": "decalStain",
+              "seed": 3,
+              "params": {
+                "color": "#5a3a22",
+                "roughness": 0.7
+              }
             }
           },
           "stain02": {
@@ -43171,7 +43481,13 @@
               ],
               "tileAlong": "NONE",
               "opacitySource": "GENERATED",
-              "generator": "decalStain"
+              "generator": "decalStain",
+              "seed": 4,
+              "params": {
+                "color": "#2b2b28",
+                "roughness": 0.6,
+                "rim": 0.3
+              }
             }
           }
         }

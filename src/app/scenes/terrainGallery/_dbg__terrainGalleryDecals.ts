@@ -1,13 +1,15 @@
-// The terrain gallery tab's Decals section (p309 Phases 1-2): the camera over the row's panels,
+// The terrain gallery tab's Decals section (p309 Phases 1-2, 5): the camera over the row's panels,
 // the whole row or one atlas's views; and the stage's decals (Phase 2): the weather they're judged
 // in (dry, wet, rain: the surface conditions every row shares), the camera at 1, 50 and 200 m (the
 // exit's z-fighting distances) and on the wall, and the polygon offset and the edge fade switched
-// off on the four decal materials, to see what each prevents.
+// off on the four decal materials, to see what each prevents; then the procedural decals' section
+// (Phase 5, `_dbg__terrainGalleryDecalBakes.ts`).
 import * as THREE from 'three/webgpu';
 import { getMaterial } from 'aekasha';
 import { updateDebuggerTab, type DebuggerTabSection } from 'aekasha/debug';
 import { getSurfaceConditions, setSurfaceConditions } from 'aekasha/surface';
 import { flyGalleryCamera, type GalleryCameraPose } from './_dbg__terrainGalleryCamera';
+import { getDecalBakeSections } from './_dbg__terrainGalleryDecalBakes';
 import { DECALS_PANELS, DECALS_ROW_BOUNDS } from './decalsRow';
 import { DECALS_STAGE_BLOCKS, DECALS_STAGE_BOUNDS, DECALS_STAGE_MATERIAL_IDS } from './decalsStage';
 
@@ -228,4 +230,5 @@ export const getDecalsSections = (tabId: string): DebuggerTabSection[] => [
       },
     ],
   },
+  ...getDecalBakeSections(tabId),
 ];
