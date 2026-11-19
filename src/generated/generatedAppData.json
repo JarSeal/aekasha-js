@@ -20842,7 +20842,7 @@
             "name": "Orientation block (vertex colour)",
             "description": "p306 Phase 5's orientation block through its COLOR_0 (RGB_AO): grass, snow on the red marker (the engine's -x, -z corner, the top view's top left), mud on the green one (+x, -z, top right); A the baked AO."
           },
-          "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
+          "tslFile": "terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender.tsl.ts",
           "staticDefines": {
             "terrain": {
               "layers": [
@@ -20880,7 +20880,7 @@
             "name": "Orientation block (splat map)",
             "description": "p306 Phase 5's orientation block through its painted splat map (flipY false): the same sets and corners as the vertex colour material, so both blocks look alike."
           },
-          "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
+          "tslFile": "terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender.tsl.ts",
           "staticDefines": {
             "terrain": {
               "layers": [
@@ -21228,8 +21228,8 @@
             "description": "The terrain add-on's export of terrainBlockTest's orientation block (devTools/blender/exportOrientationBlock.py; p306 Phase 5). The terrainBlock profile keeps its positions lossless."
           },
           "__fileSize": 57168,
-          "__sourceUrl": "/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.glb",
-          "__url": "/aek-assets/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.d49c53dc.glb",
+          "__sourceUrl": "/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender.glb",
+          "__url": "/aek-assets/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender.d49c53dc.glb",
           "__bytes": {
             "in": 57168,
             "out": 16940
@@ -22428,8 +22428,8 @@
             "description": "The add-on's export: the corner markers painted over the block's UVs (red at the top left: the engine's -x, -z corner), layers 1 and 2 of the splat map material. flipY false: the glTF UVs start at the image's top row."
           },
           "__fileSize": 584,
-          "__sourceUrl": "/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.png",
-          "__url": "/aek-assets/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.98f9f948.png",
+          "__sourceUrl": "/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender_splat0.png",
+          "__url": "/aek-assets/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender_splat0.98f9f948.png",
           "__bytes": {
             "in": 584,
             "out": 584
@@ -24538,6 +24538,30 @@
           "__codec": "uastc"
         },
         {
+          "id": "terrainBlockTestBlender_splat0",
+          "fileName": "./terrainBlockTestBlender_splat0.png",
+          "texOpts": {
+            "flipY": false,
+            "colorSpace": ""
+          },
+          "debugData": {
+            "name": "Orientation block's splat map",
+            "description": "The add-on's export: the corner markers painted over the block's UVs (red at the top left: the engine's -x, -z corner), layers 1 and 2 of the splat map material. flipY false: the glTF UVs start at the image's top row."
+          },
+          "__fileSize": 584,
+          "__sourceUrl": "/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender_splat0.png",
+          "__url": "/aek-assets/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender_splat0.98f9f948.png",
+          "__bytes": {
+            "in": 584,
+            "out": 584
+          },
+          "__vramBytes": {
+            "in": 87380,
+            "out": 87380
+          },
+          "__codec": "none"
+        },
+        {
           "id": "namaqualandStones01_albedoHeight",
           "texOpts": {
             "wrapS": 1000,
@@ -24985,6 +25009,41 @@
           "type": "STANDARDNODEMATERIAL"
         },
         {
+          "id": "terrainBlockTestBlenderSplat",
+          "debugData": {
+            "name": "Orientation block (splat map)",
+            "description": "p306 Phase 5's orientation block through its painted splat map (flipY false): the same sets and corners as the vertex colour material, so both blocks look alike."
+          },
+          "tslFile": "terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender.tsl.ts",
+          "staticDefines": {
+            "terrain": {
+              "layers": [
+                {},
+                {},
+                {}
+              ],
+              "blend": {
+                "source": "SPLAT_MAP"
+              }
+            }
+          },
+          "inputs": {
+            "layer0": {
+              "textureSet": "grass01"
+            },
+            "layer1": {
+              "textureSet": "snow01"
+            },
+            "layer2": {
+              "textureSet": "mud01"
+            },
+            "splat0": {
+              "texture": "terrainBlockTestBlender_splat0"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
           "id": "terrainGalleryPatch",
           "debugData": {
             "name": "Terrain gallery patch",
@@ -25030,6 +25089,72 @@
             },
             "layer3": {
               "textureSet": "cliffs01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "terrainGalleryPad",
+          "debugData": {
+            "name": "Terrain gallery footprint pad",
+            "description": "The footprint pad's terrain material (p310): mud02 alone with the wet response's puddles and rain ripples, as the Decals stage's blocks, so a stamped footprint's puddle mask fills in the wet."
+          },
+          "tslFile": "scenes/terrainGallery/pad/terrainGalleryPad.tsl.ts",
+          "staticDefines": {
+            "terrain": {
+              "layers": [
+                {}
+              ],
+              "wet": {
+                "puddles": {},
+                "ripples": {}
+              }
+            }
+          },
+          "inputs": {
+            "layer0": {
+              "textureSet": "mud02"
+            },
+            "ripples": {
+              "texture": "rippleAtlas"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "terrainBlockTestBlenderVertex",
+          "debugData": {
+            "name": "Orientation block (vertex colour)",
+            "description": "p306 Phase 5's orientation block through its COLOR_0 (RGB_AO): grass, snow on the red marker (the engine's -x, -z corner, the top view's top left), mud on the green one (+x, -z, top right); A the baked AO."
+          },
+          "tslFile": "terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender.tsl.ts",
+          "staticDefines": {
+            "terrain": {
+              "layers": [
+                {},
+                {},
+                {}
+              ],
+              "blend": {
+                "source": "VERTEX_COLOR",
+                "vertexColor": {
+                  "layout": "RGB_AO"
+                }
+              },
+              "ao": {
+                "vertex": true
+              }
+            }
+          },
+          "inputs": {
+            "layer0": {
+              "textureSet": "grass01"
+            },
+            "layer1": {
+              "textureSet": "snow01"
+            },
+            "layer2": {
+              "textureSet": "mud01"
             }
           },
           "type": "STANDARDNODEMATERIAL"
@@ -25163,6 +25288,25 @@
           "__vramBytes": {
             "in": 61584,
             "out": 61584
+          }
+        },
+        {
+          "id": "terrainBlockTestBlender",
+          "fileName": "./terrainBlockTestBlender.glb",
+          "debugData": {
+            "name": "Orientation block",
+            "description": "The terrain add-on's export of terrainBlockTest's orientation block (devTools/blender/exportOrientationBlock.py; p306 Phase 5). The terrainBlock profile keeps its positions lossless."
+          },
+          "__fileSize": 57168,
+          "__sourceUrl": "/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender.glb",
+          "__url": "/aek-assets/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender.d49c53dc.glb",
+          "__bytes": {
+            "in": 57168,
+            "out": 16940
+          },
+          "__vramBytes": {
+            "in": 55848,
+            "out": 55848
           }
         }
       ],
@@ -26768,6 +26912,69 @@
             "name": "Patch block 1, -4",
             "description": "One of the terrain gallery's 3 × 3 rulesTerrain patch (p306 Phase 3): world-continuous noise, HEIGHT_FN normals, the rules laid into its vertex colours on the CPU, horizon AO in A."
           }
+        },
+        {
+          "id": "terrainGalleryPad",
+          "geometry": {
+            "generator": "noiseTerrain",
+            "params": {
+              "maxHeight": 0.5,
+              "octaves": [
+                [
+                  0.06,
+                  1
+                ],
+                [
+                  0.2,
+                  0.3
+                ]
+              ]
+            },
+            "seed": 310
+          },
+          "material": "terrainGalleryPad",
+          "grid": {
+            "x": 9,
+            "z": 2,
+            "size": 16,
+            "resolution": 65
+          },
+          "collider": {
+            "type": "NONE"
+          },
+          "shadows": {
+            "cast": false,
+            "receive": false
+          },
+          "debugData": {
+            "name": "Footprint pad",
+            "description": "The terrain gallery's footprint pad (p310 §2.1 row L): a gentle 16 m noiseTerrain block of wet mud02 in front of the Decals stage, which the debug tab stamps footprints on where it's clicked (runtime decals: spawnDecal needs a terrain block)."
+          }
+        },
+        {
+          "id": "terrainBlockTestBlender",
+          "geometry": {
+            "importedAsset": "terrainBlockTestBlender",
+            "node": "terrainBlockTestBlender"
+          },
+          "material": "terrainBlockTestBlenderVertex",
+          "grid": {
+            "x": -3,
+            "z": 3,
+            "size": 32,
+            "resolution": 33
+          },
+          "collider": {
+            "type": "HEIGHTFIELD"
+          },
+          "shadows": {
+            "cast": true,
+            "receive": true
+          },
+          "debugData": {
+            "name": "Orientation block (vertex colour)",
+            "description": "p306 Phase 5's orientation block: the terrain add-on's export (devTools/blender/exportOrientationBlock.py), 32 m / 33, a mound near the engine's +x, +z corner, the corner markers in COLOR_0 (red: snow at -x, -z; green: mud at +x, -z) and the baked AO in its A, its HEIGHTFIELD from the GLB's custom props."
+          }
         }
       ],
       "surfaceConditions": {
@@ -27190,7 +27397,8 @@
         "texturesets",
         "terrain",
         "surfaceconditions",
-        "instancing"
+        "instancing",
+        "physics"
       ]
     },
     "testDebugScene": {
@@ -31782,6 +31990,34 @@
         "out": 52076
       }
     },
+    "terrainBlockTestBlender_splat0": {
+      "id": "terrainBlockTestBlender_splat0",
+      "fileName": "./terrainBlockTestBlender_splat0.png",
+      "texOpts": {
+        "flipY": false,
+        "colorSpace": ""
+      },
+      "debugData": {
+        "name": "Orientation block's splat map",
+        "description": "The add-on's export: the corner markers painted over the block's UVs (red at the top left: the engine's -x, -z corner), layers 1 and 2 of the splat map material. flipY false: the glTF UVs start at the image's top row."
+      },
+      "optimize": {
+        "slot": "data"
+      },
+      "__sourcePath": "src/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender_splat0.texture.json",
+      "__fileSize": 584,
+      "__sourceUrl": "/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender_splat0.png",
+      "__url": "/aek-assets/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender_splat0.98f9f948.png",
+      "__bytes": {
+        "in": 584,
+        "out": 584
+      },
+      "__vramBytes": {
+        "in": 87380,
+        "out": 87380
+      },
+      "__codec": "none"
+    },
     "cliffs01_albedoHeight": {
       "id": "cliffs01_albedoHeight",
       "texOpts": {
@@ -34035,34 +34271,6 @@
         "out": 1398128
       },
       "__codec": "uastc"
-    },
-    "terrainBlockTestBlender_splat0": {
-      "id": "terrainBlockTestBlender_splat0",
-      "fileName": "./terrainBlockTestBlender_splat0.png",
-      "texOpts": {
-        "flipY": false,
-        "colorSpace": ""
-      },
-      "debugData": {
-        "name": "Orientation block's splat map",
-        "description": "The add-on's export: the corner markers painted over the block's UVs (red at the top left: the engine's -x, -z corner), layers 1 and 2 of the splat map material. flipY false: the glTF UVs start at the image's top row."
-      },
-      "optimize": {
-        "slot": "data"
-      },
-      "__sourcePath": "src/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.texture.json",
-      "__fileSize": 584,
-      "__sourceUrl": "/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.png",
-      "__url": "/aek-assets/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender_splat0.98f9f948.png",
-      "__bytes": {
-        "in": 584,
-        "out": 584
-      },
-      "__vramBytes": {
-        "in": 87380,
-        "out": 87380
-      },
-      "__codec": "none"
     },
     "p303BrickSetKtx_albedoRough": {
       "id": "p303BrickSetKtx_albedoRough",
@@ -45131,6 +45339,81 @@
       "type": "STANDARDNODEMATERIAL",
       "__sourcePath": "src/app/scenes/textureSets/p303SetMinimalMat.material.json"
     },
+    "terrainBlockTestBlenderSplat": {
+      "id": "terrainBlockTestBlenderSplat",
+      "debugData": {
+        "name": "Orientation block (splat map)",
+        "description": "p306 Phase 5's orientation block through its painted splat map (flipY false): the same sets and corners as the vertex colour material, so both blocks look alike."
+      },
+      "tslFile": "terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender.tsl.ts",
+      "staticDefines": {
+        "terrain": {
+          "layers": [
+            {},
+            {},
+            {}
+          ],
+          "blend": {
+            "source": "SPLAT_MAP"
+          }
+        }
+      },
+      "inputs": {
+        "layer0": {
+          "textureSet": "grass01"
+        },
+        "layer1": {
+          "textureSet": "snow01"
+        },
+        "layer2": {
+          "textureSet": "mud01"
+        },
+        "splat0": {
+          "texture": "terrainBlockTestBlender_splat0"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlenderSplat.material.json"
+    },
+    "terrainBlockTestBlenderVertex": {
+      "id": "terrainBlockTestBlenderVertex",
+      "debugData": {
+        "name": "Orientation block (vertex colour)",
+        "description": "p306 Phase 5's orientation block through its COLOR_0 (RGB_AO): grass, snow on the red marker (the engine's -x, -z corner, the top view's top left), mud on the green one (+x, -z, top right); A the baked AO."
+      },
+      "tslFile": "terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender.tsl.ts",
+      "staticDefines": {
+        "terrain": {
+          "layers": [
+            {},
+            {},
+            {}
+          ],
+          "blend": {
+            "source": "VERTEX_COLOR",
+            "vertexColor": {
+              "layout": "RGB_AO"
+            }
+          },
+          "ao": {
+            "vertex": true
+          }
+        }
+      },
+      "inputs": {
+        "layer0": {
+          "textureSet": "grass01"
+        },
+        "layer1": {
+          "textureSet": "snow01"
+        },
+        "layer2": {
+          "textureSet": "mud01"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlenderVertex.material.json"
+    },
     "asteroid": {
       "id": "asteroid",
       "debugData": {
@@ -45440,80 +45723,34 @@
       "type": "STANDARDNODEMATERIAL",
       "__sourcePath": "src/toolkit/materials/triplanarGrid/triplanarGrid.material.json"
     },
-    "terrainBlockTestBlenderSplat": {
-      "id": "terrainBlockTestBlenderSplat",
+    "terrainGalleryPad": {
+      "id": "terrainGalleryPad",
       "debugData": {
-        "name": "Orientation block (splat map)",
-        "description": "p306 Phase 5's orientation block through its painted splat map (flipY false): the same sets and corners as the vertex colour material, so both blocks look alike."
+        "name": "Terrain gallery footprint pad",
+        "description": "The footprint pad's terrain material (p310): mud02 alone with the wet response's puddles and rain ripples, as the Decals stage's blocks, so a stamped footprint's puddle mask fills in the wet."
       },
-      "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
+      "tslFile": "scenes/terrainGallery/pad/terrainGalleryPad.tsl.ts",
       "staticDefines": {
         "terrain": {
           "layers": [
-            {},
-            {},
             {}
           ],
-          "blend": {
-            "source": "SPLAT_MAP"
+          "wet": {
+            "puddles": {},
+            "ripples": {}
           }
         }
       },
       "inputs": {
         "layer0": {
-          "textureSet": "grass01"
+          "textureSet": "mud02"
         },
-        "layer1": {
-          "textureSet": "snow01"
-        },
-        "layer2": {
-          "textureSet": "mud01"
-        },
-        "splat0": {
-          "texture": "terrainBlockTestBlender_splat0"
+        "ripples": {
+          "texture": "rippleAtlas"
         }
       },
       "type": "STANDARDNODEMATERIAL",
-      "__sourcePath": "src/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlenderSplat.material.json"
-    },
-    "terrainBlockTestBlenderVertex": {
-      "id": "terrainBlockTestBlenderVertex",
-      "debugData": {
-        "name": "Orientation block (vertex colour)",
-        "description": "p306 Phase 5's orientation block through its COLOR_0 (RGB_AO): grass, snow on the red marker (the engine's -x, -z corner, the top view's top left), mud on the green one (+x, -z, top right); A the baked AO."
-      },
-      "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
-      "staticDefines": {
-        "terrain": {
-          "layers": [
-            {},
-            {},
-            {}
-          ],
-          "blend": {
-            "source": "VERTEX_COLOR",
-            "vertexColor": {
-              "layout": "RGB_AO"
-            }
-          },
-          "ao": {
-            "vertex": true
-          }
-        }
-      },
-      "inputs": {
-        "layer0": {
-          "textureSet": "grass01"
-        },
-        "layer1": {
-          "textureSet": "snow01"
-        },
-        "layer2": {
-          "textureSet": "mud01"
-        }
-      },
-      "type": "STANDARDNODEMATERIAL",
-      "__sourcePath": "src/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlenderVertex.material.json"
+      "__sourcePath": "src/app/scenes/terrainGallery/pad/terrainGalleryPad.material.json"
     },
     "rockScatterNamaqualandBoulder02": {
       "id": "rockScatterNamaqualandBoulder02",
@@ -45839,6 +46076,29 @@
         "out": 21000
       }
     },
+    "terrainBlockTestBlender": {
+      "id": "terrainBlockTestBlender",
+      "fileName": "./terrainBlockTestBlender.glb",
+      "debugData": {
+        "name": "Orientation block",
+        "description": "The terrain add-on's export of terrainBlockTest's orientation block (devTools/blender/exportOrientationBlock.py; p306 Phase 5). The terrainBlock profile keeps its positions lossless."
+      },
+      "optimize": {
+        "profile": "terrainBlock"
+      },
+      "__sourcePath": "src/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender.importedAsset.json",
+      "__fileSize": 57168,
+      "__sourceUrl": "/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender.glb",
+      "__url": "/aek-assets/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender.d49c53dc.glb",
+      "__bytes": {
+        "in": 57168,
+        "out": 16940
+      },
+      "__vramBytes": {
+        "in": 55848,
+        "out": 55848
+      }
+    },
     "scatterTestGnGpu": {
       "id": "scatterTestGnGpu",
       "fileName": "./scatterTestGnGpu.glb",
@@ -45887,29 +46147,6 @@
       "__vramBytes": {
         "in": 10416,
         "out": 10416
-      }
-    },
-    "terrainBlockTestBlender": {
-      "id": "terrainBlockTestBlender",
-      "fileName": "./terrainBlockTestBlender.glb",
-      "debugData": {
-        "name": "Orientation block",
-        "description": "The terrain add-on's export of terrainBlockTest's orientation block (devTools/blender/exportOrientationBlock.py; p306 Phase 5). The terrainBlock profile keeps its positions lossless."
-      },
-      "optimize": {
-        "profile": "terrainBlock"
-      },
-      "__sourcePath": "src/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.importedAsset.json",
-      "__fileSize": 57168,
-      "__sourceUrl": "/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.glb",
-      "__url": "/aek-assets/app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.d49c53dc.glb",
-      "__bytes": {
-        "in": 57168,
-        "out": 16940
-      },
-      "__vramBytes": {
-        "in": 55848,
-        "out": 55848
       }
     },
     "terrainBlockTestDecals": {

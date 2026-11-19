@@ -1,5 +1,5 @@
 {
-  "$schema": "../../../../../.schemas/texture.schema.json",
+  "$schema": "../../../../.schemas/texture.schema.json",
   "id": "terrainBlockTestBlender_splat0",
   "fileName": "./terrainBlockTestBlender_splat0.png",
   "optimize": {

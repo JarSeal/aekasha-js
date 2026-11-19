@@ -1,0 +1,32 @@
+{
+  "$schema": "../../../../../.schemas/terrainBlock.schema.json",
+  "geometry": {
+    "generator": "noiseTerrain",
+    "params": {
+      "maxHeight": 0.5,
+      "octaves": [
+        [0.06, 1],
+        [0.2, 0.3]
+      ]
+    },
+    "seed": 310
+  },
+  "material": "terrainGalleryPad",
+  "grid": {
+    "x": 9,
+    "z": 2,
+    "size": 16,
+    "resolution": 65
+  },
+  "collider": {
+    "type": "NONE"
+  },
+  "shadows": {
+    "cast": false,
+    "receive": false
+  },
+  "debugData": {
+    "name": "Footprint pad",
+    "description": "The terrain gallery's footprint pad (p310 §2.1 row L): a gentle 16 m noiseTerrain block of wet mud02 in front of the Decals stage, which the debug tab stamps footprints on where it's clicked (runtime decals: spawnDecal needs a terrain block)."
+  }
+}

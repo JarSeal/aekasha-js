@@ -14,7 +14,8 @@
     "decalsGround_blend",
     "decalsGround_cutout",
     "decalsStructure_blend",
-    "decalsStructure_cutout"
+    "decalsStructure_cutout",
+    "terrainBlockTestBlenderSplat"
   ],
   "scatters": [
     "terrainGalleryScatterPebbles",
@@ -26,7 +27,7 @@
     "terrainGalleryScatterLeaves"
   ],
   "importedAssets": ["namaqualandStones01", "namaqualandBoulder02"],
-  "terrainBlocks": ["terrainGalleryPatch_c0r0", "terrainGalleryPatch_c0r1", "terrainGalleryPatch_c0r2", "terrainGalleryPatch_c1r0", "terrainGalleryPatch_c1r1", "terrainGalleryPatch_c1r2", "terrainGalleryPatch_c2r0", "terrainGalleryPatch_c2r1", "terrainGalleryPatch_c2r2"],
+  "terrainBlocks": ["terrainGalleryPatch_c0r0", "terrainGalleryPatch_c0r1", "terrainGalleryPatch_c0r2", "terrainGalleryPatch_c1r0", "terrainGalleryPatch_c1r1", "terrainGalleryPatch_c1r2", "terrainGalleryPatch_c2r0", "terrainGalleryPatch_c2r1", "terrainGalleryPatch_c2r2", "terrainGalleryPad", "terrainBlockTestBlender"],
   "textures": ["macroNoise", "rippleAtlas", "decalsGround", "decalsStructure"],
   "textureSets": [
     "sand01",

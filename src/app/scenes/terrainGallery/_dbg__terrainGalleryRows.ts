@@ -34,6 +34,9 @@ import {
 import { PROCEDURAL_BLOCKS, PROCEDURAL_ROW_DEPTH, PROCEDURAL_ROW_EDGE_X } from './proceduralRow';
 import { LIVE_BLOCK, LIVE_BLOCK_BOUNDS, LIVE_BLOCK_SIZE } from './liveBlock';
 import { PATCH_BLOCK_IDS, PATCH_BLOCK_SIZE, PATCH_BOUNDS } from './patchRow';
+import { PACKING_BLOCKS, PACKING_ROW_BOUNDS } from './packingRow';
+import { PAD_BLOCK, PAD_BOUNDS } from './padBlock';
+import { ORIENTATION_BLOCK, ORIENTATION_BOUNDS } from './orientationBlock';
 import { GALLERY_BLOCKS } from './terrainGallery';
 
 /** A block of a row: its key in the row, its label, its centre (`y` its ground) and its side */
@@ -110,6 +113,23 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
       GALLERY_BLOCKS.map(({ setId, x, z }) => ({
         key: setId,
         label: setId,
+        x,
+        y: 0,
+        z,
+        size: BLOCK_SIZE,
+      })),
+  },
+  {
+    id: 'packing',
+    letter: 'B',
+    title: 'Packing',
+    shows: 'sand01, grass01 and cliffs01 in FULL, LITE and MINIMAL, left to right',
+    bounds: PACKING_ROW_BOUNDS,
+    getY: () => 0,
+    getBlocks: () =>
+      PACKING_BLOCKS.map(({ key, setId, packing, x, z }) => ({
+        key,
+        label: `${setId} ${packing}`,
         x,
         y: 0,
         z,
@@ -292,12 +312,22 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
     id: 'decals',
     letter: 'L',
     title: 'Decals',
-    shows: 'The atlases, BLEND and CUTOUT decals on the stage, the bake bench',
+    shows: 'The atlases, BLEND and CUTOUT decals on the stage, the bake bench, the footprint pad',
     bounds: {
-      minX: Math.min(DECALS_ROW_BOUNDS.minX, DECALS_STAGE_BOUNDS.minX),
-      maxX: Math.max(DECALS_ROW_BOUNDS.maxX, DECALS_STAGE_BOUNDS.maxX, DECALS_BENCH_BOUNDS.maxX),
+      minX: Math.min(DECALS_ROW_BOUNDS.minX, DECALS_STAGE_BOUNDS.minX, PAD_BOUNDS.minX),
+      maxX: Math.max(
+        DECALS_ROW_BOUNDS.maxX,
+        DECALS_STAGE_BOUNDS.maxX,
+        DECALS_BENCH_BOUNDS.maxX,
+        PAD_BOUNDS.maxX
+      ),
       minZ: Math.min(DECALS_ROW_BOUNDS.minZ, DECALS_STAGE_BOUNDS.minZ),
-      maxZ: Math.max(DECALS_ROW_BOUNDS.maxZ, DECALS_STAGE_BOUNDS.maxZ, DECALS_BENCH_BOUNDS.maxZ),
+      maxZ: Math.max(
+        DECALS_ROW_BOUNDS.maxZ,
+        DECALS_STAGE_BOUNDS.maxZ,
+        DECALS_BENCH_BOUNDS.maxZ,
+        PAD_BOUNDS.maxZ
+      ),
     },
     getY: () => 0,
     getBlocks: () => [
@@ -310,7 +340,17 @@ export const GALLERY_ROWS: readonly GalleryRow[] = [
         size: DECALS_STAGE_BLOCK_SIZE,
       })),
       { key: 'bench', label: 'Bake bench', ...DECALS_BENCH_BLOCK, y: 0, size: BLOCK_SIZE },
+      { key: 'pad', label: 'Footprint pad', ...PAD_BLOCK, y: 0 },
     ],
+  },
+  {
+    id: 'orientation',
+    letter: '—',
+    title: 'Orientation',
+    shows: 'terrainBlockTest’s Blender block: its corner markers by vertex colour and by splat map',
+    bounds: ORIENTATION_BOUNDS,
+    getY: () => 0,
+    getBlocks: () => [{ key: 'block', label: 'Orientation block', ...ORIENTATION_BLOCK, y: 0 }],
   },
 ];
 

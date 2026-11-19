@@ -1,5 +1,5 @@
 {
-  "$schema": "../../../../../.schemas/terrainBlock.schema.json",
+  "$schema": "../../../../.schemas/terrainBlock.schema.json",
   "geometry": {
     "importedAsset": "terrainBlockTestBlender",
     "node": "terrainBlockTestBlender"

@@ -1,7 +1,7 @@
 {
-  "$schema": "../../../../../.schemas/material.schema.json",
+  "$schema": "../../../../.schemas/material.schema.json",
   "id": "terrainBlockTestBlenderVertex",
-  "tslFile": "scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts",
+  "tslFile": "terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender.tsl.ts",
   "type": "STANDARDNODEMATERIAL",
   "staticDefines": {
     "terrain": {

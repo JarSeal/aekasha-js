@@ -28,6 +28,9 @@ import { createWetRow, WET_ROW_BOUNDS } from './wetRow';
 import { createScatterRowAsync, SCATTER_ROW_BOUNDS } from './scatterRow';
 import { createDecalsRow, DECALS_ROW_BOUNDS } from './decalsRow';
 import { createDecalsStage, DECALS_BENCH_BOUNDS, DECALS_STAGE_BOUNDS } from './decalsStage';
+import { createPackingRowAsync, PACKING_ROW_BOUNDS } from './packingRow';
+import { createPadBlockAsync, PAD_BOUNDS } from './padBlock';
+import { createOrientationBlockAsync } from './orientationBlock';
 import {
   createProceduralRowAsync,
   PROCEDURAL_ROW_DEPTH,
@@ -50,6 +53,9 @@ import {
  *   set's `physicalSize`.
  * - **The cliffs' walls:** a 6 m wall on the left of each `cliffs*` block, tiled at its UVs in
  *   metres (`uv: "MESH_UV"`).
+ * - **The Packing row** (`packingRow.ts`, p310 Phase 1): sand01, grass01 and cliffs01 (the sets
+ *   that ship every packing) side by side in FULL, LITE and MINIMAL, a 3 × 3 grid of library
+ *   blocks left of the Anti-tiling row; the scene's load loads their other packings.
  * - **The Anti-tiling row** (`antiTilingRow.ts`, p305 Phase 2): three flat 48 × 48 m blocks of
  *   `grass01` 8 m behind the library and the Procedural row, `NONE`, `DUAL_SCALE` and `HEX` from the left, the macro
  *   variation (`macroNoise`, which the scene lists) on; the tab switches the macro and tunes the
@@ -123,7 +129,13 @@ import {
  *   polygon offset and the edge fade off for comparison. Right of the stage the bake bench (p309
  *   Phase 5, made by the tab with its first bake, `_dbg__terrainGalleryDecalBakes.ts`): a generated
  *   cell baked from its generator, as decals on a third block and wall and on panels of the views
- *   beside the atlas's copy; the tab sets its seed and params, copies its data and exports it.
+ *   beside the atlas's copy; the tab sets its seed and params, copies its data and exports it. In
+ *   front of the stage the footprint pad (`padBlock.ts`, p310 Phase 1): a 16 m terrain block of wet
+ *   mud02 the tab stamps footprints on where it's clicked.
+ * - **The Orientation block** (`orientationBlock.ts`, p310 Phase 1): `terrainBlockTest`'s
+ *   orientation block (p306 Phase 5, the shared `src/app/terrainBlocks/terrainBlockTestBlender/`)
+ *   at its grid place left of the Rules row; the tab draws it by its vertex colours or by its
+ *   splat map twin's material, whose corner markers must agree.
  * - **The light:** the scene's own DAY_NIGHT sky box standing at 10:00 (`terrainGallerySky`); its
  *   sun and sky are the only lights. No shadows for now (`NO_SHADOWS`).
  *
@@ -242,6 +254,7 @@ export const scene = async () => {
     ANTI_TILING_ROW_BOUNDS.minX - BLOCK_GAP,
     SPLATTING_ROW_BOUNDS.minX - BLOCK_GAP,
     WET_ROW_BOUNDS.minX - BLOCK_GAP,
+    PACKING_ROW_BOUNDS.minX - BLOCK_GAP,
     SCATTER_ROW_BOUNDS.minX - BLOCK_GAP,
     CLIFFS_ROW_BOUNDS.minX - BLOCK_GAP,
     COLOR_MAP_ROW_BOUNDS.minX - BLOCK_GAP,
@@ -254,6 +267,7 @@ export const scene = async () => {
       DECALS_ROW_BOUNDS.maxX,
       DECALS_STAGE_BOUNDS.maxX,
       DECALS_BENCH_BOUNDS.maxX,
+      PAD_BOUNDS.maxX,
       ANTI_TILING_ROW_BOUNDS.maxX,
       CLIFFS_ROW_BOUNDS.maxX,
       COLOR_MAP_ROW_BOUNDS.maxX,
@@ -264,12 +278,13 @@ export const scene = async () => {
     SPLATTING_ROW_BOUNDS.maxZ + BLOCK_GAP,
     SCATTER_ROW_BOUNDS.maxZ + BLOCK_GAP,
     DECALS_STAGE_BOUNDS.maxZ + BLOCK_GAP,
+    PAD_BOUNDS.maxZ + BLOCK_GAP,
     RULES_ROW_BOUNDS.maxZ + BLOCK_GAP,
     CLIFFS_ROW_BOUNDS.maxZ + BLOCK_GAP,
     COLOR_MAP_ROW_BOUNDS.maxZ + BLOCK_GAP,
     STRUCTURES_ROW_BOUNDS.maxZ + BLOCK_GAP
   );
-  const back = ANTI_TILING_ROW_BOUNDS.minZ - BLOCK_GAP;
+  const back = Math.min(ANTI_TILING_ROW_BOUNDS.minZ, PACKING_ROW_BOUNDS.minZ) - BLOCK_GAP;
   createMeshEntity(
     {
       geo: {
@@ -288,6 +303,8 @@ export const scene = async () => {
     { appId: 'terrainGallery_ground', debugData: { name: 'Gallery ground' } }
   );
   GALLERY_BLOCKS.forEach((block, i) => createBlock(block, SEED_BASE + i));
+  await createPackingRowAsync(() => visit.isCurrent);
+  if (!visit.isCurrent) return;
   createAntiTilingRow();
   createSplattingRow();
   createWetRow(TERRAIN_GALLERY_SCENE_ID);
@@ -303,6 +320,10 @@ export const scene = async () => {
   if (!visit.isCurrent) return;
   // Past the ground's back edge (the ground's extent leaves it out): its blocks stand on their own
   await createPatchRowAsync(() => visit.isCurrent, addGalleryExitCleanup);
+  if (!visit.isCurrent) return;
+  await createPadBlockAsync(() => visit.isCurrent);
+  if (!visit.isCurrent) return;
+  await createOrientationBlockAsync();
   if (!visit.isCurrent) return;
 
   // Debug env only: a dynamic import, so the tab's code isn't in a production build. It applies

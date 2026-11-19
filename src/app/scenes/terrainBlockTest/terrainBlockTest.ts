@@ -42,13 +42,14 @@ import {
  *   and the load logs an error when the block's heights aren't the map's texels (a map read
  *   flipped, or its fetch's bytes not the file's).
  *
- * - **Front left** (p306 Phase 5's orientation block, `blenderBlock/`): the terrain add-on's export
+ * - **Front left** (p306 Phase 5's orientation block, shared with `terrainGallery` since p310:
+ *   `src/app/terrainBlocks/terrainBlockTestBlender/`): the terrain add-on's export
  *   (`devTools/blender/exportOrientationBlock.py`), 32 m / 33, its `HEIGHTFIELD` from the GLB's
  *   custom props: a mound near the engine's +x, +z corner, the corner markers (snow on the red one
  *   at -x, -z, the top view's top left; mud on the green one at +x, -z) and the baked AO.
  *   `terrainBlockTestBlender` draws them from its `COLOR_0`, `terrainBlockTestBlenderSplatMap`
  *   beside it (the same GLB) from its painted splat map: the two must look alike.
- *   `blenderBlock/terrainBlockTestBlender.test.ts` pins the orientation in the files.
+ *   `terrainBlockTestBlender.test.ts` (in its folder) pins the orientation in the files.
  *
  * - **Further left** (p309 Phase 3's decal block, `decalBlock/`): the terrain add-on's export
  *   (`devTools/blender/buildDecalTest.py`), 32 m / 65 at grid (-4, 3), a ridge with ±0.25 m bumps,

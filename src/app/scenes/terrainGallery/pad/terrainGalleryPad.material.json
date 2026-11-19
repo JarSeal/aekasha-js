@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../../../.schemas/material.schema.json",
+  "id": "terrainGalleryPad",
+  "tslFile": "scenes/terrainGallery/pad/terrainGalleryPad.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "staticDefines": {
+    "terrain": {
+      "layers": [{}],
+      "wet": { "puddles": {}, "ripples": {} }
+    }
+  },
+  "inputs": {
+    "layer0": { "textureSet": "mud02" },
+    "ripples": { "texture": "rippleAtlas" }
+  },
+  "debugData": {
+    "name": "Terrain gallery footprint pad",
+    "description": "The footprint pad's terrain material (p310): mud02 alone with the wet response's puddles and rain ripples, as the Decals stage's blocks, so a stamped footprint's puddle mask fills in the wet."
+  }
+}
