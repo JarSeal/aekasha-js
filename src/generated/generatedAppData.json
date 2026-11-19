@@ -27695,7 +27695,7 @@
           "id": "terrainWetlands",
           "debugData": {
             "name": "Showcase wetlands terrain",
-            "description": "terrainShowcase's wetlands (p310 §3.5): mud01 (the base), mud02 (the channel, its banks and the hollows), grass02 (the raised ground) and rocks01 (the path and the bunker's pad) weighed by the block's COLOR_0 (RGB_AO, the AO on indirect light) through the height blend, DUAL_SCALE, and wet: puddles on ground flatter than 8°, rain ripples, and the regional wetness of the block's _WETNESS attribute (the default _wetness: three's GLTFLoader lowercases it), so the channel and the hollows stay wet in any weather."
+            "description": "terrainShowcase's wetlands (p310 §3.5): mud01 (the base), mud02 (the channel, its banks and the hollows), grass02 (the raised ground) and rocks01 (the path and the bunker's pad) weighed by the block's COLOR_0 (RGB_AO, the AO on indirect light) through the height blend, DUAL_SCALE, the sets as one array (ARRAY storage: the quality tiers sample in slots), and wet: puddles on ground flatter than 8°, rain ripples, and the regional wetness of the block's _WETNESS attribute (the default _wetness: three's GLTFLoader lowercases it), so the channel and the hollows stay wet in any weather."
           },
           "tslFile": "scenes/terrainShowcase/blocks/showcaseWetlands/terrainWetlands.tsl.ts",
           "staticDefines": {
@@ -27729,17 +27729,14 @@
             }
           },
           "inputs": {
-            "layer0": {
-              "textureSet": "mud01"
-            },
-            "layer1": {
-              "textureSet": "mud02"
-            },
-            "layer2": {
-              "textureSet": "grass02"
-            },
-            "layer3": {
-              "textureSet": "rocks01"
+            "layers": {
+              "textureSetArray": [
+                "mud01",
+                "mud02",
+                "grass02",
+                "rocks01"
+              ],
+              "packing": "LITE"
             },
             "ripples": {
               "texture": "rippleAtlas"
@@ -28436,6 +28433,56 @@
               "__codec": "uastc"
             },
             {
+              "id": "grass02_albedoRough",
+              "texOpts": {
+                "wrapS": 1000,
+                "wrapT": 1000,
+                "anisotropy": "MAX",
+                "colorSpace": "srgb"
+              },
+              "debugData": {
+                "name": "grass02 albedoRough (LITE)",
+                "description": "The texture set grass02's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground037's maps (yarn fetchTextureSources)."
+              },
+              "__url": "/aek-assets/toolkit/textures/grass02/grass02_albedoRough.pack.18c50f2c.ktx2",
+              "__bytes": {
+                "in": 13835198,
+                "out": 1332029
+              },
+              "__vramBytes": {
+                "in": 22369620,
+                "out": 1398128
+              },
+              "__codec": "uastc",
+              "__averageColor": [
+                0.3305,
+                0.3088,
+                0.1146
+              ]
+            },
+            {
+              "id": "grass02_normalHeight",
+              "texOpts": {
+                "wrapS": 1000,
+                "wrapT": 1000,
+                "anisotropy": "MAX"
+              },
+              "debugData": {
+                "name": "grass02 normalHeight (LITE)",
+                "description": "The texture set grass02's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground037's maps (yarn fetchTextureSources)."
+              },
+              "__url": "/aek-assets/toolkit/textures/grass02/grass02_normalHeight.pack.e2d79646.ktx2",
+              "__bytes": {
+                "in": 12063008,
+                "out": 1294001
+              },
+              "__vramBytes": {
+                "in": 22369620,
+                "out": 1398128
+              },
+              "__codec": "uastc"
+            },
+            {
               "id": "cliffs02_albedoRough",
               "texOpts": {
                 "wrapS": 1000,
@@ -28595,6 +28642,67 @@
             "cliffs02"
           ],
           "packing": "LITE"
+        },
+        {
+          "sets": [
+            "mud01",
+            "mud02",
+            "grass02",
+            "rocks01"
+          ],
+          "packing": "LITE",
+          "__textures": [
+            {
+              "id": "mud02_albedoRough",
+              "texOpts": {
+                "wrapS": 1000,
+                "wrapT": 1000,
+                "anisotropy": "MAX",
+                "colorSpace": "srgb"
+              },
+              "debugData": {
+                "name": "mud02 albedoRough (LITE)",
+                "description": "The texture set mud02's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground071's maps (yarn fetchTextureSources)."
+              },
+              "__url": "/aek-assets/toolkit/textures/mud02/mud02_albedoRough.pack.ab7a7152.ktx2",
+              "__bytes": {
+                "in": 13235726,
+                "out": 1169913
+              },
+              "__vramBytes": {
+                "in": 22369620,
+                "out": 1398128
+              },
+              "__codec": "uastc",
+              "__averageColor": [
+                0.2075,
+                0.1277,
+                0.0645
+              ]
+            },
+            {
+              "id": "mud02_normalHeight",
+              "texOpts": {
+                "wrapS": 1000,
+                "wrapT": 1000,
+                "anisotropy": "MAX"
+              },
+              "debugData": {
+                "name": "mud02 normalHeight (LITE)",
+                "description": "The texture set mud02's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground071's maps (yarn fetchTextureSources)."
+              },
+              "__url": "/aek-assets/toolkit/textures/mud02/mud02_normalHeight.pack.18b688eb.ktx2",
+              "__bytes": {
+                "in": 10782077,
+                "out": 1297791
+              },
+              "__vramBytes": {
+                "in": 22369620,
+                "out": 1398128
+              },
+              "__codec": "uastc"
+            }
+          ]
         }
       ],
       "terrainBlocks": [
@@ -29444,72 +29552,6 @@
           "averageColor": "#dbebf8"
         },
         {
-          "id": "mud02",
-          "category": "MUD",
-          "physicalSize": [
-            1.75,
-            1.75
-          ],
-          "heightScale": 0.009,
-          "packings": {
-            "LITE": {
-              "albedoRough": "mud02_albedoRough",
-              "normalHeight": "mud02_normalHeight"
-            }
-          },
-          "debugData": {
-            "name": "Mud 02 (forest mud)",
-            "description": "ambientCG Ground071, CC0: forest mud with sticks; the puddle showcase."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#ffffff",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.7,
-            "wetDarkening": 0.6,
-            "wetRoughness": 0.15,
-            "puddleResponse": 1,
-            "dryingSpeed": 0.4
-          },
-          "averageColor": "#7e6448"
-        },
-        {
-          "id": "grass02",
-          "category": "GRASS",
-          "physicalSize": [
-            2.1,
-            2.1
-          ],
-          "heightScale": 0.027,
-          "packings": {
-            "LITE": {
-              "albedoRough": "grass02_albedoRough",
-              "normalHeight": "grass02_normalHeight"
-            }
-          },
-          "debugData": {
-            "name": "Grass 02 (forest floor)",
-            "description": "ambientCG Ground037, CC0: forest floor with grass."
-          },
-          "defaultPacking": "LITE",
-          "surface": {
-            "tint": "#ffffff",
-            "normalStrength": 1,
-            "roughnessScale": 1,
-            "aoStrength": 1,
-            "heightContrast": 1,
-            "porosity": 0.6,
-            "wetDarkening": 0.35,
-            "wetRoughness": 0.35,
-            "puddleResponse": 0.2,
-            "dryingSpeed": 0.8
-          },
-          "averageColor": "#9c975f"
-        },
-        {
           "id": "rocks01",
           "category": "ROCKS",
           "physicalSize": [
@@ -29733,6 +29775,39 @@
           "averageColor": "#5c6730"
         },
         {
+          "id": "grass02",
+          "category": "GRASS",
+          "physicalSize": [
+            2.1,
+            2.1
+          ],
+          "heightScale": 0.027,
+          "packings": {
+            "LITE": {
+              "albedoRough": "grass02_albedoRough",
+              "normalHeight": "grass02_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Grass 02 (forest floor)",
+            "description": "ambientCG Ground037, CC0: forest floor with grass."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.6,
+            "wetDarkening": 0.35,
+            "wetRoughness": 0.35,
+            "puddleResponse": 0.2,
+            "dryingSpeed": 0.8
+          },
+          "averageColor": "#9c975f"
+        },
+        {
           "id": "cliffs02",
           "category": "CLIFF",
           "physicalSize": [
@@ -29830,6 +29905,39 @@
             "dryingSpeed": 1
           },
           "averageColor": "#667d73"
+        },
+        {
+          "id": "mud02",
+          "category": "MUD",
+          "physicalSize": [
+            1.75,
+            1.75
+          ],
+          "heightScale": 0.009,
+          "packings": {
+            "LITE": {
+              "albedoRough": "mud02_albedoRough",
+              "normalHeight": "mud02_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Mud 02 (forest mud)",
+            "description": "ambientCG Ground071, CC0: forest mud with sticks; the puddle showcase."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.7,
+            "wetDarkening": 0.6,
+            "wetRoughness": 0.15,
+            "puddleResponse": 1,
+            "dryingSpeed": 0.4
+          },
+          "averageColor": "#7e6448"
         }
       ],
       "textures": [
@@ -30889,106 +30997,6 @@
           "__bytes": {
             "in": 7144752,
             "out": 1145427
-          },
-          "__vramBytes": {
-            "in": 22369620,
-            "out": 1398128
-          },
-          "__codec": "uastc"
-        },
-        {
-          "id": "mud02_albedoRough",
-          "texOpts": {
-            "wrapS": 1000,
-            "wrapT": 1000,
-            "anisotropy": "MAX",
-            "colorSpace": "srgb"
-          },
-          "debugData": {
-            "name": "mud02 albedoRough (LITE)",
-            "description": "The texture set mud02's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground071's maps (yarn fetchTextureSources)."
-          },
-          "__url": "/aek-assets/toolkit/textures/mud02/mud02_albedoRough.pack.ab7a7152.ktx2",
-          "__bytes": {
-            "in": 13235726,
-            "out": 1169913
-          },
-          "__vramBytes": {
-            "in": 22369620,
-            "out": 1398128
-          },
-          "__codec": "uastc",
-          "__averageColor": [
-            0.2075,
-            0.1277,
-            0.0645
-          ]
-        },
-        {
-          "id": "mud02_normalHeight",
-          "texOpts": {
-            "wrapS": 1000,
-            "wrapT": 1000,
-            "anisotropy": "MAX"
-          },
-          "debugData": {
-            "name": "mud02 normalHeight (LITE)",
-            "description": "The texture set mud02's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground071's maps (yarn fetchTextureSources)."
-          },
-          "__url": "/aek-assets/toolkit/textures/mud02/mud02_normalHeight.pack.18b688eb.ktx2",
-          "__bytes": {
-            "in": 10782077,
-            "out": 1297791
-          },
-          "__vramBytes": {
-            "in": 22369620,
-            "out": 1398128
-          },
-          "__codec": "uastc"
-        },
-        {
-          "id": "grass02_albedoRough",
-          "texOpts": {
-            "wrapS": 1000,
-            "wrapT": 1000,
-            "anisotropy": "MAX",
-            "colorSpace": "srgb"
-          },
-          "debugData": {
-            "name": "grass02 albedoRough (LITE)",
-            "description": "The texture set grass02's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground037's maps (yarn fetchTextureSources)."
-          },
-          "__url": "/aek-assets/toolkit/textures/grass02/grass02_albedoRough.pack.18c50f2c.ktx2",
-          "__bytes": {
-            "in": 13835198,
-            "out": 1332029
-          },
-          "__vramBytes": {
-            "in": 22369620,
-            "out": 1398128
-          },
-          "__codec": "uastc",
-          "__averageColor": [
-            0.3305,
-            0.3088,
-            0.1146
-          ]
-        },
-        {
-          "id": "grass02_normalHeight",
-          "texOpts": {
-            "wrapS": 1000,
-            "wrapT": 1000,
-            "anisotropy": "MAX"
-          },
-          "debugData": {
-            "name": "grass02 normalHeight (LITE)",
-            "description": "The texture set grass02's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground037's maps (yarn fetchTextureSources)."
-          },
-          "__url": "/aek-assets/toolkit/textures/grass02/grass02_normalHeight.pack.e2d79646.ktx2",
-          "__bytes": {
-            "in": 12063008,
-            "out": 1294001
           },
           "__vramBytes": {
             "in": 22369620,
@@ -50582,7 +50590,7 @@
       "id": "terrainWetlands",
       "debugData": {
         "name": "Showcase wetlands terrain",
-        "description": "terrainShowcase's wetlands (p310 §3.5): mud01 (the base), mud02 (the channel, its banks and the hollows), grass02 (the raised ground) and rocks01 (the path and the bunker's pad) weighed by the block's COLOR_0 (RGB_AO, the AO on indirect light) through the height blend, DUAL_SCALE, and wet: puddles on ground flatter than 8°, rain ripples, and the regional wetness of the block's _WETNESS attribute (the default _wetness: three's GLTFLoader lowercases it), so the channel and the hollows stay wet in any weather."
+        "description": "terrainShowcase's wetlands (p310 §3.5): mud01 (the base), mud02 (the channel, its banks and the hollows), grass02 (the raised ground) and rocks01 (the path and the bunker's pad) weighed by the block's COLOR_0 (RGB_AO, the AO on indirect light) through the height blend, DUAL_SCALE, the sets as one array (ARRAY storage: the quality tiers sample in slots), and wet: puddles on ground flatter than 8°, rain ripples, and the regional wetness of the block's _WETNESS attribute (the default _wetness: three's GLTFLoader lowercases it), so the channel and the hollows stay wet in any weather."
       },
       "tslFile": "scenes/terrainShowcase/blocks/showcaseWetlands/terrainWetlands.tsl.ts",
       "staticDefines": {
@@ -50616,17 +50624,14 @@
         }
       },
       "inputs": {
-        "layer0": {
-          "textureSet": "mud01"
-        },
-        "layer1": {
-          "textureSet": "mud02"
-        },
-        "layer2": {
-          "textureSet": "grass02"
-        },
-        "layer3": {
-          "textureSet": "rocks01"
+        "layers": {
+          "textureSetArray": [
+            "mud01",
+            "mud02",
+            "grass02",
+            "rocks01"
+          ],
+          "packing": "LITE"
         },
         "ripples": {
           "texture": "rippleAtlas"

@@ -17,14 +17,14 @@
     }
   },
   "inputs": {
-    "layer0": { "textureSet": "mud01" },
-    "layer1": { "textureSet": "mud02" },
-    "layer2": { "textureSet": "grass02" },
-    "layer3": { "textureSet": "rocks01" },
+    "layers": {
+      "textureSetArray": ["mud01", "mud02", "grass02", "rocks01"],
+      "packing": "LITE"
+    },
     "ripples": { "texture": "rippleAtlas" }
   },
   "debugData": {
     "name": "Showcase wetlands terrain",
-    "description": "terrainShowcase's wetlands (p310 §3.5): mud01 (the base), mud02 (the channel, its banks and the hollows), grass02 (the raised ground) and rocks01 (the path and the bunker's pad) weighed by the block's COLOR_0 (RGB_AO, the AO on indirect light) through the height blend, DUAL_SCALE, and wet: puddles on ground flatter than 8°, rain ripples, and the regional wetness of the block's _WETNESS attribute (the default _wetness: three's GLTFLoader lowercases it), so the channel and the hollows stay wet in any weather."
+    "description": "terrainShowcase's wetlands (p310 §3.5): mud01 (the base), mud02 (the channel, its banks and the hollows), grass02 (the raised ground) and rocks01 (the path and the bunker's pad) weighed by the block's COLOR_0 (RGB_AO, the AO on indirect light) through the height blend, DUAL_SCALE, the sets as one array (ARRAY storage: the quality tiers sample in slots), and wet: puddles on ground flatter than 8°, rain ripples, and the regional wetness of the block's _WETNESS attribute (the default _wetness: three's GLTFLoader lowercases it), so the channel and the hollows stay wet in any weather."
   }
 }

@@ -24,6 +24,10 @@
     {
       "sets": ["grass01", "rocks02", "snow01", "cliffs02"],
       "packing": "LITE"
+    },
+    {
+      "sets": ["mud01", "mud02", "grass02", "rocks01"],
+      "packing": "LITE"
     }
   ],
   "importedAssets": ["showcaseBunker"],

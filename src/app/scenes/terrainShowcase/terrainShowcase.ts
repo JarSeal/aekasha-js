@@ -2,6 +2,7 @@ import * as THREE from 'three/webgpu';
 import {
   createMeshEntity,
   getGeometry,
+  IS_DEBUG_ENV,
   registerOnSceneExit,
   saveBufferGeometry,
   spawnImportedAsset,
@@ -39,7 +40,8 @@ import { createShowcasePlayerAsync } from './showcasePlayer';
  *   the scene camera following it, its steps stamping footprints on the block under it.
  */
 
-const SCENE_ID = 'terrainShowcase';
+export const TERRAIN_SHOWCASE_SCENE_ID = 'terrainShowcase';
+const SCENE_ID = TERRAIN_SHOWCASE_SCENE_ID;
 const BLOCK_IDS = ['showcaseCoast', 'showcaseAlpine', 'showcaseWetlands', 'showcaseProcedural'];
 /** The surface conditions' water level (the scene JSON's), where the sea plane lies */
 const WATER_LEVEL = 0.5;
@@ -54,6 +56,18 @@ const BUNKER_POSITION = { x: 12, y: 0.58, z: 114 };
  * plateau stands over it), short of the other blocks
  */
 const SEA = { x: 0, z: 0, width: 160, depth: 160, color: '#1d4652', opacity: 0.75 };
+
+/** This visit's cleanups: the scene has one exit function (`registerOnSceneExit`), which runs
+ * them */
+const exitCleanups: (() => void)[] = [];
+
+/**
+ * Adds a function the scene's exit runs (the player's and the tab's: `registerOnSceneExit` keeps
+ * one function per scene, so they share the scene's)
+ */
+export const addShowcaseExitCleanup = (cleanup: () => void) => {
+  exitCleanups.push(cleanup);
+};
 
 const createSea = () =>
   createMeshEntity(
@@ -82,6 +96,12 @@ const createSea = () =>
   );
 
 export const scene = async () => {
+  exitCleanups.length = 0;
+  const visit = { isCurrent: true };
+  registerOnSceneExit(SCENE_ID, () => {
+    visit.isCurrent = false;
+    for (const cleanup of exitCleanups.splice(0)) cleanup();
+  });
   // The coast's, the wetlands' and the procedural block's scatters draw the toolkit's procedural
   // rocks and leaf cards
   saveRockGeometries({ kinds: ['PEBBLE', 'ROCK', 'BOULDER'] });
@@ -101,5 +121,11 @@ export const scene = async () => {
   });
   if (!leaks) return; // the scene was left meanwhile
   createSea();
-  registerOnSceneExit(SCENE_ID, await createShowcasePlayerAsync(SCENE_ID, blocks));
+  addShowcaseExitCleanup(await createShowcasePlayerAsync(SCENE_ID, blocks));
+
+  // Debug env only: a dynamic import, so the tab's code isn't in a production build
+  if (IS_DEBUG_ENV) {
+    const { createTerrainShowcaseTab } = await import('./_dbg__terrainShowcase');
+    if (visit.isCurrent) createTerrainShowcaseTab();
+  }
 };
