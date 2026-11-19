@@ -73,7 +73,7 @@ const decals = new Map<string, Promise<BakedDecal>>();
  * @example
  * ```ts
  * import { exportBakedTexture } from 'aekasha';
- * import { bakeDecalGenerator } from 'aekasha/toolkit/terrain';
+ * import { bakeDecalGenerator, decalStain } from 'aekasha/toolkit/terrain';
  *
  * // An atlas cell of 512 with 16 px of padding holds 480² of content
  * await bakeDecalGenerator({ id: 'stain03', generator: decalStain, size: 480, seed: 3 });

@@ -111,7 +111,8 @@ const getToolkitRules = (files: string[]): LayoutRule[] => [
   { from: `${T}terrain/blocks/` },
   // The terrain scatter generator (p308 D4: `terrainScatter`) and its registration
   { from: `${T}terrain/scatter/` },
-  // Terrain decals (p309): the decal material's graph (D2), later the runtime pools (D4)
+  // Terrain decals (p309): the decal material's graph (D2), the runtime pools (D4), and the
+  // procedural decal generators (D5: `generators/`, one PascalCase module each, not gathered)
   { from: `${T}terrain/decals/` },
   // The Blender side of terrain blocks (p306 D5, D6): the add-on (`aekasha_terrain_tools.py`), the
   // `.blend` templates and the images painted for them (`splatMap_splat0.png`); not modules, so

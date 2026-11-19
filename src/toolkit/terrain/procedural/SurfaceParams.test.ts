@@ -76,4 +76,17 @@ describe('checkSurfaceParamSpecs', () => {
       /\[test\] The param "size"'s default: 3 is above its max 2/
     );
   });
+
+  it('keeps a choice a plain string of its options, fixed once built (p309 D5)', () => {
+    const specs = { shape: { type: 'choice', options: ['BOOT', 'PAW'], default: 'BOOT' } } as const;
+    const build = buildSurfaceParams('test', specs, { shape: 'PAW' });
+    expect(build.nodes.shape).toBe('PAW');
+    expect(() => buildSurfaceParams('test', specs, { shape: 'HOOF' as never })).toThrow(
+      /"shape": "HOOF" isn't one of "BOOT", "PAW"/
+    );
+    expect(() => build.set({ shape: 'BOOT' })).toThrow(/"shape" is fixed when the graph is built/);
+    expect(() =>
+      checkSurfaceParamSpecs('test', { shape: { type: 'choice', options: ['A'], default: 'B' } })
+    ).toThrow(/"shape"'s default: "B" isn't one of "A"/);
+  });
 });

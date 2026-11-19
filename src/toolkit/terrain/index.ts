@@ -41,6 +41,7 @@ export type {
   SurfaceOutputs,
 } from './procedural/SurfaceGenerator';
 export type {
+  SurfaceChoiceParam,
   SurfaceColorParam,
   SurfaceNumberParam,
   SurfaceParamNode,
@@ -89,6 +90,15 @@ export type {
   DecalOutputs,
 } from './decals/DecalGenerator';
 export { setupDecalMaterial } from './decals/DecalMaterial';
+export { decalCracks } from './decals/generators/DecalCracks';
+export { decalFootprint } from './decals/generators/DecalFootprint';
+export { decalFormwork } from './decals/generators/DecalFormwork';
+export { decalIceCrack } from './decals/generators/DecalIceCrack';
+export { decalLeafPatch } from './decals/generators/DecalLeafPatch';
+export { decalMudSplatter } from './decals/generators/DecalMudSplatter';
+export { decalScorch } from './decals/generators/DecalScorch';
+export { decalStain } from './decals/generators/DecalStain';
+export { decalWetPatch } from './decals/generators/DecalWetPatch';
 export type { DecalMaterialInputs } from './decals/DecalMaterial';
 export { createDecalTrail, spawnRibbonDecal } from './decals/DecalRibbons';
 export type { CreateDecalTrailOpts, DecalTrail, SpawnRibbonDecalOpts } from './decals/DecalRibbons';
