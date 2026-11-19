@@ -1,9 +1,9 @@
 // Runtime decals (p309 D4, Phase 4): footprints, impacts and tracks stamped while a scene runs.
 // A pool is an explicit `BATCHED` merge group (p375: one render object for every decal; one
 // multi-draw on WebGL2, a draw per decal on WebGPU), its decals mesh entities joined to it, each
-// with its own geometry: a patch conformed to a terrain block (`DecalPatch.ts`), or a mesh's
-// triangles clipped to the decal (three's `DecalGeometry`, loaded with the first), written in world
-// space on an entity at the origin, so a decal is placed by its geometry alone (a `TRANSFORM`
+// with its own geometry: a patch conformed to a terrain block (`DecalPatch.ts`), a mesh's
+// triangles clipped to the decal (`MeshDecals.ts`) or a strip along a path (`DecalRibbons.ts`),
+// written in world space on an entity at the origin, so a decal is placed by its geometry alone (a `TRANSFORM`
 // written outside `MAIN` would reach the batch a frame after the slot's rewrite). The pool keeps
 // at most `maxDecals` entities: a spawn takes a free place (one never used, or a decal whose
 // lifetime ended), else the oldest decal's, rewrites its patch in place (`updateMergeMember`, which
@@ -37,16 +37,10 @@ import {
 import type { MergeTransparentOrder } from 'aekasha/merging';
 import { getTerrainBlock } from 'aekasha/terrain';
 import type { TerrainBlock } from 'aekasha/terrain';
-import { readBlockSurface } from '../blocks/BlockSurface';
+import { createFlatBlockSurface, readBlockSurface } from '../blocks/BlockSurface';
 import type { BlockSurface } from '../blocks/BlockSurface';
-import {
-  createDecalPatchArrays,
-  getDecalFrame,
-  getDecalPatchMaxIndices,
-  writeDecalPatch,
-  writeMeshDecalPatch,
-} from './DecalPatch';
-import type { DecalFrame, DecalPatchArrays, DecalPatchCounts, DecalPatchSpec } from './DecalPatch';
+import { createDecalPatchArrays, getDecalPatchMaxIndices, writeDecalPatch } from './DecalPatch';
+import type { DecalPatchArrays, DecalPatchCounts, DecalPatchSpec } from './DecalPatch';
 
 const DEFAULTS = {
   maxDecals: 128,
@@ -129,27 +123,43 @@ export type SpawnDecalOpts = {
   fadeSec?: number;
 };
 
-/** What and where {@link spawnMeshDecalAsync} projects: {@link SpawnDecalOpts}' cell, look and lifetime, on a mesh. */
-export type SpawnMeshDecalOpts = Omit<SpawnDecalOpts, 'target' | 'position' | 'normal'> & {
-  /** The mesh entity it's projected onto (a plain mesh: not instanced, batched or skinned). */
-  target: { entityId: number };
-  /** Its centre on the mesh's surface, in world space. */
-  position: { x: number; y: number; z: number };
-  /** The surface's normal there, in world space: the decal is projected along it. */
-  normal: { x: number; y: number; z: number };
-  /** How far the projection reaches along the normal, metres, half each side of the centre (default the decal's larger side). */
-  depth?: number;
+/**
+ * A decal's cell, size and rotation: what every spawn resolves before its patch.
+ * @internal
+ */
+export type DecalLook = {
+  cellRect: AtlasCellRect;
+  width: number;
+  height: number;
+  rotation: number;
 };
 
-/** A decal's cell, size and rotation: what both spawns resolve before their patch */
-type DecalLook = { cellRect: AtlasCellRect; width: number; height: number; rotation: number };
+/**
+ * A look to fill with {@link resolveLook}.
+ * @internal
+ */
+export const createLook = (): DecalLook => ({
+  cellRect: [0, 0, 1, 1],
+  width: 1,
+  height: 1,
+  rotation: 0,
+});
 
-const createLook = (): DecalLook => ({ cellRect: [0, 0, 1, 1], width: 1, height: 1, rotation: 0 });
+/**
+ * A place in the pool: its decal's entity, geometry and patch arrays.
+ * @internal
+ */
+export type DecalPlace = {
+  entityId: number;
+  geometry: THREE.BufferGeometry;
+  arrays: DecalPatchArrays;
+};
 
-/** A place in the pool: its decal's entity, geometry and patch arrays */
-type DecalPlace = { entityId: number; geometry: THREE.BufferGeometry; arrays: DecalPatchArrays };
-
-type PoolState = {
+/**
+ * A pool's state: its settings, places, line and fades.
+ * @internal
+ */
+export type PoolState = {
   pool: DecalPool;
   world: ECSWorld;
   material: string;
@@ -178,6 +188,8 @@ type PoolState = {
   timedCount: number;
   cells: Map<string, { rect: AtlasCellRect; size: readonly [number, number] | undefined }>;
   isStrideWarned: boolean;
+  /** Whether a ribbon too long for `maxPatchVertices` warned */
+  isRibbonWarned: boolean;
   isDisposed: boolean;
   removeExitListener: () => void;
 };
@@ -199,19 +211,12 @@ const spec: DecalPatchSpec = {
 };
 const counts: DecalPatchCounts = { vertexCount: 0, indexCount: 0, stride: 1 };
 const look: DecalLook = createLook();
-const frame: DecalFrame = { ux: 1, uy: 0, uz: 0, vx: 0, vy: 0, vz: -1 };
-/** The mesh decals' projector, reused */
-const projectorPosition = new THREE.Vector3();
-const projectorSize = new THREE.Vector3();
-const projectorU = new THREE.Vector3();
-const projectorV = new THREE.Vector3();
-const projectorN = new THREE.Vector3();
-const projectorBasis = new THREE.Matrix4();
-const projectorEuler = new THREE.Euler();
-/** three's `DecalGeometry`, loaded with the first mesh decal */
-let decalGeometryModule:
-  | Promise<typeof import('three/examples/jsm/geometries/DecalGeometry.js')>
-  | undefined;
+const blockTarget: DecalBlockTarget = {
+  surface: createFlatBlockSurface(1),
+  originX: 0,
+  originZ: 0,
+  half: 0.5,
+};
 const colorOpts: { color?: THREE.ColorRepresentation; opacity?: number } = {};
 
 const getSystemId = (id: string) => `decalPool:${id}`;
@@ -315,6 +320,7 @@ export const createDecalPool = (opts: CreateDecalPoolOpts): DecalPool => {
     timedCount: 0,
     cells: new Map(),
     isStrideWarned: false,
+    isRibbonWarned: false,
     isDisposed: false,
     removeExitListener: () => {},
   };
@@ -365,31 +371,11 @@ const endPool = (state: PoolState) => {
 export const spawnDecal = (pool: DecalPool, opts: SpawnDecalOpts): number | null => {
   const state = getLiveState(pool, 'spawnDecal');
   if (!state) return null;
-  const { target } = opts;
-  const block = getTerrainBlock(target.id);
-  if (!block) {
-    throw new Error(`spawnDecal: the scene doesn't list the terrain block "${target.id}".`);
-  }
-  const mesh = state.world.getComponent(target.meshEntityId, ComponentType.OBJECT3D)?.value as
-    | THREE.Mesh
-    | undefined;
-  if (!mesh?.geometry) {
-    lwarn(`spawnDecal: the terrain block "${target.id}" has no mesh (deleted?).`);
-    return null;
-  }
-  const { size, x: gridX, z: gridZ } = block.grid;
-  const originX = gridX * size;
-  const originZ = gridZ * size;
-  const localX = opts.position.x - originX;
-  const localZ = opts.position.z - originZ;
-  const half = size / 2;
-  if (Math.abs(localX) > half || Math.abs(localZ) > half) return null;
-
-  let surface = surfaces.get(mesh.geometry);
-  if (!surface) {
-    surface = readBlockSurface(mesh.geometry, size, `spawnDecal: the terrain block "${target.id}"`);
-    surfaces.set(mesh.geometry, surface);
-  }
+  const block = readDecalBlockTarget(state, opts.target, 'spawnDecal', blockTarget);
+  if (!block) return null;
+  const localX = opts.position.x - block.originX;
+  const localZ = opts.position.z - block.originZ;
+  if (Math.abs(localX) > block.half || Math.abs(localZ) > block.half) return null;
   resolveLook(state, opts, look, 'spawnDecal');
   spec.x = localX;
   spec.z = localZ;
@@ -399,159 +385,139 @@ export const spawnDecal = (pool: DecalPool, opts: SpawnDecalOpts): number | null
   spec.height = look.height;
   spec.cellRect = look.cellRect;
   spec.lift = state.lift;
-  spec.origin.x = originX;
-  spec.origin.z = originZ;
+  spec.origin.x = block.originX;
+  spec.origin.z = block.originZ;
 
   const index = takePlace(state);
   const place = state.places[index] ?? createPlace(state);
-  writeDecalPatch(surface, spec, place.arrays, counts);
+  writeDecalPatch(block.surface, spec, place.arrays, counts);
   if (counts.stride > 1 && !state.isStrideWarned) {
     state.isStrideWarned = true;
     lwarn(
       `spawnDecal: a decal of the pool "${pool.id}" covers more of the block's grid than its maxPatchVertices (${state.maxPatchVertices}) holds: it takes every ${counts.stride}th grid line, no longer on the block's triangles (raise maxPatchVertices or the lift).`
     );
   }
-  return finishSpawn(state, index, place, opts);
+  return finishSpawn(state, index, place, counts, opts);
 };
 
 /**
- * Projects a decal onto a mesh: three's `DecalGeometry` (its code loaded with the first call) clips
- * the mesh's triangles to a box at `position`, `normal` its depth, and the clipped triangles are the
- * decal, drawn by the pool's batch like a block's. For props and structures: it reads every
- * triangle of the mesh, so it costs with the mesh's size (a terrain block's decals are
- * {@link spawnDecal}'s, which reads only the cells under the decal).
- * @param pool the pool ({@link createDecalPool})
- * @param opts the mesh entity, the place and its normal, the cell and the decal's look and lifetime
- * @returns the decal's mesh entity, or `null` when the decal misses the mesh, the mesh entity is
- * gone or the pool is (also when either went during the code's load)
- * @throws for a mesh that isn't a plain one (instanced, batched or skinned), a decal of more than
- * 65 536 vertices, a cell the atlas doesn't have (or isn't loaded), or a size it can't take
- * @remarks The cell and a missing rotation are drawn from the pool's random stream at the call,
- * before the load; overlapping calls stamp in call order. A decal with more vertices than the
- * pool's `maxPatchVertices` takes a larger slot in the batch, whose buffers then grow once (its
- * place keeps it). The box projects through the whole mesh along the normal over `depth`: a thin
- * mesh's back faces inside it get the decal too.
- * @example
- * ```ts
- * import { spawnMeshDecalAsync } from 'aekasha/toolkit/terrain';
- *
- * // A scorch where a shot hit a crate (the raycast's point and face normal, in world space)
- * await spawnMeshDecalAsync(scorches, {
- *   target: { entityId: crateId },
- *   position: hit.point,
- *   normal: hit.normal,
- *   cell: 'scorch',
- *   size: 0.6,
- * });
- * ```
+ * A terrain block target's grid (read once per geometry), its place in the world and its half
+ * side.
+ * @internal
  */
-export const spawnMeshDecalAsync = async (
-  pool: DecalPool,
-  opts: SpawnMeshDecalOpts
-): Promise<number | null> => {
-  const where = 'spawnMeshDecalAsync';
-  const before = getLiveState(pool, where);
-  if (!before) return null;
-  const meshLook = resolveLook(before, opts, createLook(), where);
-  const { DecalGeometry } = await (decalGeometryModule ??= import(
-    'three/examples/jsm/geometries/DecalGeometry.js'
-  ));
-  const state = getLiveState(pool, where);
-  if (!state) return null;
-  const mesh = state.world.getComponent(opts.target.entityId, ComponentType.OBJECT3D)?.value as
-    | THREE.Mesh
-    | undefined;
-  if (!mesh?.isMesh || !state.world.isAlive(opts.target.entityId)) return null;
-  const kind = mesh as THREE.Mesh & {
-    isInstancedMesh?: boolean;
-    isBatchedMesh?: boolean;
-    isSkinnedMesh?: boolean;
-  };
-  if (kind.isInstancedMesh || kind.isBatchedMesh || kind.isSkinnedMesh) {
-    throw new Error(
-      `${where}: the entity ${opts.target.entityId} isn't a plain mesh (instanced, batched or skinned): a decal can't be projected onto it.`
-    );
-  }
-
-  const { normal, position } = opts;
-  const length = Math.hypot(normal.x, normal.y, normal.z) || 1;
-  getDecalFrame(normal.x / length, normal.y / length, normal.z / length, meshLook.rotation, frame);
-  projectorBasis.makeBasis(
-    projectorU.set(frame.ux, frame.uy, frame.uz),
-    projectorV.set(frame.vx, frame.vy, frame.vz),
-    projectorN.set(normal.x / length, normal.y / length, normal.z / length)
-  );
-  projectorEuler.setFromRotationMatrix(projectorBasis);
-  projectorSize.set(
-    meshLook.width,
-    meshLook.height,
-    opts.depth ?? Math.max(meshLook.width, meshLook.height)
-  );
-  // A member of a merge group is out of the scene graph: nothing else updates its matrix
-  mesh.updateWorldMatrix(true, false);
-  const source = new DecalGeometry(
-    mesh,
-    projectorPosition.set(position.x, position.y, position.z),
-    projectorEuler,
-    projectorSize
-  );
-  const vertexCount = source.getAttribute('position').count;
-  if (!vertexCount) {
-    source.dispose();
-    return null;
-  }
-  if (vertexCount > 65536) {
-    source.dispose();
-    throw new Error(
-      `${where}: the decal has ${vertexCount} vertices on the entity ${opts.target.entityId}, over the 65 536 a patch takes (a smaller decal or depth).`
-    );
-  }
-  const index = takePlace(state);
-  const place = state.places[index] ?? createPlace(state);
-  if (vertexCount * 3 > place.arrays.positions.length) {
-    place.arrays = createDecalPatchArrays(Math.max(vertexCount, 4));
-  }
-  writeMeshDecalPatch(source, meshLook.cellRect, state.lift, place.arrays, counts);
-  source.dispose();
-  return finishSpawn(state, index, place, opts);
+export type DecalBlockTarget = {
+  surface: BlockSurface;
+  originX: number;
+  originZ: number;
+  half: number;
 };
 
-/** The pool's state while it lives; a warning and undefined once it's gone */
-const getLiveState = (pool: DecalPool, where: string) => {
+/**
+ * Reads a terrain block target into `out`: its definition from the scene's data, its grid from its
+ * mesh's geometry.
+ * @internal
+ * @returns `out`, or undefined (warned) when the block's mesh is gone
+ * @throws for a block the scene doesn't list, or a geometry that isn't a regular grid
+ */
+export const readDecalBlockTarget = (
+  state: PoolState,
+  target: TerrainBlock,
+  where: string,
+  out: DecalBlockTarget
+) => {
+  const block = getTerrainBlock(target.id);
+  if (!block) {
+    throw new Error(`${where}: the scene doesn't list the terrain block "${target.id}".`);
+  }
+  const mesh = state.world.getComponent(target.meshEntityId, ComponentType.OBJECT3D)?.value as
+    | THREE.Mesh
+    | undefined;
+  if (!mesh?.geometry) {
+    lwarn(`${where}: the terrain block "${target.id}" has no mesh (deleted?).`);
+    return undefined;
+  }
+  const { size, x, z } = block.grid;
+  let surface = surfaces.get(mesh.geometry);
+  if (!surface) {
+    surface = readBlockSurface(mesh.geometry, size, `${where}: the terrain block "${target.id}"`);
+    surfaces.set(mesh.geometry, surface);
+  }
+  out.surface = surface;
+  out.originX = x * size;
+  out.originZ = z * size;
+  out.half = size / 2;
+  return out;
+};
+
+/**
+ * The pool's state while it lives; a warning and undefined once it's gone.
+ * @internal
+ */
+export const getLiveState = (pool: DecalPool, where: string) => {
   const state = states.get(pool);
   if (state && !state.isDisposed) return state;
   lwarn(`${where}: the decal pool "${pool.id}" is gone (disposed, or its scene left).`);
   return undefined;
 };
 
-/** Resolves the cell (a list's drawn from the random stream), then the size and the rotation (a
- * missing one drawn) into `out` */
-const resolveLook = (
+/**
+ * Resolves the cell (a list's drawn from the pool's random stream), then the size and the rotation
+ * (a missing one drawn) into `out`.
+ * @internal
+ * @returns `out`
+ */
+export const resolveLook = (
   state: PoolState,
   opts: Pick<SpawnDecalOpts, 'cell' | 'size' | 'rotation'>,
   out: DecalLook,
   where: string
 ) => {
-  const random = getRandomStream(state.randomStream);
-  const cellId =
-    typeof opts.cell === 'string' ? opts.cell : opts.cell[Math.floor(random() * opts.cell.length)];
-  const cell = getCell(state, cellId, where);
-  out.cellRect = cell.rect;
-  setDecalSize(cellId, cell.size, opts.size, out, where);
-  out.rotation = opts.rotation ?? random() * Math.PI * 2;
+  const { id, rect, size } = pickCell(state, opts.cell, where);
+  out.cellRect = rect;
+  setDecalSize(id, size, opts.size, out, where);
+  out.rotation = opts.rotation ?? getRandomStream(state.randomStream)() * Math.PI * 2;
   return out;
 };
 
-/** A spawn's end: the place's geometry from its arrays, its entity made and joined (a new place)
- * or shown and its slot rewritten, its lifetime, colour and the FIFO's fades */
-const finishSpawn = (
+/**
+ * A spawn's cell: the one named, or one drawn from a list (the pool's random stream).
+ * @internal
+ * @returns the cell's id, UV rect and physical size
+ */
+export const pickCell = (state: PoolState, cell: SpawnDecalOpts['cell'], where: string) => {
+  const id =
+    typeof cell === 'string'
+      ? cell
+      : cell[Math.floor(getRandomStream(state.randomStream)() * cell.length)];
+  return { id, ...getCell(state, id, where) };
+};
+
+/**
+ * Gives a place a spawn took back unused (a ribbon that didn't fit): hidden and free.
+ * @internal
+ */
+export const releasePlace = (state: PoolState, index: number) => {
+  if (index >= state.places.length) return;
+  const { entityId } = state.places[index];
+  if (!state.world.isDisabled(entityId)) state.world.setDisabled(entityId, true);
+  state.free.push(index);
+};
+
+/**
+ * A spawn's end: the place's geometry from its arrays, its entity made and joined (a new place) or
+ * shown and its slot rewritten, its lifetime, colour and the FIFO's fades.
+ * @internal
+ * @returns the decal's entity
+ */
+export const finishSpawn = (
   state: PoolState,
   index: number,
   place: DecalPlace,
+  patchCounts: DecalPatchCounts,
   opts: Pick<SpawnDecalOpts, 'color' | 'opacity' | 'lifetimeSec' | 'fadeSec'>
 ) => {
   const { world, pool } = state;
-  setPatchAttributes(place.geometry, place.arrays, counts);
+  setPatchAttributes(place.geometry, place.arrays, patchCounts);
   if (index < state.places.length) {
     if (world.isDisabled(place.entityId)) world.setDisabled(place.entityId, false);
     updateMergeMember(place.entityId, world);
@@ -638,8 +604,12 @@ const setDecalSize = (
   }
 };
 
-/** The place a spawn takes: a free one, a new one, else the oldest drawn (out of the line) */
-const takePlace = (state: PoolState) => {
+/**
+ * The place a spawn takes: a free one, a new one (its index past the places made), else the oldest
+ * drawn (out of the line).
+ * @internal
+ */
+export const takePlace = (state: PoolState) => {
   if (state.free.length) return state.free.pop()!;
   if (state.places.length < state.pool.maxDecals) return state.places.length;
   const index = state.order[0];
@@ -648,8 +618,11 @@ const takePlace = (state: PoolState) => {
   return index;
 };
 
-/** A new place's arrays and geometry (its entity made by the spawn) */
-const createPlace = (state: PoolState): DecalPlace => ({
+/**
+ * A new place's arrays and geometry (its entity made by the spawn).
+ * @internal
+ */
+export const createPlace = (state: PoolState): DecalPlace => ({
   entityId: -1,
   geometry: new THREE.BufferGeometry(),
   arrays: createDecalPatchArrays(state.maxPatchVertices),

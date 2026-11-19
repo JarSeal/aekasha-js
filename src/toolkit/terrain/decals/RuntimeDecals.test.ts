@@ -4,7 +4,8 @@ import { ComponentType, ECSWorld, setRandomSeed } from 'aekasha';
 import type { ECSSystem, MeshProps } from 'aekasha';
 import type { TerrainBlock } from 'aekasha/terrain';
 import { generateTerrain } from 'aekasha/toolkit/geometry';
-import { createDecalPool, spawnDecal, spawnMeshDecalAsync } from './RuntimeDecals';
+import { spawnMeshDecalAsync } from './MeshDecals';
+import { createDecalPool, spawnDecal } from './RuntimeDecals';
 import type { CreateDecalPoolOpts } from './RuntimeDecals';
 
 // The kernel's and the features' calls the pool makes, recorded

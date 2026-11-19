@@ -81,13 +81,12 @@ export { createStructureMaterial, getStructureMaterialConfig } from './material/
 export type { StructureMaterialOpts } from './material/StructureMaterial';
 export { setupDecalMaterial } from './decals/DecalMaterial';
 export type { DecalMaterialInputs } from './decals/DecalMaterial';
-export { createDecalPool, spawnDecal, spawnMeshDecalAsync } from './decals/RuntimeDecals';
-export type {
-  CreateDecalPoolOpts,
-  DecalPool,
-  SpawnDecalOpts,
-  SpawnMeshDecalOpts,
-} from './decals/RuntimeDecals';
+export { createDecalTrail, spawnRibbonDecal } from './decals/DecalRibbons';
+export type { CreateDecalTrailOpts, DecalTrail, SpawnRibbonDecalOpts } from './decals/DecalRibbons';
+export { spawnMeshDecalAsync } from './decals/MeshDecals';
+export type { SpawnMeshDecalOpts } from './decals/MeshDecals';
+export { createDecalPool, spawnDecal } from './decals/RuntimeDecals';
+export type { CreateDecalPoolOpts, DecalPool, SpawnDecalOpts } from './decals/RuntimeDecals';
 export { setupRockMaterial } from './material/RockMaterial';
 export type { RockMaterialInputs } from './material/RockMaterial';
 export { getTerrainQualityPreset } from './material/TerrainQualityPreset';
