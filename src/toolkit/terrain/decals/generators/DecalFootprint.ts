@@ -179,9 +179,11 @@ export const decalFootprint = defineDecalGenerator({
     const albedo = isSnow
       ? mix(params.snow, params.snowPacked, inside)
       : mix(params.mudRim, params.mud, inside);
+    // Dry mud's: the wet response brings the gloss (a print at 0.5 glinted like a puddle under a
+    // low sun, its lugs averaged flat in the far mips)
     const roughness = isSnow
       ? mix(float(0.75), float(0.55), inside)
-      : mix(float(0.85), float(0.5), inside);
+      : mix(float(0.85), float(0.75), inside);
 
     return {
       albedo: albedo as unknown as Node<'vec3'>,

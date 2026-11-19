@@ -10,11 +10,12 @@ import type { DecalPool, DecalTrail } from 'aekasha/toolkit/terrain';
 // footprint every stride, left and right of its path, into a pool of 128 (`spawnDecal`: the FIFO
 // takes the oldest once it's full, its oldest eighth fading out); a cart on a smaller loop leaves
 // two wheel tracks (`createDecalTrail`, `tireTracks`, 1.7 m apart as the Blender tracks beside
-// them) in a second pool, each segment fading out 30 s after it's stamped. Both are driven by the
-// fixed-step clock (`getPhysicsSimClock`): a decal's place is a function of the step it's stamped
-// at, never of the frame timing, so the scene runner's snapshot shows the same decals each run
-// (the FIFO's fades are by place; no lifetime ends within its 360 steps). Visual only: the loops'
-// shapes come from the named stream `terrainBlockTestWalk`, which every load restarts.
+// them, tinted for this dark mud) in a second pool, each segment fading out 30 s after it's
+// stamped. Both are driven by the fixed-step clock (`getPhysicsSimClock`): a decal's place is a
+// function of the step it's stamped at, never of the frame timing, so the scene runner's snapshot
+// shows the same decals each run (the FIFO's fades are by place; no lifetime ends within its 360
+// steps). Visual only: the loops' shapes come from the named stream `terrainBlockTestWalk`, which
+// every load restarts.
 //
 // URL parameters: `?tbtDecals=blend|cutout|off` (the footprints' material; default blend, the
 // `JOIN` transparent path), `?tbtDecalRate=<footprints a second>` (default 2, a 1.4 m/s walk;
@@ -45,6 +46,12 @@ const PATH_STEP = 0.05;
 const MAX_SPAWNS_PER_FRAME = 8;
 const TRACK_LIFETIME_SEC = 30;
 const TRACK_FADE_SEC = 5;
+/**
+ * The tracks' tint for this block's mud (p309 Phase 5): the cell's darkened sand, lit, is about
+ * 2.6 times as bright as this dark mud, so untinted the tracks read as pale strips; × 0.3 (sRGB)
+ * they're a little darker than the mud, pressed into it
+ */
+const TRACK_TINT = '#666666';
 
 export type DecalWalkMode = 'BLEND' | 'CUTOUT' | 'OFF';
 
@@ -188,6 +195,7 @@ export const startDecalWalk = (block: TerrainBlock) => {
   const trailOpts = {
     target: block,
     cell: 'tireTracks',
+    color: TRACK_TINT,
     lifetimeSec: TRACK_LIFETIME_SEC,
     fadeSec: TRACK_FADE_SEC,
   };

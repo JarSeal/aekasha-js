@@ -31,7 +31,7 @@ export const decalMudSplatter = defineDecalGenerator({
     dropSize: { default: 0.32, min: 0.05, max: 0.45, step: 0.01, label: 'Drop size (cells)' },
     spread: { default: 0.42, min: 0.2, max: 0.45, step: 0.01, label: 'Spread' },
     relief: { default: 0.6, min: 0, max: 1, step: 0.05, label: 'Relief' },
-    roughness: { default: 0.55, min: 0, max: 1, step: 0.05, label: 'Roughness' },
+    roughness: { default: 0.75, min: 0, max: 1, step: 0.05, label: 'Roughness' },
     mud: { type: 'color', default: '#4f3c29', label: 'Mud colour' },
     wetMud: { type: 'color', default: '#2d2219', label: 'Wet mud colour' },
   },

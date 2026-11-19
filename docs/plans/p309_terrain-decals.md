@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-4 implemented
+Status: in progress | Phases 1-5 implemented
 Category: Terrain, Rendering, Materials
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -316,7 +316,7 @@ Sections:
    - **Follow-ups (not this plan's):** a pool's first decal on a block reads the block's whole grid and its first `maxDecals` spawns each make an entity and join the group, a hitch at the start (a `prewarm` option: places made and joined at the pool's creation, the block read then); a pool's colour writes through a handle (one `getComponent` less each); `sampleBlockSurface` without the colour a decal never reads.
    - `src/toolkit/terrain/CLAUDE.md`: a "Runtime decals" bullet (the files and API, the pool, the patch, ribbons and trails, the fades, the measures and how to measure WebGL2's GPU time). Not done: the scene runner's local baseline for `terrainBlockTest` (recorded at `e44533af`, before this branch's decal block and systems: record it again on `main` before the PR's run).
 
-### Phase 5 — Procedural decals (D5)
+### Phase 5 — Procedural decals (D5) — done
 
 **Exit:** the procedural cells replace the placeholders, and wet footprints in mud fill with water during a rain shower.
 
@@ -330,7 +330,7 @@ Found when it started (2026-11-19), and decided:
 - **The tool is the gallery's Decals tab,** beside the row that shows the atlases: pick a generated cell, set its params and seed, and the row shows its bake in the row's four views, next to the atlas's copy of the cell. "Copy cell data" copies the cell's `data` as JSON for the atlas; "Export cell" and "Export all" export each generated cell from its committed data (through `_dbg__exportBake.ts`).
 - **The tyre tracks** (Phase 3's note): TireTracks001 is a sand strip at opacity 1, so on dark mud the tracks read as pale painted lines. Its recipe's opacity changes to come from the ruts (the height's `remap`), the same kind of fix as the asphalt damage's.
 - **The exit's rain is checked on the gallery's Decals stage:** it already has the weathers (dry, wet, rain), wet mud with puddles and ripples, and every cell at its size. The footprints' puddle mask gets measured the way Phase 2 measured the tracks (the share of a print's pixels that change against `puddleDepth` 0). `terrainBlockTest`'s walk shows the new boot print, but its mud doesn't respond to the weather.
-- **D5's optional `ARRAY` path:** decided in section 5. It gets built only if the walk's 128 copies of one boot print show their repetition; if not, the decision is written down here.
+- **D5's optional `ARRAY` path:** decided in section 5. It gets built only if the walk's 128 copies of one boot print show their repetition; if not, the decision is written down here. **Not built** (section 5's As built).
 
 Sections:
 
@@ -372,11 +372,30 @@ Sections:
    - **`yarn assets`:** `decalsGround` 888 KB + 1.00 MB (437 + 448 KB with the placeholders), `decalsStructure` 323 + 232 KB (159 + 189 KB); VRAM unchanged (5.59 and 2.79 MB a slot); no budget over; the old outputs pruned (a `--only` run doesn't prune: a full run after it did). Editing a cell's `data` changes no output.
    - **Seen on WebGPU** (`.cache/look/p309atlas.mts`, `p309tracks5.mts`): the row's panels show every procedural cell in the encoded atlases; on the stage the ground cells read at their sizes, the structure stains on the walls; the wall's cracks and formwork marks are faint from across the stage (close enough, they show on the bench). No console warning but Rapier's.
    - `FeatureFactories.test.ts` times out (5 s) now and then in a full `yarn test`, under the parallel load of importing every feature entry, and passes on its own (1.7 s): not this branch's (it imports engine features only).
-5. The exit: wet footprints filling in rain on the stage (measured), the walk, the `ARRAY` decision, `src/toolkit/terrain/CLAUDE.md`, this phase's As built.
+5. The exit: wet footprints filling in rain on the stage (measured), the walk, the `ARRAY` decision, `src/toolkit/terrain/CLAUDE.md`, this phase's As built — done. As built:
+
+   - **The rain, measured on the stage** (`.cache/look/p309exit.mts`, Windows Chrome on WebGPU, AMD RDNA 3): each print straight down (its quad an exact 540 px square), its pixels the PNG's alpha > 0.5, a pixel changed by more than 8 of 255 in any channel. The app loop is paused for each set of shots (`toggleAppPlay(false)`: the surface clock and its ripples held, while a setter still writes the uniforms and the master loop renders). Two measures: `puddleDepth` 0.5 against 0 (Phase 2's, what the mask adds over flat ground) and against a puddle level of 0 (the standing water alone: the film darkens the print in both shots). In the three weathers (`BLEND`; `CUTOUT` within a few points):
+
+     | Print     | Dry | Wet (0.6 / 0.6) | Rain (1 / 0.8 / 1) |
+     | --------- | --- | --------------- | ------------------ |
+     | Boot      | 0   | 31 % \| 30 %    | 38 % \| 41 %       |
+     | Bare      | 0   | 23 % \| 25 %    | 31 % \| 37 %       |
+     | Paw       | 0   | 22 % \| 25 %    | 34 % \| 39 %       |
+     | Snow boot | 0   | 0               | 0                  |
+
+     Nothing outside a print changes against `puddleDepth` 0; the snow boot never fills (no puddle mask). **A rain shower from dry** (`SIMULATED`, `startRain(1, { rampSec: 10, durationSec: 60 })`, the boot every 10 s of surface time): the water in the print climbs steadily, 0, 2 %, 7 %, 10 %, 12 %, 17 %, 25 %, 30 %, 35 %, 41 % at puddle levels 0.06 to 0.81; the heel and the ball fill first, the lugs stay above the water until about 0.6, at 0.81 the print is one pool. Below a puddle level of 0.48 water stands only in the prints; from there the mud has its own puddles too (about 40 % of it from 0.56). The measure against `puddleDepth` 0 isn't monotonic in a shower (56 % at 0.14, 13 % at 0.23): the film darkens the print at depth 0 too, so it reads the water less what the film already did.
+
+   - **The walk** (`.cache/look/p309walk.mts`: the pool filled at `?tbtDecalRate=60`, the walk paused once it wrapped): the boot print reads as a line of pressed soles alternating left and right and turning with the path; close up the lugs and the pushed rim show.
+   - **The `ARRAY` path isn't built:** the 128 copies show no repetition (each at its own angle on the curving path, a small dark shape at walking distance; close up, identical prints are what one boot leaves, and per-seed variants would vary its lugs, which real tracks don't). Both feet stamp the same print unmirrored, which doesn't show: the boot's sole and lugs are symmetric about its long axis. `footprintBare` (a left foot) would need a mirror, which `spawnDecal` doesn't have.
+   - **The far prints' sheen:** from eye height the prints more than a few metres up the path read as white dashes. Not the albedo or the normal: with the material's `roughnessScale` × 4 they turn dark brown, with a flat normal they don't change. A print's inside had a roughness of 0.5, glossy for dry mud, glinting toward the scene's low sun, its lugs averaged flat in the far mips. `decalFootprint`'s mud prints are 0.75 inside now (the rim 0.85; the snow boot's packed snow keeps 0.55), and `decalMudSplatter`'s `roughness` default 0.75 (was 0.55): the wet response brings the gloss. Exported from the tab (only the four `normalRough` PNGs changed: `footprintBoot`, `footprintBare`, `footprintPaw`, `mudSplatter`; every other cell's bake had the same pixels), `yarn assets`: `normalRough` 1.00 MB, VRAM 5.59 MB, as before. The fill figures above are after the change (within a point of before).
+   - **The tyre tracks on `terrainBlockTest`:** section 4's recipe reads pressed into the gallery's `mud02` but as pale strips on the decal block's darker `mud01`. Measured with the material's uniforms switched (`.cache/look/p309trackdiag.mts`, dry, the scene's sun): not the specular (roughness × 4 changes nothing), the opacity as designed (tinted black, the track hides ~57 % of the mud: the grooves' ~0.88 and the tops' 0.25); the track's colour, lit, is ~2.6 times as bright as this mud (sRGB ~80 against 30). A decal with its own albedo reads only on grounds it suits. The walk tints its trail (`TRACK_TINT`, `#666666`, × 0.4: `#4d4d4d` read as black lines from the overview); the Blender decal set's two tracks share `decalsGround_blend` and stay pale (a tint would need a material of their own). The handbook (Phase 6) says to tint a decal to its ground.
+   - **`src/toolkit/terrain/CLAUDE.md`:** a bullet on the decal generators (the contract, the packing, the albedo and roughness rules, the cells' recipes, the tab and the export), and the decal material's on a decal's albedo against the ground.
+   - **`FeatureFactories.test.ts`** timed out on every full `yarn test` now (section 4: now and then): it imports every feature entry, ~2 s alone. Its timeout is 30 s, as `ModuleLoad.test.ts`' 60 s. Under a load average of 12 (another project's servers on the machine) the layout check and `TerrainAsync.test.ts` timed out once too, passing alone and in the next full run.
+   - **Follow-ups** (to p990 when the plan is done): a decal mode that keeps the ground's colour and adds its darkening, relief, roughness and puddle mask (tracks and prints on any ground, no tint); a mirror for `spawnDecal` (a left and right foot from one cell).
 
 ### Phase 6 — Handbook, template, Hub, versioning
 
-1. `terrain-decals.md`, `terrain_decals.blend`.
+1. `terrain-decals.md` (with Phase 5's rule: a decal with its own albedo is tinted to its ground), `terrain_decals.blend`.
 2. **Hub** (`hub/CLAUDE.md`): the terrain feature page's decals section (atlases, the material, decal sets, runtime pools; `api:` links), the scenes-and-assets page's asset type list (`*.decalSet.json`) and the rendering page's `renderOrder` line. Then `yarn hub:build`.
 3. **Repo docs:** `readme.md` Features (toolkit: decals; engine: `*.decalSet.json`, `renderOrder`); the terrain feature's `CLAUDE.md`; `devTools/gather/CLAUDE.md`'s suffix list.
 4. Versions: engine minor, toolkit minor, app minor; `CHANGELOG.md`.

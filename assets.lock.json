@@ -1218,6 +1218,34 @@
       ],
       "ktxVersion": "4.4.2"
     },
+    "81af195dd3f02ce3aa915526a77847ceddbf1ad38143f634d3c096fde4619312": {
+      "source": "src/toolkit/textures/decalsGround/decalsGround.textureAtlas.json",
+      "url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.normalRough.8d7873bb.ktx2",
+      "bytes": 1003515,
+      "textures": [
+        {
+          "slot": "data",
+          "bytes": 1003515,
+          "source": {
+            "width": 2048,
+            "height": 2048,
+            "bytes": 14260960
+          },
+          "codec": "uastc",
+          "width": 2048,
+          "height": 2048,
+          "hasAlpha": true,
+          "mipmaps": true,
+          "normalMode": false,
+          "levels": 5
+        }
+      ],
+      "warnings": [
+        "cells[0] (\"tireTracks\"): sources.normalRough 2048×512 is stretched (its aspect ratio changes by 9.68%) to the cell's 992×224"
+      ],
+      "ktxVersion": "4.4.2",
+      "recipeKey": "43cfe38eb14f400f3e4a6a14f0dc864ad8229c779c74cf21ae6222f9cdc6af4f"
+    },
     "847901abe7554b09a218f171d1bf92e6579722b84bd1519ac15b804a11b631a0": {
       "source": "src/app/scenes/mergeMaterials/source/ruinBrick_normal.png",
       "url": "/aek-assets/app/scenes/mergeMaterials/source/ruinBrick_normal.a0d0784b.ktx2",
@@ -1287,34 +1315,6 @@
         }
       ],
       "ktxVersion": "4.4.2"
-    },
-    "895653f1493672d3f111b4e6242c1fd6419506e0c2910490e6959008a13f3cac": {
-      "source": "src/toolkit/textures/decalsGround/decalsGround.textureAtlas.json",
-      "url": "/aek-assets/toolkit/textures/decalsGround/decalsGround.atlas.normalRough.0355dd9b.ktx2",
-      "bytes": 1000236,
-      "textures": [
-        {
-          "slot": "data",
-          "bytes": 1000236,
-          "source": {
-            "width": 2048,
-            "height": 2048,
-            "bytes": 14266219
-          },
-          "codec": "uastc",
-          "width": 2048,
-          "height": 2048,
-          "hasAlpha": true,
-          "mipmaps": true,
-          "normalMode": false,
-          "levels": 5
-        }
-      ],
-      "warnings": [
-        "cells[0] (\"tireTracks\"): sources.normalRough 2048×512 is stretched (its aspect ratio changes by 9.68%) to the cell's 992×224"
-      ],
-      "ktxVersion": "4.4.2",
-      "recipeKey": "f613b533e1530f237a6fbd53696760d78569c57571f286c84b410b0ff25c664f"
     },
     "898edfa0ddb2cb16cdd86ce236281392f00ee362ec04a1a57dc7d487da2c76bd": {
       "source": "src/toolkit/textures/namaqualandStones01/namaqualandStones01_orm.texture.json",

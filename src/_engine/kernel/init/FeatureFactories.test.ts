@@ -43,4 +43,5 @@ test('ENGINE_FEATURE_FACTORIES names every feature entry factory by its id', asy
     Object.keys(entryModules).map(folderOf).sort()
   );
   expect(ENGINE_FEATURE_FACTORIES).toEqual(found);
-});
+  // It imports every feature entry: about 2 s alone, past the default 5 s under a full run's load
+}, 30_000);
