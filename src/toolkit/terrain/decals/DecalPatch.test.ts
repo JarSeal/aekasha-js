@@ -10,8 +10,11 @@ import {
 import type { BlockSurface } from '../blocks/BlockSurface';
 import {
   createDecalPatchArrays,
+  getDecalFrame,
   getDecalPatchMaxIndices,
   writeDecalPatch,
+  writeMeshDecalPatch,
+  type DecalFrame,
   type DecalPatchArrays,
   type DecalPatchCounts,
   type DecalPatchSpec,
@@ -236,5 +239,91 @@ describe('writeDecalPatch', () => {
     expect(() => createDecalPatchArrays(70000)).toThrow(/from 4 to 65536/);
     expect(() => createDecalPatchArrays(12.5)).toThrow(/an integer/);
     expect(getDecalPatchMaxIndices(169)).toBe(6 * 144);
+  });
+});
+
+describe('getDecalFrame', () => {
+  const frame: DecalFrame = { ux: 0, uy: 0, uz: 0, vx: 0, vy: 0, vz: 0 };
+  const get = (n: [number, number, number], rotation = 0) => {
+    getDecalFrame(...n, rotation, frame);
+    return {
+      u: new THREE.Vector3(frame.ux, frame.uy, frame.uz),
+      v: new THREE.Vector3(frame.vx, frame.vy, frame.vz),
+    };
+  };
+
+  it('lays u along x and v up a wall facing +z, and turns +z for a normal along x', () => {
+    const wall = get([0, 0, 1]);
+    expect(wall.u.toArray().map((c) => c + 0)).toEqual([1, 0, 0]);
+    expect(wall.v.toArray().map((c) => c + 0)).toEqual([0, 1, 0]);
+    const side = get([1, 0, 0]);
+    expect(side.u.toArray().map((c) => c + 0)).toEqual([0, 0, 1]);
+  });
+
+  it('is a right-handed unit frame around any normal and rotation', () => {
+    for (const [n, rotation] of [
+      [[0.3, 0.9, -0.2], 0.4],
+      [[-0.7, 0.1, 0.7], 2.5],
+      [[0, -1, 0], -1],
+    ] as [[number, number, number], number][]) {
+      const normal = new THREE.Vector3(...n).normalize();
+      const { u, v } = get(normal.toArray(), rotation);
+      expect(u.length()).toBeCloseTo(1, 6);
+      expect(v.length()).toBeCloseTo(1, 6);
+      expect(u.dot(normal)).toBeCloseTo(0, 6);
+      expect(new THREE.Vector3().crossVectors(u, v).distanceTo(normal)).toBeLessThan(1e-6);
+    }
+  });
+});
+
+describe('writeMeshDecalPatch', () => {
+  /** Two triangles of a projected decal, world space, UVs 0..1 */
+  const createSource = (withNormals: boolean) => {
+    const source = new THREE.BufferGeometry();
+    source.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0], 3)
+    );
+    source.setAttribute(
+      'uv',
+      new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1], 2)
+    );
+    if (withNormals) {
+      source.setAttribute(
+        'normal',
+        new THREE.Float32BufferAttribute(new Array(6).fill([0, 0, 1]).flat(), 3)
+      );
+    }
+    return source;
+  };
+
+  it('copies the triangles lifted along their normals, its UVs as uv1 and into the cell, in order', () => {
+    const arrays = createDecalPatchArrays(16);
+    const counts = writeMeshDecalPatch(createSource(true), CELL, 0.01, arrays, {
+      vertexCount: 0,
+      indexCount: 0,
+      stride: 0,
+    });
+    expect(counts).toEqual({ vertexCount: 6, indexCount: 6, stride: 1 });
+    expect(Array.from(arrays.indices.subarray(0, 6))).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(arrays.positions[4 * 3]).toBe(1);
+    expect(arrays.positions[4 * 3 + 2]).toBeCloseTo(0.01, 6);
+    expect(Array.from(arrays.decalUvs.subarray(8, 10))).toEqual([1, 1]);
+    expect(arrays.uvs[8]).toBeCloseTo(CELL[2], 6);
+    expect(arrays.uvs[9]).toBeCloseTo(CELL[3], 6);
+  });
+
+  it('gives each face its own normal where the source has none, and refuses arrays too small', () => {
+    const arrays = createDecalPatchArrays(16);
+    const out = { vertexCount: 0, indexCount: 0, stride: 0 };
+    writeMeshDecalPatch(createSource(false), CELL, 0, arrays, out);
+    for (let vertex = 0; vertex < 6; vertex++) {
+      expect(Array.from(arrays.normals.subarray(vertex * 3, vertex * 3 + 3), (c) => c + 0)).toEqual(
+        [0, 0, 1]
+      );
+    }
+    expect(() =>
+      writeMeshDecalPatch(createSource(true), CELL, 0, createDecalPatchArrays(4), out)
+    ).toThrow(/6 vertices don't fit arrays of 4/);
   });
 });

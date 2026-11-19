@@ -4,7 +4,7 @@ import { ComponentType, ECSWorld, setRandomSeed } from 'aekasha';
 import type { ECSSystem, MeshProps } from 'aekasha';
 import type { TerrainBlock } from 'aekasha/terrain';
 import { generateTerrain } from 'aekasha/toolkit/geometry';
-import { createDecalPool, spawnDecal } from './RuntimeDecals';
+import { createDecalPool, spawnDecal, spawnMeshDecalAsync } from './RuntimeDecals';
 import type { CreateDecalPoolOpts } from './RuntimeDecals';
 
 // The kernel's and the features' calls the pool makes, recorded
@@ -351,5 +351,110 @@ describe('spawnDecal', () => {
     expect(merging.dissolveMergeGroup).toHaveBeenCalledTimes(1);
     expect(merging.dissolveMergeGroup).toHaveBeenCalledWith('other', world);
     expect(kernel.exits.has('decalPool:other')).toBe(false);
+  });
+});
+
+describe('spawnMeshDecalAsync', () => {
+  /** A 1 m box entity at (2, 0, 0) */
+  const addBox = (world: ECSWorld, mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1))) => {
+    const entityId = world.createEntity();
+    mesh.position.set(2, 0, 0);
+    world.addComponent(entityId, ComponentType.OBJECT3D, { value: mesh, _lastVersion: 0 });
+    return entityId;
+  };
+  const onFront = { position: { x: 2, y: 0, z: 0.5 }, normal: { x: 0, y: 0, z: 2 } };
+
+  it("projects the cell onto the mesh's face, u along +x and v up, lifted along it", async () => {
+    const { world } = createWorld();
+    const pool = createPool(world);
+    const boxId = addBox(world);
+    const entityId = await spawnMeshDecalAsync(pool, {
+      target: { entityId: boxId },
+      ...onFront,
+      cell: 'footprint',
+      rotation: 0,
+    });
+    expect(entityId).not.toBeNull();
+    expect(merging.addToMergeGroup).toHaveBeenCalledWith('prints', [entityId], world);
+    const geometry = kernel.meshes[0].props.geo as THREE.BufferGeometry;
+    const position = geometry.getAttribute('position');
+    const uv1 = geometry.getAttribute('uv1');
+    expect(geometry.index!.count).toBe(position.count);
+    for (let i = 0; i < position.count; i++) {
+      expect(position.getZ(i)).toBeCloseTo(0.505, 5);
+      expect(position.getX(i)).toBeGreaterThanOrEqual(1.8 - 1e-6);
+      expect(position.getX(i)).toBeLessThanOrEqual(2.2 + 1e-6);
+      // 0.4 m wide: u counts x from 1.8, v counts y from −0.2
+      expect(uv1.getX(i)).toBeCloseTo((position.getX(i) - 1.8) / 0.4, 5);
+      expect(uv1.getY(i)).toBeCloseTo((position.getY(i) + 0.2) / 0.4, 5);
+      expect(geometry.getAttribute('normal').getZ(i)).toBeCloseTo(1, 6);
+    }
+  });
+
+  it('returns null for a decal missing the mesh or a mesh gone, without taking a place', async () => {
+    const { world } = createWorld();
+    const pool = createPool(world);
+    const boxId = addBox(world);
+    const away = { ...onFront, position: { x: 9, y: 0, z: 0.5 } };
+    expect(
+      await spawnMeshDecalAsync(pool, { target: { entityId: boxId }, ...away, cell: 'footprint' })
+    ).toBeNull();
+    world.deleteEntity(boxId);
+    expect(
+      await spawnMeshDecalAsync(pool, {
+        target: { entityId: boxId },
+        ...onFront,
+        cell: 'footprint',
+      })
+    ).toBeNull();
+    expect(kernel.meshes).toHaveLength(0);
+    expect(pool.getDecalCount()).toBe(0);
+  });
+
+  it("refuses a mesh that isn't a plain one", async () => {
+    const { world } = createWorld();
+    const pool = createPool(world);
+    const instancedId = addBox(
+      world,
+      new THREE.InstancedMesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial(), 2)
+    );
+    await expect(
+      spawnMeshDecalAsync(pool, {
+        target: { entityId: instancedId },
+        ...onFront,
+        cell: 'footprint',
+      })
+    ).rejects.toThrow(/isn't a plain mesh/);
+  });
+
+  it("grows a place's arrays for a decal past maxPatchVertices", async () => {
+    const { world } = createWorld();
+    const pool = createPool(world, { maxPatchVertices: 4 });
+    const boxId = addBox(world);
+    // The whole face and the side faces' edges within the depth: past the 4 vertices
+    await spawnMeshDecalAsync(pool, {
+      target: { entityId: boxId },
+      ...onFront,
+      cell: 'footprint',
+      size: [2, 2],
+      depth: 0.2,
+    });
+    const geometry = kernel.meshes[0].props.geo as THREE.BufferGeometry;
+    expect(geometry.getAttribute('position').count).toBeGreaterThan(4);
+    expect(geometry.index!.count).toBe(geometry.getAttribute('position').count);
+  });
+
+  it('returns null when the pool goes during the load', async () => {
+    const { world } = createWorld();
+    const pool = createPool(world);
+    const boxId = addBox(world);
+    const spawned = spawnMeshDecalAsync(pool, {
+      target: { entityId: boxId },
+      ...onFront,
+      cell: 'footprint',
+    });
+    pool.dispose();
+    expect(await spawned).toBeNull();
+    expect(kernel.meshes).toHaveLength(0);
   });
 });

@@ -9,6 +9,7 @@
 // material's edge fade draws as 0. A window over the arrays' size takes every n-th grid line, its
 // points still the block's but its triangles no longer. Writes into arrays the caller keeps, so a
 // spawn allocates nothing here.
+import type * as THREE from 'three/webgpu';
 import type { AtlasCellRect } from 'aekasha';
 import { createBlockSurfaceSample, sampleBlockSurface } from '../blocks/BlockSurface';
 import type { BlockSurface } from '../blocks/BlockSurface';
@@ -88,8 +89,57 @@ export const createDecalPatchArrays = (maxVertices: number): DecalPatchArrays =>
   };
 };
 
-/** The centre's sample, reused */
+/**
+ * A decal's frame: the unit directions its u and v run along (u × v is its normal).
+ * @internal
+ */
+export type DecalFrame = { ux: number; uy: number; uz: number; vx: number; vy: number; vz: number };
+
+/**
+ * A decal's frame from its plane's unit normal and its rotation: u along the plane's x (+x less its
+ * share along the normal; +z for a normal along x) and v the normal × u (−z on flat ground, so the
+ * cell's top is away from +z; up a wall facing +z), both turned counter-clockwise seen from the
+ * normal's tip.
+ * @internal
+ * @returns `out`
+ */
+export const getDecalFrame = (
+  nx: number,
+  ny: number,
+  nz: number,
+  rotation: number,
+  out: DecalFrame
+) => {
+  let t0x = 1 - nx * nx;
+  let t0y = -nx * ny;
+  let t0z = -nx * nz;
+  let length = Math.sqrt(t0x * t0x + t0y * t0y + t0z * t0z);
+  if (length < 1e-3) {
+    t0x = -nz * nx;
+    t0y = -nz * ny;
+    t0z = 1 - nz * nz;
+    length = Math.sqrt(t0x * t0x + t0y * t0y + t0z * t0z);
+  }
+  t0x /= length;
+  t0y /= length;
+  t0z /= length;
+  const b0x = ny * t0z - nz * t0y;
+  const b0y = nz * t0x - nx * t0z;
+  const b0z = nx * t0y - ny * t0x;
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+  out.ux = t0x * cos + b0x * sin;
+  out.uy = t0y * cos + b0y * sin;
+  out.uz = t0z * cos + b0z * sin;
+  out.vx = b0x * cos - t0x * sin;
+  out.vy = b0y * cos - t0y * sin;
+  out.vz = b0z * cos - t0z * sin;
+  return out;
+};
+
+/** The centre's sample and the frame, reused */
 const centre = createBlockSurfaceSample();
+const frame: DecalFrame = { ux: 1, uy: 0, uz: 0, vx: 0, vy: 0, vz: -1 };
 
 /** The points a window of `span` grid cells has along an axis at a stride */
 const countPoints = (span: number, stride: number) => Math.ceil(span / stride) + 1;
@@ -121,36 +171,20 @@ export const writeDecalPatch = (
   const cx = spec.x;
   const cy = centre.height;
   const cz = spec.z;
-  const nx = spec.normal?.x ?? centre.normalX;
-  const ny = spec.normal?.y ?? centre.normalY;
-  const nz = spec.normal?.z ?? centre.normalZ;
-  // The plane's x: +x less its share along the normal (+z when the normal is along x)
-  let t0x = 1 - nx * nx;
-  let t0y = -nx * ny;
-  let t0z = -nx * nz;
-  let length = Math.sqrt(t0x * t0x + t0y * t0y + t0z * t0z);
-  if (length < 1e-3) {
-    t0x = -nz * nx;
-    t0y = -nz * ny;
-    t0z = 1 - nz * nz;
-    length = Math.sqrt(t0x * t0x + t0y * t0y + t0z * t0z);
-  }
-  t0x /= length;
-  t0y /= length;
-  t0z /= length;
-  // n × t0: −z on flat ground, so v points to the back (the cell's top away from +z)
-  const b0x = ny * t0z - nz * t0y;
-  const b0y = nz * t0x - nx * t0z;
-  const b0z = nx * t0y - ny * t0x;
-  const cos = Math.cos(spec.rotation);
-  const sin = Math.sin(spec.rotation);
-  // u and v per metre: the frame turned, over the decal's size
-  const ux = (t0x * cos + b0x * sin) / width;
-  const uy = (t0y * cos + b0y * sin) / width;
-  const uz = (t0z * cos + b0z * sin) / width;
-  const vx = (b0x * cos - t0x * sin) / height;
-  const vy = (b0y * cos - t0y * sin) / height;
-  const vz = (b0z * cos - t0z * sin) / height;
+  getDecalFrame(
+    spec.normal?.x ?? centre.normalX,
+    spec.normal?.y ?? centre.normalY,
+    spec.normal?.z ?? centre.normalZ,
+    spec.rotation,
+    frame
+  );
+  // u and v per metre: the frame over the decal's size
+  const ux = frame.ux / width;
+  const uy = frame.uy / width;
+  const uz = frame.uz / width;
+  const vx = frame.vx / height;
+  const vy = frame.vy / height;
+  const vz = frame.vz / height;
 
   // The window: the grid cells under the rect's corners' x and z, inside the block
   const halfX = (Math.abs(ux) * width * width + Math.abs(vx) * height * height) / 2;
@@ -230,6 +264,85 @@ export const writeDecalPatch = (
   out.vertexCount = vertex;
   out.indexCount = index;
   out.stride = stride;
+  return out;
+};
+
+/**
+ * Writes a decal projected onto a mesh (three's `DecalGeometry`: world-space triangles, not
+ * indexed, its UVs 0..1 over the decal) into `arrays`: the positions lifted along the normals, the
+ * normals (each face's own where the source has none), its UVs as the decal's (`uv1`) and mapped
+ * into the cell, and an index listing every vertex in order.
+ * @internal
+ * @param source the projected geometry
+ * @param cellRect the atlas cell's UV rect
+ * @param lift metres along the normals
+ * @param arrays the patch's arrays, at least as large as the source
+ * @param out filled and returned (`stride` 1)
+ * @returns `out`
+ * @throws when the arrays are smaller than the source
+ */
+export const writeMeshDecalPatch = (
+  source: THREE.BufferGeometry,
+  cellRect: AtlasCellRect,
+  lift: number,
+  arrays: DecalPatchArrays,
+  out: DecalPatchCounts
+) => {
+  const position = source.getAttribute('position');
+  const normal = source.getAttribute('normal');
+  const uv = source.getAttribute('uv');
+  const count = position ? position.count : 0;
+  const { positions, normals, uvs, decalUvs, indices } = arrays;
+  if (count * 3 > positions.length || count > indices.length) {
+    throw new Error(
+      `writeMeshDecalPatch: the decal's ${count} vertices don't fit arrays of ${positions.length / 3}.`
+    );
+  }
+  const [u0, v0, u1, v1] = cellRect;
+  let nx = 0;
+  let ny = 1;
+  let nz = 0;
+  for (let i = 0; i < count; i++) {
+    if (normal) {
+      nx = normal.getX(i);
+      ny = normal.getY(i);
+      nz = normal.getZ(i);
+    } else if (i % 3 === 0) {
+      // The face's: (b − a) × (c − a)
+      const ax = position.getX(i);
+      const ay = position.getY(i);
+      const az = position.getZ(i);
+      const bx = position.getX(i + 1) - ax;
+      const by = position.getY(i + 1) - ay;
+      const bz = position.getZ(i + 1) - az;
+      const cx = position.getX(i + 2) - ax;
+      const cy = position.getY(i + 2) - ay;
+      const cz = position.getZ(i + 2) - az;
+      nx = by * cz - bz * cy;
+      ny = bz * cx - bx * cz;
+      nz = bx * cy - by * cx;
+      const length = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+      nx /= length;
+      ny /= length;
+      nz /= length;
+    }
+    positions[i * 3] = position.getX(i) + nx * lift;
+    positions[i * 3 + 1] = position.getY(i) + ny * lift;
+    positions[i * 3 + 2] = position.getZ(i) + nz * lift;
+    normals[i * 3] = nx;
+    normals[i * 3 + 1] = ny;
+    normals[i * 3 + 2] = nz;
+    const u = uv.getX(i);
+    const v = uv.getY(i);
+    decalUvs[i * 2] = u;
+    decalUvs[i * 2 + 1] = v;
+    uvs[i * 2] = u0 + u * (u1 - u0);
+    uvs[i * 2 + 1] = v0 + v * (v1 - v0);
+    indices[i] = i;
+  }
+  out.vertexCount = count;
+  out.indexCount = count;
+  out.stride = 1;
   return out;
 };
 
