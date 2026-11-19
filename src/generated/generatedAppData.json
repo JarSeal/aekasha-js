@@ -27748,6 +27748,69 @@
           "type": "STANDARDNODEMATERIAL"
         },
         {
+          "id": "terrainProcedural",
+          "debugData": {
+            "name": "Showcase procedural terrain",
+            "description": "terrainShowcase's procedural block (p310 §3): the alpine block's grass01, rocks02, snow01 and cliffs02 weighed by the vertex colours the rulesTerrain generator laid from its rules on the CPU (RGB_AO, the horizon AO in A on the indirect light) through the height blend, DUAL_SCALE, the sets as one array (ARRAY storage), cliffs02 triplanar past a 35-50° slope gate, the macro variation, and the wet response's snow (snow01) by the surface conditions' snow cover. The tab's shader variant evaluates the block's rules per pixel (RULES) instead."
+          },
+          "tslFile": "scenes/terrainShowcase/blocks/showcaseProcedural/terrainProcedural.tsl.ts",
+          "staticDefines": {
+            "terrain": {
+              "layers": [
+                {},
+                {},
+                {},
+                {
+                  "projection": {
+                    "mode": "TRIPLANAR",
+                    "slopeGate": [
+                      35,
+                      50
+                    ]
+                  }
+                }
+              ],
+              "blend": {
+                "source": "VERTEX_COLOR",
+                "vertexColor": {
+                  "layout": "RGB_AO"
+                },
+                "mode": "HEIGHT"
+              },
+              "ao": {
+                "vertex": true
+              },
+              "antiTiling": {
+                "mode": "DUAL_SCALE"
+              },
+              "macro": {
+                "scale": 64
+              },
+              "wet": {
+                "snow": {}
+              }
+            }
+          },
+          "inputs": {
+            "layers": {
+              "textureSetArray": [
+                "grass01",
+                "rocks02",
+                "snow01",
+                "cliffs02"
+              ],
+              "packing": "LITE"
+            },
+            "macro": {
+              "texture": "macroNoise"
+            },
+            "snow": {
+              "textureSet": "snow01"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
           "id": "rockScatter",
           "debugData": {
             "name": "Rock scatter",
@@ -27811,6 +27874,30 @@
           "inputs": {
             "albedo": {
               "texture": "leafLitter.albedo"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        },
+        {
+          "id": "showcaseProceduralRocks",
+          "debugData": {
+            "name": "Showcase procedural rocks",
+            "description": "The procedural block's scatter rocks (p310 §3): the toolkit's rockScatter over rocks02, the scree layer they lie on (a scatter item can't override a material's inputs, so rocks on another ground set are a material JSON of their own)."
+          },
+          "tslFile": "scenes/terrainShowcase/blocks/showcaseProcedural/showcaseProceduralRocks.tsl.ts",
+          "staticDefines": {
+            "tiling": "TRIPLANAR",
+            "antiTiling": "DUAL_SCALE",
+            "wet": "FULL",
+            "frost": true,
+            "rainOcclusion": "NORMAL_Y"
+          },
+          "inputs": {
+            "surface": {
+              "textureSet": "rocks02"
+            },
+            "macro": {
+              "texture": "macroNoise"
             }
           },
           "type": "STANDARDNODEMATERIAL"
@@ -28499,6 +28586,15 @@
               "__codec": "uastc"
             }
           ]
+        },
+        {
+          "sets": [
+            "grass01",
+            "rocks02",
+            "snow01",
+            "cliffs02"
+          ],
+          "packing": "LITE"
         }
       ],
       "terrainBlocks": [
@@ -28596,6 +28692,105 @@
           "debugData": {
             "name": "Showcase wetlands",
             "description": "terrainShowcase's wetlands block (p310 §3.5): the terrain add-on's export (devTools/blender/buildShowcaseBlocks.py), 64 m / 129, almost flat ground (0-0.7 m) with a meandering channel, two hollows and a flattened pad for the bunker, its COLOR_0 painted (mud02 in the channel and hollows, grass02 on the raised ground, rocks01 on the path and the pad) with the AO baked into its A, and a regional wetness _WETNESS (painted in Blender, the first loaded from a GLB) wet along the channel and in the hollows; leaf litter on the grass and mud and pebbles on the gravel scattered by terrainScatter, tyre ruts along the path through the ford and mud splatters on the banks (its decal set)."
+          }
+        },
+        {
+          "id": "showcaseProcedural",
+          "geometry": {
+            "generator": "rulesTerrain",
+            "params": {
+              "maxHeight": 18,
+              "octaves": [
+                [
+                  0.008,
+                  1
+                ],
+                [
+                  0.025,
+                  0.3
+                ],
+                [
+                  0.07,
+                  0.08
+                ],
+                [
+                  0.16,
+                  0.02
+                ]
+              ],
+              "layout": "RGB_AO",
+              "rules": [
+                {
+                  "layer": 1,
+                  "slope": {
+                    "min": 30,
+                    "softness": 8
+                  },
+                  "noise": {
+                    "scale": 18,
+                    "amount": 0.35,
+                    "channel": "A"
+                  }
+                },
+                {
+                  "layer": 2,
+                  "height": {
+                    "min": 10,
+                    "softness": 3
+                  },
+                  "slope": {
+                    "max": 35,
+                    "softness": 8
+                  },
+                  "aspect": {
+                    "direction": [
+                      0,
+                      -1
+                    ],
+                    "range": 70,
+                    "softness": 35
+                  },
+                  "noise": {
+                    "scale": 24,
+                    "amount": 0.3
+                  }
+                },
+                {
+                  "layer": 3,
+                  "slope": {
+                    "min": 45
+                  }
+                }
+              ],
+              "ao": {
+                "radius": 8,
+                "strength": 0.8
+              }
+            },
+            "seed": 13
+          },
+          "material": "terrainProcedural",
+          "grid": {
+            "x": 2,
+            "z": 2,
+            "size": 64,
+            "resolution": 129
+          },
+          "collider": {
+            "type": "HEIGHTFIELD",
+            "friction": 1
+          },
+          "shadows": {
+            "cast": true,
+            "receive": true
+          },
+          "scatter": [
+            "showcaseProcedural_rocks",
+            "showcaseProcedural_boulders"
+          ],
+          "debugData": {
+            "name": "Showcase procedural",
+            "description": "terrainShowcase's engine-generated block (p310 §3): the toolkit's rulesTerrain generator, 64 m / 129, world-continuous simplex heights over about 25 m, its four layers (the alpine block's grass01, rocks02, snow01 and cliffs02) laid by the rules into its vertex colours on the CPU (rocks past 30°, snow above 10 m on slopes under 35° facing north within 70°, cliffs past 45°) with the horizon AO in their A, so nothing is painted; the tab's A/B evaluates the same rules in the shader. Rocks and boulders scattered on its rocks02 layer by terrainScatter."
           }
         }
       ],
@@ -28959,6 +29154,126 @@
           "debugData": {
             "name": "Wetlands path rocks",
             "description": "The wetlands' small rocks (p310 §3.5): the toolkit's procedural pebbles and a few rocks in rockScatter over rocks01 (the gravel's own set) on the rocks01 layer (layer 3: the path and the bunker's pad)."
+          }
+        },
+        {
+          "id": "showcaseProcedural_rocks",
+          "items": [
+            {
+              "geometry": "rockSmall_a",
+              "material": "showcaseProceduralRocks",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "rockSmall_b",
+              "material": "showcaseProceduralRocks",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true,
+              "collider": "NONE"
+            },
+            {
+              "geometry": "rockSmall_c",
+              "material": "showcaseProceduralRocks",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true,
+              "collider": "NONE"
+            }
+          ],
+          "source": {
+            "type": "PROCEDURAL",
+            "generator": "terrainScatter",
+            "params": {
+              "minSpacing": 1.2,
+              "density": 0.6,
+              "mask": {
+                "layers": {
+                  "1": 1
+                },
+                "slope": {
+                  "max": 42
+                },
+                "noise": {
+                  "scale": 8,
+                  "amount": 0.5
+                }
+              },
+              "scale": [
+                0.7,
+                1.6
+              ],
+              "alignToNormal": 0.6,
+              "sink": 0.35,
+              "tint": 0.15
+            },
+            "seed": 3
+          },
+          "cellSize": 16,
+          "lod": {
+            "levels": [
+              {
+                "screenSize": 0
+              }
+            ],
+            "cullScreenSize": 0.15
+          },
+          "debugData": {
+            "name": "Procedural rocks",
+            "description": "The procedural block's rocks (p310 §3): the toolkit's procedural rocks in showcaseProceduralRocks (rockScatter over rocks02) on the block's rocks02 layer (layer 1: the rules' slopes past 30°), not on the cliff faces, thinned in clusters, casting shadows."
+          }
+        },
+        {
+          "id": "showcaseProcedural_boulders",
+          "items": [
+            {
+              "geometry": "boulder_a",
+              "material": "showcaseProceduralRocks",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true,
+              "collider": "CONVEXHULL"
+            },
+            {
+              "geometry": "boulder_b",
+              "material": "showcaseProceduralRocks",
+              "weight": 1,
+              "castShadow": true,
+              "receiveShadow": true,
+              "collider": "CONVEXHULL"
+            }
+          ],
+          "source": {
+            "type": "PROCEDURAL",
+            "generator": "terrainScatter",
+            "params": {
+              "minSpacing": 5,
+              "density": 0.35,
+              "mask": {
+                "layers": {
+                  "1": 1
+                },
+                "slope": {
+                  "max": 38
+                }
+              },
+              "scale": [
+                0.6,
+                1.2
+              ],
+              "alignToNormal": 0.5,
+              "sink": 0.3,
+              "tint": 0.1
+            },
+            "seed": 4
+          },
+          "cellSize": 16,
+          "debugData": {
+            "name": "Procedural boulders",
+            "description": "The procedural block's boulders (p310 §3): the toolkit's procedural boulders in showcaseProceduralRocks on its rocks02 layer, sparse, each with a convex hull collider, casting shadows: the generated counterpart of the alpine block's boulders scattered in Blender."
           }
         }
       ],
@@ -50084,6 +50399,95 @@
       },
       "type": "STANDARDNODEMATERIAL",
       "__sourcePath": "src/app/scenes/terrainShowcase/blocks/showcaseCoast/terrainCoast.material.json"
+    },
+    "showcaseProceduralRocks": {
+      "id": "showcaseProceduralRocks",
+      "debugData": {
+        "name": "Showcase procedural rocks",
+        "description": "The procedural block's scatter rocks (p310 §3): the toolkit's rockScatter over rocks02, the scree layer they lie on (a scatter item can't override a material's inputs, so rocks on another ground set are a material JSON of their own)."
+      },
+      "tslFile": "scenes/terrainShowcase/blocks/showcaseProcedural/showcaseProceduralRocks.tsl.ts",
+      "staticDefines": {
+        "tiling": "TRIPLANAR",
+        "antiTiling": "DUAL_SCALE",
+        "wet": "FULL",
+        "frost": true,
+        "rainOcclusion": "NORMAL_Y"
+      },
+      "inputs": {
+        "surface": {
+          "textureSet": "rocks02"
+        },
+        "macro": {
+          "texture": "macroNoise"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/terrainShowcase/blocks/showcaseProcedural/showcaseProceduralRocks.material.json"
+    },
+    "terrainProcedural": {
+      "id": "terrainProcedural",
+      "debugData": {
+        "name": "Showcase procedural terrain",
+        "description": "terrainShowcase's procedural block (p310 §3): the alpine block's grass01, rocks02, snow01 and cliffs02 weighed by the vertex colours the rulesTerrain generator laid from its rules on the CPU (RGB_AO, the horizon AO in A on the indirect light) through the height blend, DUAL_SCALE, the sets as one array (ARRAY storage), cliffs02 triplanar past a 35-50° slope gate, the macro variation, and the wet response's snow (snow01) by the surface conditions' snow cover. The tab's shader variant evaluates the block's rules per pixel (RULES) instead."
+      },
+      "tslFile": "scenes/terrainShowcase/blocks/showcaseProcedural/terrainProcedural.tsl.ts",
+      "staticDefines": {
+        "terrain": {
+          "layers": [
+            {},
+            {},
+            {},
+            {
+              "projection": {
+                "mode": "TRIPLANAR",
+                "slopeGate": [
+                  35,
+                  50
+                ]
+              }
+            }
+          ],
+          "blend": {
+            "source": "VERTEX_COLOR",
+            "vertexColor": {
+              "layout": "RGB_AO"
+            },
+            "mode": "HEIGHT"
+          },
+          "ao": {
+            "vertex": true
+          },
+          "antiTiling": {
+            "mode": "DUAL_SCALE"
+          },
+          "macro": {
+            "scale": 64
+          },
+          "wet": {
+            "snow": {}
+          }
+        }
+      },
+      "inputs": {
+        "layers": {
+          "textureSetArray": [
+            "grass01",
+            "rocks02",
+            "snow01",
+            "cliffs02"
+          ],
+          "packing": "LITE"
+        },
+        "macro": {
+          "texture": "macroNoise"
+        },
+        "snow": {
+          "textureSet": "snow01"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/terrainShowcase/blocks/showcaseProcedural/terrainProcedural.material.json"
     },
     "showcaseWetlandsRuts": {
       "id": "showcaseWetlandsRuts",

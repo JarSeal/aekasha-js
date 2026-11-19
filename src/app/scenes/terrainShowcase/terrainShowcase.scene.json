@@ -11,7 +11,7 @@
     "wetness": 0,
     "waterLevel": 0.5
   },
-  "terrainBlocks": ["showcaseCoast", "showcaseAlpine", "showcaseWetlands"],
+  "terrainBlocks": ["showcaseCoast", "showcaseAlpine", "showcaseWetlands", "showcaseProcedural"],
   "textureSetArrays": [
     {
       "sets": ["sand01", "sand02", "rocks01", "cliffs01"],
@@ -19,6 +19,10 @@
     },
     {
       "sets": ["grass01", "grass02", "rocks02", "cliffs02", "snow01", "snow02", "ice01"],
+      "packing": "LITE"
+    },
+    {
+      "sets": ["grass01", "rocks02", "snow01", "cliffs02"],
       "packing": "LITE"
     }
   ],

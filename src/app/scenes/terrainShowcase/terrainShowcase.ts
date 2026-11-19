@@ -40,7 +40,7 @@ import { createShowcasePlayerAsync } from './showcasePlayer';
  */
 
 const SCENE_ID = 'terrainShowcase';
-const BLOCK_IDS = ['showcaseCoast', 'showcaseAlpine', 'showcaseWetlands'];
+const BLOCK_IDS = ['showcaseCoast', 'showcaseAlpine', 'showcaseWetlands', 'showcaseProcedural'];
 /** The surface conditions' water level (the scene JSON's), where the sea plane lies */
 const WATER_LEVEL = 0.5;
 /**
@@ -82,8 +82,9 @@ const createSea = () =>
   );
 
 export const scene = async () => {
-  // The coast's and the wetlands' scatters draw the toolkit's procedural rocks and leaf cards
-  saveRockGeometries({ kinds: ['PEBBLE', 'ROCK'] });
+  // The coast's, the wetlands' and the procedural block's scatters draw the toolkit's procedural
+  // rocks and leaf cards
+  saveRockGeometries({ kinds: ['PEBBLE', 'ROCK', 'BOULDER'] });
   saveLeafCardGeometry();
   const blocks: TerrainBlock[] = [];
   for (const id of BLOCK_IDS) {

@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../../../../.schemas/scatter.schema.json",
+  "items": [
+    {
+      "geometry": "boulder_a",
+      "material": "showcaseProceduralRocks",
+      "collider": "CONVEXHULL",
+      "castShadow": true
+    },
+    {
+      "geometry": "boulder_b",
+      "material": "showcaseProceduralRocks",
+      "collider": "CONVEXHULL",
+      "castShadow": true
+    }
+  ],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "terrainScatter",
+    "params": {
+      "minSpacing": 5,
+      "density": 0.35,
+      "mask": {
+        "layers": { "1": 1 },
+        "slope": { "max": 38 }
+      },
+      "scale": [0.6, 1.2],
+      "alignToNormal": 0.5,
+      "sink": 0.3,
+      "tint": 0.1
+    },
+    "seed": 4
+  },
+  "debugData": {
+    "name": "Procedural boulders",
+    "description": "The procedural block's boulders (p310 §3): the toolkit's procedural boulders in showcaseProceduralRocks on its rocks02 layer, sparse, each with a convex hull collider, casting shadows: the generated counterpart of the alpine block's boulders scattered in Blender."
+  }
+}
