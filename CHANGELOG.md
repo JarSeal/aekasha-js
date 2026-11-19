@@ -4,6 +4,60 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-19 — p309_terrain-decals
+
+Terrain decals (p309, part of the terrain texturing epic p301): tyre tracks, cracks, stains, scorch marks, leaks and footprints as small meshes UV'd into a decal atlas and drawn over the ground in a decal material that gets wet with it, its ruts and prints filling with water first. A new asset, `*.decalSet.json`, is an import's meshes drawn as decals: made in Blender with the terrain add-on's new decal tools and spawned with their terrain block. The toolkit brings two decal atlases (ambientCG scans and cells baked by nine decal generators), the decal material, and runtime decal pools that stamp footprints, tyre ribbons and trails onto a block's own grid, or decals onto any mesh, as one render object a pool. Meshes get a `renderOrder`. The handbook gains its decals page and a Blender template, the Hub the terrain page's decals. Nothing breaks, and the template's first download is unchanged.
+
+### Engine 6.19.0 (Sunset)
+
+**Added**
+
+- The decal set asset, `*.decalSet.json` (the `terrain()` feature's; its schema on `aekasha/schemas`: `DecalSetAssetSchema`, `DecalSetAsset`, `DecalSetDef`, `DECAL_SET_DEFAULTS`): `importedAsset` (its meshes are the decals: planes UV'd into a decal atlas's cells with a second UV set, `uv1`, 0..1 over each decal), `material`, `renderOrder` (default 10) and `receiveShadow` (default true). A scene lists the sets its code spawns in `decalSets` (the manifest names `terrain`); a terrain block names its own in `decals`.
+- `spawnDecalSet(id, { transform?, appId? })` and `getDecalSet(id)` (`aekasha/terrain`): the set's meshes in its material at its render order, never casting shadows, without physics; a node with physics custom props or GPU instances is skipped with a warning, one without `uv1` warned of. Resolves `null` when the scene was left meanwhile. Types `DecalSet`, `SpawnDecalSetOpts`, `DecalSetDef`.
+- Terrain blocks spawn their `decals` last, at their place (`block.decalIds`, deleted by its `dispose()`).
+- `MeshProps.renderOrder` and a mesh JSON's `props.renderOrder`: the mesh's draw order within its pass (default 0), kept through its LOD's level swaps and fade copies. The bands: terrain 0, decals 10, other transparents 20 and up.
+- `sourceOnly` on a `*.texture.json`: a texture that's only an atlas cell's or an array layer's source. The asset pipeline doesn't encode it on its own, and the gather fails a scene, material or texture set naming it.
+
+### Toolkit 3.7.0 (Gibbous)
+
+**Added**
+
+- The decal atlases `decalsGround` (2048², 14 cells: `tireTracks` and `asphaltDamage` from ambientCG, and `crack`, `mudSplatter`, `wetPatch`, `stain01`, `stain02`, `scorch`, four footprints, `leafPatch`, `iceCrack` generated) and `decalsStructure` (2048 × 1024: `leak01`-`leak03` from ambientCG, and `formworkMarks`, two cracks and two stains generated), in the `DECAL` packing: `albedoAlpha` (sRGB albedo, opacity) and `normalRough` (normal XY, roughness, a puddle mask). Each cell's `data` gives its `physicalSize`, `tileAlong` and opacity source, and a generated cell's recipe (`generator`, `seed`, `params`). The ambientCG decals are source folders fetched by `yarn fetchTextureSources`, packed by `sourceOnly` recipes; `CREDITS.md` lists them.
+- `setupDecalMaterial` (`aekasha/toolkit/terrain`, type `DecalMaterialInputs`) and the materials `decalsGround_blend`, `decalsGround_cutout`, `decalsStructure_blend`, `decalsStructure_cutout`: any cell of the atlas at the mesh's UV, `BLEND` (transparent, sorted) or `CUTOUT` (alpha-tested, alpha to coverage), a polygon offset on both, an edge fade by `uv1`, wet by the surface conditions with puddles that fill the puddle mask first, frost, rain ripples and an optional snow set; `tint`, `opacity`, `normalStrength`, `roughnessScale` and the wet response as inputs.
+- Runtime decals (`aekasha/toolkit/terrain`): `createDecalPool(opts)`, a `BATCHED` merge group of up to `maxDecals` decals (128) drawn as one render object, recycling the oldest (its last `fifoFade` fading out by place); `spawnDecal(pool, opts)`, a patch of a terrain block's own grid under the decal, so it follows the block exactly; `spawnRibbonDecal(pool, opts)`, a strip along a path, its cell repeating along it and its ends faded in metres; `createDecalTrail(pool, opts)`, a ribbon stamped every `segmentLength` behind a moving point; `spawnMeshDecalAsync(pool, opts)`, three's `DecalGeometry` on any plain mesh, loaded with its first call. Lifetimes fade by time; a cell list and a missing rotation draw from the named stream `decals`. Measured: 128 footprints and 64 track segments are 2 render objects, the CPU frame 0.75 ms against 1.74 with a mesh per decal (WebGPU), the batch's buffers the same after 10 minutes of spawning. Types `CreateDecalPoolOpts`, `DecalPool`, `SpawnDecalOpts`, `SpawnRibbonDecalOpts`, `CreateDecalTrailOpts`, `DecalTrail`, `SpawnMeshDecalOpts`.
+- Decal generators: `defineDecalGenerator(def)` (a TSL graph's albedo, opacity, height, roughness and optional puddle mask and normal, packed into the `DECAL` slots) and `bakeDecalGenerator(opts)` (both slots in one bake, the surface bake's controls), and nine: `decalCracks`, `decalStain`, `decalScorch`, `decalMudSplatter`, `decalFootprint` (`shape` `BOOT`, `BARE`, `PAW`, `SNOW_BOOT`), `decalWetPatch`, `decalIceCrack`, `decalLeafPatch`, `decalFormwork`. Types `DecalGenerator`, `DecalGeneratorDef`, `DecalOutputs`, `DecalBuildContext`, `BakeDecalGeneratorOpts`, `BakedDecal`.
+- A `choice` param for surface and decal generators (`SurfaceChoiceParam`): a build-time string among its options.
+- The Blender add-on 1.1.0's Decal Sets panel: Add Decal Set, Add Decal (a quad, or a strip along its own path for a cell that tiles, UV'd into its cell with a second UV map, subdivided and shrinkwrapped onto the block) and Export Decal Set (the GLB and its JSON stubs); the template `terrain/blender/terrain_decals.blend`.
+
+**Changed**
+
+- The terrain scatter's block surface reader is shared with the decals (`terrain/blocks/BlockSurface.ts`, internal).
+
+### App 1.31.0 (Preschooler)
+
+**Added**
+
+- `terrainGallery`'s decals: the Decals row (both atlases' slots, each cell outlined and named), the Decals stage (every cell on a mud block and a concrete wall, `BLEND` beside `CUTOUT`) and, from its tab, the bake bench for the decal generators (a cell baked from its data as decals on wet mud, its seed and params edited, its data copied and its PNGs exported); the tab's Decals sections have the weathers, the cameras at 1, 50 and 200 m and switches for the polygon offset and the edge fade.
+- `terrainBlockTest`'s decal block: a Blender block with a ridge and its decal set (two tyre tracks over the ridge, an asphalt damage and a crack), and a seeded walk stamping boot prints and cart tracks into two runtime pools (`?tbtDecals=blend|cutout|off`, `?tbtDecalRate`, `?tbtDecalFifoFade`), with its tab's Runtime decals pane.
+
+**Changed**
+
+- `terrainGallery`'s ground is 6 m wider for the bake bench, so its scene runner snapshot changes.
+
+### Project
+
+**Added**
+
+- The handbook's `docs/techniques/terrain-decals.md`: mesh decals in a forward renderer, what fits which game, the cost (`BLEND` against `CUTOUT`, draws, spawns, VRAM, the measured pools), the `DECAL` maps and your own decals, the Blender steps and export, decal sets and runtime pools, every parameter, the variations and the pitfalls; the index's row.
+- The Hub: the terrain page's decals section, the asset types table's missing four (`*.mergeMaterial.json`, `*.terrainBlock.json`, `*.scatter.json`, `*.decalSet.json`), the rendering page's draw order, the toolkit page's decals, the merging page's pools.
+- `yarn fetchTextureSources` takes source folders (a `source.json` without a set beside it, an `opacity` map type); the asset pipeline skips `sourceOnly` textures; the gather's decal sets (`devTools/gather/decalSets.ts`).
+- `yarn verify:blender` checks the add-on's decal tools; `devTools/blender/buildDecalTest.py` makes `terrainBlockTest`'s decal block; the bench `devTools/bench/terrainBlockTestDecals.ts` measures the runtime pools (render objects, draws, the CPU frame, the buffers over time, WebGL2's GPU time with its own timer queries).
+- The issue [A killed verify or bench run leaves its headless Windows Chrome rendering on the GPU](docs/issues/verify-chrome-left-running.md) (open, with the workaround).
+
+**Changed**
+
+- `FeatureFactories.test.ts`' timeout is 30 s: it imports every feature entry and timed out under a full run's load.
+
 ## 2026-11-18 — p308_terrain-scatter
 
 Terrain scatter (p308, part of the terrain texturing epic p301): pebbles, rocks, boulders and leaf litter on terrain blocks, drawn as static instances in cells with no entity per instance and no per-frame cost. A new asset, `*.scatter.json`, names the items and the source that places them: a generator (the toolkit's `terrainScatter`, which follows a block's painted layers, slope and height), Blender's Geometry Nodes exported as GPU instances or as a point cloud, which the glTF import now reads, or a list. A terrain block spawns its own scatters, seeded by the world seed and its grid place. The toolkit brings procedural and scanned rocks, a rock material that draws the ground's own texture set and gets wet with it, and leaf litter cards. The handbook gains its scatter page and a Blender template, the Hub a static instances section and the terrain page's scatter. Nothing breaks.

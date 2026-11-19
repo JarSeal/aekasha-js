@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 4225,
-      "total": 4225
+      "documented": 4316,
+      "total": 4316
     },
     "members": {
       "documented": 1145,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3735,
-        "total": 3735
+        "documented": 3743,
+        "total": 3743
       },
       "members": {
         "documented": 969,
@@ -23,8 +23,8 @@
     },
     "toolkit": {
       "exports": {
-        "documented": 490,
-        "total": 490
+        "documented": 573,
+        "total": 573
       },
       "members": {
         "documented": 176,
@@ -413,8 +413,8 @@
     },
     "engine/features/terrain": {
       "exports": {
-        "documented": 23,
-        "total": 23
+        "documented": 31,
+        "total": 31
       },
       "members": {
         "documented": 0,
@@ -1055,6 +1055,20 @@
         "members": []
       }
     },
+    "toolkit/materials/decal": {
+      "exports": {
+        "documented": 1,
+        "total": 1
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
     "toolkit/materials/leafLitter": {
       "exports": {
         "documented": 1,
@@ -1141,8 +1155,36 @@
     },
     "toolkit/terrain/blocks": {
       "exports": {
-        "documented": 3,
-        "total": 3
+        "documented": 9,
+        "total": 9
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/decals": {
+      "exports": {
+        "documented": 54,
+        "total": 54
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "toolkit/terrain/decals/generators": {
+      "exports": {
+        "documented": 20,
+        "total": 20
       },
       "members": {
         "documented": 0,
@@ -1197,8 +1239,8 @@
     },
     "toolkit/terrain/procedural": {
       "exports": {
-        "documented": 39,
-        "total": 39
+        "documented": 47,
+        "total": 47
       },
       "members": {
         "documented": 0,
@@ -1351,8 +1393,8 @@
     },
     "toolkit/terrain/scatter": {
       "exports": {
-        "documented": 13,
-        "total": 13
+        "documented": 7,
+        "total": 7
       },
       "members": {
         "documented": 0,

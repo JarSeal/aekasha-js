@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-5 implemented
+Status: implemented (Phases 1-6)
 Category: Terrain, Rendering, Materials
 Blocks: p310_terrain-preview-scenes.md
 Epic: p301_terrain-texturing-epic.md
@@ -393,12 +393,21 @@ Sections:
    - **`FeatureFactories.test.ts`** timed out on every full `yarn test` now (section 4: now and then): it imports every feature entry, ~2 s alone. Its timeout is 30 s, as `ModuleLoad.test.ts`' 60 s. Under a load average of 12 (another project's servers on the machine) the layout check and `TerrainAsync.test.ts` timed out once too, passing alone and in the next full run.
    - **Follow-ups** (to p990 when the plan is done): a decal mode that keeps the ground's colour and adds its darkening, relief, roughness and puddle mask (tracks and prints on any ground, no tint); a mirror for `spawnDecal` (a left and right foot from one cell).
 
-### Phase 6 — Handbook, template, Hub, versioning
+### Phase 6 — Handbook, template, Hub, versioning — done
 
 1. `terrain-decals.md` (with Phase 5's rule: a decal with its own albedo is tinted to its ground), `terrain_decals.blend`.
 2. **Hub** (`hub/CLAUDE.md`): the terrain feature page's decals section (atlases, the material, decal sets, runtime pools; `api:` links), the scenes-and-assets page's asset type list (`*.decalSet.json`) and the rendering page's `renderOrder` line. Then `yarn hub:build`.
 3. **Repo docs:** `readme.md` Features (toolkit: decals; engine: `*.decalSet.json`, `renderOrder`); the terrain feature's `CLAUDE.md`; `devTools/gather/CLAUDE.md`'s suffix list.
 4. Versions: engine minor, toolkit minor, app minor; `CHANGELOG.md`.
+
+As built:
+
+- **The handbook page** (`docs/techniques/terrain-decals.md`, the page template's 11 sections; the plan's "Making your own decals" is a subsection of Maps): the three ways (decal sets, pools, mesh decals), why mesh decals in a forward renderer, `BLEND` against `CUTOUT`, the cost (2 fetches a pixel, draws and render objects, Phase 4's measures, the spawn's cost, 11.2 MB of VRAM for a 2K atlas's two slots: the plan's "≈ 5.6 MB for 2 maps" is per map), the `DECAL` maps, the toolkit's cells, your own decals (a scan's recipes, the generators and the tab, a Blender bake), the Blender steps and export, decal sets and runtime pools with the wet footprints' figures, the parameters, the variations (tinting, `CUTOUT`, painting a static decal into a colour map: no tool does it, the add-on's Bake Colour Map bakes only the block's preview; seeds as cells; structures; a long strip's `edgeFade`) and the pitfalls. The tint examples are `#666666`, the walk's (`#4d4d4d` read as black lines). The index's row and reading order, and `structure-materials.md`'s two decal lines, link it.
+- **The template:** `README_DECALS` gains "In the engine" (the tint rule, a long strip's `edgeFade`); `terrain_decals.blend` made again in Blender 5.3 (`buildTerrainTemplates.py … terrain_decals`), its render as before.
+- **The Hub:** the terrain page's Terrain decals section (the atlases and material, decal sets from Blender, runtime decals), its intro, install, block JSON, Blender tools (nine templates), debugging, key APIs and read more; the scenes-and-assets table gets the four gathered types it lacked (`*.mergeMaterial.json`, `*.terrainBlock.json`, `*.scatter.json`, `*.decalSet.json`); the rendering page's draw order; beyond the plan's list, the toolkit page (its tree, the decal materials, a Decals bullet, nine templates) and the merging page's pools (the toolkit's pools, and that a `TRANSFORM` written outside `MAIN` reaches the batch a frame after `updateMergeMember`). `yarn hub:build` passes; its warnings include four `{@link}`s in `DecalRibbons.ts` and `MeshDecals.ts` to `createDecalPool` / `spawnDecal`, which TypeDoc can't resolve across modules (the terrain material's files have the same), shown as code.
+- **Repo docs:** `readme.md` (rendering's `renderOrder`, the terrain blocks' decal sets, a toolkit Terrain decals bullet, nine templates, the tree, the guides); the terrain feature's `CLAUDE.md` points at the toolkit's and the handbook; `devTools/gather/CLAUDE.md` already had the suffix and `decalSets.ts` (Phase 3); the root `CLAUDE.md`'s map entries, `terrain()` line, data pipeline and toolkit catalogue.
+- **Versions:** engine 6.19.0, toolkit 3.7.0, app 1.31.0 (`yarn checkVersions --against main` passes); the `CHANGELOG.md` entry. `yarn verify:baselines --update`: the API baseline (Phase 3's, deferred here) has p309's exports, and the `@internal` `ScatterSurface` helpers moved to `blocks/BlockSurface.ts`; the bundles unchanged (the template's first download 410.5 kB gzip, both embeds), no debug code shipped, docs 100 %.
+- **The plan done:** p310's `Blocked by` dropped and this plan in its `Related`, with where its text predates what landed (`tireTracks`, `leak01`-`leak03`, the 0.015 m offset, the gallery's decals); the follow-ups (Phase 3's, 4's and 5's) in p990's Terrain section. Before the PR's `yarn verify:scenes` run, record `terrainBlockTest`'s and `terrainGallery`'s local baselines on `main` (Phase 3's and 5's notes: both scenes changed on this branch).
 
 ---
 

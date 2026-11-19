@@ -1,8 +1,7 @@
 Status: draft | not-implemented
 Category: App, Terrain, Docs
-Blocked by: p309_terrain-decals.md
 Epic: p301_terrain-texturing-epic.md
-Related: \_DONE_p307_wet-and-dry-surface-states.md (the surface conditions and the wet response this plan's scenes show: its As built lists have the API that landed, the gallery's Wet/dry row and the measurements; the handbook's `wet-dry-surfaces.md`), \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (merged dressing and modular kit terrain, for the matrix and the measurements)
+Related: \_DONE_p309_terrain-decals.md (the decals this plan's scenes and blocks use; its As built lists have what landed, which differs from this plan's text in places: the strip cell is `tireTracks`, the structure leaks `leak01`-`leak03`; the add-on's Add Decal conforms with a 0.015 m offset and a subdivision level of its own, Export Decal Set writes the GLB and stubs; the gallery already has a Decals row, a Decals stage with the weathers and a bake bench for the decal generators, and `terrainBlockTest` a runtime decal walk; the handbook is `docs/techniques/terrain-decals.md`), \_DONE_p307_wet-and-dry-surface-states.md (the surface conditions and the wet response this plan's scenes show: its As built lists have the API that landed, the gallery's Wet/dry row and the measurements; the handbook's `wet-dry-surfaces.md`), \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (merged dressing and modular kit terrain, for the matrix and the measurements)
 
 # Terrain Preview Scenes (gallery + showcase) and the Final Handbook Pass
 
