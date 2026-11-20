@@ -17,7 +17,8 @@ import type { ProjectOptOut } from './switches';
 /**
  * Resolves an asset's optimization settings (p300 §4): the built-in defaults, then
  * `assets.config.json`'s `defaults`, its matching rules (in order), the profile (the asset's own,
- * else the last matching rule's), the collider default and the asset JSON's own overrides,
+ * else the last matching rule's), the collider default, the cube texture default (p311 D3) and
+ * the asset JSON's own overrides,
  * later wins. Within each level, a texture slot's entry merges over that level's `default`.
  * The project switches (src/CONFIG.ts, `AEK_ASSETS_OPTIMIZE`) and an `optimize: false` (or
  * `textures: false` / `mesh: false`) in a rule or the asset JSON win over all of it.
@@ -56,6 +57,13 @@ export const BUILTIN_DEFAULTS = {
  * turn simplification back on.
  */
 const COLLIDER_LEVEL: OptimizeLevel = { mesh: { simplify: null } };
+
+/**
+ * A cube texture's (`faces`, p311 D3) codec: ETC1S, since a UASTC sky with zstd took ~1.1 s to
+ * load at 2048 per face, with 6.5× ETC1S's bytes (p311 Phase 0). Applied after the profile, like
+ * the collider default, so only the asset's own JSON names another codec.
+ */
+const CUBE_LEVEL: OptimizeLevel = { textures: { default: { codec: 'etc1s' } } };
 
 /** Only the keys the codec reads, so equal encodes resolve (and hash) equally. */
 export type ResolvedTextureSettings =
@@ -122,6 +130,8 @@ export type AssetSettingsInput = {
   optimize?: AssetOptimize;
   /** A GLB with collider nodes (`colliderType` extras) */
   isColliderSource?: boolean;
+  /** A cube texture (`faces`, p311 D1): its codec defaults to ETC1S */
+  isCubeSource?: boolean;
 };
 
 const formatIssues = (issues: { path: PropertyKey[]; message: string }[]) =>
@@ -239,6 +249,7 @@ export const createSettingsResolver = (
       ...matched.map((rule) => toLevel(`the rule "${rule.glob}"`, rule)),
       toLevel(`the profile "${profile}"`, profile ? profiles[profile] : undefined),
       toLevel('the collider default', input.isColliderSource ? COLLIDER_LEVEL : undefined),
+      toLevel('the cube texture default', input.isCubeSource ? CUBE_LEVEL : undefined),
     ];
     const ownLevel = toLevel('the asset JSON', own ?? undefined);
     const levels = [...configLevels, ownLevel];

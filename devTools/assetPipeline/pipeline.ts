@@ -30,6 +30,7 @@ import {
 } from './gltfMergeOptions';
 import { KTX_VERSION } from './ktxTool';
 import {
+  getCubeLogicalPath,
   getLogicalPath,
   getOutputFile,
   getPackLogicalPath,
@@ -65,15 +66,16 @@ import {
   listTextureAtlasFiles,
   type AtlasSlotSource,
 } from './textureAtlases';
+import { encodeCubeTexture, listCubeFiles, type CubeSource } from './textureCubes';
 import { encodeTextureAsset, type EncodedTexture } from './textures';
 
 /**
  * One asset JSON's source through the pipeline (p300 §7): pass it through as it is (DD8), or
  * optimize it: a texture into KTX2 (or a PNG for `codec: "none"`), a GLB / glTF into a
  * compressed .glb, a texture array's layers into one KTX2 array (p299 D2), an atlas slot's cells
- * into one KTX2 (p299 D3). A packed texture (DD5) is built either way: passed through, it's
- * written as a PNG. An array or an atlas slot is never passed through: without its textures side,
- * it has no output.
+ * into one KTX2 (p299 D3), a cube texture's faces into one KTX2 cube (p311 D1). A packed texture
+ * (DD5) is built either way: passed through, it's written as a PNG. An array, an atlas slot or a
+ * cube is never passed through: without its textures side, it has no output.
  */
 
 export type PipelineAsset = {
@@ -84,9 +86,9 @@ export type PipelineAsset = {
   jsonFile: string;
   /**
    * An array's is always an {@link ArraySource}, and only an array's is; the same for an atlas
-   * slot and its {@link AtlasSlotSource}
+   * slot and its {@link AtlasSlotSource}. A cube texture's is a {@link CubeSource}.
    */
-  source: AssetSource | PackSource | ArraySource | AtlasSlotSource;
+  source: AssetSource | PackSource | ArraySource | AtlasSlotSource | CubeSource;
   /** An atlas slot's is the slot's */
   optimize?: AssetOptimize;
   /**
@@ -270,7 +272,7 @@ const listGLTFFiles = (file: string, json: GLTFJson) => [
 
 /**
  * Every file an asset's encode reads: the file, every file a pack reads, a glTF with its
- * external files, or every file an array's layers (an atlas slot's cells) read. Empty for a
+ * external files, every file an array's layers (an atlas slot's cells) read, or a cube's faces. Empty for a
  * remote or missing source. Throws like `resolvePackFile` and `readGLTFJson`.
  */
 export const listAssetSourceFiles = (asset: PipelineAsset) => {
@@ -278,6 +280,7 @@ export const listAssetSourceFiles = (asset: PipelineAsset) => {
   if (source.kind === 'remote') return [];
   if (source.kind === 'array') return listTextureArrayFiles(source);
   if (source.kind === 'atlas') return listTextureAtlasFiles(source);
+  if (source.kind === 'cube') return listCubeFiles(source);
   if (source.kind !== 'pack' && !fs.existsSync(source.file)) return [];
   return asset.type === 'importedAsset' && source.kind !== 'pack'
     ? listGLTFFiles(source.file, readGLTFJson(source.file))
@@ -363,8 +366,8 @@ type LocalSource = Exclude<PipelineAsset['source'], { kind: 'remote' }>;
 
 /**
  * An asset kept as it is: a plain source is used (a relative one copied), a pack is built into a
- * PNG (cached, it reads several files); an array or an atlas slot has no output without its
- * textures side.
+ * PNG (cached, it reads several files); an array, an atlas slot or a cube texture has no output
+ * without its textures side.
  */
 const runPassThroughAsync = async (
   source: LocalSource,
@@ -372,8 +375,8 @@ const runPassThroughAsync = async (
   reason: string,
   opts: ProcessAssetOpts & { isSrgb: boolean }
 ): Promise<PipelineOutcome> => {
-  if (source.kind === 'array' || source.kind === 'atlas') {
-    const what = source.kind === 'array' ? 'an array' : 'an atlas slot';
+  if (source.kind === 'array' || source.kind === 'atlas' || source.kind === 'cube') {
+    const what = { array: 'an array', atlas: 'an atlas slot', cube: 'a cube texture' }[source.kind];
     return {
       status: 'skipped',
       reason: `${what} is only built as a KTX2 file, and textures are kept as they are: ${reason}`,
@@ -414,7 +417,8 @@ const runPassThroughAsync = async (
 };
 
 /** What an encode needs: its settings (a GLB's with its collider default), its cache key's
- * inputs, and the texture settings of a texture, an array or an atlas slot */
+ * inputs, and the texture settings of a texture, or of an array, an atlas slot or a cube texture
+ * (always a KTX2) */
 type EncodePlan = {
   settings: ResolvedAssetSettings;
   keyInput: CacheKeyInput;
@@ -453,6 +457,28 @@ const planArrayEncode = (
             isSrgb,
             ...getTextureAtlasKeyParams(source),
           },
+  };
+  return { settings, keyInput, arraySettings };
+};
+
+const planCubeEncode = (
+  asset: PipelineAsset,
+  source: CubeSource,
+  settings: ResolvedAssetSettings
+): EncodePlan => {
+  // Not passed through, so its textures side is on
+  const arraySettings = getTextureArraySlotSettings(settings, 'a cube texture') ?? undefined;
+  if (!arraySettings) throw new Error(`${asset.jsonFile}: no texture settings`);
+  const keyInput: CacheKeyInput = {
+    type: 'texture',
+    files: listCubeFiles(source),
+    params: {
+      kind: 'cubeTexture',
+      slot: settings.slot,
+      settings: arraySettings,
+      isSrgb: !!asset.isSrgb,
+      output: getCubeLogicalPath(source.jsonFile),
+    },
   };
   return { settings, keyInput, arraySettings };
 };
@@ -544,6 +570,7 @@ const planEncode = (
   if (source.kind === 'array' || source.kind === 'atlas') {
     return planArrayEncode(asset, source, settings);
   }
+  if (source.kind === 'cube') return planCubeEncode(asset, source, settings);
   if (asset.type === 'texture') return planTextureEncode(asset, source, settings);
   if (source.kind === 'pack') throw new Error('an imported asset has no pack');
   return planGLTFEncode(asset, source, settings, resolveSettings);
@@ -565,6 +592,15 @@ const encodeAsync = async (
       source.kind === 'array'
         ? await encodeTextureArray(source, settings.slot, arraySettings, ktxOpts)
         : await encodeTextureAtlasSlot(source, settings.slot, arraySettings, ktxOpts);
+    return { status: 'optimized', output, settings, textures: [texture] };
+  }
+  if (source.kind === 'cube') {
+    if (!arraySettings) throw new Error(`${asset.jsonFile}: no texture settings`);
+    const { output, texture } = await encodeCubeTexture(source, settings.slot, arraySettings, {
+      isSrgb,
+      getKtx,
+      warn,
+    });
     return { status: 'optimized', output, settings, textures: [texture] };
   }
   if (slotSettings) {
@@ -617,7 +653,11 @@ const runAsset = async (
   if (source.kind === 'remote') {
     return { status: 'skipped', reason: 'a remote file is loaded from where it is' };
   }
-  const settings = resolveSettings({ sourcePath: source.repoPath, optimize: asset.optimize });
+  const settings = resolveSettings({
+    sourcePath: source.repoPath,
+    optimize: asset.optimize,
+    ...(source.kind === 'cube' ? { isCubeSource: true } : {}),
+  });
   const reason = getPassThroughReason(asset, settings);
   if (reason)
     return runPassThroughAsync(source, settings, reason, { ...opts, isSrgb: !!asset.isSrgb });

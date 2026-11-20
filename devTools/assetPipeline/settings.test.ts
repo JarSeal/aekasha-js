@@ -106,6 +106,37 @@ describe('createSettingsResolver', () => {
     expect(own.mesh).toMatchObject({ simplify: 0.25 });
   });
 
+  it("encodes a cube texture as ETC1S, unless the asset JSON's own textures name a codec (p311 D3)", () => {
+    // The config's defaults and a rule's profile say UASTC; the cube default comes after them
+    const uastc = {
+      defaults: { textures: { default: { codec: 'uastc' as const, rdo: 2 } } },
+      profiles: { sky: { textures: { default: { codec: 'uastc' as const, maxSize: 2048 } } } },
+      rules: [{ glob: 'src/skies/**', profile: 'sky' }],
+    };
+    const cube = createSettingsResolver(uastc)({
+      sourcePath: 'src/skies/dunes.texture.json',
+      isCubeSource: true,
+    });
+    expect(cube.textures && cube.textures.default).toEqual({
+      codec: 'etc1s',
+      maxSize: 2048,
+      mipmaps: true,
+      quality: 128,
+      normalMode: false,
+    });
+    // The budget's ceiling is the cube default's too
+    expect(cube.budget.profileTextures.default).toMatchObject({ codec: 'etc1s' });
+    const own = createSettingsResolver(uastc)({
+      sourcePath: 'src/skies/dunes.texture.json',
+      isCubeSource: true,
+      optimize: { textures: { default: { codec: 'uastc' } } },
+    });
+    expect(own.textures && own.textures.default).toMatchObject({ codec: 'uastc', rdo: 2 });
+    // Not a cube: the profile's codec
+    const flat = createSettingsResolver(uastc)({ sourcePath: 'src/skies/dunes.texture.json' });
+    expect(flat.textures && flat.textures.default).toMatchObject({ codec: 'uastc' });
+  });
+
   it('throws for an unknown profile, in a rule or an asset', () => {
     expect(() => createSettingsResolver({ rules: [{ glob: '**', profile: 'nope' }] })).toThrow(
       /rules\[0\] names an unknown profile "nope"/

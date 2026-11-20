@@ -166,6 +166,30 @@ export const encodeKtx2Layers = async (
   );
 };
 
+/** The `ktx create` options for a cube texture (p311 D1): {@link getKtxCreateArgs}' and `--cubemap` */
+export const getKtxCubeArgs = (
+  settings: KtxSettings,
+  opts: { channels: 3 | 4; isSrgb: boolean; isNormal: boolean }
+) => [...getKtxCreateArgs(settings, opts), '--cubemap'];
+
+/**
+ * Encodes six images as one KTX2 cube texture (`ktx create --cubemap`, p311 D1), face `i` from
+ * `readFace(i)` in the order +x, −x, +y, −y, +z, −z: linear float channels at the face size, top
+ * row first and not flipped (a KTX2 cube's faces are stored as a cube texture's images are).
+ * Each face is written out before the next is read. `channels` is the cube's (every face is
+ * converted to it). Throws like {@link encodeKtx2}.
+ */
+export const encodeKtx2Cube = async (
+  readFace: (index: number) => Promise<Img>,
+  settings: KtxSettings,
+  opts: { channels: 3 | 4; isSrgb: boolean; isNormal: boolean; getKtx: KtxProvider }
+): Promise<Uint8Array> => {
+  const tool = await opts.getKtx();
+  return runKtxCreate(tool, getKtxCubeArgs(settings, opts), 6, async (index) =>
+    encodePng(toChannels(await readFace(index), opts.channels), opts.isSrgb)
+  );
+};
+
 /**
  * Encodes a texture with the mip levels given (`ktx create --levels`, no `--generate-mipmap`;
  * p299 D3's atlas slots, whose chain stops where its layout does): level `i` from

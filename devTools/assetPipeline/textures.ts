@@ -53,6 +53,11 @@ export type EncodedTexture = {
   /** A texture array's layer count (p299 D2); unset for a texture */
   layers?: number;
   /**
+   * A cube texture's (p311 D1): six faces of `width` × `height`, its `source` a face's size and
+   * every face's bytes
+   */
+  isCube?: true;
+  /**
    * The mip levels stored, when the chain is shorter than a full one: an atlas slot's (p299 D3)
    * stops at the level its layout keeps apart. Unset: a full chain (with `mipmaps`) or one level.
    */

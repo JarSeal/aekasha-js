@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getKtxCreateArgs } from './ktxEncode';
+import { getKtxCreateArgs, getKtxCubeArgs } from './ktxEncode';
 
 // p619 D14: `ktx create`'s arguments decide the KTX2's bytes, so their order is fixed (a change
 // needs a PIPELINE_VERSION bump: every output encodes again)
@@ -48,6 +48,16 @@ describe('getKtxCreateArgs', () => {
     );
     expect(args.join(' ')).toBe(
       '--format R8G8B8_SRGB --assign-tf srgb --assign-primaries bt709 --encode basis-lz --qlevel 128'
+    );
+  });
+
+  it('a cube texture (p311 D1): the same options, then --cubemap', () => {
+    const args = getKtxCubeArgs(
+      { codec: 'etc1s', maxSize: 1024, mipmaps: true, quality: 128, normalMode: false },
+      { channels: 3, isSrgb: true, isNormal: false }
+    );
+    expect(args.join(' ')).toBe(
+      '--format R8G8B8_SRGB --assign-tf srgb --assign-primaries bt709 --generate-mipmap --encode basis-lz --qlevel 128 --cubemap'
     );
   });
 });

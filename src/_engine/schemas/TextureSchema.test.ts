@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'vitest';
 import * as THREE from 'three';
-import { StoredFlippedTexOptsSchema, TEXTURE_CONSTANTS, TexOptsSchema } from './TextureSchema';
+import {
+  InlineTextureSchema,
+  StoredFlippedTexOptsSchema,
+  TEXTURE_CONSTANTS,
+  TextureAssetSchema,
+  TexOptsSchema,
+} from './TextureSchema';
 
 /** three's constant for each table name, by the name three exports it under */
 const THREE_NAMES: { [K in keyof typeof TEXTURE_CONSTANTS]: Record<string, string> } = {
@@ -108,6 +114,65 @@ describe('StoredFlippedTexOptsSchema', () => {
     expect(StoredFlippedTexOptsSchema.safeParse({ flipY: true, wrapS: 'REPEAT' }).data).toEqual({
       flipY: true,
       wrapS: 1000,
+    });
+  });
+});
+
+describe('TextureAssetSchema: a cube texture (p311 D1)', () => {
+  const faces = ['./px.png', './nx.png', './py.png', './ny.png', './pz.png', './nz.png'];
+  const issuesOf = (json: object) =>
+    TextureAssetSchema.safeParse(json).error?.issues.map(({ path, message }) => ({
+      path,
+      message,
+    }));
+
+  test('takes six faces, with path, optimize and a colour space', () => {
+    const json = {
+      faces: faces.map((face) => face.slice(2)),
+      path: '/skyboxes/dunes/',
+      texOpts: { colorSpace: 'srgb' },
+      optimize: { textures: { default: { codec: 'uastc' } } },
+    };
+    expect(TextureAssetSchema.parse(json).faces).toEqual(json.faces);
+  });
+
+  test('refuses a count other than six', () => {
+    expect(TextureAssetSchema.safeParse({ faces: faces.slice(0, 5) }).success).toBe(false);
+    expect(TextureAssetSchema.safeParse({ faces: [...faces, './extra.png'] }).success).toBe(false);
+  });
+
+  test('refuses two of fileName, pack and faces, at the second', () => {
+    expect(issuesOf({ faces, fileName: './a.png' })).toEqual([
+      {
+        path: ['faces'],
+        message:
+          'fileName, pack and faces are alternatives: give one (this texture has fileName and faces)',
+      },
+    ]);
+    const pack = { channels: { rgb: 0.5 }, size: [4, 4] };
+    expect(issuesOf({ faces, pack })?.[0].path).toEqual(['faces']);
+    expect(issuesOf({ fileName: './a.png', pack })?.[0].path).toEqual(['pack']);
+  });
+
+  test("refuses texOpts.flipY and optimize.alphaCoverage on a cube, but not on a file's", () => {
+    expect(issuesOf({ faces, texOpts: { flipY: true } })?.map(({ path }) => path)).toEqual([
+      ['texOpts', 'flipY'],
+    ]);
+    expect(issuesOf({ faces, optimize: { alphaCoverage: 0.5 } })?.map(({ path }) => path)).toEqual([
+      ['optimize', 'alphaCoverage'],
+    ]);
+    expect(
+      TextureAssetSchema.safeParse({
+        fileName: './a.png',
+        texOpts: { flipY: false },
+        optimize: { alphaCoverage: 0.5 },
+      }).success
+    ).toBe(true);
+  });
+
+  test('is no inline texture key', () => {
+    expect(InlineTextureSchema.parse({ fileName: '/a.png', faces })).toEqual({
+      fileName: '/a.png',
     });
   });
 });

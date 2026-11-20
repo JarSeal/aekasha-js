@@ -26,6 +26,7 @@ import { resolveMergeMaterial } from './mergeMaterials';
 import type { PipelineAsset } from './pipeline';
 import { createArraySource, resolveTextureArrayLayers, type TextureLookup } from './textureArrays';
 import { createAtlasSlotSource, resolveTextureAtlas } from './textureAtlases';
+import { resolveCubeSource, type CubeSource } from './textureCubes';
 import {
   createPackSource,
   resolveAssetSource,
@@ -54,6 +55,7 @@ type AssetData = {
   fileName?: string;
   path?: string;
   pack?: TextureAsset['pack'];
+  faces?: TextureAsset['faces'];
   texOpts?: TextureAsset['texOpts'];
   importTextures?: ImportedAsset['importTextures'];
   lodChain?: ImportedAsset['lodChain'];
@@ -70,7 +72,7 @@ export const getMergeMaterialSlotAssetKey = (jsonFile: string, slot: string) =>
 
 /** One use of an asset: the JSON as it is, or merged with a scene's latest save entry. */
 type AssetUse = {
-  source: AssetSource | PackSource;
+  source: AssetSource | PackSource | CubeSource;
   isSrgb: boolean;
   /** A texture whose `texOpts.flipY` is false: its KTX2 output is stored as the source is
    * (p302 D1), every other texture's flipped */
@@ -83,7 +85,8 @@ type AssetUse = {
 /**
  * The source and the encode inputs of an asset's data, as the gatherer merges it for a scene
  * (`{ ...asset, ...latestEntry }`, shallow: an entry's `texOpts` replaces the JSON's). Returns
- * `{ error }` like `resolveAssetSource`, or null when there's no file at all.
+ * `{ error }` like `resolveAssetSource` (and `resolveCubeSource` for a cube texture's `faces`), or
+ * null when there's no file at all.
  * @param jsonFile The asset JSON, absolute or relative to the repo root
  */
 export const resolveAssetUse = (
@@ -100,6 +103,12 @@ export const resolveAssetUse = (
     const source = createPackSource(jsonFile, data.pack);
     return { source, isSrgb, isUnflipped, importTextures, lodChain };
   }
+  if (data.faces) {
+    // A cube's faces are stored as they are, whatever a scene entry's texOpts says (p311 D1)
+    const source = resolveCubeSource(jsonFile, data.faces, data.path);
+    if ('error' in source) return source;
+    return { source, isSrgb, isUnflipped: false, importTextures, lodChain };
+  }
   if (!data.fileName) return null;
   const source = resolveAssetSource({ jsonFile, fileName: data.fileName, path: data.path });
   return 'error' in source ? source : { source, isSrgb, isUnflipped, importTextures, lodChain };
@@ -113,7 +122,7 @@ export const resolveAssetUse = (
  */
 export const getPipelineAssetKey = (type: PipelineAssetType, jsonFile: string, use: AssetUse) => {
   const source = use.source.kind === 'remote' ? use.source.url : use.source.repoPath;
-  const kind = use.source.kind === 'pack' ? 'pack' : 'file';
+  const kind = use.source.kind === 'pack' || use.source.kind === 'cube' ? use.source.kind : 'file';
   const colorSpace = type === 'texture' ? (use.isSrgb ? ':srgb' : ':linear') : '';
   // Only when unflipped, so the other keys didn't change (p302 D1)
   const flip = type === 'texture' && use.isUnflipped ? ':unflipped' : '';

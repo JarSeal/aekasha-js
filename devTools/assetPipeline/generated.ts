@@ -10,6 +10,7 @@ import {
 } from './assets';
 import type { PipelineRun, PipelineRunResult } from './run';
 import type { AssetSource, PackSource } from './sources';
+import type { CubeSource } from './textureCubes';
 import { PUBLIC_DIR, SRC_DIR } from '../paths';
 import type { EncodedTexture } from './textures';
 
@@ -34,7 +35,8 @@ export const GENERATED_FIELD_KEYS = [
 const toUrl = (base: string, file: string) =>
   `/${path.relative(base, file).split(path.sep).join('/')}`;
 
-const getSourceUrl = (source: AssetSource | PackSource) => {
+// A pack has no single source to load instead, nor a cube texture (its faces, p311 D1)
+const getSourceUrl = (source: AssetSource | PackSource | CubeSource) => {
   if (source.kind === 'relative') return toUrl(SRC_DIR, source.file);
   if (source.kind === 'public') return toUrl(PUBLIC_DIR, source.file);
   return undefined;
@@ -81,12 +83,17 @@ export const estimateVramBytes = (
     ? getLevelsBytes(width, height, 1, 4, true)
     : getLevelsBytes(width, height, 4, 16, mipmaps, levelCount);
 
+/** The images a texture holds: an array's layers (p299 D2), a cube's six faces (p311 D1), or 1 */
+export const getTextureImageCount = (texture: EncodedTexture) =>
+  texture.layers ?? (texture.isCube ? 6 : 1);
+
 /**
- * An array's (p299 D2) is every layer's: `in` as the runtime would assemble its sources (RGBA8).
- * An atlas slot's (p299 D3) counts its shortened chain; its `in` is the layout as one RGBA8 image.
+ * An array's (p299 D2) is every layer's, a cube's (p311 D1) every face's: `in` as the runtime
+ * would assemble its sources (RGBA8). An atlas slot's (p299 D3) counts its shortened chain; its
+ * `in` is the layout as one RGBA8 image.
  */
 export const estimateTextureVramBytes = (texture: EncodedTexture) => {
-  const layers = texture.layers ?? 1;
+  const layers = getTextureImageCount(texture);
   const { width, height, codec, mipmaps, levels } = texture;
   return {
     in: estimateVramBytes(texture.source.width, texture.source.height, 'none', true) * layers,
