@@ -345,6 +345,7 @@ export const InlineTextureSchema = TextureAssetObjectSchema.omit({
   sourceOnly: true,
   __url: true,
   __sourceUrl: true,
+  __sourceUrls: true,
   __bytes: true,
   __vramBytes: true,
   __codec: true,

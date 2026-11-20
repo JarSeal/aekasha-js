@@ -20,7 +20,7 @@ import { checkSceneMergedGeometries } from './mergedGeometries';
 import { resolveSceneMergeMaterials } from './mergeMaterials';
 import { getSaveEntry } from './saveEntries';
 import type { ShipChecks } from './shipChecks';
-import { getSourceFileSize, setGeneratedFields } from './sources';
+import { getSourceFileSize, getTextureSourceFileSize, setGeneratedFields } from './sources';
 import { resolveScatters } from './scatters';
 import { resolveDecalSets } from './decalSets';
 import { resolveTerrainBlocks } from './terrainBlocks';
@@ -164,11 +164,16 @@ const resolveTextureAsset = (
   const texData = { ...texture, ...getSaveEntry(texture, sceneId) };
   if (ctx.isProduction) delete texData.debugData;
   // A per-scene override can point at another file
-  texData.__fileSize = getSourceFileSize(jsonFile, texData.fileName, texData.path);
+  texData.__fileSize = getTextureSourceFileSize(jsonFile, texData);
   setGeneratedFields(ctx, texData, 'texture', jsonFile);
   ship.checkAsset(texData, 'texture', jsonFile, sceneId);
   delete texData.optimize; // Build time only (p300)
   delete texData.pack;
+  if (texData.faces) {
+    // Build time only (p311 D1): the runtime loads its output, or its `__sourceUrls`
+    delete texData.faces;
+    delete texData.path;
+  }
   delete texData.sourceOnly; // Build time only (p309 D1)
   delete texData.__sourcePath;
   delete texData.__saveData;
@@ -367,8 +372,9 @@ const resolvePostFx = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun) 
  * p308 D2; the decal sets before the materials: they add theirs and their imports, p309 D3; the
  * impostors, the merge materials, the texture sets and the texture closure before the textures:
  * they add their atlas and array slots, the sets' default packings (p303 D1) and the textures the
- * resolved materials, lights, meshes and blocks name, p302 D6; the set arrays' members after
- * them, p303 D4) */
+ * resolved materials, lights, meshes and blocks name, p302 D6, and the sky boxes before the
+ * closure: a cube base's lone `textureId` names a texture asset, p311 D2; the set arrays' members
+ * after them, p303 D4) */
 export const resolveSceneAssets = (run: SceneRun) => {
   resolveCameras(run);
   resolveLights(run);
@@ -381,11 +387,11 @@ export const resolveSceneAssets = (run: SceneRun) => {
   resolveMaterials(run);
   resolveMeshes(run);
   resolveTextureSets(run);
+  resolveSkyBoxes(run);
   addTextureClosure(run);
   resolveTextures(run);
   // The set arrays' members the textures don't hold (pass 1 checked each slot is a texture asset)
   declareTextureSetArrayMembers(run, (texId) => resolveTextureAsset(run, run.reg.textures[texId]));
   resolveImportedAssets(run);
-  resolveSkyBoxes(run);
   resolvePostFx(run);
 };

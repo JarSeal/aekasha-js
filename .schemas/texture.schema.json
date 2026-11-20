@@ -59,17 +59,20 @@
     "__sourceUrl": {
       "$ref": "#/definitions/__schema135"
     },
-    "__bytes": {
+    "__sourceUrls": {
       "$ref": "#/definitions/__schema137"
     },
-    "__vramBytes": {
-      "$ref": "#/definitions/__schema139"
-    },
-    "__codec": {
+    "__bytes": {
       "$ref": "#/definitions/__schema140"
     },
+    "__vramBytes": {
+      "$ref": "#/definitions/__schema142"
+    },
+    "__codec": {
+      "$ref": "#/definitions/__schema143"
+    },
     "__averageColor": {
-      "$ref": "#/definitions/__schema141"
+      "$ref": "#/definitions/__schema144"
     }
   },
   "additionalProperties": false,
@@ -1513,7 +1516,7 @@
       "type": "string"
     },
     "__schema137": {
-      "description": "Set by the gatherer: the download in bytes.",
+      "description": "Set by the gatherer (development data): a cube texture's six faces as the dev server serves them.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema138"
@@ -1521,6 +1524,25 @@
       ]
     },
     "__schema138": {
+      "minItems": 6,
+      "maxItems": 6,
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema139"
+      }
+    },
+    "__schema139": {
+      "type": "string"
+    },
+    "__schema140": {
+      "description": "Set by the gatherer: the download in bytes.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema141"
+        }
+      ]
+    },
+    "__schema141": {
       "type": "object",
       "properties": {
         "in": {
@@ -1538,30 +1560,30 @@
       ],
       "additionalProperties": false
     },
-    "__schema139": {
+    "__schema142": {
       "description": "Set by the gatherer: the estimated GPU memory in bytes.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema138"
+          "$ref": "#/definitions/__schema141"
         }
       ]
     },
-    "__schema140": {
+    "__schema143": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema71"
         }
       ]
     },
-    "__schema141": {
+    "__schema144": {
       "description": "Set by the gatherer (development data): the texture's average RGB, linear.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema142"
+          "$ref": "#/definitions/__schema145"
         }
       ]
     },
-    "__schema142": {
+    "__schema145": {
       "type": "array",
       "items": [
         {

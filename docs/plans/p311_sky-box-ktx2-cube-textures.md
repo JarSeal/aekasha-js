@@ -182,6 +182,41 @@ Steps (a section each, stopped for review):
    closure from a scene's sky boxes, the development data's six-source fallback and
    `loadTextureAsync`'s path for it (`kernel/assets/Texture.ts`). Tests: `gather.test.ts`,
    `SkyBox.test.ts`, `SkyBoxSchema.test.ts`.
+   As built (step 1):
+   - `TextureAssetSchema` takes `faces` (a six-tuple of what `fileName` takes; `path` applies to
+     public faces as to `fileName`). Its refinements (`superRefine`): at most one of `fileName`,
+     `pack`, `faces` (the issue at the second); with `faces`, any `texOpts.flipY` (true too) and
+     `optimize.alphaCoverage` are refused. The refinements sit on the exported schema over an
+     unrefined object (`TextureAssetObjectSchema`), which `InlineTextureSchema` omits from (zod 4
+     can't `omit` a refined object); an inline texture has no `faces`. `RuntimeTypes.test.ts` lists
+     `faces` as a build-time key.
+   - `devTools/assetPipeline/textureCubes.ts` (new, beside `textureArrays.ts` and
+     `textureAtlases.ts`): `CubeSource` (`kind: 'cube'`, the JSON as `repoPath`, like a pack),
+     `resolveCubeSource` (each face through `textureArrays.ts`' now-exported `resolveFileLayer`:
+     an error per face, `faces[4] (+z): …`), `listCubeFiles` (the key's files, in face order) and
+     `encodeCubeTexture` (faces square and of one size, else an error naming the face; fit to
+     `maxSize`; RGBA when a face has alpha; not flipped). `ktxEncode.ts`' `encodeKtx2Cube` /
+     `getKtxCubeArgs`: `getKtxCreateArgs` then `--cubemap`. Output `<json path>.cube.<hash>.ktx2`
+     (`getCubeLogicalPath`); key params `kind: 'cubeTexture'`, the slot, the settings, `isSrgb`,
+     the output. No `PIPELINE_VERSION` bump (no existing output changes).
+   - The pipeline key is `texture:<json>:cube:<json>:srgb|linear` (`getPipelineAssetKey`); a cube
+     use is never `:unflipped`, whatever a scene entry's `texOpts` says. A cube with its textures
+     side off is `skipped` (no output, like an array); codec `none` throws ("a cube texture is a
+     KTX2 file", `getTextureArraySlotSettings`).
+   - D3: a built-in level in `settings.ts` (`CUBE_LEVEL`, `textures.default.codec: 'etc1s'`, input
+     `isCubeSource`), applied after the profile like the collider default: only the JSON's own
+     `optimize.textures` names another codec (a rule's or profile's codec doesn't, nor
+     `assets.config.json`'s `defaults`, which say `uastc`). The budget's ceiling uses it too.
+   - `EncodedTexture.isCube`: the VRAM figures and the budget count six faces
+     (`getTextureImageCount`, `generated.ts`).
+   - Tests: `textureCubes.test.ts` (not `textures.test.ts`: next to the new module),
+     `ktxEncode.test.ts`, `settings.test.ts`, `assets.test.ts`, `TextureSchema.test.ts`. Checked
+     with the real `ktx`: scene01's cubemap01 PNGs (2048²) → 6 faces at 1024, 11 levels, ETC1S
+     sRGB, 785 KB, 8.6 s.
+   - Open for step 2: a cube has no output when its textures are kept as they are, so with the
+     project switch off a production build using one fails its output check (a plain texture gets
+     a copy of its file then).
+
 3. The example on the pipeline: `desertDunesKtx2` names a `desertDunes` cube texture asset (its
    six faces from the PNGs scene01's desert-dunes loads) in place of Phase 1's hand-made
    `cubemap02.ktx2`, which is removed; `yarn assets` builds it and the lock is committed with

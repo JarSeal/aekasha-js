@@ -51,17 +51,20 @@ const KTX2_FILE = /\.ktx2(?:[?#].*)?$/i;
 
 const SkyBoxCubeBaseSchema = z
   .object({
-    /** A cube: six images, one per face (`fileNames`), or one KTX2 cube file (`file`). */
+    /** A cube: six images, one per face (`fileNames`), one KTX2 cube file (`file`), or a cube
+     * texture asset (`textureId` alone). */
     type: z.literal('CUBE_TEXTURE'),
-    /** In the order +x, -x, +y, -y, +z, -z, relative to `path`. One of `fileNames` and `file` is
-     * needed. */
+    /** In the order +x, -x, +y, -y, +z, -z, relative to `path`. One of `fileNames`, `file` and
+     * a lone `textureId` is needed. */
     fileNames: z.array(z.string()).length(6).optional(),
     /** One `.ktx2` file with six faces (`ktx create --cubemap`) and its mips, relative to `path`:
      * smaller to download than six images, and no mip generation at load (p311). */
     file: z.string().optional(),
     /** The folder the files are in. Default: the site's root (`./`). */
     path: z.string().optional(),
-    /** The id the loaded cube texture is registered under. */
+    /** With `fileNames` or `file`, the id the loaded cube texture is registered under; alone, a
+     * cube texture asset's id (a `*.texture.json` with `faces`, p311), which a scene listing the
+     * sky box loads with its textures. */
     textureId: z.string().optional(),
     /** Default: 'srgb', or 'srgb-linear' for .hdr files; a KTX2 file's own colour space. An empty
      * string is unset. */
@@ -73,8 +76,13 @@ const SkyBoxCubeBaseSchema = z
     /** The background's and the environment's brightness multiplier. Default 1. */
     intensity: z.number().min(0).optional(),
   })
-  .refine((base) => Boolean(base.fileNames) !== Boolean(base.file), {
-    error: 'A CUBE_TEXTURE base needs either fileNames (six images) or file (one .ktx2 cube).',
+  .refine((base) => !(base.fileNames && base.file), {
+    error: 'A CUBE_TEXTURE base takes fileNames (six images) or file (one .ktx2 cube), not both.',
+    path: ['file'],
+  })
+  .refine((base) => Boolean(base.fileNames || base.file || base.textureId), {
+    error:
+      'A CUBE_TEXTURE base needs fileNames (six images), file (one .ktx2 cube) or a textureId (a cube texture asset).',
     path: ['fileNames'],
   })
   .refine((base) => !base.file || KTX2_FILE.test(base.file), {

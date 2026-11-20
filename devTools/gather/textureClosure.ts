@@ -5,7 +5,8 @@
  * a terrain block's `materialInputs`):
  * their `params` texture slots and their TSL `inputs` and `nodes` values that name a texture (a
  * bare id, a texture ref, a texture array layer's array, an atlas cell's slot); and from its spot
- * lights' cookies (`map`) and its `backgroundTexture`. Appended after the listed ids, so they
+ * lights' cookies (`map`), its `backgroundTexture` and its cube sky boxes that name a texture
+ * asset by a lone `textureId` (p311 D2). Appended after the listed ids, so they
  * resolve, ship-check and stream as listed ones do; an id no asset JSON has fails the gather as a
  * listed one does (p619 G12), naming what names it. A texture array layer or atlas cell input
  * whose layer, slot or cell its asset doesn't have fails it too (p299 D5). A texture set input
@@ -223,6 +224,14 @@ const getNamedTextureIds = (run: SceneRun): Collect => {
     addMaterialIds({ inputs: block.materialInputs }, collect, `the terrain block "${block.id}"`);
   }
   if (scene.backgroundTexture) addId(named, scene.backgroundTexture, 'backgroundTexture');
+  // A cube base with only a textureId shows that texture asset (p311 D2)
+  for (const sky of scene.skyboxes ?? []) {
+    if (typeof sky !== 'object') continue;
+    const { base } = sky;
+    if (base?.type === 'CUBE_TEXTURE' && base.textureId && !base.file && !base.fileNames) {
+      addId(named, base.textureId, `the sky box "${sky.id}"`);
+    }
+  }
   return collect;
 };
 
@@ -249,10 +258,10 @@ const isKnownTextureId = ({ reg }: SceneRun, id: string) =>
   );
 
 /**
- * Appends the textures the scene's materials, spot light cookies and background name, and its
- * `textures` doesn't list, to its `textures` (each once, in the order they're named). Runs after
- * the materials, lights and meshes are resolved (their save entries applied), before the
- * textures are. An id no asset JSON has, and a texture array layer, atlas cell or texture set
+ * Appends the textures the scene's materials, spot light cookies, background and cube sky boxes
+ * name, and its `textures` doesn't list, to its `textures` (each once, in the order they're
+ * named). Runs after the materials, lights, meshes and sky boxes are resolved (their save entries
+ * applied), before the textures are. An id no asset JSON has, and a texture array layer, atlas cell or texture set
  * input its asset doesn't have, is logged, naming what names it, and fails the gather. The texture
  * sets the inputs name are written into the scene's `textureSets` (after its own, each once), with
  * the sets of its set arrays (listed, and the lists the inputs name, `resolveTextureSetArrays`).

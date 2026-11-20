@@ -93,6 +93,36 @@ describe('loadTextureAsync', () => {
   });
 });
 
+describe('loadTextureAsync: a cube texture asset (p311 D2)', () => {
+  const sourceUrls = ['px', 'nx', 'py', 'ny', 'pz', 'nz'].map((f) => `/app/sky/${f}.png`);
+
+  test('loads its six source faces as a cube when the pipeline has no output, warned once', async () => {
+    const paths: string[] = [];
+    const setPath = vi
+      .spyOn(THREE.CubeTextureLoader.prototype, 'setPath')
+      .mockImplementation(function (this: THREE.CubeTextureLoader, path: string) {
+        paths.push(path);
+        return this;
+      });
+    const loadAsync = vi
+      .spyOn(THREE.CubeTextureLoader.prototype, 'loadAsync')
+      .mockImplementation(async () => new THREE.CubeTexture());
+    vi.stubGlobal('document', { baseURI: 'https://example.test/' });
+
+    const texture = await loadTextureAsync({ id: 'p311SourceCube', __sourceUrls: sourceUrls });
+    expect(texture).toBeInstanceOf(THREE.CubeTexture);
+    // Absolute URLs, with no path before them
+    expect(paths).toEqual(['']);
+    expect(loadAsync).toHaveBeenCalledWith(sourceUrls.map((url) => `https://example.test${url}`));
+    expect(fns.lwarn).toHaveBeenCalledTimes(1);
+    expect(String(fns.lwarn.mock.calls[0][0])).toContain('six source faces');
+
+    vi.unstubAllGlobals();
+    setPath.mockRestore();
+    loadAsync.mockRestore();
+  });
+});
+
 describe('applyTexOpts', () => {
   test('applies every defined value, falsy ones too, and the UV transform', () => {
     const texture = new THREE.Texture();

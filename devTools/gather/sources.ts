@@ -13,6 +13,8 @@ import {
   resolveAssetSource,
   resolvePackFile,
 } from '../assetPipeline/sources';
+import { getTextureArraySlotSettings } from '../assetPipeline/textureArrays';
+import { resolveCubeSource } from '../assetPipeline/textureCubes';
 import type { GatherContext } from './context';
 
 /** Bytes on disk of an asset JSON's source file (relative to the JSON, or served from
@@ -22,6 +24,18 @@ export const getSourceFileSize = (jsonFile: string, fileName?: string, urlPath?:
   if (!fileName) return undefined;
   const source = resolveAssetSource({ jsonFile, fileName, path: urlPath });
   return 'error' in source ? undefined : getAssetSourceFileSize(source);
+};
+
+/** A texture's bytes on disk: its file's, or a cube texture's six faces' (p311 D1); undefined
+ * when one is missing */
+export const getTextureSourceFileSize = (
+  jsonFile: string,
+  data: { fileName?: string; path?: string; faces?: readonly string[] }
+) => {
+  if (!data.faces) return getSourceFileSize(jsonFile, data.fileName, data.path);
+  const source = resolveCubeSource(jsonFile, data.faces, data.path);
+  if ('error' in source) return undefined;
+  return source.faces.reduce((sum, face) => sum + (getAssetSourceFileSize(face) ?? 0), 0);
 };
 
 type GeneratedFieldsTarget = Parameters<typeof getGeneratedFields>[3];
@@ -48,6 +62,8 @@ type SourcedAsset = {
   /** An imported asset's (p371 D3): only a file the pipeline reads can be merged */
   merge?: unknown;
   pack?: TexturePack;
+  /** A cube texture's (p311 D1) */
+  faces?: readonly string[];
   useHDRLoader?: boolean;
   __saveData?: Record<string, { fileName?: string; path?: string }[] | undefined>;
 };
@@ -74,6 +90,37 @@ const checkPackSources = (fullPath: string, data: SourcedAsset & { pack: Texture
 };
 
 /**
+ * A cube texture's `faces` (p311 D1): every face must resolve to a local 8-bit image, and its
+ * slot must encode to KTX2 (a cube is only ever its KTX2 output)
+ */
+const checkCubeSources = (
+  ctx: GatherContext,
+  fullPath: string,
+  data: SourcedAsset & { faces: readonly string[] }
+) => {
+  const errors: string[] = [];
+  if (data.useHDRLoader) errors.push('"faces" are 8-bit images: remove "useHDRLoader"');
+  const source = resolveCubeSource(fullPath, data.faces, data.path);
+  if ('error' in source) {
+    errors.push(source.error);
+    return errors;
+  }
+  try {
+    getTextureArraySlotSettings(
+      ctx.resolveSettings({
+        sourcePath: source.repoPath,
+        optimize: data.optimize,
+        isCubeSource: true,
+      }),
+      'a cube texture'
+    );
+  } catch (e) {
+    errors.push((e as Error).message);
+  }
+  return errors;
+};
+
+/**
  * Checks an asset JSON's source files, its own and each scene's latest save entry's (p300 DD3),
  * and resolves its `optimize` settings for each (an unknown profile throws). Logs every problem.
  * @returns false if there was one
@@ -95,6 +142,11 @@ export const checkAssetSources = (
     }
     for (const error of errors) ctx.log.error(`${file}: ${error}`);
     if (errors.length) return false;
+  }
+  if (data.faces) {
+    const errors = checkCubeSources(ctx, fullPath, { ...data, faces: data.faces });
+    for (const error of errors) ctx.log.error(`${file}: ${error}`);
+    return !errors.length;
   }
   const sources = [{ label: '', fileName: data.fileName, path: data.path }];
   for (const [sceneId, entries] of Object.entries(data.__saveData ?? {})) {

@@ -34,7 +34,7 @@ import {
   type TakenIds,
 } from './context';
 import { getIdFromFileName } from './gatheredJson';
-import { checkAssetSources, getSourceFileSize, setGeneratedFields } from './sources';
+import { checkAssetSources, getTextureSourceFileSize, setGeneratedFields } from './sources';
 
 const readTextures = (ctx: GatherContext, reg: Registries, taken: TakenIds) =>
   readAssetJsons(ctx, 'texture', TextureAssetSchema, (texJSON, { file, fullPath, sourcePath }) => {
@@ -42,7 +42,7 @@ const readTextures = (ctx: GatherContext, reg: Registries, taken: TakenIds) =>
     const texId = texJSON.id || getIdFromFileName(file, 'texture');
     if (!claimIds(ctx, taken.textures, 'texture', file, texId)) return;
     texJSON.__sourcePath = sourcePath;
-    texJSON.__fileSize = getSourceFileSize(fullPath, texJSON.fileName, texJSON.path);
+    texJSON.__fileSize = getTextureSourceFileSize(fullPath, texJSON);
     setGeneratedFields(ctx, texJSON, 'texture', fullPath);
     texJSON.id = texId;
     delete texJSON.$schema;

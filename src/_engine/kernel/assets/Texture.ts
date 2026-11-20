@@ -15,7 +15,12 @@ import {
   retagAssetOwner,
   runInAssetOwnerScope,
 } from './AssetOwners';
-import { resolveAssetUrl, resolveFileUrl, type GeneratedAssetUrls } from './AssetUrl';
+import {
+  resolveAssetUrl,
+  resolveCubeSourceUrls,
+  resolveFileUrl,
+  type GeneratedAssetUrls,
+} from './AssetUrl';
 import { loadKTX2Texture } from './import/KTX2';
 import { getRenderer } from '../render/Renderer';
 import type { TextureArrayInfo } from './TextureArray';
@@ -558,7 +563,9 @@ const loadTextureAtlasSlotAsync = async (
  * instead of its `fileName`, see resolveAssetUrl. The loader is picked by the loaded URL. A
  * texture array asset (`*.textureArray.json`, p299 D2) loads its KTX2 output as a
  * `CompressedArrayTexture`, a one-layer array too. A texture atlas slot (`*.textureAtlas.json`,
- * p299 D3) loads its KTX2 output with its cell table on `userData.textureAtlas`.
+ * p299 D3) loads its KTX2 output with its cell table on `userData.textureAtlas`. A cube texture
+ * asset (a `*.texture.json` with `faces`, p311) loads its KTX2 cube output as a
+ * `CompressedCubeTexture`, or, in development data without one, its six faces as a `CubeTexture`.
  *
  * The texture is registered under `id` (else its uuid), owned by the scene loading (or current)
  * and released with it unless a material, a sky box or the scene's background holds it. A
@@ -599,15 +606,24 @@ export const loadTextureAsync = async (props: TextureProps) => {
   if (__layers) return loadTextureArrayAssetAsync({ ...props, __layers }, ownerScope);
   if (__atlas) return loadTextureAtlasSlotAsync({ ...props, __atlas }, ownerScope);
 
+  // A cube texture asset's faces (p311 D2): without its output, or under "Load source files"
+  const cubeSourceUrls = resolveCubeSourceUrls(props);
   // A packed texture (p300 DD5) has no fileName, only its output
-  if (!fileName && !__url) return getNoFileTexture(texOpts);
+  if (!fileName && !__url && !cubeSourceUrls) return getNoFileTexture(texOpts);
+  const cubeFiles = cubeSourceUrls ?? (Array.isArray(fileName) ? fileName : null);
 
   let loaderType = '';
   let url: string | undefined;
 
   try {
-    if (!Array.isArray(fileName)) {
-      url = resolveTextureUrl({ id, fileName, path, __url, __sourceUrl });
+    if (!cubeFiles) {
+      url = resolveTextureUrl({
+        id,
+        fileName: fileName as string | undefined,
+        path,
+        __url,
+        __sourceUrl,
+      });
       loaderType = getTextureFileLoaderType(url, useHDRLoader);
       const { texture: result, report } = await loadTextureFileAsync(url, {
         useHDRLoader,
@@ -620,16 +636,17 @@ export const loadTextureAsync = async (props: TextureProps) => {
       const loadedTexture = setTextureOpts(result, texOpts, userData, debugData);
       return saveAndReport(loadedTexture, id, isPersistent, report, url, ownerScope);
     } else {
-      // Cube texture (always loaded on the main thread)
-      if (fileName.length !== 6) {
+      // Cube texture (always loaded on the main thread); a cube asset's faces are absolute URLs
+      if (cubeFiles.length !== 6) {
         throw new Error(
-          `Cube texture has to have exactly 6 images in an array (found ${fileName.length} images).`
+          `Cube texture has to have exactly 6 images in an array (found ${cubeFiles.length} images).`
         );
       }
       loaderType = 'CubeTextureLoader';
       const loader = new THREE.CubeTextureLoader();
+      const loaderPath = cubeSourceUrls ? '' : resolveFileUrl(path || './');
       const loadedTexture = setTextureOpts(
-        await loader.setPath(resolveFileUrl(path || './')).loadAsync(fileName),
+        await loader.setPath(loaderPath).loadAsync(cubeFiles),
         texOpts,
         userData,
         debugData
@@ -639,10 +656,10 @@ export const loadTextureAsync = async (props: TextureProps) => {
       ) as THREE.CubeTexture;
     }
   } catch (err) {
-    const errorMsg = `Could not load texture in loadTextureAsync (id: "${id}", fileName: "${Array.isArray(fileName) ? fileName.join(', ') : fileName ?? ''}", ${path ? `path: "${path}", ` : ''}${url ? `url: "${url}", ` : ''}loaderType: "${loaderType}")`;
+    const errorMsg = `Could not load texture in loadTextureAsync (id: "${id}", fileName: "${cubeFiles ? cubeFiles.join(', ') : fileName ?? ''}", ${path ? `path: "${path}", ` : ''}${url ? `url: "${url}", ` : ''}loaderType: "${loaderType}")`;
     lerror(errorMsg, err);
     if (throwOnError) throw new Error(errorMsg);
-    if (Array.isArray(fileName)) return getNoFileTexture(texOpts, true) as THREE.CubeTexture;
+    if (cubeFiles) return getNoFileTexture(texOpts, true) as THREE.CubeTexture;
     return getNoFileTexture(texOpts) as THREE.Texture;
   }
 };

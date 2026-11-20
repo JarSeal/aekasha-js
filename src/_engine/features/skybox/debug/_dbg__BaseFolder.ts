@@ -10,6 +10,12 @@ const isKtx2Cube = () => {
   const base = getActiveSkyBox()?.def.base;
   return base?.type === 'CUBE_TEXTURE' && Boolean(base.file);
 };
+/** Whether the active base is a cube from six images (`fileNames`), not one file or a cube
+ * texture asset (a lone `textureId`, p311). */
+const isImagesCube = () => {
+  const base = getActiveSkyBox()?.def.base;
+  return base?.type === 'CUBE_TEXTURE' && Boolean(base.fileNames);
+};
 const isNot =
   (...types: SkyBoxBaseType[]) =>
   () => {
@@ -51,7 +57,7 @@ export const buildBaseFolder = (): DebuggerPaneItem => {
         multiline: true,
         rows: 6,
         interval: 0,
-        hidden: () => isNot('CUBE_TEXTURE')() || isKtx2Cube(),
+        hidden: () => !isImagesCube(),
       },
       {
         key: 'path',
