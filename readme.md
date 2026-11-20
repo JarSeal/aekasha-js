@@ -76,7 +76,7 @@ These are ready-made modules you can import as they are, or copy into your app a
 - **Procedural textures** (`terrain/`): a noise library that tiles (value and gradient noise, fbm, domain warp, Worley cells, height to normal and cavity), each periodic for a bake or not for live use, and hashed with integers, so it's safe on software WebGL and agrees across backends up to float precision; ten surface generators (`sandRipples`, `sandFlat`, `mudCracked`, `mudSmooth`, `rockyGround`, `cliffStrata`, `snowDrift`, `iceSheet`, `grassGround`, `concretePores`), each baked into any packing (`bakeSurfaceGenerator`, or a procedural texture set) or evaluated live in a material (`createLiveSurface`: it never repeats, and costs per pixel); and two shared generated textures, a macro noise for breaking up tiling and a rain ripple atlas, both bakeable and committed as KTX2 (`textures/macroNoise/`, `textures/rippleAtlas/`).
 - **Terrain materials** (`terrain/material/`): `createTerrainMaterial` builds one material from a declarative config of up to 16 texture set layers, and compiles only what the config turns on: weights from vertex colours, one or two splat maps, or rules of slope, height, facing and noise (alone or over the paint), with height blending; dual-scale or hex anti-tiling and a macro variation; biplanar, triplanar and slope-gated projection for cliffs; sparse sampling of the few layers that matter at each pixel from a set array; a block's baked colour map under tiled detail (`bakeTerrainColorMap`), and a far surface that stops sampling the layers in the distance; object space for structures (`createStructureMaterial`); layers that run a procedural surface live; a wet response to the surface conditions (`wet`, or `applySurfaceWetness` in a TSL material of your own): each layer darkening and glossing by its texture set's response to water, puddles in the low spots with rain rings, rivulets down steep faces, a shoreline's wash, snow cover turning to slush, and frost; quality tiers (`getTerrainQualityPreset`); and debug views (texel density, weights, projection, fetches a pixel, layers a pixel, wetness). Its numbers are uniforms, its texture budget checked, and the JSON route (`terrain`) lets a mesh swap a block's sets and splat maps without another shader. A handbook page per technique: [`docs/techniques/`](docs/techniques/README.md).
 - **Procedural geometry** (`geometry/`): seeded noise terrain, foliage, asteroids, scatter rocks (pebbles, rocks and boulders within their triangle budgets), leaf litter cards and scattering on surfaces: the same seed gives the same world. The terrain generator samples its noise at the world place, so blocks of one seed continue each other, with normals that agree across their edges; it takes a height function or a raw heightmap (`R16`, `R32F`) instead, lays the terrain material's rules into the vertex colours on the CPU, bakes a horizon AO and returns the heightfield collider, and `generateTerrainAsync` runs it on a worker.
-- **Terrain blocks** (`terrain/blocks/`, `terrain/blender/`): the block generators `noiseTerrain` and `rulesTerrain` for JSON blocks, and a Blender add-on (one file, Blender 5.3) that adds, validates, paints, bakes AO and colour maps, splits a large terrain into neighbours and exports blocks with locked glTF settings and their JSON stubs, lays decals and decal strips onto a block and exports them as a decal set, with nine templates for the block and each technique, scatter and decals included.
+- **Terrain blocks** (`terrain/blocks/`, `terrain/blender/`): the block generators `noiseTerrain` and `rulesTerrain` for JSON blocks, and a Blender add-on (one file, Blender 5.3) that adds, validates, paints (vertex colours, or one or two splat maps for up to eight painted layers), bakes AO and colour maps, splits a large terrain into neighbours and exports blocks with locked glTF settings and their JSON stubs, lays decals and decal strips onto a block and exports them as a decal set, with nine templates for the block and each technique, scatter and decals included.
 - **Terrain scatter** (`terrain/scatter/`): the `terrainScatter` generator places a block's scatter by Poisson-disk sampling, kept by the block's painted layers, slope, height and a clustering noise, on the block's own mesh. The `rockScatter` material draws rocks in the ground's own texture set (no texture memory of their own), triplanar in each rock's space, wet with the ground; `leafLitter` draws a leaf of its atlas per card. A handbook page: [`docs/techniques/terrain-scatter.md`](docs/techniques/terrain-scatter.md).
 - **Terrain decals** (`terrain/decals/`, `textures/decalsGround/`, `textures/decalsStructure/`): two decal atlases (tyre tracks, cracks, stains, scorch marks, footprints, wet patches, leaks, formwork marks: ambientCG scans and cells baked by nine decal generators, whose data is their recipe) and their decal material, alpha-blended or cut out, faded at its edges, wet with the ground, its ruts and prints filling with water first. Runtime decal pools stamp footprints, tyre ribbons and trails behind a moving point on a block's own grid, or decals on any mesh, recycling the oldest, all of a pool one render object (`createDecalPool`, `spawnDecal`, `createDecalTrail`). A handbook page: [`docs/techniques/terrain-decals.md`](docs/techniques/terrain-decals.md).
 - **Models** (`models/<category>/<id>/`): the Ækasha symbol, the Æ glyph extruded with a soft bevel, as a Draco-compressed GLB with its asset JSON, ready for `importAssetAsync`; and scatter rocks (`nature/`): Poly Haven's Namaqualand stones and boulder, decimated to the scatter's budgets, each with its own maps as a texture set.
@@ -118,6 +118,12 @@ These are ready-made modules you can import as they are, or copy into your app a
 | Smallest build         | A production bundle holds what the app lists and uses: features install only when listed, nothing registers at module load (a unit test checks it), `package.json`'s `sideEffects` lets the bundler drop unused modules, and Rapier, the glTF / Draco / HDR loaders, each TSL material and PostFX file, and the assets worker's jobs load on demand. `yarn sbp` measures it against per-profile budgets in `sbp.config.ts` on every `yarn build`; the Hub's Smallest build page shows the current numbers, generated from its report. |
 | Save data              | Each asset file stores per-scene override history stamped with the engine, toolkit and app versions, and the gatherer warns when an entry comes from another major version.                                                                                                                                                                                                                                                                                                                                                           |
 | Versioning             | Engine, toolkit and app are versioned independently, with release tags and a checksum meta tag in the built HTML.                                                                                                                                                                                                                                                                                                                                                                                                                     |
+
+### Terrain, from Blender to a measured frame
+
+![The terrain showcase: a coast, an alpine slope, wetlands with a concrete bunker and a generated block, as islands in the sea](src/app/scenes/terrainShowcase/terrainShowcase.hub.png)
+
+The `terrainShowcase` scene puts the terrain work together: a coast, an alpine slope and wetlands shaped and painted in Blender with the toolkit's add-on, a block generated from rules beside them and a concrete bunker, each with its scatter and decals, under a day-night sky and weather that rains, dries and snows, walked by a player who leaves footprints. Each technique has its own row in `terrainGallery`, measured from a camera per game type: at 1920 × 1080 on an AMD RDNA 3 GPU, a block's ground costs 0.15-1.3 ms from its game type's camera, the wettest weather nothing measurable and snow 0.04-0.27 ms. The handbook's decision matrix ([`docs/techniques/`](docs/techniques/README.md)) picks the techniques for each game type with those figures.
 
 ---
 
@@ -403,7 +409,55 @@ export const scene = async () => {
 
 A scene's JSON reaches the same generator through the material `terrain`, a mesh's `matOverrides` giving a block its sets and splat maps. Which technique suits which game, and what each costs: [`docs/techniques/`](docs/techniques/README.md), starting from [single-layer terrain](docs/techniques/terrain-single-layer.md).
 
-### 5. Add code-driven content and physics
+### 5. Place a terrain block
+
+A terrain block is a square of ground as one asset: its geometry (a Blender export, or a generator with its params and seed), its terrain material, its place on the world grid, its collider and its scatter. This one is generated: seeded noise heights, the rules laid into its vertex colours, rocks on its scree.
+
+```jsonc
+// src/app/examples/terrain/exampleTerrainBlock.terrainBlock.json (abridged)
+{
+  "$schema": "../../../../.schemas/terrainBlock.schema.json",
+  "geometry": {
+    "generator": "rulesTerrain", // the toolkit's, registered by registerTerrainGenerators()
+    "params": {
+      "maxHeight": 14,
+      "layout": "RGB_AO", // three layer weights over the base layer, a horizon AO in A
+      "rules": [
+        { "layer": 1, "slope": { "min": 32, "softness": 6 } }, // scree
+        {
+          "layer": 2, // snow
+          "height": { "min": 7, "softness": 3 },
+          "slope": { "max": 35, "softness": 8 },
+        },
+        { "layer": 3, "slope": { "min": 45 } }, // cliffs
+      ],
+    },
+    "seed": 2,
+  },
+  "material": "exampleTerrainGround",
+  "grid": { "x": 0, "z": 0, "size": 64, "resolution": 129 },
+  "collider": { "type": "HEIGHTFIELD", "friction": 1.0 },
+  "scatter": ["exampleTerrainRocks"],
+}
+```
+
+The scene JSON lists it (`"terrainBlocks": ["exampleTerrainBlock"]`), and the gather brings its material, texture sets and scatter. The scene file spawns it:
+
+```ts
+import { spawnTerrainBlock } from 'aekasha/terrain';
+import { saveRockGeometries } from 'aekasha/toolkit/geometry';
+
+export const scene = async () => {
+  saveRockGeometries({ kinds: ['ROCK'] }); // the procedural rocks its scatter names
+  // The mesh, its material, its heightfield collider and its scatter, released with the scene
+  const block = await spawnTerrainBlock('exampleTerrainBlock');
+  if (!block) return; // the scene was left while it spawned
+};
+```
+
+Blocks shaped and painted in Blender come from the toolkit's add-on, which exports the GLB and these JSONs: [`docs/techniques/terrain-blocks-blender.md`](docs/techniques/terrain-blocks-blender.md). The Hub's terrain example walks through this one.
+
+### 6. Add code-driven content and physics
 
 The `sceneFile` exports a `scene` function that runs while the scene loads.
 
@@ -428,7 +482,7 @@ export const scene = async () => {
 };
 ```
 
-### 6. Write your own component and system
+### 7. Write your own component and system
 
 ```ts
 // src/app/shared/Spin.ts
@@ -476,7 +530,7 @@ ecsWorld.addComponent(ballId, SpinComponentType.SPIN, { speed: 2 });
 
 > Anything that moves physics bodies (poses, velocities, impulses, kinematic targets) goes in an `APP_PHYSICS_STEP` system, so it stays in lockstep with the simulation and deterministic.
 
-### 7. Configure the app
+### 8. Configure the app
 
 `InitEngine`'s `config` (example 1): every key is optional, and one you leave out keeps its default, set by the part of the engine that reads it (`physics.workerTarget`: `'WORKER_THREAD'`).
 
@@ -496,7 +550,7 @@ const config: AppConfig = {
 };
 ```
 
-### 8. Embed a scene in a site
+### 9. Embed a scene in a site
 
 An embed profile (`sbp.config.ts`) builds into `dist-embed/<id>/` with `yarn sbp --profile <id>`. Its entry binds the profile's data and features; the site copies the folder and mounts it into any element:
 
@@ -524,7 +578,7 @@ The page keeps its own styles and input; the scene pauses out of view, and `scen
 
 The Ækasha Hub's Examples section (`/hub/examples/`) walks through thirteen examples: twelve scenes, each in [`src/app/examples/`](src/app/examples/) and named "Example: …" in the scene dropdowns (the quick start, physics, a keyboard-driven character with a look-ahead follow camera, the toolkit's model and materials, a generated terrain block with its collider and scattered rocks, the sky box and day-night, a component and system of your own, LOD and instancing, mesh merging (a ruined courtyard of about 280 kit pieces drawn as five merged meshes, a gate swung in place and pillars toppled out of their group), a debug tab of your own, an app HUD from the UI kit with a settings grid, a form, an inspector of the scene's objects and a command palette, and a game HUD played with a keyboard and mouse or a gamepad, with prompts that follow the device, world anchors, a compass, a minimap, a conversation, an inventory and a controls page; each page opens its scene with `?startScene`), and embedding the banner in a site, which runs live on its page.
 
-The other scenes, a folder each in [`src/app/scenes/`](src/app/scenes/), cover more: the start scene (`sceneTestECS`: JSON meshes, a TSL material, an imported GLB and the toolkit's hover effect), a physics and joints test, a physics simulation tiers demo (686 crates and a plough), a large procedural world with instancing and culling, an instance stress test (instanced LOD pools against an instance set, up to a million trees), a third-person character gym, a top-down character scene (world-fixed controls, hills, and sun shadows fitted to the view), the LOD showcase, a sky showcase with day-night, a zero-g space scene with asteroids under mutual gravity, the KTX2 codecs next to their uncompressed sources, texture arrays and atlases (built and runtime arrays, an atlas at each mip level, and a layer and a cell sampled from a material JSON), texture sets in each packing and as set arrays, the terrain gallery (every set of the toolkit's library on its own block of generated terrain, a row per technique of the terrain material (anti-tiling, splatting, rules, cliffs, colour maps, structures, a live procedural layer) with its quality tiers and debug views, and a row of the procedural generators, baked, live or as the library's sets, with their frame cost), and the procedural textures' verification scenes (`noiseLibrary`: every noise function baked and tiled next to its live variant, and the shared textures; `proceduralSurfaces`: the ten generators in every packing, baked, live and from a set JSON).
+The other scenes, a folder each in [`src/app/scenes/`](src/app/scenes/), cover more: the start scene (`sceneTestECS`: JSON meshes, a TSL material, an imported GLB and the toolkit's hover effect), a physics and joints test, a physics simulation tiers demo (686 crates and a plough), a large procedural world with instancing and culling, an instance stress test (instanced LOD pools against an instance set, up to a million trees), a third-person character gym, a top-down character scene (world-fixed controls, hills, and sun shadows fitted to the view), the LOD showcase, a sky showcase with day-night, a zero-g space scene with asteroids under mutual gravity, the KTX2 codecs next to their uncompressed sources, texture arrays and atlases (built and runtime arrays, an atlas at each mip level, and a layer and a cell sampled from a material JSON), texture sets in each packing and as set arrays, the terrain gallery (every set of the toolkit's library on its own block of generated terrain, a row per technique of the terrain material (anti-tiling, splatting, rules, cliffs, colour maps, structures, a live procedural layer) with its quality tiers and debug views, and a row of the procedural generators, baked, live or as the library's sets, with their frame cost; the packings side by side, scatter, decals and the weather, camera presets per game type, and a measurement mode that times each block's GPU cost and draws), the terrain showcase (three blocks built in Blender, a coast, an alpine slope and wetlands, a generated block and a concrete bunker, with their scatter and decals, the weather's scenarios and a player stamping footprints), and the procedural textures' verification scenes (`noiseLibrary`: every noise function baked and tiled next to its live variant, and the shared textures; `proceduralSurfaces`: the ten generators in every packing, baked, live and from a set JSON).
 
 ---
 
