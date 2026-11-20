@@ -3,7 +3,7 @@
   "chunks": {
     "assets/Announcer.js": {
       "bytes": 2435,
-      "gzip": 1251
+      "gzip": 1250
     },
     "assets/AssetsSwitchGLTF.js": {
       "bytes": 152452,
@@ -71,11 +71,11 @@
     },
     "assets/GeometryMerge.js": {
       "bytes": 8249,
-      "gzip": 3428
+      "gzip": 3429
     },
     "assets/GeometryTransfer.js": {
       "bytes": 1933,
-      "gzip": 870
+      "gzip": 871
     },
     "assets/GeometryTransfer.js@AssetsWorker": {
       "bytes": 2051,
@@ -119,7 +119,7 @@
     },
     "assets/ImportRegistry.js": {
       "bytes": 18135,
-      "gzip": 7355
+      "gzip": 7359
     },
     "assets/KTX2Loader.js": {
       "bytes": 60311,
@@ -143,7 +143,7 @@
     },
     "assets/TextureInputResolvers.js": {
       "bytes": 3306,
-      "gzip": 1364
+      "gzip": 1366
     },
     "assets/three.core.js": {
       "bytes": 199218,
@@ -151,7 +151,7 @@
     },
     "assets/three.module.js": {
       "bytes": 219,
-      "gzip": 182
+      "gzip": 183
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -162,8 +162,8 @@
       "gzip": 1987
     },
     "assets/uiKit.embed.js": {
-      "bytes": 973610,
-      "gzip": 272183
+      "bytes": 973958,
+      "gzip": 272276
     },
     "assets/uiKitEmbed.css": {
       "bytes": 18013,
@@ -179,7 +179,7 @@
     },
     "assets/uiKitEmbedData.js": {
       "bytes": 50878,
-      "gzip": 19024
+      "gzip": 19023
     },
     "assets/uiKitEmbedForm.css": {
       "bytes": 24068,
@@ -199,20 +199,20 @@
     },
     "uiKit.embed.js": {
       "bytes": 249,
-      "gzip": 210
+      "gzip": 211
     }
   },
   "main": {
     "chunk": "assets/uiKit.embed.js",
     "modules": 69,
-    "minified": 997647,
-    "gzip": 278423
+    "minified": 998012,
+    "gzip": 278509
   },
   "mainGroups": {
     "_engine/kernel/assets": {
       "modules": 15,
-      "minified": 31806,
-      "gzip": 11274
+      "minified": 32171,
+      "gzip": 11364
     },
     "_engine/kernel/camera": {
       "modules": 1,
@@ -222,7 +222,7 @@
     "_engine/kernel/config": {
       "modules": 1,
       "minified": 2433,
-      "gzip": 1085
+      "gzip": 1081
     },
     "_engine/kernel/ecs": {
       "modules": 6,

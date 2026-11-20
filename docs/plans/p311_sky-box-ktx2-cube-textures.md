@@ -296,4 +296,9 @@ What Phases 1-2 leave for it:
    on `TextureProps`), app minor (scene01's KTX2 cube sky box), Project for the pipeline; the
    `CHANGELOG.md` entry; `yarn verify:baselines --update` for the API baseline (`SkyBoxDef`'s
    `file` / optional `fileNames`, `TextureProps.__sourceUrls`); `yarn checkVersions --against main`.
+   As built: engine and project 6.19.1 → 6.20.0, app 1.32.0 → 1.33.0, the toolkit unchanged
+   (3.8.0). The API baseline records exports' names and kinds, not their types, so `SkyBoxDef`'s
+   and `TextureProps`' changes don't show in it: its one change is the `@internal`
+   `resolveCubeSourceUrls` (the docs baseline counts it documented). The bundles: the sky box
+   feature +0.3 KiB gzip in the app's first download, the embeds' main chunks about 0.1 KiB.
 3. Mark the plan done (`_DONE_` rename, references).
