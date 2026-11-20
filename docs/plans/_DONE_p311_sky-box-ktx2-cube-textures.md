@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-2 implemented; Phase 3 dropped
+Status: implemented (Phases 0-2 and 4; Phase 3 dropped)
 Category: Sky box, Assets, Textures
 Related: \_DONE_p057_three-r187-migration.md (r187's compressed cube support), \_DONE_p300_asset-optimization-pipeline-plan.md (the KTX2 encoder), \_DONE_p299_texture-arrays-and-atlases.md
 
@@ -272,7 +272,7 @@ Design 3, if Phase 0 says so. Dropped on Phase 0's figures (2026-11-20): the bak
 smaller than what Phases 1-2 cut, and WebGPU's first-bake pipeline creation is shared with a
 composite sky's env bake. A follow-up only if a scene's first frame shows the pipeline creation.
 
-### Phase 4: Hub and versioning
+### Phase 4: Hub and versioning — done
 
 Hub (the sky box page's base layer section, the asset pipeline page), `CLAUDE.md`s, versioning
 (an engine minor: new schema option).
