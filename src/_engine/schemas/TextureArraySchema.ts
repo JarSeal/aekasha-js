@@ -70,6 +70,7 @@ export const TextureArrayAssetSchema = z.object({
   ...GeneratedAssetFieldsSchema.omit({
     __lodChain: true,
     __sourceUrl: true,
+    __sourceUrls: true,
     __averageColor: true,
   }).shape,
 });

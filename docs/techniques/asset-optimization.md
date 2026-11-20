@@ -53,7 +53,7 @@ Save it, and the dev server encodes it. Then commit the source, the new file in 
 
 - **`slot`** tells the pipeline what the texture is (see [Slots](#slots)). It defaults to `default`.
 - **Colour space:** set `texOpts.colorSpace: "srgb"` on colour textures (albedo, emissive). The KTX2 is encoded with the colour space your JSON says, so it looks the same as the PNG loaded with the same JSON.
-- **Orientation:** standalone textures are stored flipped in the KTX2, because a compressed texture can't be flipped at load. They look the same as the source loaded through `TextureLoader`. You don't need to do anything. A texture whose `texOpts.flipY` is `false` (UVs with the origin at the top, as a glTF's) is stored as the source is instead: its own encode, keyed apart (p302 D1). A texture array or atlas slot is always stored flipped, so its schema refuses `flipY: false`, and a merge palette fails on a member texture that has it.
+- **Orientation:** standalone textures are stored flipped in the KTX2, because a compressed texture can't be flipped at load. They look the same as the source loaded through `TextureLoader`. You don't need to do anything. A texture whose `texOpts.flipY` is `false` (UVs with the origin at the top, as a glTF's) is stored as the source is instead: its own encode, keyed apart (p302 D1). A texture array or atlas slot is always stored flipped, so its schema refuses `flipY: false`, and a merge palette fails on a member texture that has it. A cube texture is never flipped (see [Cube textures](#cube-textures)).
 - **Relative sources** must stay inside `src/` and can't be combined with `path`. A production build doesn't ship `src/`, only the outputs.
 - **A `src/public` path** (`"/textures/rock.png"`) still works, and that file is optimized too. A remote URL is loaded as it is.
 - HDR sources (`.hdr`, `.exr`) and `.ktx2` / `.basis` sources are passed through as they are: UASTC and ETC1S are LDR formats.
@@ -218,6 +218,47 @@ A texture JSON can build its image from several sources with `pack`, in place of
 - Sources of different sizes need `size: [width, height]`. The result is then resized to the slot's `maxSize`.
 
 With optimization off, a pack is still built and written as a PNG, since it has no single source file.
+
+## Cube textures
+
+A sky box's cube map is six images, one per face. As six PNGs, a 2048² cube is a 22.6 MB download, and the browser makes its mips on the main thread at upload (160-190 ms on a desktop GPU). A texture JSON with `faces` in place of `fileName` is encoded as one KTX2 cube, its mips made by the encoder:
+
+```jsonc
+// src/app/scenes/scene01/desertDunes.texture.json
+{
+  "$schema": "../../../../.schemas/texture.schema.json",
+  "id": "desertDunes",
+  "faces": [
+    "cubemap02_positive_x.png",
+    "cubemap02_negative_x.png",
+    "cubemap02_negative_y.png",
+    "cubemap02_positive_y.png",
+    "cubemap02_positive_z.png",
+    "cubemap02_negative_z.png",
+  ],
+  "path": "/debugger/assets/testTextures/",
+  "texOpts": { "colorSpace": "srgb" },
+}
+```
+
+- **`faces`**, in the order +x, −x, +y, −y, +z, −z: each is what `fileName` takes (relative to the JSON with `./`, or a `src/public` path after `path`). `fileName`, `pack` and `faces` are alternatives: the schema refuses two.
+- **The faces** must be square and of one size. They're resized to the slot's `maxSize` (1024 by default) like a texture, and a face with alpha makes the cube RGBA.
+- **ETC1S by default**, whatever the profile or `defaults` say: only the JSON's own `optimize.textures` names another codec. A 2048 UASTC cube was 6.5 times ETC1S's download and about nine times slower to load (1.1 s against 128 ms: zstd and the UASTC transcode), slow for a sky. Codec `none` is refused: a cube is a KTX2 file.
+- **Not flipped:** the faces are stored as they are, so `texOpts.flipY` is refused. A sky box turns a cube upside down with its own `flipY`. `alphaCoverage` is refused too.
+- **No pass-through.** With optimization off for the asset or the project, a cube has no output. The dev server then loads its six faces (with a warning), and `yarn build` fails on one a shipped scene uses, even with `AEK_ASSETS_ALLOW_UNOPTIMIZED=true`.
+- Output: `aek-assets/<json path>.cube.<hash>.ktx2`. The VRAM figures and the budget's ceiling count six faces.
+- An array layer or an atlas cell can't name a cube texture.
+
+The size of a sky texture is also its lighting's cost: the sky box bakes its environment map (a PMREM, HalfFloat) at the cube's face size. A 1024 cube's is 67 MB on the GPU, a 2048 one's 268 MB, and its bake takes two to three times as long (WebGPU 28 → 50 ms, WebGL2 50 → 145 ms). Measured on scene01's desert dunes (Chrome, an AMD RDNA 3 GPU):
+
+| Cube                       | Download | Load    | Upload (main thread)      | VRAM (estimate) |
+| -------------------------- | -------- | ------- | ------------------------- | --------------- |
+| Six 2048² PNGs             | 22.6 MB  | ~185 ms | 160-190 ms                | 134 MB          |
+| KTX2 ETC1S, 1024 (default) | 0.64 MB  | ~40 ms  | under 3 ms                | 8.4 MB          |
+| KTX2 ETC1S, 2048           | 2.09 MB  | ~128 ms | 4-5 ms (WebGL2: 23-25 ms) | 34 MB           |
+| KTX2 UASTC, 2048           | 13.5 MB  | ~1.1 s  | 4-5 ms (WebGL2: 23-25 ms) | 34 MB           |
+
+A sky box shows the asset with a `CUBE_TEXTURE` base that names it by `textureId` alone, and the scene that lists the sky box loads the texture with its own (see the Hub's [sky box page](../../hub/pages/features/sky-box/guide.md)).
 
 ## Texture arrays and atlases
 
@@ -398,7 +439,7 @@ On by default, at three levels:
 
 2. **One asset:** `"optimize": false` in its JSON, or `{ "glob": "…", "optimize": false }` as a rule. A GLB can keep one side as it is: `"optimize": { "textures": false }` or `{ "mesh": false }`.
 
-3. **One page load (dev / test builds):** the Assets debug tab's "Asset loading" folder has a "Load source files (boot)" checkbox. After a reload, assets load their source files instead of the outputs, for an A/B comparison. Packed textures have no source and stay optimized. A production build ignores it.
+3. **One page load (dev / test builds):** the Assets debug tab's "Asset loading" folder has a "Load source files (boot)" checkbox. After a reload, assets load their source files instead of the outputs, for an A/B comparison. Packed textures have no source and stay optimized; a cube texture loads its six faces. A production build ignores it.
 
 ## Codec cheat sheet
 

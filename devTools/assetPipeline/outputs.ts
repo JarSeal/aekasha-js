@@ -38,6 +38,13 @@ export const getPackLogicalPath = (source: PackSource) =>
   getJsonLogicalPath(source.jsonFile, '.pack');
 
 /**
+ * A cube texture's logical path (p311 D1): its JSON's, eg. 'app/skyboxes/dunes.cube' for
+ * dunes.texture.json
+ * @param jsonFile Absolute
+ */
+export const getCubeLogicalPath = (jsonFile: string) => getJsonLogicalPath(jsonFile, '.cube');
+
+/**
  * A texture array's logical path (p299 D2): its JSON's, eg. 'app/textures/rocks.array' for
  * rocks.textureArray.json
  * @param jsonFile Absolute

@@ -86,6 +86,10 @@ A `*.texture.json` names an image and how it's sampled:
   their `texOpts` refuse it.
 - **`isPersistent: true`** keeps the texture loaded past every scene's release: only
   [`deleteTexture`](api:deleteTexture) removes it.
+- **A cube texture** has `faces`, six images (+x, −x, +y, −y, +z, −z), in place of `fileName`:
+  the asset pipeline encodes them as one KTX2 cube, which a
+  [sky box's cube base](hub:features/sky-box#a-cube-map) shows by its id (see
+  [cube textures](hub:features/asset-optimization#cube-textures)).
 
 ## Merged geometries
 
@@ -206,7 +210,8 @@ A scene lists the materials it uses, and the gather adds the textures they name 
 `{ "texture": … }`, a texture array's `{ "textureArray": … }`, an atlas cell's
 `{ "atlas": …, "slot": … }`, which adds the slot's texture, and a texture set's
 `{ "textureSet": … }`, which adds its packing's); and the scene's spot lights' cookies
-(`map`) and its `backgroundTexture`. The added textures come after the listed ones, each once,
+(`map`), its `backgroundTexture` and the cube texture a sky box it lists names by `textureId`
+alone (see [a cube map](hub:features/sky-box#a-cube-map)). The added textures come after the listed ones, each once,
 and load, release and stream with the scene as listed ones do.
 
 - **An id no texture JSON has** fails the gather, naming what names it:

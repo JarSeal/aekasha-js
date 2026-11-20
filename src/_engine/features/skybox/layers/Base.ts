@@ -148,26 +148,49 @@ const loadEquirectTexture = async (
   return texture;
 };
 
+/**
+ * A cube base's texture: six images (`fileNames`) as a CubeTexture, mipmapped at upload, one
+ * KTX2 cube file (`file`) as a CompressedCubeTexture with its own mips and colour space (p311),
+ * or a registered cube texture asset (a lone `textureId`, p311 D2: the scene's load registered
+ * it) with its own colour space. A texture that isn't a cube is reported and shows black, like a
+ * failed load.
+ */
 const loadCubeTexture = async (
   base: Extract<SkyBoxBaseDef, { type: 'CUBE_TEXTURE' }>
 ): Promise<THREE.Texture | null> => {
+  const fileName = base.file ?? base.fileNames;
+  const isAsset = !base.texture && !fileName;
   const texture =
     base.texture ||
-    ((await loadSkyTextureAsync({
-      id: base.textureId,
-      fileName: base.fileNames,
-      path: base.path,
-    })) as THREE.CubeTexture | null);
-  if (!texture) {
+    (fileName
+      ? await loadSkyTextureAsync({ id: base.textureId, fileName, path: base.path })
+      : (base.textureId && getTexture(base.textureId)) || null);
+  if (!texture || !(texture as THREE.CubeTexture).isCubeTexture) {
+    const what = isAsset ? `texture "${base.textureId ?? ''}"` : 'file';
     reportSkyTextureFailure(
-      `Could not load the cube sky box texture (${JSON.stringify(base)}): the base shows black.`
+      texture
+        ? `The cube sky box's ${what} isn't a cube texture (${JSON.stringify(base)}; a KTX2 cube needs six faces, ktx create --cubemap): the base shows black.`
+        : isAsset
+          ? `The cube sky box's texture "${base.textureId ?? ''}" isn't registered (${JSON.stringify(base)}; a scene that lists the sky box loads it): the base shows black.`
+          : `Could not load the cube sky box texture (${JSON.stringify(base)}): the base shows black.`
     );
     return null;
   }
   texture.userData.id = base.textureId || texture.userData.id || texture.uuid;
+  // A texture asset's colour space is its own (`texOpts`), unless the base sets one
+  if (isAsset && !(texture as THREE.CompressedTexture).isCompressedTexture) {
+    if (base.colorSpace) setColorSpace(texture, base.colorSpace as THREE.ColorSpace);
+    return texture;
+  }
+  if ((texture as THREE.CompressedTexture).isCompressedTexture) {
+    // Its mips come in the file (a compressed format can't generate them), and KTX2Loader has
+    // set the filter and the file's colour space
+    if (base.colorSpace) setColorSpace(texture, base.colorSpace as THREE.ColorSpace);
+    return texture;
+  }
   texture.generateMipmaps = true;
   texture.minFilter = THREE.LinearMipmapLinearFilter;
-  setColorSpace(texture, resolveColorSpace(base.colorSpace, base.fileNames[0]));
+  setColorSpace(texture, resolveColorSpace(base.colorSpace, base.fileNames?.[0]));
   return texture;
 };
 

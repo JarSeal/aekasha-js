@@ -65,6 +65,45 @@ second (`env.updateAngleDeg`, `env.maxUpdatesPerSec`). `env.size` is the environ
 size: 256 (the default) or 512, for sharper mirror reflections at four times the memory and about
 twice the bake time. 64 and 128 are deprecated: they bake at 256 (three's smallest).
 
+## A cube map
+
+A `CUBE_TEXTURE` base takes its cube in one of three forms:
+
+- **`fileNames`**: six images, in the order +x, −x, +y, −y, +z, −z, relative to `path`. The
+  simplest, and the heaviest: a 2048² cube of PNGs is a 22.6 MB download, and the browser makes
+  its mips on the main thread when it uploads it (160-190 ms).
+- **`file`**: one `.ktx2` cube (`ktx create --cubemap`), its mips in the file.
+- **`textureId` alone**: a cube texture asset, a `*.texture.json` with `faces`, which the
+  [asset pipeline](hub:features/asset-optimization#cube-textures) encodes as one KTX2 cube (ETC1S,
+  1024 per face, by default). A scene that lists the sky box loads the texture with its own, so
+  you list nothing else.
+
+The app's scene01 shows the third form. Its sky box names the texture asset, and the asset names
+the six PNGs:
+
+::: code-group
+
+<<< src/app/scenes/scene01/desertDunesKtx2.skybox.json title="desertDunesKtx2.skybox.json"
+
+<<< src/app/scenes/scene01/desertDunes.texture.json title="desertDunes.texture.json"
+
+:::
+
+- **`flipY`** turns the cube upside down (a half turn about the X axis), for faces made the other
+  way up, and `rotate` turns it about the vertical axis, in radians. Both work on all three forms
+  alike.
+- **The colour space:** six images are sRGB by default (an `.hdr` linear); a KTX2 file or a
+  texture asset keeps its own. `colorSpace` replaces either.
+- **The face size is the lighting's cost.** The environment map that lights the scene is baked at
+  the cube's face size (at least 256), in half floats: 67 MB of GPU memory for a 1024 cube, 268 MB
+  for a 2048 one, and two to three times the bake time. `env.size` sets only a procedural sky's
+  bake.
+- A file that isn't a cube (a KTX2 without six faces), or a texture asset nobody loaded, shows
+  black, with an error in the console, as a texture that fails to load does.
+
+scene01 also has the same sky as six PNGs (`desert-dunes`, made in its code, the default): open
+it with `?isDebug=true&startScene=scene01` and switch between the two in the Sky box tab.
+
 ## Day and night
 
 With `dayNight`, the sky keeps a running time of day. Your game drives it:

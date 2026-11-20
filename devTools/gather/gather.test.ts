@@ -8,6 +8,7 @@ import { ROOT } from '../paths';
 import { GENERATED_APP_DATA_FILENAME, GENERATED_APP_FNS_FILENAME } from './output';
 import { getPipelineAssetKey, resolveAssetUse } from '../assetPipeline/assets';
 import { getGeneratedFields } from '../assetPipeline/generated';
+import { createSettingsResolver } from '../assetPipeline/settings';
 import type { PipelineRun, PipelineRunResult } from '../assetPipeline/run';
 
 // The gather on the repo's data, and its rules (p619 G1-G3, G5, G6, G12, G13) on small trees in a
@@ -2063,5 +2064,146 @@ describe('p309 D3: decal sets', () => {
     ).toBe(false);
     expect(gather(files({ renderOrder: 1.5 })).isGathered).toBe(false);
     expect(gather(files({ castShadow: true })).isGathered).toBe(false);
+  });
+});
+
+describe('p311 D2: a cube texture asset', () => {
+  const DIR = '/debugger/assets/testTextures/';
+  const FACES = [
+    'positive_x',
+    'negative_x',
+    'positive_y',
+    'negative_y',
+    'positive_z',
+    'negative_z',
+  ];
+  const faces = FACES.map((face) => `cubemap01_${face}.png`);
+  const SOURCE_URLS = faces.map((face) => `${DIR}${face}`);
+  const files = (cube: Record<string, unknown> = {}, base: Record<string, unknown> = {}) => ({
+    'app/textures/dunes.texture.json': {
+      id: 'dunes',
+      faces,
+      path: DIR,
+      texOpts: { colorSpace: 'srgb' },
+      ...cube,
+    },
+    'app/skyboxes/dunesSky.skybox.json': {
+      id: 'dunesSky',
+      base: { type: 'CUBE_TEXTURE', textureId: 'dunes', flipY: true, ...base },
+    },
+    ...scene('a', { skyboxes: ['dunesSky'] }),
+  });
+  const sceneTexture = (out: OutputScene | undefined) =>
+    ((out?.textures ?? []) as Record<string, unknown>[]).find((tex) => tex.id === 'dunes');
+
+  /** Gathers with a run whose result for the cube is `result` */
+  const gatherWithRun = (result: Record<string, unknown>, isProduction = false) => {
+    const { srcDir, outDir } = makeTree(files());
+    // Pass 1 keys it by its file, the scene pass by its `__sourcePath` from the tree's root,
+    // which it resolves against the repo's (one key in the repo, two in a temp tree)
+    const jsonFiles = [
+      path.join(srcDir, 'app/textures/dunes.texture.json'),
+      path.join(ROOT, 'src/app/textures/dunes.texture.json'),
+    ];
+    const pipeline = {
+      results: new Map(
+        jsonFiles.map((jsonFile) => {
+          const use = resolveAssetUse(jsonFile, {
+            faces,
+            path: DIR,
+            texOpts: { colorSpace: 'srgb' },
+          } as never);
+          if (!use || 'error' in use) throw new Error('the cube has no use');
+          const asset = { type: 'texture', id: 'dunes', jsonFile, source: use.source };
+          const key = getPipelineAssetKey('texture', jsonFile, use);
+          return [key, { ...result, asset } as PipelineRunResult] as const;
+        })
+      ),
+    };
+    const { isGathered } = gatherSceneData({
+      srcDir,
+      outDir,
+      profiles: [],
+      isProduction,
+      pipeline,
+    });
+    const dataFile = path.join(outDir, GENERATED_APP_DATA_FILENAME);
+    const json = isGathered
+      ? (JSON.parse(fs.readFileSync(dataFile, 'utf8')) as Output['json'])
+      : null;
+    return { isGathered, scene: json?.scenes.a };
+  };
+
+  it("is added to the textures of a scene whose sky box names it, with its faces' URLs", () => {
+    const { isGathered, scene: get } = gather(files());
+    expect(isGathered).toBe(true);
+    const texture = sceneTexture(get('a'));
+    expect(texture).toMatchObject({ id: 'dunes', __sourceUrls: SOURCE_URLS });
+    // Build time only: the runtime loads its output or its faces
+    expect(texture).not.toHaveProperty('faces');
+    expect(texture).not.toHaveProperty('path');
+    const bytes = SOURCE_URLS.reduce(
+      (sum, url) => sum + fs.statSync(path.join(ROOT, 'src/public', url)).size,
+      0
+    );
+    expect(texture?.__fileSize).toBe(bytes);
+  });
+
+  it('leaves out a base with files, whose textureId only names what it loads', () => {
+    const { scene: get } = gather(files({}, { file: '/sky.ktx2' }));
+    expect(get('a')?.textures).toBeUndefined();
+  });
+
+  it('gets its output, with the faces in development data only', () => {
+    const optimized = {
+      status: 'optimized',
+      output: { file: '', url: '/aek-assets/app/textures/dunes.cube.1234abcd.ktx2', bytes: 10 },
+      textures: [
+        {
+          slot: 'default',
+          codec: 'etc1s',
+          width: 4,
+          height: 4,
+          hasAlpha: false,
+          mipmaps: true,
+          normalMode: false,
+          bytes: 10,
+          source: { width: 4, height: 4, bytes: 60 },
+          isCube: true,
+        },
+      ],
+      warnings: [],
+      settings: createSettingsResolver({})({ sourcePath: 'cube', isCubeSource: true }),
+      durationMs: 0,
+    };
+    const dev = sceneTexture(gatherWithRun(optimized).scene);
+    expect(dev).toMatchObject({ __url: optimized.output.url, __sourceUrls: SOURCE_URLS });
+    // Six faces' VRAM: 6 × 16 B at 1 B/px, plus the mips (4×4, 2×2, 1×1 blocks of 16 B)
+    expect(dev?.__vramBytes).toMatchObject({ out: 6 * 3 * 16 });
+    const production = gatherWithRun(optimized, true);
+    expect(production.isGathered).toBe(true);
+    expect(sceneTexture(production.scene)).not.toHaveProperty('__sourceUrls');
+  });
+
+  it('fails a production build without its output', () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const skipped = { status: 'skipped', reason: 'textures kept as they are', durationMs: 0 };
+    expect(gatherWithRun(skipped, true).isGathered).toBe(false);
+    expect(errors.mock.calls.flat().join('\n')).toContain('dunes');
+  });
+
+  it('fails on a missing face, a codec "none" and a sky box naming no texture asset', () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const missing = [...faces];
+    missing[2] = 'cubemap01_nope.png';
+    expect(gather(files({ faces: missing })).isGathered).toBe(false);
+    expect(
+      gather(files({ optimize: { textures: { default: { codec: 'none' } } } })).isGathered
+    ).toBe(false);
+    expect(gather(files({}, { textureId: 'noSuchCube' })).isGathered).toBe(false);
+    const logged = errors.mock.calls.flat().join('\n');
+    expect(logged).toContain('faces[2] (+y): source file');
+    expect(logged).toContain('a cube texture is a KTX2 file');
+    expect(logged).toContain('the sky box "dunesSky" names the texture "noSuchCube"');
   });
 });

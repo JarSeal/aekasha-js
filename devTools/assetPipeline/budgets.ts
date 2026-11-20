@@ -1,4 +1,9 @@
-import { estimateTextureVramBytes, estimateVramBytes, getResultFigures } from './generated';
+import {
+  estimateTextureVramBytes,
+  estimateVramBytes,
+  getResultFigures,
+  getTextureImageCount,
+} from './generated';
 import { formatBytes } from './report';
 import type { PipelineRunResult } from './run';
 import type { BudgetLimit } from './settings';
@@ -46,16 +51,17 @@ export const getBudgetViolations = (result: PipelineRunResult): string[] => {
     const allowed = budget.profileTextures[texture.slot];
     if (allowed.maxSize === null) continue;
     const mipmaps = allowed.codec !== 'none' && allowed.mipmaps;
-    // An array (p299 D2) gets the ceiling per layer
-    const layers = texture.layers ?? 1;
+    // An array (p299 D2) gets the ceiling per layer, a cube (p311 D1) per face
+    const layers = getTextureImageCount(texture);
     const ceiling =
       estimateVramBytes(allowed.maxSize, allowed.maxSize, allowed.codec, mipmaps) * layers;
     const vram = estimateTextureVramBytes(texture).out;
     if (vram <= ceiling) continue;
     const label = texture.name ? `texture "${texture.name}"` : 'the texture';
-    const size = `${texture.width}×${texture.height}${texture.layers ? `×${layers} layers` : ''}`;
+    const unit = texture.layers ? 'layer' : texture.isCube ? 'face' : null;
+    const size = `${texture.width}×${texture.height}${unit ? `×${layers} ${unit}s` : ''}`;
     violations.push(
-      `${label} (${texture.slot}, ${size} ${texture.codec}): VRAM ${formatBytes(vram)} is over the ${formatBytes(ceiling)} its slot's settings allow without the asset JSON's overrides (maxSize ${allowed.maxSize}, ${allowed.codec}${texture.layers ? ' per layer' : ''}${profile ? `, ${profile}` : ''})`
+      `${label} (${texture.slot}, ${size} ${texture.codec}): VRAM ${formatBytes(vram)} is over the ${formatBytes(ceiling)} its slot's settings allow without the asset JSON's overrides (maxSize ${allowed.maxSize}, ${allowed.codec}${unit ? ` per ${unit}` : ''}${profile ? `, ${profile}` : ''})`
     );
   }
   return violations;

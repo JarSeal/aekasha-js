@@ -4,6 +4,41 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-20 — p311_sky-box-ktx2-cube-textures
+
+Sky box KTX2 cube textures (p311): a sky box's cube map can be one KTX2 file or a cube texture asset that the asset pipeline encodes from six images, instead of six PNGs. On scene01's desert dunes sky, the download goes from 22.6 MB to 0.64 MB (ETC1S, 1024 per face) and the main thread's upload from 160-190 ms to under 3 ms, and the environment map baked from it from 268 MB of GPU memory to 67 MB. Pre-filtered cubes (the plan's Phase 3) were dropped on Phase 0's figures: the runtime bake they'd save costs less than what the KTX2 cubes cut. Nothing breaks.
+
+### Engine 6.20.0 (Sunset)
+
+**Added**
+
+- A cube texture asset: `faces` on a `*.texture.json` (`TextureAssetSchema`, `aekasha/schemas`), six sources in the order +x, −x, +y, −y, +z, −z, each what `fileName` takes, in place of `fileName` or `pack` (the schema refuses two of the three, and with `faces` any `texOpts.flipY` and `optimize.alphaCoverage`). The asset pipeline encodes it as one KTX2 cube, which `loadTextureAsync` loads as a `CompressedCubeTexture`.
+- A `CUBE_TEXTURE` sky box base takes one `.ktx2` cube as `file` (its mips, filter and colour space kept; `colorSpace` replaces the colour space), or a lone `textureId`: a cube texture asset, which a scene listing the sky box loads with its own textures. `SkyBoxDef`'s base has `file`, and `fileNames` is optional: one of `fileNames`, `file` and a lone `textureId` is needed. A texture that isn't a cube (a KTX2 without six faces), or a `textureId` nobody registered, is reported and shows black, as a failed load does.
+- `TextureProps.__sourceUrls` (development data only): a cube texture asset's six faces, which `loadTextureAsync` loads as a six-image cube when the pipeline has no output for it (with a warning) or under the Assets tab's "Load source files".
+
+**Changed**
+
+- The sky box tab's base folder shows `File` for a KTX2 cube and `Files` only for a cube of six images.
+
+### App 1.33.0 (Preschooler)
+
+**Added**
+
+- scene01's `desertDunesKtx2` sky box: the desert dunes cube as the cube texture asset `desertDunes` (its six 2048 PNGs, encoded as one ETC1S KTX2 at 1024 per face, 637.5 KB), switched to in the sky box tab. scene01's default stays the PNG cube, so its scene runner snapshot is unchanged.
+
+### Project
+
+**Added**
+
+- The asset pipeline encodes cube textures (`devTools/assetPipeline/textureCubes.ts`): the six faces (square, of one size) fit to the slot's `maxSize` (1024 by default), `ktx create --cubemap`, stored unflipped, output `<json path>.cube.<hash>.ktx2` with its lock entry. A cube defaults to ETC1S (`settings.ts`' `CUBE_LEVEL`, after the profile: only the JSON's own `optimize.textures` names another codec), codec `none` is refused, and the VRAM figures and budgets count six faces. A cube is KTX2 only: with optimization off it has no output, and `yarn build` fails on one a shipped scene uses, even with `AEK_ASSETS_ALLOW_UNOPTIMIZED=true`.
+- The gather: a scene's texture closure adds the cube texture a listed sky box names by `textureId` alone, checks a cube's faces (`checkCubeSources`), and writes its faces' URLs into the development data (`__sourceUrls`).
+- The docs: `docs/techniques/asset-optimization.md`'s Cube textures with Phase 0's measurements, the Hub's sky box page (A cube map), asset optimization page (Cube textures) and scenes-and-assets page, the sky box's, asset pipeline's and gather's `CLAUDE.md`, and the readme's sky box and asset optimization lines.
+
+**Changed**
+
+- The baselines: the API's and the docs' (the internal `resolveCubeSourceUrls`, documented) and the bundles' (the sky box feature +0.3 KiB gzip in the app's first download, the embeds' main chunks about 0.1 KiB).
+- The plans: p311 done (Phases 0-2 and 4; Phase 3, pre-filtered cubes, dropped).
+
 ## 2026-11-20 — p310_terrain-preview-scenes
 
 Terrain preview scenes (p310, the last plan of the terrain texturing epic p301): the terrain work put together and measured. A new scene, `terrainShowcase`, has a coast, an alpine slope and wetlands built in Blender with the toolkit's add-on, a block generated from rules and a concrete bunker, each with its scatter and decals, under a day-night sky and weather that rains, dries and snows, walked by a player who leaves footprints. `terrainGallery` is complete: a row per technique, camera presets per game type and a measurement mode, whose figures (WebGPU, 1920 × 1080) fill the handbook's decision matrix and every technique page. A new Hub example places a generated terrain block with its collider. The add-on paints a second splat map, two wet responses and the structure leak decals are corrected, and nothing breaks.

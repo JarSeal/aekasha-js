@@ -572,6 +572,16 @@ export const GeneratedAssetFieldsSchema = z.object({
     .string()
     .optional()
     .describe('Set by the gatherer: the source as the dev server serves it.'),
+  /** A cube texture's (p311 D2) six faces as the dev server serves them, in `faces`' order:
+   * loaded as six images when the pipeline has no output, or under the "Load source files"
+   * override. Development data only. */
+  __sourceUrls: z
+    .array(z.string())
+    .length(6)
+    .optional()
+    .describe(
+      "Set by the gatherer (development data): a cube texture's six faces as the dev server serves them."
+    ),
   /** Download: the source files vs the output. */
   __bytes: BytesInOutSchema.optional().describe('Set by the gatherer: the download in bytes.'),
   /** Estimated GPU memory (optimized only): the source as RGBA8 vs the output. */

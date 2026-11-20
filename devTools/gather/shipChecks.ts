@@ -63,7 +63,7 @@ const reportMissingOutputs = (
       ? ` Or ship them unoptimized in this build: ${ALLOW_UNOPTIMIZED_ENV_KEY}=true yarn build`
       : '';
     const ktxOnly = encoderMissing.some(isKtxOnlyAsset)
-      ? ` A texture array or atlas slot has no unoptimized form: it needs ktx, even with ${ALLOW_UNOPTIMIZED_ENV_KEY}.`
+      ? ` A texture array, atlas slot or cube texture has no unoptimized form: it needs ktx, even with ${ALLOW_UNOPTIMIZED_ENV_KEY}.`
       : '';
     ctx.log.details(
       `  Without ktx: set it up (see [Assets] above), run yarn assets, and commit src/public/aek-assets/ and assets.lock.json.${unoptimized}${ktxOnly}`
@@ -71,7 +71,7 @@ const reportMissingOutputs = (
   }
   if (results.some((result) => result.status === 'skipped' && isKtxOnlyAsset(result))) {
     ctx.log.details(
-      `  A texture array or atlas slot is only ever its KTX2 output, and it has none while its textures side is off (a rule's "textures": false, the project switches): turn it on for it, or don't use it in a shipped scene.`
+      `  A texture array, atlas slot or cube texture is only ever its KTX2 output, and it has none while its textures side is off (a rule's "textures": false, the project switches): turn it on for it, or don't use it in a shipped scene.`
     );
   }
   if (results.some((result) => result.status === 'error')) {

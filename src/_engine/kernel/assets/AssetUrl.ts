@@ -7,7 +7,10 @@ import type { GeneratedAssetFields } from '../../schemas/AssetsConfigSchema';
  * The asset pipeline's URLs (p300), baked into a texture's or an imported asset's generated data
  * by gatherAppData. Scene data carries them; code that loads a file by its name doesn't set them.
  */
-export type GeneratedAssetUrls = Pick<GeneratedAssetFields, '__url' | '__sourceUrl'>;
+export type GeneratedAssetUrls = Pick<
+  GeneratedAssetFields,
+  '__url' | '__sourceUrl' | '__sourceUrls'
+>;
 
 /** Source URLs already warned about, so a source used by many scenes warns once. */
 const warnedSourceUrls = new Set<string>();
@@ -160,4 +163,25 @@ export const resolveAssetUrl = (
     );
   }
   return legacyUrl(asset.fileName);
+};
+
+/**
+ * The URLs a cube texture asset (p311 D2) loads its six faces from instead of its output
+ * (`__sourceUrls`, development data only): when the pipeline has no output for it (warned once,
+ * as `resolveAssetUrl` warns for one file), or under the "Load source files" override (see
+ * isLoadingSourceFiles). Null when it loads its output, and for any other texture.
+ * @internal
+ * @returns the six absolute URLs, or null
+ */
+export const resolveCubeSourceUrls = (asset: GeneratedAssetUrls & { id?: string }) => {
+  const faces = asset.__sourceUrls;
+  if (!faces) return null;
+  if (asset.__url && !isLoadingSourceFiles()) return null;
+  if (!asset.__url && !warnedSourceUrls.has(faces[0])) {
+    warnedSourceUrls.add(faces[0]);
+    lwarn(
+      `Cube texture "${asset.id ?? faces[0]}" is loaded from its six source faces: the asset pipeline has no output for it (encoder missing, the encode failed, or not built yet; see the dev server's log, or run "yarn assets").`
+    );
+  }
+  return faces.map(toAppUrl);
 };

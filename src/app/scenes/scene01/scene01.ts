@@ -92,7 +92,8 @@ const SHADOWS = { castShadow: true, receiveShadow: true };
 /**
  * The basic physics demo: a FIXED ground, a bouncing box, a falling ball and cylinder, a GLB
  * with a TRIMESH collider, a sensor collider without a mesh, a group, and a rotating wireframe
- * sphere. Its camera and lights come from its JSON; four sky boxes, one shown.
+ * sphere. Its camera and lights come from its JSON; four sky boxes, one shown, and its JSON's
+ * KTX2 cube sky box (`desertDunesKtx2`) to switch to.
  */
 export const scene = async () => {
   const updateLoaderFn = getLoaderStatusUpdater();

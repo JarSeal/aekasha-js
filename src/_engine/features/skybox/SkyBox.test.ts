@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three/webgpu';
 
 // No renderer and no files: the root scene is a plain THREE.Scene, the current scene a fixed id,
@@ -51,6 +51,7 @@ import {
   type SkyBoxUpdate,
 } from './SkyBox';
 import { installSkyBoxSystem } from './SkyDayNight';
+import { deleteTexture, saveTexture } from '../../kernel/assets/Texture';
 import type { SkyBoxDef } from './SkyBoxTypes';
 
 const equirect = (file: string) => ({ type: 'EQUIRECTANGULAR' as const, file });
@@ -140,6 +141,104 @@ describe('a sky box texture that fails to load', () => {
     await result;
     expect(getActiveSkyBox()?.textures.source).toBeNull();
     expect(m.rootScene.backgroundNode).not.toBeNull();
+  });
+});
+
+describe('a KTX2 cube base (p311)', () => {
+  const ktx2Cube = (file: string, colorSpace?: 'srgb' | 'srgb-linear') => ({
+    type: 'CUBE_TEXTURE' as const,
+    file,
+    ...(colorSpace ? { colorSpace } : {}),
+  });
+
+  /** As KTX2Loader returns a six-face file: its mips in the faces, no mip generation. */
+  const compressedCube = () => {
+    const face = {
+      width: 4,
+      height: 4,
+      mipmaps: [{ data: new Uint8Array(16), width: 4, height: 4 }],
+    };
+    const texture = new THREE.CompressedCubeTexture(
+      Array.from({ length: 6 }, () => face) as unknown as THREE.CompressedTexture[],
+      THREE.RGBA_ASTC_4x4_Format
+    );
+    texture.generateMipmaps = false;
+    texture.minFilter = THREE.LinearFilter;
+    texture.colorSpace = THREE.LinearSRGBColorSpace;
+    return texture;
+  };
+
+  it("loads its one file and keeps the file's mips, filter and colour space", async () => {
+    registerSkyBox({ id: 'ktx2', base: ktx2Cube('/sky/cube.ktx2') }, 'scene');
+    const result = setActiveSkyBox('ktx2');
+    expect(m.loads[0].fileName).toBe('/sky/cube.ktx2');
+    const texture = compressedCube();
+    m.loads[0].resolve(texture);
+    await result;
+    expect(getActiveSkyBox()?.textures.source).toBe(texture);
+    expect(texture.generateMipmaps).toBe(false);
+    expect(texture.minFilter).toBe(THREE.LinearFilter);
+    expect(texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
+  });
+
+  it("sets the base's colorSpace over the file's", async () => {
+    registerSkyBox({ id: 'ktx2', base: ktx2Cube('/sky/cube.ktx2', 'srgb') }, 'scene');
+    const result = setActiveSkyBox('ktx2');
+    const texture = compressedCube();
+    m.loads[0].resolve(texture);
+    await result;
+    expect(texture.colorSpace).toBe(THREE.SRGBColorSpace);
+  });
+
+  it('shows black for a KTX2 file without six faces', async () => {
+    registerSkyBox({ id: 'flat', base: ktx2Cube('/sky/flat.ktx2') }, 'scene');
+    const result = setActiveSkyBox('flat');
+    m.loads[0].resolve(new THREE.CompressedTexture([], 4, 4));
+    await result;
+    expect(getActiveSkyBox()?.textures.source).toBeNull();
+  });
+});
+
+describe('a cube texture asset base (p311 D2)', () => {
+  const assetCube = (textureId: string, colorSpace?: 'srgb') => ({
+    type: 'CUBE_TEXTURE' as const,
+    textureId,
+    ...(colorSpace ? { colorSpace } : {}),
+  });
+
+  afterEach(() => {
+    deleteTexture(['p311AssetCube', 'p311FlatAsset']);
+  });
+
+  it('shows the registered texture without a load, its colour space its own', async () => {
+    // The six-source fallback's CubeTexture, linear by its texOpts
+    const texture = new THREE.CubeTexture();
+    texture.colorSpace = THREE.LinearSRGBColorSpace;
+    saveTexture(texture, 'p311AssetCube');
+    registerSkyBox({ id: 'asset', base: assetCube('p311AssetCube') }, 'scene');
+    await setActiveSkyBox('asset');
+    expect(m.loads).toHaveLength(0);
+    expect(getActiveSkyBox()?.textures.source).toBe(texture);
+    expect(texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
+  });
+
+  it("sets the base's colorSpace over the texture's", async () => {
+    const texture = new THREE.CubeTexture();
+    texture.colorSpace = THREE.LinearSRGBColorSpace;
+    saveTexture(texture, 'p311AssetCube');
+    registerSkyBox({ id: 'asset', base: assetCube('p311AssetCube', 'srgb') }, 'scene');
+    await setActiveSkyBox('asset');
+    expect(texture.colorSpace).toBe(THREE.SRGBColorSpace);
+  });
+
+  it("shows black for an id that isn't registered, or isn't a cube", async () => {
+    registerSkyBox({ id: 'missing', base: assetCube('p311NoSuchCube') }, 'scene');
+    await setActiveSkyBox('missing');
+    expect(getActiveSkyBox()?.textures.source).toBeNull();
+    saveTexture(loadedTexture(), 'p311FlatAsset');
+    registerSkyBox({ id: 'flat', base: assetCube('p311FlatAsset') }, 'scene');
+    await setActiveSkyBox('flat');
+    expect(getActiveSkyBox()?.textures.source).toBeNull();
   });
 });
 

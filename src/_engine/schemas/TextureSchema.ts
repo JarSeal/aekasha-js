@@ -247,12 +247,22 @@ const TextureOverridesSchema = z.object({
   ...TEXTURE_FIELDS,
 });
 
-/**
- * A texture JSON (`*.texture.json`): the runtime's `TextureProps` for `loadTextureAsync`, its
- * build-time `optimize` and `pack`, its per-scene save entries, and the fields the gatherer bakes
- * in from the asset pipeline's run.
- */
-export const TextureAssetSchema = z.object({
+/** A cube texture's six faces (p311 D1), each what `fileName` takes. */
+const TextureFacesSchema = z
+  .tuple([
+    AssetFileNameSchema,
+    AssetFileNameSchema,
+    AssetFileNameSchema,
+    AssetFileNameSchema,
+    AssetFileNameSchema,
+    AssetFileNameSchema,
+  ])
+  .describe(
+    'A cube texture: six source images in the order +x, -x, +y, -y, +z, -z, each relative to this JSON or a src/public URL path. Encoded as one KTX2 cube (ETC1S unless optimize names a codec), in place of fileName and pack.'
+  );
+
+// Without the refinements, which `omit` can't take (InlineTextureSchema)
+const TextureAssetObjectSchema = z.object({
   /** The JSON Schema an editor validates the file with. */
   $schema: JsonSchemaRefSchema.optional(),
   ...TEXTURE_FIELDS,
@@ -260,6 +270,11 @@ export const TextureAssetSchema = z.object({
   optimize: TextureOptimizeSchema.optional(),
   /** Build time only: the texture packed from source images, in place of `fileName`. */
   pack: TexturePackSchema.optional(),
+  /** A cube texture (p311 D1): six source images in the order +x, −x, +y, −y, +z, −z, each what
+   * `fileName` takes, in place of `fileName` and `pack`. The asset pipeline encodes them as one
+   * KTX2 cube, its faces stored as they are (so no `texOpts.flipY`), ETC1S unless the JSON's
+   * `optimize` names a codec. */
+  faces: TextureFacesSchema.optional(),
   /** Build time only: the texture is only a source, an atlas cell's or a texture array layer's
    * (p309 D1). The asset pipeline doesn't encode it on its own, and no scene loads it. */
   sourceOnly: z
@@ -280,6 +295,41 @@ export const TextureAssetSchema = z.object({
   ...GeneratedAssetFieldsSchema.omit({ __lodChain: true }).shape,
 });
 
+/** The keys a texture's source is given by: one of them at most */
+const SOURCE_KEYS = ['fileName', 'pack', 'faces'] as const;
+
+/**
+ * A texture JSON (`*.texture.json`): the runtime's `TextureProps` for `loadTextureAsync`, its
+ * build-time `optimize` and `pack` (or its cube `faces`), its per-scene save entries, and the
+ * fields the gatherer bakes in from the asset pipeline's run.
+ */
+export const TextureAssetSchema = TextureAssetObjectSchema.superRefine((texture, ctx) => {
+  const given = SOURCE_KEYS.filter((key) => texture[key] !== undefined);
+  if (given.length > 1) {
+    ctx.addIssue({
+      code: 'custom',
+      message: `fileName, pack and faces are alternatives: give one (this texture has ${given.join(' and ')})`,
+      path: [given[1]],
+    });
+  }
+  if (!texture.faces) return;
+  if (texture.texOpts?.flipY !== undefined) {
+    ctx.addIssue({
+      code: 'custom',
+      message:
+        "flipY doesn't apply to a cube texture (faces): its faces are stored as they are, and a cube isn't flipped at load",
+      path: ['texOpts', 'flipY'],
+    });
+  }
+  if (texture.optimize && texture.optimize.alphaCoverage !== undefined) {
+    ctx.addIssue({
+      code: 'custom',
+      message: "alphaCoverage isn't for a cube texture (faces)",
+      path: ['optimize', 'alphaCoverage'],
+    });
+  }
+});
+
 /** A texture JSON (`*.texture.json`), as {@link TextureAssetSchema} validates it. */
 export type TextureAsset = z.infer<typeof TextureAssetSchema>;
 
@@ -288,12 +338,14 @@ export type TextureAsset = z.infer<typeof TextureAssetSchema>;
  * scene's inline `textures` (`createSceneAssetSchema`).
  * @internal
  */
-export const InlineTextureSchema = TextureAssetSchema.omit({
+export const InlineTextureSchema = TextureAssetObjectSchema.omit({
   optimize: true,
   pack: true,
+  faces: true,
   sourceOnly: true,
   __url: true,
   __sourceUrl: true,
+  __sourceUrls: true,
   __bytes: true,
   __vramBytes: true,
   __codec: true,

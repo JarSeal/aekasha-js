@@ -2489,6 +2489,7 @@
       "isJsonRelativeFileName": "Function",
       "isLoadingSourceFiles": "Function",
       "resolveAssetUrl": "Function",
+      "resolveCubeSourceUrls": "Function",
       "resolveFileUrl": "Function",
       "setAssetBaseUrl": "Function",
       "toAppUrl": "Function"

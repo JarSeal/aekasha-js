@@ -47,16 +47,24 @@ export type TextureArrayLayer = {
 };
 
 /** A texture asset by id, as the pipeline or the gatherer has it */
-export type TextureLookup = (
-  id: string
-) =>
-  | { jsonFile: string; data: Pick<TextureAsset, 'fileName' | 'path' | 'pack' | 'texOpts'> }
+export type TextureLookup = (id: string) =>
+  | {
+      jsonFile: string;
+      data: Pick<TextureAsset, 'fileName' | 'path' | 'pack' | 'faces' | 'texOpts'>;
+    }
   | undefined;
 
-const resolveFileLayer = (
+/**
+ * A source image file an array layer, an atlas cell or a cube face (p311 D1) reads, or why it
+ * can't be one: it doesn't resolve, is remote, doesn't exist or isn't an 8-bit image.
+ * @param jsonFile The asset JSON, absolute or relative to the repo root
+ * @param what Names it in the error (default 'a layer')
+ */
+export const resolveFileLayer = (
   jsonFile: string,
   fileName: string,
-  urlPath?: string
+  urlPath?: string,
+  what = 'a layer'
 ): Extract<AssetSource, { file: string }> | string => {
   const source = resolveAssetSource({ jsonFile, fileName, path: urlPath });
   if ('error' in source) return source.error;
@@ -66,7 +74,7 @@ const resolveFileLayer = (
   }
   const ext = path.extname(source.file).toLowerCase();
   if (UNREADABLE_LAYER_EXTENSIONS.includes(ext)) {
-    return `a layer is read as an 8-bit image, and a ${ext} file isn't one (${source.repoPath})`;
+    return `${what} is read as an 8-bit image, and a ${ext} file isn't one (${source.repoPath})`;
   }
   return source;
 };
@@ -82,8 +90,8 @@ const resolveTextureLayer = (
   }
   const { jsonFile, data } = found;
   const texture = { id, jsonFile, isSrgb: data.texOpts?.colorSpace === 'srgb' };
+  if (data.faces) return `the texture "${id}" is a cube texture`;
   if (data.pack) return { key: id, source: createPackSource(jsonFile, data.pack), texture };
-  if (Array.isArray(data.fileName)) return `the texture "${id}" is a cube texture`;
   if (!data.fileName) return `the texture "${id}" has neither a fileName nor a pack`;
   const source = resolveFileLayer(jsonFile, data.fileName, data.path);
   return typeof source === 'string'

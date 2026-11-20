@@ -2128,6 +2128,30 @@
       ],
       "ktxVersion": "4.4.2"
     },
+    "c98a93073ea86ee7cd90877747b9110e9e457830257f1f146d339e4b7c857e4f": {
+      "source": "src/app/scenes/scene01/desertDunes.texture.json",
+      "url": "/aek-assets/app/scenes/scene01/desertDunes.cube.bcbcb2a4.ktx2",
+      "bytes": 637512,
+      "textures": [
+        {
+          "slot": "default",
+          "bytes": 637512,
+          "source": {
+            "width": 2048,
+            "height": 2048,
+            "bytes": 22609060
+          },
+          "codec": "etc1s",
+          "width": 1024,
+          "height": 1024,
+          "hasAlpha": false,
+          "mipmaps": true,
+          "normalMode": false,
+          "isCube": true
+        }
+      ],
+      "ktxVersion": "4.4.2"
+    },
     "cd61257ab8efc6245ac73f8371824e53009d38ce42510e5f2b0a91ad18bb3994": {
       "source": "src/app/scenes/largeWorld/largeWorldTreeCross.textureAtlas.json",
       "url": "/aek-assets/app/scenes/largeWorld/largeWorldTreeCross.atlas.albedo.5916d4c9.ktx2",

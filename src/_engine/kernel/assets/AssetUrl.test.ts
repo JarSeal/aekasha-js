@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getAppBaseUrl, resolveFileUrl, setAssetBaseUrl, toAppUrl } from './AssetUrl';
+import {
+  getAppBaseUrl,
+  resolveCubeSourceUrls,
+  resolveFileUrl,
+  setAssetBaseUrl,
+  toAppUrl,
+} from './AssetUrl';
 import { configureDraco, getDracoWorkerSettings } from './import/DracoDecoder';
 
 // A page at a sub path, as a host page or the template app served from one
@@ -65,5 +71,23 @@ describe('assetBaseUrl (a mounted engine)', () => {
     setAssetBaseUrl(null);
     vi.stubEnv('BASE_URL', '/');
     expect(getAppBaseUrl()).toBe('https://site.test/');
+  });
+});
+
+describe("resolveCubeSourceUrls: a cube texture asset's faces (p311 D2)", () => {
+  const faces = ['px', 'nx', 'py', 'ny', 'pz', 'nz'].map((face) => `/app/sky/${face}.png`);
+
+  it('gives none for another texture, or one with an output', () => {
+    expect(resolveCubeSourceUrls({ id: 'flat', __url: '/aek-assets/flat.ktx2' })).toBeNull();
+    expect(
+      resolveCubeSourceUrls({ id: 'cube', __url: '/aek-assets/cube.ktx2', __sourceUrls: faces })
+    ).toBeNull();
+  });
+
+  it("gives the faces under the app's base without an output", () => {
+    vi.stubEnv('BASE_URL', '/');
+    expect(resolveCubeSourceUrls({ id: 'cube', __sourceUrls: faces })).toEqual(
+      faces.map((face) => `https://site.test${face}`)
+    );
   });
 });

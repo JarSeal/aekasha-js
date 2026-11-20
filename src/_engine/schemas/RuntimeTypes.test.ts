@@ -120,10 +120,12 @@ describe('the asset JSONs fit their runtime types', () => {
     expectTypeOf<TextureAsset>().toExtend<TextureProps>();
     expectTypeOf<TexOptsJson>().toExtend<TexOptsRuntime>();
     expectTypeOf<ExtraKeys<TextureAsset, TextureProps>>().toEqualTypeOf<
-      // Build time and the Assets tab only: the gatherer drops `optimize`, `pack` and `sourceOnly`
+      // Build time and the Assets tab only: the gatherer drops `optimize`, `pack` and `sourceOnly`;
+      // a cube texture's `faces` (p311 D1) are its pipeline sources
       | ToolingKeys
       | 'optimize'
       | 'pack'
+      | 'faces'
       | 'sourceOnly'
       | '__fileSize'
       | '__bytes'

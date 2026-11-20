@@ -10,6 +10,7 @@ import {
 } from './assets';
 import type { PipelineRun, PipelineRunResult } from './run';
 import type { AssetSource, PackSource } from './sources';
+import type { CubeSource } from './textureCubes';
 import { PUBLIC_DIR, SRC_DIR } from '../paths';
 import type { EncodedTexture } from './textures';
 
@@ -24,6 +25,7 @@ import type { EncodedTexture } from './textures';
 export const GENERATED_FIELD_KEYS = [
   '__url',
   '__sourceUrl',
+  '__sourceUrls',
   '__bytes',
   '__vramBytes',
   '__codec',
@@ -34,7 +36,8 @@ export const GENERATED_FIELD_KEYS = [
 const toUrl = (base: string, file: string) =>
   `/${path.relative(base, file).split(path.sep).join('/')}`;
 
-const getSourceUrl = (source: AssetSource | PackSource) => {
+// A pack has no single source to load instead, nor a cube texture (its faces, p311 D1)
+const getSourceUrl = (source: AssetSource | PackSource | CubeSource) => {
   if (source.kind === 'relative') return toUrl(SRC_DIR, source.file);
   if (source.kind === 'public') return toUrl(PUBLIC_DIR, source.file);
   return undefined;
@@ -81,12 +84,17 @@ export const estimateVramBytes = (
     ? getLevelsBytes(width, height, 1, 4, true)
     : getLevelsBytes(width, height, 4, 16, mipmaps, levelCount);
 
+/** The images a texture holds: an array's layers (p299 D2), a cube's six faces (p311 D1), or 1 */
+export const getTextureImageCount = (texture: EncodedTexture) =>
+  texture.layers ?? (texture.isCube ? 6 : 1);
+
 /**
- * An array's (p299 D2) is every layer's: `in` as the runtime would assemble its sources (RGBA8).
- * An atlas slot's (p299 D3) counts its shortened chain; its `in` is the layout as one RGBA8 image.
+ * An array's (p299 D2) is every layer's, a cube's (p311 D1) every face's: `in` as the runtime
+ * would assemble its sources (RGBA8). An atlas slot's (p299 D3) counts its shortened chain; its
+ * `in` is the layout as one RGBA8 image.
  */
 export const estimateTextureVramBytes = (texture: EncodedTexture) => {
-  const layers = texture.layers ?? 1;
+  const layers = getTextureImageCount(texture);
   const { width, height, codec, mipmaps, levels } = texture;
   return {
     in: estimateVramBytes(texture.source.width, texture.source.height, 'none', true) * layers,
@@ -156,15 +164,17 @@ export const getMergeMaterialSlotResult = (run: PipelineRun, jsonFile: string, s
 /** A texture array (p299 D2, a palette slot's too) or an atlas slot (D3): only ever a KTX2 output,
  * never passed through */
 export const isKtxOnlyAsset = (result: PipelineRunResult) =>
-  result.asset.type === 'textureArray' || result.asset.type === 'textureAtlas';
+  result.asset.type === 'textureArray' ||
+  result.asset.type === 'textureAtlas' ||
+  result.asset.source.kind === 'cube';
 
 /**
  * A result a production build can't ship (Phase 3 step 4): its source is local, but the run has
  * no output for it (`encoderMissing`, `error`), and production data has no `__sourceUrl` to fall
  * back to. A relative source or a pack wouldn't load at all, and a public one would load
  * unoptimized. A remote file, or a public file that doesn't exist, ships as it did before the
- * pipeline (`skipped`). A texture array or an atlas slot (p299) is its output alone, so a
- * `skipped` one (its textures side off) has nothing to ship either.
+ * pipeline (`skipped`). A texture array, an atlas slot (p299) or a cube texture (p311) is its
+ * output alone, so a `skipped` one (its textures side off) has nothing to ship either.
  */
 export const isMissingOutput = (result: PipelineRunResult) =>
   result.status === 'encoderMissing' ||
@@ -190,8 +200,8 @@ const getOutputFields = (
 
 /**
  * The generated fields of an asset's data (the JSON, or merged with a scene's latest entry)
- * from a run. None without a run; only the source's URL for data the run didn't optimize or
- * pass through.
+ * from a run. None without a run, but a cube texture's `__sourceUrls` (p311 D2, development data);
+ * only the source's URL (a cube's faces') for data the run didn't optimize or pass through.
  * @param jsonFile The asset JSON, absolute or relative to the repo root
  */
 export const getGeneratedFields = (
@@ -201,10 +211,16 @@ export const getGeneratedFields = (
   data: Parameters<typeof resolveAssetUse>[1],
   opts: { isProduction: boolean }
 ): GeneratedAssetFields => {
-  if (!run) return {};
+  // A cube texture's faces (p311 D2) even without a run: it has no fileName to load instead
+  if (!run && !data.faces) return {};
   const use = resolveAssetUse(jsonFile, data);
   if (!use || 'error' in use) return {};
   const sourceUrl = opts.isProduction ? undefined : getSourceUrl(use.source);
+  const sourceUrls =
+    !opts.isProduction && use.source.kind === 'cube'
+      ? use.source.faces.map((face) => getSourceUrl(face) as string)
+      : undefined;
+  if (!run) return sourceUrls ? { __sourceUrls: sourceUrls } : {};
   const result = run.results.get(getPipelineAssetKey(type, jsonFile, use));
   // Development data only (p303 D1): a texture set takes its albedo's into its own data
   const averageColor =
@@ -213,6 +229,7 @@ export const getGeneratedFields = (
       : undefined;
   return {
     ...(sourceUrl ? { __sourceUrl: sourceUrl } : {}),
+    ...(sourceUrls ? { __sourceUrls: sourceUrls } : {}),
     ...getOutputFields(type, result),
     ...(averageColor ? { __averageColor: averageColor } : {}),
   };
