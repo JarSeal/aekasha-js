@@ -528,7 +528,8 @@ export const syncSkyBoxProxy = () => {
   if (active && isDayNightEnabled(active.def)) syncDerivedPositions(active);
   syncNebulaProxy(active?.def);
   const base = active?.def.base;
-  skyBoxProxy.base.fileNames = base?.type === 'CUBE_TEXTURE' ? base.fileNames.join('\n') : '';
+  skyBoxProxy.base.fileNames =
+    base?.type === 'CUBE_TEXTURE' ? base.fileNames?.join('\n') ?? '' : '';
   skyBoxProxy.base.color = base?.type === 'COLOR' ? base.color : '#000000';
 };
 

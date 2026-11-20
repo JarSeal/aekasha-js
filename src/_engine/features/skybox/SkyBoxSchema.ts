@@ -46,24 +46,41 @@ const SkyBoxEquirectBaseSchema = z
     path: ['file'],
   });
 
-const SkyBoxCubeBaseSchema = z.object({
-  /** Six images, one per cube face. */
-  type: z.literal('CUBE_TEXTURE'),
-  /** In the order +x, -x, +y, -y, +z, -z, relative to `path`. */
-  fileNames: z.array(z.string()).length(6),
-  /** The folder the files are in. Default: the site's root (`./`). */
-  path: z.string().optional(),
-  /** The id the loaded cube texture is registered under. */
-  textureId: z.string().optional(),
-  /** Default: 'srgb', or 'srgb-linear' for .hdr files. An empty string is unset. */
-  colorSpace: ColorSpaceSchema.optional(),
-  /** Rotation around the Y axis, in radians. */
-  rotate: z.number().optional(),
-  /** Turns the cube upside down (a half turn about the X axis). */
-  flipY: z.boolean().optional(),
-  /** The background's and the environment's brightness multiplier. Default 1. */
-  intensity: z.number().min(0).optional(),
-});
+/** A `.ktx2` file name or URL (its query and hash ignored), as `isKTX2` reads it. */
+const KTX2_FILE = /\.ktx2(?:[?#].*)?$/i;
+
+const SkyBoxCubeBaseSchema = z
+  .object({
+    /** A cube: six images, one per face (`fileNames`), or one KTX2 cube file (`file`). */
+    type: z.literal('CUBE_TEXTURE'),
+    /** In the order +x, -x, +y, -y, +z, -z, relative to `path`. One of `fileNames` and `file` is
+     * needed. */
+    fileNames: z.array(z.string()).length(6).optional(),
+    /** One `.ktx2` file with six faces (`ktx create --cubemap`) and its mips, relative to `path`:
+     * smaller to download than six images, and no mip generation at load (p311). */
+    file: z.string().optional(),
+    /** The folder the files are in. Default: the site's root (`./`). */
+    path: z.string().optional(),
+    /** The id the loaded cube texture is registered under. */
+    textureId: z.string().optional(),
+    /** Default: 'srgb', or 'srgb-linear' for .hdr files; a KTX2 file's own colour space. An empty
+     * string is unset. */
+    colorSpace: ColorSpaceSchema.optional(),
+    /** Rotation around the Y axis, in radians. */
+    rotate: z.number().optional(),
+    /** Turns the cube upside down (a half turn about the X axis). */
+    flipY: z.boolean().optional(),
+    /** The background's and the environment's brightness multiplier. Default 1. */
+    intensity: z.number().min(0).optional(),
+  })
+  .refine((base) => Boolean(base.fileNames) !== Boolean(base.file), {
+    error: 'A CUBE_TEXTURE base needs either fileNames (six images) or file (one .ktx2 cube).',
+    path: ['fileNames'],
+  })
+  .refine((base) => !base.file || KTX2_FILE.test(base.file), {
+    error: "A CUBE_TEXTURE base's file is a .ktx2 cube (six images go in fileNames).",
+    path: ['file'],
+  });
 
 /** The `base` layer: a colour, an equirectangular texture or a cube texture, by `type`. */
 export const SkyBoxBaseSchema = z.discriminatedUnion('type', [

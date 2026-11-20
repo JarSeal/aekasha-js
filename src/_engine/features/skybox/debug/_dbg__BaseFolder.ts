@@ -5,6 +5,11 @@ import { resetSkyBoxLayer, setSkyBoxParam } from './_dbg__SkyBoxEdits';
 import { skyBoxProxy } from './_dbg__SkyBoxShared';
 
 const baseType = () => getActiveSkyBox()?.def.base.type;
+/** Whether the active base is a cube from one KTX2 file (`file`) rather than six images. */
+const isKtx2Cube = () => {
+  const base = getActiveSkyBox()?.def.base;
+  return base?.type === 'CUBE_TEXTURE' && Boolean(base.file);
+};
 const isNot =
   (...types: SkyBoxBaseType[]) =>
   () => {
@@ -36,7 +41,7 @@ export const buildBaseFolder = (): DebuggerPaneItem => {
         label: 'File',
         readonly: true,
         interval: 0,
-        hidden: isNot('EQUIRECTANGULAR'),
+        hidden: () => isNot('EQUIRECTANGULAR')() && !isKtx2Cube(),
       },
       {
         key: 'fileNames',
@@ -46,7 +51,7 @@ export const buildBaseFolder = (): DebuggerPaneItem => {
         multiline: true,
         rows: 6,
         interval: 0,
-        hidden: isNot('CUBE_TEXTURE'),
+        hidden: () => isNot('CUBE_TEXTURE')() || isKtx2Cube(),
       },
       {
         key: 'path',

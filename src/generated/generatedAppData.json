@@ -15565,7 +15565,7 @@
     },
     "scene01": {
       "name": "Scene 01 (basic physics demo)",
-      "description": "Basic FIXED/DYNAMIC physics demo: a ground box, a bouncing box, a falling metal ball and cylinder, an imported GLB with a TRIMESH collider and CCD, a sensor collider without a mesh (it turns the wireframe sphere green while a body is in it), a group, shadows, four sky boxes and metal spheres reflecting the sky.",
+      "description": "Basic FIXED/DYNAMIC physics demo: a ground box, a bouncing box, a falling metal ball and cylinder, an imported GLB with a TRIMESH collider and CCD, a sensor collider without a mesh (it turns the wireframe sphere green while a body is in it), a group, shadows, five sky boxes (one a KTX2 cube) and metal spheres reflecting the sky.",
       "cameras": [
         {
           "camProps": {
@@ -15650,9 +15650,26 @@
           }
         }
       ],
+      "skyboxes": [
+        {
+          "id": "desertDunesKtx2",
+          "base": {
+            "type": "CUBE_TEXTURE",
+            "file": "/debugger/assets/testTextures/cubemap02.ktx2",
+            "textureId": "desertDunesKtx2Cube",
+            "flipY": true
+          },
+          "debugData": {
+            "name": "Desert dunes (KTX2 cube)",
+            "description": "The desert-dunes cube as one ETC1S KTX2 cube file at 1024 per face (640 KB, its mips in the file) in place of six 2048 PNGs (22.6 MB), made with ktx create --cubemap in the faces' order scene01's desert-dunes lists them (p311 Phase 1). Switch to it in the sky box tab."
+          }
+        }
+      ],
       "id": "scene01",
       "sceneFile": "./scenes/scene01/scene01.ts",
-      "__features": []
+      "__features": [
+        "skybox"
+      ]
     },
     "sceneTestECS": {
       "name": "Start scene",
@@ -52625,6 +52642,20 @@
         "description": "The DAY_NIGHT preset standing still at 10:00 (as the terrain gallery's), so the blocks are lit the same on every visit and their relief shows on the ramps."
       },
       "__sourcePath": "src/app/scenes/proceduralSurfaces/proceduralSurfacesSky.skybox.json"
+    },
+    "desertDunesKtx2": {
+      "id": "desertDunesKtx2",
+      "base": {
+        "type": "CUBE_TEXTURE",
+        "file": "/debugger/assets/testTextures/cubemap02.ktx2",
+        "textureId": "desertDunesKtx2Cube",
+        "flipY": true
+      },
+      "debugData": {
+        "name": "Desert dunes (KTX2 cube)",
+        "description": "The desert-dunes cube as one ETC1S KTX2 cube file at 1024 per face (640 KB, its mips in the file) in place of six 2048 PNGs (22.6 MB), made with ktx create --cubemap in the faces' order scene01's desert-dunes lists them (p311 Phase 1). Switch to it in the sky box tab."
+      },
+      "__sourcePath": "src/app/scenes/scene01/desertDunesKtx2.skybox.json"
     },
     "terrainGallerySky": {
       "base": {

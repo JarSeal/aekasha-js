@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented; Phase 3 dropped
 Category: Sky box, Assets, Textures
 Related: \_DONE_p057_three-r187-migration.md (r187's compressed cube support), \_DONE_p300_asset-optimization-pipeline-plan.md (the KTX2 encoder), \_DONE_p299_texture-arrays-and-atlases.md
 
@@ -96,9 +96,36 @@ pipelines), and a pre-filtered cube needs a browser build step and an HDR-capabl
 the HalfFloat PMREM. Recommended: drop Phase 3 for now (a follow-up if a scene's first frame shows
 the pipeline creation).
 
-### Phase 1: KTX2 cube bases
+### Phase 1: KTX2 cube bases — done
 
-Design 1, with an example sky box in the app. Notes from Phase 0's reading of the code:
+Design 1, with an example sky box in the app.
+
+As built:
+
+- The key is `file`, not `fileName`: the equirect base's single file is `file` already, and the
+  flat base overrides schema and `BASE_STRUCTURAL_KEYS` have it. `SkyBoxCubeBaseSchema` takes
+  `fileNames` (six) or `file` (one `.ktx2`, its query and hash ignored), exactly one of them
+  (refinements; the overrides schema didn't change).
+- `loadCubeTexture` (`layers/Base.ts`) loads `file ?? fileNames` through `loadSkyTextureAsync`;
+  a texture that isn't a cube (a KTX2 without six faces) is reported and shows black, like a
+  failed load. A compressed cube keeps KTX2Loader's filter, its own mips and the file's colour
+  space; the base's `colorSpace` replaces it only when set. Six images are as before.
+- Debug tab: the base folder shows `File` for a KTX2 cube and `Files` for six images
+  (`_dbg__BaseFolder.ts`); the proxy's `fileNames` copes with a cube without them.
+- The app's example: scene01's JSON lists `desertDunesKtx2` (`scenes/scene01/desertDunesKtx2.skybox.json`),
+  the desert-dunes cube as one ETC1S KTX2 at 1024 per face
+  (`src/public/debugger/assets/testTextures/cubemap02.ktx2`, 640 KB, Phase 0's encode in the
+  faces' order scene01 lists them, `flipY` as desert-dunes), switched to in the sky box tab;
+  scene01's default stays the PNG cube, so its scene baseline doesn't change.
+- Tests: `SkyBox.test.ts`' "a KTX2 cube base (p311)" (the one file loaded, the file's mips,
+  filter and colour space kept, `colorSpace` over it, a non-cube shown black) and
+  `SkyBoxSchema.test.ts` (six images or one `.ktx2`; both, neither and a non-`.ktx2` refused).
+- Checked in the Windows Chrome (WebGPU and WebGL2): scene01 switches between the PNG cube and
+  the KTX2 cube with no error, the same orientation and colours.
+- `SkyBoxDef`'s public type changed (`fileNames` optional, `file` added): the API baseline
+  (`yarn verify:baselines`) is updated with Phase 4's versioning.
+
+Notes from Phase 0's reading of the code (the plan before Phase 1):
 
 - `loadTextureAsync` already loads a single `.ktx2` `fileName` through the shared KTX2Loader,
   which gives a `CompressedCubeTexture` for a six-face file (`generateMipmaps` false, the colour
@@ -119,9 +146,11 @@ registered texture, its `textureId` is only the id it registers under). So Phase
 form for a texture JSON, a way for a base to name that texture asset (so its `__url` loads), and
 the encode, with the faces stored unflipped (the pipeline stores 2D textures flipped).
 
-### Phase 3: Pre-filtered cubes
+### Phase 3: Pre-filtered cubes — dropped
 
-Design 3, if Phase 0 says so (see its decision: recommended dropped).
+Design 3, if Phase 0 says so. Dropped on Phase 0's figures (2026-11-20): the bake it saves is
+smaller than what Phases 1-2 cut, and WebGPU's first-bake pipeline creation is shared with a
+composite sky's env bake. A follow-up only if a scene's first frame shows the pipeline creation.
 
 ### Phase 4: Hub and versioning
 

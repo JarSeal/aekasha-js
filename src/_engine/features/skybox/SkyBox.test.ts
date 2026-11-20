@@ -143,6 +143,61 @@ describe('a sky box texture that fails to load', () => {
   });
 });
 
+describe('a KTX2 cube base (p311)', () => {
+  const ktx2Cube = (file: string, colorSpace?: 'srgb' | 'srgb-linear') => ({
+    type: 'CUBE_TEXTURE' as const,
+    file,
+    ...(colorSpace ? { colorSpace } : {}),
+  });
+
+  /** As KTX2Loader returns a six-face file: its mips in the faces, no mip generation. */
+  const compressedCube = () => {
+    const face = {
+      width: 4,
+      height: 4,
+      mipmaps: [{ data: new Uint8Array(16), width: 4, height: 4 }],
+    };
+    const texture = new THREE.CompressedCubeTexture(
+      Array.from({ length: 6 }, () => face) as unknown as THREE.CompressedTexture[],
+      THREE.RGBA_ASTC_4x4_Format
+    );
+    texture.generateMipmaps = false;
+    texture.minFilter = THREE.LinearFilter;
+    texture.colorSpace = THREE.LinearSRGBColorSpace;
+    return texture;
+  };
+
+  it("loads its one file and keeps the file's mips, filter and colour space", async () => {
+    registerSkyBox({ id: 'ktx2', base: ktx2Cube('/sky/cube.ktx2') }, 'scene');
+    const result = setActiveSkyBox('ktx2');
+    expect(m.loads[0].fileName).toBe('/sky/cube.ktx2');
+    const texture = compressedCube();
+    m.loads[0].resolve(texture);
+    await result;
+    expect(getActiveSkyBox()?.textures.source).toBe(texture);
+    expect(texture.generateMipmaps).toBe(false);
+    expect(texture.minFilter).toBe(THREE.LinearFilter);
+    expect(texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
+  });
+
+  it("sets the base's colorSpace over the file's", async () => {
+    registerSkyBox({ id: 'ktx2', base: ktx2Cube('/sky/cube.ktx2', 'srgb') }, 'scene');
+    const result = setActiveSkyBox('ktx2');
+    const texture = compressedCube();
+    m.loads[0].resolve(texture);
+    await result;
+    expect(texture.colorSpace).toBe(THREE.SRGBColorSpace);
+  });
+
+  it('shows black for a KTX2 file without six faces', async () => {
+    registerSkyBox({ id: 'flat', base: ktx2Cube('/sky/flat.ktx2') }, 'scene');
+    const result = setActiveSkyBox('flat');
+    m.loads[0].resolve(new THREE.CompressedTexture([], 4, 4));
+    await result;
+    expect(getActiveSkyBox()?.textures.source).toBeNull();
+  });
+});
+
 describe('stopSkyBox, for unmount()', () => {
   it('clears the sky box, settles what waits and drops the listeners', async () => {
     registerSkyBox({ id: 'sky', base: equirect('a.png') }, 'scene');
