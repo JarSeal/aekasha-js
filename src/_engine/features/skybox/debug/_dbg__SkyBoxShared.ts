@@ -25,7 +25,7 @@ import { getMoonPhase } from '../SkyDayNight';
 import { isDayNightEnabled } from '../SkyComposite';
 import { GROUND_DEFAULTS } from '../layers/Ground';
 import { MAX_NEBULAE, NEBULA_DEFAULTS } from '../layers/Nebula';
-import { SHADOW_PRESETS } from '../../../kernel/light/Light';
+import { getShadowPresetBias, SHADOW_PRESETS } from '../../../kernel/light/Light';
 import { getEnvSize } from '../SkyComposite';
 
 /** The sky box tab's id in the debug drawer (`updateDebuggerTab` refreshes or rebuilds it). */
@@ -137,7 +137,7 @@ const getPresetDefault = (def: SkyBoxDef | undefined, path: string) => {
   const presetName = (getPath(def, `${match[1]}.shadowPreset`) ??
     SUN_LIGHT_DEFAULTS.shadowPreset) as keyof typeof SHADOW_PRESETS;
   const preset = SHADOW_PRESETS[presetName] || SHADOW_PRESETS[SUN_LIGHT_DEFAULTS.shadowPreset];
-  if (match[2] === 'shadowBias') return preset.bias;
+  if (match[2] === 'shadowBias') return getShadowPresetBias(preset);
   if (match[2] === 'shadowNormalBias') return preset.normalBias;
   return preset.mapSize[0];
 };

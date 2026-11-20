@@ -12,6 +12,7 @@ import { lerror, lwarn } from '../../utils/Logger';
 import { getTexture } from '../assets/Texture';
 import { retagAssetOwner } from '../assets/AssetOwners';
 import { toThreeColor } from '../render/ThreeMath';
+import { getRendererOptions } from '../render/Renderer';
 import { setFrustumCullingEnabled } from '../ecs/ObjectFrustumCullingSystem';
 import type { FeatureContext } from '../init/Features';
 import type { ShadowQuality } from '../../schemas/_HelperSchemas';
@@ -112,6 +113,28 @@ export const SHADOW_PRESETS: Record<ShadowQuality, ShadowPreset> = {
     normalBias: 0.06,
   },
 };
+
+/**
+ * The most a preset's depth bias is under `VSMShadowMap`: one step of three's half-float targets
+ * (r187), which its blur stores the depth's mean in, at depths 0.5..1 (2^-11), where the ground
+ * under a light that follows the camera lands (the sky lights put the camera at 0.5). The blur's
+ * two passes round the mean by up to that step, and a surface facing the light keeps its variance
+ * at the filter's floor, so a smaller bias draws stripes down a slope nothing shadows (VSM draws
+ * every receiver into the map): `docs/issues/_DONE_i010_vsm-stripes-on-unshadowed-slopes.md`.
+ * @internal
+ */
+export const VSM_PRESET_BIAS = -0.0005;
+
+/**
+ * A shadow preset's depth bias for the renderer's shadow map type: under `VSMShadowMap` at most
+ * `VSM_PRESET_BIAS`, else the preset's own. Read when a light is made (changing the type reloads
+ * the page); a light's own bias isn't limited.
+ * @internal
+ */
+export const getShadowPresetBias = (preset: ShadowPreset) =>
+  getRendererOptions().shadowMapType === THREE.VSMShadowMap
+    ? Math.min(preset.bias, VSM_PRESET_BIAS)
+    : preset.bias;
 
 /**
  * A light's props for {@link createLightEntity}: the runtime type. It's wider than the light JSON
@@ -324,7 +347,7 @@ export const createLightEntity = (lightProps: LightProps, opts?: CreateEntityOpt
     s.mapSize.set(preset.mapSize[0], preset.mapSize[1]);
     s.blurSamples = preset.blurSamples;
     s.radius = preset.radius;
-    s.bias = preset.bias;
+    s.bias = getShadowPresetBias(preset);
     s.normalBias = preset.normalBias;
 
     // Apply Developer Overrides (Fine-tuning)

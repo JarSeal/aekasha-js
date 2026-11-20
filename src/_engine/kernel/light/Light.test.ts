@@ -1,9 +1,10 @@
 import { beforeAll, describe, expect, test } from 'vitest';
-import type * as THREE from 'three/webgpu';
+import * as THREE from 'three/webgpu';
 import { ECSWorld } from '../ecs/ECS';
 import { ComponentType } from '../ecs/ECSCoreComponents';
 import { createRootScene } from '../scene/Scene';
-import { createLightEntity } from './Light';
+import { getRendererOptions } from '../render/Renderer';
+import { createLightEntity, SHADOW_PRESETS, VSM_PRESET_BIAS } from './Light';
 
 // The default world (createLightEntity's) and the root scene, once for this file
 let world: ECSWorld;
@@ -34,6 +35,29 @@ describe('createLightEntity', () => {
     expect(getShadow(tuned).radius).toBe(1);
 
     for (const entityId of [high, medium, tuned]) world.deleteEntity(entityId);
+  });
+
+  test("limits a preset's bias under VSM, not a light's own (i010)", () => {
+    const options = getRendererOptions();
+    const shadowMapType = options.shadowMapType;
+    try {
+      options.shadowMapType = THREE.PCFShadowMap;
+      const pcf = createLightEntity({ type: 'DIRECTIONAL', castShadow: true });
+      expect(getShadow(pcf).bias).toBe(SHADOW_PRESETS.MEDIUM.bias);
+
+      options.shadowMapType = THREE.VSMShadowMap;
+      const medium = createLightEntity({ type: 'DIRECTIONAL', castShadow: true });
+      expect(getShadow(medium).bias).toBe(VSM_PRESET_BIAS);
+      // A preset with a bigger bias keeps its own
+      const low = createLightEntity({ type: 'SPOT', castShadow: true, shadowPreset: 'LOW' });
+      expect(getShadow(low).bias).toBe(Math.min(SHADOW_PRESETS.LOW.bias, VSM_PRESET_BIAS));
+      const own = createLightEntity({ type: 'DIRECTIONAL', castShadow: true, shadowBias: -0.0001 });
+      expect(getShadow(own).bias).toBe(-0.0001);
+
+      for (const entityId of [pcf, medium, low, own]) world.deleteEntity(entityId);
+    } finally {
+      options.shadowMapType = shadowMapType;
+    }
   });
 
   test("takes the JSON's { r, g, b } colours (three would ignore the plain object)", () => {

@@ -4,6 +4,28 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-20 — i010_vsm-stripes-on-unshadowed-slopes
+
+VSM shadows no longer draw stripes down a slope facing the sun that nothing shadows (i010). It was the receiver shadowing itself: under VSM three draws every shadow receiver into the map, and its blur stores the depth's mean in half floats, whose rounding (2⁻¹¹ at depths 0.5..1, where a sky light puts the ground under the camera) outgrew the `MEDIUM` preset's bias. Nothing breaks.
+
+### Engine 6.20.1 (Sunset)
+
+**Fixed**
+
+- Under `VSMShadowMap` a shadow preset's depth bias is at most −0.0005 (one half-float step at depths 0.5..1), for `createLightEntity`'s lights and the sky lights: `MEDIUM` (−0.0002), `HIGH` (−0.0001) and `ULTRA` (−0.00005) take −0.0005 there, `LOW` had it, PCF keeps the presets as they were, and a light's own `shadowBias` isn't limited. On terrainGallery's ramps the stripes went (each a correct 1.000 against the shot without shadows, from 0.946) and the cliff wall's contact shadow stayed the same; `largeWorld` (its sun on `HIGH`) is unchanged within its run-to-run noise. The sky box tab's default bias shows the same value.
+
+### App 1.33.1 (Preschooler)
+
+**Changed**
+
+- terrainGallery's `NO_SHADOWS` stays, now as the measurement mode's condition (the handbook's GPU tables are without a shadow pass), not as i010's workaround.
+
+### Project
+
+**Changed**
+
+- The docs: i010 closed (`docs/issues/_DONE_i010_vsm-stripes-on-unshadowed-slopes.md`, with its cause and the measurements), the texture sets handbook's troubleshooting line, the sky box's and texture sets' `CLAUDE.md`.
+
 ## 2026-11-20 — p311_sky-box-ktx2-cube-textures
 
 Sky box KTX2 cube textures (p311): a sky box's cube map can be one KTX2 file or a cube texture asset that the asset pipeline encodes from six images, instead of six PNGs. On scene01's desert dunes sky, the download goes from 22.6 MB to 0.64 MB (ETC1S, 1024 per face) and the main thread's upload from 160-190 ms to under 3 ms, and the environment map baked from it from 268 MB of GPU memory to 67 MB. Pre-filtered cubes (the plan's Phase 3) were dropped on Phase 0's figures: the runtime bake they'd save costs less than what the KTX2 cubes cut. Nothing breaks.

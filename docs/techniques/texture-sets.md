@@ -335,7 +335,7 @@ Several sets of one packing as one array texture per slot: a terrain material bi
 - [ ] Sets meant for one array share the packing, size and codec.
 - [ ] A full `yarn assets` before committing; the outputs and `assets.lock.json` committed, `source/raw/` not.
 - **Lit from the wrong side?** Open the gallery, pick `FULL` then `MINIMAL` in its tab for `sand01`, `grass01` or `cliffs01`: the bump has no tangent frame, so the two disagreeing means a mirrored frame or map. The world tiling is `(x, −z)` for this reason: `(x, z)` shows the map mirrored from above (`src/_engine/features/texturesets/CLAUDE.md`'s trap: three's `normalMap()` builds its frame from the mesh's UV, not the tiling's).
-- **Stripes down a slope** in a scene with shadows: three's VSM, not the set ([`docs/issues/i010_vsm-stripes-on-unshadowed-slopes.md`](../issues/i010_vsm-stripes-on-unshadowed-slopes.md)).
+- **Stripes down a slope** in a scene with shadows: three's VSM, not the set. A shadow preset's bias is at most −0.0005 under VSM, which removes them; a light's own `shadowBias` smaller than that brings them back ([`docs/issues/_DONE_i010_vsm-stripes-on-unshadowed-slopes.md`](../issues/_DONE_i010_vsm-stripes-on-unshadowed-slopes.md)).
 - **A set missing in a production build:** no shipped scene lists or names it, so its data and outputs aren't in the build.
 
 ## Template file and example asset ids
