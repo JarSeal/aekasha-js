@@ -34,7 +34,36 @@ textures get theirs from the material slot that uses them.
 - **`none`**: kept exact, for data read as numbers (lookup tables, splat maps).
 
 A texture JSON can also build its image from several sources (`pack`: an ORM map from three
-greyscale images, AO baked into an albedo).
+greyscale images, AO baked into an albedo), or be a cube (`faces`, below).
+
+## Cube textures
+
+A sky box's cube map is six images. A texture JSON with `faces` (+x, −x, +y, −y, +z, −z) in
+place of `fileName` is encoded as one KTX2 cube, its mips made by the encoder, and a
+[sky box's cube base](hub:features/sky-box#a-cube-map) shows it by its `textureId`:
+
+<<< src/app/scenes/scene01/desertDunes.texture.json
+
+- **ETC1S by default**, whatever the profile says: only the JSON's own `optimize.textures` names
+  another codec. `none` is refused: a cube is only ever a KTX2 file.
+- **1024 per face by default** (the slot's `maxSize`). The faces must be square and of one size.
+- **Stored as they are**, never flipped, so `texOpts.flipY` is refused: the sky box turns a cube
+  over with its own `flipY`.
+- **No pass-through:** with optimization off a cube has no output. The dev server then loads its
+  six faces, with a warning, and `yarn build` fails on one a shipped scene uses.
+
+Measured on the app's desert dunes sky (Chrome, a desktop GPU, WebGPU):
+
+| The cube              | Download | Load    | Upload (main thread) | GPU memory (texture) |
+| --------------------- | -------- | ------- | -------------------- | -------------------- |
+| Six 2048² PNGs        | 22.6 MB  | ~185 ms | 160-190 ms           | 134 MB               |
+| ETC1S, 1024 (default) | 0.64 MB  | ~40 ms  | under 3 ms           | 8.4 MB               |
+| ETC1S, 2048           | 2.09 MB  | ~128 ms | 4-5 ms               | 34 MB                |
+| UASTC, 2048           | 13.5 MB  | ~1.1 s  | 4-5 ms               | 34 MB                |
+
+UASTC isn't worth it for a sky: 6.5 times ETC1S's download and nine times its load (zstd and
+the UASTC transcode). The face size matters past the texture too: the environment map the sky
+lights the scene with is baked at it, 67 MB of GPU memory at 1024 and 268 MB at 2048.
 
 ## Merging a model's pieces
 
@@ -239,6 +268,8 @@ The technique guide, `docs/techniques/asset-optimization.md`, has every setting:
   [merging its pieces](repo:docs/techniques/asset-optimization.md#merging-pieces).
 - [Profiles and settings](repo:docs/techniques/asset-optimization.md#profiles-and-settings) and
   the [codec cheat sheet](repo:docs/techniques/asset-optimization.md#codec-cheat-sheet).
+- [Cube textures](repo:docs/techniques/asset-optimization.md#cube-textures): the faces, the
+  codec and the measured figures.
 - [Texture arrays and atlases](repo:docs/techniques/asset-optimization.md#texture-arrays-and-atlases):
   which to use, sizes, padding, codecs and budgets.
 - [Alpha-cut textures](repo:docs/techniques/asset-optimization.md#alpha-cut-textures) and
