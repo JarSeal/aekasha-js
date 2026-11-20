@@ -77,6 +77,15 @@ each roadmap lists its folder's open issues under the areas their `Category` nam
 files may not share a name, even across the folders: both are at `issues/<name>/`. A `TODO` in
 the code names its issue file or plan.
 
+An issue is prioritized like a plan, in a number space of its own: the file is
+`i<number>_<name>.md` (`i070_postfx-rebuilds-on-camera-change.md`), and a lower number means a
+higher priority. The numbers go in steps of 10, so a new issue fits between two: the low ones are
+wrong behaviour an app or a player meets, then measurements, performance and build size, then dev
+tooling, then cosmetic problems, upstream reports and open questions. A closed issue is renamed
+`_DONE_<same name>`. Neither prefix is in the page's address, so a link to an issue holds when
+its priority changes or it's closed, and `yarn hub:build` warns about an open issue without a
+number. The roadmap lists each area's issues by priority.
+
 ### Versions and the changelog
 
 `package.json` holds four semver versions, each bumped on its own:

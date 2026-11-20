@@ -1,4 +1,4 @@
-// The merge groups' builds (docs/plans/_DONE_p372_mesh-merge-groups.md): the pending groups built
+// The merge groups' builds (p372): the pending groups built
 // once a frame by the build system, or at once by the scene step (MergeGroups.ts), each by its
 // mode's code. A `BAKED` group's members are merged with p371's merge (`GeometryMerge.ts`, loaded
 // on the first build, so an app that never merges doesn't download it), in the assets worker above

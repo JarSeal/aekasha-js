@@ -1,4 +1,4 @@
-// What the LOD selection measures (docs/plans/_DONE_p348_ecs-lod-selection.md): the camera's
+// What the LOD selection measures (p348): the camera's
 // terms, an entity's world position and scale, its screen size. The selection (LodSystem.ts) and
 // the debug tools (the overlay and the LOD window, through measureLodEntity / getLodWorldSphere)
 // share this code, so they can't drift apart.

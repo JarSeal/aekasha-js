@@ -1,4 +1,4 @@
-// Impostor bakes (docs/plans/_DONE_p351_impostor-billboard-lod.md §2): the shared parts of rendering an
+// Impostor bakes (p351 §2): the shared parts of rendering an
 // object into atlas frames. A bake renders the object with unlit bake materials into a frame
 // target, then copies the frame into its atlas cell with a dilation pass. Atlases hold albedo and
 // normals, never lighting (§2.3): the impostor material shades with the scene's lights at runtime.
@@ -318,7 +318,7 @@ export const createAtlasTarget = (
 /**
  * Lets the next render into an atlas target generate its mips: call it right before the bake's
  * last copy into it, so the chain is built once per atlas (three r187's `mipmapsAutoUpdate`,
- * docs/plans/_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md D3).
+ * p058 D3).
  * For the generators' bakes.
  * @internal
  */

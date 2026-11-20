@@ -7,7 +7,7 @@ import { getConservativeGeometryRadius } from 'aekasha/spatial';
 import { getSkyLightIds } from 'aekasha/skybox';
 import { createProjectionTimer, createSystemTimer, installWalkOnce } from './_dbg__hlodSpikeSplit';
 
-// p377 Phase 0's probe additions (docs/plans/_DONE_p377_hlod-streaming-cell-proxies.md,
+// p377 Phase 0's probe additions (p377,
 // "What the spike adds"), on `window.__aekHlod` next to p376's (`_dbg__hlodSpike.ts`), for
 // largeWorld's far field (`?hlodField`, `src/app/scenes/largeWorld/_dbg__largeWorldHlodField.ts`,
 // which says what it drew in `window.__aekHlodField`). The field's objects are its groups (`members`: the groups its
@@ -25,7 +25,7 @@ import { createProjectionTimer, createSystemTimer, installWalkOnce } from './_db
 //   root scene's `updateMatrixWorld` timed on its own inside it (three's walk over every object,
 //   hidden members included; summed per frame, with its calls: one per render call), the systems
 //   (the rest), and the scene graph's objects, the hidden ones apart. p378 Phase 0
-//   (docs/plans/_DONE_p378_baked-members-out-of-the-scene-graph.md) adds each system's time
+//   (p378) adds each system's time
 //   (`systems`, `systemsTimedMs` their sum outside `LATE_MAIN`), the projection walks per render
 //   kind (`projection`, `projectMs` their sum) and walk-once's skipped calls
 //   (`_dbg__hlodSpikeSplit.ts`).

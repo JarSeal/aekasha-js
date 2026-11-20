@@ -48,7 +48,7 @@ export const BASELINE_MATERIAL_ID = 'textureSetSurface';
 
 /**
  * No mesh casts or receives shadows: the engine's VSM shadows draw stripes down a sloped receiver
- * that nothing shadows (docs/issues/vsm-stripes-on-unshadowed-slopes.md), which would read as the
+ * that nothing shadows (docs/issues/i010_vsm-stripes-on-unshadowed-slopes.md), which would read as the
  * sets' relief. Back to cast and receive once that's fixed.
  */
 export const NO_SHADOWS = { castShadow: false, receiveShadow: false } as const;

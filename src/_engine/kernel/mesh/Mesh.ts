@@ -478,7 +478,7 @@ const addLodComponent = (entityId: number, def: LodDef, world: ECSWorld) => {
 };
 
 /**
- * Gives a mesh entity levels of detail (docs/plans/_DONE_p348_ecs-lod-selection.md): from the next
+ * Gives a mesh entity levels of detail (p348): from the next
  * frame, lodSelectionSystem picks a level by the mesh's screen size and lodApplySystem swaps its
  * geometry, material(s) and `castShadow`. Level 0 is the mesh's own unless it names others. Every
  * level's assets are held (ref counted) until the LOD is removed or the entity deleted, and
@@ -486,7 +486,7 @@ const addLodComponent = (entityId: number, def: LodDef, world: ECSWorld) => {
  * to level 0 first). The definition is read, not copied: after changing its levels, set it again.
  *
  * Level changes and hiding / showing cross-fade with a dither over `fadeSeconds` (default
- * `AppConfig.lod.fadeSeconds`; docs/plans/_DONE_p351_impostor-billboard-lod.md §2.4): the previous level
+ * `AppConfig.lod.fadeSeconds`; p351 §2.4): the previous level
  * is drawn by a temporary copy of the mesh meanwhile. Unless `fadeSeconds` is 0, the levels'
  * materials get `enableLodDither` (shared with other meshes, those get it too).
  *

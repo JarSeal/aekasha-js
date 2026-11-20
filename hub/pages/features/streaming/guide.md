@@ -334,9 +334,7 @@ crate back from `REMOVED` exactly where it was left, chains `STATIC` far away, i
 targets. With the ruins' stand-ins (16 ruin cells): two flights out and back at 30 and 60 m/s on
 each backend, 75 far groups let go of a flight, each cell's three in one frame, the frames around
 them at most 17.7 ms; the far ruins add 3 draws at the median and 6 at most, no CPU time
-measurable. The plan's
-[Phase 1](repo:docs/plans/_DONE_p353_macro-streaming-grid.md#phase-1--cells-and-the-state-machine-code-content--done)
-and Phases 2 to 5 have the numbers.
+measurable (p353's Phases 1-5, p377's Phase 5).
 :::
 
 ## Not yet
@@ -350,9 +348,6 @@ and Phases 2 to 5 have the numbers.
   `streaming.radii`.
 - A cell's state isn't saved when it unloads: a crate moved in it is back where it started next
   time (it keeps its place while the cell is `FAR`).
-
-See [the plan](repo:docs/plans/_DONE_p353_macro-streaming-grid.md), and
-[p377](repo:docs/plans/_DONE_p377_hlod-streaming-cell-proxies.md) for a kit's far stand-ins.
 
 ## Key APIs
 

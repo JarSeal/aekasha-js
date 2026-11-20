@@ -11,7 +11,7 @@ import { getMergeGroupOf, type MeshMergeDef } from 'aekasha/merging';
 import { nextFrames } from '../../shared/verifyHarness';
 
 /**
- * The `mergeMaterials` scene's field (docs/plans/_DONE_p374_multi-material-merging.md, Phase 3,
+ * The `mergeMaterials` scene's field (p374, Phase 3,
  * D5's test scene): 1 600 meshes, 400 of each `ruinsPalette` member (Phase 0's shapes, each
  * material on every shape), on a 40 × 40 grid over 3 × 3 cells of the scene's `AUTO` cell size,
  * away from the verification variants at the origin and seen by a camera of its own. Made in one of

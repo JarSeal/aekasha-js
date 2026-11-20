@@ -1,4 +1,4 @@
-// LOD chains (docs/plans/_DONE_p347_lod-chain-generation.md): simplified levels of a registered geometry,
+// LOD chains (p347): simplified levels of a registered geometry,
 // generated in the assets worker (AppConfig.assets.simplifyWorkerTarget) and registered as ordinary
 // geometries. LOD selection (LodSystem.ts) uses a chain through `lod: 'AUTO'` (LodAuto.ts).
 //

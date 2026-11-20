@@ -1,4 +1,4 @@
-// World streaming's priming (docs/plans/_DONE_p353_macro-streaming-grid.md §5, Phase 2): a cell streamed
+// World streaming's priming (p353 §5, Phase 2): a cell streamed
 // in during play is held from drawing (`TAG_DRAW_HELD`) while its units load, then primed and
 // shown, so a new shader never compiles on a draw (100-480 ms, 1-2.4 s for four at once) and an
 // upload never lands in a visible frame unannounced:

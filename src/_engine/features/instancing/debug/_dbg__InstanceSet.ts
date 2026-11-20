@@ -26,7 +26,7 @@ import type {
   InstanceSetStats,
 } from '../InstanceSetTypes';
 
-// An instance set's debug readback (docs/plans/_DONE_p354_gpu-driven-culling.md D11): the GPU
+// An instance set's debug readback (p354 D11): the GPU
 // backend's counters per slot and state words (the level and the outgoing one), read back after the
 // GPU's queued work, or the CPU backend's level meshes and state arrays, read as they are; the
 // state of the front's live ranges only (a removed instance's is the backend's own marker). Loaded

@@ -1,4 +1,4 @@
-// The octahedral impostor's material nodes (docs/plans/_DONE_p351_impostor-billboard-lod.md §2.2, Phase 3):
+// The octahedral impostor's material nodes (p351 §2.2, Phase 3):
 // a quad that faces the camera from each instance's centre, blending the three atlas frames baked
 // nearest to the direction it's seen from, shaded with the baked object-space normals.
 //
@@ -14,8 +14,8 @@
 // `drawnInstanceMatrix` (kernel/render/InstanceMatrix.ts), resolved per drawn object: an
 // InstancedMesh's `instanceMatrix` through three r187's `referenceAttribute`, bound per drawn mesh
 // (so impostor InstancedMeshes on one material share a build,
-// docs/plans/_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md D1), an instance
-// set's draw's fetched matrix (docs/plans/_DONE_p354_gpu-driven-culling.md D8), else the identity;
+// p058 D1), an instance
+// set's draw's fetched matrix (p354 D8), else the identity;
 // and it reads `positionGeometry`, the quad's corners before any transform.
 //
 // The shadow pass reuses `positionNode`, `colorNode` and `depthNode` (`Renderer._getShadowNodes`):

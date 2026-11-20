@@ -33,7 +33,7 @@ conservative radius) and the receiver test's sphere (`getMeshWorldBoundingSphere
 position). A 16 m cell of 12 cm pebbles would be a 12 cm sphere at the cell's centre: turning the
 flag on would make a light near the cell's edge miss it, and ECS frustum culling (the same
 provider) would hide a cell whose centre is off screen. The receiver test's sphere is shared with
-frustum culling by design (`_DONE_p080`, `_DONE_p050` §7), so changing how a mesh is measured
+frustum culling by design (p080, `_DONE_p050` §7), so changing how a mesh is measured
 changes both, for every mesh.
 
 ## A way out
@@ -45,7 +45,7 @@ changes both, for every mesh.
 - Then drop the forced `spatialIndex: false` (and `ecsFrustumCullingEnabled: false`) from
   `createInstancedMeshEntity`, keeping them as options. The pools' meshes (`TAG_IS_MESH`, their
   bounds grown as instances move) would be measured the same way; their instances are
-  `docs/issues/pool-instances-not-light-receivers.md`.
+  `docs/issues/i100_pool-instances-not-light-receivers.md`.
 - Check with a point light over a scatter on a target without a mesh (`scatterTest` can take one),
   and `yarn verify:scenes` for the scenes with cells (`lodShowcase`, `scatterTest`,
   `terrainGallery`): which lights are culled can change their hashes.

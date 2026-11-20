@@ -1,4 +1,4 @@
-// Physics simulation tiers (docs/plans/_DONE_p352_physics-simulation-tiers.md): a dynamic body can be
+// Physics simulation tiers (p352): a dynamic body can be
 // frozen in place but collidable (STATIC), taken out of the simulation (DISABLED) or out of the
 // physics world (REMOVED), and put back (FULL). The physicsTiers() feature installs its system and
 // hooks (installPhysicsTiers, PhysicsTiersFeature.ts); with no tier requested, the system returns
@@ -199,7 +199,7 @@ export const isPhysicsEntityJointed = (world: ECSWorld, entityId: number) => {
 
 /** `DISABLED` is `STATIC` for a jointed group: Rapier (0.19.3) mishandles joints on disabled
  * bodies (a joint inserted between them panics, and stepping them corrupts other joints' solving:
- * docs/issues/rapier-joint-on-disabled-bodies-panics.md). */
+ * docs/issues/i250_rapier-joint-on-disabled-bodies-panics.md). */
 const toJointSafeTier = (world: ECSWorld, group: readonly number[], tier: PhysicsTier) =>
   tier === 'DISABLED' && isGroupJointed(world, group) ? 'STATIC' : tier;
 

@@ -26,9 +26,9 @@ import type { InstancePlacement, InstancedMeshSlotData } from './InstancedMeshPo
 // Instanced mesh pools: one InstancedMesh drawing many instances, each instance an ECS entity
 // with a Transform and an INSTANCED_MESH_SLOT (its mesh and slot index), kept in sync onto the
 // instance matrix by instancedMeshPoolSyncSystem. An instanced LOD pool has one mesh per level
-// (docs/plans/_DONE_p348_ecs-lod-selection.md §4.2). The `instancing()` feature installs the sync system.
+// (p348 §4.2). The `instancing()` feature installs the sync system.
 
-// A pool instance's spatial radius (docs/plans/_DONE_p346_spatial-domains.md §3.3): the pool
+// A pool instance's spatial radius (p346 §3.3): the pool
 // geometry's (an instanced LOD pool: level 0's), scaled by the instance's Transform.
 const getInstanceRadius: SpatialRadiusProvider = (entityId, world) => {
   const slot = world.getComponent(entityId, ComponentType.INSTANCED_MESH_SLOT);
@@ -46,7 +46,7 @@ const _color = new THREE.Color();
 const _box = new THREE.Box3();
 const _sphere = new THREE.Sphere();
 
-// Slot → entity per pooled mesh (docs/plans/_DONE_p348_ecs-lod-selection.md §4.2): freeing a slot moves
+// Slot → entity per pooled mesh (p348 §4.2): freeing a slot moves
 // the mesh's last instance into it and patches that instance's entity. Keyed by mesh, not by
 // pool, so a pool with several meshes (one per LOD level) shares the same swap-remove. Entity ids
 // can be negative int32s (the generation is in the high bits), which Int32Array holds exactly.
@@ -213,10 +213,10 @@ const freeInstanceSlot = (entityId: number, world: ECSWorld) => {
 };
 
 // A pool instance in an instanced LOD pool shows its level by moving to that level's mesh
-// (docs/plans/_DONE_p348_ecs-lod-selection.md §4.2). Its slot keeps pointing at the applied level's
+// (p348 §4.2). Its slot keeps pointing at the applied level's
 // mesh while it's LOD culled (index -1, in no mesh), so it knows where to come back to.
 //
-// A LOD cross-fade (docs/plans/_DONE_p351_impostor-billboard-lod.md §2.4) keeps the instance's old copy
+// A LOD cross-fade (p351 §2.4) keeps the instance's old copy
 // drawn as its outgoing copy (`_fadeOutMesh`/`_fadeOutIndex`) while the new one fades in, each
 // with its own per-instance fade (LodFade.ts). A fade to culled has only the outgoing copy, a fade
 // from culled only the incoming one. The LOD system ends a running fade before the next change.
@@ -382,10 +382,10 @@ export interface CreateInstancedMeshPoolOptions {
   entityOpts?: CoreEntityOpts;
   /**
    * A registered spatial domain `spawn()` joins every instance to
-   * (docs/plans/_DONE_p346_spatial-domains.md). Default: none.
+   * (p346). Default: none.
    * @remarks An instance in `DEFAULT` is never a light's receiver: light culling's receiver test
    * reads a mesh's `OBJECT3D`, which an instance hasn't, so an object-culled light whose only
-   * nearby meshes are pool instances is culled (docs/issues/pool-instances-not-light-receivers.md).
+   * nearby meshes are pool instances is culled (docs/issues/i100_pool-instances-not-light-receivers.md).
    * Give the pool a domain of its own, or leave object culling off for the lights that light it.
    */
   spatialDomain?: string;
@@ -527,7 +527,7 @@ export interface CreateInstancedLodPoolOptions {
    * A registered spatial domain `spawn()` joins every instance to. Default: none.
    * @remarks An instance in `DEFAULT` is never a light's receiver: light culling's receiver test
    * reads a mesh's `OBJECT3D`, which an instance hasn't, so an object-culled light whose only
-   * nearby meshes are pool instances is culled (docs/issues/pool-instances-not-light-receivers.md).
+   * nearby meshes are pool instances is culled (docs/issues/i100_pool-instances-not-light-receivers.md).
    * Give the pool a domain of its own, or leave object culling off for the lights that light it.
    */
   spatialDomain?: string;
@@ -552,14 +552,14 @@ export interface InstancedLodPool {
 }
 
 /**
- * An instanced pool with levels of detail (docs/plans/_DONE_p348_ecs-lod-selection.md §4.2): one
+ * An instanced pool with levels of detail (p348 §4.2): one
  * `InstancedMesh` per level, and every instance in exactly one of them. Each instance entity has
  * `INSTANCED_MESH_SLOT` (pointing at its level's mesh) and `LOD`, so the engine's LOD selection
  * picks its level and moves it to that level's mesh (a swap-remove from the old one, an append to
  * the new one). A LOD-culled instance is in no mesh. One draw call per non-empty level.
  *
  * Level changes and LOD culling cross-fade (`lod.fadeSeconds`, default `AppConfig.lod.fadeSeconds`;
- * docs/plans/_DONE_p351_impostor-billboard-lod.md §2.4): during a fade the instance is in both levels'
+ * p351 §2.4): during a fade the instance is in both levels'
  * meshes, dithered by a per-instance fade. The pool calls `enableLodDither` on its level materials.
  *
  * Every level mesh gets the union bounds of every placement, at spawn, grown by the sync when a

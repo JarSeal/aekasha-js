@@ -37,7 +37,7 @@ replay the local player there.
     when the message landed.
 - **The checks:** `devTools/verify/scenes.config.ts` keeps `thirdPersonGymScene` in `unstableHash`
   for `workerSab` and `workerMsg` (the characters push the hashed bodies), and the runner compares
-  the characters' path hash on `MAIN_THREAD` only (`devTools/verify/scenes.ts`). The `space` scene's
+  the characters' path hash on `MAIN_THREAD` only (`devTools/verify/scenes.ts`). `unstableHash` skips those hashes but not the snapshots, so in a full `yarn verify:scenes` run the gym's `workerMsg` snapshot fails now and then (the follow camera elsewhere: a character drifted) and passes alone (p622 Phases 2-3, p057 Phase 3). Until this plan lands, a per-configuration snapshot skip or tolerance (`snapshot` in `scenes.config.ts` is per scene) would stop it reading as a regression. The `space` scene's
   `MutualGravity` has the same cause (it reads the worker's last synced poses) and the same entry.
 - **The controller's dependencies:** `controllers/dynamic/` is built on `three/webgpu` maths, the
   physics facade (`PhysicsState.ts`' `getPhysicsWorld` for its casts and `PhysicsStepping.ts`' step

@@ -63,7 +63,8 @@ with these differences:
   change to the engine or the toolkit is Ækasha's, even when an app scene shows it. An issue goes
   with the code it's in.
 - **Numbers:** the app's plans have a number space of their own, so an app `p100` and an Ækasha
-  `p100` can both exist. The number is the priority within the folder.
+  `p100` can both exist. The number is the priority within the folder. The app's issues number
+  the same way (`i<number>_<name>.md`), apart from Ækasha's too.
 - **References:** a header line names a plan in its own folder by file name, and one in the other
   folder by its repo path (`Blocked by: docs/plans/p303_texture-sets-and-terrain-texture-library.md`).
 - **One way, as in the code:** an app plan can wait on an Ækasha plan, but an Ækasha plan never

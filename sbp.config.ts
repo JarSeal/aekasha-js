@@ -38,7 +38,7 @@ const profiles: SbpProfile[] = [
     // `BatchedMesh` (+4.6 KiB of three) ships with `merging()` though only the lazy batch code
     // (`MergeBatch.ts`) names it: its class is a statement of `three.core.js`, one module, and
     // Rollup keeps a module's statements in its chunk, so no `import()` moves it
-    // (docs/issues/three-classes-ship-with-their-chunk.md); with `merging`'s growth the initial
+    // (docs/issues/i130_three-classes-ship-with-their-chunk.md); with `merging`'s growth the initial
     // is 392.8 and `assets/index.js` 388.6 KiB: 387 → 393 and 383 → 389 KiB. p375 Phase 2:
     // per-member LOD in batched groups (S1's scene graph detach, S2's level checks; S3-S4's
     // delegate and LOD-cull hooks are forwarding stubs, the batch side lazy): initial 393.2 KiB,

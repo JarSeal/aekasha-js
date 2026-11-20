@@ -1,5 +1,5 @@
 /**
- * An editor view's right drawer (docs/plans/_DONE_p084_material-editor-stage-and-selector.md DD6),
+ * An editor view's right drawer (p084 DD6),
  * written for every editor: the scene debug drawer's shell (p806 D6, `_dbg__DrawerShell.ts`: the
  * toggler, the width handle, the heading row with a title and a close button, the tab rail, a
  * scrolling container per tab) mounting ordinary

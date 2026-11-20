@@ -1,4 +1,4 @@
-// LOD cross-fades (docs/plans/_DONE_p351_impostor-billboard-lod.md §2.4): a level change, or hiding
+// LOD cross-fades (p351 §2.4): a level change, or hiding
 // and showing, dissolves over `fadeSeconds` (LodFade.ts). The entity gets TAG_LOD_TRANSITIONING and
 // `_fade` (its progress) and lodFadeSystem (LodSystem.ts) drives it; a change while a fade runs
 // finishes that fade first. The first apply after the LOD is added never fades (the load), nor

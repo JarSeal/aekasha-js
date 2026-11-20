@@ -35,7 +35,7 @@ This is a Three.js bug, not an Aekasha one. The engine releases everything corre
 removed, their registered geometries are disposed, and the number of live geometries is the same on every
 visit. It is fixed on three's `dev` branch and is expected to ship in r187 (see Upstream fix).
 
-Note: this is not the `_bindingGroupsCache` light leak (`three-bind-group-cache-light-leak.md`,
+Note: this is not the `_bindingGroupsCache` light leak (`_DONE_three-bind-group-cache-light-leak.md`,
 p056). That one keeps old lights alive in the JS heap only and leaves `renderer.info.memory` flat.
 
 ## Reproduce

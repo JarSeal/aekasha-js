@@ -10,7 +10,7 @@ import type { FeatureContext } from '../init/Features';
  * Opts the entity in or out of frustum culling (`FRUSTUM_CULLING_ENABLED`): a mesh, a point or a
  * spot light is then hidden while outside the main camera's frustum. Opting out shows it again.
  * `Light.ts`' `setLightFrustumCullingEnabled` delegates here
- * (docs/plans/_DONE_p080_object3d-frustum-culling.md §2.4).
+ * (p080 §2.4).
  * @internal
  */
 export const setFrustumCullingEnabled = (entityId: number, enabled: boolean, world: ECSWorld) => {
@@ -27,7 +27,7 @@ export const setFrustumCullingEnabled = (entityId: number, enabled: boolean, wor
 };
 
 // --- BOUNDING-VOLUME PROVIDERS ---
-// docs/plans/_DONE_p080_object3d-frustum-culling.md §2.3's provider abstraction: each entity "kind"
+// p080 §2.3's provider abstraction: each entity "kind"
 // that can opt into FRUSTUM_CULLING_ENABLED gets a provider that returns a world-space bounding
 // sphere for the frustum test, or `undefined` to mean "always visible" (used both by lights'
 // infinite-range/degenerate-angle special cases and by anything the provider can't measure).
@@ -90,7 +90,7 @@ const _meshBoundingSphere = new THREE.Sphere();
 /**
  * A mesh entity's world-space bounding sphere: its geometry's (computed if missing) at its world
  * position, the radius scaled by its largest scale axis (conservative for a non-uniform scale,
- * docs/plans/_DONE_p080_object3d-frustum-culling.md §2.2). Undefined for an entity without a mesh.
+ * p080 §2.2). Undefined for an entity without a mesh.
  * Shared with the spatial feature's light culling.
  * @internal
  * @returns a scratch sphere, overwritten by the next call: copy it to keep it
@@ -112,7 +112,7 @@ export const getMeshWorldBoundingSphere: BoundingVolumeProvider = (entityId, wor
 
 // Checked in this order per entity — first tag present wins. An entity carrying
 // FRUSTUM_CULLING_ENABLED but none of these tags (e.g. opted in on an unsupported entity kind)
-// is simply skipped, matching docs/plans/_DONE_p080_object3d-frustum-culling.md §2.2's "only ever
+// is simply skipped, matching p080 §2.2's "only ever
 // applies to entities tagged for a kind this system knows how to measure."
 const boundingVolumeProviders: [ComponentType, BoundingVolumeProvider][] = [
   [ComponentType.TAG_IS_POINT_LIGHT, getPointLightBoundingSphere],
@@ -182,7 +182,7 @@ export const installObjectFrustumCulling = (ctx: FeatureContext) => {
   // The visibility hook: deliberately a separate component/hook from DISABLED (see docs/plans/_DONE_light-culling.md
   // §2.2, §4.2): FRUSTUM_CULLING_ENABLED is the opt-in flag, TAG_FRUSTUM_CULLED is the
   // fast-changing runtime state. DISABLED must keep meaning exactly one thing: "user/game logic
-  // turned this off." Generic across entity types (docs/plans/_DONE_p080_object3d-frustum-culling.md
+  // turned this off." Generic across entity types (p080
   // §2.1) — nothing here is light-specific, it just reads OBJECT3D/hooks generically.
   ctx.registerComponentHooks(ComponentType.TAG_FRUSTUM_CULLED, {
     onAddComponent: (entityId, world) => {

@@ -1,5 +1,5 @@
 /**
- * p309 Phase 4's check (docs/plans/_DONE_p309_terrain-decals.md, section 5): the runtime decals of the
+ * p309 Phase 4's check (p309, section 5): the runtime decals of the
  * `terrainBlockTest` scene (its decal block's walk, `decalBlock/terrainBlockTestDecalWalk.ts`: a
  * pool of 128 footprints and one of 64 wheel-track segments, each a `BATCHED` merge group) on
  * WebGPU and on WebGL2, both on the machine's GPU (WebGL2 through the renderer tab's persisted

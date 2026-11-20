@@ -485,7 +485,7 @@ export const _updateOnScreenTools = (tools?: ToolTypes[] | ToolTypes) => {
 
 /**
  * Disables every on-screen tool during a scene load, or enables them again (p806 D7, closing
- * `docs/issues/on-screen-tools-during-scene-load.md`): each control is `aria-disabled` (still
+ * `docs/issues/_DONE_on-screen-tools-during-scene-load.md`): each control is `aria-disabled` (still
  * focusable, so the focus stays where it is) with the tooltip "Loading the scene…", its clicks are
  * ignored, and an open drop-down closes. The debug keys stop by themselves (their maps' context).
  * `_disableDebugger`'s.

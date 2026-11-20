@@ -1,7 +1,7 @@
 /**
  * The material editor's right drawer tabs
- * (docs/plans/_DONE_p084_material-editor-stage-and-selector.md DD6,
- * docs/plans/_DONE_p085_material-editor-params-and-persistence.md): **Params** (the selected
+ * (p084 DD6,
+ * p085): **Params** (the selected
  * material's info, its editable params and TSL inputs, the rest of its params read-only, and a
  * "Reset params" heading button) and **Settings** (the material's stage and preview settings, the
  * camera's fov, pose and reset, and "Clear editor data of all materials").

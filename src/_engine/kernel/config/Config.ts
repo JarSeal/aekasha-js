@@ -203,7 +203,7 @@ export type AppConfig = {
       meshes?: boolean;
     };
   };
-  /** LOD selection (`lod()`: features/lod/LodSystem.ts, docs/plans/_DONE_p348_ecs-lod-selection.md). */
+  /** LOD selection (`lod()`: features/lod/LodSystem.ts, p348). */
   lod?: {
     /** Global LOD bias: multiplies every entity's screen size, >1 keeps detail longer. The
      * initial value: setLodBias() changes it at runtime. Default 1. */
@@ -222,7 +222,7 @@ export type AppConfig = {
      * Default `src/app/impostors`. */
     impostorExportDir?: string;
   };
-  /** World streaming's budgets (`streaming()`: features/streaming/, docs/plans/_DONE_p353_macro-streaming-grid.md).
+  /** World streaming's budgets (`streaming()`: features/streaming/, p353).
    * A scene's cells and rings are its own (`streaming` in its JSON, or setSceneStreamingSettings()). */
   streaming?: {
     /** How often the cells' states are decided from the focus, in frames. Default 10. */
@@ -270,7 +270,7 @@ export type AppConfig = {
     far?: number;
     zoom?: number;
   };
-  /** PostFX engine-level defaults (docs/plans/_DONE_p070_post-fx-system.md). Per-scene and
+  /** PostFX engine-level defaults (p070). Per-scene and
    * per-pass state lives in the scene / `*.postFx.json` files, not here. */
   postFx?: {
     /** Global master switch: when false, no scene's PostFX chain is ever rendered. A scene

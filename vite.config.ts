@@ -85,7 +85,7 @@ const appConfig = defineConfig({
     // stylesheets is side-effect free, so the build keeps only what's used (the entries included)
   },
   // ES module workers: an IIFE worker can't be code-split, and the assets worker loads the
-  // meshopt simplifier on demand (docs/plans/_DONE_p347_lod-chain-generation.md, Phase 0). The dev server
+  // meshopt simplifier on demand (p347, Phase 0). The dev server
   // loads workers as modules either way.
   worker: { format: 'es', plugins: () => [moduleSizes.workerPlugin()] },
   // No `optimizeDeps`: the dep scan from `index.html` finds the workers' deps too (checked on

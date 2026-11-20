@@ -1,4 +1,4 @@
-// The LOD selection's settings (docs/plans/_DONE_p348_ecs-lod-selection.md): the global fade
+// The LOD selection's settings (p348): the global fade
 // seconds, bias and selection budget (each initially from `AppConfig.lod`), the debug overrides
 // and the per-world frame stats. LodSystem.ts, LodMeasure.ts and LodFades.ts read them.
 import type { ECSWorld } from '../../kernel/ecs/ECS';

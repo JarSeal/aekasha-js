@@ -1,7 +1,7 @@
 import type { SceneData } from '../../kernel/scene/Scene';
 import type { SceneMergeMaterial } from './MergeMaterialSchema';
 
-// A scene's merge materials (docs/plans/_DONE_p374_multi-material-merging.md Phase 2): merging()'s
+// A scene's merge materials (p374 Phase 2): merging()'s
 // `assetsLoaded` scene hook makes the merge material of each palette the loading scene lists,
 // once its slot arrays have loaded with the scene's textures and before its scene code runs, and
 // registers it under the palette's id. Only this guard is in the first download: the

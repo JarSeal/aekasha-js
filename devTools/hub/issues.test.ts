@@ -67,20 +67,55 @@ describe('an issue file', () => {
   });
 
   it('warns without a title line and falls back to its first heading', () => {
-    const dir = writeFolder('untitled', { 'b.md': '# A heading\n\nStatus: open\n\nText.\n' });
+    const dir = writeFolder('untitled', { 'i1_b.md': '# A heading\n\nStatus: open\n\nText.\n' });
     const diag = new HubDiagnostics();
-    expect(parseIssue(path.join(dir, 'b.md'), 'aekasha', diag).title).toBe('A heading');
+    expect(parseIssue(path.join(dir, 'i1_b.md'), 'aekasha', diag).title).toBe('A heading');
     expect(diag.warnings).toHaveLength(1);
+  });
+
+  it('reads its priority and closed prefix from the file name, and its page from the rest', () => {
+    const dir = writeFolder('names', {
+      'i120_slow.md': issueText('Slow', 'open'),
+      '_DONE_i040_leak.md': issueText('Leak', 'fixed'),
+      '_DONE_old.md': issueText('Old', "won't fix"),
+    });
+    const diag = new HubDiagnostics();
+    const read = (name: string) => parseIssue(path.join(dir, name), 'aekasha', diag);
+    expect(read('i120_slow.md')).toMatchObject({
+      name: 'slow',
+      priority: 120,
+      path: 'issues/slow/',
+    });
+    expect(read('_DONE_i040_leak.md')).toMatchObject({ priority: 40, path: 'issues/leak/' });
+    expect(read('_DONE_old.md')).toMatchObject({ priority: null, path: 'issues/old/' });
+    expect(diag.warnings).toEqual([]);
+  });
+
+  it('warns about an open issue without a priority, and a prefix its status disagrees with', () => {
+    const dir = writeFolder('badNames', {
+      'unnumbered.md': issueText('Unnumbered', 'open'),
+      '_DONE_i1_open.md': issueText('Still open', 'open'),
+      'i2_fixed.md': issueText('Fixed', 'fixed'),
+    });
+    const messages = (name: string) => {
+      const diag = new HubDiagnostics();
+      parseIssue(path.join(dir, name), 'aekasha', diag);
+      return diag.warnings.map(({ message }) => message);
+    };
+    expect(messages('unnumbered.md')).toEqual([expect.stringContaining('No priority number')]);
+    expect(messages('_DONE_i1_open.md')).toEqual([expect.stringContaining("isn't a closed one")]);
+    expect(messages('i2_fixed.md')).toEqual([expect.stringContaining('without the _DONE_ prefix')]);
   });
 });
 
 describe("the Issues section's folders (p809 D7)", () => {
   const engineDir = writeFolder('engine', {
-    'leak.md': issueText('Leak', 'open'),
-    'old.md': issueText('Old', 'fixed'),
+    'i20_leak.md': issueText('Leak', 'open'),
+    'i10_slow.md': issueText('Slow', 'open'),
+    '_DONE_old.md': issueText('Old', 'fixed'),
     'README.txt': 'not an issue',
   });
-  const appDir = writeFolder('app', { 'scene-bug.md': issueText('Scene bug', 'open') });
+  const appDir = writeFolder('app', { 'i10_scene-bug.md': issueText('Scene bug', 'open') });
   const emptyDir = writeFolder('empty', {});
 
   it('lists by status alone when the app has no issues, as before', () => {
@@ -90,10 +125,13 @@ describe("the Issues section's folders (p809 D7)", () => {
     ]);
     expect([...diag.errors, ...diag.warnings]).toEqual([]);
     expect(section.pages.map(({ path: pagePath }) => pagePath)).toEqual([
-      'issues/leak/',
       'issues/old/',
+      'issues/slow/',
+      'issues/leak/',
     ]);
     expect(list).toMatch(/<h2[^>]*>.*Open/);
+    // By priority within a status
+    expect(list.indexOf('>Slow</a>')).toBeLessThan(list.indexOf('>Leak</a>'));
     expect(list).not.toMatch(/Ækasha|The app/);
     expect(section.dirs).toEqual([engineDir, emptyDir]);
   });
@@ -112,11 +150,11 @@ describe("the Issues section's folders (p809 D7)", () => {
     // Ækasha's first, each folder's statuses one level down
     expect(list.indexOf('Ækasha')).toBeLessThan(list.indexOf('The app'));
     expect(list).toMatch(/<h3[^>]*>.*Open/);
-    expect(section.files).toContain(path.join(appDir, 'scene-bug.md'));
+    expect(section.files).toContain(path.join(appDir, 'i10_scene-bug.md'));
   });
 
   it('refuses a second file whose page the other folder has', () => {
-    const clashDir = writeFolder('clash', { 'leak.md': issueText('Another leak', 'open') });
+    const clashDir = writeFolder('clash', { 'i5_leak.md': issueText('Another leak', 'open') });
     const { section, diag } = render([
       { dir: engineDir, owner: 'aekasha' },
       { dir: clashDir, owner: 'app' },

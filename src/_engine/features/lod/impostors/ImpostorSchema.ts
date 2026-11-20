@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { DebugDataSchema } from '../../../schemas/_HelperSchemas';
 import { IMPOSTOR_EXPORT_FORMAT_VERSION, IMPOSTOR_MATERIAL_TYPES } from './ImpostorFormat';
 
-// An exported impostor (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4): everything its
+// An exported impostor (p351 Phase 4): everything its
 // material needs besides the atlas, which is a `*.textureAtlas.json` (p299) with the kind's slots
 // (`IMPOSTOR_ATLAS_SLOTS`). Written by the LOD tab's Export, not by hand. A scene lists it in
 // `impostors`, which loads the atlas's slots with the scene; `generateOctahedralImpostor` (or

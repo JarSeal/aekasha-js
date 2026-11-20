@@ -1,8 +1,9 @@
 Status: draft | not-implemented
 Category: Debug, Dev tooling
-Related: \_DONE_p342_dev-file-server.md (builds on it: the routes, `writeDevFiles`, save entry
-writes, the "File server" folder; this plan is its §5 question 4), \_DONE_p085_material-editor-params-and-persistence.md
-(the material overrides this plan saves), p150_current-entity-data-source-info-on-edit-windows.md
+Related: `devTools/devFiles/CLAUDE.md` (the dev file server this builds on, p342: the routes,
+`writeDevFiles`, save entry writes, the "File server" folder; this plan is p342's §5 question 4),
+`src/_engine/debug/editors/CLAUDE.md` (the material editor's per-material record, p084-p085: the
+overrides this plan saves), p150_current-entity-data-source-info-on-edit-windows.md
 (origin info on the same camera and light data)
 
 # Save Menu and File Server Settings
@@ -75,7 +76,7 @@ grid rows. Line numbers below are as of 2026-11-04 and move; the names don't.
 | `AEK_debugPostFx` (`features/postfx/debug/_dbg__PostFX.ts`) | `*.postFx.json`              | scene, pass id    | deviation-only `{ enabled?, params? }` over the authored snapshot (latest entry included)                                    | `__saveData`, no conversion                                       |
 | `AEK_debugCams` (`kernel/camera/debug/_dbg__CameraDebugState.ts`) | `*.camera.json`        | scene, appId      | full values (every edited key), plus UI keys (`helperVisible`, `_lensSettingsOpen`) and `debugCam`                           | `__saveData`, strip and diff                                      |
 | `AEK_debugLights` (`kernel/light/debug/_dbg__LightDebugState.ts`) | `*.light.json`         | scene, appId      | full values, plus UI keys and `globalHelpersVisible`; colours as hex numbers; every record has `enabled: true`               | `__saveData`, convert and diff                                    |
-| `AEK_debugMatEditorMat_<id>` (`debug/editors/material/_dbg__MaterialEditorStore.ts`) | `*.material.json` | **global**        | deviation-only `overrides: { params, nodes }` against the raw material JSON (plus editor `settings` and `camera`, not saved) | `__saveData` of the current scene, if its JSON lists the material |
+| `AEK_debugMatEditorMat_<id>` (`debug/editors/material/_dbg__MaterialEditorStore.ts`) | `*.material.json` | **global**        | deviation-only `overrides: { params, nodes, inputs }` against the raw material JSON (plus editor `settings` and `camera`, not saved) | `__saveData` of the current scene, if its JSON lists the material |
 | `AEK_debugPostFxSettings` `postFxEnabled[sceneId]` (`_dbg__PostFX.ts`) | scene JSON `postFxEnabled` | scene             | deviation-only boolean                                                                                                       | scene `__saveData` (Phase 7)                                      |
 | `AEK_debugSpatialGrid` `domains[id].cellSizeByScene` (`features/spatial/debug/_dbg__SpatialGridSettings.ts`) | scene JSON `spatialDomains[]` | scene             | full value                                                                                                                   | scene `__saveData` (Phase 7)                                      |
 | `AEK_debugCharConfig` (`features/character/debug/_dbg__CharacterConfigOverrides.ts`) | none (characters are code) | scene, character  | deviation-only                                                                                                               | not saved (characters come later)                                 |
@@ -144,7 +145,7 @@ type SaveChange = {
   that edit.
 - **Merged entries:** a scene change builds its entry from the file's latest
   `__saveData[sceneId][0]` with the debug delta merged in, by its type's merge rule (the
-  gatherer's: flat for cameras and lights, `params` and `nodes` one level deeper for materials
+  gatherer's: flat for cameras and lights, `params`, `nodes` and `inputs` one level deeper for materials
   and PostFX, deep for sky boxes, where a whole list replaces). Then it drops every value that
   equals what the asset gives without the entry, so entries hold only real overrides. An entry
   left empty isn't written.
@@ -154,7 +155,7 @@ type SaveChange = {
 - **Materials (for now) save only into the current scene, and only the ones it lists.** The
   material editor's edits aren't bound to a scene, but its source reports them as changes of
   the current scene: one per material in the scene JSON's `materials` list, saved as that
-  scene's `__saveData` entry (its latest entry with the editor's `params` / `nodes` merged in,
+  scene's `__saveData` entry (its latest entry with the editor's `params` / `nodes` / `inputs` merged in,
   one level deep), so the save shows where the gather applies it. A material the scene doesn't
   list is Not saveable ("not in this scene") and keeps its editor changes; it's never in
   "Other scenes" either. Later the material editor will edit only the current scene's materials
@@ -269,7 +270,7 @@ changed):
    how its gather went. `writeDevFiles` remembers the paths it wrote for 60 s; an
    `aek:gather` event whose `files` has one of them is this page's.
    - `done`: the reload comes next, so the listener writes a note to sessionStorage
-     (`AEK_devFilesGatherNote`; the reload waits for the listener, p342 Phase 2) and the debug
+     (`AEK_devFilesGatherNote`; the reload waits up to 2 s for the listener's promise: `devTools/devFiles/CLAUDE.md`'s API) and the debug
      init shows the toast after the reload: "Saved 4 files" with the list, a warning with the
      asset errors when there are some.
    - `failed`: an alert toast at once with the message (no reload; the overlay shows).

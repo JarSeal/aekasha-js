@@ -26,7 +26,7 @@ lodShowcase's join no domain.
 ## Why it's not a one-line fix
 
 The receiver test shares its bounding sphere with object frustum culling, one implementation by
-design (`_DONE_p080`, `_DONE_p050` §7). Measuring pool instances some other way means a second
+design (p080, `_DONE_p050` §7). Measuring pool instances some other way means a second
 source of a candidate's sphere, and the natural one, the grid's own position and radius, would
 change the result for plain meshes too: the grid holds the `Transform` position as of its last
 rebuild and the radius provider's conservative radius, not the `Object3D`'s world position and its

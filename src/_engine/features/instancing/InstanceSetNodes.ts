@@ -25,7 +25,7 @@ import {
 } from 'three/tsl';
 import { LOD_FADE_END_EPSILON } from '../../utils/LodRules';
 
-// An instance set's TSL (docs/plans/_DONE_p354_gpu-driven-culling.md D4, D7, D8): the compute
+// An instance set's TSL (p354 D4, D7, D8): the compute
 // passes and the vertex fetch, over the GPU backend's buffers (InstanceSetGpu.ts). Its own module
 // so the backend's bookkeeping and the shader code read apart; only the GPU backend imports it.
 //

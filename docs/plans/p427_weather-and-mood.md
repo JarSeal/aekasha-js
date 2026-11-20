@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Weather, Rendering, Gameplay
-Related: p420_npc-simulation-tiers.md (The gameplay contracts: C7, weather and mood, the time-of-day clock), \_DONE_p307_wet-and-dry-surface-states.md (its surface conditions state is what this plan drives), `src/_engine/features/skybox/CLAUDE.md` (the sky box's day-night time and its sky clock, which read the world clock from here once it moves), p425_game-events-missions-and-save-games.md (the world state is saved), p990_follow-ups-from-done-plans.md (volumetric clouds and weather)
+Related: p420_npc-simulation-tiers.md (The gameplay contracts: C7, weather and mood, the time-of-day clock), `src/_engine/features/surface/CLAUDE.md` (the surface conditions state, p307, which this plan drives; the how-to is `docs/techniques/wet-dry-surfaces.md`), `src/_engine/features/skybox/CLAUDE.md` (the sky box's day-night time and its sky clock, which read the world clock from here once it moves), p425_game-events-missions-and-save-games.md (the world state is saved), p990_follow-ups-from-done-plans.md (volumetric clouds and weather; the surface query for wet friction)
 
 # Weather and Mood — Stub
 
@@ -66,8 +66,8 @@ between weather presets.
    transition's curves per value.
 3. **Fog:** height and distance fog as nodes the materials share, and its cost with impostors and
    PostFX.
-4. **Wind:** one vector for foliage (p308), clouds, particles and maybe physics (forces on light
+4. **Wind:** one vector for foliage sway in the materials (nothing sways today: static instance cells and instance sets are static by design, `src/_engine/features/instancing/CLAUDE.md`), clouds, particles and maybe physics (forces on light
    bodies), and its gusts.
-5. **Determinism:** weather that changes gameplay (wet friction, p307 T14) changes by the step clock
+5. **Determinism:** weather that changes gameplay (wet friction, p307 T14: physics friction by the ground's wetness, read through a surface query that doesn't exist yet, p990's Terrain) changes by the step clock
    and the seeded RNG; purely visual weather can run at frame time.
 6. **Regional weather:** one global state, or zones (spatial domains) blended around the camera.

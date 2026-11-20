@@ -1,7 +1,7 @@
 Status: stub — not-implemented
 Category: AI, Characters
 Blocks: p420_npc-simulation-tiers.md (soft: its `REDUCED` tier moves on the navmesh)
-Related: `src/_engine/features/character/CLAUDE.md` (the brain contract and `registerBrainKind` in code; the gym's `GYM_DUMMY` is the first app brain), p420_npc-simulation-tiers.md (The gameplay contracts: C4, the AI brain), p421_kinematic-character-controller.md (the NPC default controller), p425_game-events-missions-and-save-games.md (AI reacting to game events), p510_headless-simulation-runtime.md (The multiplayer path: step-index time, the seeded RNG), \_DONE_p346_spatial-domains.md (neighbour queries)
+Related: `src/_engine/features/character/CLAUDE.md` (the brain contract and `registerBrainKind` in code; the gym's `GYM_DUMMY` is the first app brain), p420_npc-simulation-tiers.md (The gameplay contracts: C4, the AI brain), p421_kinematic-character-controller.md (the NPC default controller), p425_game-events-missions-and-save-games.md (AI reacting to game events), p510_headless-simulation-runtime.md (The multiplayer path: step-index time, the seeded RNG), `src/_engine/features/spatial/CLAUDE.md` (p346's spatial domains: neighbour queries)
 
 # AI Brains and Navigation — Stub
 

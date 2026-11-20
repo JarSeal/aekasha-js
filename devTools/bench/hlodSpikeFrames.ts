@@ -10,7 +10,7 @@
  * reversed on every second run, so a drift over the page's life doesn't favour one.
  *
  * Step 3 is the same with `--field <sites>` (largeWorld's `?hlodField`, the far field). On WebGPU
- * the frame figure sums overlapping passes (docs/issues/gpu-timer-webgpu-frame-sum.md), so the
+ * the frame figure sums overlapping passes (docs/issues/i120_gpu-timer-webgpu-frame-sum.md), so the
  * passes that draw the scene are read one by one meanwhile (the probe's `gpuContextsAsync`: the
  * scene pass, the AO pre-pass and the sun's shadow, each its median), and their sum compared.
  */

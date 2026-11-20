@@ -22,7 +22,7 @@ const _lightSphere = new THREE.Sphere();
 
 function meshIsVisibleReceiver(entityId: number, world: ECSWorld): boolean {
   // Shared with ObjectFrustumCullingSystem.ts's mesh bounding-volume provider
-  // (docs/plans/_DONE_p080_object3d-frustum-culling.md §2.2) — same world-space
+  // (p080 §2.2) — same world-space
   // bounding-sphere approximation, one implementation.
   const meshSphere = getMeshWorldBoundingSphere(entityId, world);
   if (!meshSphere) return false; // the index also holds lights, cameras, etc.

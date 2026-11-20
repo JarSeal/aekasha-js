@@ -1,6 +1,6 @@
 /**
  * The material editor's settings per material
- * (docs/plans/_DONE_p085_material-editor-params-and-persistence.md DD3): the stage (background,
+ * (p085 DD3): the stage (background,
  * environment, light intensities) and the preview (auto-rotation), their defaults, checking a
  * saved value, and the Settings tab's pane items.
  *

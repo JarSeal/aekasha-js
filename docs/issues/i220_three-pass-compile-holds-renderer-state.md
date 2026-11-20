@@ -2,7 +2,7 @@
 
 Status: open | fixed upstream on dev ([#35359](https://github.com/mrdoob/three.js/pull/35359), 2026-11-05), not in a release yet: no report to file
 Category: Bug, Rendering, Dependencies
-Found: 2026-11-06, p057 Phase 3 step 3 (finding 4: the PostFX output quad built with the pre-pass's MRT into the scene pass's target, `docs/plans/_DONE_p057_three-r187-migration.md`)
+Found: 2026-11-06, p057 Phase 3 step 3 (finding 4: the PostFX output quad built with the pre-pass's MRT into the scene pass's target)
 Our workaround: the engine's compiles run one at a time and every engine render runs with no target and no MRT set (`src/_engine/kernel/render/CompileQueue.ts`, `src/_engine/kernel/render/CLAUDE.md`'s Pre-warm compiles)
 
 ### What happens (three r187)
@@ -58,8 +58,11 @@ first run of a fresh shader set took 1.4 s instead of ~140 ms); `src=/three/src`
 - `compileInScenePassAsync` (`src/_engine/features/postfx/PostFX.ts`) holds the pass's target and MRT until its
   compile resolves (`compile=hold`): restore them right after the synchronous `compileAsync` call instead
   (`compile=sync`), as three's `PassNode.compileAsync` then does.
-- After that, `runWithClearRenderState` around the engine's renders should be unneeded; re-measure with p057's
-  probe (the Gym, a pre-warm through the passes: no build in the frames during the compile) before removing it.
+- After that, `runWithClearRenderState` around the engine's renders should be unneeded; re-measure first with
+  p057's probe: in the Gym (PostFX `ambientOcclusion`), add a mesh with a fresh `MeshStandardNodeMaterial` (casting
+  and receiving shadows) 4 m in front of the camera, pre-warm it through the passes, and count the node builds
+  (`NodeManager._createNodeBuilder`) and render pipelines (`backend.createRenderPipeline`) in the frames after the
+  add: none may be built during the compile. Use fresh shaders each run, so a shader cache doesn't hide the hitch.
   `runCompileAsync` (one compile at a time) needs its own check: #35359 stacks the precompilation states
   (`previousPrecompilationState`), which may make overlapping compiles safe.
 

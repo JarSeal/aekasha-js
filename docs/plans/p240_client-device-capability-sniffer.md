@@ -1,6 +1,6 @@
 Status: draft | not-implemented
 Category: Performance, Settings
-Related: the PostFX feature (`aekasha/postfx`, `features/postfx/PostFX.ts`: `setPostFxEnabled` is one of the switches the recommendations target), \_DONE_p350_lod-system-research.md (the device levels are a natural LOD budget input), \_DONE_p345_gpu-memory-and-draw-call-debugger.md (§2.4: a device memory level is the GPU memory tab's natural default budget), the physics transform buffer (`features/physics/CLAUDE.md`: a `SharedArrayBuffer` only when the page is cross-origin-isolated, so `crossOriginIsolated` is part of the probe), the sky box (`features/skybox/SkyLights.ts`: its sun light's `shadowPreset` uses the same `LOW`…`ULTRA` scale as the device levels, see §3.1)
+Related: the PostFX feature (`aekasha/postfx`, `features/postfx/PostFX.ts`: `setPostFxEnabled` is one of the switches the recommendations target), the LOD feature (`src/_engine/features/lod/CLAUDE.md`, p350: the device levels are a natural LOD budget input, eg. `setLodBias`, `setLodMaxSelectionsPerFrame`), the profiler's GPU memory tab (`src/_engine/debug/CLAUDE.md`; p345 §2.4: a device memory level is its natural default budget, see Phase 3), the physics transform buffer (`features/physics/CLAUDE.md`: a `SharedArrayBuffer` only when the page is cross-origin-isolated, so `crossOriginIsolated` is part of the probe), the sky box (`features/skybox/SkyLights.ts`: its sun light's `shadowPreset` uses the same `LOW`…`ULTRA` scale as the device levels, see §3.1)
 
 # Client Device Capability Sniffer — Plan
 
@@ -219,7 +219,7 @@ type DeviceLevels = {
 - **GPU depends on resolution:** the same GPU rates lower on a 4K DPR-2 display than at 1080p. The level answers "what can this device run here", not "how fast is this chip".
 - **Shadow level:** `recommendations.shadowQuality` is `min(gpu, gpuMemory ?? gpu)`, because ULTRA's 4096² shadow maps need memory headroom. An app can pass it as a light's or the sky box sun light's `shadowPreset`, or use `SHADOW_PRESETS[level]` (`kernel/light/Light.ts`). The engine doesn't apply it (§1.3). A future `shadowPreset: 'AUTO'` that resolves to this level would be a separate change.
 - **Intended use per category** (a guide for apps, not enforced):
-  - GPU: rendering settings (shadows, PostFX, antialias, pixel ratio, sky/env bake resolution).
+  - GPU: rendering settings (shadows, PostFX, antialias, pixel ratio, sky/env bake resolution), the LOD bias (`setLodBias`) and the instance sets' density, or no set at all, on a weak device (p354 §5 left choosing their backend by device here: on WebGL2 a set runs its CPU backend, `src/_engine/features/instancing/CLAUDE.md`'s Instance sets, which past about 20k spread-out instances draws more than tiled pools).
   - CPU: physics sub-steps, entity and character counts, spatial-index density.
   - Memory and GPU memory: texture resolution, streaming radius, cache sizes.
 
@@ -307,7 +307,7 @@ The dynamic import keeps the module out of the main chunk for apps that don't us
   - The levels per category and overall, with their `sources` (monitors, or kit badges).
   - Buttons "Re-run (force)" and "Clear stored result".
   - Debug-only **forced levels** (`lsKey` + `persistKeys`): overall and/or per category, each `OFF` or `LOW`…`ULTRA` (selects). When set, `getDeviceCapabilityReport()` returns the forced levels (`levels.forced: true`) and the recommendations derived from them, so developers can test the LOW path on a strong machine. The override has no effect outside `IS_DEBUG_ENV`.
-- The profiler (`debug/Profiler.ts`): the GPU memory tab's default budget from the device's GPU memory level when there is one (`_DONE_p345` §2.4; the tab's own saved budget still wins), and the device's levels as an Overview row, so the measured figures sit next to the device's budgets.
+- The profiler (`debug/Profiler.ts`): the GPU memory tab's default budget from the device's GPU memory level when there is one (p345 §2.4: the tab's budget is one MB figure, 512 by default (`DEFAULT_BUDGET_MB` in `debug/gpuMemory/_dbg__GPUMemory.ts`), saved per browser under `AEK_debugGPUMemory`, the bar red and one debug toast per scene over it; the tab's own saved budget still wins), and the device's levels as an Overview row, so the measured figures sit next to the device's budgets.
 - Example app: enable `runAtInit` in `src/CONFIG.ts` and pass `recommendations.pixelRatio`/`antialias` to `createRenderer` in `src/index.ts`. App minor bump.
 - The Hub: the feature on a page (the Rendering feature page, `hub/pages/features/rendering/`, or a page of its own with `aek:covers`), its snippet from `src/index.ts` through a `#region`; `readme.md`'s Features list.
 

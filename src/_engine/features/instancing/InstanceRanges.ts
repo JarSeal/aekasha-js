@@ -1,4 +1,4 @@
-// An instance set's ranges (docs/plans/_DONE_p354_gpu-driven-culling.md D1, Phase 5 step 1): which
+// An instance set's ranges (p354 D1, Phase 5 step 1): which
 // of its instance indices are live, and the free list a removed range waits in for a later add.
 // Pure bookkeeping, no three: the front (InstanceSet.ts) keeps one per set and tells the backend
 // what changed.

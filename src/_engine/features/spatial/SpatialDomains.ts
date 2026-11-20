@@ -1,12 +1,12 @@
 // The spatial domains (docs/plans/_DONE_p050_spatial-index.md §3, §8): each ECS world holds named
-// domains (docs/plans/_DONE_p346_spatial-domains.md §3.1), separate grids, each with its own cell
+// domains (p346 §3.1), separate grids, each with its own cell
 // size, capacity and update policy. `DEFAULT` is the one LightObjectCullingSystem.ts queries. Its
 // grid is built per scene on demand (by its first SPATIAL_INDEXED member or a `getSpatialGrid`
 // call) and freed on every scene change; its settings outlive the grid
-// (docs/plans/_DONE_p349_scene-scoped-spatial-domains.md §3.6).
+// (p349 §3.6).
 //
 // A domain (or `DEFAULT`'s settings) can belong to a scene and is released on its exit
-// (docs/plans/_DONE_p349_scene-scoped-spatial-domains.md, `sceneId` in SpatialDomainOptions).
+// (p349, `sceneId` in SpatialDomainOptions).
 //
 // A domain's grid instance is replaced when the domain is re-registered with other settings, and
 // dropped when it's unregistered, so read it with `getSpatialDomain`/`getSpatialGrid` where it's
@@ -54,7 +54,7 @@ export interface SpatialDomainOptions {
   /** See SpatialGridOptions (default 2). */
   oversizedRadiusMultiplier?: number;
   /**
-   * The scene these settings belong to (docs/plans/_DONE_p349_scene-scoped-spatial-domains.md §3.1).
+   * The scene these settings belong to (p349 §3.1).
    * While they exist they replace the domain's world settings (the last ones registered without
    * a scene). On that scene's exit the domain goes back to its world settings, or is
    * unregistered if it has none. A scope, not a setting: registering the same settings for
@@ -354,7 +354,7 @@ const warnIfNotActiveScene = (id: string, sceneId: string) => {
   lwarn(
     `SpatialIndex: domain '${id}' was registered for scene '${sceneId}', which isn't the ` +
       `${isCurrentlyLoading() ? 'loading' : 'current'} scene ('${activeSceneId}'). Its settings ` +
-      `stay until '${sceneId}' exits (docs/plans/_DONE_p349_scene-scoped-spatial-domains.md §3.1).`
+      `stay until '${sceneId}' exits (the Hub's Spatial index page, Scene settings).`
   );
 };
 

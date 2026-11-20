@@ -11,6 +11,8 @@ import {
 } from '../markdown';
 import { PLANS_DIR, toRepoPath } from '../paths';
 import {
+  compareIssues,
+  getIssueLabel,
   ISSUE_SOURCES,
   listIssueFiles,
   parseIssue,
@@ -373,12 +375,10 @@ const renderIssues = (ctx: RoadmapRender, issues: Issue[]) => {
   let html = heading(ctx, '## Issues by area');
   if (!open.length) html += '<p>No open issues.</p>\n';
   for (const area of sorted) {
-    const items = area.issues
-      .sort((a, b) => a.plainTitle.localeCompare(b.plainTitle))
-      .map(
-        (issue) =>
-          `<li><a href="${escapeHtml(resolveHubLink(`hub:${issue.path}`, ctx.env, issue.file, 1))}">${inline(issue.title)}</a> <span class="hubStatus hubStatus_${issue.status.kind}">${escapeHtml(capitalize(issue.status.label))}</span></li>`
-      );
+    const items = area.issues.sort(compareIssues).map((issue) => {
+      const label = getIssueLabel(issue);
+      return `<li>${label ? `<code>${label}</code> ` : ''}<a href="${escapeHtml(resolveHubLink(`hub:${issue.path}`, ctx.env, issue.file, 1))}">${inline(issue.title)}</a> <span class="hubStatus hubStatus_${issue.status.kind}">${escapeHtml(capitalize(issue.status.label))}</span></li>`;
+    });
     html += `${heading(ctx, `### ${area.name}`, area.issues[0].file)}<ul class="hubRoadmapList">\n${items.join('\n')}\n</ul>\n`;
   }
   const closed = issues.length - open.length;

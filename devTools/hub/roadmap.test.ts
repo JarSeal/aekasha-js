@@ -53,10 +53,10 @@ const appPlans = writeFolder('appPlans', {
   'p100_app-plan.md': plan('Status: draft\nBlocked by: docs/plans/p201_blocker.md', 'App plan'),
 });
 const engineIssues = writeFolder('issues', {
-  'a.md': issue('Leak in `X`', 'open', 'Bug, ECS'),
-  'b.md': issue('Slow', 'not filed yet', 'Physics, ecs'),
+  'i010_a.md': issue('Leak in `X`', 'open', 'Bug, ECS'),
+  'i020_b.md': issue('Slow', 'not filed yet', 'Physics, ecs'),
   'c.md': issue('Odd', 'open'),
-  'd.md': issue('Fixed one', 'fixed', 'ECS'),
+  '_DONE_i005_d.md': issue('Fixed one', 'fixed', 'ECS'),
 });
 const emptyDir = writeFolder('empty', {});
 
@@ -162,6 +162,9 @@ describe("Ækasha's roadmap", () => {
     const ecs = html.slice(html.search(/<h3[^>]*>ECS/), html.search(/<h3[^>]*>Physics/));
     expect(ecs).toContain('Leak in <code>X</code>');
     expect(ecs).toContain('>Slow</a>');
+    // By priority, labelled with it; the page at the name without the prefix
+    expect(ecs.indexOf('<code>i010</code>')).toBeLessThan(ecs.indexOf('<code>i020</code>'));
+    expect(ecs).toContain('href="../../../issues/a/"');
     expect(ecs).not.toContain('Fixed one');
     expect(html).toContain('href="../../../issues/c/">Odd</a>');
     expect(html).toContain('1 closed issue not listed');
@@ -204,7 +207,7 @@ describe('the sections', () => {
     expect(app.path).toBe('project/app/roadmap/');
     expect(engine.dirs).toEqual([enginePlans, engineIssues]);
     expect(app.dirs).toEqual([appPlans, emptyDir]);
-    expect(engine.files).toContain(path.join(engineIssues, 'a.md'));
+    expect(engine.files).toContain(path.join(engineIssues, 'i010_a.md'));
     expect(engine.files).not.toContain(path.join(enginePlans, 'CLAUDE.md'));
     expect(app.files).toEqual([path.join(appPlans, 'p100_app-plan.md')]);
   });

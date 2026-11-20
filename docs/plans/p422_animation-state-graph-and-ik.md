@@ -28,14 +28,14 @@ ray, look-at, hand targets). Ragdoll as a controller mode plus jointed bodies.
 
 - No `AnimationMixer` and no `SkinnedMesh` in engine, toolkit or app code (only the profiler census
   and the LOD window recognise skinned meshes). Three's keyframe and binding classes already ship
-  in every build (`docs/issues/three-animation-classes-in-builds-without-models.md`), so `yarn sbp`
+  in every build (`docs/issues/i140_three-animation-classes-in-builds-without-models.md`), so `yarn sbp`
   measures what a mixer and the graph add; the feature loads its own code on first use.
 - `LocomotionState` (10 states, `features/character/CharacterTypes.ts`) is documented as "what a
   future animation-state system switches on", with `onLocomotionStateChange`; its listeners run
   inside the sub-step. A graph reads the controller's `state.locomotionState` at `APP_RENDER_SYNC`
   instead.
 - The character's visual can be any `Object3D`; the controller never reads it.
-- LOD cross-fades skip skinned meshes (`_DONE_p351`), and impostors are static.
+- LOD cross-fades skip skinned meshes (p351; `src/_engine/features/lod/CLAUDE.md`'s LOD selection), `generateLodChain` refuses skinned and morph-target geometry (p347 Q1: simplifying breaks skin weights and morph targets unless they're carried as attributes; the characters' LOD is open here and in p420), and impostors are static.
 
 ## Open questions
 

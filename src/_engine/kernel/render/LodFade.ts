@@ -1,4 +1,4 @@
-// Dithered LOD cross-fades (docs/plans/_DONE_p351_impostor-billboard-lod.md §2.4, Phase 2): while an entity
+// Dithered LOD cross-fades (p351 §2.4, Phase 2): while an entity
 // changes level, both levels are drawn and dissolve into each other through a screen-space dither,
 // so nothing pops and everything stays opaque (no sorting, shadows and post effects unchanged).
 //
@@ -11,7 +11,7 @@
 // reads the fade of what's being drawn, from one of three sources, picked when the build is set up:
 // - An InstancedMesh: its per-instance `lodFade` attribute (createLodFadeAttribute), and the
 //   per-object value too (setLodObjectFade: an InstancedMesh entity fades as a whole; p058 D2,
-//   docs/plans/_DONE_p058_shared-instanced-builds-for-lod-fades-and-impostors.md). An InstancedMesh
+//   p058). An InstancedMesh
 //   without a fade of its own binds an opaque one (`getDrawnFadeAttribute`), so the shared build
 //   always finds an attribute.
 // - An object whose draws carry their own fade (setObjectLodFadeNode): an instance set's draws

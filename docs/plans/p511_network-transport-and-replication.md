@@ -2,7 +2,7 @@ Status: stub — not-implemented
 Category: Networking
 Blocked by: p510_headless-simulation-runtime.md (a server to talk to)
 Blocks: p512_client-prediction-and-reconciliation.md
-Related: `src/_engine/features/physics/CLAUDE.md` (Worker targets: the transport interface in front of `postMessage`, `features/physics/transport/`), p510_headless-simulation-runtime.md (The multiplayer path: the verdict and rules 4, 5 and 7), p425_game-events-missions-and-save-games.md (serializable components, shared with save games), \_DONE_p346_spatial-domains.md and \_DONE_p352_physics-simulation-tiers.md (interest management), p420_npc-simulation-tiers.md (The gameplay contracts: C4 the network brain, C5 recorded actions, C7 game events)
+Related: `src/_engine/features/physics/CLAUDE.md` (Worker targets: the transport interface in front of `postMessage`, `features/physics/transport/`), p510_headless-simulation-runtime.md (The multiplayer path: the verdict and rules 4, 5 and 7), p425_game-events-missions-and-save-games.md (serializable components, shared with save games), `src/_engine/features/spatial/CLAUDE.md` (p346's spatial domains) and `src/_engine/features/physics/CLAUDE.md`'s Simulation tiers (p352) (interest management), p420_npc-simulation-tiers.md (The gameplay contracts: C4 the network brain, C5 recorded actions, C7 game events)
 
 # Network Transport and Replication — Stub
 

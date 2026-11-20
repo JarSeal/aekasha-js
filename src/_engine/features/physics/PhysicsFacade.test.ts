@@ -250,7 +250,7 @@ describe('the facade (MAIN_THREAD)', () => {
   });
 
   it('p353: a jointed body is STATIC where DISABLED is asked for, and a new joint makes it so', async () => {
-    // docs/issues/rapier-joint-on-disabled-bodies-panics.md: disabled bodies with joints corrupt
+    // docs/issues/i250_rapier-joint-on-disabled-bodies-panics.md: disabled bodies with joints corrupt
     // Rapier's solving of other joints
     const world = new ECSWorld({ id: 'p353-joint-safe-tier' });
     facade.tiersInstalled = true;
@@ -293,7 +293,7 @@ describe('the facade (MAIN_THREAD)', () => {
   });
 
   it('a joint created between disabled bodies after a step steps (Rapier 0.19.3 panicked)', async () => {
-    // docs/issues/rapier-joint-on-disabled-bodies-panics.md: both disabled, and disabled to fixed
+    // docs/issues/i250_rapier-joint-on-disabled-bodies-panics.md: both disabled, and disabled to fixed
     const world = new ECSWorld({ id: 'p353-joint-on-disabled' });
     facade.tiersInstalled = true;
     try {

@@ -12,7 +12,7 @@ let nextJointId = 0;
 
 /** Rapier 0.19.3 panics (`unreachable`, in the next step) on a joint inserted when neither body is
  * an enabled dynamic one and they've been stepped so (two disabled bodies, or a disabled one and
- * a fixed one: the DISABLED physics tier's, docs/issues/rapier-joint-on-disabled-bodies-panics.md).
+ * a fixed one: the DISABLED physics tier's, docs/issues/i250_rapier-joint-on-disabled-bodies-panics.md).
  * A disabled body is enabled for the insert and disabled again: it stays where it was, with its
  * velocities. */
 const createImpulseJointOnDisabled = (

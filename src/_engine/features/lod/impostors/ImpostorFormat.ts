@@ -1,4 +1,4 @@
-// What an exported impostor (`*.impostor.json`, docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4)
+// What an exported impostor (`*.impostor.json`, p351 Phase 4)
 // is made of, shared by the schema (`ImpostorSchema.ts`), the gatherer and the runtime. No
 // imports: the runtime loads no zod, and the gatherer (Node) loads no three.
 

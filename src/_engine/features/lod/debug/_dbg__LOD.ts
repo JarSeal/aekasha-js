@@ -40,9 +40,9 @@ import {
   type LodControls,
 } from './_dbg__LodTabItems';
 
-// The LOD tab (docs/plans/_DONE_p348_ecs-lod-selection.md §6): counts per level, the last frame's
+// The LOD tab (p348 §6): counts per level, the last frame's
 // selections, applies and fades, the selection's runtime overrides, the fades' duration and time
-// scale (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 2), the level overlay
+// scale (p351 Phase 2), the level overlay
 // (_dbg__LodOverlay.ts), the per-entity LOD windows (_dbg__LodEntityWindow.ts) and the
 // impostors generated in this session with their Export (p351 Phase 4,
 // _dbg__ImpostorExport.ts), and the instance sets (p354 D11: LOD content without entities, through

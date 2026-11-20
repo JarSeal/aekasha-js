@@ -1,4 +1,4 @@
-// LOD chain options (docs/plans/_DONE_p347_lod-chain-generation.md §2.2) and the description of
+// LOD chain options (p347 §2.2) and the description of
 // a GLB's prebuilt chains. Import-free: the asset pipeline resolves the options and writes the
 // description in Node without loading three (devTools/engineImports.test.ts keeps it so).
 

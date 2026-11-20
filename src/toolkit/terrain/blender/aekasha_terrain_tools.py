@@ -2,7 +2,7 @@
 
 A terrain block is a square heightfield grid that the engine spawns from a `*.terrainBlock.json`
 (the `terrain()` feature, `aekasha/terrain`). This add-on makes one that follows the block
-conventions (docs/plans/_DONE_p306_terrain-blocks-and-procedural-terrain-meshes.md D1; the
+conventions (p306 D1; the
 handbook's docs/techniques/terrain-blocks-blender.md), lets you paint and bake its splat, checks
 it and exports it with the locked glTF settings (D5). Its decal sets (p309 D3): decals of a decal
 atlas's cells, quads or strips along a path, shrinkwrapped onto the block and exported as one GLB

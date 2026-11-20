@@ -1,6 +1,6 @@
 **Title:** An uncompressed texture array's layers go through a 2D canvas, which rounds the colour where the alpha is under 1
 
-Status: open | for a texture array follow-up (`_DONE_p299_texture-arrays-and-atlases.md`'s code)
+Status: open | for a texture array follow-up (p299's code)
 Category: Assets, Rendering, Bug
 Found: 2026-11-13, p303 Phase 3 section 3 (the `textureSets` scene's PNG set array against its sets: up to 2 / 255 apart on 27-58 % of the pixels, on WebGPU and WebGL2; the KTX2 array matches exactly)
 Our workaround: none needed yet. A shipped texture is KTX2 (`yarn assets`), so a shipped array is a `CompressedArrayTexture`, built from the members' blocks as they are; only a member without an output (a source image in development, "Load source files", an `optimize: false` texture) takes this path

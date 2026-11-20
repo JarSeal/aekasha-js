@@ -34,7 +34,7 @@ import {
 } from './_dbg__SpatialGridReadouts';
 
 // The "Spatial index" drawer tab (docs/plans/_DONE_p050_spatial-index.md §9,
-// docs/plans/_DONE_p346_spatial-domains.md §3.6): per domain, the cell size override, the
+// p346 §3.6): per domain, the cell size override, the
 // brute-force oracle, the overlays and the rebuild counts, and an all-domains summary. Default
 // world only. Its settings, overlays, rows and figures are the `_dbg__SpatialGrid*.ts` modules
 // beside it (p806 D11).

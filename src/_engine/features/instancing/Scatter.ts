@@ -26,7 +26,7 @@ import { SCATTER_COLLIDER_WARNING } from './ScatterLimits';
 import type { ScatterDef, ScatterItemDef, ScatterPlacementDef } from './ScatterSchema';
 import { createStaticInstances } from './StaticInstances';
 
-// Scatters (docs/plans/_DONE_p308_terrain-scatter.md D2): a `*.scatter.json` from the spawning scene's
+// Scatters (p308 D2): a `*.scatter.json` from the spawning scene's
 // data, its instances placed by its source (a registered generator, its placements, or an import's
 // GPU instances and point clouds), grouped by item and drawn in cells by `createStaticInstances`.
 

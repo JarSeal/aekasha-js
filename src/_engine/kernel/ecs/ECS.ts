@@ -597,7 +597,7 @@ export class ECSWorld {
     // the packed id's 12 bits: isAlive compares it with the id's masked
     // generation, so an unwrapped 4096 would make every later entity in the
     // slot dead on creation and undeletable. An id repeats after 4096 reuses
-    // of its slot (docs/issues/ecs-generation-wrap-after-4096-reuses.md).
+    // of its slot (docs/issues/_DONE_ecs-generation-wrap-after-4096-reuses.md).
     this.generations[index] = (this.generations[index] + 1) & this.GEN_MASK;
 
     // Clear ECS data using the packed ID as the key for Map consistency

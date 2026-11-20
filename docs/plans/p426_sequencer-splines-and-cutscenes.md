@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Gameplay, Cameras, Cutscenes
-Related: `src/_engine/features/character/CLAUDE.md` (the brain contract and `setCharacterBrain` in code, which a takeover uses), p420_npc-simulation-tiers.md (The gameplay contracts: C7, the sequencer and splines; C4, the brain switch on takeover), p425_game-events-missions-and-save-games.md (cues emit game events), \_DONE_p083_editor-creator-view.md (an editor view to draw splines in), `src/_engine/ui/CLAUDE.md` (the UI kit's curve editor, in its forms)
+Related: `src/_engine/features/character/CLAUDE.md` (the brain contract and `setCharacterBrain` in code, which a takeover uses), p420_npc-simulation-tiers.md (The gameplay contracts: C7, the sequencer and splines; C4, the brain switch on takeover), p425_game-events-missions-and-save-games.md (cues emit game events), `src/_engine/kernel/render/CLAUDE.md`'s Views and `src/_engine/debug/editors/CLAUDE.md` (p083's editor views: one to draw splines in), `src/_engine/ui/CLAUDE.md` (the UI kit's curve editor, in its forms)
 
 # Sequencer, Splines and Cutscenes — Stub
 

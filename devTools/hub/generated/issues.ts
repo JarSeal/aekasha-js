@@ -19,6 +19,11 @@ import type { HubGeneratedPage, HubGeneratedSection } from './section';
  * other keys a list under it; the rest of the file is rendered as it is. Without a `**Title:**`
  * line the title is the first heading (an `# h1` is then left out of the body), else the file
  * name; without a `Status:` line the issue counts as open, shown as "Status not stated".
+ *
+ * The file name carries the priority as a plan's does (docs/plans/CLAUDE.md's Issue priorities):
+ * `i120_<name>.md` while it's open, `_DONE_i120_<name>.md` once it's closed. The page is at the
+ * bare name (`issues/<name>/`), so a new priority or a close never moves it. An open issue without
+ * a number, and a `_DONE_` prefix and a status that disagree, warn.
  */
 
 const ISSUES_SECTION_PATH = 'issues/';
@@ -30,6 +35,8 @@ const TITLE_LINE_REGEX = /^\*\*Title:\*\*\s*(.+?)\s*$/;
 /** A header line: `Status: open`, `File at: https://…`, `Our workaround: …` */
 const META_LINE_REGEX = /^([A-Z][A-Za-z ]{0,30}):\s+(\S.*?)\s*$/;
 const CLOSED_STATUSES = ['fixed', 'closed', 'resolved', 'done', "won't fix", 'wontfix'];
+/** A file name: the closed prefix, the priority, the page's name (`_DONE_i120_leak`) */
+const FILE_NAME_REGEX = /^(_DONE_)?(?:i(\d+)_)?(.+)$/;
 /** The breadcrumbs' label and the `<meta name="description">` are cut to about this */
 const MENU_LENGTH = 48;
 const DESCRIPTION_LENGTH = 200;
@@ -61,7 +68,10 @@ export type IssueStatus = {
 };
 
 export type Issue = {
+  /** The file name without its prefixes and `.md`: the page's (`leak`) */
   name: string;
+  /** The file name's `i<digits>_` (lower first), or null without one */
+  priority: number | null;
   file: string;
   owner: DocsOwner;
   path: string;
@@ -136,7 +146,7 @@ const findSummary = (body: string) => {
 
 /** An issue file's header and body (the convention in this module's comment) */
 export const parseIssue = (file: string, owner: DocsOwner, diag: HubDiagnostics): Issue => {
-  const name = path.basename(file, '.md');
+  const [, donePrefix, priority, name] = FILE_NAME_REGEX.exec(path.basename(file, '.md'))!;
   const lines = fs.readFileSync(file, 'utf-8').split('\n');
   const blank = (from: number, to = from + 1) => lines.fill('', from, to);
 
@@ -164,9 +174,20 @@ export const parseIssue = (file: string, owner: DocsOwner, diag: HubDiagnostics)
   const status = parseStatus(meta[statusIndex]?.value);
   if (statusIndex >= 0) meta.splice(statusIndex, 1);
 
+  const isClosed = status.kind === 'closed';
+  if (donePrefix && !isClosed) {
+    diag.warn(file, 1, `A _DONE_ file whose status "${status.label}" isn't a closed one`);
+  } else if (!donePrefix && isClosed) {
+    diag.warn(file, 1, `Status "${status.label}" without the _DONE_ prefix: \`git mv\` it`);
+  }
+  if (!isClosed && !priority) {
+    diag.warn(file, 1, 'No priority number in the file name (`i<digits>_<name>.md`): sorted last');
+  }
+
   const body = lines.join('\n');
   return {
     name,
+    priority: priority ? Number(priority) : null,
     file,
     owner,
     path: `${ISSUES_SECTION_PATH}${slugify(name)}/`,
@@ -209,6 +230,16 @@ const renderIssue = (issue: Issue, md: MarkdownIt, env: HubMarkdownEnv) => {
 const groupOrder = (status: IssueStatus) =>
   status.group === 'open' ? 0 : status.kind === 'closed' ? 2 : 1;
 
+/** By priority (lower first, none last), then by title */
+export const compareIssues = (a: Issue, b: Issue) =>
+  (a.priority ?? Infinity) - (b.priority ?? Infinity) || a.plainTitle.localeCompare(b.plainTitle);
+
+/** An issue's priority as its file name writes it (`i120`), or '' without one */
+export const getIssueLabel = (issue: Issue) => {
+  const digits = FILE_NAME_REGEX.exec(path.basename(issue.file, '.md'))?.[2];
+  return digits ? `i${digits}` : '';
+};
+
 /** One folder's list: a heading per status (`##`, or `###` under a folder's heading), open first */
 const renderStatusGroups = (
   issues: Issue[],
@@ -221,7 +252,7 @@ const renderStatusGroups = (
     (a, b) =>
       groupOrder(a.status) - groupOrder(b.status) ||
       a.status.group.localeCompare(b.status.group) ||
-      a.plainTitle.localeCompare(b.plainTitle)
+      compareIssues(a, b)
   );
   for (const issue of sorted) {
     groups.set(issue.status.group, [...(groups.get(issue.status.group) ?? []), issue]);

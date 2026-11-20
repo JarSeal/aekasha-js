@@ -26,7 +26,7 @@ import type { Flags } from 'meshoptimizer/simplifier';
 import { createDrawsApi } from './_dbg__hlodSpikeDraws';
 import type { SpikeFrame } from './_dbg__hlodSpikeDraws';
 
-// p376 Phase 0's probe (docs/plans/_DONE_p376_hlod-merged-cluster-proxies.md §3), `window.__aekHlod`,
+// p376 Phase 0's probe (p376 §3), `window.__aekHlod`,
 // driven by `devTools/bench/hlodSpike.ts`. Shared by the scenes it measures (largeWorld,
 // testDebugScene), each loading it in the debug env and prod test mode.
 //
@@ -47,7 +47,7 @@ import type { SpikeFrame } from './_dbg__hlodSpikeDraws';
 // triangles (every pass), and `passTriangles` the groups' triangles in the main camera's and each
 // shadow-casting sky sun's frustum. `restore` (and a scene exit) puts the groups' geometries back.
 //
-// p377 Phase 0 (docs/plans/_DONE_p377_hlod-streaming-cell-proxies.md) adds the far field's
+// p377 Phase 0 (p377) adds the far field's
 // draws, cull, CPU split and rebuilds: `_dbg__hlodSpikeDraws.ts`, on this module's frame systems
 // (`onFrame`).
 

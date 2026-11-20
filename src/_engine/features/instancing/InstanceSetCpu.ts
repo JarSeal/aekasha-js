@@ -21,7 +21,7 @@ import {
 } from '../../utils/LodRules';
 import type { CreateInstanceSetBackend } from './InstanceSetTypes';
 
-// An instance set's CPU backend (docs/plans/_DONE_p354_gpu-driven-culling.md D9): what a set draws
+// An instance set's CPU backend (p354 D9): what a set draws
 // with on a renderer without compute (WebGL2). The front's `import()` (InstanceSet.ts), so only
 // such a device downloads it. The same set, data and rules as the GPU backend, without the compute:
 //

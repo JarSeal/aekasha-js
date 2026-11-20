@@ -1,5 +1,5 @@
 /**
- * PostFX per-pass performance measuring (docs/plans/_DONE_p070_post-fx-system.md, Design decision 8).
+ * PostFX per-pass performance measuring (p070, Design decision 8).
  * Debug-only, lazily loaded through PostFX.ts' registerPostFxProfiler(), and switchable live (no reload).
  * While off nothing is installed: no inspector, no wrappers, no timing calls.
  *

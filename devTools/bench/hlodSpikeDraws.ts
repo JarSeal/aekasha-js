@@ -1,6 +1,6 @@
 /**
  * p377 Phase 0 (`hlodSpike.ts --step draws`,
- * docs/plans/_DONE_p377_hlod-streaming-cell-proxies.md): which way to fewer draws. largeWorld's
+ * p377): which way to fewer draws. largeWorld's
  * far field (`?hlodField=<sites>`) drawn each way, a page per case and run, under the day-night sky box paused at `--time`, on each backend, from each view.
  *
  * Cases (`--cases`, default all of steps 1-4):
@@ -10,7 +10,7 @@
  * - `<as>@<cell>+cull25|50|75`: that page's field culled (the probe's `setCull`) at the screen
  *   size below which about 25, 50 or 75 % of its objects are from the `far` view (`screenSizes`),
  *   measured on the same page as its uncull'd case (step 2: `members@32+cull50`).
- * - p378 Phase 0 (docs/plans/_DONE_p378_baked-members-out-of-the-scene-graph.md): `floor` or a field
+ * - p378 Phase 0 (p378): `floor` or a field
  *   case with `:detached` or `:frozen` (`?hlodFieldMembers`: the built baked members out of the
  *   scene graph, or in it with their matrix updates off; the page waits until it's applied) or
  *   `:walk-once` (`?hlodFieldWalk=once`: the root scene walked once a frame). A mode case's image
@@ -27,7 +27,7 @@
  * Per case and view: the probe's CPU split (`cpuSplitAsync`: the frame, the render submit, the
  * scene graph walk in it, the systems, the scene's objects), the renderer's draws and triangles,
  * the field's objects drawn per pass (`fieldDraws`), the GPU (WebGL2: the stats panel's figure;
- * WebGPU: the scene passes, docs/issues/gpu-timer-webgpu-frame-sum.md) and a snapshot (the test
+ * WebGPU: the scene passes, docs/issues/i120_gpu-timer-webgpu-frame-sum.md) and a snapshot (the test
  * bridge's, the canvas without debug helpers) in
  * `.cache/bench/hlodSpike/draws/<sites>-sites/<backend>/`, compared with the reference's of the
  * same run (`snapshotDiff.ts`: the changed share and the mean
@@ -498,7 +498,7 @@ const projectionOf = (r: CaseRun, kind: string) =>
   r.split.projection?.[kind] ?? { ms: NaN, calls: NaN };
 
 /**
- * p378 Phase 0's tables (docs/plans/_DONE_p378_baked-members-out-of-the-scene-graph.md), from the
+ * p378 Phase 0's tables (p378), from the
  * cases that have its figures: the CPU frame's parts per case and view against the reference
  * (the walk, the projection walks by render kind, the systems, and the submit's rest), each
  * system's mean ms a frame (over the views and runs), and `frozen` against `detached` by D2's rule.
@@ -695,7 +695,7 @@ export const formatDraws = (results: DrawsResults, args: DrawsArgs) => {
         const views = Object.keys(byView).length;
         // WebGPU's scene passes don't decide (p377 Phase 0's results): they rise when the CPU
         // frame drops (the floor, without the field, "lost" 1.6-6.4 ms), passes overlapping on a
-        // tile-based GPU (docs/issues/gpu-timer-webgpu-frame-sum.md); shown, not counted
+        // tile-based GPU (docs/issues/i120_gpu-timer-webgpu-frame-sum.md); shown, not counted
         const gpuDecides = backend !== 'webgpu';
         const gpuOk = gpuDecides ? gpuLost === false : true;
         const pays = cpuViews >= Math.min(2, views) && gpuOk && !imageOut;

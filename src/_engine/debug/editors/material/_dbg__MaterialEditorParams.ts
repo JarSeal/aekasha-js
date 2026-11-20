@@ -1,6 +1,6 @@
 /**
  * The material editor's editable params
- * (docs/plans/_DONE_p085_material-editor-params-and-persistence.md DD2): the param catalogue (key, folder, kind, range, whether a change rebuilds the render
+ * (p085 DD2): the param catalogue (key, folder, kind, range, whether a change rebuilds the render
  * pipeline), reading and setting a param on the editor copy, the TSL inputs (read and set through
  * their uniforms), and the Params tab's pane items.
  *

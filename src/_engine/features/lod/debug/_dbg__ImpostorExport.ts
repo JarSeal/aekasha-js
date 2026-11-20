@@ -25,15 +25,15 @@ import { bakeCrossQuadsAtlases, resolveCrossQuadsOptions } from '../impostors/Cr
 import { getGeneratedAppData } from '../../../kernel/scene/Scene';
 import { readRenderTargetImageAsync } from '../../../kernel/assets/debug/_dbg__TexturePreview';
 
-// The impostor export (docs/plans/_DONE_p351_impostor-billboard-lod.md Phase 4 section 3): bakes an
+// The impostor export (p351 Phase 4 section 3): bakes an
 // impostor again from the source its generator got (the registry keeps it), reads the atlases
-// back and writes them into the repo through the dev files (_DONE_p342): one PNG per atlas slot,
+// back and writes them into the repo through the dev files (p342): one PNG per atlas slot,
 // a `*.textureAtlas.json` (p299, `image` slots, `mipChain: "FULL"`) and the `*.impostor.json`.
 // The gather that follows encodes the atlases as KTX2 (p300). Without the dev files (a LAN device
 // without AEK_DEV_FILES_LAN, AEK_DEV_FILES=false, a build) the files are downloaded instead, with
 // the repo paths to put them at. Both kinds export (octahedral: albedo and normalDepth slots;
 // cross-quads, section 6: albedo, and normal when baked with normals). The albedo slot carries
-// the impostor's `alphaTest` as `alphaCoverage` (docs/plans/_DONE_p341_alpha-coverage-mips.md), so
+// the impostor's `alphaTest` as `alphaCoverage` (p341), so
 // its mips keep level 0's coverage and thin features don't break up with distance.
 
 /** Where an impostor stands against the export the generated data has of it */

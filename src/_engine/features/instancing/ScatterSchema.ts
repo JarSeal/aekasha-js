@@ -5,7 +5,7 @@ import { JsonSchemaRefSchema, SourcePathSchema } from '../../schemas/_SaveDataSc
 import { LodDefSchema } from '../lod/LodSchema';
 import type { LodDef } from '../lod/LodTypes';
 
-// The scatter asset (docs/plans/_DONE_p308_terrain-scatter.md D2): static instances of a few items (a
+// The scatter asset (p308 D2): static instances of a few items (a
 // geometry and a material each) placed by a source, drawn in cells by `createStaticInstances`. The
 // gatherer fills the defaults in and writes each scatter a scene lists (or a terrain block of it
 // names) into its data (`ScatterDef`), where `spawnScatter` reads it.

@@ -23,7 +23,7 @@ import type {
   InstanceSetStats,
 } from './InstanceSetTypes';
 
-// Instance sets (docs/plans/_DONE_p354_gpu-driven-culling.md): many instances as plain data, with
+// Instance sets (p354): many instances as plain data, with
 // no entity per instance, culled and LOD-selected per instance by a backend: the GPU one (compute
 // culling and indirect draws, WebGPU) or the CPU one (WebGL2). This is the front, on the entry: the
 // options' checks, the owning entity, the ranges (InstanceRanges.ts: the live ones and the free
@@ -223,7 +223,7 @@ const loadBackendAsync = async (kind: InstanceSetBackendKind) =>
     : (await import('./InstanceSetCpu')).createCpuInstanceSetBackend;
 
 /**
- * Creates an instance set (docs/plans/_DONE_p354_gpu-driven-culling.md): up to millions of
+ * Creates an instance set (p354): up to millions of
  * instances of an instanced LOD pool's levels as plain data, with no entity per instance. On
  * WebGPU, compute passes cull each instance against the camera and select its level by the LOD
  * rules (`LodDef`'s screen sizes, `hysteresis` and `cullScreenSize`, against the LOD selection's

@@ -271,7 +271,7 @@ export const _keepTimedUids = (uids: string[]) => {
  * The summed GPU ms of these render contexts, or null while any of them is missing. A negative
  * duration counts as 0: on WebGPU (three r187) a shadow map pass with no caster in its frustum
  * resolves with a stale timestamp, thousands of ms below its other one and falling with the
- * page's age (docs/issues/gpu-timer-webgpu-frame-sum.md), and it would sink the frame's sum.
+ * page's age (docs/issues/i120_gpu-timer-webgpu-frame-sum.md), and it would sink the frame's sum.
  */
 export const _sumGpuMs = (timestamps: ReadonlyMap<string, number>, uids: string[]) => {
   let total = 0;

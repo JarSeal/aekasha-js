@@ -65,16 +65,16 @@ export const ComponentType = {
   // Spatial index (docs/plans/_DONE_p050_spatial-index.md)
   SPATIAL_INDEXED: 'CORE_SPATIAL_INDEXED', // opt-in, membership in the DEFAULT spatial domain
   SPATIAL_DOMAINS: 'CORE_SPATIAL_DOMAINS', // runtime-only, membership in the other spatial domains
-  // LOD selection (docs/plans/_DONE_p348_ecs-lod-selection.md) — see features/lod/LodSystem.ts
+  // LOD selection (p348) — see features/lod/LodSystem.ts
   LOD: 'CORE_LOD', // opt-in, user-authored
   TAG_LOD_CULLED: 'CORE_TAG_LOD_CULLED', // runtime-only, beyond the last level
   TAG_LOD_TRANSITIONING: 'CORE_TAG_LOD_TRANSITIONING', // runtime-only, a LOD cross-fade runs (p351)
-  // Draw hold (docs/plans/_DONE_p353_macro-streaming-grid.md §5) — see features/streaming/StreamingPriming.ts
+  // Draw hold (p353 §5) — see features/streaming/StreamingPriming.ts
   TAG_DRAW_HELD: 'CORE_TAG_DRAW_HELD', // runtime-only, not drawn until its owner lets it
   // Instanced mesh pools — see features/instancing/InstancedMeshPool.ts
   INSTANCED_MESH_SLOT: 'CORE_INSTANCED_MESH_SLOT', // runtime-only, set by a pool's spawn
   INSTANCE_SET: 'CORE_INSTANCE_SET', // runtime-only, set by createInstanceSetAsync (p354)
-  // Mesh merge groups (docs/plans/_DONE_p372_mesh-merge-groups.md) — see features/merging/MergeGroups.ts
+  // Mesh merge groups (p372) — see features/merging/MergeGroups.ts
   MERGE_GROUP: 'CORE_MERGE_GROUP', // runtime-only, on a merge group's entity
   MERGE_MEMBER: 'CORE_MERGE_MEMBER', // runtime-only, on a merge group's member
   TAG_MERGED: 'CORE_TAG_MERGED', // runtime-only, drawn by its group's merged mesh

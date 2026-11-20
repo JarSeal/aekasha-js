@@ -1,4 +1,4 @@
-// Which mesh entities a merge group takes (docs/plans/_DONE_p372_mesh-merge-groups.md §5): a refused one
+// Which mesh entities a merge group takes (p372 §5): a refused one
 // is drawn on its own, with a warning naming the reason (`addToMergeGroup`). A `BATCHED` group
 // (p375) takes moving bodies and transparent materials (its batch sorts its members, Phase 3), but
 // only a mesh directly under the root scene whose geometry's attributes and index are the group's

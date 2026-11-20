@@ -18,7 +18,7 @@ import {
 
 // The example scenes' "Hub" tab (p554 §2.4): "Save Hub image" takes a snapshot of what the canvas shows (kernel/render/Snapshot.ts: the
 // active camera, PostFX, no viewports or debug helpers) at a fixed size and writes it as
-// `<sceneId>.hub.png` beside the scene file through the dev files (_DONE_p342). The Hub's
+// `<sceneId>.hub.png` beside the scene file through the dev files (p342). The Hub's
 // `::: scene` directive and `aek:image` pick it up by that path (devTools/hub/scenes.ts) and
 // convert it to webp. Without the dev files the PNG is downloaded, with the path to put it at.
 // Every scene whose file is under `src/app/examples/` gets the tab on enter

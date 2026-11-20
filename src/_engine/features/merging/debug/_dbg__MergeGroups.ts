@@ -1,4 +1,4 @@
-// The merge groups' moved-member check (docs/plans/_DONE_p372_mesh-merge-groups.md §3, debug env only):
+// The merge groups' moved-member check (p372 §3, debug env only):
 // a member is static by contract, and one moved without `updateMergeMember` is still drawn where
 // it was merged. Every MOVE_CHECK_FRAMES frames (LATE_MAIN, after object3DSyncSystem's copy in
 // MAIN), each built member's world matrix, updated by the check, is compared with the one its

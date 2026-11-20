@@ -1,4 +1,4 @@
-// Shared cell maths for every cell-keyed spatial structure (docs/plans/_DONE_p346_spatial-domains.md
+// Shared cell maths for every cell-keyed spatial structure (p346
 // §3.4): `spatial()`'s SpatialGrid, the `streaming()` cells (p353) and later the static instance
 // cells (p308) and p372's `AUTO` merge groups. For a given cell size, a cell key means the same
 // cell everywhere. Pure, so it's in utils/ (p353 Phase 1): a feature imports no other feature's code.

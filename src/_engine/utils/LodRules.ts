@@ -1,4 +1,4 @@
-// The LOD rules on plain numbers (docs/plans/_DONE_p354_gpu-driven-culling.md D3): the level
+// The LOD rules on plain numbers (p354 D3): the level
 // selection with its hysteresis, the cull test, and a cross-fade's start and step. Pure, so it's in
 // utils/: the ECS path (features/lod/LodSystem.ts, LodFades.ts) calls it, and so do the instance
 // sets (features/instancing/), which import no LOD code. The GPU backend's TSL ports these

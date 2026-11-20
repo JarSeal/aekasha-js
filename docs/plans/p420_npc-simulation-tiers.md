@@ -1,7 +1,7 @@
 Status: stub — not-implemented
 Category: Characters, AI
 Blocked by: p421_kinematic-character-controller.md (soft: the NPC default controller), p424_ai-brains-and-navigation.md (soft: the AI brain and the navmesh `REDUCED` moves on)
-Related: `src/_engine/features/character/CLAUDE.md` (the actor, controller and brain contracts in code, p610), The gameplay contracts below (p603's C1-C7, which the other 42x stubs refer to), p425_game-events-missions-and-save-games.md (where `ABSTRACT` NPC state is saved), p422_animation-state-graph-and-ik.md (animation cost per tier), \_DONE_p350_lod-system-research.md (§6 physics simulation tiers, §8 roadmap), \_DONE_p352_physics-simulation-tiers.md (generic rigid bodies; it refuses tier changes on characters and leaves them to this plan), \_DONE_p353_macro-streaming-grid.md (cells around the player), \_DONE_p351_impostor-billboard-lod.md (`CROWD` rendering), p102_physics-world-bounds.md, p510_headless-simulation-runtime.md (The multiplayer path: the determinism rules an `ABSTRACT` simulation would follow)
+Related: `src/_engine/features/character/CLAUDE.md` (the actor, controller and brain contracts in code, p610), The gameplay contracts below (p603's C1-C7, which the other 42x stubs refer to), p425_game-events-missions-and-save-games.md (where `ABSTRACT` NPC state is saved), p422_animation-state-graph-and-ik.md (animation cost per tier), p350 (the LOD epic; §6: physics simulation tiers), `src/_engine/features/physics/CLAUDE.md`'s Simulation tiers (p352, p343: generic rigid bodies; they refuse tier changes on characters and leave them to this plan), `src/_engine/features/streaming/CLAUDE.md` (p353: cells around the player), `src/_engine/features/lod/CLAUDE.md` and `lod/impostors/CLAUDE.md` (p348, p351: cross-fades and impostors for `CROWD` rendering), p102_physics-world-bounds.md, p510_headless-simulation-runtime.md (The multiplayer path: the determinism rules an `ABSTRACT` simulation would follow)
 
 # NPC Simulation Tiers — Stub
 
@@ -100,7 +100,7 @@ Each tier needs:
   out in the world can't rely on colliders existing under it. `FULL` NPCs need the streamed cells
   around the player (p353).
 - **Runtime body migration in `WORKER_THREAD` mode** is an async round trip. It needs an explicit
-  mid-transition state (p350 §6; the generic tiers' `REMOVED` round trip, `_DONE_p352`), or an NPC
+  mid-transition state (p350 §6; the generic tiers' `REMOVED` round trip, `PHYSICS_SIM_TIER.inFlight` until the reattach reply: physics' Simulation tiers), or an NPC
   can be double-created or operated on while it has no body. The generic tiers refuse characters
   (`src/_engine/features/physics/CLAUDE.md`'s Simulation tiers): this plan owns their tiers.
 - **`PhysicsTransformBuffer`'s fixed `maxBodies`.** Promotion churns slots; a full buffer rejects

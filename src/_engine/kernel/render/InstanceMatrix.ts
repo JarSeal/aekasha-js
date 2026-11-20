@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import { mat4, referenceAttribute } from 'three/tsl';
 
 // The drawn object's instance matrix, for a material that positions its own instances
-// (docs/plans/_DONE_p354_gpu-driven-culling.md D8, Phase 5 step 4): the octahedral impostor's
+// (p354 D8, Phase 5 step 4): the octahedral impostor's
 // billboard turns each instance's quad to face the camera from the instance's centre, so it reads
 // the instance's matrix itself, in its `positionNode`. Which matrix depends on what draws the
 // material:

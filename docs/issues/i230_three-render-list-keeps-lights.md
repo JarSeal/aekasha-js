@@ -3,8 +3,18 @@
 Status: not filed yet
 File at: https://github.com/mrdoob/three.js/issues/new?template=bug_report.yml
 Category: Bug, Rendering, Dependencies
-Found: 2026-11-05, p057 D4 (with three's #34707 in, the app still kept every Gym visit's lights: `docs/plans/_DONE_p057_three-r187-migration.md`)
-Our workaround: one pre-pass MRT node for every PostFX build (`prePassMRT`, `src/_engine/features/postfx/PostFX.ts`), so the render contexts stay bounded; the lights of the first and the latest Gym visit stay (p057 D4's table)
+Found: 2026-11-05, p057 D4 (with three's #34707 in, the app still kept every Gym visit's lights)
+Our workaround: one pre-pass MRT node for every PostFX build (`prePassMRT`, `src/_engine/features/postfx/PostFX.ts`), so the render contexts stay bounded; the lights of the first and the latest Gym visit stay (p057 D4, below)
+
+Measured in the app (p057 D4, 2026-11-05: `thirdPersonGymScene` ↔ `testDebugScene`, Chromium, WebGPU, `--expose-gc`, the Gym's two lights registered in a `FinalizationRegistry`, `BufferGeometry` counted with CDP `Runtime.queryObjects` after a forced GC):
+
+| Build | Gym lights collected (of 2 per visit) | `BufferGeometry` in the light scene after visits 1-4 |
+| --- | --- | --- |
+| r187, before the workaround | 0 / 8 | 35 / 35 / 35 / 35 (58 each with `?isDebug=true`) |
+| r187 + `RenderList.clear` also emptying `lightsArray` (a page patch) | 6 / 8 | same |
+| r187 + the workaround | 4 / 8 at 4 visits, 8 / 12 at 6: the first and the latest visit's stay | same |
+
+Before removing the workaround once three ships a fix, run the same cycle. The method's traps (p056, p057): each `Runtime.queryObjects` result keeps its objects alive until its object group is released (it grew the count by 8 a visit); import the engine modules in the page from the URLs the app loaded them from (`performance.setResourceTimingBufferSize(100000)` in an init script first: a bare path is a second module instance); in a heap snapshot, follow a WeakMap edge only once both its key and its table are reached, and skip the `(Global handles) → DevTools console` roots.
 
 Everything below is the report, in the repository's bug report template.
 

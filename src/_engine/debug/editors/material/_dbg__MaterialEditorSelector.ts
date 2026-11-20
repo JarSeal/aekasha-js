@@ -1,5 +1,5 @@
 /**
- * The material editor's selector (docs/plans/_DONE_p084_material-editor-stage-and-selector.md
+ * The material editor's selector (p084
  * DD5), on the UI kit (p806 D10): the bottom drawer with every project material as a card, a
  * search field filtering by id and name, a collapse button and, on its top edge, a height handle.
  * It is only UI: the editor hands it the entries and its callbacks, and calls `refresh` when the

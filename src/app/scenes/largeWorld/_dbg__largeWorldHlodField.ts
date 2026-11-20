@@ -20,13 +20,13 @@ import type { ECSWorld, MergePart } from 'aekasha';
 import { createRuins, getRuinGeometries, getRuinMaterial, layoutRuins } from './largeWorldRuins';
 import type { RuinMaterials, RuinPiece, RuinPieceKind, RuinSite } from './largeWorldRuins';
 
-// p376 Phase 0 step 3 (docs/plans/_DONE_p376_hlod-merged-cluster-proxies.md §3): `?hlodField=<sites>`
+// p376 Phase 0 step 3 (p376 §3): `?hlodField=<sites>`
 // adds that many ruin sites (`largeWorldRuins.ts`' kit) in a ring 200 m-1 km from the origin,
 // past the 200 m terrain, on a flat ground of their own at y = 0: the kit-terrain far field p370
 // §10 makes HLOD for. The overview camera's far plane goes to 3 km so the ring isn't clipped. The
 // same field on every load (seeded).
 //
-// p377 Phase 0 (docs/plans/_DONE_p377_hlod-streaming-cell-proxies.md) draws the same pieces
+// p377 Phase 0 (p377) draws the same pieces
 // three ways:
 // - `?hlodFieldCell=<m>`: the cell size (default 32), `AUTO`'s for `members`, the proxies' and
 //   the instanced meshes' cells for the others (x/z, `Math.floor(coord / size)`, as `AUTO`'s).
@@ -44,7 +44,7 @@ import type { RuinMaterials, RuinPiece, RuinPieceKind, RuinSite } from './largeW
 // The probe (`src/app/shared/_dbg__hlodSpike.ts`) finds what the field draws through
 // `window.__aekHlodField` (`HlodFieldInfo`), set on every load (undefined without a field).
 //
-// p378 Phase 0 (docs/plans/_DONE_p378_baked-members-out-of-the-scene-graph.md) adds
+// p378 Phase 0 (p378) adds
 // `?hlodFieldMembers=graph|detached|frozen` (default `graph`, today's), with or without a field:
 // once every merge member of the world is built (the scene step's builds), each built baked
 // member (`TAG_MERGED`, `partIndex >= 0`: the field's and largeWorld's own) is taken out of the

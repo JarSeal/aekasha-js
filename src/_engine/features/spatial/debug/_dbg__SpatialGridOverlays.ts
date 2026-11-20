@@ -1,4 +1,4 @@
-// The Spatial index tab's overlays (docs/plans/_DONE_p125_spatial-index-system-visualizer.md;
+// The Spatial index tab's overlays (p125;
 // p806 D11: out of _dbg__SpatialGrid.ts). Two per domain, each one line created on the domain's
 // first use and then only hidden: the occupied cells, and the oversized tier's members (which
 // bypass the grid, so they have no cell to draw). Each domain has its own colors, so several can

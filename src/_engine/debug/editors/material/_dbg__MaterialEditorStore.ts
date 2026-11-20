@@ -1,6 +1,6 @@
 /**
  * The material editor's LocalStorage
- * (docs/plans/_DONE_p084_material-editor-stage-and-selector.md DD4, DD8):
+ * (p084 DD4, DD8):
  * - the editor's UI state, `AEK_debugMatEditorUI`: the selected material, the selector's and the
  *   right drawer's state;
  * - one record per material, `AEK_debugMatEditorMat_<id>` (p085 DD1): its overrides (the edited

@@ -1,6 +1,6 @@
 /**
- * The material editor (docs/plans/_DONE_p084_material-editor-stage-and-selector.md,
- * docs/plans/_DONE_p085_material-editor-params-and-persistence.md), the first editor view: a
+ * The material editor (p084,
+ * p085), the first editor view: a
  * preview object on a stage of its own (lights, a studio environment, a grey background), seen
  * through the editor's orbit camera, showing an editor copy of a project material
  * (`*.material.json`), picked in the selector (the bottom drawer).

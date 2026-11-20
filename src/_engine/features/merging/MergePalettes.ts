@@ -1,4 +1,4 @@
-// Merge groups on a palette (docs/plans/_DONE_p374_multi-material-merging.md D4, Phase 3): a group
+// Merge groups on a palette (p374 D4, Phase 3): a group
 // whose `palette` names a merge material palette draws its members, each of one of the palette's
 // materials, with the palette's merge material (registered under the palette's id by the scene that
 // lists it, MergeMaterialLoad.ts), each member's vertices tagged with its material's palette index.

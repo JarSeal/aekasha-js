@@ -105,7 +105,7 @@ describe('entity ids and generations', () => {
     expect(world.isAlive(world.createRawEntity())).toBe(true);
   });
 
-  // docs/issues/ecs-generation-wrap-after-4096-reuses.md
+  // docs/issues/_DONE_ecs-generation-wrap-after-4096-reuses.md
   test('a slot reused 4096 times still gives live, deletable entities', () => {
     const world = createWorld();
     const first = world.createRawEntity();
