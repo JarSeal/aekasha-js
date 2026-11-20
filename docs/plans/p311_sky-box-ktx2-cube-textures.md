@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 0 implemented
 Category: Sky box, Assets, Textures
 Related: \_DONE_p057_three-r187-migration.md (r187's compressed cube support), \_DONE_p300_asset-optimization-pipeline-plan.md (the KTX2 encoder), \_DONE_p299_texture-arrays-and-atlases.md
 
@@ -48,10 +48,82 @@ its first-frame bake.
 
 ## Phases
 
-0. **Measure:** a texture sky's first-frame cost (the PMREM bake) and its download, six PNGs
-   against one KTX2 cube, on WebGPU and WebGL2.
-1. KTX2 cube bases (design 1), with an example sky box in the app.
-2. The pipeline's cube encode (design 2).
-3. Pre-filtered cubes (design 3), if Phase 0 says so.
-4. Hub (the sky box page's base layer section, the asset pipeline page), `CLAUDE.md`s, versioning
-   (an engine minor: new schema option).
+### Phase 0: Measure — done
+
+A texture sky's first-frame cost (the PMREM bake) and its download, six PNGs against one KTX2
+cube, on WebGPU and WebGL2.
+
+As built (2026-11-20; a throwaway Playwright script, not committed):
+
+- Subject: scene01's `desert-dunes` cube, six 2048² RGB PNGs. KTX2 cubes made from them with the
+  repo's `ktx` 4.4.2 (`ktx create --cubemap --format R8G8B8_SRGB --generate-mipmap`, the
+  pipeline's default codec settings: ETC1S `--qlevel 128`; UASTC level 2, RDO 2, zstd 18), at 2048
+  and at 1024 (`--scale 0.5`). Encode times: ETC1S 8 s / 4 s, UASTC 40 s / 11 s.
+- Method: the scene runner's dev server and the Windows Chrome 157 on the real GPU (AMD RDNA 3);
+  WebGL2 forced through the renderer's debug LS key (`debugRenderer`). A page per case on
+  `exampleQuickStart`, in the page: `loadTextureAsync`, `renderer.initTexture`, then
+  `getPMREMTexture`, each timed on the CPU and until the GPU finished (WebGPU
+  `queue.onSubmittedWorkDone()`, WebGL2 a 1-pixel `readPixels`). Six runs per case: the first
+  (cold), then the median of five (warm). The first page per API was a warm-up (WebGL2 caches
+  its programs across pages; WebGPU didn't).
+- Both APIs load a KTX2 cube as a `CompressedCubeTexture` and bake its PMREM with `fromCubemap`
+  unchanged: r187's support works.
+- **Download:** PNGs 22.6 MB; ETC1S 2048 2.09 MB (with mips), UASTC 2048 13.5 MB; ETC1S 1024
+  0.64 MB, UASTC 1024 3.74 MB.
+- **Load** (warm; fetch from the local dev server plus decode or transcode; the KTX2 transcode is
+  in KTX2Loader's workers): PNG ~185 ms; ETC1S 2048 ~128 ms, 1024 ~40 ms; UASTC 2048 ~1.1 s,
+  1024 ~275 ms (zstd and the UASTC transcode: slow for a sky).
+- **Upload** (main thread; the PNG cube with `generateMipmaps`, as `loadCubeTexture` sets it):
+  PNG 160-190 ms CPU on both APIs; a KTX2 2048 cube 4-5 ms (WebGPU) / 23-25 ms (WebGL2), 1024
+  under 3 ms. The largest first-frame cut Phase 1 gives.
+- **PMREM bake** (warm, GPU done): WebGPU 28 ms at 1024, 47-50 ms at 2048 (9-15 ms of it CPU);
+  WebGL2 50 ms at 1024, 139-145 ms at 2048 (all of it blocking the main thread). The source format
+  makes no difference, only the face size. Cold, WebGPU's first bake in a page took 480-500 ms
+  on every page (its pipelines' creation), WebGL2's 243 ms on the warm-up page only.
+- **The PMREM's size is the source's face size** (r187's `_fromTexture`: a cube's face width,
+  floored to a power of two, at least 256; an equirect's width / 4), and it's HalfFloat RGBA. So
+  the 2048 PNG cube keeps a 2048-per-face PMREM of about 268 MB on the GPU (9 levels down to 8
+  texels), plus a transient source target of ~200 MB during the bake; at 1024 it's 67 MB, at 512
+  17 MB. `env.size` doesn't apply to a texture base (only the composite path's bake). A sky
+  texture's face size is its memory and its bake time, so the cube's size should be a choice:
+  the pipeline's default `maxSize` (1024) would make it one in Phase 2.
+
+Decision for Phase 3 (pre-filtered cubes): the warm bake (28-50 ms GPU on WebGPU, 50-145 ms
+on WebGL2) is smaller than what Phases 1-2 cut (the PNG upload's 160-190 ms main-thread block and
+~20 MB of download). WebGPU's ~0.5 s first bake is pipeline creation, which a pre-filtered cube
+skips only when nothing else in the page makes a PMREM (a composite sky's env bake uses the same
+pipelines), and a pre-filtered cube needs a browser build step and an HDR-capable encode to match
+the HalfFloat PMREM. Recommended: drop Phase 3 for now (a follow-up if a scene's first frame shows
+the pipeline creation).
+
+### Phase 1: KTX2 cube bases
+
+Design 1, with an example sky box in the app. Notes from Phase 0's reading of the code:
+
+- `loadTextureAsync` already loads a single `.ktx2` `fileName` through the shared KTX2Loader,
+  which gives a `CompressedCubeTexture` for a six-face file (`generateMipmaps` false, the colour
+  space read from the file); `isPMREMSourceReady` accepts it. So the base needs the `fileName`
+  branch (schema, the overrides schema, `BASE_STRUCTURAL_KEYS`, `loadCubeTexture`), no forced
+  `generateMipmaps` / `minFilter` on a compressed cube, and the file's colour space kept unless
+  the base sets `colorSpace` (today `resolveColorSpace` defaults to sRGB).
+- `flipY` is a lookup turn (`turnUpsideDown`), not a texture flip, so it works on a KTX2 cube as
+  on six images. The KTX2's faces are stored unflipped (`ktx create --cubemap`, as above).
+
+### Phase 2: The pipeline's cube encode
+
+Design 2. Phase 0 found a gap the design must close first: a `*.texture.json` can't describe a
+cube (`TextureAssetSchema`'s `fileName` is one string; `textureArrays.ts`' cube check only guards
+an array layer), and a sky box base never goes through a texture asset (its files are `src/public`
+URLs; the gatherer adds no sky box file to a scene's texture closure; a cube base can't name a
+registered texture, its `textureId` is only the id it registers under). So Phase 2 needs a cube
+form for a texture JSON, a way for a base to name that texture asset (so its `__url` loads), and
+the encode, with the faces stored unflipped (the pipeline stores 2D textures flipped).
+
+### Phase 3: Pre-filtered cubes
+
+Design 3, if Phase 0 says so (see its decision: recommended dropped).
+
+### Phase 4: Hub and versioning
+
+Hub (the sky box page's base layer section, the asset pipeline page), `CLAUDE.md`s, versioning
+(an engine minor: new schema option).
