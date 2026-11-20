@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: in progress | Phases 1-4 implemented
 Category: App, Terrain, Docs
 Epic: p301_terrain-texturing-epic.md
 Related: \_DONE_p309_terrain-decals.md (the decals this plan's scenes and blocks use; its As built lists have what landed, which differs from this plan's text in places: the strip cell is `tireTracks`, the structure leaks `leak01`-`leak03`; the add-on's Add Decal conforms with a 0.015 m offset and a subdivision level of its own, Export Decal Set writes the GLB and stubs; the gallery already has a Decals row, a Decals stage with the weathers and a bake bench for the decal generators, and `terrainBlockTest` a runtime decal walk; the handbook is `docs/techniques/terrain-decals.md`), \_DONE_p307_wet-and-dry-surface-states.md (the surface conditions and the wet response this plan's scenes show: its As built lists have the API that landed, the gallery's Wet/dry row and the measurements; the handbook's `wet-dry-surfaces.md`), \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (merged dressing and modular kit terrain, for the matrix and the measurements)
@@ -497,12 +497,12 @@ Sections:
    - **Docs:** the scene JSON's description (the procedural block, the bunker's shadows, the weather, the tab), the scene file's header (the same, the tab's modules), the sky box's description (the tab's Day section), `terrain-procedural-rules.md`' Template file section (the procedural block as the CPU-against-shader example: its 0.9 % of pixels, a baked rule's ramps and the staircase, its own snow line), `devTools/verify/CLAUDE.md` (both terrain scenes among the `debugger` runs), §3's table and §3.7's outline (as built).
    - `yarn test`, `tsc` (both projects), lint (no errors) and the docs ratchet pass.
 
-### Phase 4 — Measurements, the handbook and the Hub (§4)
+### Phase 4 — Measurements, the handbook and the Hub (§4) — done
 
 1. §4's steps 1-3 and 6 (the Hub), the Hub images saved.
 2. `yarn sbp`: in the app's first download only the features' installs and runtime state (`terrain()`'s factory, `surfaceConditions()` and `rainOcclusion()`, which the template lists), no terrain material, wet response or scatter code, and the banner's feature groups at 0.
 
-**Exit:** no handbook page has a placeholder left; the README matrix has numbers; `yarn hub:build` passes.
+**Exit:** no handbook page has a placeholder left; the README matrix has numbers; `yarn hub:build` passes. Met: no "p310" placeholder left in `docs/techniques/` (section 2); the README's matrix has its measured column (sections 1-2); the full `yarn hub:build` passes, 130 pages (section 5).
 
 Found when it started (2026-11-20), and decided:
 
@@ -570,7 +570,13 @@ Sections:
    - **The Hub image** (`exampleTerrain.hub.png`, `p310p4s3.mts --save exampleTerrain --wait 12000`, the balls settled). **The page** (`hub/pages/examples/terrain/`, order 35, after the toolkit's): the intro's panel and what a block is; the walkthrough includes the block, the ground material, its TSL file, the scatter, the scene JSON and both regions, each explained, and a Try it list. Linked from the terrain page's Generated blocks and the toolkit page's See it; the examples page's cards list it.
    - **The scene runner:** every scene runs by default, so `exampleTerrain`'s WebGPU baselines were recorded and then passed in all four configurations, the probe hash `d4caf8ce` in all three physics targets (the balls' drop is deterministic).
    - `yarn hub:build --no-api --no-embed` (92 pages, no new warning), `yarn test`, lint and both `tsc` pass.
-5. **The exit:** `yarn sbp` (the app's first download holds only the features' installs and runtime state, no terrain material, wet response or scatter code; the banner's feature groups at 0), `yarn hub:build`, `yarn test`, `tsc`, lint and the docs ratchet; this plan's Phase 5 steps checked against what this phase changed.
+5. **The exit:** `yarn sbp` (the app's first download holds only the features' installs and runtime state, no terrain material, wet response or scatter code; the banner's feature groups at 0), `yarn hub:build`, `yarn test`, `tsc`, lint and the docs ratchet; this plan's Phase 5 steps checked against what this phase changed. As built:
+   - **`yarn sbp --profile all`:** the app's first download holds no terrain material, wet response, scatter or rock code (`Wet.js`, `Scatter.js`, `Rock.js`, `TerrainScatter.js`, the materials' TSL files are lazy chunks; the `terrain` group's first-download share is 0.4 KiB, its installs), and the banner's and uiKit's budgets all pass (every feature group 0 in the banner). **But the app profile failed three budgets:** the initial 410.3 KiB (budget 403), `assets/index.js` 406.1 (399), the `app` group 25.9 (19). The growth is production scene data, which every scene puts in the first download (`generatedAppData.json`, 24.3 KiB gzip): measured on a production gather, `terrainShowcase`'s data is 6.5 KiB of it (Phases 2-3) and `exampleTerrain`'s 1.5 KiB; about 1 KiB more is other groups' drift since the baseline (p309's last section; no engine code of p310's). **Decided (asked):** raised with the reason, as p354 and p377 did for scene data: initial 403 → 411, `assets/index.js` 399 → 407, the `app` group 19 → 27 KiB (`sbp.config.ts`' history comments). Then all three profiles pass (one "well under" note, the character group's, not p310's). `bundle.json` isn't recorded here: `yarn verify:baselines --update` records it, Phase 5's release or the PR.
+   - **The full `yarn hub:build`** (the API and the embeds): 130 pages, no error. Its warnings are older than this phase (API JSDoc links in toolkit and physics files it didn't touch; the search index over 450 KiB, there before).
+   - **The scene runner:** the gallery's `debugger` configuration recorded again (the tab's Pose select and Measure matrix button) and passing; the showcase's `debugger` too (its drawer gains the "Hub" tab with `OTHER_HUB_SCENES`); then all three terrain scenes in every configuration pass. One run of the gallery's `workerMsg` failed on a page reload mid-run (an `sbp.config.ts` edit during it reloads the dev server's gather) and passed on its rerun.
+   - **Docs this phase's changes reached:** `hub/CLAUDE.md`'s `OTHER_HUB_SCENES` list (`terrainShowcase`), `readme.md`'s Hub examples line (thirteen examples, twelve scenes, the terrain example). The docs ratchet is unchanged (100 %).
+   - **Phase 5 against this phase:** no engine or toolkit code changed in Phase 4 (the app's gallery and example, the docs, `sbp.config.ts`, the nested `CLAUDE.md` files), so Phase 5's bumps stand as written (app minor; the engine patch and the toolkit minor from Phases 2-3). Its changelog adds: the gallery's measurement poses, draw counts and matrix run, the handbook's measured figures and the README's second table, the terrain example and its Hub page, the showcase's Hub image and panel, the raised SBP budgets (Project). `readme.md`'s §4 step 4 items are still Phase 5's (the example's line is done).
+   - `yarn test` (463 files), both `tsc`, lint and the docs ratchet pass.
 
 ### Phase 5 — Release
 
