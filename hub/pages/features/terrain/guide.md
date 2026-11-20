@@ -613,7 +613,8 @@ Machine or World Creator), seamless `HEIGHT_FN` normals, rules into vertex colou
 the collider's params (`collider: true`). A 257² block with everything takes about 50 ms, a dropped
 frame on the main thread and none on the worker. Options, seeds, costs and when to bake rules into
 the colours rather than run them in the shader: [procedural terrain
-meshes](repo:docs/techniques/terrain-procedural-meshes.md).
+meshes](repo:docs/techniques/terrain-procedural-meshes.md). The [terrain example](hub:examples/terrain)
+is a generated block walked through: its JSON, its rules, its collider and its scatter.
 
 ## Terrain scatter
 

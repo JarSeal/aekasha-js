@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../../.schemas/camera.schema.json",
+  "camProps": {
+    "type": "PERSPECTIVE",
+    "fov": 45,
+    "near": 0.1,
+    "far": 400,
+    "position": { "x": -10, "y": 38, "z": 78 },
+    "lookAtPoint": { "x": -6, "y": -3, "z": -6 },
+    "active": true
+  },
+  "entityOpts": {
+    "appId": "exampleTerrainCamera",
+    "debugData": { "name": "Terrain example camera" }
+  }
+}

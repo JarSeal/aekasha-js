@@ -422,6 +422,8 @@ in place of `../TriplanarProjection`.
 ## See it
 
 - The [toolkit example](hub:examples/toolkit): the model, two materials and `HoverEffect`.
+- The [terrain example](hub:examples/terrain): a block from `rulesTerrain` with its collider, in
+  the terrain material, and the toolkit's rocks scattered on it by `terrainScatter`.
 - The app's `terrainGallery` scene: every set of the texture library on its own block, a row per
   technique of the terrain material with its measurements, the procedural surfaces, baked or
   live, and the Scatter row: the procedural and imported rocks on one block, and leaf litter (see

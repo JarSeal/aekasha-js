@@ -88,6 +88,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  exampleTerrain: async ({ sceneData, assets }) => {
+    const module = await import('../app/./examples/terrain/exampleTerrain.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   exampleToolkit: async ({ sceneData, assets }) => {
     const module = await import('../app/./examples/toolkit/exampleToolkit.ts');
     await (
@@ -331,6 +339,8 @@ export const sceneFileObjects: {
 };
 
 export const tslMaterialFileObjects = {
+  exampleTerrainGround: () => import('../app/examples/terrain/exampleTerrainGround.tsl.ts'),
+  exampleTerrainRock: () => import('../app/examples/terrain/exampleTerrainRock.tsl.ts'),
   bannerAether: () => import('../app/profiles/banner/bannerAether.tsl.ts'),
   scatterTestRulesTerrain: () => import('../app/scenes/scatterTest/scatterTestTerrain.tsl.ts'),
   testTslMat: () => import('../app/scenes/sceneTestECS/testTslMat.tsl.ts'),

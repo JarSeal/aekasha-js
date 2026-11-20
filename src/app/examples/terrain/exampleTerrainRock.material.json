@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "exampleTerrainRock",
+  "tslFile": "examples/terrain/exampleTerrainRock.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "staticDefines": { "tiling": "TRIPLANAR", "antiTiling": "DUAL_SCALE" },
+  "inputs": {
+    "surface": { "textureSet": "rocks02" },
+    "macro": { "texture": "macroNoise" }
+  },
+  "debugData": {
+    "name": "Terrain example rock",
+    "description": "The terrain example's scatter rocks: the toolkit's rockScatter graph over rocks02, the scree they lie on (a scatter item can't override a material's inputs, so rocks on another set are a material of their own)."
+  }
+}
