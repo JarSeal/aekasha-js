@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../../../../.schemas/material.schema.json",
+  "id": "showcaseProceduralRocks",
+  "tslFile": "scenes/terrainShowcase/blocks/showcaseProcedural/showcaseProceduralRocks.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "staticDefines": {
+    "tiling": "TRIPLANAR",
+    "antiTiling": "DUAL_SCALE",
+    "wet": "FULL",
+    "frost": true,
+    "rainOcclusion": "NORMAL_Y"
+  },
+  "inputs": {
+    "surface": { "textureSet": "rocks02" },
+    "macro": { "texture": "macroNoise" }
+  },
+  "debugData": {
+    "name": "Showcase procedural rocks",
+    "description": "The procedural block's scatter rocks (p310 §3): the toolkit's rockScatter over rocks02, the scree layer they lie on (a scatter item can't override a material's inputs, so rocks on another ground set are a material JSON of their own)."
+  }
+}

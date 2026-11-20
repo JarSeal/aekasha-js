@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../../../../.schemas/importedAsset.schema.json",
+  "id": "showcaseBunker_leaks",
+  "fileName": "./showcaseBunker_leaks.glb",
+  "debugData": {
+    "name": "Bunker leaks",
+    "description": "The bunker's leak decals (p310 §3.6): two quads of decalsStructure's leak01 and leak03 on its front wall under the roof edge, 1 cm off it, exported by hand in the bunker's space (devTools/blender/buildShowcaseBlocks.py: the add-on's decal mesh, UVMap in the cell and DecalUV 0..1). The default mesh encode."
+  }
+}

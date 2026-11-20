@@ -88,6 +88,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  exampleTerrain: async ({ sceneData, assets }) => {
+    const module = await import('../app/./examples/terrain/exampleTerrain.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   exampleToolkit: async ({ sceneData, assets }) => {
     const module = await import('../app/./examples/toolkit/exampleToolkit.ts');
     await (
@@ -272,6 +280,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  terrainShowcase: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/terrainShowcase/terrainShowcase.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   testDebugScene: async ({ sceneData, assets }) => {
     const module = await import('../app/scenes/testDebugScene/testDebugScene.ts');
     await (
@@ -323,6 +339,8 @@ export const sceneFileObjects: {
 };
 
 export const tslMaterialFileObjects = {
+  exampleTerrainGround: () => import('../app/examples/terrain/exampleTerrainGround.tsl.ts'),
+  exampleTerrainRock: () => import('../app/examples/terrain/exampleTerrainRock.tsl.ts'),
   bannerAether: () => import('../app/profiles/banner/bannerAether.tsl.ts'),
   scatterTestRulesTerrain: () => import('../app/scenes/scatterTest/scatterTestTerrain.tsl.ts'),
   testTslMat: () => import('../app/scenes/sceneTestECS/testTslMat.tsl.ts'),
@@ -335,6 +353,8 @@ export const tslMaterialFileObjects = {
   p303SetFullMat: () => import('../app/scenes/textureSets/p303TextureSetMat.tsl.ts'),
   p303SetLiteMat: () => import('../app/scenes/textureSets/p303TextureSetMat.tsl.ts'),
   p303SetMinimalMat: () => import('../app/scenes/textureSets/p303TextureSetMat.tsl.ts'),
+  terrainBlockTestBlenderSplat: () => import('../app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender.tsl.ts'),
+  terrainBlockTestBlenderVertex: () => import('../app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender.tsl.ts'),
   asteroid: () => import('../toolkit/materials/asteroid/asteroid.tsl.ts'),
   decalsGround_blend: () => import('../toolkit/materials/decal/decal.tsl.ts'),
   decalsGround_cutout: () => import('../toolkit/materials/decal/decal.tsl.ts'),
@@ -346,10 +366,17 @@ export const tslMaterialFileObjects = {
   textureSetSurface: () => import('../toolkit/materials/textureSetSurface/textureSetSurface.tsl.ts'),
   triplanarCheckerboard: () => import('../toolkit/materials/triplanarCheckerboard/triplanarCheckerboard.tsl.ts'),
   triplanarGrid: () => import('../toolkit/materials/triplanarGrid/triplanarGrid.tsl.ts'),
-  terrainBlockTestBlenderSplat: () => import('../app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts'),
-  terrainBlockTestBlenderVertex: () => import('../app/scenes/terrainBlockTest/blenderBlock/terrainBlockTestBlender.tsl.ts'),
+  terrainGalleryPad: () => import('../app/scenes/terrainGallery/pad/terrainGalleryPad.tsl.ts'),
   rockScatterNamaqualandBoulder02: () => import('../toolkit/materials/rockScatter/rockScatter.tsl.ts'),
   rockScatterNamaqualandStones01: () => import('../toolkit/materials/rockScatter/rockScatter.tsl.ts'),
+  terrainAlpine: () => import('../app/scenes/terrainShowcase/blocks/showcaseAlpine/terrainAlpine.tsl.ts'),
+  showcaseCoastTracks: () => import('../app/scenes/terrainShowcase/blocks/showcaseCoast/showcaseCoastTracks.tsl.ts'),
+  terrainCoast: () => import('../app/scenes/terrainShowcase/blocks/showcaseCoast/terrainCoast.tsl.ts'),
+  showcaseProceduralRocks: () => import('../app/scenes/terrainShowcase/blocks/showcaseProcedural/showcaseProceduralRocks.tsl.ts'),
+  terrainProcedural: () => import('../app/scenes/terrainShowcase/blocks/showcaseProcedural/terrainProcedural.tsl.ts'),
+  showcaseWetlandsRuts: () => import('../app/scenes/terrainShowcase/blocks/showcaseWetlands/showcaseWetlandsRuts.tsl.ts'),
+  structureBunker: () => import('../app/scenes/terrainShowcase/blocks/showcaseWetlands/structureBunker.tsl.ts'),
+  terrainWetlands: () => import('../app/scenes/terrainShowcase/blocks/showcaseWetlands/terrainWetlands.tsl.ts'),
 };
 
 export const postFxFileObjects = {

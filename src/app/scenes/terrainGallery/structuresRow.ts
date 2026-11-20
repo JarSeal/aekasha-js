@@ -7,7 +7,8 @@
 // painted in code); and two pillars turning and rising, `concrete02` in `OBJECT` space beside
 // `WORLD` (the texture sticks to one and slides over the other). The pillars are a unit box scaled
 // into shape, so the object space's scale is checked too. They move on the scene's looper, which
-// the tab pauses.
+// the tab pauses. `decalsStructure`'s leaks (p310) run down the wall's front and the bunker's
+// (`decalsStructure_blend`, the Decals stage's quads).
 import * as THREE from 'three/webgpu';
 import { TessellateModifier } from 'three/addons/modifiers/TessellateModifier.js';
 import {
@@ -17,6 +18,7 @@ import {
   getEntityIdByAppId,
   getGeometry,
   getMeshByAppId,
+  remapUVsToAtlasCell,
   saveBufferGeometry,
   setMeshMaterial,
 } from 'aekasha';
@@ -27,6 +29,7 @@ import {
 } from 'aekasha/toolkit/terrain';
 import { COLOR_MAP_ROW_BOUNDS } from './colorMapRow';
 import { BLOCK_GAP, NO_SHADOWS, type GalleryDebugView } from './galleryBlocks';
+import { DECAL_RENDER_ORDER, getDecalCellSize, getDecalQuadGeometry } from './decalsStage';
 
 /** The spaces a structure material samples in */
 type TerrainSpace = NonNullable<TerrainMaterialConfig['space']>;
@@ -156,6 +159,32 @@ export const getStructuresAppIds = (key: StructuresKey) =>
   key === 'WALL'
     ? [`terrainGallery_structures_${key}_0`, `terrainGallery_structures_${key}_1`]
     : [`terrainGallery_structures_${key}`];
+
+/**
+ * The leak decals (p310 §2.1 row I): `decalsStructure`'s three leaks under the wall's top, across
+ * its joint, and two beside the bunker's doorway under its roof, smaller (the front narrows to
+ * the roof). Each its cell, its centre on the piece's front face (the wall's x, the bunker's own x
+ * before its turn) and metres from the piece's foot, and its width (none: the cell's)
+ */
+const LEAKS: readonly {
+  piece: 'WALL' | 'BUNKER';
+  cell: string;
+  x: number;
+  y: number;
+  size?: number;
+}[] = [
+  { piece: 'WALL', cell: 'leak01', x: -27, y: 2.95 },
+  { piece: 'WALL', cell: 'leak02', x: -23.5, y: 2.95 },
+  { piece: 'WALL', cell: 'leak03', x: -18.5, y: 2.95 },
+  { piece: 'BUNKER', cell: 'leak02', x: 1.75, y: 2.2, size: 1.5 },
+  { piece: 'BUNKER', cell: 'leak03', x: -1.75, y: 2.2, size: 1.5 },
+];
+const LEAK_ATLAS_ID = 'decalsStructure';
+const LEAK_MATERIAL_ID = 'decalsStructure_blend';
+
+/** The leak decals' mesh entities' app ids */
+export const getStructuresLeakAppIds = () =>
+  LEAKS.map(({ piece, cell }, i) => `terrainGallery_structures_leak_${piece}_${cell}_${i}`);
 
 /** Whether the pillars move (the tab's switch) */
 export const isStructuresMoving = () => rowState.isMoving;
@@ -338,10 +367,47 @@ const startPillars = (sceneId: string) => {
   }, sceneId);
 };
 
+/** The leak decals on the wall's and the bunker's fronts, coplanar with them */
+const createLeaks = (footY: number) => {
+  const leakAppIds = getStructuresLeakAppIds();
+  const turnCos = Math.cos(BUNKER_TURN);
+  const turnSin = Math.sin(BUNKER_TURN);
+  LEAKS.forEach((leak, i) => {
+    const [cellWidth, cellHeight] = getDecalCellSize(LEAK_ATLAS_ID, leak.cell);
+    const width = leak.size ?? cellWidth;
+    const height = (width / cellWidth) * cellHeight;
+    const quad = getDecalQuadGeometry(width, height, 1, true);
+    const front = leak.piece === 'WALL' ? WALL.thickness / 2 : BUNKER_DEPTH / 2;
+    // The bunker's front turns with it about its foot's centre
+    const position =
+      leak.piece === 'WALL'
+        ? { x: leak.x, y: footY + leak.y, z: ROW_Z + front }
+        : {
+            x: PIECE_X.BUNKER + leak.x * turnCos + front * turnSin,
+            y: footY + leak.y,
+            z: ROW_Z - leak.x * turnSin + front * turnCos,
+          };
+    createMeshEntity(
+      {
+        geo: remapUVsToAtlasCell(quad, LEAK_ATLAS_ID, leak.cell),
+        mat: LEAK_MATERIAL_ID,
+        position,
+        ...(leak.piece === 'BUNKER' ? { rotation: { y: BUNKER_TURN } } : {}),
+        renderOrder: DECAL_RENDER_ORDER,
+        ...NO_SHADOWS,
+      },
+      {
+        appId: leakAppIds[i],
+        debugData: { name: `Structures: ${leak.cell} on the ${leak.piece.toLowerCase()}` },
+      }
+    );
+  });
+};
+
 /**
  * Creates the row (the scene's load): the pieces' geometries (the bunker tessellated and both worn
- * pieces painted the first time), the pieces with their materials, the pillars moving on the
- * scene's looper
+ * pieces painted the first time), the pieces with their materials, the leak decals, the pillars
+ * moving on the scene's looper
  * @param sceneId the gallery's scene id (its looper's)
  */
 export const createStructuresRow = (sceneId: string) => {
@@ -389,5 +455,6 @@ export const createStructuresRow = (sceneId: string) => {
       }
     );
   }
+  createLeaks(footY);
   startPillars(sceneId);
 };

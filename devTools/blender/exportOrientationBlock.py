@@ -1,6 +1,6 @@
 """Exports terrainBlockTest's orientation block with the terrain add-on (p306 Phase 5 step 10) into
-src/app/scenes/terrainBlockTest/blenderBlock/, as an artist's Add → paint → Bake AO → Validate →
-Export would, scripted so it can be made again:
+src/app/terrainBlocks/terrainBlockTestBlender/ (shared with terrainGallery since p310), as an
+artist's Add → paint → Bake AO → Validate → Export would, scripted so it can be made again:
 
 - `terrainBlockTestBlender`, 32 m / 33 at grid (-3, 3), RGB_AO;
 - a mound 6 m high near the engine's +x, +z corner (local x 4, z 10, between the
@@ -28,7 +28,7 @@ sys.dont_write_bytecode = True
 
 args = sys.argv[sys.argv.index("--") + 1 :]
 ADDON_PATH, REPO_ROOT = args[0], args[1]
-FOLDER = os.path.join(REPO_ROOT, "src", "app", "scenes", "terrainBlockTest", "blenderBlock")
+FOLDER = os.path.join(REPO_ROOT, "src", "app", "terrainBlocks", "terrainBlockTestBlender")
 
 BLOCK_ID = "terrainBlockTestBlender"
 SIZE, RES = 32, 33

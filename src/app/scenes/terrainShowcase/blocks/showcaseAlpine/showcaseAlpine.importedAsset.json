@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../../../../.schemas/importedAsset.schema.json",
+  "id": "showcaseAlpine",
+  "fileName": "./showcaseAlpine.glb",
+  "optimize": {
+    "profile": "terrainBlock"
+  },
+  "debugData": {
+    "name": "Showcase alpine slope",
+    "description": "terrainShowcase's alpine block, the terrain add-on's export (devTools/blender/buildShowcaseBlocks.py; p310 §3.4): 64 m / 129, painted in its two splat maps (no COLOR_0 weights). The terrainBlock profile keeps its positions lossless."
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "$schema": "../../../../../../.schemas/terrainBlock.schema.json",
+  "geometry": {
+    "generator": "rulesTerrain",
+    "params": {
+      "maxHeight": 18,
+      "octaves": [
+        [0.008, 1],
+        [0.025, 0.3],
+        [0.07, 0.08],
+        [0.16, 0.02]
+      ],
+      "layout": "RGB_AO",
+      "rules": [
+        {
+          "layer": 1,
+          "slope": { "min": 30, "softness": 8 },
+          "noise": { "scale": 18, "amount": 0.35, "channel": "A" }
+        },
+        {
+          "layer": 2,
+          "height": { "min": 10, "softness": 3 },
+          "slope": { "max": 35, "softness": 8 },
+          "aspect": { "direction": [0, -1], "range": 70, "softness": 35 },
+          "noise": { "scale": 24, "amount": 0.3 }
+        },
+        { "layer": 3, "slope": { "min": 45 } }
+      ],
+      "ao": { "radius": 8, "strength": 0.8 }
+    },
+    "seed": 13
+  },
+  "material": "terrainProcedural",
+  "grid": {
+    "x": 2,
+    "z": 2,
+    "size": 64,
+    "resolution": 129
+  },
+  "collider": {
+    "type": "HEIGHTFIELD",
+    "friction": 1.0
+  },
+  "scatter": ["showcaseProcedural_rocks", "showcaseProcedural_boulders"],
+  "debugData": {
+    "name": "Showcase procedural",
+    "description": "terrainShowcase's engine-generated block (p310 §3): the toolkit's rulesTerrain generator, 64 m / 129, world-continuous simplex heights over about 25 m, its four layers (the alpine block's grass01, rocks02, snow01 and cliffs02) laid by the rules into its vertex colours on the CPU (rocks past 30°, snow above 10 m on slopes under 35° facing north within 70°, cliffs past 45°) with the horizon AO in their A, so nothing is painted; the tab's A/B evaluates the same rules in the shader. Rocks and boulders scattered on its rocks02 layer by terrainScatter."
+  }
+}

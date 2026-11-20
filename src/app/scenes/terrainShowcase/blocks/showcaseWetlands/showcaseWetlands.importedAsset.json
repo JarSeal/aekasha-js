@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../../../../.schemas/importedAsset.schema.json",
+  "id": "showcaseWetlands",
+  "fileName": "./showcaseWetlands.glb",
+  "optimize": {
+    "profile": "terrainBlock"
+  },
+  "debugData": {
+    "name": "Showcase wetlands",
+    "description": "terrainShowcase's wetlands block, the terrain add-on's export (devTools/blender/buildShowcaseBlocks.py; p310 §3.5): 64 m / 129, COLOR_0 RGB_AO and the float attribute _WETNESS. The terrainBlock profile keeps its positions lossless."
+  }
+}

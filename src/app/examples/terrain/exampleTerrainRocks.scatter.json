@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../../.schemas/scatter.schema.json",
+  "items": [
+    { "geometry": "rockSmall_a", "material": "exampleTerrainRock", "castShadow": true },
+    { "geometry": "rockSmall_b", "material": "exampleTerrainRock", "castShadow": true },
+    { "geometry": "rockSmall_c", "material": "exampleTerrainRock", "castShadow": true }
+  ],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "terrainScatter",
+    "params": {
+      "minSpacing": 1.4,
+      "density": 0.6,
+      "mask": { "layers": { "1": 1 }, "slope": { "max": 42 } },
+      "scale": [0.7, 1.5],
+      "alignToNormal": 0.6,
+      "sink": 0.35,
+      "tint": 0.15
+    },
+    "seed": 3
+  },
+  "lod": { "levels": [{ "screenSize": 0 }], "cullScreenSize": 0.1 },
+  "debugData": {
+    "name": "Terrain example rocks",
+    "description": "The terrain example's rocks: the toolkit's procedural rocks in exampleTerrainRock (rockScatter over rocks02) on the block's scree (layer 1), not on its cliff faces, casting shadows."
+  }
+}

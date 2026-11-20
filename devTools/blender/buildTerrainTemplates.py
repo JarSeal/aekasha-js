@@ -1233,4 +1233,6 @@ def main():
         aek.unregister()
 
 
-main()
+# buildShowcaseBlocks.py imports the helpers above (its arguments start as this script's)
+if __name__ == "__main__":
+    main()

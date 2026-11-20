@@ -73,7 +73,21 @@ How the material composes it, per pixel, after the layers are blended:
 - **CPU:** the state's system runs once a frame in `MAIN`, allocating nothing; the uniforms are written in place.
 - **VRAM:** the ripple atlas (256², about 0.09 MB), the macro noise (0.35 MB, shared with the macro variation and the rules' noise) and the snow set (`snow01`, about 2.7 MB at 1K `LITE`).
 - **Bindings:** the macro texture 1 (shared), the ripple atlas 1, the snow set `P`; all in the material's [budget](terrain-splat-map.md#storage-and-the-binding-budget). The map's depth texture isn't in that count: leave room for it in `reservedTextures` (default 6, with the shadow maps and the environment).
-- **Measured GPU time:** not yet. p310's camera presets time every page.
+- **Measured GPU time** ([how](README.md#how-the-figures-are-measured): RDNA 3, WebGPU, 1920 × 1080; the block's own GPU ms, the frame less the frame without it). The gallery's Wet/dry row (a 12 m block per category and the two-layer beach), dry against the wettest state (`MANUAL`: wetness, rain and puddle level 1), from the measurement's pose above and a first person's eye: every category 0.19–0.25 ms dry from above and **+0.00 to +0.02 ms** wettest; the beach (the shoreline too) 0.35 and 0.36. From the eye 0.11–0.23 dry, the same +0.00 to +0.02. The showcase's four 64 m blocks (`terrainShowcase`'s tab, Measure; p310 Phase 3), each with puddles, ripples, snow, frost and its own parts, in their wettest state and under full snow:
+
+  | Block        | Pose         | Dry  | Wettest | Snow | Wettest − dry | Snow − dry |
+  | ------------ | ------------ | ---- | ------- | ---- | ------------- | ---------- |
+  | Coast        | overview     | 0.86 | 0.86    | 0.93 | −0.00         | 0.07       |
+  | Coast        | first person | 1.70 | 1.74    | 1.94 | 0.05          | 0.24       |
+  | Alpine slope | overview     | 0.67 | 0.67    | 0.74 | −0.01         | 0.06       |
+  | Alpine slope | first person | 1.04 | 1.05    | 1.23 | 0.01          | 0.19       |
+  | Wetlands     | overview     | 0.91 | 0.92    | 0.96 | 0.01          | 0.05       |
+  | Wetlands     | first person | 1.92 | 1.94    | 2.18 | 0.02          | 0.27       |
+  | Procedural   | overview     | 0.65 | 0.64    | 0.68 | −0.00         | 0.04       |
+  | Procedural   | first person | 0.88 | 0.88    | 1.03 | −0.00         | 0.14       |
+
+  (The block's own ms: the frame less the frame without it; the showcase casts its sun's shadows.) **The wettest state costs what the dry one does:** the wet response's arithmetic runs on every pixel in either state, and the ripples' two taps where water stands near the camera are within the noise. **Snow costs 0.04–0.27 ms**, the most from a first person's eye, where the snow set's taps run under the cover on most of the frame.
+
 - **Quality tier:** `SIMPLE` for `LOW` (see Variations).
 
 ## Maps
@@ -101,9 +115,9 @@ Only the regional wetness is authored: riverbanks, a swamp's floor, the ground u
 
 ## Export
 
-The add-on's _Export Block_ ([the locked settings](terrain-blocks-blender.md#export)) applies the modifiers and exports `_`-prefixed attributes. By hand: _Data → Mesh_: Apply Modifiers ✓, Attributes ✓. The attribute is `_WETNESS` in the glTF; three's GLTFLoader names it `_wetness` (it lowercases a custom attribute's name), which is the material's default. The asset pipeline keeps it, quantized to a normalized 16-bit integer (a value outside −1..1 is left as a float, with a warning).
+The add-on's _Export Block_ ([the locked settings](terrain-blocks-blender.md#export)) applies the modifiers and exports `_`-prefixed attributes. By hand: _Data → Mesh_: Apply Modifiers ✓, Attributes ✓. The attribute is `_WETNESS` in the glTF; three's GLTFLoader names it `_wetness` (it lowercases a custom attribute's name), which is the material's default. The asset pipeline keeps it: a float under the `terrainBlock` profile (lossless, 4 bytes a vertex: 66 KB on a 129² block), quantized to a normalized 16-bit integer under the default mesh encode (a value outside −1..1 is left as a float, with a warning).
 
-**Not checked yet:** no scene loads a `_WETNESS` from a GLB yet: the gallery's riverbank band is written into its generated geometry in code. Check the first painted block with the `WETNESS` view.
+**Checked** on `terrainShowcase`'s wetlands (`showcaseWetlands`, built by `devTools/blender/buildShowcaseBlocks.py` with exactly these steps): the GLB's `_WETNESS` arrives as `_wetness` (a `Float32Array`, a value a vertex), and the `WETNESS` view shows it along the channel and in the hollows, fading over the painted blur.
 
 ## Import into Ækasha
 
@@ -263,9 +277,9 @@ Every number is a uniform in the material's `userData.uniforms` (`terrain_wetShe
 | `MUD`      | 0.7        | 0.6            | 0.15           | 1                | 0.4           | Glossy soon, puddles in every low spot, dries slowly   |
 | `ROCKS`    | 0.4        | 0.35           | 0.2            | 0.6              | 1             | Puddles between the stones                             |
 | `CLIFF`    | 0.2        | 0.25           | 0.15           | 0                | 1.2           | No film or puddles; streaks                            |
-| `SNOW`     | 0.5        | 0.25           | 0.3            | 0.5              | 0.6           | Wet means slush                                        |
+| `SNOW`     | 0.5        | 0.45           | 0.3            | 0.5              | 0.6           | Wet means slush: it greys                              |
 | `ICE`      | 0          | 0.1            | 0.02           | 1                | 1             | A film at once: a mirror when it melts                 |
-| `GRASS`    | 0.6        | 0.35           | 0.35           | 0.2              | 0.8           | Sheds water, stays rough                               |
+| `GRASS`    | 0.6        | 0.35           | 0.55           | 0.2              | 0.8           | Sheds water, stays rough: its water beads, no film     |
 | `CONCRETE` | 0.5        | 0.45           | 0.15           | 0.7              | 0.9           | Puddles in low spots; streaks on walls                 |
 | `OTHER`    | 0.5        | 0.5            | 0.3            | 0.5              | 1             | The flat defaults                                      |
 
@@ -324,7 +338,7 @@ Every number is a uniform in the material's `userData.uniforms` (`terrain_wetShe
 - [ ] A scene with a code-route wet material lists `macroNoise` and `rippleAtlas` in its `textures` and the snow set in its `textureSets`.
 - [ ] `TAPS` in the rain stays where the material's budget planned it (ripples on standing water, snow under the cover).
 - [ ] The occluders cast shadows or have `userData.rainOccluder`.
-- **A bright or dense set hardly darkens on screen:** its gloss reflects the sky back. Snow, ice and cliffs read wet by their gloss, not their colour (measured on the gallery at wetness 1: 4–5 % darker, mud 43 %).
+- **A bright or dense set hardly darkens on screen:** its gloss reflects the sky back. Ice and cliffs read wet by their gloss, not their colour (measured on the gallery at wetness 1: 4–12 % darker, snow 15 %, mud 43 %).
 - **Puddles read little against a full film from far away** (0.02 against 0.05 roughness): the ripples are what mark them in the rain.
 - **Puddles that look like holes:** there are no screen-space reflections (a p990 follow-up), so a puddle reflects only the environment. Keep them in the open, under the sky; their darkening is capped at 15 % for this.
 - **Snapshots are stable:** the rings, the streaks' pulses and the waves run on the surface clock, which restarts at every scene and which the test bridge's `freeze()` holds, so the scene runner's snapshots of a wet scene are the same on every run.
@@ -335,9 +349,26 @@ Every number is a uniform in the material's `userData.uniforms` (`terrain_wetShe
 - **Not seen yet:** a shadow-casting ground in the map (the gallery's row casts no shadows; the bias and a 1.5-texel push along the normal are meant to keep the ground open over itself).
 - **Gameplay:** the state is visual and runs at frame time. Wet friction or anything else that changes the simulation needs the step clock and seeded random streams, as the engine's physics code does (not part of this).
 
+## Reference photos
+
+Each category's look at wetness 0.3, 0.6 and 1 (the puddle level following, no rain; the gallery's Wet/dry row, a block 6 m in front and 3.5 m up) was judged against CC0 photos of the real surface (p310 Phase 3, 2026-11-20). The darkening is the main surface's on screen, sRGB luminance, dry → wetness 1, at the gallery's 10:00 sun:
+
+| Category | Photos (CC0)                                                                                                                                                                              | On screen                                                       | Judged                                                                                                                                                                           |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SAND     | [Beach Sand, Mike Moloney](https://stocksnap.io/photo/beach-sand-ZWO9JIXREK), [Beach Sand, Kristin Hardwick](https://stocksnap.io/photo/beach-sand-RATCDTJGXH)                            | −1 % at 0.3, −20 % at 0.6, −21 % at 1; puddle sheen in the lows | Plausible: the damp band's darker, smoother sand. Little shows at 0.3 (`dryingSpeed` 1.6: sand shows less of the same weather)                                                   |
+| MUD      | [MaxwellFury on Flickr](https://www.flickr.com/photos/142802911@N08/54341453876), [Footprint Mud](https://stocksnap.io/photo/footprint-mud-GOX8IUXSEM)                                    | Glossy at once, standing water early                            | Plausible on a block with relief; on very flat ground (the gallery's top) a puddle level of 0.3 stands everywhere: give such a block `puddles.patches` (the showcase's wetlands) |
+| ROCKS    | [Cobblestone Ground, Marcin Milewski](https://stocksnap.io/photo/cobblestone-ground-SYC0YBA37V), [Clouded mind., simon_berger](https://www.flickr.com/photos/107922203@N04/54945835554)   | −10 % at 0.3, −16 % at 1; sheen between the stones              | Plausible: the joints darker, the faces glossy; the second photo is the ripples' reference (rings on standing water)                                                             |
+| CLIFF    | [Govik cliff, AnnSophieQ](https://www.flickr.com/photos/141281588@N05/54394056022), [End of the Trail, Terry Kearney](https://www.flickr.com/photos/24490288@N04/54080025424)             | −4 % at 0.3, −12 % at 1                                         | Plausible: dense rock darkens little and reads wet by its gloss and streaks                                                                                                      |
+| SNOW     | [winter slush wonderland, roland](https://www.flickr.com/photos/35034347371@N01/51796557677), [Snowmaggedon 2022-2023, roland](https://www.flickr.com/photos/35034347371@N01/52584337813) | −15 % at 1 (was −8 %)                                           | **Corrected:** wet snow stayed white beside the slush photo's grey; `wetDarkening` 0.25 → 0.45. Still lighter than slush in shade; the snow cover's own slush tint does the rest |
+| ICE      | [Ice Winter](https://stocksnap.io/photo/ice-winter-NRYPKUQQR3), [nature_mixed_forest_in_winter_98, Juhele_CZ](https://www.flickr.com/photos/96541566@N06/52731007815)                     | −2 % at 0.3, −8 % at 1                                          | Plausible: ice is a mirror dry or wet; meltwater changes its gloss little                                                                                                        |
+| GRASS    | [Wet Grass, Matt Bango](https://stocksnap.io/photo/wet-grass-FTFHHPKJAT), [Dew Grass](https://stocksnap.io/photo/dew-grass-93RRVDOUIK)                                                    | −16 % from 0.3                                                  | **Corrected:** a smooth bluish sheen covered the sky-facing slopes, like a plastic film; wet grass beads its water on rough blades. `wetRoughness` 0.35 → 0.55                   |
+| CONCRETE | [The Man-Machine on Flickr](https://www.flickr.com/photos/127283891@N07/52161645312), [Pigeon Bird, Mary](https://stocksnap.io/photo/pigeon-bird-8TT2RKSMSE)                              | Wall −4 % at 0.3 (streaks), −9 % at 1; ground −31 %             | Plausible: the wall's rain streaks at 0.3 are the kerb photo's; the ground's sky reflections the wet pavement's                                                                  |
+
+The photos are linked, not committed; each is CC0 on its page (Flickr's public-domain dedication, StockSnap's CC0), found through Openverse's CC0 filter. A screen's luminance isn't an albedo (the sky's reflection adds to a glossy surface's), so the judgement is by eye beside the photos, the figures for comparing the categories.
+
 ## Template file and example asset ids
 
-- **Blender template:** none of its own; any block and the steps above. The add-on's _Export Block_ exports the attribute.
+- **Blender template:** none of its own; any block and the steps above. The add-on's _Export Block_ exports the attribute. A worked block: `src/app/scenes/terrainShowcase/blocks/showcaseWetlands/showcaseWetlands.blend` (the vertex group `Wet` and the modifier "AEK Wetness"; its material `terrainWetlands`, `wet: { puddles: { maxSlope: 8 }, ripples: {}, regional: {} }`).
 - **The gallery's Wet/dry row** (`terrainGallery`, `?isDebug=true&startScene=terrainGallery`; `src/app/scenes/terrainGallery/wetRow.ts`): a 3 × 3 of library blocks left of the Splatting row, `sand02`, `mud02`, `rocks01` / `cliffs01`, `snow01`, `ice01` / `grass01`, `concrete02` and a beach (`sand02` with `rocks01` on slopes past 22°), each with puddles in patches, ripples, snow, frost and the map, a `LOW` tier with `SIMPLE`. The grass block has a regional riverbank band, the beach a shoreline under a water plane; a concrete wall and a cliff boulder streak; a concrete canopy over the mud keeps it dry. Its tab section ("Wet/dry row") has the wetness, rain, puddle level, snow cover, temperature and water level, the row's quality and view (shaded, `WETNESS`, `TAPS`), the map's switch and each block's response.
 - **The debug drawer's Surface conditions tab:** a rain shower (10 s up, 60 s, 10 s down), stop rain, dry now, soak, snowfall; every value and the mode; the surface clock, the sun and wind factors; the map's switch, update frames and its render's CPU and GPU time.
 - **Assets:** `rippleAtlas`, `macroNoise` and `snow01` (the toolkit's); every library set's category gives its response.

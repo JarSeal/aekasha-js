@@ -59,7 +59,14 @@ A set ships as many packings as it needs: the library's sets are `LITE` only but
 - **Bindings:** one per texture, so `P` per set. WebGPU's 16 sampled textures per stage (shadow maps and the environment map included) allow about 3 `FULL` or 4 `LITE` sets in one material; a [set array](#set-arrays) binds `P` arrays for up to 16 layers.
 - **Draw calls:** none of its own. A set is data a material samples.
 - **Quality tier:** the packing (above). It's a material's: the terrain material's tiers keep it (the packing is in its inputs), so a low-end packing is a material of its own.
-- **Measured GPU time:** p310 adds the gallery's.
+- **Measured GPU time** in the gallery's Packing row ([how](README.md#how-the-figures-are-measured): RDNA 3, WebGPU, 1920 × 1080; the block's own GPU ms, the frame less the frame without it): 12 m blocks of `sand01`, `grass01` and `cliffs01` (with its wall) in each packing, at the material's own fields and the tiers:
+
+  | ms                    | Own       | `LOW`     | `MEDIUM`  | `HIGH`    | `ULTRA`   |
+  | --------------------- | --------- | --------- | --------- | --------- | --------- |
+  | `sand01`, `grass01`   | 0.13      | 0.13      | 0.14–0.15 | 0.22–0.24 | 0.22–0.24 |
+  | `cliffs01` and a wall | 0.15–0.16 | 0.15–0.16 | 0.17–0.18 | 0.27–0.28 | 0.27–0.28 |
+
+  Each range is the three packings: **`FULL`, `LITE` and `MINIMAL` cost the same within 0.02 ms**. A set's taps hit the texture cache alike whatever their count at this size; the packing is a choice of VRAM, download and look (the table above), and the tiers, not the packing, are the GPU's knob.
 
 ## Maps
 

@@ -163,6 +163,7 @@ const OTHER_HUB_SCENES = new Set([
   'uiKitEmbed',
   'streamingGrid',
   'terrainGallery',
+  'terrainShowcase',
 ]);
 
 /** Scenes whose Hub image has no background: an embed's poster, in place of the live embed that

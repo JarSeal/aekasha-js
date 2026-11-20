@@ -59,11 +59,17 @@ const profiles: SbpProfile[] = [
     // template lists it) took the initial to 401.3 and `assets/index.js` to 397.1 KiB: 401 → 402
     // and 396 → 398 KiB. p307 Phase 6: the `rainOcclusion()` feature (the rain occlusion map,
     // 1.8 KiB; the template lists it) took the initial to 402.7 and `assets/index.js` to 398.4
-    // KiB: 402 → 403 and 398 → 399 KiB
+    // KiB: 402 → 403 and 398 → 399 KiB. p310 (Phases 2-4): the `terrainShowcase` scene's data
+    // (its four blocks' materials, set arrays, scatters and decal sets: 6.5 KiB of the
+    // production data's gzip) and the `exampleTerrain` example's (1.5 KiB), with about 1 KiB of
+    // other groups' drift since p309's baseline (no engine code of p310's in it), took the initial
+    // to 410.3 and `assets/index.js` to 406.1 KiB: 403 → 411 and 399 → 407 KiB. Their code is
+    // lazy: the terrain material, the wet response, the scatter and the rocks are chunks of their
+    // own
     budgets: {
-      initial: 403 * KIB,
+      initial: 411 * KIB,
       chunks: {
-        'assets/index.js': 399 * KIB,
+        'assets/index.js': 407 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
@@ -149,8 +155,10 @@ const profiles: SbpProfile[] = [
         '_engine/ui': 7 * KIB,
         // p354 Phase 1: 14 → 15 KiB (14.06 KiB): the `instanceStress` verification scene's data
         // (every scene's JSON is in the first download; its code loads with it, `instanceStress.js`).
-        // p377 Phase 3: 15 → 19 KiB (18.0 KiB): `streamingGrid`'s ruin kit, kept to 16 cells for it
-        app: 19 * KIB,
+        // p377 Phase 3: 15 → 19 KiB (18.0 KiB): `streamingGrid`'s ruin kit, kept to 16 cells for it.
+        // p310: 19 → 27 KiB (25.9 KiB): `terrainShowcase`'s data (6.5 KiB) and `exampleTerrain`'s
+        // (1.5 KiB)
+        app: 27 * KIB,
         toolkit: 7 * KIB,
       },
       modules: {

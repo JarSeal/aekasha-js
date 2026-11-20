@@ -44,7 +44,19 @@ Everything on [Single-layer terrain](terrain-single-layer.md) applies to each la
   | 1920 × 1080, 8 layers, from above   | 0.15  | 0.76 | 0.55  | 1.12     | **1.38** | 2.36    |
   | 1920 × 1080, 8 layers, third person | 0.19  | 1.53 | 0.70  | 1.37     | **1.68** | 2.90    |
 
-  "Own" is dense, no anti-tiling. Sparse sampling pays for the anti-tiling: `MEDIUM` (top 3, `DUAL_SCALE`) costs what the dense 8 layers without anti-tiling do, `LOW` (top 2, none) half of it; `HIGH` adds `HEX` on the dominant layer for 0.15–0.2 ms; `ULTRA` (top 4, `HEX` on all) is 1.7–2.6 × `HIGH`. The 8-layer `HIGH` terrain at 1080p stays under p305's 3 ms budget at 1.68 ms. WebGL2 is within about 0.1 ms. p310 measures every page with fixed camera presets.
+  "Own" is dense, no anti-tiling. Sparse sampling pays for the anti-tiling: `MEDIUM` (top 3, `DUAL_SCALE`) costs what the dense 8 layers without anti-tiling do, `LOW` (top 2, none) half of it; `HIGH` adds `HEX` on the dominant layer for 0.15–0.2 ms; `ULTRA` (top 4, `HEX` on all) is 1.7–2.6 × `HIGH`. The 8-layer `HIGH` terrain at 1080p stays under p305's 3 ms budget at 1.68 ms. WebGL2 is within about 0.1 ms.
+
+  Measured in the gallery ([how](README.md#how-the-figures-are-measured): RDNA 3, WebGPU, 1920 × 1080; the block's own GPU ms, the frame less the frame without it); own fields, `LOW`, `MEDIUM`, `HIGH`, `ULTRA`:
+
+  | ms                                             | Own  | `LOW` | `MEDIUM` | `HIGH` | `ULTRA` |
+  | ---------------------------------------------- | ---- | ----- | -------- | ------ | ------- |
+  | 24 m, 5 layers, one map, `LINEAR`              | 0.23 | 0.17  | 0.36     | 0.46   | 0.90    |
+  | 24 m, 5 layers, one map, `HEIGHT`              | 0.23 | 0.18  | 0.34     | 0.41   | 0.95    |
+  | 24 m, 9 layers, two maps, a set array          | 0.40 | 0.20  | 0.36     | 0.45   | 1.26    |
+  | 64 m, 8 layers, splat map + rules, from above  | 0.62 | 0.32  | 0.85     | 1.11   | 1.96    |
+  | The same, first person (75°, the eye at 1.7 m) | –    | –     | 0.98     | 1.29   | –       |
+
+  A splat map costs what the vertex colours do (one fetch). The first person row is the [matrix](README.md#which-technique-for-my-game)'s: its recommendation at `MEDIUM` and `HIGH`.
 
 - **VRAM:** the layers (2.67 MB per 1K `LITE` set: 24 MB for nine, alike in an array or separate; an array holds its layers once whatever binds it) and the splat maps, per block:
 
@@ -74,8 +86,8 @@ The block workflow (set-up, the grid, shaping, validating, exporting) is [Terrai
 2. **_New Splat Map_** on the block: `<id>_splat0`, black (the base), at a size by the block's: **1K for 64 m, 2K for 128 m** (about 6 cm a texel), 512 for a 32 m block. It's **Non-Color** from the start and _Channel Packed_ (A a weight, not transparency), and the block gets a preview material of its own drawing it, its image node the paint target. Set a map you made yourself to Non-Color **before the first stroke**: changing the colour space later reloads the image and drops its unsaved paint, and a map painted in sRGB stores a half weight as 188, not 128.
 3. **Texture Paint mode:** one channel a layer with pure colours, as for [vertex colours](terrain-vertex-color-splat.md#blender-step-by-step): (1, 0, 0) layer 1, (0, 1, 0) layer 2, (0, 0, 1) layer 3, black the base, the Mix blend at strength 1; layer 4 is the alpha (the brush's _Add Alpha_ blend, _Erase Alpha_ to remove). Falloff off (or a hard brush) for a crisp road edge: the map holds a border far finer than the mesh.
 4. **Orientation:** the map's top row is the block's −z edge in the engine (the top view's top), its top left the engine's −x, −z corner; check with a corner stroke against `terrainBlockTest`'s orientation block, whose splat map is painted that way.
-5. **Save it:** _Image → Save_ (8-bit PNG), or let _Export Block_ save it. Blender doesn't keep unsaved paint in the `.blend` (the templates pack no images).
-6. **Eight layers:** a second map `<id>_splat1` (layers 5-8), painted the same way; the preview shows the first map's four.
+5. **Save it:** _Image → Save As_ beside the `.blend` (8-bit PNG). Blender doesn't keep unsaved paint in the `.blend` (the templates pack no images), and _Export Block_ writes the PNG beside the GLB without making the `.blend` read it: a map left unsaved is blank when the file opens again.
+6. **Eight layers:** _New Splat Map_ again with _Map_ **Layers 5-8**: `<id>_splat1`, layers 5-8 in its RGBA, drawn by the block's material with the first map (the layout must be `RGBA`, so the first map's A is layer 4). The preview's layers 5-8 are the box under layer 4 (sidebar → Preview Material). The map just made is the paint target; to paint the other, pick it in Texture Paint's _Texture Slots_ panel.
 
 ## Export
 
@@ -223,3 +235,4 @@ A shader stage binds 16 sampled textures (WebGPU's default, which the engine req
 - **The material:** `terrain`, or an app material of its own for an array; `createTerrainMaterial` with `blend.source: 'SPLAT_MAP'` and `splatMaps`.
 - **The gallery's Splatting row** (`terrainGallery`, `?isDebug=true&startScene=terrainGallery`; `src/app/scenes/terrainGallery/splattingRow.ts`): 24 m generated blocks with one painted pattern, `LINEAR` left of `HEIGHT`: 5 layers with one 256² splat map (`AUTO`: an array) and 9 layers with two (`cliffs01`, `ice01`, `grass02` and `mud02` added). Its tab lists each block's storage; the Quality select shows the tiers, the Debug view select `WEIGHTS` and `LAYER_COUNT`. The 8-layer terrain of the measurement is the Rules row's third block.
 - **Set arrays:** the scene's `textureSetArrays` (`src/app/scenes/terrainGallery/terrainGallery.scene.json`).
+- **A worked block with two maps:** `terrainShowcase`'s alpine slope (`src/app/scenes/terrainShowcase/blocks/showcaseAlpine/`): seven layers in `showcaseAlpine_splat0` and `_splat1` with rules over them (`terrainAlpine`: `SPLAT_MAP_AND_RULES`, `ARRAY`, sparse top 3).

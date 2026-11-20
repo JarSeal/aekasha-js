@@ -4,6 +4,60 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-20 — p310_terrain-preview-scenes
+
+Terrain preview scenes (p310, the last plan of the terrain texturing epic p301): the terrain work put together and measured. A new scene, `terrainShowcase`, has a coast, an alpine slope and wetlands built in Blender with the toolkit's add-on, a block generated from rules and a concrete bunker, each with its scatter and decals, under a day-night sky and weather that rains, dries and snows, walked by a player who leaves footprints. `terrainGallery` is complete: a row per technique, camera presets per game type and a measurement mode, whose figures (WebGPU, 1920 × 1080) fill the handbook's decision matrix and every technique page. A new Hub example places a generated terrain block with its collider. The add-on paints a second splat map, two wet responses and the structure leak decals are corrected, and nothing breaks.
+
+### Engine 6.19.1 (Sunset)
+
+**Changed**
+
+- Two categories' wet response in `TEXTURE_SET_WET_RESPONSES` (`aekasha/schemas`), judged against CC0 photos of wet ground: `SNOW.wetDarkening` 0.25 → 0.45 (wet snow greys toward slush, 15 % darker soaked instead of 8 %) and `GRASS.wetRoughness` 0.35 → 0.55 (wet grass stays rough, its water beading on the blades, instead of a glossy film). A set's own `surface` still overrides them; the gather writes the new values into every snow and grass set without one.
+
+### Toolkit 3.8.0 (Gibbous)
+
+**Added**
+
+- The Blender add-on 1.2.0's second splat map: New Splat Map takes the map (`Layers 1-4` makes `<id>_splat0`, `Layers 5-8` `<id>_splat1`, with the `RGBA` layout), and the block's preview material draws layers 5-8 from the second, so a block is painted with eight layers over its base as the terrain material's two splat maps read them.
+
+**Fixed**
+
+- The add-on's Export Block skipped a block image that wasn't loaded (a splat map saved as a file and not drawn since, eg. in a reopened `.blend`) without a word, so the second map and its stub weren't written. It reads the pixels first now, and warns of an image without any.
+- The `decalsStructure` atlas's leak cells (`leak01`-`leak03`) were nearly transparent: their opacity came from ambientCG height maps that are almost black, remapped over their full range. Their recipes remap the range the streaks use (0-0.05, 0-0.09, 0-0.02), and the atlas's `albedoAlpha` is encoded again: the leaks show as dark drips.
+
+### App 1.32.0 (Preschooler)
+
+**Added**
+
+- The scene `terrainShowcase`: `showcaseCoast` (dunes, a cliff band and a beach to the sea, vertex colour splatting, the cliffs triplanar by slope, the shoreline's wash, pebble and rock scatters, tyre tracks), `showcaseAlpine` (a ridge, a rock scarp and a frozen pond, two splat maps and a snow rule, sparse sampling, Blender-scattered boulders with colliders, ice cracks), `showcaseWetlands` (a channel, puddle hollows and a ford, a painted regional wetness, leaf litter, ruts and mud splatters), `showcaseProcedural` (a `rulesTerrain` block of four of the Alpine's sets, rocks and boulders scattered on its scree) and `showcaseBunker` (a bunker and a wall in a structure material, their wear painted in Blender, leaks, box colliders, an occluder of the rain); the sea at the water level, a day-night sky and a third-person player stamping footprints into a pool on the block under it. Its tab: the blocks (the player put on one), the weather's scenarios (Rain shower, Dry, Snowfall) with their GPU cost, the day playing, and every block's debug view and quality tier, the procedural block's rules on the CPU or in the shader. Its blocks are built by `devTools/blender/buildShowcaseBlocks.py`.
+- `terrainGallery` completed: the B Packing row (three sets in each packing, with a time of day slider), the structures' leak decals, the footprint pad (click to stamp, dry or wet), the Orientation block, signposts over the rows and a Rows list, camera presets per game type (first and third person, top-down, isometric, side view, a flyover) and a measurement mode: a block alone in its own pose or a preset's, the frame's GPU ms and draws with it hidden and at each quality tier, a row in turn, the handbook matrix's runs, the table copied with the machine (WebGPU).
+- The example scene `exampleTerrain`: a generated `rulesTerrain` block with its heightfield collider and procedural rocks on its scree, and balls dropped on it (Space or the pad's south button).
+- The Hub images of `terrainShowcase` (its first), `terrainGallery` (saved again) and `exampleTerrain`; `terrainShowcase` joins `OTHER_HUB_SCENES`.
+
+**Changed**
+
+- `terrainBlockTest`'s Blender orientation block moved to the shared `src/app/terrainBlocks/terrainBlockTestBlender/` (its ids kept): the gallery shows it too.
+- The gallery's GPU frame sampler is in `src/app/shared/_dbg__gpuFrameMeasure.ts`, shared with the showcase, and counts the frame's draws; the Procedural row's and the Live block's measurements use it.
+- `terrainGallery`'s scene runner snapshot changes (the new rows, and its snow and grass blocks where they show wet).
+
+### Project
+
+**Added**
+
+- The handbook's measured figures: `docs/techniques/README.md`'s matrix gets its texel density cells and a second table per game type (the far surface, the weather, scatter and decals, the measured cost from its camera), what the measurements changed, a Static dressing note, a Start here path and How the figures are measured; every technique page's Performance section gets the gallery's figures beside p305's, and `wet-dry-surfaces.md` its reference photos and the showcase's weather costs. The pages' Template file sections name the showcase's blocks as worked examples, and `terrain-blocks-blender.md`, `terrain-splat-map.md`, `terrain-scatter.md`, `terrain-decals.md` and `structure-materials.md` the steps the showcase's build corrected.
+- The Hub: the terrain page's intro panel is the showcase, with a Where to start section (the handbook's reading order and the matrix's figures) and the gallery's panel in its Debugging; the example page `examples/terrain/`, linked from the terrain and toolkit pages.
+- `devTools/blender/buildShowcaseBlocks.py` (the showcase's blocks and the bunker, in a background Blender through the add-on's operators); `yarn verify:blender` checks the second splat map and its export from a file.
+- `terrainShowcase` in the scene runner (`debugger` configuration included; `terrainGallery`'s recorded again).
+- The issue [The test bridge's `focusDebuggerControl` focuses the next control for a property grid button in a labelled row](docs/issues/test-bridge-focus-labelled-grid-button.md) (open, with the fix).
+- The root `CLAUDE.md`'s Terrain section (covered by the Hub's terrain page), the terrain feature's verification scenes, `hub/CLAUDE.md`'s `OTHER_HUB_SCENES`, and the readme: a terrain highlight with the showcase's picture, the example "Place a terrain block", the showcase and the gallery's rows.
+
+**Changed**
+
+- `sbp.config.ts`: the app's initial download 403 → 411 KiB, `assets/index.js` 399 → 407 KiB and the `app` group 19 → 27 KiB. It's production scene data, which every scene puts in the first download: `terrainShowcase`'s 6.5 KiB and `exampleTerrain`'s 1.5 KiB gzip, about 1 KiB other groups' drift; no terrain code is in the first download.
+- `buildTerrainTemplates.py` runs its `main()` only as the script, so `buildShowcaseBlocks.py` imports its helpers; the layout rules' app asset folders include `terrainBlocks`.
+- The baselines: the bundles.
+- The plans: p310 done, and with it the terrain texturing epic p301; their open follow-ups (structures placed with their block, snow on scatter rocks, Git LFS for the terrain binaries) in `p990_follow-ups-from-done-plans.md`.
+
 ## 2026-11-19 — p309_terrain-decals
 
 Terrain decals (p309, part of the terrain texturing epic p301): tyre tracks, cracks, stains, scorch marks, leaks and footprints as small meshes UV'd into a decal atlas and drawn over the ground in a decal material that gets wet with it, its ruts and prints filling with water first. A new asset, `*.decalSet.json`, is an import's meshes drawn as decals: made in Blender with the terrain add-on's new decal tools and spawned with their terrain block. The toolkit brings two decal atlases (ambientCG scans and cells baked by nine decal generators), the decal material, and runtime decal pools that stamp footprints, tyre ribbons and trails onto a block's own grid, or decals onto any mesh, as one render object a pool. Meshes get a `renderOrder`. The handbook gains its decals page and a Blender template, the Hub the terrain page's decals. Nothing breaks, and the template's first download is unchanged.

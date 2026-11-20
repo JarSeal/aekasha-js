@@ -47,7 +47,24 @@ Everything on [Single-layer terrain](terrain-single-layer.md) applies to the lay
   | far `COLOR_MAP` / `AVERAGE_COLOR`                         | 1.59        | 1.20        | 1.63        | 1.91        | 3.08        |
   | WebGL2 1280 × 800 (empty 0.42): the source / far          | 0.95 / 0.74 | 0.62 / 0.62 | 0.86 / 0.85 | 0.98 / 0.99 | 1.56 / 1.56 |
 
-  The far surface from 40 m takes about 40 % off the block's own cost in the third person (0.71 → 0.43 ms at 1280, 0.96 → 0.72 at 1080p); the two far modes cost alike; `DETAIL` costs what the source does. The tiers' own far starts (`getTerrainQualityPreset({ far })`: 60, 120 and 200 m) lie mostly past a 64 m block, so the gallery shows their saving only a little on `MEDIUM` and `HIGH`: they're for open worlds. From above every material costs about the same (0.40–0.44 ms). p310 measures every page with fixed camera presets.
+  The far surface from 40 m takes about 40 % off the block's own cost in the third person (0.71 → 0.43 ms at 1280, 0.96 → 0.72 at 1080p); the two far modes cost alike; `DETAIL` costs what the source does. The tiers' own far starts (`getTerrainQualityPreset({ far })`: 60, 120 and 200 m) lie mostly past a 64 m block, so the gallery shows their saving only a little on `MEDIUM` and `HIGH`: they're for open worlds. From above every material costs about the same (0.40–0.44 ms).
+
+  Measured in the gallery's Colour map row ([how](README.md#how-the-figures-are-measured): RDNA 3, WebGPU, 1920 × 1080; the block's own GPU ms, the frame less the frame without it), 64 m, the 8-layer source; own fields, `LOW`, `MEDIUM`, `HIGH`, `ULTRA`:
+
+  | ms                                          | Own  | `LOW` | `MEDIUM`  | `HIGH` | `ULTRA`   |
+  | ------------------------------------------- | ---- | ----- | --------- | ------ | --------- |
+  | From above (51 m up): the source            | 0.62 | 0.32  | 0.86      | 1.13   | 1.97      |
+  | `DETAIL`                                    | 0.63 | 0.33  | 0.87      | 1.17   | 1.96      |
+  | far `COLOR_MAP`                             | 0.17 | 0.17  | 0.19      | 0.22   | 1.98      |
+  | far `AVERAGE_COLOR`                         | 0.19 | 0.19  | 0.21      | 0.24   | 1.97      |
+  | Third person: the source                    | 1.15 | 0.43  | 1.01      | 1.34   | 2.58      |
+  | `DETAIL`                                    | 1.20 | 0.45  | 1.02      | 1.36   | 2.54      |
+  | far `COLOR_MAP` / `AVERAGE_COLOR`           | 1.16 | 0.45  | 0.89–0.91 | 1.26   | 2.58–2.61 |
+  | Top-down (30 m up, 55°): `DETAIL`           | 0.83 | 0.41  | –         | –      | –         |
+  | Isometric (120 m out, 20°): `DETAIL`        | 0.92 | 0.42  | –         | –      | –         |
+  | Flight (15 m up, 60 m out): far `COLOR_MAP` | 0.17 | –     | 0.18      | –      | –         |
+
+  Seen from above, the whole block lies past the far start: the far surface takes 70 % off (`ULTRA` has none). In the third person most of the ground is nearer than 40 m, so it saves 0.1 ms at `MEDIUM` and `HIGH` and nothing at its own fields. The last three rows are the [matrix](README.md#which-technique-for-my-game)'s cameras.
 
 - **VRAM:** a colour map per block: 1K UASTC 1.40 MB, 512² 0.35 MB; a runtime bake is uncompressed RGBA8 with mips, 5.6 MB at 1K. `AVERAGE_COLOR` needs no texture.
 - **Bindings:** 1 for the colour map.

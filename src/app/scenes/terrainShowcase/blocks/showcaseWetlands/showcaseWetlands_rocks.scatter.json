@@ -1,0 +1,31 @@
+{
+  "$schema": "../../../../../../.schemas/scatter.schema.json",
+  "items": [
+    { "geometry": "rockPebble_a", "material": "rockScatter" },
+    { "geometry": "rockPebble_b", "material": "rockScatter" },
+    { "geometry": "rockPebble_c", "material": "rockScatter" },
+    { "geometry": "rockSmall_a", "material": "rockScatter", "weight": 0.3 }
+  ],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "terrainScatter",
+    "params": {
+      "minSpacing": 0.6,
+      "density": 0.5,
+      "mask": {
+        "layers": { "3": 1 },
+        "noise": { "scale": 3, "amount": 0.5 }
+      },
+      "scale": [0.8, 1.6],
+      "alignToNormal": 0.8,
+      "sink": 0.3,
+      "tint": 0.2
+    },
+    "seed": 4
+  },
+  "lod": { "levels": [{ "screenSize": 0 }], "cullScreenSize": 0.4 },
+  "debugData": {
+    "name": "Wetlands path rocks",
+    "description": "The wetlands' small rocks (p310 §3.5): the toolkit's procedural pebbles and a few rocks in rockScatter over rocks01 (the gravel's own set) on the rocks01 layer (layer 3: the path and the bunker's pad)."
+  }
+}

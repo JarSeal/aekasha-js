@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../../../../.schemas/scatter.schema.json",
+  "items": [{ "geometry": "leafCard", "material": "leafLitter" }],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "terrainScatter",
+    "params": {
+      "minSpacing": 0.3,
+      "density": 0.7,
+      "mask": {
+        "layers": { "2": 1, "1": 0.5 },
+        "noise": { "scale": 4, "amount": 0.7 }
+      },
+      "scale": [0.8, 1.4],
+      "alignToNormal": 1,
+      "tint": 0.15
+    },
+    "seed": 3
+  },
+  "cellSize": 8,
+  "lod": { "levels": [{ "screenSize": 0 }], "cullScreenSize": 0.3 },
+  "debugData": {
+    "name": "Wetlands leaf litter",
+    "description": "The wetlands' leaf litter (p310 §3.5): the toolkit's leaf cards (generateLeafCard, the leafLitter material over its LeafSet024 atlas) on the grass02 layer (layer 2) and, thinner, the mud02 one (layer 1), lying along the ground in clusters, 8 m cells hidden past about 50 m."
+  }
+}

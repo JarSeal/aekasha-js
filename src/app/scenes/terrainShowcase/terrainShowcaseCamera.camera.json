@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../../.schemas/camera.schema.json",
+  "camProps": {
+    "type": "PERSPECTIVE",
+    "fov": 50,
+    "near": 0.1,
+    "far": 1000,
+    "position": { "x": 46, "y": 26, "z": 70 },
+    "lookAtPoint": { "x": 0, "y": 2, "z": 0 },
+    "active": true
+  },
+  "entityOpts": {
+    "appId": "terrainShowcaseCamera",
+    "debugData": {
+      "name": "Terrain showcase overview",
+      "description": "The coast from the sea (+z), above it, facing the cliff band along its north edge."
+    }
+  }
+}

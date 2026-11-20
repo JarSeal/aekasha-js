@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../../../../.schemas/decalSet.schema.json",
+  "importedAsset": "showcaseWetlands_decals",
+  "material": "showcaseWetlandsRuts",
+  "debugData": {
+    "name": "Wetlands ruts and splatters",
+    "description": "The wetlands' decal set (p310 §3.5): two tireTracks strips of the decalsGround atlas 1.7 m apart along the gravel path, through the ford across the channel (their puddle mask fills in the rain), and three mudSplatter quads on the channel's banks, conformed to showcaseWetlands by the terrain add-on (devTools/blender/buildShowcaseBlocks.py), in decalsGround_blend tinted darker for the gravel (showcaseWetlandsRuts)."
+  }
+}

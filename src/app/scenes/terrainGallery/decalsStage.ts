@@ -166,7 +166,7 @@ export const getDecalQuadGeometry = (
 };
 
 /** A cell's size in metres: its `data.physicalSize` */
-const getCellSize = (atlasId: string, cellId: string) => {
+export const getDecalCellSize = (atlasId: string, cellId: string) => {
   const cell = getAtlasCell(atlasId, cellId);
   const size = (cell?.data as { physicalSize?: [number, number] } | undefined)?.physicalSize;
   if (!size) {
@@ -182,7 +182,7 @@ const createDecal = (
   block: DecalsStageBlock,
   onWall: boolean
 ) => {
-  const [width, depth] = getCellSize(atlasId, placement.cell);
+  const [width, depth] = getDecalCellSize(atlasId, placement.cell);
   const tiles = placement.tiles ?? 1;
   const quad = getDecalQuadGeometry(width * tiles, depth, tiles, onWall);
   const materialIds = getDecalMaterialIds(block.mode);

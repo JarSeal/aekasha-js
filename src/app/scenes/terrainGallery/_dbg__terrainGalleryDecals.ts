@@ -8,18 +8,17 @@ import * as THREE from 'three/webgpu';
 import { getMaterial } from 'aekasha';
 import { updateDebuggerTab, type DebuggerTabSection } from 'aekasha/debug';
 import { getSurfaceConditions, setSurfaceConditions } from 'aekasha/surface';
-import { flyGalleryCamera, type GalleryCameraPose } from './_dbg__terrainGalleryCamera';
+import {
+  flyGalleryCamera,
+  getBoundsPose,
+  type GalleryCameraPose,
+} from './_dbg__terrainGalleryCamera';
 import { getDecalBakeSections } from './_dbg__terrainGalleryDecalBakes';
 import { DECALS_PANELS, DECALS_ROW_BOUNDS } from './decalsRow';
 import { DECALS_STAGE_BLOCKS, DECALS_STAGE_BOUNDS, DECALS_STAGE_MATERIAL_IDS } from './decalsStage';
 
 /** In front of the panels (+z) and above them, looking down at their middle */
-const getPose = (minX: number, maxX: number, minZ: number, maxZ: number): GalleryCameraPose => {
-  const x = (minX + maxX) / 2;
-  const z = (minZ + maxZ) / 2;
-  const span = Math.max(maxX - minX, maxZ - minZ);
-  return { pos: { x, y: span * 0.7, z: z + span * 0.45 }, look: { x, y: 0, z } };
-};
+const getPose = getBoundsPose;
 
 /** One atlas's panels' pose */
 const getAtlasPose = (atlasId: string) => {

@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../../../../.schemas/decalSet.schema.json",
+  "importedAsset": "showcaseBunker_leaks",
+  "material": "decalsStructure_blend",
+  "debugData": {
+    "name": "Bunker leaks",
+    "description": "The bunker's leaks (p310 §3.6): a decal set of the scene's own (not a block's: the add-on's Add Decal projects onto a block), spawned by the scene code at the bunker's transform, in the toolkit's decalsStructure_blend."
+  }
+}

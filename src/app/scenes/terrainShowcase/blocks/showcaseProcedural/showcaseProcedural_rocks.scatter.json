@@ -1,0 +1,31 @@
+{
+  "$schema": "../../../../../../.schemas/scatter.schema.json",
+  "items": [
+    { "geometry": "rockSmall_a", "material": "showcaseProceduralRocks", "castShadow": true },
+    { "geometry": "rockSmall_b", "material": "showcaseProceduralRocks", "castShadow": true },
+    { "geometry": "rockSmall_c", "material": "showcaseProceduralRocks", "castShadow": true }
+  ],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "terrainScatter",
+    "params": {
+      "minSpacing": 1.2,
+      "density": 0.6,
+      "mask": {
+        "layers": { "1": 1 },
+        "slope": { "max": 42 },
+        "noise": { "scale": 8, "amount": 0.5 }
+      },
+      "scale": [0.7, 1.6],
+      "alignToNormal": 0.6,
+      "sink": 0.35,
+      "tint": 0.15
+    },
+    "seed": 3
+  },
+  "lod": { "levels": [{ "screenSize": 0 }], "cullScreenSize": 0.15 },
+  "debugData": {
+    "name": "Procedural rocks",
+    "description": "The procedural block's rocks (p310 §3): the toolkit's procedural rocks in showcaseProceduralRocks (rockScatter over rocks02) on the block's rocks02 layer (layer 1: the rules' slopes past 30°), not on the cliff faces, thinned in clusters, casting shadows."
+  }
+}

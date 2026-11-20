@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../../../../.schemas/terrainBlock.schema.json",
+  "geometry": {
+    "importedAsset": "showcaseCoast",
+    "node": "showcaseCoast"
+  },
+  "material": "terrainCoast",
+  "grid": {
+    "x": 0,
+    "z": 0,
+    "size": 64,
+    "resolution": 129
+  },
+  "collider": {
+    "type": "HEIGHTFIELD",
+    "friction": 1.0
+  },
+  "scatter": ["showcaseCoast_pebbles", "showcaseCoast_rocks"],
+  "decals": ["showcaseCoast_decals"],
+  "debugData": {
+    "name": "Showcase coast",
+    "description": "terrainShowcase's coast block (p310 §3.3): the terrain add-on's export (devTools/blender/buildShowcaseBlocks.py), 64 m / 129, dunes falling toward the sea (the engine's +z) under the scene's 0.5 m water level and a 7-9 m cliff band along the north edge, its COLOR_0 painted (sand02 along the waterline, rocks01 at the cliff foot and in three islands, cliffs01 on the face) with the AO baked into its A; pebbles on the gravel and rocks at the cliff foot scattered by terrainScatter, and two tyre tracks across the beach (its decal set)."
+  }
+}

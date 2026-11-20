@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../.schemas/light.schema.json",
+  "lightProps": {
+    "type": "DIRECTIONAL",
+    "color": "#fff2d9",
+    "intensity": 3,
+    "position": { "x": 40, "y": 60, "z": 30 },
+    "targetPos": { "x": 0, "y": 0, "z": 0 },
+    "castShadow": true,
+    "shadowCameraNearFar": [1, 160],
+    "shadowCameraFrustum": [-40, 40, 40, -40]
+  },
+  "entityOpts": {
+    "appId": "exampleTerrainSun",
+    "debugData": { "name": "Terrain example sun" }
+  }
+}

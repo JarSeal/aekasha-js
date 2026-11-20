@@ -843,6 +843,34 @@ def check_splat_map(aek):
         got = pixels[row, col, :3]
         expect(np.abs(got - aek.FALLBACK_COLORS[layer]).max() < 1e-3, f"the {where} is layer {layer}: {got}")
 
+    # A second map (layers 5-8): its G on the bottom left quarter (the base in the first map) is
+    # layer 6; the others keep the first map's layers
+    aek.build_preview_group(["noSuchSet"] * aek.PREVIEW_LAYERS, {}, layout="RGBA")
+    bpy.ops.aek.new_splat_map(size="256", map="1")
+    second = bpy.data.images["checkSplatMap_splat1"]
+    expect(tuple(second.size) == (256, 256) and second.colorspace_settings.name == "Non-Color"
+           and second.alpha_mode == "CHANNEL_PACKED", "a 256² Non-Color, channel-packed second map")
+    expect(block.active_material == material and material[aek.SPLAT_MAP_PROPS[1]] == second.name
+           and material[aek.SPLAT_MAP_PROPS[0]] == image.name, "the block's material names both maps")
+    expect(tree.nodes.active.image == second, "the second map's node is the paint target")
+    expect(preview.inputs["Splat"].links[0].from_node.image == image
+           and preview.inputs["Splat 2"].links[0].from_node.image == second
+           and preview.inputs["Splat 2 Alpha"].is_linked, "the maps feed their inputs")
+    second_pixels = np.zeros((256, 256, 4), dtype=np.float32)
+    second_pixels[:128, :128] = (0.0, 1.0, 0.0, 0.0)
+    second.pixels.foreach_set(second_pixels.ravel())
+    pixels = render_pixels(path)
+    for (row, col), layer, where in (((24, 8), 1, "top left"), ((24, 24), 4, "top right"),
+                                     ((8, 8), 6, "bottom left"), ((8, 24), 2, "bottom right")):
+        got = pixels[row, col, :3]
+        expect(np.abs(got - aek.FALLBACK_COLORS[layer]).max() < 1e-3, f"two maps: the {where} is layer {layer}: {got}")
+    aek.update_splat_map_materials(scene)
+    expect(tree.nodes.active.image == second and len([n for n in tree.nodes if n.type == "TEX_IMAGE"]) == 2,
+           "a relink keeps the painted map the target, an image node a map")
+    aek.ensure_splat_map_material(scene, "checkSplatMap", image)
+    expect(tree.nodes.active.image == image, "the first map the paint target again")
+    aek.build_preview_group(flat, {}, layout="RGBA")
+
     # RGB + AO: three layers from the map, A not read
     scene.aek_terrain_preview.layout = "RGB_AO"
     aek.build_preview_group(flat, {}, layout="RGB_AO")
@@ -864,8 +892,14 @@ def check_splat_map(aek):
     expect(np.abs(px[384, 128, :3] - layer).max() < 2.5 / 255, f"the colour map's top left is layer 1: {px[384, 128, :3]}")
     expect(tree.nodes.active.image == image, "the splat map is the paint target again")
 
-    # Export saves the map with RGB kept under A 0
+    # Export saves the map with RGB kept under A 0, and the second map from its file when it
+    # isn't in memory (a reopened .blend whose map nothing has drawn yet)
     folder = os.path.join(OUT_DIR, "export", "checkSplatMap")
+    second.filepath_raw = os.path.join(OUT_DIR, "checkSplatMap_splat1_painted.png")
+    second.file_format = "PNG"
+    second.save()
+    second.buffers_free()
+    expect(not second.has_data, "the second map out of memory")
     export_into(aek, block, folder)
     saved = bpy.data.images.load(os.path.join(folder, "checkSplatMap_splat0.png"), check_existing=False)
     saved.alpha_mode = "CHANNEL_PACKED"
@@ -876,6 +910,12 @@ def check_splat_map(aek):
         texture = json.load(f)
     expect(texture["optimize"] == {"slot": "data"} and texture["texOpts"] == {"flipY": False, "colorSpace": ""},
            f"its texture stub: {texture}")
+    saved = bpy.data.images.load(os.path.join(folder, "checkSplatMap_splat1.png"), check_existing=False)
+    saved.alpha_mode = "CHANNEL_PACKED"
+    got = np.array(saved.pixels[:]).reshape(256, 256, 4)
+    bpy.data.images.remove(saved)
+    expect(np.abs(got - second_pixels).max() < 1 / 255, "the second map's PNG holds it")
+    expect(os.path.isfile(os.path.join(folder, "checkSplatMap_splat1.texture.json")), "and its texture stub")
     aek.build_preview_group(["NONE"] * 5, {})
 
 

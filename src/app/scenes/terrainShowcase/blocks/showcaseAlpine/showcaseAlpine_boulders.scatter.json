@@ -1,0 +1,32 @@
+{
+  "$schema": "../../../../../../.schemas/scatter.schema.json",
+  "items": [
+    {
+      "geometry": "showcaseAlpine_scatter/BoulderA",
+      "material": "rockScatterNamaqualandBoulder02",
+      "collider": "CONVEXHULL",
+      "castShadow": true
+    },
+    {
+      "geometry": "showcaseAlpine_scatter/BoulderB",
+      "material": "rockScatterNamaqualandBoulder02",
+      "collider": "CONVEXHULL",
+      "castShadow": true
+    },
+    {
+      "geometry": "showcaseAlpine_scatter/BoulderC",
+      "material": "rockScatterNamaqualandBoulder02",
+      "collider": "CONVEXHULL",
+      "castShadow": true
+    }
+  ],
+  "source": {
+    "type": "IMPORTED",
+    "importedAsset": "showcaseAlpine_scatter",
+    "nodes": ["showcaseAlpineBoulders"]
+  },
+  "debugData": {
+    "name": "Alpine boulders",
+    "description": "showcaseAlpine's boulders (p310 §3.4): Blender's Geometry Nodes scatter over the scree under the rock band (showcaseAlpine_scatter's GPU instances), the toolkit's namaqualandBoulder02 in three shapes at its own maps (rockScatterNamaqualandBoulder02), each with a convex hull collider, casting shadows."
+  }
+}

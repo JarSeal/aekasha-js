@@ -2,7 +2,7 @@ Status: implemented (Phases 1-7)
 Category: Rendering, Materials, Procedural
 Blocks: \_DONE_p305_terrain-material-generator.md (soft: macro noise and ripple atlas), \_DONE_p307_wet-and-dry-surface-states.md (ripple atlas), \_DONE_p309_terrain-decals.md (procedural decals)
 Related: \_DONE_p342_dev-file-server.md (D5 writes its PNGs into the set's `source/` through it; its API now: `devTools/devFiles/CLAUDE.md`)
-Epic: p301_terrain-texturing-epic.md
+Epic: \_DONE_p301_terrain-texturing-epic.md
 
 # Procedural Texture Baker
 

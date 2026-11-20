@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../../.schemas/terrainBlock.schema.json",
+  "geometry": {
+    "importedAsset": "terrainBlockTestBlender",
+    "node": "terrainBlockTestBlender"
+  },
+  "material": "terrainBlockTestBlenderVertex",
+  "grid": {
+    "x": -3,
+    "z": 3,
+    "size": 32,
+    "resolution": 33
+  },
+  "collider": {
+    "type": "HEIGHTFIELD"
+  },
+  "debugData": {
+    "name": "Orientation block (vertex colour)",
+    "description": "p306 Phase 5's orientation block: the terrain add-on's export (devTools/blender/exportOrientationBlock.py), 32 m / 33, a mound near the engine's +x, +z corner, the corner markers in COLOR_0 (red: snow at -x, -z; green: mud at +x, -z) and the baked AO in its A, its HEIGHTFIELD from the GLB's custom props."
+  }
+}

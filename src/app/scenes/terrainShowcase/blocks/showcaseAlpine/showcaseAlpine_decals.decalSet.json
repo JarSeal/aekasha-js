@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../../../../.schemas/decalSet.schema.json",
+  "importedAsset": "showcaseAlpine_decals",
+  "material": "decalsGround_blend",
+  "debugData": {
+    "name": "Alpine ice cracks",
+    "description": "The alpine block's decal set (p310 §3.4): two iceCrack quads of the decalsGround atlas on the frozen pond, conformed to showcaseAlpine by the terrain add-on (devTools/blender/buildShowcaseBlocks.py), in its BLEND decal material."
+  }
+}

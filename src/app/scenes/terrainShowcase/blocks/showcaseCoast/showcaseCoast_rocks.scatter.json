@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../../../../.schemas/scatter.schema.json",
+  "items": [
+    {
+      "geometry": "rockSmall_a",
+      "material": "rockScatter",
+      "castShadow": true
+    },
+    {
+      "geometry": "rockSmall_b",
+      "material": "rockScatter",
+      "castShadow": true
+    },
+    {
+      "geometry": "rockSmall_c",
+      "material": "rockScatter",
+      "castShadow": true
+    }
+  ],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "terrainScatter",
+    "params": {
+      "minSpacing": 1.6,
+      "density": 0.6,
+      "mask": {
+        "slope": {
+          "min": 24,
+          "max": 45,
+          "softness": 5
+        },
+        "height": {
+          "min": 1.2,
+          "max": 5,
+          "softness": 0.5
+        }
+      },
+      "scale": [0.8, 1.8],
+      "alignToNormal": 0.5,
+      "sink": 0.35,
+      "tint": 0.15
+    },
+    "seed": 2
+  },
+  "lod": {
+    "levels": [
+      {
+        "screenSize": 0
+      }
+    ],
+    "cullScreenSize": 0.15
+  },
+  "debugData": {
+    "name": "Coast rocks",
+    "description": "The coast's rocks (p310 §3.3): the toolkit's procedural rocks in rockScatter over rocks01 where the ground turns up into the cliff (slope 24-45°, 1.2-5 m: its foot, not its face, the plateau, the dunes' gentler flanks or the waterline), casting shadows."
+  }
+}

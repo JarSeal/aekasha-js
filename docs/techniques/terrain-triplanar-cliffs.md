@@ -41,7 +41,18 @@ Everything on [Single-layer terrain](terrain-single-layer.md) applies to each la
   | `TRIPLANAR`                  | 0.21         | 0.24        | 0.27         | 0.32        |
   | `TRIPLANAR` gated `[30, 50]` | 0.17         | 0.22        | 0.21         | 0.26        |
 
-  From above the gate costs about what `PLANAR` does and `TRIPLANAR` the most; at the face the gate lies between `BIPLANAR` and `TRIPLANAR` (its planar tap plus two planes). In the shader, a gated `TRIPLANAR` `LITE` layer has 2 plain samples before its branch and 4 `textureSampleGrad` inside; ungated `TRIPLANAR` 6, `BIPLANAR` 4. p310 measures every page with fixed camera presets.
+  From above the gate costs about what `PLANAR` does and `TRIPLANAR` the most; at the face the gate lies between `BIPLANAR` and `TRIPLANAR` (its planar tap plus two planes). In the shader, a gated `TRIPLANAR` `LITE` layer has 2 plain samples before its branch and 4 `textureSampleGrad` inside; ungated `TRIPLANAR` 6, `BIPLANAR` 4.
+
+  Measured in the gallery's Cliffs row ([how](README.md#how-the-figures-are-measured): RDNA 3, WebGPU, 1920 × 1080; the block's own GPU ms, the frame less the frame without it), the 40 m mesa from above (the measurement's pose) and from the side view (level, 15 m out from the steep face, 45°: the [matrix](README.md#which-technique-for-my-game)'s side-view camera):
+
+  | ms                | Above | Side view |
+  | ----------------- | ----- | --------- |
+  | `PLANAR`          | 0.10  | 0.16      |
+  | `BIPLANAR`        | 0.17  | 0.31      |
+  | `TRIPLANAR`       | 0.24  | 0.39      |
+  | `TRIPLANAR` gated | 0.16  | 0.15      |
+
+  Facing the cliff the gate costs what `PLANAR` does and less than half of ungated `TRIPLANAR`: the side view sees the face and the flat top beyond it, and only the face's pixels take the three planes.
 
 - **VRAM, bindings:** none of its own: the layer's set.
 - **Draw calls:** none of its own.
@@ -131,3 +142,4 @@ A material-wide `projection` projects every layer (a structure's, a rock's). Pro
 - **Blender template:** `src/toolkit/terrain/blender/terrain_triplanarCliff.blend` (its README text block mirrors this page's Blender steps; the block workflow: [Terrain blocks from Blender](terrain-blocks-blender.md)). `terrainBlockTest`'s `terrainBlockTestTrimesh` is a generated `TRIMESH` block.
 - **The projection helpers** the material builds on: `triplanarProjection` and `blendProjections` on `aekasha/toolkit/materials`.
 - **The gallery's Cliffs row** (`terrainGallery`, `?isDebug=true&startScene=terrainGallery`; `src/app/scenes/terrainGallery/cliffsRow.ts`): four 40 m blocks on one generated mesa (a face of about 85° facing +x down to 48° facing −x), `cliffs01` in `PLANAR`, `BIPLANAR`, `TRIPLANAR` and `TRIPLANAR` gated `[30, 50]`. Its tab switches the normal blend and the gated block's mode, has sliders for both sharpnesses and the gate, camera poses above, off the steep face and off the gentle one, and lists each block's fetches; the Debug view select shows `PROJECTION` and `TAPS`. The Rules row's `cliffs01` layer is gated `TRIPLANAR` `[35, 50]`.
+- **A worked block:** `terrainShowcase`'s coast (`src/app/scenes/terrainShowcase/blocks/showcaseCoast/`): a 7-9 m heightfield cliff band, its `cliffs01` layer `TRIPLANAR` past a 35-50° slope gate under `HEX`'s `DOMINANT` slots; the alpine slope's `cliffs02` scarp likewise.

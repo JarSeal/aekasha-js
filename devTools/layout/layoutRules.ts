@@ -154,6 +154,7 @@ const APP_ASSET_FOLDERS = [
   'meshes',
   'postFx',
   'skyboxes',
+  'terrainBlocks',
   'textures',
 ];
 
