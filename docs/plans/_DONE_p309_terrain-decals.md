@@ -1,7 +1,7 @@
 Status: implemented (Phases 1-6)
 Category: Terrain, Rendering, Materials
-Blocks: p310_terrain-preview-scenes.md
-Epic: p301_terrain-texturing-epic.md
+Blocks: \_DONE_p310_terrain-preview-scenes.md
+Epic: \_DONE_p301_terrain-texturing-epic.md
 Related: \_DONE_p307_wet-and-dry-surface-states.md (wet decals: `applySurfaceWetness` on the decal material, D2), \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (mesh merging; §2.1 on `BatchedMesh` draw counts), \_DONE_p372_mesh-merge-groups.md (merging a block's cutout mesh decals), \_DONE_p375_batched-mesh-batches.md (its `BATCHED` merge groups are D4's runtime pools: its Phase 0 spike and Phase 3 answer this plan's `BatchedMesh` risk and D4's pool question)
 
 # Terrain Decals

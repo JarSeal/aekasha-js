@@ -1,6 +1,6 @@
-Status: draft | epic — not-implemented
+Status: implemented (an epic: every child done, 2026-11-20) | p302, p303, p304, p305, p306, p307, p308, p309 and p310 implemented
 Category: Terrain, Materials, Assets
-Blocks: \_DONE_p302_material-and-texture-system-refactor.md, \_DONE_p303_texture-sets-and-terrain-texture-library.md, \_DONE_p304_procedural-texture-baker.md, \_DONE_p305_terrain-material-generator.md, \_DONE_p306_terrain-blocks-and-procedural-terrain-meshes.md, \_DONE_p307_wet-and-dry-surface-states.md, \_DONE_p308_terrain-scatter.md, \_DONE_p309_terrain-decals.md, p310_terrain-preview-scenes.md
+Blocks: \_DONE_p302_material-and-texture-system-refactor.md, \_DONE_p303_texture-sets-and-terrain-texture-library.md, \_DONE_p304_procedural-texture-baker.md, \_DONE_p305_terrain-material-generator.md, \_DONE_p306_terrain-blocks-and-procedural-terrain-meshes.md, \_DONE_p307_wet-and-dry-surface-states.md, \_DONE_p308_terrain-scatter.md, \_DONE_p309_terrain-decals.md, \_DONE_p310_terrain-preview-scenes.md
 Related: \_DONE_p299_texture-arrays-and-atlases.md (the array/atlas core p303 and p309 build on), \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (mesh merging; new terrain processes in its §10)
 
 # Terrain Texturing — Epic
@@ -115,6 +115,8 @@ Proposed with this update (2026-11-04), to confirm before p302 starts: no child 
 - **One branch per child plan**, each into `main` with its own PR when its last phase is done, in the plan map's order: p302, then p303 (after p299 has merged its Phase 5-6 branch, or with p303 D4 on p299 D1 alone, which is done), then p304 and p305 (in parallel, separate branches), p306, then p307, p308 and p309 (independent), and p310 last.
 - Each PR bumps the parts it changed once (engine, toolkit, app; `yarn checkVersions --against main`) and adds its `CHANGELOG.md` entry.
 - p299 belongs to the p370 epic and keeps its own branch.
+
+Followed as proposed: each child merged into `main` on its own branch with its own bump; p310's branch, the last, goes into `main` with its PR (2026-11-20, opened when asked).
 
 ---
 
@@ -283,6 +285,6 @@ These are not built here, but nothing may block them:
 
 ## 9. Open questions
 
-1. **Git LFS for `.blend` templates and app GLBs?** Not now (§2). Revisit if binary churn grows.
+1. **Git LFS for `.blend` templates and app GLBs?** Not now (§2). Revisit if binary churn grows: in `p990_follow-ups-from-done-plans.md`'s Terrain section since the epic closed, with the binaries' sizes.
 2. **Concrete in the texture library.** Included as 2 optional sets (`concrete01`, `concrete02`) for the structures technique. Drop them if the toolkit should stay terrain-only.
 3. **Toolkit version scale.** The epic adds several toolkit features (minor bumps). p302/p303/p304/p306/p307 add engine features (engine minor bumps). Nothing is planned to break, so no major bumps.

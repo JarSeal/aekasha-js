@@ -67,6 +67,12 @@ Each item names the plan it came from; the full plan text is in git history (e.g
 
 - **Decal sets on structures, and the atlas in Blender** (p309 Phase 3, the terrain add-on). The add-on's decal set is a block's (its origin and its Shrinkwrap target), so a wall's or bunker's decals of `decalsStructure` are exported by hand or spawned with `spawnMeshDecalAsync`: a set whose origin is any object's. Blender can't read the atlases' KTX2 outputs, so its decals draw a stand-in (`AEK Decal Preview`): `yarn assets` writing a PNG preview of each atlas slot would let the preview show the cells.
 
+- **Structures placed with their block** (p310 §3.6, deferred in its Phase 2). `terrainShowcase`'s bunker and its leak decals are spawned by the scene file at a fixed world transform on the wetlands block's pad (`spawnImportedAsset` with `structureBunker`, then `spawnDecalSet`), so they don't follow the block's grid place and a streamed cell wouldn't carry them. **What it takes:** a `structures` list in `*.terrainBlock.json` (an import, its material and a transform relative to the block, its decal sets), spawned and deleted with the block as its scatters and decals are (`TerrainBlocks.ts`), and the add-on exporting a structure's place on its block.
+
+- **Snow on scatter rocks** (p310 Phase 3). `rockScatter` (`setupRockMaterial`) gets wet and frosted with the ground but has no snow input, so under `terrainShowcase`'s Snowfall the scatter rocks and boulders stand bare on white ground (the decal material takes an optional `snow` set; the showcase's decal set materials name one). **What it takes:** the same optional `snow` input on the rock material, the cover on the rock's up-facing side by the surface conditions' snow.
+
+- **Git LFS for the terrain binaries** (p301 §9, question 1: "not now, revisit if binary churn grows"). On 2026-11-20 the repo holds 16.3 MB of `.blend` files, 4.4 MB of source GLBs in the app and toolkit and 65 MB of asset outputs in `src/public/aek-assets/`; `terrainShowcase`'s blocks are 7.5 MB of it. A `.blend` changes whole on every save, so rebuilding the showcase's blocks or the templates (`buildShowcaseBlocks.py`, `buildTerrainTemplates.py`) adds their full size to the history each time. Revisit when a clone's size gets in the way.
+
 ## Debugger
 
 - **The PostFX window guesses a colour param's range** (p806): one with a channel over 1 is read as 0-255 and scaled (`features/postfx/debug/_dbg__PostFX.ts`), so an HDR float colour reads as 0-255 too. A colour space in the pass's `paramsMeta` would say which it is.

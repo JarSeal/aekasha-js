@@ -1,6 +1,6 @@
-Status: in progress | Phases 1-4 implemented
+Status: implemented (Phases 1-5)
 Category: App, Terrain, Docs
-Epic: p301_terrain-texturing-epic.md
+Epic: \_DONE_p301_terrain-texturing-epic.md
 Related: \_DONE_p309_terrain-decals.md (the decals this plan's scenes and blocks use; its As built lists have what landed, which differs from this plan's text in places: the strip cell is `tireTracks`, the structure leaks `leak01`-`leak03`; the add-on's Add Decal conforms with a 0.015 m offset and a subdivision level of its own, Export Decal Set writes the GLB and stubs; the gallery already has a Decals row, a Decals stage with the weathers and a bake bench for the decal generators, and `terrainBlockTest` a runtime decal walk; the handbook is `docs/techniques/terrain-decals.md`), \_DONE_p307_wet-and-dry-surface-states.md (the surface conditions and the wet response this plan's scenes show: its As built lists have the API that landed, the gallery's Wet/dry row and the measurements; the handbook's `wet-dry-surfaces.md`), \_DONE_p370_static-mesh-merging-and-texture-atlas-systems.md (merged dressing and modular kit terrain, for the matrix and the measurements)
 
 # Terrain Preview Scenes (gallery + showcase) and the Final Handbook Pass
@@ -483,7 +483,7 @@ Sections:
 
      **The wettest state costs what the dry one does** (−0.04 to +0.05 ms over two runs): the wet response's arithmetic runs on every pixel in either state, and the ripples' two taps on standing water near the camera (the rings show in the shaded shots) are within the noise on this GPU. **Snow costs 0.04-0.27 ms**, the most from a first person's eye (the set's taps under the cover on most of the frame). The `TAPS` view's bands (16-24 there) are too coarse to show the ripples' two fetches.
 
-   - **A test bridge finding:** `focusDebuggerControl({ name })` with a property grid button's text (the shower's) focused the next button in the pane (Dry), so the first two cycle runs pressed Dry; the script clicks the button found by its text. Not fixed here (the engine's test bridge; a property grid button whose row has a label).
+   - **A test bridge finding:** `focusDebuggerControl({ name })` with a property grid button's text (the shower's) focused the next button in the pane (Dry), so the first two cycle runs pressed Dry; the script clicks the button found by its text. Not fixed here (the engine's test bridge; a property grid button whose row has a label): filed in Phase 5 as `docs/issues/test-bridge-focus-labelled-grid-button.md`.
    - `yarn test`, `tsc` and lint pass.
 
 4. **The reference photos:** each category on the gallery's Wet/dry row at wetness 0.3, 0.6 and 1 against 1-2 CC0 photos; a category that reads wrong gets its response corrected (`TEXTURE_SET_WET_RESPONSES` or the set's own `surface`, a toolkit change); the photos and the judgement in `wet-dry-surfaces.md`. As built:
@@ -578,12 +578,24 @@ Sections:
    - **Phase 5 against this phase:** no engine or toolkit code changed in Phase 4 (the app's gallery and example, the docs, `sbp.config.ts`, the nested `CLAUDE.md` files), so Phase 5's bumps stand as written (app minor; the engine patch and the toolkit minor from Phases 2-3). Its changelog adds: the gallery's measurement poses, draw counts and matrix run, the handbook's measured figures and the README's second table, the terrain example and its Hub page, the showcase's Hub image and panel, the raised SBP budgets (Project). `readme.md`'s §4 step 4 items are still Phase 5's (the example's line is done).
    - `yarn test` (463 files), both `tsc`, lint and the docs ratchet pass.
 
-### Phase 5 — Release
+### Phase 5 — Release — done
 
 1. `readme.md`, `CLAUDE.md` (§4 steps 4-5), `CHANGELOG.md`.
 2. App minor bump (scenes); engine/toolkit bumps if this plan touched them. It did: the engine (Phase 3 section 4: `TEXTURE_SET_WET_RESPONSES`' snow darkening and grass wet roughness, a patch) and the toolkit (Phase 2: the add-on's second splat map and Export's fix, the `decalsStructure` leak cells' recipes; a minor for the add-on's new map).
 3. `yarn checkVersions --against main`.
 4. Mark the plan done; it's the epic's last child, so the epic's own closing steps follow (p301).
+
+Sections (2026-11-20):
+
+1. **The docs** (§4 steps 4-5). As built:
+   - **`.claude/CLAUDE.md`:** a `### Terrain` section in Architecture after Physics: where each part lives (the features' and the toolkit's nested `CLAUDE.md` files, already in the map), p301 §4's conventions, the binding budget, the debug views, the two verification scenes and the handbook. The terrain feature page's `aek:covers` names it (`Terrain`).
+   - **`src/_engine/features/terrain/CLAUDE.md`:** the verification scenes for the terrain plans (`terrainGallery`, `terrainShowcase`; `exampleTerrain` the Hub's example), as `features/lod/CLAUDE.md` names `lodShowcase`.
+   - **`readme.md`:** a "Terrain, from Blender to a measured frame" highlight after the Technical highlights table, with `terrainShowcase.hub.png` (the readme's first image) and Phase 4's figures; the example "5. Place a terrain block" (`exampleTerrainBlock`'s JSON abridged, `spawnTerrainBlock`; the examples after it renumbered 6-9); the add-on's two splat maps in Features; the gallery's later rows and the showcase in the scenes paragraph. The commands (`fetchTextureSources`, `assets`) and the per-part Features bullets were there already.
+   - `exampleTerrain`'s scene and block descriptions said "snow above 6 m" (Phase 4 moved the line to 7 m): corrected. `yarn hub:build --no-api --no-embed` passes (92 pages; the new section covered).
+2. **The release.** As built: engine 6.19.0 → 6.19.1 (the project version with it), toolkit 3.7.0 → 3.8.0 (the add-on 1.2.0), app 1.31.0 → 1.32.0; `CHANGELOG.md`'s entry "2026-11-20 — p310_terrain-preview-scenes" (Engine, Toolkit, App, Project); `yarn checkVersions --against main` passes. `yarn verify:baselines --update`: `bundle.json` (`assets/index.js` 397.2 → 406.1 kB gzip, the `app` group +7.8 kB of it: the production scene data Phase 4 measured; several chunks named new or smaller are Rollup's chunking of p308's and p309's modules with the new importers, no engine or toolkit code moved), the embeds' by a few bytes, `api.json` and `docs.json` unchanged, no debug code in the three builds.
+3. **Closing.** As built: this plan done and renamed; the epic p301 done (`_DONE_p301_terrain-texturing-epic.md`, its status and the references to both names in the plans); the open follow-ups in `p990_follow-ups-from-done-plans.md`'s Terrain section (structures placed with their block, snow on scatter rocks, p301 §9's Git LFS question with the binaries' sizes); Phase 3's test bridge finding filed as `docs/issues/test-bridge-focus-labelled-grid-button.md` (open, the mechanism and the fix: `PropertyGridItems.ts` names a labelled row's button by the row's label and its text, and `findLabelledControls` takes the control after the text's leaf, not the button holding it).
+
+**Time for a PR:** the epic's last child is done. Its section (one branch per child, each into `main`) gives this branch, `p310_terrain-preview-scenes`, into `main`, opened when asked.
 
 ---
 

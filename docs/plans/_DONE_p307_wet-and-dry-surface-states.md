@@ -1,7 +1,7 @@
 Status: implemented (Phases 1-7)
 Category: Materials, Terrain, Weather
-Blocks: p310_terrain-preview-scenes.md
-Epic: p301_terrain-texturing-epic.md
+Blocks: \_DONE_p310_terrain-preview-scenes.md
+Epic: \_DONE_p301_terrain-texturing-epic.md
 Related: p427_weather-and-mood.md (its weather state drives this plan's surface conditions), p990_follow-ups-from-done-plans.md (precipitation, clouds, a weather driver, SSR)
 
 # Wet & Dry Surface States

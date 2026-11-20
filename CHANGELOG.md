@@ -48,6 +48,7 @@ Terrain preview scenes (p310, the last plan of the terrain texturing epic p301):
 - The Hub: the terrain page's intro panel is the showcase, with a Where to start section (the handbook's reading order and the matrix's figures) and the gallery's panel in its Debugging; the example page `examples/terrain/`, linked from the terrain and toolkit pages.
 - `devTools/blender/buildShowcaseBlocks.py` (the showcase's blocks and the bunker, in a background Blender through the add-on's operators); `yarn verify:blender` checks the second splat map and its export from a file.
 - `terrainShowcase` in the scene runner (`debugger` configuration included; `terrainGallery`'s recorded again).
+- The issue [The test bridge's `focusDebuggerControl` focuses the next control for a property grid button in a labelled row](docs/issues/test-bridge-focus-labelled-grid-button.md) (open, with the fix).
 - The root `CLAUDE.md`'s Terrain section (covered by the Hub's terrain page), the terrain feature's verification scenes, `hub/CLAUDE.md`'s `OTHER_HUB_SCENES`, and the readme: a terrain highlight with the showcase's picture, the example "Place a terrain block", the showcase and the gallery's rows.
 
 **Changed**
@@ -55,7 +56,7 @@ Terrain preview scenes (p310, the last plan of the terrain texturing epic p301):
 - `sbp.config.ts`: the app's initial download 403 → 411 KiB, `assets/index.js` 399 → 407 KiB and the `app` group 19 → 27 KiB. It's production scene data, which every scene puts in the first download: `terrainShowcase`'s 6.5 KiB and `exampleTerrain`'s 1.5 KiB gzip, about 1 KiB other groups' drift; no terrain code is in the first download.
 - `buildTerrainTemplates.py` runs its `main()` only as the script, so `buildShowcaseBlocks.py` imports its helpers; the layout rules' app asset folders include `terrainBlocks`.
 - The baselines: the bundles.
-- The plans: p310 done, and with it the terrain texturing epic p301.
+- The plans: p310 done, and with it the terrain texturing epic p301; their open follow-ups (structures placed with their block, snow on scatter rocks, Git LFS for the terrain binaries) in `p990_follow-ups-from-done-plans.md`.
 
 ## 2026-11-19 — p309_terrain-decals
 
