@@ -1,4 +1,4 @@
-Status: in progress | Phases 0-1 implemented; Phase 3 dropped
+Status: in progress | Phases 0-2 implemented; Phase 3 dropped
 Category: Sky box, Assets, Textures
 Related: \_DONE_p057_three-r187-migration.md (r187's compressed cube support), \_DONE_p300_asset-optimization-pipeline-plan.md (the KTX2 encoder), \_DONE_p299_texture-arrays-and-atlases.md
 
@@ -136,7 +136,7 @@ Notes from Phase 0's reading of the code (the plan before Phase 1):
 - `flipY` is a lookup turn (`turnUpsideDown`), not a texture flip, so it works on a KTX2 cube as
   on six images. The KTX2's faces are stored unflipped (`ktx create --cubemap`, as above).
 
-### Phase 2: The pipeline's cube encode
+### Phase 2: The pipeline's cube encode — done
 
 Design 2. Phase 0 found a gap the design must close first: a `*.texture.json` can't describe a
 cube (`TextureAssetSchema`'s `fileName` is one string; `textureArrays.ts`' cube check only guards
@@ -217,10 +217,54 @@ Steps (a section each, stopped for review):
      project switch off a production build using one fails its output check (a plain texture gets
      a copy of its file then).
 
+   As built (step 2):
+   - `SkyBoxCubeBaseSchema`: `fileNames` and `file` not both, and one of them or a `textureId`.
+     `loadCubeTexture` (`layers/Base.ts`): a lone `textureId` takes `getTexture` (no load); its
+     texture keeps its own colour space (its `texOpts`) unless the base sets `colorSpace`; not
+     registered, or not a cube: reported, black. The debug tab's "Files" row shows for a
+     six-image cube only.
+   - The gather: `resolveSkyBoxes` now runs before `addTextureClosure` (it reads nothing else);
+     the closure adds a cube base's lone `textureId` (`the sky box "<id>"` in the unknown-id
+     error). `checkAssetSources` checks `faces` (`checkCubeSources`: the faces, `useHDRLoader`
+     refused, codec `none` refused through `getTextureArraySlotSettings`); `__fileSize` is the six
+     faces' (`getTextureSourceFileSize`); the scene's texture drops `faces` and `path`.
+   - The six-source fallback: a new generated field `__sourceUrls` (`GeneratedAssetFieldsSchema`,
+     texture only: the import, array and atlas schemas omit it, like `__averageColor`), the faces
+     as the dev server serves them, development data only, written even without a run (a cube
+     has no `fileName` to fall back to). `resolveCubeSourceUrls` (`AssetUrl.ts`) gives them when
+     there's no `__url` (warned once) or under "Load source files"; `loadTextureAsync` then loads
+     them through its cube branch (absolute URLs, `setPath('')`). The KTX2 `__url` needed no
+     change: the single-file path loads it as a `CompressedCubeTexture`.
+   - Production: `isKtxOnlyAsset` includes a cube, so one without an output fails the build, and
+     `AEK_ASSETS_ALLOW_UNOPTIMIZED` doesn't ship it unoptimized (step 1's open point: it fails,
+     as an array does).
+   - `__sourceUrls` is on the public `TextureProps` (`GeneratedAssetUrls`): the API baseline is
+     updated with Phase 4's versioning. `devTools/gather/CLAUDE.md`'s scene pass order is updated.
+   - Tests: `gather.test.ts` (p311 D2), `SkyBox.test.ts`, `SkyBoxSchema.test.ts`,
+     `Texture.test.ts`, `AssetUrl.test.ts`.
+
 3. The example on the pipeline: `desertDunesKtx2` names a `desertDunes` cube texture asset (its
    six faces from the PNGs scene01's desert-dunes loads) in place of Phase 1's hand-made
    `cubemap02.ktx2`, which is removed; `yarn assets` builds it and the lock is committed with
    it. Checked in the browser as Phase 1 was (WebGPU and WebGL2, against the PNG cube).
+
+   As built (step 3):
+   - `src/app/scenes/scene01/desertDunes.texture.json` (id `desertDunes`): the six
+     `cubemap02_*.png` faces in the order scene01's `desert-dunes` lists them (its y faces swapped,
+     so the sky box keeps `flipY: true`), `path` `/debugger/assets/testTextures/`, `texOpts`
+     sRGB. `desertDunesKtx2.skybox.json`'s base is `{ type: CUBE_TEXTURE, textureId: desertDunes,
+     flipY: true }`; scene01 lists the sky box only (the closure adds the texture). `cubemap02.ktx2`
+     is removed (`textureCubes.test.ts`' "not an 8-bit image" face is an `.hdr` now).
+   - `yarn assets`: ETC1S (D3's default), 1024 per face, 22.61 MB → 637.5 KB, VRAM estimate
+     134.2 → 8.4 MB, 9.4 s; output `aek-assets/app/scenes/scene01/desertDunes.cube.bcbcb2a4.ktx2`,
+     its lock entry with `isCube`. scene01's data: `__url`, `__sourceUrls`, `__fileSize`, no
+     `faces` / `path`.
+   - Browser (a throwaway script on the runner's server and browser, the Windows Chrome 157 on
+     the AMD RDNA 3; WebGL2 through the `debugRenderer` LS key): on both APIs the sky box loads
+     the asset as a `CompressedCubeTexture` (1024, 11 mips, sRGB, registered as `desertDunes`),
+     the same orientation and colours as the PNG cube (a little softer: 1024 against 2048), no
+     error (the one warning on each page, a deprecated init call's, isn't the sky box's). The
+     six-source fallback is checked by the unit tests only.
 
 ### Phase 3: Pre-filtered cubes — dropped
 
@@ -232,3 +276,24 @@ composite sky's env bake. A follow-up only if a scene's first frame shows the pi
 
 Hub (the sky box page's base layer section, the asset pipeline page), `CLAUDE.md`s, versioning
 (an engine minor: new schema option).
+
+What Phases 1-2 leave for it:
+
+1. Docs:
+   - `devTools/assetPipeline/CLAUDE.md`: cube textures (`faces`, `textureCubes.ts`, the
+     `--cubemap` encode, the `.cube` output name, D3's `CUBE_LEVEL`, codec `none` refused, no
+     output when the textures side is off, `isKtxOnlyAsset`) and `docs/techniques/asset-optimization.md`.
+   - `src/_engine/features/skybox/CLAUDE.md`: the cube base's `file` (Phase 1) and lone
+     `textureId` (a cube texture asset, the scene's closure loads it).
+   - `devTools/gather/CLAUDE.md`: the texture closure's list (step 5's paragraph) gets the cube
+     sky boxes' lone `textureId`; `__sourceUrls` with the generated fields. (The scene pass order
+     is already updated.)
+   - `kernel/assets` (`loadTextureAsync`'s cube asset path) where a nested `CLAUDE.md` or the Hub
+     describes the loader; `readme.md` if it lists the texture JSON's forms.
+   - Hub: the sky box page (the three cube forms, scene01's example), the asset pipeline page (cube
+     textures, ETC1S by default, Phase 0's figures), any `#region` include these files moved.
+2. Versioning: engine minor (`faces`, the cube base's `file` and lone `textureId`, `__sourceUrls`
+   on `TextureProps`), app minor (scene01's KTX2 cube sky box), Project for the pipeline; the
+   `CHANGELOG.md` entry; `yarn verify:baselines --update` for the API baseline (`SkyBoxDef`'s
+   `file` / optional `fileNames`, `TextureProps.__sourceUrls`); `yarn checkVersions --against main`.
+3. Mark the plan done (`_DONE_` rename, references).

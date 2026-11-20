@@ -59,7 +59,7 @@ describe('resolveCubeSource', () => {
     const faces = [...CUBEMAP01];
     faces[1] = 'cubemap01_missing.png';
     faces[3] = 'https://example.com/face.png';
-    faces[5] = 'cubemap02.ktx2';
+    faces[5] = 'kloofendal_48d_partly_cloudy_puresky_2k.hdr';
     const source = resolveCubeSource(JSON_FILE, faces, DIR);
     expect('error' in source && source.error.split('; ')).toEqual([
       expect.stringMatching(/^faces\[1\] \(-x\): source file .* not found/),

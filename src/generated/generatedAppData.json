@@ -15655,18 +15655,48 @@
           "id": "desertDunesKtx2",
           "base": {
             "type": "CUBE_TEXTURE",
-            "file": "/debugger/assets/testTextures/cubemap02.ktx2",
-            "textureId": "desertDunesKtx2Cube",
+            "textureId": "desertDunes",
             "flipY": true
           },
           "debugData": {
             "name": "Desert dunes (KTX2 cube)",
-            "description": "The desert-dunes cube as one ETC1S KTX2 cube file at 1024 per face (640 KB, its mips in the file) in place of six 2048 PNGs (22.6 MB), made with ktx create --cubemap in the faces' order scene01's desert-dunes lists them (p311 Phase 1). Switch to it in the sky box tab."
+            "description": "The desert-dunes cube as the cube texture asset desertDunes: one ETC1S KTX2 cube at 1024 per face, its mips in the file, built by the asset pipeline from the six 2048 PNGs (22.6 MB) the PNG cube loads (p311). Switch to it in the sky box tab."
           }
         }
       ],
       "id": "scene01",
       "sceneFile": "./scenes/scene01/scene01.ts",
+      "textures": [
+        {
+          "id": "desertDunes",
+          "texOpts": {
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "Desert dunes (cube)",
+            "description": "The desert-dunes cube's six 2048 PNGs as one cube texture asset: the asset pipeline encodes them as one ETC1S KTX2 cube at 1024 per face (p311 Phase 2). The faces in the order scene01's desert-dunes lists them (its y faces swapped), so its sky box keeps flipY."
+          },
+          "__fileSize": 22609060,
+          "__sourceUrls": [
+            "/debugger/assets/testTextures/cubemap02_positive_x.png",
+            "/debugger/assets/testTextures/cubemap02_negative_x.png",
+            "/debugger/assets/testTextures/cubemap02_negative_y.png",
+            "/debugger/assets/testTextures/cubemap02_positive_y.png",
+            "/debugger/assets/testTextures/cubemap02_positive_z.png",
+            "/debugger/assets/testTextures/cubemap02_negative_z.png"
+          ],
+          "__url": "/aek-assets/app/scenes/scene01/desertDunes.cube.bcbcb2a4.ktx2",
+          "__bytes": {
+            "in": 22609060,
+            "out": 637512
+          },
+          "__vramBytes": {
+            "in": 134217720,
+            "out": 8388768
+          },
+          "__codec": "etc1s"
+        }
+      ],
       "__features": [
         "skybox"
       ]
@@ -37037,6 +37067,45 @@
       },
       "__codec": "uastc"
     },
+    "desertDunes": {
+      "id": "desertDunes",
+      "path": "/debugger/assets/testTextures/",
+      "texOpts": {
+        "colorSpace": "srgb"
+      },
+      "debugData": {
+        "name": "Desert dunes (cube)",
+        "description": "The desert-dunes cube's six 2048 PNGs as one cube texture asset: the asset pipeline encodes them as one ETC1S KTX2 cube at 1024 per face (p311 Phase 2). The faces in the order scene01's desert-dunes lists them (its y faces swapped), so its sky box keeps flipY."
+      },
+      "faces": [
+        "cubemap02_positive_x.png",
+        "cubemap02_negative_x.png",
+        "cubemap02_negative_y.png",
+        "cubemap02_positive_y.png",
+        "cubemap02_positive_z.png",
+        "cubemap02_negative_z.png"
+      ],
+      "__sourcePath": "src/app/scenes/scene01/desertDunes.texture.json",
+      "__fileSize": 22609060,
+      "__sourceUrls": [
+        "/debugger/assets/testTextures/cubemap02_positive_x.png",
+        "/debugger/assets/testTextures/cubemap02_negative_x.png",
+        "/debugger/assets/testTextures/cubemap02_negative_y.png",
+        "/debugger/assets/testTextures/cubemap02_positive_y.png",
+        "/debugger/assets/testTextures/cubemap02_positive_z.png",
+        "/debugger/assets/testTextures/cubemap02_negative_z.png"
+      ],
+      "__url": "/aek-assets/app/scenes/scene01/desertDunes.cube.bcbcb2a4.ktx2",
+      "__bytes": {
+        "in": 22609060,
+        "out": 637512
+      },
+      "__vramBytes": {
+        "in": 134217720,
+        "out": 8388768
+      },
+      "__codec": "etc1s"
+    },
     "p303TestSet_albedoHeight": {
       "id": "p303TestSet_albedoHeight",
       "fileName": "./source/albedoHeight.png",
@@ -52647,13 +52716,12 @@
       "id": "desertDunesKtx2",
       "base": {
         "type": "CUBE_TEXTURE",
-        "file": "/debugger/assets/testTextures/cubemap02.ktx2",
-        "textureId": "desertDunesKtx2Cube",
+        "textureId": "desertDunes",
         "flipY": true
       },
       "debugData": {
         "name": "Desert dunes (KTX2 cube)",
-        "description": "The desert-dunes cube as one ETC1S KTX2 cube file at 1024 per face (640 KB, its mips in the file) in place of six 2048 PNGs (22.6 MB), made with ktx create --cubemap in the faces' order scene01's desert-dunes lists them (p311 Phase 1). Switch to it in the sky box tab."
+        "description": "The desert-dunes cube as the cube texture asset desertDunes: one ETC1S KTX2 cube at 1024 per face, its mips in the file, built by the asset pipeline from the six 2048 PNGs (22.6 MB) the PNG cube loads (p311). Switch to it in the sky box tab."
       },
       "__sourcePath": "src/app/scenes/scene01/desertDunesKtx2.skybox.json"
     },
