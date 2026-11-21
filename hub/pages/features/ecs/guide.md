@@ -2,7 +2,11 @@
 
 [`createEntity`](api:ECSWorld.createEntity) returns an id that packs the entity's slot and a
 generation. When an entity is deleted and its slot reused, the old id no longer matches
-([`isAlive`](api:ECSWorld.isAlive)), so a stale id can't reach the new entity.
+([`isAlive`](api:ECSWorld.isAlive)), so a stale id can't reach the new entity. A write through
+one does nothing: [`addComponent`](api:ECSWorld.addComponent) and
+[`commitTransform`](api:ECSWorld.commitTransform) ignore an id that isn't alive, and the debug env
+warns, naming the entity and the component. An id kept across an `await` may be stale by then:
+check `isAlive` when the code after it depends on the write.
 
 Most entities come from the managers, which create them with their components:
 [`createMeshEntity`](api:createMeshEntity), [`createLightEntity`](api:createLightEntity),

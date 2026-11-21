@@ -4,9 +4,9 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
-## 2026-11-21 — issue-fixing-20261120 (i010, i020, i030)
+## 2026-11-21 — issue-fixing-20261120 (i010, i020, i030, i040)
 
-Three issues fixed. VSM shadows no longer draw stripes down a slope facing the sun that nothing shadows (i010). It was the receiver shadowing itself: under VSM three draws every shadow receiver into the map, and its blur stores the depth's mean in half floats, whose rounding (2⁻¹¹ at depths 0.5..1, where a sky light puts the ground under the camera) outgrew the `MEDIUM` preset's bias. And a GLB the asset pipeline quantized (its default meshopt encode) now gives the same geometries as the unquantized file (i020): a mesh made from an imported geometry's id was drawn at the size and place of its quantized positions, a mesh node with children lost its id and its custom props, and two identical meshes lost the second one's id. The positions upload as 32-bit floats now (the download is unchanged). And an imported file with several bodies but no `index` custom props gets all of them (i030): only the first node with a `rigidType` got a body, the others were drawn but never moved or collided, and nothing said so. Nothing breaks.
+Four issues fixed. VSM shadows no longer draw stripes down a slope facing the sun that nothing shadows (i010). It was the receiver shadowing itself: under VSM three draws every shadow receiver into the map, and its blur stores the depth's mean in half floats, whose rounding (2⁻¹¹ at depths 0.5..1, where a sky light puts the ground under the camera) outgrew the `MEDIUM` preset's bias. And a GLB the asset pipeline quantized (its default meshopt encode) now gives the same geometries as the unquantized file (i020): a mesh made from an imported geometry's id was drawn at the size and place of its quantized positions, a mesh node with children lost its id and its custom props, and two identical meshes lost the second one's id. The positions upload as 32-bit floats now (the download is unchanged). And an imported file with several bodies but no `index` custom props gets all of them (i030): only the first node with a `rigidType` got a body, the others were drawn but never moved or collided, and nothing said so. And a component added to a deleted entity is ignored (i040): it was stored where no delete would clear it, and in `TYPED_ARRAY` storage a stale id's transform write could take a live entity's transform. Nothing breaks.
 
 ### Engine 6.21.0 (Sunset)
 
@@ -25,6 +25,9 @@ Three issues fixed. VSM shadows no longer draw stripes down a slope facing the s
 
 - Under `VSMShadowMap` a shadow preset's depth bias is at most −0.0005 (one half-float step at depths 0.5..1), for `createLightEntity`'s lights and the sky lights: `MEDIUM` (−0.0002), `HIGH` (−0.0001) and `ULTRA` (−0.00005) take −0.0005 there, `LOW` had it, PCF keeps the presets as they were, and a light's own `shadowBias` isn't limited. On terrainGallery's ramps the stripes went (each a correct 1.000 against the shot without shadows, from 0.946) and the cliff wall's contact shadow stayed the same; `largeWorld` (its sun on `HIGH`) is unchanged within its run-to-run noise. The sky box tab's default bias shows the same value.
 
+- `ECSWorld.addComponent` and `ECSWorld.commitTransform` ignore an id that isn't alive (i040): before, `addComponent` stored the data and ran the type's `onAddComponent` hooks for a deleted entity, where it stayed until its slot's next entity was deleted, and in `TYPED_ARRAY` storage a stale id's `TRANSFORM` write (either call) after its slot was reused took the new entity's place in the store, so the live entity's `TRANSFORM` read `undefined`. The debug env warns, naming the world, the entity and the component type.
+- `createCharacter` rejects, naming the visual, when the visual's entity is deleted while its body is created (a scene exit during a `WORKER_THREAD` create; i040), and `createDynamicCharacter` then disposes the brain it made: before, the character was left on the deleted entity with its brain's action map, and `createDynamicCharacter` threw from finding no body.
+
 ### App 1.33.1 (Preschooler)
 
 **Changed**
@@ -38,6 +41,7 @@ Three issues fixed. VSM shadows no longer draw stripes down a slope facing the s
 **Changed**
 
 - The docs: i010 closed (`docs/issues/_DONE_i010_vsm-stripes-on-unshadowed-slopes.md`, with its cause and the measurements), the texture sets handbook's troubleshooting line, the sky box's and texture sets' `CLAUDE.md`.
+- i040 closed (`docs/issues/_DONE_i040_ecs-components-on-deleted-entities.md`, with the scan of the callers), the ECS and characters `CLAUDE.md` and the Hub's ECS guide (Entities).
 - The asset pipeline records each quantized mesh's dequantization (i020, `devTools/assetPipeline/gltfQuantization.ts`): around `meshopt()` and `quantize()`, in the extras of every node using the mesh, with where `quantize()` put it (the node, a new child node or the GPU instances). Its format version (`GLTF_QUANTIZATION_FORMAT_VERSION`) is in a quantizing encode's cache key only, so those GLBs encode once more. The run's VRAM figure, which the budgets read, counts those positions as floats. The LOD chain step reads a moved mesh's node's extras.
 - The docs: i020 closed (`docs/issues/_DONE_i020_quantized-glb-geometry-by-id.md`, with the fix and the two cases the scene run found), the asset optimization and terrain scatter handbooks, the Hub's LOD page (an `IMPORTED` scatter's import needn't be lossless), the asset pipeline's and instancing's `CLAUDE.md`.
 
