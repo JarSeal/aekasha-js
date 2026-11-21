@@ -125,8 +125,9 @@ gallery's pebbles:
   `terrainScatter` places on a terrain block by its painted layers, slope, height and a
   clustering noise ([Terrain scatter](hub:features/terrain#terrain-scatter)).
 - **`IMPORTED`:** an import's instances, from Blender's Geometry Nodes exported as GPU instances
-  (`EXT_mesh_gpu_instancing`) or as a point cloud with `_ROT`, `_SCALE` and `_ITEM`. The import
-  must be lossless (`"optimize": { "mesh": { "quantize": false } }`).
+  (`EXT_mesh_gpu_instancing`) or as a point cloud with `_ROT`, `_SCALE` and `_ITEM`. The asset
+  pipeline's default encode works (the import takes its quantization back out); a file another
+  tool quantized must be imported lossless (`"optimize": { "mesh": { "quantize": false } }`).
 - **`PLACEMENTS`:** a list, relative to the target.
 
 A terrain block spawns its own scatters (its `scatter` ids); scene code spawns one with

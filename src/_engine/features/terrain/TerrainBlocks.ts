@@ -105,10 +105,11 @@ const getImportedBlockGeometry = (
   if (!geometry) {
     throw new Error(`${where}: the import's geometry "${info.geometryId}" isn't registered.`);
   }
-  // Quantized positions are dequantized by their node's transform, which the block replaces
-  if (geometry.getAttribute('position')?.normalized) {
+  // Quantized positions: another tool's are dequantized by their node's transform, which the
+  // block replaces; the pipeline's, made floats again by the import, miss their neighbours' edge
+  if (geometry.getAttribute('position')?.normalized || info.isDequantized) {
     throw new Error(
-      `${where}: the import "${importedAsset}" has quantized positions (the asset pipeline's default meshopt encode), whose scale is in the node the block ignores. Give its importedAsset JSON "optimize": { "profile": "terrainBlock" }.`
+      `${where}: the import "${importedAsset}" has quantized positions (the asset pipeline's default meshopt encode), which don't meet a neighbouring block's edge exactly. Give its importedAsset JSON "optimize": { "profile": "terrainBlock" }.`
     );
   }
   if (!isIdentityTransform(info.transform)) {

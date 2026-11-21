@@ -42,6 +42,9 @@ const ALLOWED_MODULES: Record<string, AllowedModule> = {
   'src/_engine/features/lod/LodChainOptions.ts': {
     reason: 'the LOD chain options and a GLB’s chain description, which the asset pipeline writes',
   },
+  'src/_engine/kernel/assets/import/GLTFQuantization.ts': {
+    reason: 'a GLB’s recorded dequantization of a quantized mesh, which the asset pipeline writes',
+  },
   'src/_engine/features/lod/LodSimplify.ts': {
     packages: ['three', 'meshoptimizer'],
     reason: 'a GLB’s prebuilt chain comes from the runtime’s own simplifier',

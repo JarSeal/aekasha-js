@@ -1,12 +1,18 @@
-import { Document, Logger, NodeIO, Primitive } from '@gltf-transform/core';
-import { EXTMeshGPUInstancing } from '@gltf-transform/extensions';
-import { quantize } from '@gltf-transform/functions';
+import { Document, Logger, NodeIO, Primitive, PropertyType, type Node } from '@gltf-transform/core';
+import { EXTMeshGPUInstancing, KHRMeshQuantization } from '@gltf-transform/extensions';
+import { dedup, quantize } from '@gltf-transform/functions';
 import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { describe, expect, test, vi } from 'vitest';
 import { AssetsProtocolType, type AssetsDownProtocol } from '../AssetsAPITypes';
 import { assetsSwitchGLTF } from '../worker/AssetsSwitchGLTF';
 import { extractPrimitives } from './GLTFExtract';
+import { getGLTFPrimitiveKey } from './GLTFPrimitiveKey';
+import {
+  GLTF_QUANTIZATION_EXTRAS_KEY,
+  GLTF_QUANTIZATION_FORMAT_VERSION,
+  type GLTFDequantizationTarget,
+} from './GLTFQuantization';
 import { addInstancesToTransfer } from './GeometryTransfer';
 import type { ImportedInstances } from './ImportTypes';
 
@@ -137,7 +143,7 @@ const addPointCloudNode = (doc: Document, name: string, extras = { aekScatterPoi
 const createScene = (doc: Document) => doc.getRoot().setDefaultScene(doc.createScene());
 
 const writeGlbAsync = (doc: Document) =>
-  new NodeIO().registerExtensions([EXTMeshGPUInstancing]).writeBinary(doc);
+  new NodeIO().registerExtensions([EXTMeshGPUInstancing, KHRMeshQuantization]).writeBinary(doc);
 
 const parseAsync = async (glb: Uint8Array) => new GLTFLoader().parseAsync(glb.slice().buffer, '');
 
@@ -221,7 +227,7 @@ describe('extractPrimitives: GPU instances', () => {
     for (const { info } of primitives!) expectClose(info.instances!.matrices, expectedMatrices());
   });
 
-  test("the asset pipeline's quantize folds into the instances: they draw the same", async () => {
+  test("another tool's quantize folds into the instances: they draw the same", async () => {
     const doc = createDoc();
     createScene(doc);
     addInstancedNode(doc, 'Rocks');
@@ -295,7 +301,7 @@ describe('extractPrimitives: point clouds', () => {
     expect(cloud.instances.items).toBeUndefined();
   });
 
-  test('quantized positions are refused with the reason, and a points node without the prop is left out', async () => {
+  test("quantized positions without the pipeline's record are refused with the reason, and a points node without the prop is left out", async () => {
     const doc = createDoc();
     createScene(doc);
     addPointCloudNode(doc, 'RockPoints');
@@ -353,5 +359,278 @@ describe("the assets worker's GLTF job", () => {
       mainThread.primitives!.map(({ info }) => info)
     );
     expect(received.pointClouds).toEqual(mainThread.pointClouds);
+  });
+});
+
+// i020: a box off its node's origin. quantize() maps its bounds to [-1, 1] around their centre,
+// scaled by the largest half extent: the dequantization the asset pipeline records for it.
+const BOX = [0.5, 1, -2, 2.5, 1, -2, 0.5, 4, -2, 2.5, 4, -1];
+const BOX_DEQUANTIZATION = { offset: [1.5, 2.5, -1.5] as [number, number, number], scale: 1.5 };
+const TRIANGLE_DEQUANTIZATION = { offset: [0.5, 0.5, 0] as [number, number, number], scale: 0.5 };
+
+const createBoxMesh = (doc: Document, name: string) =>
+  doc
+    .createMesh(name)
+    .addPrimitive(doc.createPrimitive().setAttribute('POSITION', accessor(doc, 'VEC3', BOX)));
+
+/** What `devTools/assetPipeline/gltfQuantization.ts` writes into a node's extras */
+const record = (
+  node: Node,
+  target: GLTFDequantizationTarget,
+  dequantization = BOX_DEQUANTIZATION,
+  version = GLTF_QUANTIZATION_FORMAT_VERSION
+) =>
+  node.setExtras({
+    ...node.getExtras(),
+    [GLTF_QUANTIZATION_EXTRAS_KEY]: { version, ...dequantization, target },
+  });
+
+/** quantize() put exactly this dequantization into the node's matrix */
+const expectQuantizedBy = (
+  node: Node,
+  sourceMatrix: number[],
+  dequantization: typeof BOX_DEQUANTIZATION
+) => {
+  const { offset, scale } = dequantization;
+  const expected = new THREE.Matrix4()
+    .fromArray(sourceMatrix)
+    .multiply(new THREE.Matrix4().makeTranslation(...offset))
+    .multiply(new THREE.Matrix4().makeScale(scale, scale, scale));
+  expectClose(node.getMatrix(), expected.elements);
+};
+
+const expectFloatPositions = (geometry: THREE.BufferGeometry, expected: ArrayLike<number>) => {
+  const position = geometry.getAttribute('position');
+  expect(position.array).toBeInstanceOf(Float32Array);
+  expect(position.normalized).toBe(false);
+  expectClose(position.array, expected, 3);
+};
+
+const expectTransform = (
+  transform: {
+    position: THREE.Vector3Like;
+    quaternion: THREE.QuaternionLike;
+    scale: THREE.Vector3Like;
+  },
+  source: { translation: number[]; rotation: number[]; scale: number[] }
+) => {
+  expectClose(Object.values(transform.position), source.translation);
+  expectClose(Object.values(transform.quaternion), source.rotation);
+  expectClose(Object.values(transform.scale), source.scale);
+};
+
+describe("extractPrimitives: the asset pipeline's quantized meshes (i020)", () => {
+  test('NODE: float positions in the source node space, the transform without the dequantization', async () => {
+    const doc = createDoc();
+    createScene(doc);
+    const node = doc
+      .createNode('crate')
+      .setMesh(createBoxMesh(doc, 'crate'))
+      .setTranslation([1, 2, 3])
+      .setRotation([0, Math.SQRT1_2, 0, Math.SQRT1_2])
+      .setScale([2, 2, 2]);
+    doc.getRoot().getDefaultScene()!.addChild(node);
+    // A second root, so the crate isn't the unwrapped import root
+    doc.getRoot().getDefaultScene()!.addChild(doc.createNode('marker'));
+    const source = {
+      translation: node.getTranslation(),
+      rotation: node.getRotation(),
+      scale: node.getScale(),
+    };
+    const sourceMatrix = node.getMatrix();
+    await doc.transform(quantize());
+    expectQuantizedBy(node, sourceMatrix, BOX_DEQUANTIZATION);
+    record(node, 'NODE');
+
+    const [{ geometry, info }] = (await extractAsync(doc)).primitives!;
+    expect(info.geometryId).toBe('scatter/crate');
+    expectFloatPositions(geometry, BOX);
+    expect(info.isDequantized).toBe(true);
+    expectTransform(info.transform, source);
+    expect(info.customProps.raw).not.toHaveProperty(GLTF_QUANTIZATION_EXTRAS_KEY);
+    expectClose(geometry.boundingBox!.min.toArray(), [0.5, 1, -2], 3);
+    expectClose(geometry.boundingBox!.max.toArray(), [2.5, 4, -1], 3);
+  });
+
+  test("PIVOT: the mesh takes its source node's name, extras and place; the node, a lone root, isn't unwrapped", async () => {
+    const doc = createDoc();
+    createScene(doc);
+    const door = doc
+      .createNode('door_left')
+      .setMesh(createBoxMesh(doc, 'door_left'))
+      .setTranslation([-0.25, 0.45, 0])
+      .setExtras({ isPhysObj: true, keepMesh: true, colliderType: 'BOX', hx: 1 });
+    const handle = doc.createNode('door_left_handle').setMesh(createBoxMesh(doc, 'handle'));
+    doc.getRoot().getDefaultScene()!.addChild(door.addChild(handle));
+    const doorMatrix = door.getMatrix();
+    await doc.transform(quantize());
+    const pivot = door.listChildren().find((child) => child !== handle)!;
+    expectQuantizedBy(pivot, new THREE.Matrix4().elements, BOX_DEQUANTIZATION);
+    expectQuantizedBy(handle, new THREE.Matrix4().elements, BOX_DEQUANTIZATION);
+    record(pivot, 'PIVOT');
+    record(handle, 'NODE');
+
+    const { primitives } = await extractAsync(doc);
+    const byId = new Map(primitives!.map((p) => [p.info.geometryId, p]));
+    expect([...byId.keys()].sort()).toEqual(['scatter/door_left', 'scatter/door_left_handle']);
+    const doorPrimitive = byId.get('scatter/door_left')!;
+    expect(doorPrimitive.info).toMatchObject({ nodeName: 'door_left', parentPath: [] });
+    expect(doorPrimitive.info.customProps).toMatchObject({
+      isPhysObj: true,
+      colliderParams: { type: 'BOX', hx: 1 },
+    });
+    expect(doorPrimitive.info.customProps.raw).not.toHaveProperty(GLTF_QUANTIZATION_EXTRAS_KEY);
+    expectFloatPositions(doorPrimitive.geometry, BOX);
+    expectClose(
+      new THREE.Matrix4()
+        .compose(
+          new THREE.Vector3().copy(doorPrimitive.info.transform.position),
+          new THREE.Quaternion().copy(doorPrimitive.info.transform.quaternion),
+          new THREE.Vector3().copy(doorPrimitive.info.transform.scale)
+        )
+        .toArray(),
+      doorMatrix
+    );
+    const handlePrimitive = byId.get('scatter/door_left_handle')!;
+    expect(handlePrimitive.info).toMatchObject({ parentPath: ['door_left'] });
+    expect(handlePrimitive.info.customProps.isPhysObj).toBe(false);
+    expectClose(Object.values(handlePrimitive.info.transform.position), [-0.25, 0.45, 0]);
+  });
+
+  test('nodes sharing a mesh share one geometry, dequantized once', async () => {
+    const doc = createDoc();
+    createScene(doc);
+    const mesh = createBoxMesh(doc, 'pillar');
+    const scene = doc.getRoot().getDefaultScene()!;
+    const a = doc.createNode('pillar_a').setMesh(mesh);
+    const b = doc.createNode('pillar_b').setMesh(mesh).setTranslation([5, 0, 0]);
+    scene.addChild(a).addChild(b);
+    await doc.transform(quantize());
+    record(a, 'NODE');
+    record(b, 'NODE');
+
+    const { primitives } = await extractAsync(doc);
+    expect(primitives![0].geometry).toBe(primitives![1].geometry);
+    expectFloatPositions(primitives![0].geometry, BOX);
+    expect(primitives!.map(({ info }) => info.transform.position)).toEqual([
+      { x: 0, y: 0, z: 0 },
+      { x: 5, y: 0, z: 0 },
+    ]);
+  });
+
+  test('INSTANCES: the node keeps its transform, each instance matrix loses the dequantization', async () => {
+    const doc = createDoc();
+    createScene(doc);
+    const node = addInstancedNode(doc, 'Rocks');
+    await doc.transform(quantize());
+    record(node, 'INSTANCES', TRIANGLE_DEQUANTIZATION);
+
+    const [{ geometry, info }] = (await extractAsync(doc)).primitives!;
+    expectFloatPositions(geometry, TRIANGLE);
+    expect(info.transform.position).toEqual({ x: 10, y: 0, z: 0 });
+    expectClose(info.instances!.matrices, expectedMatrices(), 4);
+  });
+
+  test('a point cloud with a record is read, not refused', async () => {
+    const doc = createDoc();
+    createScene(doc);
+    const node = addPointCloudNode(doc, 'RockPoints');
+    await doc.transform(quantize());
+    // The points' bounds: (-3, 0, 0) to (1, 1, 2)
+    record(node, 'NODE', { offset: [-1, 0.5, 1], scale: 2 });
+
+    const [cloud] = (await extractAsync(doc)).pointClouds!;
+    expect(cloud.customProps.warnings).toEqual([]);
+    expectClose(Object.values(cloud.transform.position), [10, 0, 0]);
+    expectClose(cloud.instances.matrices, expectedMatrices(), 3);
+  });
+
+  test("a prebuilt LOD level gets the base's dequantized attribute objects, and the extent its scale", async () => {
+    const doc = createDoc();
+    createScene(doc);
+    const node = doc.createNode('rock').setMesh(createBoxMesh(doc, 'rock'));
+    doc.getRoot().getDefaultScene()!.addChild(node).addChild(doc.createNode('marker'));
+    await doc.transform(quantize());
+    record(node, 'NODE');
+    const gltf = await parseAsync(await writeGlbAsync(doc));
+    const base = (gltf.scene.getObjectByName('rock') as THREE.Mesh).geometry;
+    const level = new THREE.BufferGeometry();
+    level.setAttribute('position', base.getAttribute('position'));
+    level.setIndex([0, 1, 2]);
+    const chain = {
+      extent: 2,
+      baseTriangles: 2,
+      vertices: 'BASE' as const,
+      options: {
+        ratios: [0.5],
+        maxError: 0.05,
+        attributeWeights: { normal: 0.5, uv: 0.5 },
+        compactVertices: false,
+        lockBorder: false,
+        permissive: false,
+      },
+      levels: [{ geometry: level, triangles: 1, error: 0.01 }],
+    };
+    const { primitives } = extractPrimitives(gltf, {
+      importId: 'scatter',
+      lodChains: new Map([[getGLTFPrimitiveKey(0, 0), chain]]),
+    });
+
+    const [{ geometry, lodChain }] = primitives!;
+    expectFloatPositions(geometry, BOX);
+    expect(lodChain!.levels[0].geometry.getAttribute('position')).toBe(
+      geometry.getAttribute('position')
+    );
+    expect(lodChain!.extent).toBeCloseTo(2 * BOX_DEQUANTIZATION.scale);
+  });
+
+  test("two identical glTF meshes dedup() joined keep their own ids, each in its node's space", async () => {
+    const doc = createDoc();
+    createScene(doc);
+    const scene = doc.getRoot().getDefaultScene()!;
+    const left = doc
+      .createNode('door_left')
+      .setMesh(createBoxMesh(doc, 'door_left'))
+      .setTranslation([-1, 0, 0]);
+    left.addChild(doc.createNode('door_left_handle'));
+    const right = doc
+      .createNode('door_right')
+      .setMesh(createBoxMesh(doc, 'door_right'))
+      .setTranslation([1, 0, 0]);
+    scene.addChild(left).addChild(right);
+    // quantize()'s own cleanup dedups accessors only (the meshes stay two)
+    await doc.transform(quantize(), dedup({ propertyTypes: [PropertyType.ACCESSOR] }));
+    const [leftMesh, rightMesh] = doc.getRoot().listMeshes();
+    expect(leftMesh.listPrimitives()[0].getAttribute('POSITION')).toBe(
+      rightMesh.listPrimitives()[0].getAttribute('POSITION')
+    );
+    record(left.listChildren().find((child) => child.getMesh())!, 'PIVOT');
+    record(right, 'NODE');
+
+    const { primitives } = await extractAsync(doc);
+    const byId = new Map(primitives!.map((p) => [p.info.geometryId, p]));
+    expect([...byId.keys()].sort()).toEqual(['scatter/door_left', 'scatter/door_right']);
+    const [a, b] = [byId.get('scatter/door_left')!, byId.get('scatter/door_right')!];
+    expect(a.geometry).not.toBe(b.geometry);
+    expect(a.geometry.getAttribute('position')).toBe(b.geometry.getAttribute('position'));
+    expectFloatPositions(b.geometry, BOX);
+    expect(b.info.isDequantized).toBe(true);
+    expectClose(Object.values(a.info.transform.position), [-1, 0, 0]);
+    expectClose(Object.values(b.info.transform.position), [1, 0, 0]);
+    expectClose(Object.values(b.info.transform.scale), [1, 1, 1]);
+  });
+
+  test('a record of another format version leaves the mesh as GLTFLoader gives it', async () => {
+    const doc = createDoc();
+    createScene(doc);
+    const node = doc.createNode('crate').setMesh(createBoxMesh(doc, 'crate'));
+    doc.getRoot().getDefaultScene()!.addChild(node).addChild(doc.createNode('marker'));
+    await doc.transform(quantize());
+    record(node, 'NODE', BOX_DEQUANTIZATION, GLTF_QUANTIZATION_FORMAT_VERSION + 1);
+
+    const [{ geometry, info }] = (await extractAsync(doc)).primitives!;
+    expect(geometry.getAttribute('position').array).not.toBeInstanceOf(Float32Array);
+    expect(info.isDequantized).toBeUndefined();
+    expect(info.transform.scale.x).toBeCloseTo(BOX_DEQUANTIZATION.scale);
   });
 });

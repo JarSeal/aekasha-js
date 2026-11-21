@@ -4,13 +4,22 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
-## 2026-11-20 — i010_vsm-stripes-on-unshadowed-slopes
+## 2026-11-21 — issue-fixing-20261120 (i010, i020)
 
-VSM shadows no longer draw stripes down a slope facing the sun that nothing shadows (i010). It was the receiver shadowing itself: under VSM three draws every shadow receiver into the map, and its blur stores the depth's mean in half floats, whose rounding (2⁻¹¹ at depths 0.5..1, where a sky light puts the ground under the camera) outgrew the `MEDIUM` preset's bias. Nothing breaks.
+Two issues fixed. VSM shadows no longer draw stripes down a slope facing the sun that nothing shadows (i010). It was the receiver shadowing itself: under VSM three draws every shadow receiver into the map, and its blur stores the depth's mean in half floats, whose rounding (2⁻¹¹ at depths 0.5..1, where a sky light puts the ground under the camera) outgrew the `MEDIUM` preset's bias. And a GLB the asset pipeline quantized (its default meshopt encode) now gives the same geometries as the unquantized file (i020): a mesh made from an imported geometry's id was drawn at the size and place of its quantized positions, a mesh node with children lost its id and its custom props, and two identical meshes lost the second one's id. The positions upload as 32-bit floats now (the download is unchanged). Nothing breaks.
 
-### Engine 6.20.1 (Sunset)
+### Engine 6.21.0 (Sunset)
+
+**Added**
+
+- `ImportedGeometryInfo.isDequantized` (`aekasha`): the geometry's positions were quantized by the asset pipeline and the import made them floats again, so they're only within the encode's precision of the source's. The Assets tab's geometry info window shows it.
 
 **Fixed**
+
+- A quantized GLB's geometry used by its id (a scene's or a `*.mesh.json`'s `geo`, `createMeshEntity({ geo })`, a scatter item) is in its node's space, as an unquantized file's (i020). The import reads the dequantization the asset pipeline records on each node (`aekQuantization` in its extras) and puts it back into the positions, as floats (morph targets and prebuilt LOD levels too, the chain's extent scaled), and out of the node's transform or its GPU instances' matrices; normals and UVs stay quantized. `spawnImportedAsset` draws the same as before. A file another tool quantized imports as before.
+- A mesh node with children keeps its geometry id and custom props when quantized (`door_left`, not `door_left_1` without its collider props): `quantize()` moves its mesh into a new child node, whose name, props and parent path the import now takes from the node. A file whose only root is such a node isn't unwrapped as the import root.
+- Two glTF meshes with the same accessors (identical meshes an encode's `dedup()` joined) each get their own geometry and id, sharing the attributes: three's GLTFLoader gave them one geometry, registered under the first node's id only.
+- A point cloud (`aekScatterPoints`) and an `IMPORTED` scatter's GPU instances from the asset pipeline's default encode are read, not refused; a terrain block still refuses quantized positions (`isDequantized` too: a neighbour's edge wouldn't meet exactly). The scatter refusals' messages name a file another tool quantized.
 
 - Under `VSMShadowMap` a shadow preset's depth bias is at most −0.0005 (one half-float step at depths 0.5..1), for `createLightEntity`'s lights and the sky lights: `MEDIUM` (−0.0002), `HIGH` (−0.0001) and `ULTRA` (−0.00005) take −0.0005 there, `LOW` had it, PCF keeps the presets as they were, and a light's own `shadowBias` isn't limited. On terrainGallery's ramps the stripes went (each a correct 1.000 against the shot without shadows, from 0.946) and the cliff wall's contact shadow stayed the same; `largeWorld` (its sun on `HIGH`) is unchanged within its run-to-run noise. The sky box tab's default bias shows the same value.
 
@@ -19,12 +28,16 @@ VSM shadows no longer draw stripes down a slope facing the sun that nothing shad
 **Changed**
 
 - terrainGallery's `NO_SHADOWS` stays, now as the measurement mode's condition (the handbook's GPU tables are without a shadow pass), not as i010's workaround.
+- `p371MergeKit` takes the default (quantized) mesh encode again: i020's workaround is gone.
+- The quantized GLBs are encoded again with the dequantization recorded: `p371MergeKit`, `testImport` (`box01.glb`, whose box in `sceneTestECS` is now its own 1 m size, not 2 m), `showcaseBunker` and its leaks, and the decal sets of `terrainBlockTest` and `terrainShowcase`.
 
 ### Project
 
 **Changed**
 
 - The docs: i010 closed (`docs/issues/_DONE_i010_vsm-stripes-on-unshadowed-slopes.md`, with its cause and the measurements), the texture sets handbook's troubleshooting line, the sky box's and texture sets' `CLAUDE.md`.
+- The asset pipeline records each quantized mesh's dequantization (i020, `devTools/assetPipeline/gltfQuantization.ts`): around `meshopt()` and `quantize()`, in the extras of every node using the mesh, with where `quantize()` put it (the node, a new child node or the GPU instances). Its format version (`GLTF_QUANTIZATION_FORMAT_VERSION`) is in a quantizing encode's cache key only, so those GLBs encode once more. The run's VRAM figure, which the budgets read, counts those positions as floats. The LOD chain step reads a moved mesh's node's extras.
+- The docs: i020 closed (`docs/issues/_DONE_i020_quantized-glb-geometry-by-id.md`, with the fix and the two cases the scene run found), the asset optimization and terrain scatter handbooks, the Hub's LOD page (an `IMPORTED` scatter's import needn't be lossless), the asset pipeline's and instancing's `CLAUDE.md`.
 
 ## 2026-11-20 — p311_sky-box-ktx2-cube-textures
 

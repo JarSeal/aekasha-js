@@ -62,7 +62,8 @@ export type GLTFLodChainsExtras = {
     /** The base: a mesh index and its primitive index */
     mesh: number;
     primitive: number;
-    /** The base's largest bounding box side, in its own (possibly quantized) units */
+    /** The base's largest bounding box side, in its own units: a quantized base's (the import
+     * scales it with the positions it dequantizes) */
     extent: number;
     baseTriangles: number;
     vertices: LodLevelVertices;
