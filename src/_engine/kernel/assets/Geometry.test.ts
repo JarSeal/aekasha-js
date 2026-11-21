@@ -82,6 +82,38 @@ describe('saveBufferGeometry', () => {
 });
 
 describe('createGeometry', () => {
+  test('returns the registered geometry for a taken id, and warns in the debug env when the props differ (i050)', () => {
+    initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
+    const box = createGeometry({ id: 'geometryTestTaken', type: 'BOX', params: { width: 2 } });
+    fns.lwarn.mockClear();
+
+    const same = {
+      id: 'geometryTestTaken',
+      type: 'BOX',
+      params: { width: 2 },
+      debugData: { name: 'Crate' },
+    };
+    expect(createGeometry(same as never)).toBe(box);
+    expect(fns.lwarn).not.toHaveBeenCalled();
+
+    const other = { id: 'geometryTestTaken', type: 'SPHERE', params: { radius: 2 } };
+    expect(createGeometry(other as never)).toBe(box);
+    expect(fns.lwarn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '"geometryTestTaken" is registered already with other props (type, params.width, params.radius)'
+      )
+    );
+
+    saveBufferGeometry(new THREE.BufferGeometry(), { id: 'geometryTestTakenSaved' });
+    createGeometry({ id: 'geometryTestTakenSaved', type: 'BOX' });
+    expect(fns.lwarn).toHaveBeenLastCalledWith(expect.stringContaining('a save without props'));
+
+    initEnvironment({ search: '', env: { VITE_APP_ENV: 'development' } });
+    fns.lwarn.mockClear();
+    expect(createGeometry(other as never)).toBe(box);
+    expect(fns.lwarn).not.toHaveBeenCalled();
+  });
+
   test('throws for a MERGED geometry, naming registerMergedGeometry', () => {
     const merged = { id: 'geometryTestMerged', type: 'MERGED', params: { parts: [] } };
     expect(() => createGeometry(merged as never)).toThrow(/registerMergedGeometry/);

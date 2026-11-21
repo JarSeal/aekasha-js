@@ -5,6 +5,7 @@ import { getRootScene } from '../scene/Scene';
 import { lwarn } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from '../config/Config';
 import { recordAssetOwner, retagAssetOwner } from './AssetOwners';
+import { warnIfAssetPropsIgnored } from './AssetPropsDiff';
 import type { MergeGeometryOptions } from './GeometryMergeCore';
 
 /** A geometry's name and description for the debug tooling: a registry entry's `debugData`. */
@@ -17,6 +18,8 @@ const geometries: {
     persistent?: boolean;
     preWarm?: boolean;
     debugData?: GeoDebugData;
+    /** The props the geometry was created with (createGeometry; none for saveBufferGeometry's) */
+    props?: GeoProps;
   };
 } = {};
 
@@ -259,7 +262,8 @@ export const prewarmGeometry = (id: string) =>
  * Creates and registers a three geometry from its props: owned by the scene loading (or current),
  * released with it when nothing holds a ref (see {@link incGeometryRef}). An `id` already
  * registered returns that geometry, re-tagged to the scene getting it, and builds nothing (the
- * props are ignored).
+ * props are ignored: the debug env warns when they differ from those it was created with, naming
+ * them, `debugData` aside).
  * @template T the geometry class `props.type` builds, for the caller's type
  * @throws for an unknown `type`, and for `MERGED` (see {@link MergedGeoProps})
  * @example
@@ -277,6 +281,15 @@ export const prewarmGeometry = (id: string) =>
 export const createGeometry = <T extends GeoTypes>(props: GeoProps): T => {
   let geo;
   if (props?.id && geometries[props.id]) {
+    if (IS_DEBUG_ENV) {
+      warnIfAssetPropsIgnored(
+        'createGeometry',
+        'geometry',
+        props.id,
+        geometries[props.id].props,
+        props
+      );
+    }
     retagAssetOwner(geometries[props.id].resource);
     return geometries[props.id].resource as T;
   }
@@ -358,6 +371,7 @@ export const createGeometry = <T extends GeoTypes>(props: GeoProps): T => {
     ...(props?.isPersistent ? { persistent: true } : {}),
     ...(props?.preWarm ? { preWarm: true } : {}),
     ...(props?.debugData ? { debugData: props.debugData } : {}),
+    props,
   };
   recordAssetOwner(geo);
 
@@ -410,8 +424,8 @@ export const deleteGeometry = (id: string | string[]) => {
 };
 
 /**
- * The geometry registry by id: each entry's geometry (`resource`), ref count, persistence and
- * debug data. Read it, never write it (the registry functions keep it consistent).
+ * The geometry registry by id: each entry's geometry (`resource`), ref count, persistence, debug
+ * data and creation props (`createGeometry`'s). Read it, never write it (the registry functions keep it consistent).
  * @example
  * ```ts
  * import { getGeometryRegistry } from 'aekasha';

@@ -5,7 +5,13 @@ import { addSceneHooks } from '../scene/SceneHooks';
 import { setAppData } from '../scene/AppData';
 import { float } from 'three/tsl';
 import { initEnvironment } from '../config/Config';
-import { createMaterial, decMaterialRef, getMaterialVariant, incMaterialRef } from './Material';
+import {
+  createMaterial,
+  decMaterialRef,
+  getMaterialVariant,
+  incMaterialRef,
+  saveMaterial,
+} from './Material';
 import { loadTslMaterialFileAsync, registerTslMaterial, type TslMaterialFns } from './MaterialTsl';
 import { getTexture, saveTexture } from './Texture';
 
@@ -74,6 +80,48 @@ describe('createMaterial', () => {
       params: { normalScale: given },
     }) as THREE.MeshStandardMaterial;
     expect(fromVector.normalScale.toArray()).toEqual([2, 3]);
+  });
+
+  test('returns the registered material for a taken id, and warns in the debug env when the props differ (i050)', () => {
+    initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
+    const albedo = saveTexture(new THREE.Texture(), 'materialTestTakenAlbedo');
+    // As the scene loader creates it: its texture id resolved
+    const ground = createMaterial({
+      id: 'materialTestTaken',
+      type: 'BASIC',
+      params: { map: albedo, color: '#808080' },
+    });
+    fns.lwarn.mockClear();
+
+    const same = createMaterial({
+      id: 'materialTestTaken',
+      type: 'BASIC',
+      params: { map: 'materialTestTakenAlbedo', color: '#808080' },
+      debugData: { name: 'Ground' },
+    });
+    expect(same).toBe(ground);
+    expect(fns.lwarn).not.toHaveBeenCalled();
+
+    const other = createMaterial({
+      id: 'materialTestTaken',
+      type: 'LAMBERT',
+      params: { map: 'materialTestTakenAlbedo', color: '#a0a0a0' },
+    });
+    expect(other).toBe(ground);
+    expect(fns.lwarn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '"materialTestTaken" is registered already with other props (type, params.color)'
+      )
+    );
+
+    saveMaterial(new THREE.MeshBasicMaterial(), 'materialTestTakenSaved');
+    createMaterial({ id: 'materialTestTakenSaved', type: 'BASIC' });
+    expect(fns.lwarn).toHaveBeenLastCalledWith(expect.stringContaining('a save without props'));
+
+    initEnvironment({ search: '', env: { VITE_APP_ENV: 'development' } });
+    fns.lwarn.mockClear();
+    createMaterial({ id: 'materialTestTaken', type: 'LAMBERT' });
+    expect(fns.lwarn).not.toHaveBeenCalled();
   });
 });
 
