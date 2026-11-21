@@ -25,6 +25,8 @@ export type ImportPhysicsSpawn = {
   params: SpawnImportedParams;
   /** The appId prefix of the spawn's entities, or undefined when they get generated appIds. */
   appIdPrefix: string | undefined;
+  /** The import's id, for warnings. */
+  importId: string;
 };
 
 /** What `spawnImportedAsset` hands the instancing extension for one node of GPU instances: what

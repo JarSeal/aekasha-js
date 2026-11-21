@@ -11,6 +11,7 @@ import {
   type ImportInstancesSpawn,
   warnMissingImportExtension,
 } from './ImportExtensions';
+import { groupImportPhysicsNodes } from './ImportPhysicsGroups';
 import { getImportedAsset, retagImportedAsset } from './ImportRegistry';
 import type {
   ImportedAssetManifest,
@@ -178,12 +179,12 @@ export const spawnImportedAsset = async (
     material = params.material;
   }
 
-  // The spawn's `merge` leaves out the physics groups (an `index`, or the nodes without one) whose
-  // body moves: their anchor's mesh moves with it
-  const movingGroups = new Set(
-    nodes
-      .filter((node) => node.props.rigidType && node.props.rigidType !== 'FIXED')
-      .map((node) => node.props.index)
+  // The spawn's `merge` leaves out the nodes of a physics group whose body moves: their anchor's
+  // mesh moves with it
+  const movingNodes = new Set(
+    groupImportPhysicsNodes(nodes)
+      .groups.filter(({ rigid }) => rigid.props.rigidType !== 'FIXED')
+      .flatMap(({ nodes: group }) => group)
   );
 
   const meshEntityIds: number[] = [];
@@ -243,7 +244,7 @@ export const spawnImportedAsset = async (
         merge:
           meshProps?.merge ??
           node.props.merge ??
-          (movingGroups.has(node.props.index) ? undefined : params.merge),
+          (movingNodes.has(node) ? undefined : params.merge),
         appId,
       },
       { ...params.entityOpts, appId }
@@ -266,7 +267,12 @@ export const spawnImportedAsset = async (
   if (physicsNodes.some((node) => node.props.isPhysObj)) {
     const spawnPhysics = getImportPhysicsSpawn();
     if (spawnPhysics) {
-      physicsEntityIds = await spawnPhysics({ nodes: physicsNodes, params, appIdPrefix });
+      physicsEntityIds = await spawnPhysics({
+        nodes: physicsNodes,
+        params,
+        appIdPrefix,
+        importId: manifest.id,
+      });
     } else warnMissingImportExtension('physics', 'spawnImportedAsset (a node with physics)');
   }
   return { meshEntityIds, physicsEntityIds };
