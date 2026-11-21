@@ -1,16 +1,25 @@
 import { beforeAll, describe, expect, test, vi } from 'vitest';
 import * as THREE from 'three/webgpu';
-import { ECSWorld } from '../ecs/ECS';
+import { ECSWorld, getEntityIdByAppId } from '../ecs/ECS';
 import { ComponentType } from '../ecs/ECSCoreComponents';
 import { getAssetOwners, getCellOwnerKey, setAssetOwnerScene } from '../assets/AssetOwners';
 import { getGeometry, getGeometryRegistry, saveBufferGeometry } from '../assets/Geometry';
 import { getMaterial } from '../assets/Material';
 import { saveTexture } from '../assets/Texture';
-import { createRootScene } from './Scene';
-import { createSceneObject3Ds, loadSceneAssetsAsync } from './SceneDataLoader';
+import { createCameraEntity, getActiveCameraId } from '../camera/Camera';
+import { createRootScene, type SceneData } from './Scene';
+import {
+  createCameras,
+  createSceneObject3Ds,
+  loadSceneAssetsAsync,
+  type SceneObject3DLists,
+} from './SceneDataLoader';
 
 // The scene data loader on a part of a scene's data with an owner key (p353 Phase 3: a streaming
 // cell's assets and entities), on the real registries
+
+// The canvas's size (the window's, read by createCameraEntity)
+vi.hoisted(() => vi.stubGlobal('window', { innerWidth: 1600, innerHeight: 900 }));
 
 const lerror = vi.hoisted(() => vi.fn());
 vi.mock(import('../../utils/Logger'), async (importOriginal) => ({
@@ -125,5 +134,76 @@ describe('createSceneObject3Ds', () => {
     );
     expect(world.getComponent(ids[1], ComponentType.OBJECT3D)?.value).toBeInstanceOf(THREE.Mesh);
     for (const id of ids) world.deleteEntity(id);
+  });
+});
+
+// docs/issues/_DONE_i060_entity-persistent-flag-not-applied.md
+describe('persistent JSON entities', () => {
+  const countAppId = (appId: string) =>
+    Array.from(world.getStorage(ComponentType.APP_ID)).filter(([, data]) => data.id === appId)
+      .length;
+
+  test('a later load reuses a persistent light and mesh, and creates the others again', () => {
+    const data: SceneObject3DLists = {
+      lights: [
+        { lightProps: { type: 'POINT', appId: 'keptLamp' }, entityOpts: { persistent: true } },
+      ],
+      meshes: [
+        {
+          props: { appId: 'keptBox', geo: { type: 'BOX' }, mat: { type: 'BASIC' } },
+          entityOpts: { persistent: true },
+        },
+        { props: { appId: 'sceneBox', geo: { type: 'BOX' }, mat: { type: 'BASIC' } } },
+      ],
+    };
+    const [lampId, keptBoxId] = createSceneObject3Ds(data);
+    expect(world.hasComponent(lampId, ComponentType.PERSISTENT)).toBe(true);
+    expect(world.hasComponent(keptBoxId, ComponentType.PERSISTENT)).toBe(true);
+
+    // The scene switch, then the next visit's load
+    world.clearNonPersistent();
+    const ids = createSceneObject3Ds(data);
+    expect(ids).toHaveLength(1);
+    expect(world.getComponent(ids[0], ComponentType.APP_ID)?.id).toBe('sceneBox');
+    expect(getEntityIdByAppId('keptLamp')).toBe(lampId);
+    expect(getEntityIdByAppId('keptBox')).toBe(keptBoxId);
+    expect(countAppId('keptLamp')).toBe(1);
+    expect(countAppId('keptBox')).toBe(1);
+    for (const id of [lampId, keptBoxId, ids[0]]) world.deleteEntity(id);
+  });
+
+  test('a live entity with the id that isn’t persistent is no reason to skip', () => {
+    const plain = world.createEntity({ appId: 'plainLamp' });
+    const ids = createSceneObject3Ds({
+      lights: [
+        { lightProps: { type: 'POINT', appId: 'plainLamp' }, entityOpts: { persistent: true } },
+      ],
+    });
+    expect(ids).toHaveLength(1);
+    for (const id of [plain, ids[0]]) world.deleteEntity(id);
+  });
+
+  test('a later load reuses a persistent camera and makes it active again', () => {
+    const data = {
+      id: 'loaderCameras',
+      cameras: [
+        {
+          camProps: { type: 'PERSPECTIVE', appId: 'keptCam', active: true },
+          entityOpts: { persistent: true },
+        },
+      ],
+    } as SceneData;
+    createCameras(data);
+    const keptCamId = getEntityIdByAppId('keptCam')!;
+    expect(getActiveCameraId()).toBe(keptCamId);
+
+    // Another scene's camera takes over, then the switch back
+    const otherCamId = createCameraEntity({ type: 'PERSPECTIVE', active: true });
+    expect(getActiveCameraId()).toBe(otherCamId);
+    world.clearNonPersistent();
+    createCameras(data);
+    expect(getActiveCameraId()).toBe(keptCamId);
+    expect(countAppId('keptCam')).toBe(1);
+    world.deleteEntity(keptCamId);
   });
 });

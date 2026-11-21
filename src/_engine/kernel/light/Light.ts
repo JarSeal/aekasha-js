@@ -393,7 +393,9 @@ export const createLightEntity = (lightProps: LightProps, opts?: CreateEntityOpt
     s.camera.updateProjectionMatrix();
   }
 
-  const entityId = world.createEntity(entityOpts);
+  // The props' appId is the entity's too (as a mesh's), or a JSON light, whose gathered props
+  // always have one, would get a generated id: unfindable by its app id (i060)
+  const entityId = world.createEntity(appId ? { ...entityOpts, appId } : entityOpts);
   light.userData.entityId = entityId;
   world.addComponent(entityId, ComponentType.OBJECT3D, { value: light, _lastVersion: -1 });
 

@@ -407,6 +407,8 @@ export interface InstancedMeshPool {
    * every instance is addressable through the ECS. Placements can come straight from the toolkit's
    * `scatterOnSurface`. Returns the created entity ids (fewer than `placements.length` if the
    * pool's `maxInstances` is reached).
+   * @remarks A persistent pool's instances aren't persistent unless their own `entityOpts` say so:
+   * the scene switch deletes the others, freeing their slots.
    */
   spawn: (placements: InstancePlacement[], entityOpts?: CoreEntityOpts) => number[];
   /**
@@ -545,7 +547,7 @@ export interface InstancedLodPool {
   meshEntityIds: number[];
   /** Spawns one entity per placement in the pool's world, with `INSTANCED_MESH_SLOT` and `LOD`,
    * starting in level 0's mesh. Returns the created entity ids (fewer than `placements.length`
-   * past `maxInstances`). */
+   * past `maxInstances`). Persistent only with their own `entityOpts.persistent`, as a pool's. */
   spawn: (placements: InstancePlacement[], entityOpts?: CoreEntityOpts) => number[];
   /** Deletes an instance's entity, like `InstancedMeshPool.despawn`. */
   despawn: (entityId: number) => boolean;

@@ -282,8 +282,6 @@ export const createInstanceSetAsync = async (
   // The owning entity first: a scene exit while the backend loads deletes it, which the check
   // after the import sees
   const entityId = world.createEntity(opts.entityOpts);
-  // createEntity leaves it to the creators (as createLineEntity)
-  if (opts.entityOpts?.persistent) world.addComponent(entityId, ComponentType.PERSISTENT, true);
   const isGpu = isWebGPURenderer() && !(IS_DEBUG_ENV && isCpuBackendForced);
   const backend: InstanceSetBackendKind = isGpu ? 'GPU' : 'CPU';
   let createBackend: CreateInstanceSetBackend;

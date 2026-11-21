@@ -129,15 +129,16 @@ export const CoreEntityOptsSchema = z
     disabled: z.boolean().optional().describe('Creates the entity disabled.'),
     /**
      * Keeps the entity on a scene switch (a `PERSISTENT` component).
-     * @remarks Only lines and a directional or spot light's target entity read it today:
-     * `createEntity` itself doesn't, so a camera, light or mesh entity from a JSON isn't kept
-     * (p619 S8).
+     * @remarks A scene's JSON camera, light or mesh is created on its scene's first load and
+     * reused by every later one, found by its app id, which the gather requires: the first
+     * load's props stay, a later scene's (or save entry's) aren't applied. In a streaming
+     * scene it stays in the base. Code that sets it creates the entity once.
      */
     persistent: z
       .boolean()
       .optional()
       .describe(
-        "Keeps the entity on a scene switch. Read only by lines and a light's target entity so far."
+        "Keeps the entity on a scene switch. A scene's JSON entity needs an app id: later loads reuse it with its first props."
       ),
     /** Leaves the entity's object out of the root scene (the caller attaches it). */
     doNotAddToScene: z

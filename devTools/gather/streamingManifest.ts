@@ -7,7 +7,8 @@
  * `'LOD_LEVELS'`; a cell's alike ones one instanced group naming its near entries, p377 D3), and
  * the assets only cell content uses
  * move out of the scene's lists with them, into `__streaming`, listed per layer. What stays in the
- * scene's lists is its base, loaded with the scene.
+ * scene's lists is its base, loaded with the scene: a persistent mesh or light stays there too (a
+ * cell deletes its entities on unload, and the scene load reuses a persistent one, i060).
  */
 import type {
   StreamingFarMesh,
@@ -503,7 +504,11 @@ export const buildStreamingManifest = <S extends SceneJSON>(
   for (const mesh of scene.meshes ?? []) {
     const appId = getMeshAppId(mesh);
     if (appId !== undefined) knownIds.add(appId);
-    if (typeof mesh === 'string' || (appId !== undefined && baseIds.has(appId))) {
+    if (
+      typeof mesh === 'string' ||
+      mesh.entityOpts?.persistent ||
+      (appId !== undefined && baseIds.has(appId))
+    ) {
       baseMeshes.push(mesh);
     } else {
       cellMeshes.push(mesh);
@@ -515,7 +520,10 @@ export const buildStreamingManifest = <S extends SceneJSON>(
   for (const light of scene.lights ?? []) {
     const appId = getLightAppId(light);
     if (appId !== undefined) knownIds.add(appId);
-    const isCellType = typeof light !== 'string' && CELL_LIGHT_TYPES.has(light.lightProps.type);
+    const isCellType =
+      typeof light !== 'string' &&
+      !light.entityOpts?.persistent &&
+      CELL_LIGHT_TYPES.has(light.lightProps.type);
     if (!isCellType || (appId !== undefined && baseIds.has(appId))) baseLights.push(light);
     else cellLights.push(light as Exclude<LightEntry, string>);
   }

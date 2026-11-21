@@ -140,6 +140,19 @@ describe('entity ids and generations', () => {
     const generated = world.createEntity({ disabled: true });
     expect(world.getComponent(generated, ComponentType.APP_ID)?.isFixed).toBe(false);
     expect(world.isDisabled(generated)).toBe(true);
+    expect(world.hasComponent(generated, ComponentType.PERSISTENT)).toBe(false);
+  });
+
+  // docs/issues/_DONE_i060_entity-persistent-flag-not-applied.md
+  test('createEntity adds PERSISTENT for persistent, which clearNonPersistent keeps', () => {
+    const world = createWorld();
+    const kept = world.createEntity({ appId: 'kept', persistent: true });
+    const dropped = world.createEntity({ persistent: false });
+    expect(world.hasComponent(kept, ComponentType.PERSISTENT)).toBe(true);
+
+    world.clearNonPersistent();
+    expect(world.isAlive(kept)).toBe(true);
+    expect(world.isAlive(dropped)).toBe(false);
   });
 });
 

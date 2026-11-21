@@ -94,6 +94,42 @@ describe('createInstancedMeshPool', () => {
     expect(world.getComponent(first, ComponentType.INSTANCED_MESH_SLOT)!.index).toBe(0);
   });
 
+  // docs/issues/_DONE_i060_entity-persistent-flag-not-applied.md
+  test('a persistent pool and its persistent instances outlive a scene switch', () => {
+    const sceneWorld = new ECSWorld({ id: 'persistentPools' });
+    const pool = createInstancedMeshPool({
+      world: sceneWorld,
+      geometry: new THREE.BoxGeometry(),
+      material: new THREE.MeshBasicNodeMaterial(),
+      maxInstances: 3,
+      entityOpts: { persistent: true },
+    });
+    const [kept] = pool.spawn([placeAt(1)], { persistent: true });
+    const [dropped] = pool.spawn([placeAt(2)]);
+
+    sceneWorld.clearNonPersistent();
+    expect(sceneWorld.isAlive(pool.meshEntityId)).toBe(true);
+    expect(sceneWorld.isAlive(kept)).toBe(true);
+    expect(sceneWorld.isAlive(dropped)).toBe(false);
+    // The dropped instance's slot is free again
+    expect(pool.mesh.count).toBe(1);
+
+    const lodPool = createInstancedLodPool({
+      world: sceneWorld,
+      levels: [
+        {
+          geometry: new THREE.BoxGeometry(),
+          material: new THREE.MeshBasicNodeMaterial(),
+          screenSize: 0.5,
+        },
+      ],
+      maxInstances: 1,
+      entityOpts: { persistent: true },
+    });
+    sceneWorld.clearNonPersistent();
+    for (const id of lodPool.meshEntityIds) expect(sceneWorld.isAlive(id)).toBe(true);
+  });
+
   // p616 P2: the sync grows the bounds spawn computed, so three never frustum-culls the whole mesh
   // while a moved instance is on screen
   test('keeps an instance moved through its Transform inside the mesh bounds', () => {

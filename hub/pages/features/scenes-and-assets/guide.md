@@ -290,6 +290,10 @@ version. Debug tools write these entries through the
 2. Creates the next scene's cameras and starts a fresh physics world (see
    [deterministic scene loads](hub:features/physics#deterministic-scene-loads)).
 3. Loads the next scene's assets, then runs its scene file and creates its lights and meshes.
+   A camera, light or mesh whose `entityOpts` say `persistent: true` is created on the scene's
+   first load and reused by every later one (a scene that lists it again included), found by its
+   app id, which the gather requires of it. The first load's props stay: another scene's props,
+   or its save entry, for the same id aren't applied. A streaming scene keeps it in its base.
 4. Releases what the previous scene loaded and the next one doesn't use. An asset both use is
    kept, not loaded again. (`deletePrevScene: true` releases first instead: a lower peak in
    memory, but shared assets load again.)

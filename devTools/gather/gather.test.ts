@@ -413,6 +413,58 @@ describe('p353 Phase 3: a streaming scene’s cell manifest', () => {
     expect(out.materials).toHaveLength(1);
     expect(out.__streaming).toBeUndefined();
   });
+
+  it('keeps a persistent mesh or light in the base', () => {
+    const files = {
+      ...streamingScene({
+        lights: [
+          {
+            lightProps: { type: 'POINT', appId: 'keptLamp', position: { x: 10, y: 1, z: 10 } },
+            entityOpts: { persistent: true },
+          },
+        ],
+      }),
+      ...crate,
+      'app/crate.mesh.json': { ...crate['app/crate.mesh.json'], entityOpts: { persistent: true } },
+    };
+    const out = gather(files).scene('w') as OutputScene & { lights?: unknown[] };
+    expect(out.meshes?.[0]?.props.appId).toBe('crate');
+    expect(out.lights).toHaveLength(1);
+    expect(out.__streaming).toBeUndefined();
+  });
+});
+
+// docs/issues/_DONE_i060_entity-persistent-flag-not-applied.md
+describe('i060: a persistent entity needs an app id', () => {
+  const box = {
+    'app/i060Box.geometry.json': { geoProps: { id: 'i060Box', type: 'BOX' } },
+    'app/i060Mat.material.json': material('i060Mat'),
+  };
+  const lists = { geometries: ['i060Box'], materials: ['i060Mat'] };
+  const persistent = { persistent: true };
+
+  it.each([
+    ['a camera', { cameras: [{ camProps: { type: 'PERSPECTIVE' }, entityOpts: persistent }] }],
+    ['a light', { lights: [{ lightProps: { type: 'POINT' }, entityOpts: persistent }] }],
+    [
+      'a mesh',
+      { ...lists, meshes: [{ props: { geo: 'i060Box', mat: 'i060Mat' }, entityOpts: persistent }] },
+    ],
+  ])('fails on %s without one', (_kind, fields) => {
+    expect(gather({ ...scene('a', fields), ...box }).isGathered).toBe(false);
+  });
+
+  it('passes with one in its props or its entityOpts', () => {
+    const fields = {
+      ...lists,
+      cameras: [{ camProps: { type: 'PERSPECTIVE', appId: 'keptCam' }, entityOpts: persistent }],
+      lights: [{ lightProps: { type: 'POINT' }, entityOpts: { ...persistent, appId: 'keptLamp' } }],
+      meshes: [
+        { props: { geo: 'i060Box', mat: 'i060Mat', appId: 'keptBox' }, entityOpts: persistent },
+      ],
+    };
+    expect(gather({ ...scene('a', fields), ...box }).isGathered).toBe(true);
+  });
 });
 
 describe('merge material palettes (p374 D1, D2)', () => {

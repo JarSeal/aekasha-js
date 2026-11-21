@@ -152,7 +152,6 @@ export const createLineEntity = (props: LineProps = {}, opts?: CreateEntityOpts)
   world.addComponent(entityId, ComponentType.OBJECT3D, { value: obj, _lastVersion: -1 });
   world.addComponent(entityId, ComponentType.LINE, { lineId: line.id });
   retagLineEntity(world, entityId);
-  if (entityOpts?.persistent) world.addComponent(entityId, ComponentType.PERSISTENT, true);
 
   // The ECS transform owns placement from here on, starting where the props put it
   world.setTransform(entityId, {

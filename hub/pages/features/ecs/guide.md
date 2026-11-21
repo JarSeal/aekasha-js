@@ -16,7 +16,9 @@ Most entities come from the managers, which create them with their components:
   (one lookup, each world keeps a map). Keep it unique: when two entities have it, the first one
   created keeps it until it's deleted, and the debug env warns about the second.
 - `persistent`: the entity survives scene switches. Everything else a scene creates is deleted
-  when it exits.
+  when it exits. Code that runs on every visit (a scene file) creates another one each time, so
+  create it once, or look its `appId` up first; a scene JSON's persistent camera, light or mesh
+  is reused for you (see [loading scenes](hub:features/scenes-and-assets#loading-scenes)).
 - `disabled`: created switched off, hidden and with its physics body disabled.
   [`setDisabled`](api:ECSWorld.setDisabled) switches it later.
 

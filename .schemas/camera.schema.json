@@ -315,7 +315,7 @@
       "type": "boolean"
     },
     "__schema27": {
-      "description": "Keeps the entity on a scene switch. Read only by lines and a light's target entity so far.",
+      "description": "Keeps the entity on a scene switch. A scene's JSON entity needs an app id: later loads reuse it with its first props.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema28"
