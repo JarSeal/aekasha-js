@@ -26,7 +26,7 @@ import {
   createFollowObjectCameraRig,
 } from 'aekasha/toolkit/ecs';
 import type { MovingPlatformPoint } from 'aekasha/toolkit/ecs';
-import { createPhysicsEntity } from 'aekasha/physics';
+import { createPhysicsEntity, setSceneWorldBounds } from 'aekasha/physics';
 import { createCharacterVisualAsync } from '../../shared/characterVisual';
 import { createGymStairsAndWallAsync } from './gymStairsAndWall';
 
@@ -602,6 +602,10 @@ export const scene = async () => {
   const updateLoaderFn = getLoaderStatusUpdater();
   const totalCount = 4;
   updateLoaderFn({ loadedCount: 0, totalCount });
+
+  // A body that falls off the 200 m ground (or through it) is deleted 50 m below, instead of
+  // falling and stepping for the rest of the visit (p102). Set before any of the scene's bodies
+  setSceneWorldBounds({ min: { y: -50 } });
 
   // The JSON lights are created after this function runs, so the sun gets its shadow fit on
   // enter. The camera looks down from 20 m above and ~10 m behind the player (a ~64° pitch, a 60°
