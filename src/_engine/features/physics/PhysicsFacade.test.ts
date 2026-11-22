@@ -42,7 +42,11 @@ import { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import { getAllColliderEntries, getAllRigidBodyEntries } from './PhysicsRegistry';
 import { facade, getPhysicsState, getPhysicsWorld, isPhysicsWorldEnabled } from './PhysicsState';
 import { holdPhysicsStepping, isPhysicsSteppingHeld } from './PhysicsStepping';
-import { flushPhysicsEvents, setOutOfBoundsHandler } from './PhysicsMessaging';
+import {
+  flushPhysicsEvents,
+  getOutOfBoundsExitSteps,
+  setOutOfBoundsHandler,
+} from './PhysicsMessaging';
 import type { OutOfBoundsRecord } from './types/PhysicsWorldBoundsTypes';
 import {
   applySceneWorldBounds,
@@ -382,12 +386,19 @@ describe('the facade (MAIN_THREAD)', () => {
       expect(handled).toEqual([
         [{ bodyId: below.id, step: 0, x: 50, y: -10, z: 0, source: 'GLOBAL' }],
       ]);
+      // The probe's read: the step's exit before its flush delivers it
+      expect([...getOutOfBoundsExitSteps()]).toEqual([
+        [below.id, 0],
+        [falling.id, 1],
+      ]);
       flushPhysicsEvents();
       expect(handled[1]).toEqual([expect.objectContaining({ bodyId: falling.id, step: 1 })]);
       facade.engAPI!.step();
       flushPhysicsEvents();
       expect(handled).toHaveLength(2);
       expect(falling.isEnabledSync()).toBe(false);
+      await resetPhysicsWorld();
+      expect(getOutOfBoundsExitSteps().size).toBe(0);
     } finally {
       setOutOfBoundsHandler(null);
     }

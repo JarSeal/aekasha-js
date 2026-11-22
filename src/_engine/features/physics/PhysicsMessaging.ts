@@ -273,7 +273,9 @@ const onWorkerMessage = (data: PhysicsDownProtocol) => {
   } else if (type === PhysicsProtocolType.EVENTS_PUSH) {
     // Unsolicited push, only ever sent when at least one event occurred that step — no
     // requestId, not a response to resolve.
-    // Delivered by flushPhysicsEvents() at the start of the next sub-step, not right away.
+    // Delivered by flushPhysicsEvents() at the start of the next sub-step, not right away. The
+    // world bounds' exits are noted now: the determinism probe reads them before any flush.
+    noteOutOfBoundsExits(data.outOfBounds);
     pendingEventPushes.push(data);
     return;
   } else if (type === PhysicsProtocolType.DEBUG_STATE_PUSH) {
@@ -303,14 +305,14 @@ let pendingEventPushes: EventsPushMessage[] = [];
  */
 export type OutOfBoundsHandler = (records: readonly OutOfBoundsRecord[]) => void;
 
-/** The world bounds' handler (PhysicsEntity.ts', set at physics' install); without one, an exited
- * body stays out of the simulation and nothing else happens. */
+/** The world bounds' handler (PhysicsWorldBounds.ts', set at physics' install); without one, an
+ * exited body stays out of the simulation and nothing else happens. */
 let outOfBoundsHandler: OutOfBoundsHandler | null = null;
 
 /**
  * Sets (or clears, with null) the one handler of the world bounds' exits, which
  * flushPhysicsEvents calls after the collision and contact-force callbacks. The facade knows no
- * entities: physics entities set it (PhysicsEntity.ts).
+ * entities: physics entities set it (PhysicsWorldBounds.ts).
  * @internal
  */
 export const setOutOfBoundsHandler = (handler: OutOfBoundsHandler | null) => {
@@ -318,11 +320,44 @@ export const setOutOfBoundsHandler = (handler: OutOfBoundsHandler | null) => {
 };
 
 /**
- * Drops the event pushes not delivered yet: a new world's, or a deleted one's.
+ * Drops the event pushes not delivered yet, and the world bounds' exits noted and not delivered:
+ * a new world's, or a deleted one's.
  * @internal
  */
 export const clearPendingEventPushes = () => {
   pendingEventPushes = [];
+  mainThreadExits = [];
+  exitStepByBodyId.clear();
+};
+
+/** The current world's exited bodies (p102), each body's exit step by its id: noted when the exit
+ * reaches the main thread, before its delivery. */
+const exitStepByBodyId = new Map<number, number>();
+/** MAIN_THREAD: the exits taken from the backend and not delivered yet. */
+let mainThreadExits: OutOfBoundsRecord[] = [];
+
+const noteOutOfBoundsExits = (records: readonly OutOfBoundsRecord[]) => {
+  for (let i = 0; i < records.length; i++) exitStepByBodyId.set(records[i].bodyId, records[i].step);
+};
+
+/** MAIN_THREAD: takes the backend's exits into mainThreadExits, noting them. */
+const takeMainThreadExits = () => {
+  const records = facade.engAPI?.drainPendingOutOfBoundsRecords();
+  if (!records?.length) return;
+  noteOutOfBoundsExits(records);
+  for (let i = 0; i < records.length; i++) mainThreadExits.push(records[i]);
+};
+
+/**
+ * The step each body of the current world left the world bounds on, by body id: every exit that
+ * has reached the main thread, delivered to the out-of-bounds handler or not (the determinism
+ * probe leaves them out of its hash, since their deletes land at different steps in the two
+ * worker targets).
+ * @internal
+ */
+export const getOutOfBoundsExitSteps = (): ReadonlyMap<number, number> => {
+  if (!isWorkerTarget()) takeMainThreadExits();
+  return exitStepByBodyId;
 };
 
 /**
@@ -340,9 +375,12 @@ export const flushPhysicsEvents = () => {
     const engAPI = facade.engAPI;
     if (!engAPI) return;
     engAPI.dispatchPendingEventRecords();
-    // Drained without a handler too: the records are of this world only
-    const outOfBounds = engAPI.drainPendingOutOfBoundsRecords();
-    if (outOfBounds.length) outOfBoundsHandler?.(outOfBounds);
+    // Taken without a handler too: the records are of this world only
+    takeMainThreadExits();
+    if (!mainThreadExits.length) return;
+    const exits = mainThreadExits;
+    mainThreadExits = [];
+    outOfBoundsHandler?.(exits);
     return;
   }
   if (!pendingEventPushes.length) return;

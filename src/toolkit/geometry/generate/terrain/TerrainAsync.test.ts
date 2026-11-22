@@ -108,6 +108,8 @@ beforeEach(() => {
 });
 
 describe('generateTerrainAsync (p306 Phase 4)', () => {
+  // The first import of the worker modules: about 1 s alone, past the 5 s default under the full
+  // suite's load (and a timed-out run's late request then lands in the next test's)
   it("gives generateTerrain's terrain, generated on the worker", async () => {
     const { generateTerrainAsync, generateTerrain } = await importAsync();
     expectSameTerrain(await generateTerrainAsync(BLOCK), generateTerrain(BLOCK));
@@ -119,7 +121,7 @@ describe('generateTerrainAsync (p306 Phase 4)', () => {
     expect(Object.keys(options)).not.toContain('seed');
     expect(Object.keys(options)).not.toContain('collider');
     expect(bridge.lwarn).not.toHaveBeenCalled();
-  });
+  }, 30_000);
 
   it("sends a noise's texels once, then its key", async () => {
     const { generateTerrainAsync } = await importAsync();

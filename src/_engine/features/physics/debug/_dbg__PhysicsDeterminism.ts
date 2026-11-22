@@ -7,14 +7,20 @@
 // policy (PhysicsTierPolicy.ts) is frozen: it runs on frames and often follows the camera. A STEPS
 // one isn't: it's deterministic, so the probe tests it (p343). The kernel's arm flag
 // (kernel/config/DeterminismProbe.ts) tells other features: streaming() stops moving its cells.
+//
+// The world bounds (p102): a body that left them on a step up to the target is left out of the
+// hash. The backend disables it on that step in both targets, but its entity is deleted when the
+// exit is delivered, a sub-step later on MAIN_THREAD and a frame or more on WORKER_THREAD (and
+// never while frozen), so one run would still hash it and another not.
 
 import { setDeterminismProbeArmed } from '../../../kernel/config/DeterminismProbe';
 import { getECSWorld, getStableAppId } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
 import type { IComponentStorage } from '../../../kernel/ecs/ECSComponentStorage';
+import { getOutOfBoundsExitSteps } from '../PhysicsMessaging';
 import { getPhysicsState } from '../PhysicsState';
 import { getPhysicsSnapshotStepIndex, setPhysicsStepLimit } from '../PhysicsStepping';
-import { getResolvedTransportMode } from '../PhysicsWorld';
+import { flushPhysics, getResolvedTransportMode } from '../PhysicsWorld';
 import type { RigidBodyAPI } from '../types/PhysicsBodyTypes';
 import type { PhysicsTier } from '../PhysicsTierTypes';
 import { DETERMINISM_PROBE_FREEZE_SOURCE, setPhysicsTierPolicyFrozen } from '../PhysicsTierPolicy';
@@ -119,15 +125,22 @@ const readRemovedValues = (entityId: number) => {
 };
 
 /** Dynamic bodies (characters split out), keyed by appId or by creation order. Bodies a physics
- * tier froze into BODY_STATIC or took out of the world (REMOVED) count too. */
-const collectBodies = () => {
+ * tier froze into BODY_STATIC or took out of the world (REMOVED) count too; bodies that left the
+ * world bounds by `targetStep` don't (`exited` counts them). */
+const collectBodies = (targetStep: number) => {
   const world = getECSWorld();
+  const exitSteps = getOutOfBoundsExitSteps();
+  let exited = 0;
   const characterEntityIds = new Set(getCharacters(world).map((c) => c.entityId));
   const keyed: ProbeBody[] = [];
   const keyless: { body: ProbeBody; rbId: number }[] = [];
   const characters: ProbeBody[] = [];
 
   const add = (entityId: number, rbId: number, values: number[]) => {
+    if ((exitSteps.get(rbId) ?? Infinity) <= targetStep) {
+      exited++;
+      return;
+    }
     const appId = getStableAppId(entityId, world);
     const name = world.getComponent(entityId, ComponentType.OBJECT3D)?.value.name ?? '';
     const body = { key: appId ?? '', name, entityId, values };
@@ -163,7 +176,7 @@ const collectBodies = () => {
     ...keyed,
     ...keyless.map(({ body }, i) => ({ ...body, key: `#${i}` })),
   ];
-  return { bodies, characters };
+  return { bodies, characters, exited };
 };
 
 const formatVec = (values: number[], from: number, count: number) =>
@@ -242,7 +255,7 @@ const pruneStoredRuns = (runs: Record<string, StoredRun>) => {
 };
 
 const report = (run: ActiveRun) => {
-  const { bodies, characters } = collectBodies();
+  const { bodies, characters, exited } = collectBodies(run.targetStep);
   const hash = hashBodies(bodies);
   const state = getPhysicsState();
   const transport =
@@ -251,7 +264,7 @@ const report = (run: ActiveRun) => {
 
   llog(`[PhysicsProbe] ${run.sceneId} | ${config} | ${run.steps} | ${hash}`);
   llog(
-    `[PhysicsProbe] steps ${run.startStep} → ${run.targetStep} of the current world, ${bodies.length} bodies hashed`
+    `[PhysicsProbe] steps ${run.startStep} → ${run.targetStep} of the current world, ${bodies.length} bodies hashed${exited ? `, ${exited} out of the world bounds left out` : ''}`
   );
   // eslint-disable-next-line no-console -- the probe's report: the bodies as a table, which the logger can't print
   console.table(toTableRows(bodies));
@@ -324,7 +337,13 @@ const startRun = (steps: number) => {
       return;
     }
     // Stays frozen at the target step (for inspection) until the scene exits or it's disarmed.
-    report(run);
+    // The exits of the steps up to it are behind the snapshot on WORKER_THREAD (the shared buffer
+    // is visible before their push is handled): the flush's reply comes after that push
+    flushPhysics()
+      .then(() => {
+        if (activeRun === run) report(run);
+      })
+      .catch((err) => lwarn('[PhysicsProbe] Could not flush physics before the report', err));
   };
   run.rafId = requestAnimationFrame(poll);
 };

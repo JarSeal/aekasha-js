@@ -104,6 +104,7 @@ import {
   beginSubStepCapture,
   endSubStepCapture,
   flushPhysicsEvents,
+  getOutOfBoundsExitSteps,
   messageWorker,
   setOutOfBoundsHandler,
 } from './PhysicsMessaging';
@@ -376,7 +377,9 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
       max: { x: 1e6, y: 1e6, z: 1e6 },
     });
 
-    // The push waits for the next sub-step's flush, which hands the exits to the handler
+    // Noted on arrival (the probe's read); the push waits for the next sub-step's flush, which hands
+    // the exits to the handler
+    expect(getOutOfBoundsExitSteps().get(falling.id)).toBe(1);
     const handled: OutOfBoundsRecord[] = [];
     setOutOfBoundsHandler((records) => handled.push(...records));
     try {
