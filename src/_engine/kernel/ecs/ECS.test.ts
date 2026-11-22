@@ -3,6 +3,7 @@ import { ECSWorld, type ECSWorldOptions } from './ECS';
 import { ComponentType, Transform } from './ECSCoreComponents';
 import { getEntityDiagnosticData } from './ECSHelpers';
 import { ECSSystemStage } from '../loop/SystemStages';
+import { initEnvironment } from '../config/Config';
 
 const INDEX_BITS = 20;
 
@@ -139,6 +140,109 @@ describe('entity ids and generations', () => {
     const generated = world.createEntity({ disabled: true });
     expect(world.getComponent(generated, ComponentType.APP_ID)?.isFixed).toBe(false);
     expect(world.isDisabled(generated)).toBe(true);
+    expect(world.hasComponent(generated, ComponentType.PERSISTENT)).toBe(false);
+  });
+
+  // docs/issues/_DONE_i060_entity-persistent-flag-not-applied.md
+  test('createEntity adds PERSISTENT for persistent, which clearNonPersistent keeps', () => {
+    const world = createWorld();
+    const kept = world.createEntity({ appId: 'kept', persistent: true });
+    const dropped = world.createEntity({ persistent: false });
+    expect(world.hasComponent(kept, ComponentType.PERSISTENT)).toBe(true);
+
+    world.clearNonPersistent();
+    expect(world.isAlive(kept)).toBe(true);
+    expect(world.isAlive(dropped)).toBe(false);
+  });
+});
+
+// docs/issues/_DONE_i040_ecs-components-on-deleted-entities.md
+describe('writes to a deleted entity', () => {
+  afterEach(() => initEnvironment({ search: '', env: {} }));
+
+  test('addComponent ignores a deleted id: nothing is stored and no onAddComponent hook runs', () => {
+    const world = createWorld();
+    const calls = recordHooks(world, ComponentType.LIFETIME);
+    const entityId = world.createRawEntity();
+    world.deleteEntity(entityId);
+
+    world.addComponent(entityId, ComponentType.LIFETIME, 5 as never);
+    world.addComponent(entityId, ComponentType.USER_DATA, {});
+    expect(world.isAlive(entityId)).toBe(false);
+    expect(world.hasComponent(entityId, ComponentType.LIFETIME)).toBe(false);
+    expect(world.hasComponent(entityId, ComponentType.USER_DATA)).toBe(false);
+    expect(calls).toEqual([]);
+  });
+
+  test('addComponent ignores an id the world never created', () => {
+    const world = createWorld();
+    world.addComponent(42, ComponentType.USER_DATA, {});
+    expect(world.hasComponent(42, ComponentType.USER_DATA)).toBe(false);
+  });
+
+  test('an onDeleteEntity hook can still add to the entity being deleted (then cleared)', () => {
+    const world = createWorld();
+    ECSWorld.registerComponentHooks(ComponentType.LINE, {
+      onDeleteEntity: (entityId, w) => {
+        if (w !== world) return;
+        w.addComponent(entityId, ComponentType.PERSISTENT, true);
+        expect(w.hasComponent(entityId, ComponentType.PERSISTENT)).toBe(true);
+      },
+    });
+    const entityId = world.createRawEntity();
+    world.addComponent(entityId, ComponentType.LINE, 'line' as never);
+
+    world.deleteEntity(entityId);
+    expect(world.hasComponent(entityId, ComponentType.PERSISTENT)).toBe(false);
+  });
+
+  test.each(['MAP', 'TYPED_ARRAY'] as const)(
+    "%s: a stale id's TRANSFORM writes leave the slot's new entity alone",
+    (storageMode) => {
+      const world = createWorld({ storageMode });
+      const stale = world.createEntity();
+      world.deleteEntity(stale);
+      const current = world.createEntity();
+      expect(world.getEntityIndex(current)).toBe(world.getEntityIndex(stale));
+      const transform = world.getComponent(current, ComponentType.TRANSFORM)!;
+      transform.position.set(1, 2, 3);
+      world.commitTransform(current, transform);
+
+      const staleTransform = new Transform();
+      staleTransform.position.set(9, 9, 9);
+      world.addComponent(stale, ComponentType.TRANSFORM, staleTransform);
+      world.commitTransform(stale, staleTransform);
+
+      const read = world.getComponent(current, ComponentType.TRANSFORM);
+      expect(read?.position.toArray()).toEqual([1, 2, 3]);
+      expect(world.hasComponent(stale, ComponentType.TRANSFORM)).toBe(false);
+      const storage = world.getStorage(ComponentType.TRANSFORM);
+      expect(storage.size).toBe(1);
+      world.deleteEntity(current);
+      expect(storage.size).toBe(0);
+    }
+  );
+
+  test('the debug env warns naming the world, the entity and the type; production is silent', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const world = createWorld();
+    const entityId = world.createRawEntity();
+    world.deleteEntity(entityId);
+
+    world.addComponent(entityId, ComponentType.USER_DATA, {});
+    world.commitTransform(entityId, new Transform());
+    expect(warn).not.toHaveBeenCalled();
+
+    initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
+    world.addComponent(entityId, ComponentType.USER_DATA, {});
+    world.commitTransform(entityId, new Transform());
+    expect(warn).toHaveBeenCalledTimes(2);
+    for (const [message] of warn.mock.calls) {
+      expect(message).toContain(`'${world.id}'`);
+      expect(message).toContain(`entity ${entityId}`);
+    }
+    expect(warn.mock.calls[0][0]).toContain(ComponentType.USER_DATA);
+    expect(warn.mock.calls[1][0]).toContain(ComponentType.TRANSFORM);
   });
 });
 

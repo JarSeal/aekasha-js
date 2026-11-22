@@ -129,7 +129,8 @@ export type CreateCharacterOpts = CharacterBodyKindField & {
   /** The intent the controller reads (default: a new one). */
   intent?: CharacterIntent;
   /** The brain that writes the intent (see {@link setCharacterBrain}), made by the controller's
-   * creator (it may suggest controller configuration first). Disposed with the character. */
+   * creator (it may suggest controller configuration first). Disposed with the character; when
+   * the creation rejects, it's still the caller's to dispose. */
   brain?: ActorBrain<CharacterIntent>;
 };
 
@@ -138,7 +139,8 @@ export type CreateCharacterOpts = CharacterBodyKindField & {
  * and `TAG_IS_CHARACTER` to the visual's entity. Deleting that entity any way deletes the
  * character and disposes of its brain and controller. An existing character with the same id is
  * replaced. Controllers build on this (eg. createDynamicCharacter): a character created here alone
- * has no controller, so nothing moves it.
+ * has no controller, so nothing moves it. It rejects when the visual's entity is deleted while
+ * its body is created (a scene exit), with no character made.
  * @param opts see {@link CreateCharacterOpts}
  * @returns the character ({@link CharacterObject})
  */
@@ -167,6 +169,13 @@ export const createCharacter = async (opts: CreateCharacterOpts) => {
     // FULL over a streaming cell's creation scope: characters have no tiers (p420 owns theirs)
     { world: ecsWorld, initialTier: 'FULL' }
   );
+  // The create's await: the visual's entity may have been deleted meanwhile (a scene exit during
+  // a WORKER_THREAD create), and then it got no body. A character on it would never be cleaned up
+  if (!ecsWorld.isAlive(entityId)) {
+    throw new Error(
+      `createCharacter: the entity of visual '${visualAppId}' was deleted while its body was created.`
+    );
+  }
 
   const char: CharacterObject = {
     id,

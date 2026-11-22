@@ -466,7 +466,7 @@ The build replaces `src`, `srcset`, `width` and `height` with the scene's WebP i
 
 ### Adding an example
 
-1. Make the scene in `src/app/examples/<name>/`: `<id>.scene.json` with `name: "Example: …"` and a `description`, the scene file and its own camera, lights and assets. Give the assets ids of their own: `createGeometry` returns an id that's already registered with its old params.
+1. Make the scene in `src/app/examples/<name>/`: `<id>.scene.json` with `name: "Example: …"` and a `description`, the scene file and its own camera, lights and assets. Give the assets ids of their own: `createGeometry` and `createMaterial` return an id that's already registered with its old params (the debug env warns when they differ).
 2. Mark the code the page shows with `// #region <name> (shown in the Hub: hub/pages/examples/<slug>/)`. Keep debug code out of the regions: a region can't leave lines out.
 3. Add the page, `hub/pages/examples/<slug>/index.html`, with `aek:image` set to `scene:<id>`, a `::: scene <id>` panel and the code included with `<<<`.
 4. Open the scene in debug and save its Hub image.

@@ -2565,6 +2565,12 @@
     "src/_engine/kernel/assets/import/GLTFPrimitiveKey.ts": {
       "getGLTFPrimitiveKey": "Function"
     },
+    "src/_engine/kernel/assets/import/GLTFQuantization.ts": {
+      "GLTF_QUANTIZATION_EXTRAS_KEY": "Variable",
+      "GLTF_QUANTIZATION_FORMAT_VERSION": "Variable",
+      "GLTFDequantizationTarget": "TypeAlias",
+      "GLTFQuantizationExtras": "TypeAlias"
+    },
     "src/_engine/kernel/assets/import/GLTFSource.ts": {
       "loadGLTF": "Function",
       "toAbsoluteUrl": "Function",
@@ -3149,6 +3155,7 @@
       "getLightByAppId": "Function",
       "getLightTargetId": "Function",
       "getSavedLightDebugProps": "Function",
+      "getShadowPresetBias": "Function",
       "installLights": "Function",
       "isAnyLightHelperVisible": "Function",
       "LightProps": "TypeAlias",
@@ -3158,7 +3165,8 @@
       "setLightObjectCullingEnabled": "Function",
       "SHADOW_PRESETS": "Variable",
       "ShadowPreset": "TypeAlias",
-      "toggleAllLightHelpers": "Function"
+      "toggleAllLightHelpers": "Function",
+      "VSM_PRESET_BIAS": "Variable"
     },
     "src/_engine/kernel/light/LightHelpers.ts": {
       "getLightCharacteristics": "Function"

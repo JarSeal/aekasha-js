@@ -101,6 +101,23 @@ describe("spawnImportedAsset's merge", () => {
     ]);
   });
 
+  test('a body without an index leaves out only its own nodes (i030)', async () => {
+    const manifest = createManifest({
+      ground: { isPhysObj: true, keepMesh: true, rigidType: 'FIXED', colliderType: 'BOX' },
+      barrel: { isPhysObj: true, keepMesh: true, rigidType: 'DYNAMIC', colliderType: 'BOX' },
+      // Two bodies without an index: the nodes without one join neither
+      fence: {},
+    });
+    const { meshEntityIds } = await spawnImportedAsset(manifest, {
+      material: 'spawnTestMat',
+      merge: 'AUTO',
+    });
+    expect(getMerges(meshEntityIds)).toEqual([
+      [0, 'AUTO'],
+      [2, 'AUTO'],
+    ]);
+  });
+
   test('no merge, no handler call', async () => {
     await spawnImportedAsset(createManifest({ wall: {} }), { material: 'spawnTestMat' });
     expect(fns.merge).not.toHaveBeenCalled();

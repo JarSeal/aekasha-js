@@ -174,6 +174,11 @@ src/app/
   in its scene JSON, its scene file or one of its assets goes in that scene's folder. When a
   second scene starts using it, move it to its type's folder; `cameras/`, `lights/`,
   `materials/`, `meshes/`, `geometries/` and `importedAssets/` appear with the first shared one.
+- **An asset id is one asset, across every scene.** [`createMaterial`](api:createMaterial) and
+  [`createGeometry`](api:createGeometry) with an id that's registered return that asset and
+  build nothing, so two scenes giving one id other props both get the first one's while it's
+  held (the previous scene's assets are released after the next one loads). The debug env warns,
+  naming the props that differ. Give each its own id.
 - **Name a scene's folder and files after its id.** The id is what everything else keys on: the
   `__saveData` entries, `?startScene=`, the debugger's saved state.
 - **Moving a file changes no id**, so the scenes that name it don't change. What does is in the
@@ -285,6 +290,10 @@ version. Debug tools write these entries through the
 2. Creates the next scene's cameras and starts a fresh physics world (see
    [deterministic scene loads](hub:features/physics#deterministic-scene-loads)).
 3. Loads the next scene's assets, then runs its scene file and creates its lights and meshes.
+   A camera, light or mesh whose `entityOpts` say `persistent: true` is created on the scene's
+   first load and reused by every later one (a scene that lists it again included), found by its
+   app id, which the gather requires of it. The first load's props stay: another scene's props,
+   or its save entry, for the same id aren't applied. A streaming scene keeps it in its base.
 4. Releases what the previous scene loaded and the next one doesn't use. An asset both use is
    kept, not loaded again. (`deletePrevScene: true` releases first instead: a lower peak in
    memory, but shared assets load again.)

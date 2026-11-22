@@ -47,9 +47,10 @@ export const GALLERY_MATERIAL_ID = 'terrain';
 export const BASELINE_MATERIAL_ID = 'textureSetSurface';
 
 /**
- * No mesh casts or receives shadows: the engine's VSM shadows draw stripes down a sloped receiver
- * that nothing shadows (docs/issues/i010_vsm-stripes-on-unshadowed-slopes.md), which would read as the
- * sets' relief. Back to cast and receive once that's fixed.
+ * No mesh casts or receives shadows: the measurement mode's figures (the handbook's GPU tables) are
+ * the surfaces' alone, without a shadow pass. Since the fix of
+ * docs/issues/_DONE_i010_vsm-stripes-on-unshadowed-slopes.md the engine's VSM shadows draw these
+ * blocks without stripes, so this is the gallery's choice, not a workaround.
  */
 export const NO_SHADOWS = { castShadow: false, receiveShadow: false } as const;
 

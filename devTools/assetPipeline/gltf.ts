@@ -20,6 +20,7 @@ import { readImageFile, resizeImage } from './images';
 import type { KtxProvider } from './ktxEncode';
 import { mergeGLTFNodes } from './gltfMerge';
 import type { GLTFMergeStats, ResolvedMergeOptions } from './gltfMergeOptions';
+import { listDequantizedPositions, quantizeRecordedAsync } from './gltfQuantization';
 import { buildLodChains, type BuiltLodChain } from './lodChains';
 import { getLogicalPath, writeOutput, type PipelineOutput } from './outputs';
 import type { ResolvedAssetSettings, ResolvedMeshSettings } from './settings';
@@ -65,10 +66,12 @@ class WarningLogger extends Logger {
 }
 
 /**
- * Vertex and index bytes as uploaded (quantized attributes stay quantized in VRAM). An accessor
- * that several primitives share (LOD levels over their base's vertices) is uploaded once.
+ * Vertex and index bytes as uploaded: quantized attributes stay quantized in VRAM, but for the
+ * positions whose dequantization the pipeline recorded, which the import makes floats (i020). An
+ * accessor that several primitives share (LOD levels over their base's vertices) is uploaded once.
  */
 export const getGeometryBytes = (doc: Document) => {
+  const dequantized = listDequantizedPositions(doc);
   const accessors = new Set<Accessor>();
   for (const mesh of doc.getRoot().listMeshes()) {
     for (const prim of mesh.listPrimitives()) {
@@ -78,7 +81,11 @@ export const getGeometryBytes = (doc: Document) => {
     }
   }
   let bytes = 0;
-  for (const accessor of accessors) bytes += accessor.getByteLength();
+  for (const accessor of accessors) {
+    bytes += dequantized.has(accessor)
+      ? accessor.getCount() * accessor.getElementSize() * Float32Array.BYTES_PER_ELEMENT
+      : accessor.getByteLength();
+  }
   return bytes;
 };
 
@@ -90,11 +97,13 @@ const COMPRESSION_EXTENSIONS: [string, ResolvedMeshSettings['codec']][] = [
 /**
  * Compresses the geometry (DD6):
  * - meshopt, quantized: gltf-transform's `meshopt()` (reorder, quantize, filters). Texcoords are
- *   quantized only inside [0, 1], as normalized integers (no KHR_texture_transform).
+ *   quantized only inside [0, 1], as normalized integers (no KHR_texture_transform). Each
+ *   mesh's dequantization is recorded in its nodes' extras (`gltfQuantization.ts`, i020).
  * - meshopt, `quantize: false`: lossless, EXT_meshopt_compression alone (no reorder, no
  *   quantization, no filters: `QUANTIZE` means "no filters").
  * - draco: always quantized.
- * - none: `quantize()` alone (KHR_mesh_quantization), or the geometry as it is.
+ * - none: `quantize()` alone (KHR_mesh_quantization, recorded the same way), or the geometry as
+ *   it is.
  * `simplify` (a triangle ratio) welds and simplifies first.
  */
 const compressGeometry = async (
@@ -118,7 +127,7 @@ const compressGeometry = async (
   }
   if (mesh.codec === 'meshopt') {
     if (mesh.quantize) {
-      await doc.transform(meshopt({ encoder: MeshoptEncoder }));
+      await quantizeRecordedAsync(doc, meshopt({ encoder: MeshoptEncoder }), warn);
     } else {
       doc
         .createExtension(EXTMeshoptCompression)
@@ -131,7 +140,7 @@ const compressGeometry = async (
     }
     await doc.transform(draco());
   } else if (mesh.quantize) {
-    await doc.transform(quantize());
+    await quantizeRecordedAsync(doc, quantize(), warn);
   }
 };
 

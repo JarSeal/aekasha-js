@@ -290,7 +290,7 @@ describe('AUTO', () => {
   });
 
   test('a persistent mesh goes into a persistent group of its own', async () => {
-    // createEntity doesn't read `persistent` (p619 S8): the component, before the build
+    // The component, before the build (as `persistent` adds it at creation)
     const persistent = createBox(0, 0);
     world.addComponent(persistent, ComponentType.PERSISTENT, true);
     const plain = createBox(0, 0);

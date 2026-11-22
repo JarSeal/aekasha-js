@@ -5,13 +5,15 @@ import type { RigidBodyParams } from '../types/PhysicsBodyTypes';
 import type { ColliderParams } from '../types/PhysicsColliderTypes';
 import { createPhysicsEntity } from '../PhysicsEntity';
 import type { ImportPhysicsSpawn } from '../../../kernel/assets/import/ImportExtensions';
-import type { ImportSpawnNode } from '../../../kernel/assets/import/ImportTypes';
+import { groupImportPhysicsNodes } from '../../../kernel/assets/import/ImportPhysicsGroups';
+import { lwarn } from '../../../utils/Logger';
 import { deriveColliderFromGeometry } from './MeshColliderGeometry';
 
 /**
  * Physics of the spawned nodes (the `physics()` feature's import extension, PhysicsFeature.ts):
- * one rigid body per custom prop `index` group (nodes without an index form one group together),
- * carried by the group's node with a `rigidType`, plus one collider per physics node of the group.
+ * one rigid body per group of `groupImportPhysicsNodes` (an `index`, or a node with a `rigidType`
+ * and no `index`), carried by the group's node with a `rigidType`, plus one collider per physics
+ * node of the group. A node the groups leave without physics is warned about, naming the import.
  *
  * The rigid body attaches to an existing mesh entity (the anchor): the rigid body node itself when
  * it's visible, otherwise the group's first visible node. Every other collider is offset by its
@@ -20,30 +22,25 @@ import { deriveColliderFromGeometry } from './MeshColliderGeometry';
  * @internal
  * @returns the entity ids carrying the rigid bodies
  */
-export const spawnImportedPhysics = async ({ nodes, params, appIdPrefix }: ImportPhysicsSpawn) => {
-  const groups: ImportSpawnNode[][] = [];
-  const withoutIndex = nodes.filter((n) => typeof n.props.index !== 'number');
-  if (withoutIndex.length) groups.push(withoutIndex);
-  const indexes = [
-    ...new Set(nodes.map((n) => n.props.index).filter((i) => typeof i === 'number')),
-  ];
-  for (const index of indexes) groups.push(nodes.filter((n) => n.props.index === index));
+export const spawnImportedPhysics = async ({
+  nodes,
+  params,
+  appIdPrefix,
+  importId,
+}: ImportPhysicsSpawn) => {
+  const { groups, warnings } = groupImportPhysicsNodes(nodes);
+  for (const warning of warnings) lwarn(`spawnImportedAsset: import "${importId}": ${warning}`);
 
   const physicsEntityIds: number[] = [];
-  for (const group of groups) {
-    const rigid = group.find((n) => n.props.rigidType);
-    if (!rigid?.props.isPhysObj || !rigid.props.colliderParams) continue;
-    const members = [
-      rigid,
-      ...group.filter(
-        (n) => n !== rigid && !n.props.rigidType && n.props.isPhysObj && n.props.colliderParams
-      ),
-    ];
+  for (const { rigid, nodes: group } of groups) {
+    if (!rigid.props.isPhysObj || !rigid.props.colliderParams) continue;
+    const others = group.filter((n) => n !== rigid);
+    const members = [rigid, ...others.filter((n) => n.props.isPhysObj && n.props.colliderParams)];
     // Same anchor search order as before: rigid node, then colliders, then non-collider nodes
     const searchOrder = [
       rigid,
-      ...group.filter((n) => n !== rigid && !n.props.rigidType && n.props.colliderParams),
-      ...group.filter((n) => n !== rigid && !n.props.rigidType && !n.props.colliderParams),
+      ...others.filter((n) => n.props.colliderParams),
+      ...others.filter((n) => !n.props.colliderParams),
     ];
     const anchor = searchOrder.find((n) => n.entityId !== undefined) || rigid;
     const anchorInverse = new THREE.Matrix4()

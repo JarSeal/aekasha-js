@@ -201,7 +201,7 @@ Procedural, on the block's layers (`"1": 1` is layer 1, the material's R; the ma
 }
 ```
 
-**From Blender** (the GLB's import lossless, its scatter object's node by name):
+**From Blender** (its scatter object's node by name; the import lossless here, for instances exact to the source, though the default encode works too):
 
 ```json
 {
@@ -306,7 +306,7 @@ The instance's colour (the scatter's `tint`) multiplies in. `leafLitter`: `albed
 
 - [ ] `registerTerrainScatter()` called once from an install; `instancing()` (and `physics()` for colliders) in `features`.
 - [ ] Code-made items (`saveRockGeometries`, `saveLeafCardGeometry`) registered before `spawnTerrainBlock`.
-- [ ] An import a scatter draws is lossless (`"quantize": false`): a quantized one's scale is in its nodes, which a cell doesn't draw. The spawn throws naming the fix.
+- [ ] An import a scatter draws is the asset pipeline's output (quantized or lossless: the import makes the pipeline's quantized positions floats again) or lossless; a file another tool quantized keeps its scale in its nodes, which a cell doesn't draw, and the spawn throws naming `"quantize": false`.
 - [ ] `cullScreenSize` set from the distance each kind should hide at (Performance), not left at a value that never hides.
 - [ ] Shadows on the large pieces only.
 - [ ] In Blender: the rocks' rotation and scale applied, their origin at the base's centre, instances never realized.

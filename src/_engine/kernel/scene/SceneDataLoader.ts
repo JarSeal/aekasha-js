@@ -2,7 +2,9 @@ import type * as THREE from 'three/webgpu';
 import { lerror, lwarn } from '../../utils/Logger';
 import type { SceneData } from './Scene';
 import type { ScenePrimitiveAssets } from './SceneLoader';
-import { getEntityIdByAppId } from '../ecs/ECS';
+import { getECSWorld, getEntityIdByAppId } from '../ecs/ECS';
+import { ComponentType } from '../ecs/ECSCoreComponents';
+import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
 import { getTexture, loadTextureAsync } from '../assets/Texture';
 import { createMaterial, getMaterial } from '../assets/Material';
 import { loadTslMaterialFileAsync } from '../assets/MaterialTsl';
@@ -17,9 +19,26 @@ import { retagAssetOwner, runInAssetOwnerScope } from '../assets/AssetOwners';
 // What a scene load builds from the scene's data (`SceneData`): its cameras, its assets and its
 // JSON lights and meshes. The load itself, its order and its hooks are SceneLoader.ts'.
 
-/** Creates a scene's cameras from its data. A scene needs at least one it creates; without an
- * active one, the first camera it names by id (a persistent one) becomes active. Throws without a
- * created camera (the load fails).
+/** A persistent camera's, light's or mesh's entity from an earlier load, which this one reuses
+ * instead of creating another (i060): the live entity with its app id, if it's `PERSISTENT`. The
+ * gather fails on a persistent entity without an app id. */
+const findLivePersistentEntity = (
+  appId: string | undefined,
+  entityOpts: CoreEntityOpts | undefined
+): number | undefined => {
+  const id = appId || entityOpts?.appId;
+  if (!entityOpts?.persistent || !id) return undefined;
+  const world = getECSWorld();
+  const entityId = world.getEntityIdByAppId(id);
+  return entityId !== undefined && world.hasComponent(entityId, ComponentType.PERSISTENT)
+    ? entityId
+    : undefined;
+};
+
+/** Creates a scene's cameras from its data. A scene needs at least one it creates (or reuses: a
+ * persistent camera an earlier load created, made active again when its props say `active`);
+ * without an active one, the first camera it names by id (a persistent one) becomes active. Throws
+ * without a created camera (the load fails).
  * @internal
  */
 export const createCameras = (sceneData: SceneData) => {
@@ -36,7 +55,12 @@ export const createCameras = (sceneData: SceneData) => {
       if (i === 0) firstCamId = getEntityIdByAppId(props);
       continue;
     }
-    createCameraEntity(props.camProps, props.entityOpts);
+    const keptId = findLivePersistentEntity(props.camProps.appId, props.entityOpts);
+    if (keptId === undefined) {
+      createCameraEntity(props.camProps, props.entityOpts);
+    } else if (props.camProps.active) {
+      setActiveCamera(keptId);
+    }
     oneCameraCreated = true;
     if (props.camProps.active) activeCamFound = true;
   }
@@ -263,7 +287,9 @@ export const createNextSceneObject3Ds = (sceneData: SceneData) => {
 /**
  * Creates the lights and meshes of a scene's data (a scene's, or a streaming cell's), lights
  * first, in the default world. A mesh whose geometry or material id isn't registered is skipped
- * with an error.
+ * with an error. A persistent light or mesh an earlier load created is reused as it is, not
+ * created again (and not in the returned ids; the gather keeps persistent ones out of a streaming
+ * cell).
  * @internal
  * @returns the created entities' ids, in creation order
  */
@@ -274,6 +300,7 @@ export const createSceneObject3Ds = (sceneData: SceneObject3DLists): number[] =>
   for (let i = 0; i < lightProps.length; i++) {
     const props = lightProps[i];
     if (typeof props === 'string') continue;
+    if (findLivePersistentEntity(props.lightProps.appId, props.entityOpts) !== undefined) continue;
     entityIds.push(createLightEntity(props.lightProps, props.entityOpts));
   }
 
@@ -282,6 +309,7 @@ export const createSceneObject3Ds = (sceneData: SceneObject3DLists): number[] =>
   for (let i = 0; i < meshProps.length; i++) {
     const props = meshProps[i];
     if (typeof props === 'string') continue;
+    if (findLivePersistentEntity(props.props.appId, props.entityOpts) !== undefined) continue;
     // Resolve into locals, never write back: the generated scene data is cached, and a revisit
     // would otherwise reuse the previous visit's released (disposed) geometry/material objects
     let geo = props.props.geo;

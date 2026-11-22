@@ -4,6 +4,11 @@ import { isOnlyObject3D } from '../../render/Object3DHelpers';
 import type { ExtractedLodChain, GLTFLodChains } from '../../../features/lod/LodChainGLTF';
 import { parseCustomProps } from './CustomProps';
 import { getGLTFPrimitiveKey } from './GLTFPrimitiveKey';
+import {
+  GLTF_QUANTIZATION_EXTRAS_KEY,
+  GLTF_QUANTIZATION_FORMAT_VERSION,
+  type GLTFQuantizationExtras,
+} from './GLTFQuantization';
 import type {
   ImportedGeometryInfo,
   ImportedInstances,
@@ -47,11 +52,24 @@ export type ExtractResult =
   | { primitives: ExtractedPrimitive[]; pointClouds: ImportedPointCloudInfo[]; error?: undefined }
   | { primitives?: undefined; pointClouds?: undefined; error: string };
 
+/** The asset pipeline's record of a quantized mesh's dequantization on a node (i020), when it's
+ * of the format this build reads */
+const readQuantization = (node: THREE.Object3D) => {
+  const record = node.userData[GLTF_QUANTIZATION_EXTRAS_KEY] as GLTFQuantizationExtras | undefined;
+  return record?.version === GLTF_QUANTIZATION_FORMAT_VERSION ? record : undefined;
+};
+
+/** A node whose mesh quantization moved into a child (a pivot) looks empty, but is a piece */
+const hasPivot = (node: THREE.Object3D) =>
+  node.children.some((child) => readQuantization(child)?.target === 'PIVOT');
+
 /** A Blender export often has a single empty Object3D as its only root: its children are then
  * the real pieces, and transforms are relative to it. */
 const getImportRoot = (gltf: GLTF): THREE.Object3D => {
   const children = gltf.scene.children;
-  if (children.length === 1 && isOnlyObject3D(children[0])) return children[0];
+  if (children.length === 1 && isOnlyObject3D(children[0]) && !hasPivot(children[0])) {
+    return children[0];
+  }
   return gltf.scene;
 };
 
@@ -65,9 +83,137 @@ const getIndexedNode = (root: THREE.Object3D, meshIndex: number | number[]) => {
 const MATRIX_SIZE = 16;
 const COLOR_SIZE = 3;
 
-/** An instanced node's matrices and colours (linear RGB floats, whatever the accessor's type) */
-const readGPUInstances = (mesh: THREE.InstancedMesh): ImportedInstances => {
+const _position = new THREE.Vector3();
+const _quaternion = new THREE.Quaternion();
+const _scale = new THREE.Vector3();
+const _matrix = new THREE.Matrix4();
+
+type PositionAttribute = THREE.BufferAttribute | THREE.InterleavedBufferAttribute;
+type MorphName = keyof THREE.BufferGeometry['morphAttributes'];
+
+/** What an extract has dequantized: an attribute once (a LOD level shares its base's attribute
+ * objects, which the worker's serializer relies on), a geometry once (nodes share a mesh's) */
+type Dequantized = {
+  attributes: Map<PositionAttribute, THREE.BufferAttribute>;
+  /** The float attributes made: a geometry holding one is dequantized already (a copy shares
+   * its glTF mesh's attributes, `getMeshGeometry`) */
+  floats: Set<THREE.BufferAttribute>;
+  geometries: Map<THREE.BufferGeometry, boolean>;
+};
+
+const dequantizeAttribute = (
+  attr: PositionAttribute,
+  { offset, scale }: GLTFQuantizationExtras,
+  isRelative: boolean,
+  done: Dequantized
+) => {
+  let float = done.attributes.get(attr);
+  if (float) return float;
+  const array = new Float32Array(attr.count * 3);
+  const [ox, oy, oz] = isRelative ? [0, 0, 0] : offset;
+  // getX/Y/Z denormalize a normalized integer attribute, interleaved or not
+  for (let i = 0; i < attr.count; i++) {
+    array[i * 3] = attr.getX(i) * scale + ox;
+    array[i * 3 + 1] = attr.getY(i) * scale + oy;
+    array[i * 3 + 2] = attr.getZ(i) * scale + oz;
+  }
+  float = new THREE.BufferAttribute(array, 3);
+  float.name = attr.name;
+  done.attributes.set(attr, float);
+  done.floats.add(float);
+  return float;
+};
+
+/**
+ * Puts a quantized mesh's recorded dequantization into its geometry's positions (and morph
+ * targets'), as floats: the geometry is then in its node's space, as an unquantized file's is,
+ * for every use of it by id. Normals and UVs stay quantized. False for positions that aren't
+ * quantized (nothing to undo: the node keeps its transform as it is).
+ */
+const dequantizeGeometry = (
+  geometry: THREE.BufferGeometry,
+  record: GLTFQuantizationExtras,
+  done: Dequantized
+) => {
+  const known = done.geometries.get(geometry);
+  if (known !== undefined) return known;
+  const position = geometry.getAttribute('position') as PositionAttribute | undefined;
+  if (position && done.floats.has(position as THREE.BufferAttribute)) {
+    done.geometries.set(geometry, true);
+    return true;
+  }
+  const isQuantized =
+    !!position && (!(position.array instanceof Float32Array) || position.normalized);
+  done.geometries.set(geometry, isQuantized);
+  if (!position || !isQuantized) return false;
+  geometry.setAttribute('position', dequantizeAttribute(position, record, false, done));
+  const targets = geometry.morphAttributes.position as PositionAttribute[] | undefined;
+  if (targets) {
+    geometry.morphAttributes.position = targets.map((target) =>
+      dequantizeAttribute(target, record, geometry.morphTargetsRelative, done)
+    );
+  }
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  return true;
+};
+
+/**
+ * GLTFLoader caches a geometry per primitive by its accessors, so two glTF meshes with the same
+ * accessors (identical meshes an encode's `dedup()` joined) get one BufferGeometry, which the
+ * registry would register once, under the first node's id: each glTF mesh gets its own, sharing
+ * the attribute objects (uploaded once). Nodes sharing one glTF mesh still share its geometry.
+ */
+const getMeshGeometry = (
+  geometry: THREE.BufferGeometry,
+  meshIndex: number | undefined,
+  byGeometry: Map<THREE.BufferGeometry, Map<number, THREE.BufferGeometry>>
+) => {
+  if (meshIndex === undefined) return geometry;
+  let byMesh = byGeometry.get(geometry);
+  if (!byMesh) byGeometry.set(geometry, (byMesh = new Map([[meshIndex, geometry]])));
+  let own = byMesh.get(meshIndex);
+  if (!own) {
+    own = new THREE.BufferGeometry();
+    own.name = geometry.name;
+    own.setIndex(geometry.index);
+    for (const [name, attr] of Object.entries(geometry.attributes)) own.setAttribute(name, attr);
+    for (const name of Object.keys(geometry.morphAttributes) as MorphName[]) {
+      own.morphAttributes[name] = [...(geometry.morphAttributes[name] ?? [])];
+    }
+    own.morphTargetsRelative = geometry.morphTargetsRelative;
+    for (const { start, count, materialIndex } of geometry.groups) {
+      own.addGroup(start, count, materialIndex);
+    }
+    own.boundingBox = geometry.boundingBox?.clone() ?? null;
+    own.boundingSphere = geometry.boundingSphere?.clone() ?? null;
+    own.userData = { ...geometry.userData };
+    byMesh.set(meshIndex, own);
+  }
+  return own;
+};
+
+/** The inverse of a record's dequantization (a uniform scale after an offset) */
+const getDequantizationInverse = ({ offset, scale }: GLTFQuantizationExtras) =>
+  new THREE.Matrix4()
+    .makeScale(1 / scale, 1 / scale, 1 / scale)
+    .multiply(new THREE.Matrix4().makeTranslation(-offset[0], -offset[1], -offset[2]));
+
+/** An instanced node's matrices and colours (linear RGB floats, whatever the accessor's type).
+ * `dequantizationInverse` takes a quantized mesh's dequantization out of each matrix (i020). */
+const readGPUInstances = (
+  mesh: THREE.InstancedMesh,
+  dequantizationInverse?: THREE.Matrix4
+): ImportedInstances => {
   const matrices = (mesh.instanceMatrix.array as Float32Array).slice(0, mesh.count * MATRIX_SIZE);
+  if (dequantizationInverse) {
+    for (let i = 0; i < mesh.count; i++) {
+      _matrix
+        .fromArray(matrices, i * MATRIX_SIZE)
+        .multiply(dequantizationInverse)
+        .toArray(matrices, i * MATRIX_SIZE);
+    }
+  }
   const color = mesh.instanceColor;
   if (!color) return { matrices };
   const colors = new Float32Array(mesh.count * COLOR_SIZE);
@@ -91,11 +237,6 @@ const dropInstanceAttributes = (geometry: THREE.BufferGeometry) => {
   }
 };
 
-const _position = new THREE.Vector3();
-const _quaternion = new THREE.Quaternion();
-const _scale = new THREE.Vector3();
-const _matrix = new THREE.Matrix4();
-
 /** A point cloud's points as instances in its node's space, or why it has none. Blender's exporter
  * turns the positions to glTF's Y-up axes but leaves the custom attributes in its Z-up ones: `_ROT`
  * is a Blender quaternion (w, x, y, z) and `_SCALE` a Blender scale (x, y, z), or one float. */
@@ -107,7 +248,7 @@ const readPointCloud = (
   if (!(position.array instanceof Float32Array) || position.normalized) {
     return {
       error:
-        'The point cloud has quantized positions (the asset pipeline\'s default meshopt encode), whose scale is in the node and would scale every instance. Give its importedAsset JSON "optimize": { "profile": "terrainBlock" }.',
+        'The point cloud has quantized positions without the asset pipeline\'s record of their dequantization (a file another tool quantized), whose scale is in the node and would scale every instance. Give its importedAsset JSON "optimize": { "profile": "terrainBlock" }.',
     };
   }
   // GLTFLoader lowercases the names it doesn't know
@@ -172,8 +313,11 @@ const hasPropUp = (node: THREE.Object3D, scene: THREE.Object3D, prop: string) =>
  * readGLTFLodChains()) and its GPU instances (`EXT_mesh_gpu_instancing`). A node with the custom
  * prop `aekScatterPoints`, or a points node under one (Blender writes a Geometry Nodes point cloud
  * as a child `GN Instance` of its object's node), is a point cloud: its points are instances
- * (positions, `_ROT`, `_SCALE`, `_ITEM`) and its geometry is left out. Pure: nothing is
- * registered, disposed or logged.
+ * (positions, `_ROT`, `_SCALE`, `_ITEM`) and its geometry is left out. A quantized mesh whose
+ * dequantization the asset pipeline recorded (`GLTFQuantization.ts`, i020) gets it back in its
+ * positions (floats; its LOD levels' too), out of its transform or instance matrices, so its
+ * geometry is in its node's space for every use by id; a pivot `quantize()` moved it into takes
+ * its parent's name, props and place. Pure: nothing is registered, disposed or logged.
  * @internal
  */
 export const extractPrimitives = (
@@ -198,6 +342,12 @@ export const extractPrimitives = (
   const primitives: ExtractedPrimitive[] = [];
   const pointClouds: ImportedPointCloudInfo[] = [];
   const idsInUse = new Set<string>();
+  const dequantized: Dequantized = {
+    attributes: new Map(),
+    floats: new Set(),
+    geometries: new Map(),
+  };
+  const geometriesByMesh = new Map<THREE.BufferGeometry, Map<number, THREE.BufferGeometry>>();
   subtreeRoot.traverse((obj) => {
     const isPoints = Boolean((obj as THREE.Points).isPoints);
     if (!(obj as THREE.Mesh).isMesh && !isPoints) return;
@@ -207,19 +357,36 @@ export const extractPrimitives = (
     // one child Mesh per primitive; a single-primitive mesh is the node itself.
     const isNode = assoc.nodes !== undefined;
     const node = isNode ? mesh : (mesh.parent as THREE.Object3D);
+    mesh.geometry = getMeshGeometry(mesh.geometry, assoc.meshes, geometriesByMesh);
+
+    // A quantized mesh (i020): its positions get its dequantization back, and its transform or
+    // instances lose it. A pivot's name, props and place are its parent's, the source's node.
+    const quantization = readQuantization(node);
+    const dequantizationInverse =
+      quantization && dequantizeGeometry(mesh.geometry, quantization, dequantized)
+        ? getDequantizationInverse(quantization)
+        : undefined;
+    const sourceNode = (quantization?.target === 'PIVOT' && node.parent) || node;
 
     const nodeName =
-      node.name ||
-      `node_${associations.get(node)?.nodes ?? primitives.length + pointClouds.length}`;
+      sourceNode.name ||
+      `node_${associations.get(sourceNode)?.nodes ?? primitives.length + pointClouds.length}`;
     const parentPath: string[] = [];
-    for (let p = node.parent; p && p !== gltf.scene; p = p.parent) parentPath.unshift(p.name);
-    const transform = toTransform(
-      new THREE.Matrix4().multiplyMatrices(rootInverse, mesh.matrixWorld)
-    );
+    for (let p = sourceNode.parent; p && p !== gltf.scene; p = p.parent) parentPath.unshift(p.name);
+    const matrix = new THREE.Matrix4().multiplyMatrices(rootInverse, mesh.matrixWorld);
+    if (dequantizationInverse && quantization?.target !== 'INSTANCES') {
+      matrix.multiply(dequantizationInverse);
+    }
+    const transform = toTransform(matrix);
 
     // Node extras win over mesh extras, as they do on a single-primitive mesh
-    const userData = { ...(node === mesh ? {} : mesh.userData), ...node.userData };
+    const userData = {
+      ...(node === mesh ? {} : mesh.userData),
+      ...node.userData,
+      ...(sourceNode === node ? {} : sourceNode.userData),
+    };
     delete userData.gltfExtensions;
+    delete userData[GLTF_QUANTIZATION_EXTRAS_KEY];
     const customProps: ParsedCustomProps = parseCustomProps(userData);
 
     if (
@@ -264,10 +431,18 @@ export const extractPrimitives = (
     idsInUse.add(geometryId);
 
     if (instancedMesh) dropInstanceAttributes(mesh.geometry);
-    const lodChain =
+    let lodChain =
       meshDefIndex !== undefined
         ? lodChains?.get(getGLTFPrimitiveKey(meshDefIndex, primitiveIndex ?? 0))
         : undefined;
+    if (lodChain && dequantizationInverse && quantization) {
+      // Its levels index the base's quantized vertices (or copies of them), and its extent was
+      // measured in them
+      for (const level of lodChain.levels) {
+        dequantizeGeometry(level.geometry, quantization, dequantized);
+      }
+      lodChain = { ...lodChain, extent: lodChain.extent * quantization.scale };
+    }
     primitives.push({
       geometry: mesh.geometry,
       material: mesh.material,
@@ -281,7 +456,15 @@ export const extractPrimitives = (
         customProps,
         ...(meshDef?.name ? { meshName: meshDef.name } : {}),
         isDracoCompressed: Boolean(primitiveDef?.extensions?.KHR_draco_mesh_compression),
-        ...(instancedMesh ? { instances: readGPUInstances(instancedMesh) } : {}),
+        ...(dequantizationInverse ? { isDequantized: true } : {}),
+        ...(instancedMesh
+          ? {
+              instances: readGPUInstances(
+                instancedMesh,
+                quantization?.target === 'INSTANCES' ? dequantizationInverse : undefined
+              ),
+            }
+          : {}),
       },
     });
   });

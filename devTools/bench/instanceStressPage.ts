@@ -21,7 +21,7 @@ export type StressApi = {
 export type StressWindow = Window & { __aekInstanceStress?: StressApi };
 
 /** Waits for the scene's load (the test bridge's `whenSceneReady`) and its probe (its window
- * global); throws on a timeout, naming it. */
+ * global); throws on a failed load or a timeout, naming it. */
 export const whenStressReadyAsync = async (page: Page) => {
   const ready = await withTimeout(
     page.evaluate(
@@ -31,6 +31,7 @@ export const whenStressReadyAsync = async (page: Page) => {
     STRESS_READY_TIMEOUT_MS + EVALUATE_MARGIN_MS,
     'whenSceneReady'
   );
+  if (ready.status === 'FAILED') throw new Error('the scene failed to load');
   if (ready.status !== 'READY') {
     throw new Error(`the scene didn't load in ${STRESS_READY_TIMEOUT_MS / 1000} s`);
   }

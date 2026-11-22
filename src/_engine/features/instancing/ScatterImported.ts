@@ -83,11 +83,12 @@ const collectParts = (
   const parts: Part[] = [];
   for (const info of manifest.geometries) {
     if (!info.instances || !isTaken(info)) continue;
-    // Quantized, its instances carry its dequantization (gltf-transform's `quantize()` folds it in)
+    // Quantized by another tool, its instances carry its dequantization (gltf-transform's
+    // `quantize()` folds it in); the asset pipeline's records it, and the import takes it out
     const own = getGeometry(info.geometryId);
     if (own && hasQuantizedPositions(own)) {
       throw new Error(
-        `${where}: its node ${formatNode(info)} of GPU instances has quantized positions (the asset pipeline's default meshopt encode), whose scale is in each instance's matrix. ${LOSSLESS_IMPORT_FIX}`
+        `${where}: its node ${formatNode(info)} of GPU instances has quantized positions (a file another tool quantized), whose scale is in each instance's matrix. ${LOSSLESS_IMPORT_FIX}`
       );
     }
     const item = findItem(scatter, manifest, info);

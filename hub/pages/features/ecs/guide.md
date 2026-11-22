@@ -2,7 +2,11 @@
 
 [`createEntity`](api:ECSWorld.createEntity) returns an id that packs the entity's slot and a
 generation. When an entity is deleted and its slot reused, the old id no longer matches
-([`isAlive`](api:ECSWorld.isAlive)), so a stale id can't reach the new entity.
+([`isAlive`](api:ECSWorld.isAlive)), so a stale id can't reach the new entity. A write through
+one does nothing: [`addComponent`](api:ECSWorld.addComponent) and
+[`commitTransform`](api:ECSWorld.commitTransform) ignore an id that isn't alive, and the debug env
+warns, naming the entity and the component. An id kept across an `await` may be stale by then:
+check `isAlive` when the code after it depends on the write.
 
 Most entities come from the managers, which create them with their components:
 [`createMeshEntity`](api:createMeshEntity), [`createLightEntity`](api:createLightEntity),
@@ -12,7 +16,9 @@ Most entities come from the managers, which create them with their components:
   (one lookup, each world keeps a map). Keep it unique: when two entities have it, the first one
   created keeps it until it's deleted, and the debug env warns about the second.
 - `persistent`: the entity survives scene switches. Everything else a scene creates is deleted
-  when it exits.
+  when it exits. Code that runs on every visit (a scene file) creates another one each time, so
+  create it once, or look its `appId` up first; a scene JSON's persistent camera, light or mesh
+  is reused for you (see [loading scenes](hub:features/scenes-and-assets#loading-scenes)).
 - `disabled`: created switched off, hidden and with its physics body disabled.
   [`setDisabled`](api:ECSWorld.setDisabled) switches it later.
 

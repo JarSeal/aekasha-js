@@ -12,6 +12,7 @@ import { hashStringFNV1a } from '../../utils/Hash';
 import { stableStringify } from '../../utils/StableStringify';
 import { IS_DEBUG_ENV } from '../config/Config';
 import { recordAssetOwner, retagAssetOwner } from './AssetOwners';
+import { warnIfAssetPropsIgnored } from './AssetPropsDiff';
 import { getSceneRetainedTextures } from '../scene/SceneHooks';
 import { applyTslGraph } from './MaterialTsl';
 
@@ -264,7 +265,8 @@ const resolveMaterialParams = (params: MatProps['params'], id: string | undefine
  * Creates and registers a three material from its props (see {@link MatProps}): owned by the
  * scene loading (or current), released with it when nothing holds a ref. An `id` already
  * registered returns that material, re-tagged to the scene getting it, and builds nothing (the
- * props are ignored). A texture id that isn't registered is left out of `params` (warned); in a
+ * props are ignored: the debug env warns when they differ from those it was created with, naming
+ * them, `debugData` aside). A texture id that isn't registered is left out of `params` (warned); in a
  * TSL input it samples one white texel (warned). A `normalScale` or `clearcoatNormalScale` given as
  * `[x, y]` or `{ x, y }` (a material JSON's) becomes a `Vector2`. A node material's TSL graph
  * ({@link TslMaterialProps}) runs its `setup` first, then its `nodes` sockets' functions, which
@@ -287,6 +289,9 @@ export const createMaterial = (props: MatProps) => {
   const id = props.id;
 
   if (id && materials[id]) {
+    if (IS_DEBUG_ENV) {
+      warnIfAssetPropsIgnored('createMaterial', 'material', id, materials[id].props, props);
+    }
     retagAssetOwner(materials[id].resource);
     return materials[id].resource;
   }

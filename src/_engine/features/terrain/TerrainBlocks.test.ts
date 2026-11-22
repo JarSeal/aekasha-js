@@ -195,6 +195,13 @@ describe('spawnTerrainBlock', () => {
     );
   });
 
+  test('refuses the pipeline’s quantized positions the import made floats (i020)', async () => {
+    fns.imports.ground.geometries = [{ ...nodeInfo('Block'), isDequantized: true }];
+    await expect(spawnTerrainBlock('coast')).rejects.toThrow(
+      /quantized positions .* "optimize": \{ "profile": "terrainBlock" \}/
+    );
+  });
+
   test('warns on a node transform, which the grid place replaces', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     fns.imports.ground.geometries = [nodeInfo('Block', { scale: { x: 2, y: 1, z: 2 } })];

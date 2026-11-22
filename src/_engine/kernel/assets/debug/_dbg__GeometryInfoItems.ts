@@ -224,6 +224,7 @@ const getImportFolders = (importInfo: ImportedGeometryInfo): PropertyGridItem[] 
         ['Quaternion', vec(t.quaternion)],
         ['Scale', vec(t.scale)],
         ['DRACO-compressed', importInfo.isDracoCompressed ? 'yes' : 'no'],
+        ['Dequantized', importInfo.isDequantized ? 'yes (quantized in the file)' : 'no'],
         ...optional(
           importInfo.textureSlots,
           'Texture slots',

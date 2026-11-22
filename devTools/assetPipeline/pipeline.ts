@@ -5,6 +5,7 @@ import {
   LOD_SIMPLIFY_VERSION,
   type ResolvedLodChainOptions,
 } from '../../src/_engine/features/lod/LodChainOptions';
+import { GLTF_QUANTIZATION_FORMAT_VERSION } from '../../src/_engine/kernel/assets/import/GLTFQuantization';
 import type { AssetOptimize } from '../../src/_engine/schemas';
 import { ALPHA_COVERAGE_VERSION } from './alphaCoverage';
 import { encodePng } from './images';
@@ -554,6 +555,11 @@ const planGLTFEncode = (
         : {}),
       // Only when set, so the keys of the files without it didn't change
       ...(asset.merge ? { merge: { options: asset.merge, version: GLTF_MERGE_VERSION } } : {}),
+      // The recorded dequantization (i020): only a quantizing encode's key has it (Draco's
+      // decoder dequantizes into float positions)
+      ...(resolved.mesh && resolved.mesh.quantize && resolved.mesh.codec !== 'draco'
+        ? { quantization: GLTF_QUANTIZATION_FORMAT_VERSION }
+        : {}),
       output: getLogicalPath(source),
     },
   };

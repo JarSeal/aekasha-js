@@ -10,7 +10,7 @@ const TEST_BRIDGE_QUERY_PARAM = 'aekTest';
  * bridge's and the scene runner's.
  * @internal
  */
-export const TEST_BRIDGE_VERSION = 7;
+export const TEST_BRIDGE_VERSION = 8;
 
 /**
  * Key events the bridge dispatches right before fixed physics steps of the first scene's world
@@ -44,13 +44,16 @@ export type TestBridgeCharacterPaths =
   | { status: 'NONE' };
 
 /**
- * `whenSceneReady`'s result: the first scene is ready, or the wait timed out.
+ * `whenSceneReady`'s result: the first scene is ready, its load failed, or the wait timed out.
  * Only the test bridge and the scene runner (by path, in `devTools/verify/`) use it.
  * @internal
  */
 export type TestBridgeSceneReady =
   /** `backend`: what the renderer runs on (WebGPU falls back to WebGL2 without `navigator.gpu`) */
   | { status: 'READY'; sceneId: string; backend: 'WEBGPU' | 'WEBGL' }
+  /** No scene has loaded and the last load failed (its error is on the console); `sceneId` is
+   * the scene it loaded */
+  | { status: 'FAILED'; sceneId: string | null }
   | { status: 'TIMEOUT'; sceneId: string | null };
 
 /**
@@ -140,7 +143,7 @@ export type AekTestBridge = {
   version: number;
   mode: 'DEBUG' | 'PROD_TEST';
   /** Resolves once the first scene has loaded: its load finished and the physics hold released,
-   * plus two rendered frames */
+   * plus two rendered frames. `FAILED` as soon as a load fails with no scene loaded before it. */
   whenSceneReady: (opts?: { timeoutMs?: number }) => Promise<TestBridgeSceneReady>;
   /** Resolves with the determinism probe's report for the current scene, once the probe has
    * frozen physics at its step. Freeze only after it: a paused app loop never reaches the step. */

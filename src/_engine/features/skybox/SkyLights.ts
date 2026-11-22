@@ -25,7 +25,12 @@
 import * as THREE from 'three/webgpu';
 import { getECSWorld, type ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
-import { createLightEntity, getLightTargetId, SHADOW_PRESETS } from '../../kernel/light/Light';
+import {
+  createLightEntity,
+  getLightTargetId,
+  getShadowPresetBias,
+  SHADOW_PRESETS,
+} from '../../kernel/light/Light';
 import { getActiveCamera } from '../../kernel/camera/Camera';
 import type { ShadowQuality } from '../../schemas/_HelperSchemas';
 import type {
@@ -281,7 +286,7 @@ const applyDiscLight = (
   const preset = SHADOW_PRESETS[lightDef.shadowPreset ?? defaults.shadowPreset];
   const mapSize = lightDef.shadowMapSize ?? preset.mapSize[0];
   shadow.mapSize.set(mapSize, mapSize);
-  shadow.bias = lightDef.shadowBias ?? preset.bias;
+  shadow.bias = lightDef.shadowBias ?? getShadowPresetBias(preset);
   shadow.normalBias = lightDef.shadowNormalBias ?? preset.normalBias;
   shadow.radius = preset.radius;
   shadow.blurSamples = preset.blurSamples;

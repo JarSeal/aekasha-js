@@ -496,6 +496,7 @@ export class ECSWorld {
    * must call this afterward for the change to persist in both modes.
    */
   public commitTransform(entityId: number, transform: Transform): void {
+    if (!this.isAlive(entityId)) return this._warnDeadWrite(entityId, ComponentType.TRANSFORM);
     this.storages.get(ComponentType.TRANSFORM)?.set(entityId, transform);
   }
 
@@ -542,8 +543,11 @@ export class ECSWorld {
   /**
    * Creates an entity with the core components: `APP_ID` (`opts.appId`, else a generated UUID),
    * `TRANSFORM` (identity), `USER_DATA`, `DEBUG_DATA` (debug env and prod test only), `MANAGED_BY`
-   * when given, and `DISABLED` when `opts.disabled`.
+   * when given, `DISABLED` when `opts.disabled` and `PERSISTENT` when `opts.persistent`.
    * @returns the new entity's id
+   * @remarks A persistent entity outlives the scene switch, so code that runs on every visit
+   * (scene code) creates another one each time: create it once, or look its app id up first. A
+   * scene's JSON cameras, lights and meshes are reused by the load (i060).
    */
   createEntity(opts?: CoreEntityOpts): number {
     const id = this._getNewEntityId();
@@ -556,6 +560,7 @@ export class ECSWorld {
     this.addComponent(id, ComponentType.USER_DATA, opts?.userData || {});
     this.addComponent(id, ComponentType.DEBUG_DATA, opts?.debugData || {});
     if (opts?.managedBy) this.addComponent(id, ComponentType.MANAGED_BY, { ...opts.managedBy });
+    if (opts?.persistent) this.addComponent(id, ComponentType.PERSISTENT, true);
     this.setDisabled(id, Boolean(opts?.disabled));
     ECSWorld.notifyEntityCountChange(this);
     return id;
@@ -613,11 +618,17 @@ export class ECSWorld {
 
   /**
    * Stores `data` as the entity's `type` component (replacing one it has), then runs the type's
-   * `onAddComponent` hooks. `DEBUG_DATA` is dropped outside the debug env and prod test mode.
+   * `onAddComponent` hooks. `DEBUG_DATA` is dropped outside the debug env and prod test mode. A
+   * dead id is ignored (nothing stored, no hook; a warning in the debug env).
    * @remarks The data is stored as given, not copied: a component object shared by two entities
-   * changes for both.
+   * changes for both. An id kept across an `await` may be dead by then: check
+   * {@link ECSWorld.isAlive} first when the rest of the code depends on the add.
    */
   addComponent<K extends ComponentType>(entityId: number, type: K, data: ComponentData[K]): void {
+    // A deleted entity's storages were cleared once, by deleteEntity: data added now would stay
+    // until the slot's next delete, and a TYPED_ARRAY TRANSFORM would take over the slot's
+    // current entity's (docs/issues/_DONE_i040_ecs-components-on-deleted-entities.md)
+    if (!this.isAlive(entityId)) return this._warnDeadWrite(entityId, type);
     // DEBUG_DATA is only stored where it is read: debug and prodTest mode (eg. the on-screen
     // tools' camera names). Production never stores it. The flags are read here, not at load:
     // they're set by InitEngine
@@ -643,6 +654,14 @@ export class ECSWorld {
     // Trigger Initialization Hooks (onAddComponent); an index loop: no closure per add
     const hooks = ECSWorld.onAddComponentHooks.get(type);
     if (hooks) for (let i = 0; i < hooks.length; i++) hooks[i](entityId, this);
+  }
+
+  /** A write to a dead id was ignored: the debug env names it, to find the caller. */
+  private _warnDeadWrite(entityId: number, type: ComponentType) {
+    if (!IS_DEBUG_ENV) return;
+    lwarn(
+      `ECS World '${this.id}': entity ${entityId} isn't alive, so its '${type}' write was ignored (an id kept after its entity was deleted, eg. across an await).`
+    );
   }
 
   /**

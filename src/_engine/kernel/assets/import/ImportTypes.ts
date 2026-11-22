@@ -119,6 +119,10 @@ export type ImportedGeometryInfo = {
   meshName?: string;
   /** The primitive came from KHR_draco_mesh_compression (vertex order is not preserved). */
   isDracoCompressed: boolean;
+  /** Its positions were quantized by the asset pipeline and the import made them floats again
+   * (i020): in its node's space like any other, but only within the encode's precision of the
+   * source's (a terrain block needs them exact). */
+  isDequantized?: boolean;
   /** Only with importTextures: which registered texture filled which slot of this primitive's glTF
    * material, so an engine material can be given the same maps. */
   textureSlots?: Partial<Record<TextureMapKeys, string>>;

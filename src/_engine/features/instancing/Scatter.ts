@@ -105,8 +105,9 @@ const placementMatrices = (placements: readonly ScatterPlacementDef[], origin: T
 };
 
 /**
- * Whether a geometry's positions are quantized (the asset pipeline's default meshopt encode of an
- * import): their scale is in the import's node, which a scatter's cell doesn't draw.
+ * Whether a geometry's positions are quantized: an import another tool quantized, whose scale is
+ * in its node, which a scatter's cell doesn't draw (the asset pipeline's are made floats again
+ * by the import, i020).
  * @internal
  */
 export const hasQuantizedPositions = (geometry: THREE.BufferGeometry) => {
@@ -139,7 +140,7 @@ const checkItemAssets = (scatter: ScatterDef) => {
     }
     if (geometry && hasQuantizedPositions(geometry)) {
       throw new Error(
-        `${where}'s geometry "${item.geometry}" has quantized positions (an import's default meshopt encode), whose scale is in its node, which a scatter doesn't draw. ${LOSSLESS_IMPORT_FIX}`
+        `${where}'s geometry "${item.geometry}" has quantized positions (a file another tool quantized), whose scale is in its node, which a scatter doesn't draw. ${LOSSLESS_IMPORT_FIX}`
       );
     }
   });
@@ -277,8 +278,8 @@ export type SpawnedScatter = {
  * @returns the scatter's cells and colliders and its `dispose()`, or `null` when its scene left
  * meanwhile
  * @throws when `instancing()` isn't installed, there's no scene, the scene doesn't have the
- * scatter, an item's geometry or material isn't registered or its geometry is quantized (an
- * import's default encode: give the import `"optimize": { "mesh": { "quantize": false } }`), its generator isn't registered or
+ * scatter, an item's geometry or material isn't registered or its geometry is quantized (a file
+ * another tool quantized: give the import `"optimize": { "mesh": { "quantize": false } }`), its generator isn't registered or
  * returns instances that don't fit its items, its import has no node it takes, a node of GPU
  * instances no item draws or a point's `_ITEM` past the items, or a collider can't be made (the
  * cells made are deleted first)

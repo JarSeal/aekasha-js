@@ -307,6 +307,33 @@ const resolveMeshes = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun) 
   });
 };
 
+/** Fails on a persistent camera, light or mesh without an app id: the scene load reuses a
+ * persistent one by its app id, so without one every visit creates another (i060) */
+const checkPersistentAppIds = ({ ctx, sceneId, scene }: SceneRun) => {
+  const entries = [
+    ...(scene.cameras ?? []).map((cam) =>
+      typeof cam === 'string' ? null : (['camera', cam.camProps.appId, cam.entityOpts] as const)
+    ),
+    ...(scene.lights ?? []).map((light) =>
+      typeof light === 'string'
+        ? null
+        : (['light', light.lightProps.appId, light.entityOpts] as const)
+    ),
+    ...(scene.meshes ?? []).map((mesh) =>
+      typeof mesh === 'string' ? null : (['mesh', mesh.props.appId, mesh.entityOpts] as const)
+    ),
+  ];
+  for (const entry of entries) {
+    if (!entry) continue;
+    const [kind, appId, entityOpts] = entry;
+    if (!entityOpts?.persistent || appId || entityOpts.appId) continue;
+    const name = entityOpts.debugData?.name;
+    ctx.log.error(
+      `Scene "${sceneId}": a persistent ${kind}${name ? ` ("${name}")` : ''} has no app id. Give it one (its props' appId or entityOpts.appId): the scene load reuses a persistent entity by its app id, so without one every visit creates another.`
+    );
+  }
+};
+
 const resolveImportedAssets = (run: SceneRun) => {
   const { ctx, reg, ship, sceneId, scene, reportUnknownId } = run;
   if (!Array.isArray(scene.importedAssets)) return;
@@ -386,6 +413,7 @@ export const resolveSceneAssets = (run: SceneRun) => {
   resolveSceneMergeMaterials(run);
   resolveMaterials(run);
   resolveMeshes(run);
+  checkPersistentAppIds(run);
   resolveTextureSets(run);
   resolveSkyBoxes(run);
   addTextureClosure(run);

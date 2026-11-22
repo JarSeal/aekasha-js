@@ -15,6 +15,7 @@ import {
   type ResolvedLodChainOptions,
 } from '../../src/_engine/features/lod/LodChainOptions';
 import { simplifyLodChain } from '../../src/_engine/features/lod/LodSimplify';
+import { getSourceNode } from './gltfQuantization';
 
 /**
  * The GLB step's LOD chains (p347 Phase 3, §2.4): every rendered triangle primitive is simplified
@@ -58,9 +59,13 @@ const toTransferable = (accessor: Accessor, name: string): TransferableAttribute
   name,
 });
 
-/** Node extras win over mesh extras, as in CustomProps.ts: a collider-only node isn't rendered */
+/** Node extras win over mesh extras, as in CustomProps.ts: a collider-only node isn't rendered.
+ * A quantization pivot's are its source node's (`gltfQuantization.ts`). */
 const isRenderedNode = (node: Node, mesh: Mesh) => {
-  const extras = { ...mesh.getExtras(), ...node.getExtras() } as Record<string, unknown>;
+  const extras = { ...mesh.getExtras(), ...getSourceNode(node).getExtras() } as Record<
+    string,
+    unknown
+  >;
   return !extras.isPhysObj || !!extras.keepMesh;
 };
 

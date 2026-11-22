@@ -235,7 +235,9 @@ export const createCameraEntity = (camProps: CameraProps, opts?: CreateEntityOpt
     rootScene.add(camera);
   }
 
-  const entityId = world.createEntity(entityOpts);
+  // The props' appId is the entity's too (as a mesh's), or a JSON camera, whose gathered props
+  // always have one, would get a generated id: unfindable by its app id (i060)
+  const entityId = world.createEntity(appId ? { ...entityOpts, appId } : entityOpts);
   camera.userData.entityId = entityId;
 
   world.addComponent(entityId, ComponentType.TAG_IS_CAMERA, true);
@@ -557,7 +559,6 @@ export const initDebugCamera = async (world: ECSWorld) => {
     );
 
     world.addComponent(debugCameraEntityId, ComponentType.DEBUG_TAG_IS_DEBUG_CAMERA, true);
-    world.addComponent(debugCameraEntityId, ComponentType.PERSISTENT, true);
 
     inspectEntity(debugCameraEntityId);
   }
