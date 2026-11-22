@@ -95,7 +95,8 @@ const findControlAfter = (label: Element, row: Element) => {
   return null;
 };
 
-/** The controls an element named `name` labels: its text (a leaf's) or its title, then the first
+/** The controls an element named `name` labels: its text (a leaf's) or its title, then the control
+ * it's inside (a button's text part, whose row label is in its name too, i180) or else the first
  * control after it in its row, up to {@link LABEL_ROW_DEPTH} ancestors inside the root */
 const findLabelledControls = (root: Element, name: string) => {
   const found: HTMLElement[] = [];
@@ -105,6 +106,11 @@ const findLabelledControls = (root: Element, name: string) => {
       normalize(el.getAttribute('title')) === name ||
       (el.children.length === 0 && normalize(el.textContent) === name);
     if (!isLabel) continue;
+    const owner = el.closest<HTMLElement>(CONTROL_SELECTOR);
+    if (owner && root.contains(owner)) {
+      found.push(owner);
+      continue;
+    }
     let row: Element | null = el;
     for (let depth = 0; row && depth <= LABEL_ROW_DEPTH; depth++) {
       const control = findControlAfter(el, row);
