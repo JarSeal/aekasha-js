@@ -13,6 +13,7 @@ import type { PhysRotation, PhysVector } from '../types/PhysicsCommonTypes';
 import type { PhysicsState } from '../types/PhysicsConfigTypes';
 import type { JointMotorModel, JointParams } from '../types/PhysicsJointTypes';
 import type { PhysRay, QueryFilterFlags } from '../types/PhysicsQueryTypes';
+import type { WorldBoundsBox } from '../types/PhysicsWorldBoundsTypes';
 import type { PhysicsProtocolType } from './PhysicsProtocolType';
 
 /**
@@ -69,6 +70,11 @@ export type PhysicsUpProtocol =
         type: PhysicsProtocolType.SET_STEP_STATS;
         /** The worker's PhysicsState.stepStatsEnabled from the next STEP message on. */
         enabled: boolean;
+      }
+    | {
+        type: PhysicsProtocolType.SET_WORLD_BOUNDS;
+        /** The box (its open sides left out), or null for no bounds. */
+        bounds: WorldBoundsBox | null;
       }
     | { type: PhysicsProtocolType.FLUSH }
     // World --------------------------------------

@@ -16,6 +16,8 @@ const bridge = vi.hoisted(() => {
     terminated: false,
     /** Every message posted to the worker, as it arrived there. */
     sent: [] as { type: number; [key: string]: unknown }[],
+    /** Every message the worker posted, as the main thread got it. */
+    received: [] as { type: number; [key: string]: unknown }[],
     instance: undefined as { deliver: (data: unknown) => void } | undefined,
     releaseReplies() {
       state.holdReplies = false;
@@ -37,6 +39,8 @@ const bridge = vi.hoisted(() => {
       state.instance = this;
       vi.stubGlobal('self', {
         crossOriginIsolated: false,
+        // Rapier's step reads its clock through `self` (a STEP panics with `unreachable` without)
+        performance: globalThis.performance,
         addEventListener: (_type: string, fn: Listener) => this.listeners.push(fn),
         removeEventListener: (_type: string, fn: Listener) => {
           this.listeners = this.listeners.filter((listener) => listener !== fn);
@@ -52,6 +56,7 @@ const bridge = vi.hoisted(() => {
 
     deliver(data: unknown) {
       if (state.terminated) return;
+      state.received.push(data as (typeof state.received)[number]);
       this.onmessage?.({ data });
       for (const fn of this.mainListeners) fn({ data });
     }
@@ -99,7 +104,13 @@ import { beginSubStepCapture, endSubStepCapture, messageWorker } from './Physics
 import { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import { createJoint } from './PhysicsJoints';
 import { facade, getPhysicsState, getPhysicsWorld } from './PhysicsState';
-import { createPhysicsWorld, initPhysics, resetPhysicsWorld, stopPhysics } from './PhysicsWorld';
+import {
+  createPhysicsWorld,
+  flushPhysics,
+  initPhysics,
+  resetPhysicsWorld,
+  stopPhysics,
+} from './PhysicsWorld';
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
 import { createPhysicsEntity, deleteAllPhysicsEntities } from './PhysicsEntity';
 import { WorldProxyAPI } from './proxies/WorldProxyAPI';
@@ -128,6 +139,13 @@ const BROKEN_TRIMESH = { type: 'TRIMESH', vertices: new Float32Array(9) } as con
 const lastSent = (type: PhysicsProtocolType) => {
   const { sent } = bridge.state;
   for (let i = sent.length - 1; i >= 0; i--) if (sent[i].type === type) return sent[i];
+  return undefined;
+};
+
+/** The last message of `type` the worker posted to the main thread. */
+const lastReceived = (type: PhysicsProtocolType) => {
+  const { received } = bridge.state;
+  for (let i = received.length - 1; i >= 0; i--) if (received[i].type === type) return received[i];
   return undefined;
 };
 
@@ -319,6 +337,36 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
   });
 
   // Replaces the world: after the tests that use the first world's collider 0
+  it("p102: the world bounds' exits reach the main thread in the next STEP's EVENTS_PUSH", async () => {
+    await resetPhysicsWorld();
+    // Outside before the bounds are set: their set catches it, on the new world's step 0
+    const below = await createRigidBody({
+      rigidType: 'DYNAMIC',
+      translation: { x: 50, y: -10, z: 0 },
+    });
+    messageWorker({
+      type: PhysicsProtocolType.SET_WORLD_BOUNDS,
+      bounds: { min: { y: -5 } },
+      isOneWay: true,
+    });
+    // 10 m down in its first step: outside after step 1
+    const falling = await createRigidBody({
+      rigidType: 'DYNAMIC',
+      translation: { x: 60, y: 0, z: 0 },
+      linvel: { x: 0, y: -600, z: 0 },
+    });
+    await createCollider({ type: 'BALL', radius: 0.5 }, falling.id);
+    messageWorker({ type: PhysicsProtocolType.STEP, steps: 1, isOneWay: true });
+    // Replied after the STEP's push
+    await flushPhysics();
+    const push = lastReceived(PhysicsProtocolType.EVENTS_PUSH);
+    expect(push?.outOfBounds).toEqual([
+      { bodyId: below.id, step: 0, x: 50, y: -10, z: 0, source: 'GLOBAL' },
+      expect.objectContaining({ bodyId: falling.id, step: 1, source: 'GLOBAL' }),
+    ]);
+    expect(getRigidBodyAPIWithId(falling.id)?.isEnabledSync()).toBe(false);
+  });
+
   it("D7: every new world gets the config's maxCcdSubsteps, 0 included; the setter sets it", async () => {
     // The proxy's copy and the worker's world
     const read = async () => [

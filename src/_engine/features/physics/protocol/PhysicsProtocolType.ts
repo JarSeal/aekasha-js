@@ -24,6 +24,10 @@ export enum PhysicsProtocolType {
   /** One-way: sets the worker's PhysicsState.stepStatsEnabled (setPhysicsStepStatsEnabled).
    * The worker's state outlives world resets, so it is sent once per change. */
   SET_STEP_STATS = 7,
+  /** One-way: sets (or clears) the current world's bounds (p102), which the backend checks after
+   * every step. In the ENGINE range because it calls the worker's engAPI, which the WORLD
+   * switchboard doesn't receive. A new world starts without, so it's sent after each one. */
+  SET_WORLD_BOUNDS = 8,
   CREATE_WORLD = 100,
   DELETE_WORLD = 101,
   /** Worker -> main thread unsolicited push of the hot-path transform buffer (MESSAGE_BATCH fallback only). */

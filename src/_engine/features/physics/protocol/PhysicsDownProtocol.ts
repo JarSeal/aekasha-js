@@ -6,6 +6,7 @@ import type {
 } from '../types/PhysicsColliderTypes';
 import type { PhysRotation, PhysVector } from '../types/PhysicsCommonTypes';
 import type { CollisionEventRecord, ContactForceEventRecord } from '../types/PhysicsEventTypes';
+import type { OutOfBoundsRecord } from '../types/PhysicsWorldBoundsTypes';
 import type {
   RayColliderHitAPI,
   RayColliderIntersectionAPI,
@@ -268,6 +269,8 @@ export type PhysicsDownProtocol =
         type: PhysicsProtocolType.EVENTS_PUSH;
         collisions: CollisionEventRecord[];
         contactForces: ContactForceEventRecord[];
+        /** The bodies the backend found outside the world bounds (p102), in order. */
+        outOfBounds: readonly OutOfBoundsRecord[];
       }
     // Error --------------------------------------
     | {
