@@ -1,12 +1,13 @@
 import type Rapier from '@dimforge/rapier3d-compat';
 import * as THREE from 'three/webgpu';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { LoopState } from '../../../../kernel/loop/MainLoop';
 import type { PhysicsDownProtocol } from '../../protocol/PhysicsDownProtocol';
 import { PhysicsProtocolType } from '../../protocol/PhysicsProtocolType';
 import type { PhysicsUpProtocol } from '../../protocol/PhysicsUpProtocol';
 import type { EngineAPIType } from '../../types/PhysicsBackendTypes';
 import { RigidBodyTypeAPI } from '../../types/PhysicsBodyTypes';
+import type { RigidBodyParams } from '../../types/PhysicsBodyTypes';
 import { ShapeType } from '../../types/PhysicsColliderTypes';
 import type { ColliderParams } from '../../types/PhysicsColliderTypes';
 import type { PhysicsState } from '../../types/PhysicsConfigTypes';
@@ -135,5 +136,138 @@ describe('EngineRapier', () => {
     );
     expect(nested.filter((toi) => toi !== null)).toHaveLength(1);
     expect(nested.find((toi) => toi !== null)).toBeCloseTo(1.5);
+  });
+});
+
+describe('EngineRapier world bounds (p102)', () => {
+  const killY = { min: { y: -5 } };
+
+  /** A dynamic ball away from the ground (x = 50), moving at `vy` m/s. */
+  const createBall = (y: number, vy = 0, extra: Partial<RigidBodyParams> = {}) => {
+    const body = engAPI.createRigidBody({
+      rigidType: 'DYNAMIC',
+      translation: { x: 50, y, z: 0 },
+      linvel: { x: 0, y: vy, z: 0 },
+      ...extra,
+    });
+    engAPI.createCollider({ type: 'BALL', radius: 0.5 }, body.id);
+    return body;
+  };
+
+  beforeEach(() => {
+    // A fresh world each: its step count starts at 0, and it has no bounds
+    engAPI.deleteWorld();
+    engAPI.createWorld({ x: 0, y: -9.81, z: 0 }, { timestep: 1 / 60 });
+  });
+
+  it('disables a body on the step it leaves the bounds, and records it once', () => {
+    engAPI.setWorldBounds(killY);
+    const body = createBall(0, -60);
+    let steps = 0;
+    let records = engAPI.drainPendingOutOfBoundsRecords();
+    while (!records.length && steps < 30) {
+      engAPI.step();
+      steps++;
+      records = engAPI.drainPendingOutOfBoundsRecords();
+    }
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ bodyId: body.id, step: steps, source: 'GLOBAL' });
+    expect(records[0].y).toBeLessThan(-5);
+    expect(body.isEnabledSync()).toBe(false);
+    for (let i = 0; i < 10; i++) engAPI.step();
+    expect(engAPI.drainPendingOutOfBoundsRecords()).toHaveLength(0);
+  });
+
+  it('checks nothing without bounds, or with a box open on every side', () => {
+    const body = createBall(-10, -60);
+    engAPI.step();
+    engAPI.setWorldBounds({ min: {}, max: {} });
+    engAPI.step();
+    expect(engAPI.drainPendingOutOfBoundsRecords()).toHaveLength(0);
+    expect(body.isEnabledSync()).toBe(true);
+  });
+
+  it('catches a body created outside at its create, before any step', () => {
+    engAPI.setWorldBounds(killY);
+    engAPI.step();
+    // A body that sleeps from its create on never becomes active: the step's check wouldn't see it
+    const body = engAPI.createRigidBody({
+      rigidType: 'DYNAMIC',
+      translation: { x: 50, y: -10, z: 0 },
+    });
+    expect(body.isEnabledSync()).toBe(false);
+    expect(engAPI.drainPendingOutOfBoundsRecords()).toEqual([
+      { bodyId: body.id, step: 1, x: 50, y: -10, z: 0, source: 'GLOBAL' },
+    ]);
+  });
+
+  it('checks every body, the sleeping ones included, when the bounds are set', () => {
+    const sleeper = createBall(-10);
+    sleeper.sleep();
+    const inside = createBall(0);
+    engAPI.step();
+    engAPI.setWorldBounds(killY);
+    const records = engAPI.drainPendingOutOfBoundsRecords();
+    expect(records.map((r) => r.bodyId)).toEqual([sleeper.id]);
+    expect(records[0].step).toBe(1);
+    expect(sleeper.isEnabledSync()).toBe(false);
+    expect(inside.isEnabledSync()).toBe(true);
+  });
+
+  it('leaves fixed and kinematic bodies alone', () => {
+    engAPI.setWorldBounds(killY);
+    const fixed = engAPI.createRigidBody({
+      rigidType: 'FIXED',
+      translation: { x: 50, y: -10, z: 0 },
+    });
+    const kinematic = engAPI.createRigidBody({
+      rigidType: 'VELO_BASED',
+      translation: { x: 50, y: 0, z: 0 },
+      linvel: { x: 0, y: -60, z: 0 },
+    });
+    for (let i = 0; i < 20; i++) engAPI.step();
+    expect(engAPI.drainPendingOutOfBoundsRecords()).toHaveLength(0);
+    expect(fixed.isEnabledSync()).toBe(true);
+    expect(kinematic.isEnabledSync()).toBe(true);
+  });
+
+  it('makes a jointed body FIXED instead of disabling it (i250)', () => {
+    engAPI.setWorldBounds({ min: { x: 40 } });
+    const anchor = createBall(0, 0, { gravityScale: 0 });
+    const body = createBall(0, 0, { gravityScale: 0, linvel: { x: -60, y: 0, z: 0 } });
+    engAPI.createJoint({
+      type: 'ROPE',
+      body1Id: anchor.id,
+      body2Id: body.id,
+      length: 100,
+      anchor1: { x: 0, y: 0, z: 0 },
+      anchor2: { x: 0, y: 0, z: 0 },
+    });
+    for (let i = 0; i < 30; i++) engAPI.step();
+    const records = engAPI.drainPendingOutOfBoundsRecords();
+    expect(records.map((r) => r.bodyId)).toEqual([body.id]);
+    expect(body.isEnabledSync()).toBe(true);
+    expect(body.bodyTypeSync()).toBe(RigidBodyTypeAPI.Fixed);
+    expect(anchor.bodyTypeSync()).toBe(RigidBodyTypeAPI.Dynamic);
+  });
+
+  it('forgets the bounds and the undelivered exits with the world', () => {
+    engAPI.setWorldBounds(killY);
+    createBall(-10);
+    engAPI.deleteWorld();
+    engAPI.createWorld({ x: 0, y: -9.81, z: 0 });
+    const body = createBall(-10, -60);
+    engAPI.step();
+    expect(engAPI.drainPendingOutOfBoundsRecords()).toHaveLength(0);
+    expect(body.isEnabledSync()).toBe(true);
+  });
+
+  it('finds a body again after a detach and reattach (the REMOVED tier)', () => {
+    const body = createBall(0, -60);
+    engAPI.detachRigidBody(body.id);
+    engAPI.reattachRigidBody(body.id, { bodyType: RigidBodyTypeAPI.Dynamic, enabled: true });
+    engAPI.setWorldBounds(killY);
+    for (let i = 0; i < 30; i++) engAPI.step();
+    expect(engAPI.drainPendingOutOfBoundsRecords().map((r) => r.bodyId)).toEqual([body.id]);
   });
 });

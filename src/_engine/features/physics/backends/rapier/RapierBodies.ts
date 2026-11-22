@@ -14,6 +14,7 @@ import { EngineColliderProxyAPI } from './proxies/EngineColliderProxyAPI';
 import { EngineRigidBodyProxyAPI } from './proxies/EngineRigidBodyProxyAPI';
 import { toRapierBodyType } from './RapierEnums';
 import { cleanupColliderEventRegistrations } from './RapierEvents';
+import { checkBodyAtCreate } from './RapierWorldBounds';
 import {
   backend,
   colliderAPIs,
@@ -25,6 +26,7 @@ import {
   getRigidBody,
   handleToColliderId,
   handleToJointId,
+  handleToRigidBodyId,
   jointAPIs,
   joints,
   rigidBodies,
@@ -148,6 +150,7 @@ export const createRigidBody = (params: RigidBodyParams) => {
   const id = nextRigidBodyId;
   nextRigidBodyId += 1;
   rigidBodies.set(id, rigidBody.handle);
+  handleToRigidBodyId.set(rigidBody.handle, id);
   const rigidBodyAPI = new EngineRigidBodyProxyAPI(id, params.userData);
   const lt = params.lockTranslations;
   if (lt) rigidBodyAPI.writeOnly.translationsEnabled = [!lt.x, !lt.y, !lt.z];
@@ -157,6 +160,7 @@ export const createRigidBody = (params: RigidBodyParams) => {
     rigidBodyAPI.writeOnly.additionalMass = { mass: params.additionalMass };
   }
   rigidBodyAPIs.set(id, rigidBodyAPI);
+  checkBodyAtCreate(rigidBody, id);
 
   return rigidBodyAPI;
 };
@@ -201,6 +205,7 @@ export const deleteRigidBody = (id: number) => {
       );
     }
     rigidBodies.delete(id);
+    handleToRigidBodyId.delete(rbHandle);
     return { id, colliderIds, jointIds };
   }
   const colliderCount = rb.numColliders();
@@ -230,6 +235,7 @@ export const deleteRigidBody = (id: number) => {
   backend.world.removeRigidBody(rb);
   rigidBodyAPIs.delete(id);
   rigidBodies.delete(id);
+  handleToRigidBodyId.delete(rbHandle);
   return { id, colliderIds, jointIds };
 };
 
@@ -326,6 +332,7 @@ export const detachRigidBody = (id: number): RigidBodyPose | undefined => {
     colliders: detachedColliders,
   });
 
+  handleToRigidBodyId.delete(rb.handle);
   // Removes its colliders too
   backend.world.removeRigidBody(rb);
   rigidBodies.delete(id);
@@ -397,6 +404,7 @@ export const reattachRigidBody = (
   if (!isZeroVector(detached.userForce)) rb.addForce(detached.userForce, false);
   if (!isZeroVector(detached.userTorque)) rb.addTorque(detached.userTorque, false);
   rigidBodies.set(id, rb.handle);
+  handleToRigidBodyId.set(rb.handle, id);
   api._rebind(rb);
   rigidBodyAPIs.set(id, api);
 

@@ -34,6 +34,10 @@ export const backend: {
   /** Told the id of every body moved by setTranslation/setRotation, MAIN_THREAD only; see
    * setBodyMovedObserver. */
   bodyMovedObserver: ((rigidBodyId: number) => void) | null;
+  /** The fixed steps the current world has run (step(), RapierWorld.ts; 0 again with a new
+   * world): the facade's and the worker's step count, so a step stamped with it is on
+   * getPhysicsSnapshotStepIndex's scale. */
+  stepCount: number;
 } = {
   RAPIER: undefined as unknown as typeof Rapier,
   world: { step: () => {} } as Rapier.World,
@@ -41,6 +45,7 @@ export const backend: {
   eventQueue: undefined,
   queryObserver: null,
   bodyMovedObserver: null,
+  stepCount: 0,
 };
 
 // The maps by running id (next*Id in RapierBodies.ts, RapierColliders.ts and RapierJoints.ts).
@@ -86,6 +91,12 @@ export const jointAPIs = new Map<number, JointAPI>();
  * @internal
  */
 export const handleToColliderId = new Map<number, number>();
+/**
+ * Each live body's running id, by Rapier handle: the reverse of `rigidBodies`, for the world
+ * bounds' check (RapierWorldBounds.ts), which iterates Rapier's active bodies.
+ * @internal
+ */
+export const handleToRigidBodyId = new Map<number, number>();
 /**
  * Each live joint's running id, by Rapier handle: the reverse of `joints`, needed for the same
  * reason as handleToColliderId — deleteRigidBody reaps attached joint handles via Rapier's own

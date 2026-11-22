@@ -13,6 +13,7 @@ import type { CollisionEventRecord, ContactForceEventRecord } from './PhysicsEve
 import type { JointAPI, JointParams } from './PhysicsJointTypes';
 import type { PhysicsQueryObserver } from './PhysicsQueryTypes';
 import type { WorldAPI } from './PhysicsWorldTypes';
+import type { OutOfBoundsRecord, WorldBoundsBox } from './PhysicsWorldBoundsTypes';
 
 /**
  * The backend contract: what a physics backend module (`backends/rapier/EngineRapier.ts`) exports,
@@ -78,8 +79,16 @@ export type EngineAPIType = {
   /** Enumerates the ids of all currently-live rigid bodies. */
   getAllRigidBodyIds: () => IterableIterator<number>;
   /** Runs one fixed step, collecting its events for `dispatchPendingEventRecords` /
-   * `drainPendingEventRecords`. */
+   * `drainPendingEventRecords`, then takes the dynamic bodies that left the world bounds out of
+   * the simulation (disabled, or FIXED when jointed) and records them for
+   * `drainPendingOutOfBoundsRecords`. */
   step: (eventQueue?: unknown) => void;
+  /** Sets (or clears, with null) the current world's bounds (p102), and checks every enabled
+   * dynamic body against them at once. A new world starts without. */
+  setWorldBounds: (box: WorldBoundsBox | null) => void;
+  /** Returns (and clears) the bodies found outside the world bounds since the last call, in
+   * order: by step(), setWorldBounds() or a dynamic body's create. */
+  drainPendingOutOfBoundsRecords: () => readonly OutOfBoundsRecord[];
   /** The world's debug render lines (as {@link WorldAPI.debugRender}); needs a world. */
   debugRender: () => { vertices: Float32Array; colors: Float32Array } | undefined;
   /** WORKER_THREAD only: returns (and clears) collision/contact-force events accumulated

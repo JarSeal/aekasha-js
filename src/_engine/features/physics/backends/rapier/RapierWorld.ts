@@ -9,6 +9,7 @@ import type { LoopState } from '../../../../kernel/loop/MainLoop';
 import { existsOrThrow } from '../../../../utils/Assert';
 import { EngineWorldProxyAPI } from './proxies/EngineWorldProxyAPI';
 import { clearEventRegistrations, drainAndDispatchEvents } from './RapierEvents';
+import { checkWorldBounds, clearWorldBounds } from './RapierWorldBounds';
 import {
   backend,
   colliderAPIs,
@@ -16,6 +17,7 @@ import {
   detachedBodies,
   handleToColliderId,
   handleToJointId,
+  handleToRigidBodyId,
   jointAPIs,
   joints,
   rigidBodies,
@@ -96,6 +98,7 @@ export const createWorld = (
   if (maxCcdSubsteps !== undefined) backend.world.maxCcdSubsteps = maxCcdSubsteps;
   physicsWorldAPI = new EngineWorldProxyAPI();
   worldCreated = true;
+  backend.stepCount = 0;
   return physicsWorldAPI;
 };
 
@@ -114,12 +117,16 @@ export const deleteWorld = () => {
   jointAPIs.clear();
   handleToColliderId.clear();
   handleToJointId.clear();
+  handleToRigidBodyId.clear();
   detachedBodies.clear();
   clearEventRegistrations();
+  // Configuration of this world: a new one starts without, until physics' scene hooks set them
+  clearWorldBounds();
 
   // Reset (the running id counters are deliberately kept, see RapierState.ts' maps)
   worldCreated = false;
   physicsWorldAPI = undefined;
+  backend.stepCount = 0;
   backend.eventQueue?.free();
   backend.eventQueue = undefined;
 
@@ -159,11 +166,14 @@ export const debugRender = () => {
 };
 
 /**
- * Runs one fixed step on Rapier's own event queue (the contract's `eventQueue` isn't read) and collects its events for
- * dispatchPendingEventRecords / drainPendingEventRecords.
+ * Runs one fixed step on Rapier's own event queue (the contract's `eventQueue` isn't read), collects
+ * its events for dispatchPendingEventRecords / drainPendingEventRecords, and takes the bodies that
+ * left the world bounds on it out of the simulation (RapierWorldBounds.ts).
  * @internal
  */
 export const step = () => {
   backend.world.step(backend.eventQueue);
+  backend.stepCount++;
   drainAndDispatchEvents();
+  checkWorldBounds();
 };
