@@ -11,7 +11,12 @@ import { setFixedFrameDelta, toggleAppPlay, toggleMainPlay } from '../kernel/loo
 import { setPhysicsInterpolationPinnedToNewest } from '../features/physics/PhysicsInterpolation';
 import { getRenderer } from '../kernel/render/Renderer';
 import { getCurrentSceneId } from '../kernel/scene/Scene';
-import { hasFirstSceneBeenLoaded, isCurrentlyLoading } from '../kernel/scene/SceneLoader';
+import { addSceneHooks } from '../kernel/scene/SceneHooks';
+import {
+  getNextSceneId,
+  hasFirstSceneBeenLoaded,
+  isCurrentlyLoading,
+} from '../kernel/scene/SceneLoader';
 import { pauseDayNight } from '../features/skybox/SkyDayNight';
 import { takeSnapshotAsync } from '../kernel/render/Snapshot';
 import {
@@ -29,6 +34,13 @@ const DEFAULT_TIMEOUT_MS = 60_000;
 const TEST_FRAME_DELTA = 1 / 60;
 /** Set by freeze(): TSL `time` stops too (three's own animation loop keeps calling update) */
 let isTestClockFrozen = false;
+
+/** The scene the running load loads, from its `loadStart` (`finishLoad` clears the loader's own
+ * before `loadSettled`) */
+let loadingSceneId: string | null = null;
+/** Set when a load settles with no scene loaded yet: the first load failed (`undefined`: none
+ * has). A load that throws before it starts (an unknown scene id) runs no hook: still a timeout. */
+let failedFirstLoad: { sceneId: string | null } | undefined;
 
 /** The latest probe report per scene id (a page load probes one scene, a revisit replaces it) */
 const probeReports = new Map<string, PhysicsProbeReport>();
@@ -51,13 +63,20 @@ const pollFrames = async <T>(check: () => T | null, timeoutMs: number) => {
 };
 
 const whenSceneReady: AekTestBridge['whenSceneReady'] = async (opts) => {
-  const sceneId = await pollFrames(
-    () => (hasFirstSceneBeenLoaded() && !isCurrentlyLoading() ? getCurrentSceneId() ?? null : null),
-    opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS
-  );
-  if (sceneId === null) {
+  // A load queued behind a failed one starts in a microtask, before the next check: it's waited for
+  const ready = await pollFrames<{ sceneId: string } | { failed: string | null }>(() => {
+    if (isCurrentlyLoading()) return null;
+    if (hasFirstSceneBeenLoaded()) {
+      const sceneId = getCurrentSceneId();
+      return sceneId ? { sceneId } : null;
+    }
+    return failedFirstLoad ? { failed: failedFirstLoad.sceneId } : null;
+  }, opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+  if (ready === null) {
     return { status: 'TIMEOUT', sceneId: getCurrentSceneId() ?? null };
   }
+  if ('failed' in ready) return { status: 'FAILED', sceneId: ready.failed };
+  const { sceneId } = ready;
   // The scene's first frames: anything sampled from a render target has rendered into it
   await nextFrame();
   await nextFrame();
@@ -154,6 +173,16 @@ export const _installTestBridge = () => {
   if (window.__AEK_TEST__) return;
   useTestClock();
   installTestInput(window.__AEK_TEST_INPUT__ ?? null);
+  // Installed before the first load (Boot.ts), for the page's life
+  addSceneHooks({
+    loadStart: () => {
+      loadingSceneId = getNextSceneId();
+    },
+    loadSettled: () => {
+      if (!hasFirstSceneBeenLoaded()) failedFirstLoad = { sceneId: loadingSceneId };
+      loadingSceneId = null;
+    },
+  });
   onPhysicsProbeReport((report) => {
     probeReports.set(report.sceneId, report);
     if (freezeOnProbeReport && report.sceneId === getCurrentSceneId()) {

@@ -277,6 +277,11 @@ const loadScene = async (
     READY_TIMEOUT_MS + EVALUATE_MARGIN_MS,
     'whenSceneReady'
   );
+  if (ready.status === 'FAILED') {
+    // The load's error is the page's: printed under the failures
+    result.failures.push(`the scene "${ready.sceneId ?? '?'}" failed to load (its error is below)`);
+    return null;
+  }
   if (ready.status !== 'READY') {
     result.failures.push(`the scene didn't finish loading in ${READY_TIMEOUT_MS / 1000} s`);
     return null;
