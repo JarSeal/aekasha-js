@@ -42,11 +42,14 @@ import { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import { getAllColliderEntries, getAllRigidBodyEntries } from './PhysicsRegistry';
 import { facade, getPhysicsState, getPhysicsWorld, isPhysicsWorldEnabled } from './PhysicsState';
 import { holdPhysicsStepping, isPhysicsSteppingHeld } from './PhysicsStepping';
+import { flushPhysicsEvents, setOutOfBoundsHandler } from './PhysicsMessaging';
+import type { OutOfBoundsRecord } from './types/PhysicsWorldBoundsTypes';
 import {
   createPhysicsWorld,
   deletePhysicsWorld,
   initPhysics,
   resetPhysicsWorld,
+  setPhysicsWorldBounds,
   stopPhysics,
 } from './PhysicsWorld';
 import {
@@ -349,6 +352,51 @@ describe('the facade (MAIN_THREAD)', () => {
     await resetPhysicsWorld();
     expect(getPhysicsWorld().getMaxCcdSubstepsSync()).toBe(0);
     getPhysicsState().maxCcdSubsteps = 3;
+  });
+
+  it('p102: the world bounds hand their exits to the handler at the next flush, in order', async () => {
+    await resetPhysicsWorld();
+    const handled: OutOfBoundsRecord[][] = [];
+    setOutOfBoundsHandler((records) => handled.push([...records]));
+    try {
+      const below = createRigidBodySync({
+        rigidType: 'DYNAMIC',
+        translation: { x: 50, y: -10, z: 0 },
+      });
+      setPhysicsWorldBounds({ min: { y: -5 } });
+      const falling = createRigidBodySync({
+        rigidType: 'DYNAMIC',
+        translation: { x: 60, y: 0, z: 0 },
+        linvel: { x: 0, y: -600, z: 0 },
+      });
+      createColliderSync(BALL, falling.id);
+      // A sub-step: its flush first (the set's exit), then the step (the fall's)
+      flushPhysicsEvents();
+      facade.engAPI!.step();
+      expect(handled).toEqual([
+        [{ bodyId: below.id, step: 0, x: 50, y: -10, z: 0, source: 'GLOBAL' }],
+      ]);
+      flushPhysicsEvents();
+      expect(handled[1]).toEqual([expect.objectContaining({ bodyId: falling.id, step: 1 })]);
+      facade.engAPI!.step();
+      flushPhysicsEvents();
+      expect(handled).toHaveLength(2);
+      expect(falling.isEnabledSync()).toBe(false);
+    } finally {
+      setOutOfBoundsHandler(null);
+    }
+  });
+
+  it('p102: a new world has no bounds', async () => {
+    setPhysicsWorldBounds({ min: { y: -5 } });
+    await resetPhysicsWorld();
+    const body = createRigidBodySync({
+      rigidType: 'DYNAMIC',
+      translation: { x: 50, y: -10, z: 0 },
+    });
+    facade.engAPI!.step();
+    expect(facade.engAPI!.drainPendingOutOfBoundsRecords()).toHaveLength(0);
+    expect(body.isEnabledSync()).toBe(true);
   });
 
   it('A4: deletes without a world are quiet no-ops', async () => {

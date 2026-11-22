@@ -13,6 +13,7 @@ import {
   clearPendingEventPushes,
   closeWorkerTransport,
   hasWorkerTransport,
+  messageWorker,
   messageWorkerAsync,
   openWorkerTransport,
 } from './PhysicsMessaging';
@@ -44,6 +45,7 @@ import type {
 import { WorldProxyAPI } from './proxies/WorldProxyAPI';
 import type { PhysVector } from './types/PhysicsCommonTypes';
 import type { WorldAPI } from './types/PhysicsWorldTypes';
+import type { WorldBoundsBox } from './types/PhysicsWorldBoundsTypes';
 
 /** Set by stopPhysics (a mounted engine's unmount): no world is created after it. */
 let isPhysicsStopped = false;
@@ -281,6 +283,40 @@ export const resetPhysicsWorld = async () => {
   await flushPhysics();
   await deletePhysicsWorld();
   await createPhysicsWorld();
+};
+
+/** A box as plain data with only its given sides: what crosses the worker boundary (a
+ * `THREE.Vector3` corner would arrive as a plain object with every field, its methods gone). */
+const toWireBounds = (box: WorldBoundsBox): WorldBoundsBox => {
+  const side = (v: WorldBoundsBox['min']) =>
+    v && {
+      ...(v.x !== undefined ? { x: v.x } : {}),
+      ...(v.y !== undefined ? { y: v.y } : {}),
+      ...(v.z !== undefined ? { z: v.z } : {}),
+    };
+  return {
+    ...(box.min ? { min: side(box.min) } : {}),
+    ...(box.max ? { max: side(box.max) } : {}),
+  };
+};
+
+/**
+ * Sets (or clears, with null) the current world's bounds (p102): from then on, a dynamic body whose
+ * translation is outside the box after a step is taken out of the simulation on that step (disabled,
+ * or FIXED when jointed) and handed to the out-of-bounds handler (setOutOfBoundsHandler). Every
+ * enabled dynamic body is checked against them at once. A new world starts without (physics' scene
+ * hooks set a scene's). A no-op without a world. `WORKER_THREAD`: applies when the worker gets it;
+ * from an `APP_PHYSICS_STEP` system, before that sub-step, as on `MAIN_THREAD`.
+ * @internal
+ */
+export const setPhysicsWorldBounds = (box: WorldBoundsBox | null) => {
+  if (!facade.worldEnabled) return;
+  const bounds = box && toWireBounds(box);
+  if (!isWorkerTarget()) {
+    facade.engAPI?.setWorldBounds(bounds);
+    return;
+  }
+  messageWorker({ type: PhysicsProtocolType.SET_WORLD_BOUNDS, bounds, isOneWay: true });
 };
 
 /**

@@ -22,6 +22,7 @@ import type { ColliderParams } from './types/PhysicsColliderTypes';
 import type { PhysRotation } from './types/PhysicsCommonTypes';
 import { ContactForceEventSnapshot } from './types/PhysicsEventTypes';
 import type { JointParams } from './types/PhysicsJointTypes';
+import type { OutOfBoundsRecord } from './types/PhysicsWorldBoundsTypes';
 
 /** The channel to the worker (WORKER_THREAD mode, from initPhysics): every message to it and from
  * it goes through this (p614 D5). */
@@ -296,6 +297,27 @@ const onWorkerMessage = (data: PhysicsDownProtocol) => {
 let pendingEventPushes: EventsPushMessage[] = [];
 
 /**
+ * What handles the bodies the backend found outside the world bounds (p102): told each push's or
+ * sub-step's records, in order.
+ * @internal
+ */
+export type OutOfBoundsHandler = (records: readonly OutOfBoundsRecord[]) => void;
+
+/** The world bounds' handler (PhysicsEntity.ts', set at physics' install); without one, an exited
+ * body stays out of the simulation and nothing else happens. */
+let outOfBoundsHandler: OutOfBoundsHandler | null = null;
+
+/**
+ * Sets (or clears, with null) the one handler of the world bounds' exits, which
+ * flushPhysicsEvents calls after the collision and contact-force callbacks. The facade knows no
+ * entities: physics entities set it (PhysicsEntity.ts).
+ * @internal
+ */
+export const setOutOfBoundsHandler = (handler: OutOfBoundsHandler | null) => {
+  outOfBoundsHandler = handler;
+};
+
+/**
  * Drops the event pushes not delivered yet: a new world's, or a deleted one's.
  * @internal
  */
@@ -315,13 +337,21 @@ export const clearPendingEventPushes = () => {
  */
 export const flushPhysicsEvents = () => {
   if (!isWorkerTarget()) {
-    facade.engAPI?.dispatchPendingEventRecords();
+    const engAPI = facade.engAPI;
+    if (!engAPI) return;
+    engAPI.dispatchPendingEventRecords();
+    // Drained without a handler too: the records are of this world only
+    const outOfBounds = engAPI.drainPendingOutOfBoundsRecords();
+    if (outOfBounds.length) outOfBoundsHandler?.(outOfBounds);
     return;
   }
   if (!pendingEventPushes.length) return;
   const pushes = pendingEventPushes;
   pendingEventPushes = [];
-  for (let i = 0; i < pushes.length; i++) dispatchPushedEvents(pushes[i]);
+  for (let i = 0; i < pushes.length; i++) {
+    dispatchPushedEvents(pushes[i]);
+    if (pushes[i].outOfBounds.length) outOfBoundsHandler?.(pushes[i].outOfBounds);
+  }
 };
 
 /** Resolves an EVENTS_PUSH message's plain-data records back to ColliderAPIs (via the

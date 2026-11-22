@@ -100,7 +100,14 @@ import {
   reattachRigidBody,
 } from './PhysicsBodies';
 import { createCollider, createColliders } from './PhysicsColliders';
-import { beginSubStepCapture, endSubStepCapture, messageWorker } from './PhysicsMessaging';
+import {
+  beginSubStepCapture,
+  endSubStepCapture,
+  flushPhysicsEvents,
+  messageWorker,
+  setOutOfBoundsHandler,
+} from './PhysicsMessaging';
+import type { OutOfBoundsRecord } from './types/PhysicsWorldBoundsTypes';
 import { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import { createJoint } from './PhysicsJoints';
 import { facade, getPhysicsState, getPhysicsWorld } from './PhysicsState';
@@ -109,6 +116,7 @@ import {
   flushPhysics,
   initPhysics,
   resetPhysicsWorld,
+  setPhysicsWorldBounds,
   stopPhysics,
 } from './PhysicsWorld';
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
@@ -344,11 +352,8 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
       rigidType: 'DYNAMIC',
       translation: { x: 50, y: -10, z: 0 },
     });
-    messageWorker({
-      type: PhysicsProtocolType.SET_WORLD_BOUNDS,
-      bounds: { min: { y: -5 } },
-      isOneWay: true,
-    });
+    // A corner given as a Vector3 goes as plain data, and a side not given isn't sent
+    setPhysicsWorldBounds({ min: { y: -5 }, max: new THREE.Vector3(1e6, 1e6, 1e6) });
     // 10 m down in its first step: outside after step 1
     const falling = await createRigidBody({
       rigidType: 'DYNAMIC',
@@ -365,6 +370,20 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
       expect.objectContaining({ bodyId: falling.id, step: 1, source: 'GLOBAL' }),
     ]);
     expect(getRigidBodyAPIWithId(falling.id)?.isEnabledSync()).toBe(false);
+    expect(lastSent(PhysicsProtocolType.SET_WORLD_BOUNDS)?.bounds).toEqual({
+      min: { y: -5 },
+      max: { x: 1e6, y: 1e6, z: 1e6 },
+    });
+
+    // The push waits for the next sub-step's flush, which hands the exits to the handler
+    const handled: OutOfBoundsRecord[] = [];
+    setOutOfBoundsHandler((records) => handled.push(...records));
+    try {
+      flushPhysicsEvents();
+    } finally {
+      setOutOfBoundsHandler(null);
+    }
+    expect(handled.map((r) => r.bodyId)).toEqual([below.id, falling.id]);
   });
 
   it("D7: every new world gets the config's maxCcdSubsteps, 0 included; the setter sets it", async () => {
