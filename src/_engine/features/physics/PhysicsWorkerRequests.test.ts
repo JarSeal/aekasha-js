@@ -108,6 +108,7 @@ import {
   setOutOfBoundsHandler,
 } from './PhysicsMessaging';
 import type { OutOfBoundsRecord } from './types/PhysicsWorldBoundsTypes';
+import { installPhysicsWorldBounds } from './PhysicsWorldBounds';
 import { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import { createJoint } from './PhysicsJoints';
 import { facade, getPhysicsState, getPhysicsWorld } from './PhysicsState';
@@ -384,6 +385,34 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
       setOutOfBoundsHandler(null);
     }
     expect(handled.map((r) => r.bodyId)).toEqual([below.id, falling.id]);
+  });
+
+  it('p102: an entity whose body leaves the bounds is deleted at the flush after the push', async () => {
+    await resetPhysicsWorld();
+    installPhysicsWorldBounds();
+    const world = new ECSWorld({ id: 'p102-worker' });
+    try {
+      setPhysicsWorldBounds({ min: { y: -5 } });
+      const id = await createPhysicsEntity(
+        {
+          colliders: { type: 'BALL', radius: 0.5 },
+          body: {
+            rigidType: 'DYNAMIC',
+            translation: { x: 50, y: 0, z: 0 },
+            linvel: { x: 0, y: -600, z: 0 },
+          },
+        },
+        { world }
+      );
+      messageWorker({ type: PhysicsProtocolType.STEP, steps: 1, isOneWay: true });
+      await flushPhysics();
+      expect(world.isAlive(id)).toBe(true);
+      flushPhysicsEvents();
+      expect(world.isAlive(id)).toBe(false);
+    } finally {
+      setOutOfBoundsHandler(null);
+      setPhysicsWorldBounds(null);
+    }
   });
 
   it("D7: every new world gets the config's maxCcdSubsteps, 0 included; the setter sets it", async () => {

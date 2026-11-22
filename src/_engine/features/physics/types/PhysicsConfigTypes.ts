@@ -1,3 +1,5 @@
+import type { WorldBoundsDef } from './PhysicsWorldBoundsTypes';
+
 /** A physics backend, by its key in `backends/Engines.ts`' `ENGINES`. Only Rapier exists. */
 export type PhysicsEngine = 'RAPIER';
 
@@ -105,4 +107,7 @@ export type PhysicsState = {
    * reaches the worker inside the INIT_PHYSICS payload; setPhysicsStepStatsEnabled() changes
    * it at runtime (SET_STEP_STATS). */
   stepStatsEnabled: boolean;
+  /** The world bounds of a scene that doesn't set its own (`setSceneWorldBounds`), null for none
+   * (`AppConfig.physics.worldBounds`). */
+  worldBounds: WorldBoundsDef | null;
 };

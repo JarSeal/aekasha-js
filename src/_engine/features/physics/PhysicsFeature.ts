@@ -27,6 +27,7 @@ import {
   registerPhysicsWireframeDebugAsync,
   settlePendingPhysicsEntities,
 } from './PhysicsEntity';
+import { applySceneWorldBounds, installPhysicsWorldBounds } from './PhysicsWorldBounds';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
 import { existsOrThrow } from '../../utils/Assert';
 
@@ -54,6 +55,7 @@ export const physics = (): EngineFeature => ({
       ctx,
       existsOrThrow(getECSWorld(), 'Could not find the ECS world in the physics install.')
     );
+    installPhysicsWorldBounds();
     ctx.setFixedStepDriver(physicsFixedStepDriver);
     ctx.addSceneHooks(physicsSceneHooks);
     ctx.registerImportExtension(physicsImportExtension);
@@ -96,8 +98,12 @@ export const physicsSceneHooks: SceneHooks = {
   // Every physics entity is gone by now: start the next scene on a fresh world, so a revisit
   // simulates exactly like the first visit (no leftover Rapier internal state). After the
   // cameras: in WORKER_THREAD mode this awaits the worker, and frames keep rendering meanwhile,
-  // which needs a camera. Before the assets: imports can spawn bodies.
-  beforeAssets: resetPhysicsWorld,
+  // which needs a camera. Before the assets: imports can spawn bodies. The world bounds go on the
+  // new world before any body, so the first step already uses them (p102).
+  beforeAssets: async () => {
+    await resetPhysicsWorld();
+    applySceneWorldBounds();
+  },
   entered: async () => {
     resetPhysicsRayStats();
     // Includes creates the scene code didn't await (and the prev scene's deletes, in

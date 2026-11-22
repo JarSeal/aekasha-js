@@ -68,6 +68,7 @@ export const facade: {
     useSAB: true,
     maxBodies: 2048,
     stepStatsEnabled: false,
+    worldBounds: null,
   },
   engAPI: null,
   engineInitiated: false,

@@ -45,6 +45,12 @@ import { holdPhysicsStepping, isPhysicsSteppingHeld } from './PhysicsStepping';
 import { flushPhysicsEvents, setOutOfBoundsHandler } from './PhysicsMessaging';
 import type { OutOfBoundsRecord } from './types/PhysicsWorldBoundsTypes';
 import {
+  applySceneWorldBounds,
+  installPhysicsWorldBounds,
+  setSceneWorldBounds,
+} from './PhysicsWorldBounds';
+import { setLoadingSceneId } from '../../kernel/scene/Scene';
+import {
   createPhysicsWorld,
   deletePhysicsWorld,
   initPhysics,
@@ -384,6 +390,70 @@ describe('the facade (MAIN_THREAD)', () => {
       expect(falling.isEnabledSync()).toBe(false);
     } finally {
       setOutOfBoundsHandler(null);
+    }
+  });
+
+  it('p102: an entity whose body leaves the bounds is deleted at the next flush', async () => {
+    await resetPhysicsWorld();
+    installPhysicsWorldBounds();
+    const world = new ECSWorld({ id: 'p102-delete' });
+    try {
+      const fallingId = await createPhysicsEntity(
+        {
+          colliders: BALL,
+          body: {
+            rigidType: 'DYNAMIC',
+            translation: { x: 50, y: 0, z: 0 },
+            linvel: { x: 0, y: -600, z: 0 },
+          },
+        },
+        { world }
+      );
+      const keptId = await createBall(world, 0);
+      setPhysicsWorldBounds({ min: { y: -5 } });
+      facade.engAPI!.step();
+      expect(world.isAlive(fallingId)).toBe(true);
+      flushPhysicsEvents();
+      expect(world.isAlive(fallingId)).toBe(false);
+      expect(world.isAlive(keptId)).toBe(true);
+    } finally {
+      setOutOfBoundsHandler(null);
+      setPhysicsWorldBounds(null);
+    }
+  });
+
+  it("p102: a scene's bounds apply at once and to its every new world, else the config's; null turns them off", async () => {
+    await resetPhysicsWorld();
+    const createBelow = () =>
+      createRigidBodySync({ rigidType: 'DYNAMIC', translation: { x: 50, y: -10, z: 0 } });
+    setLoadingSceneId('p102Own');
+    try {
+      const first = createBelow();
+      setSceneWorldBounds({ min: { y: -5 } });
+      expect(first.isEnabledSync()).toBe(false);
+      // A new world starts without, until the scene hook applies the scene's again
+      await resetPhysicsWorld();
+      const second = createBelow();
+      expect(second.isEnabledSync()).toBe(true);
+      applySceneWorldBounds();
+      expect(second.isEnabledSync()).toBe(false);
+
+      // A scene without its own gets the config's, until it sets null
+      facade.state.worldBounds = { min: { y: -5 } };
+      setLoadingSceneId('p102Default');
+      await resetPhysicsWorld();
+      applySceneWorldBounds();
+      expect(createBelow().isEnabledSync()).toBe(false);
+      setSceneWorldBounds(null);
+      expect(createBelow().isEnabledSync()).toBe(true);
+      // Another scene's bounds wait for its own world
+      setSceneWorldBounds({ min: { y: 0 } }, 'p102Other');
+      expect(createBelow().isEnabledSync()).toBe(true);
+    } finally {
+      facade.state.worldBounds = null;
+      setLoadingSceneId(null);
+      setPhysicsWorldBounds(null);
+      facade.engAPI!.drainPendingOutOfBoundsRecords();
     }
   });
 
