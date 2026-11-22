@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 4323,
-      "total": 4323
+      "documented": 4346,
+      "total": 4346
     },
     "members": {
       "documented": 1145,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3750,
-        "total": 3750
+        "documented": 3773,
+        "total": 3773
       },
       "members": {
         "documented": 969,
@@ -189,8 +189,8 @@
     },
     "engine/features/physics": {
       "exports": {
-        "documented": 213,
-        "total": 213
+        "documented": 221,
+        "total": 221
       },
       "members": {
         "documented": 34,
@@ -217,8 +217,8 @@
     },
     "engine/features/physics/backends/rapier": {
       "exports": {
-        "documented": 58,
-        "total": 58
+        "documented": 64,
+        "total": 64
       },
       "members": {
         "documented": 0,
@@ -301,8 +301,8 @@
     },
     "engine/features/physics/types": {
       "exports": {
-        "documented": 46,
-        "total": 46
+        "documented": 51,
+        "total": 51
       },
       "members": {
         "documented": 20,
@@ -455,8 +455,8 @@
     },
     "engine/kernel/assets": {
       "exports": {
-        "documented": 190,
-        "total": 190
+        "documented": 192,
+        "total": 192
       },
       "members": {
         "documented": 0,
@@ -469,8 +469,8 @@
     },
     "engine/kernel/assets/import": {
       "exports": {
-        "documented": 75,
-        "total": 75
+        "documented": 77,
+        "total": 77
       },
       "members": {
         "documented": 0,

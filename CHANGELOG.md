@@ -4,6 +4,44 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-22 — p102_physics-world-bounds (Phase 1)
+
+Physics world bounds (p102 Phase 1): a scene can set a box its dynamic bodies must stay in. A body that leaves it, falling through a floor or off the edge of the level, is taken out of the simulation on the fixed step it left the box and its entity deleted, instead of falling and stepping for the rest of the visit. It happens on the same step on every visit and in both worker targets, so scene loads stay deterministic, and the determinism probe leaves out the bodies that left by its step. The third-person gym deletes what falls 50 m below its ground.
+
+### Engine 6.22.0 (Sunset)
+
+**Added**
+
+- `setSceneWorldBounds(def, sceneId?)` (`aekasha/physics`), with the types `WorldBoundsBox`, `WorldBoundsDef` and `WorldBoundsAction`: a scene's world bounds, an axis-aligned box whose every side is optional (`{ min: { y: -50 } }` is a kill height). A dynamic body whose translation is outside it after a step is disabled on that step (made `FIXED` when it has a joint: Rapier mis-solves the joints of disabled bodies, i250) and its entity deleted when the exit is delivered, with the collision events at the start of the next sub-step. Without a scene id it's the loading scene's, else the current one's, and it applies at once to that scene's world; a scene keeps its bounds for its later visits, and `null` turns them off. Every body is checked when the bounds are set, and a body when it's created, so one asleep outside is caught too. Only dynamic bodies are checked, by their translation. In the debug env each exit logs a warning with the entity's name, position and step.
+- `AppConfig.physics.worldBounds` (`PhysicsState.worldBounds`, default `null`): the bounds of every scene that doesn't set its own.
+
+**Changed**
+
+- The determinism probe waits for the physics side to flush before it hashes, and leaves out the bodies whose exit step is at most its target: their entities are deleted a sub-step later on `MAIN_THREAD` and later on `WORKER_THREAD`, so one run would hash them and another not. Its log says how many it left out.
+- Physics' scene hook `beforeAssets` applies the next scene's world bounds to its new world right after the reset, before any of its bodies.
+- Without bounds the step's check costs one flag test; the Rapier backend's chunk grows by 0.5 kB gzipped (in the main build and in the physics worker).
+
+### Toolkit 3.8.1 (Gibbous)
+
+**Fixed**
+
+- `TerrainAsync.test.ts`' first test, which imports and starts the terrain worker's modules cold, has a 30 s timeout: it takes about a second alone and ran past the 5 s default under the full suite's load, and its late request then failed the next test.
+
+### App 1.34.0 (Preschooler)
+
+**Added**
+
+- `thirdPersonGymScene` sets its world bounds 50 m below the ground: a body that falls off the 200 m ground, or through it, is deleted there. Its probe hash and character paths are unchanged.
+
+### Project
+
+**Changed**
+
+- The docs: the physics `CLAUDE.md`'s World bounds section (and its tests' note on the worker harness), the root `CLAUDE.md`'s Physics, the Hub's physics page (a World bounds section, the key API, `aek:covers`), and p102's Phase 1 marked done with its As built list.
+- The physics worker test harness's fake `self` carries `performance`: Rapier's step reads its clock through it, so any `STEP` in `PhysicsWorkerRequests.test.ts` made Rapier panic with `unreachable` (on `main` too: no test stepped there before).
+- The layout check's and the module side effects test's tree-wide tests have a 30 s timeout: about 2 s alone, they ran past the 5 s default under the full suite's load.
+- The bundle, API and docs baselines recorded, with the previous merge's `kernel/assets` names (`AssetPropsDiff.ts`, `ImportPhysicsGroups.ts`) and its embed bundle sizes, which it didn't record.
+
 ## 2026-11-21 — issue-fixing-20261120 (i010, i020, i030, i040, i050, i060, i170, i180)
 
 Eight issues fixed. VSM shadows no longer draw stripes down a slope facing the sun that nothing shadows (i010). It was the receiver shadowing itself: under VSM three draws every shadow receiver into the map, and its blur stores the depth's mean in half floats, whose rounding (2⁻¹¹ at depths 0.5..1, where a sky light puts the ground under the camera) outgrew the `MEDIUM` preset's bias. And a GLB the asset pipeline quantized (its default meshopt encode) now gives the same geometries as the unquantized file (i020): a mesh made from an imported geometry's id was drawn at the size and place of its quantized positions, a mesh node with children lost its id and its custom props, and two identical meshes lost the second one's id. The positions upload as 32-bit floats now (the download is unchanged). And an imported file with several bodies but no `index` custom props gets all of them (i030): only the first node with a `rigidType` got a body, the others were drawn but never moved or collided, and nothing said so. And a component added to a deleted entity is ignored (i040): it was stored where no delete would clear it, and in `TYPED_ARRAY` storage a stale id's transform write could take a live entity's transform. And `createMaterial` and `createGeometry` with an id that's taken say so in the debug env when the call's props differ (i050): they return the registered asset and ignore the props, as before, so two scenes giving one id other props drew the second with the first's. And `persistent: true` on an entity keeps it on a scene switch (i060): `createEntity` never added the `PERSISTENT` component for it, so a camera, light, mesh or instanced pool given the flag was deleted anyway; a scene JSON's persistent entity is now created once and reused by every later load. A scene JSON with a persistent entity and no app id fails the gather; none in the repo has one. And `yarn verify:scenes` reports a scene whose first load failed in seconds, with the load's error, instead of waiting out its 180 s and calling it a slow load (i170). And the test bridge's `focusDebuggerControl` focuses a property grid button in a labelled row by its own text, not the control after it (i180).

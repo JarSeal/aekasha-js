@@ -144,6 +144,27 @@ To check a scene, open it with `?isDebug=true&physicsProbe=N`, or use "Determini
 Physics API debug tab. It freezes physics N steps after the scene starts, hashes every dynamic
 body's state, and compares the hash with the last run of the same scene.
 
+## World bounds
+
+A body that tunnels through a floor or rolls off the edge of a level falls forever, stepping all
+the while. A scene's world bounds stop that: a dynamic body whose position leaves the box is taken
+out of the simulation on the step it left, and its entity is deleted, on that same step in every
+run and on either thread.
+
+```ts
+import { setSceneWorldBounds } from 'aekasha/physics';
+
+// In the scene's code: 50 m below the level, a body is gone
+setSceneWorldBounds({ min: { y: -50 } });
+```
+
+Every side of the box is optional, and a missing side is open. A scene keeps its bounds for its
+later visits; `AppConfig.physics.worldBounds` gives every scene without its own the same box, and
+`setSceneWorldBounds(null)` turns them off for one scene. Only dynamic bodies are checked, by
+their position, not their colliders. In the debug env each exit logs a warning naming the entity:
+a body leaving the level is usually a bug (a collider smaller than its mesh, a body spawned inside
+another). The determinism probe leaves out the bodies that left by its step.
+
 ## Queries, events and joints
 
 - Ray and shape casts go through the world: [`getPhysicsWorld`](api:getPhysicsWorld)`().castRay(…)`,
@@ -229,6 +250,7 @@ every body.
   [`getPhysicsTier`](api:getPhysicsTier) and [`setPhysicsTierPolicy`](api:setPhysicsTierPolicy).
 - [`getPhysicsSubStepIndex`](api:getPhysicsSubStepIndex): the step clock for `APP_PHYSICS_STEP`
   systems.
+- [`setSceneWorldBounds`](api:setSceneWorldBounds): the box a scene's bodies must stay in.
 
 ## Read more
 

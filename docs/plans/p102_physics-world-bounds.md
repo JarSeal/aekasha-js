@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 implemented
 Category: Physics
 Related: p101 scene-load determinism (implemented, see the Physics section of `.claude/CLAUDE.md` and `src/_engine/features/physics/CLAUDE.md`'s Deterministic scene loads: exits must happen on a fixed step, and the determinism probe must stay green), p500_restore-physics-snapshot.md (bounds are configuration, not simulation state, see §8), the `lines()` feature (`src/_engine/features/lines/`, `createLines`: Phase 3 draws the bounds with it), `src/_engine/features/physics/CLAUDE.md`'s Simulation tiers (p352, p343: the tiers and their distance policy, §8)
 
@@ -177,7 +177,7 @@ Fix: the probe excludes every body with an exit record whose `step` is ≤ its t
 
 Each phase compiles, lints and can merge on its own.
 
-### Phase 1 — Global bounds, delete only
+### Phase 1 — Global bounds, delete only — done
 
 - Engine side (§4): `globalBounds`, `checkWorldBounds`, the create-time check, records, `WORLD_SET_BOUNDS`, `EVENTS_PUSH.outOfBounds`.
 - The facade's delivery (§4.2).
@@ -188,7 +188,22 @@ Each phase compiles, lints and can merge on its own.
 - Debug log (§7) and the probe fix (§6).
 - App: set a kill-Y in the third-person gym scene (`src/app/scenes/thirdPersonGymScene/`) as the first consumer; its probe and path hashes must not move.
 
+As built (engine 6.22.0, app 1.34.0; branch `p102_physics-world-bounds`):
+
+- **Backend** (`backends/rapier/RapierWorldBounds.ts`, a module of its own): the box, the pending records and the step check are module state there, not on `backend`; `backend.stepCount` (`RapierState.ts`) counts the current world's steps, since `step()` gets no step index. A record's `step` is that count after the exit step (the first snapshot showing the body disabled, `getPhysicsSnapshotStepIndex`'s scale); one found when the bounds are set or at a create gets the current count. The check iterates `forEachActiveRigidBody` through a new reverse map, `handleToRigidBodyId` (`RapierState.ts`, kept by create, delete, detach, reattach and `deleteWorld`), collects first and disables after Rapier's loop, and reads "inside" (a `NaN` translation is outside).
+- **A jointed body is made `FIXED`, not disabled** (i250: Rapier mis-solves the joints of disabled bodies, and on `WORKER_THREAD` the delete lands a frame or more later). Phase 2's `'DISABLE'` and `'CALLBACK'` must allow for an exited body that is `FIXED` and enabled.
+- **`setWorldBounds` checks every enabled dynamic body at once**, sleeping ones included, besides the create-time check: a scene's code runs after the `beforeAssets` hook, so its `setSceneWorldBounds` comes after its imports' bodies exist.
+- **Protocol:** `SET_WORLD_BOUNDS = 8` in the ENGINE range (handled in `PhysicsWorker.ts` with `engAPI`; the WORLD switchboard gets only the `WorldAPI`, and the plan's world-range message would have needed a public `WorldAPI` method). `EVENTS_PUSH.outOfBounds` as planned.
+- **Facade:** `setPhysicsWorldBounds` (`PhysicsWorld.ts`, plain data on the wire, a no-op without a world) and `setOutOfBoundsHandler` (one handler, `PhysicsMessaging.ts`; not `register…`: the standards pair that with `unregister`). Each exit's step is noted when it reaches the main thread (`getOutOfBoundsExitSteps`, the facade's, not `PhysicsEntity.ts`'), and `MAIN_THREAD` takes the backend's records into a queue of the facade's, so the probe can read the last step's exits while frozen. Both are dropped with the world (`clearPendingEventPushes`).
+- **ECS side** in a new `PhysicsWorldBounds.ts` (`PhysicsEntity.ts` is at 633 lines): `setSceneWorldBounds`, `applySceneWorldBounds` (the `beforeAssets` hook, after `resetPhysicsWorld`) and `handleOutOfBounds`. No new `bodyIdToEntityId`: `PhysicsEntity.ts`' `bodyOwners` / `getPhysicsBodyOwner` already maps a body to its entity. `setSceneWorldBounds` applies at once when its scene's world is the current one (the loading scene, else the current), throws without a scene (as `registerSkyBox`), and stores a copy. `getWorldBoundsStats` is left for Phase 3.
+- **Probe:** it waits for one `flushPhysics()` before hashing (on `WORKER_THREAD` the shared buffer is visible before the push carrying its exits is handled), and leaves out bodies whose exit step is at most its target; the second log line adds ", N out of the world bounds left out". Checked in the gym with three balls dropped past the ground's edge (a local edit, not committed; characters off): exits on steps 192, 210 and 227 in all three targets, and the same hash in all three targets and two runs each at N = 191, 192, 193 and 600. On 60 fps the worker got one step per frame there, so a step batch whose exits arrive after the buffer wasn't exercised.
+- **Tests:** the worker harness's fake `self` needed `performance` (Rapier's step reads its clock through it; any `STEP` panicked with `unreachable`, on `main` too).
+- **The gym:** `verify:scenes` against a baseline recorded on `main`: `mainThread`, `prodTest` and `debugger` pass (hash `84a78084`, character paths unchanged); the worker configurations' snapshots fail with or without the kill height (`main`'s worker recording was an odd run: `ca7ca2ad` against every other run's `84a78084`), so record them on `main` again.
+- **Hub:** a World bounds section on the physics feature page now (the root's rule: a public API updates its page in the same branch), not only in Phase 4.
+
 ### Phase 2 — Per-entity overrides and actions
+
+From Phase 1 (see its As built): widen `WorldBoundsAction` and `OutOfBoundsSource` (`'ENTITY'`) in `types/PhysicsWorldBoundsTypes.ts`; the per-body map goes in `RapierWorldBounds.ts` beside the box (cleared by `clearWorldBounds` and by the body's delete); the handler is `PhysicsWorldBounds.ts`' `handleOutOfBounds`, its action from the entity's `WORLD_BOUNDS`, else the scene's def, else `'DELETE'` (the scene's def is in `sceneDefs`; keep the active one beside it). On `WORKER_THREAD` the proxy's cached `isEnabledSync` / `bodyTypeSync` don't know the backend disabled (or froze) the body: `'DISABLE'` and `'CALLBACK'` must refresh them, and allow for a jointed body made `FIXED`.
 
 - `WORLD_BOUNDS` component, `setEntityWorldBounds`, `entityOpts.worldBounds`, `RIGID_SET_BOUNDS`, `IGNORE`.
 - `'DISABLE'` and `'CALLBACK'` actions.
