@@ -7,6 +7,10 @@ import { getConservativeGeometryRadius, incGeometryRef } from '../../kernel/asse
 import { incMaterialRef } from '../../kernel/assets/Material';
 import { registerLodTarget } from '../../kernel/ecs/LodTargets';
 import {
+  registerInstanceBoundsProvider,
+  type BoundingVolumeProvider,
+} from '../../kernel/ecs/ObjectFrustumCullingSystem';
+import {
   createLodFadeAttribute,
   enableLodDither,
   getLodFadeAttribute,
@@ -71,6 +75,29 @@ const lodPoolsByMesh = new WeakMap<THREE.InstancedMesh, LodPoolState>();
 
 const getSlot = (entityId: number, world: ECSWorld) =>
   world.getComponent(entityId, ComponentType.INSTANCED_MESH_SLOT);
+
+const _boundsMatrix = new THREE.Matrix4();
+const _instanceSphere = new THREE.Sphere();
+
+// A pool instance's world-space sphere, for light culling's receiver test (i100): its drawn copy's
+// (its outgoing one while it fades to LOD culled; none while it's culled, so it lights nothing),
+// from the instance matrix instancedMeshPoolSyncSystem baked this frame and the pool mesh's world
+// matrix. An instanced LOD pool's local sphere covers every level.
+const getInstanceWorldBoundingSphere: BoundingVolumeProvider = (entityId, world) => {
+  const slot = getSlot(entityId, world);
+  if (!slot) return undefined;
+  const isFadingOut = slot.index < 0;
+  const mesh = isFadingOut ? slot._fadeOutMesh : slot.mesh;
+  if (!mesh) return undefined;
+  const lodPool = lodPoolsByMesh.get(mesh);
+  if (!lodPool && !mesh.geometry.boundingSphere) mesh.geometry.computeBoundingSphere();
+  mesh.getMatrixAt(isFadingOut ? slot._fadeOutIndex : slot.index, _boundsMatrix);
+  mesh.updateWorldMatrix(true, false);
+  _boundsMatrix.premultiply(mesh.matrixWorld);
+  return _instanceSphere
+    .copy(lodPool ? lodPool.localSphere : mesh.geometry.boundingSphere!)
+    .applyMatrix4(_boundsMatrix);
+};
 
 /** Writes one instance's LOD fade (LodFade.ts), when the mesh has a per-instance fade. */
 const writeFade = (mesh: THREE.InstancedMesh, index: number, fade: number) => {
@@ -738,12 +765,13 @@ export const instancedMeshPoolSyncSystem = (world: ECSWorld) => {
 
 /**
  * Installs the instanced mesh pools (the `instancing()` feature's install, InstancingFeature.ts):
- * the instances' spatial radius, the slot hooks, the instanced LOD pool's LOD target and the sync
- * system.
+ * the instances' spatial radius and world bounds, the slot hooks, the instanced LOD pool's LOD
+ * target and the sync system.
  * @internal
  */
 export const installInstancedMeshPools = (ctx: FeatureContext) => {
   registerSpatialRadiusProvider(ComponentType.INSTANCED_MESH_SLOT, getInstanceRadius);
+  registerInstanceBoundsProvider(ComponentType.INSTANCED_MESH_SLOT, getInstanceWorldBoundingSphere);
 
   // onRemoveComponent too, so removing the slot directly can't leave its matrix drawn
   ctx.registerComponentHooks(ComponentType.INSTANCED_MESH_SLOT, {
