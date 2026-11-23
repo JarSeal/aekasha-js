@@ -48,7 +48,7 @@ import {
   getOutOfBoundsExitSteps,
   setOutOfBoundsHandler,
 } from './PhysicsMessaging';
-import type { OutOfBoundsRecord } from './types/PhysicsWorldBoundsTypes';
+import type { OutOfBoundsRecord, WorldBoundsExitEvent } from './types/PhysicsWorldBoundsTypes';
 import {
   applySceneWorldBounds,
   handleOutOfBounds,
@@ -394,7 +394,7 @@ describe('the facade (MAIN_THREAD)', () => {
       flushPhysicsEvents();
       facade.engAPI!.step();
       expect(handled).toEqual([
-        [{ bodyId: below.id, step: 0, x: 50, y: -10, z: 0, source: 'GLOBAL' }],
+        [{ bodyId: below.id, step: 0, x: 50, y: -10, z: 0, source: 'GLOBAL', frozen: false }],
       ]);
       // The probe's read: the step's exit before its flush delivers it
       expect([...getOutOfBoundsExitSteps()]).toEqual([
@@ -557,6 +557,92 @@ describe('the facade (MAIN_THREAD)', () => {
       expect(world.isAlive(target)).toBe(true);
     } finally {
       setOutOfBoundsHandler(null);
+      setPhysicsWorldBounds(null);
+    }
+  });
+
+  it("p102 Phase 2: the actions: the entity's own, else the scene's; DISABLE, CALLBACK, frozen", async () => {
+    await resetPhysicsWorld();
+    setOutOfBoundsHandler(handleOutOfBounds);
+    const world = new ECSWorld({ id: 'p102-actions' });
+    const createLow = (x: number, opts?: Parameters<typeof createPhysicsEntity>[1]) =>
+      createPhysicsEntity(
+        {
+          colliders: BALL,
+          body: { rigidType: 'DYNAMIC', translation: { x, y: -10, z: 0 }, gravityScale: 0 },
+        },
+        { world, ...opts }
+      );
+    const subStep = () => {
+      flushPhysicsEvents();
+      facade.engAPI!.step();
+      flushPhysicsEvents();
+    };
+    setLoadingSceneId('p102Actions');
+    try {
+      setSceneWorldBounds({ min: { y: -5 }, action: 'DISABLE' });
+      const disabled = await createLow(50);
+      // Its tier policy membership goes (added here as the option would)
+      world.addComponent(disabled, ComponentType.PHYSICS_TIER_POLICY, {
+        refusedTier: null,
+        placed: false,
+      });
+      const events: WorldBoundsExitEvent[] = [];
+      // No side: the scene's box, the entity's own action
+      const called = await createLow(60, {
+        worldBounds: { action: 'CALLBACK', onExit: (e) => events.push(e) },
+      });
+      const deleted = await createLow(70, { worldBounds: { action: 'DELETE' } });
+      const noCallback = await createLow(80, { worldBounds: { action: 'CALLBACK' } });
+      // A jointed pair: frozen (FIXED), not disabled, and only the DISABLED component for DISABLE
+      const anchor = await createLow(90);
+      const hanging = await createLow(92);
+      createJointSync({
+        type: 'SPHERICAL',
+        body1Id: world.getRigidBody(anchor)!.id,
+        body2Id: world.getRigidBody(hanging)!.id,
+        anchor1: { x: 1, y: 0, z: 0 },
+        anchor2: { x: -1, y: 0, z: 0 },
+      });
+      subStep();
+
+      expect(world.isAlive(disabled) && world.isDisabled(disabled)).toBe(true);
+      expect(world.getRigidBody(disabled)!.isEnabledSync()).toBe(false);
+      expect(world.hasComponent(disabled, ComponentType.PHYSICS_TIER_POLICY)).toBe(false);
+      expect(world.isAlive(deleted)).toBe(false);
+      expect(world.isDisabled(noCallback)).toBe(true);
+      // CALLBACK leaves the entity as it is: alive, not disabled, its body out
+      expect([world.isAlive(called), world.isDisabled(called)]).toEqual([true, false]);
+      expect(events).toEqual([
+        {
+          entityId: called,
+          world,
+          bodyId: world.getRigidBody(called)!.id,
+          step: 0,
+          position: { x: 60, y: -10, z: 0 },
+          source: 'GLOBAL',
+          frozen: false,
+        },
+      ]);
+      for (const id of [anchor, hanging]) {
+        const body = world.getRigidBody(id)!;
+        expect([world.isDisabled(id), body.isEnabledSync(), body.bodyTypeSync()]).toEqual([
+          true,
+          true,
+          RigidBodyTypeAPI.Fixed,
+        ]);
+      }
+
+      // The callback's put-back: moved inside and enabled, it stays in
+      const body = world.getRigidBody(called)!;
+      body.setTranslation({ x: 60, y: 0, z: 0 }, true);
+      body.setEnabled(true);
+      subStep();
+      expect(events).toHaveLength(1);
+      expect(body.isEnabledSync()).toBe(true);
+    } finally {
+      setOutOfBoundsHandler(null);
+      setLoadingSceneId(null);
       setPhysicsWorldBounds(null);
     }
   });

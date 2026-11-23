@@ -6,7 +6,12 @@ import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { lerror } from '../../utils/Logger';
 import { createNewResolver, rejectRequest, resolveRequest } from '../../utils/PromiseResolver';
 import { PhysicsDebugStateBuffer } from './PhysicsDebugStateBuffer';
-import { colliders, workerCollisionEventFns, workerContactForceEventFns } from './PhysicsRegistry';
+import {
+  colliders,
+  rigidBodies,
+  workerCollisionEventFns,
+  workerContactForceEventFns,
+} from './PhysicsRegistry';
 import { facade, isWorkerTarget } from './PhysicsState';
 import { recordPushedStepStats } from './PhysicsStepStats';
 import { PhysicsTransformBuffer } from './PhysicsTransformBuffer';
@@ -15,6 +20,7 @@ import type { PhysicsDownProtocol, PhysicsResponse } from './protocol/PhysicsDow
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
 import type { EventsPushMessage } from './protocol/PhysicsResponses';
 import type { PhysicsUpProtocol } from './protocol/PhysicsUpProtocol';
+import type { RigidBodyProxyAPI } from './proxies/RigidBodyProxyAPI';
 import type { PhysicsTransport } from './transport/PhysicsTransport';
 import { createWorkerTransport } from './transport/WorkerTransport';
 import type { RigidBodyParams } from './types/PhysicsBodyTypes';
@@ -393,7 +399,19 @@ export const flushPhysicsEvents = () => {
   pendingEventPushes = [];
   for (let i = 0; i < pushes.length; i++) {
     dispatchPushedEvents(pushes[i]);
-    if (pushes[i].outOfBounds.length) outOfBoundsHandler?.(pushes[i].outOfBounds);
+    const exits = pushes[i].outOfBounds;
+    if (!exits.length) continue;
+    noteProxyExits(exits);
+    outOfBoundsHandler?.(exits);
+  }
+};
+
+/** WORKER_THREAD: the exited bodies' proxies cache what the backend made of them (disabled, or
+ * FIXED), as their own setEnabled / setBodyType would have. */
+const noteProxyExits = (records: readonly OutOfBoundsRecord[]) => {
+  for (let i = 0; i < records.length; i++) {
+    const proxy = rigidBodies.get(records[i].bodyId) as RigidBodyProxyAPI | undefined;
+    proxy?._noteWorldBoundsExit(records[i].frozen);
   }
 };
 
@@ -465,13 +483,20 @@ export const copyWorldBounds = <T extends WorldBoundsBox>(bounds: T): T => ({
   ...toWireWorldBounds(bounds),
 });
 
+/** Whether a corner gives any side. */
+const hasSide = (v: WorldBoundsBox['min']) =>
+  v !== undefined && (v.x !== undefined || v.y !== undefined || v.z !== undefined);
+
 /**
  * An entity's own world bounds as the backend takes them (plain data, its callback and action
- * left out): `'IGNORE'`, or the box.
+ * left out): `'IGNORE'`, the box, or null for a box without any side (the world's box applies;
+ * only the action is the entity's).
  * @internal
  */
-export const toWireBodyWorldBounds = (bounds: EntityWorldBounds): BodyWorldBounds =>
-  bounds.ignore ? 'IGNORE' : toWireWorldBounds(bounds);
+export const toWireBodyWorldBounds = (bounds: EntityWorldBounds): BodyWorldBounds | null => {
+  if (bounds.ignore) return 'IGNORE';
+  return hasSide(bounds.min) || hasSide(bounds.max) ? toWireWorldBounds(bounds) : null;
+};
 
 /** A JointParams for the postMessage boundary: a FIXED joint's frames as plain objects
  * (toPlainRot). Returns the original object for every other type.

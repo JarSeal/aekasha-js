@@ -201,7 +201,7 @@ describe('EngineRapier world bounds (p102)', () => {
     expect(body.isEnabledSync()).toBe(false);
     // The step count it had before that step, as at a create
     expect(engAPI.drainPendingOutOfBoundsRecords()).toEqual([
-      { bodyId: body.id, step: 1, x: 50, y: -10, z: 0, source: 'GLOBAL' },
+      { bodyId: body.id, step: 1, x: 50, y: -10, z: 0, source: 'GLOBAL', frozen: false },
     ]);
     const drained = createBall(-10);
     expect(engAPI.drainPendingOutOfBoundsRecords().map((r) => r.bodyId)).toEqual([drained.id]);
@@ -283,7 +283,7 @@ describe('EngineRapier world bounds (p102)', () => {
     engAPI.setBodyWorldBounds(open.id, { min: {}, max: {} });
     engAPI.step();
     expect(engAPI.drainPendingOutOfBoundsRecords()).toEqual([
-      { bodyId: fenced.id, step: 0, x: 50, y: 0, z: 0, source: 'ENTITY' },
+      { bodyId: fenced.id, step: 0, x: 50, y: 0, z: 0, source: 'ENTITY', frozen: false },
     ]);
     expect(deep.isEnabledSync()).toBe(true);
     expect(ignored.isEnabledSync()).toBe(true);

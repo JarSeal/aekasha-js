@@ -380,7 +380,7 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
     await flushPhysics();
     const push = lastReceived(PhysicsProtocolType.EVENTS_PUSH);
     expect(push?.outOfBounds).toEqual([
-      { bodyId: below.id, step: 0, x: 50, y: -10, z: 0, source: 'GLOBAL' },
+      { bodyId: below.id, step: 0, x: 50, y: -10, z: 0, source: 'GLOBAL', frozen: false },
       expect.objectContaining({ bodyId: falling.id, step: 1, source: 'GLOBAL' }),
     ]);
     expect(getRigidBodyAPIWithId(falling.id)?.isEnabledSync()).toBe(false);
@@ -489,6 +489,57 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
       ]);
     } finally {
       bridge.state.releaseReplies();
+      setOutOfBoundsHandler(null);
+      setPhysicsWorldBounds(null);
+    }
+  });
+
+  it("p102 Phase 2: an exit's delivery updates the proxy's cached state, then DISABLE applies", async () => {
+    await resetPhysicsWorld();
+    setOutOfBoundsHandler(handleOutOfBounds);
+    const world = new ECSWorld({ id: 'p102-worker-actions' });
+    const createLow = (x: number) =>
+      createPhysicsEntity(
+        {
+          colliders: { type: 'BALL', radius: 0.5 },
+          body: { rigidType: 'DYNAMIC', translation: { x, y: -10, z: 0 }, gravityScale: 0 },
+        },
+        { world, worldBounds: { action: 'DISABLE' } }
+      );
+    try {
+      setPhysicsWorldBounds({ min: { y: -5 } });
+      const loose = await createLow(50);
+      const anchor = await createLow(60);
+      const hanging = await createLow(62);
+      await createJoint({
+        type: 'SPHERICAL',
+        body1Id: world.getRigidBody(anchor)!.id,
+        body2Id: world.getRigidBody(hanging)!.id,
+        anchor1: { x: 1, y: 0, z: 0 },
+        anchor2: { x: -1, y: 0, z: 0 },
+      });
+      messageWorker({ type: PhysicsProtocolType.STEP, steps: 1, isOneWay: true });
+      await flushPhysics();
+      // Not delivered yet: the proxies still cache what the main thread last set
+      expect(world.getRigidBody(loose)!.isEnabledSync()).toBe(true);
+      flushPhysicsEvents();
+      expect(world.getRigidBody(loose)!.isEnabledSync()).toBe(false);
+      expect(world.isDisabled(loose)).toBe(true);
+      for (const id of [anchor, hanging]) {
+        const body = world.getRigidBody(id)!;
+        expect([world.isDisabled(id), body.isEnabledSync(), body.bodyTypeSync()]).toEqual([
+          true,
+          true,
+          RigidBodyTypeAPI.Fixed,
+        ]);
+        // The worker agrees
+        expect([await body.isEnabled(), await body.bodyType()]).toEqual([
+          true,
+          RigidBodyTypeAPI.Fixed,
+        ]);
+      }
+      expect(await world.getRigidBody(loose)!.isEnabled()).toBe(false);
+    } finally {
       setOutOfBoundsHandler(null);
       setPhysicsWorldBounds(null);
     }

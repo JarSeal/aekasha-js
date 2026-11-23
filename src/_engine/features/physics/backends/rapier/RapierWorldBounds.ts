@@ -75,9 +75,11 @@ const isJointed = (rb: Rapier.RigidBody) => {
 /** Takes the body out of the simulation and records the exit. */
 const exitBody = (rb: Rapier.RigidBody, id: number, source: OutOfBoundsSource) => {
   const t = rb.translation();
-  if (isJointed(rb)) rb.setBodyType(backend.RAPIER.RigidBodyType.Fixed, false);
+  const frozen = isJointed(rb);
+  if (frozen) rb.setBodyType(backend.RAPIER.RigidBodyType.Fixed, false);
   else rb.setEnabled(false);
-  pendingRecords.push({ bodyId: id, step: backend.stepCount, x: t.x, y: t.y, z: t.z, source });
+  const { stepCount: step } = backend;
+  pendingRecords.push({ bodyId: id, step, x: t.x, y: t.y, z: t.z, source, frozen });
 };
 
 /** Checks one body by id now, whatever its sleep state: an enabled dynamic body outside its box

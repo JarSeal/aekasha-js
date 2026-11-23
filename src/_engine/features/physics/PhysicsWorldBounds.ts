@@ -19,12 +19,18 @@ import { setPhysicsWorldBounds } from './PhysicsWorld';
 import type {
   EntityWorldBounds,
   OutOfBoundsRecord,
+  WorldBoundsAction,
   WorldBoundsDef,
+  WorldBoundsExitCallback,
 } from './types/PhysicsWorldBoundsTypes';
 
 /** Each scene's own bounds (setSceneWorldBounds), null for none: kept across visits, as sky
  * boxes are. A scene without an entry gets `AppConfig.physics.worldBounds`. */
 const sceneDefs = new Map<string, WorldBoundsDef | null>();
+
+/** The definition applied to the current world (its box and action, its onExit): the scene's,
+ * or the config's, or null. Its `action` is the exits' unless an entity has its own. */
+let activeDef: WorldBoundsDef | null = null;
 
 /** The entities a handler call deletes, after its loop. Reused, so a call allocates no array. */
 const exitedOwners: PhysicsBodyOwner[] = [];
@@ -63,7 +69,9 @@ export const setSceneWorldBounds = (def: WorldBoundsDef | null, sceneId?: string
   }
   const stored = def && copyWorldBounds(def);
   sceneDefs.set(targetSceneId, stored);
-  if (targetSceneId === getWorldSceneId()) setPhysicsWorldBounds(stored);
+  if (targetSceneId !== getWorldSceneId()) return;
+  activeDef = stored;
+  setPhysicsWorldBounds(stored);
 };
 
 /**
@@ -78,32 +86,102 @@ export const applySceneWorldBounds = () => {
     sceneId !== null && sceneDefs.has(sceneId)
       ? sceneDefs.get(sceneId)!
       : facade.state.worldBounds ?? null;
+  activeDef = def;
   setPhysicsWorldBounds(def);
 };
 
-const logExit = (owner: PhysicsBodyOwner, record: OutOfBoundsRecord) => {
+const ACTION_LOG: Record<WorldBoundsAction, string> = {
+  DELETE: 'deleted',
+  DISABLE: 'disabled',
+  CALLBACK: 'handed to its onExit',
+};
+
+const logExit = (owner: PhysicsBodyOwner, record: OutOfBoundsRecord, action: WorldBoundsAction) => {
   const { world, entityId } = owner;
   const name =
     getStableAppId(entityId, world) ??
     (world.getComponent(entityId, ComponentType.OBJECT3D)?.value.name || `entity ${entityId}`);
   const pos = `${record.x.toFixed(2)}, ${record.y.toFixed(2)}, ${record.z.toFixed(2)}`;
+  const own = record.source === 'ENTITY' ? 'its own world bounds' : 'the world bounds';
   lwarn(
-    `Physics world bounds: "${name}" left them at (${pos}) on step ${record.step}, deleted. Often a collider smaller than its mesh, or a body spawned inside another.`
+    `Physics world bounds: "${name}" left ${own} at (${pos}) on step ${record.step}, ${ACTION_LOG[action]}. Often a collider smaller than its mesh, or a body spawned inside another.`
   );
 };
 
+/** The action for an exit of `entityId` and its callback: the entity's own `action`, else the
+ * active definition's, else 'DELETE'. 'CALLBACK' without its onExit is 'DISABLE' (a debug-env
+ * warning). */
+const resolveAction = (world: ECSWorld, entityId: number) => {
+  const own = world.getComponent(entityId, ComponentType.WORLD_BOUNDS);
+  const def = own?.action ? own : activeDef;
+  const action = def?.action ?? 'DELETE';
+  if (action !== 'CALLBACK' || def?.onExit) return { action, onExit: def?.onExit };
+  if (IS_DEBUG_ENV) {
+    lwarn(
+      `Physics world bounds: entity ${entityId}'s exit action is 'CALLBACK' without an onExit; disabled instead.`
+    );
+  }
+  return { action: 'DISABLE' as const, onExit: undefined };
+};
+
 /**
- * The out-of-bounds handler (setOutOfBoundsHandler): deletes each exited body's entity, after
- * going through every record. A body without a physics entity (made through the bare Physics API,
- * or its entity already deleted: a scene exit) is skipped and stays out of the simulation.
+ * Keeps an exited entity's body out of the simulation from the ECS side: it leaves the physics
+ * tier policy (whose next pass would bring it back), and a tier requested and not applied yet is
+ * dropped. A tier the app requests later applies (`world.setDisabled` keeps a disabled entity's
+ * body disabled through it; an exit's FIXED body goes DYNAMIC again with a `FULL` tier).
+ * Component reads only: the tiers' modules stay out of a build without physicsTiers().
+ */
+const holdExitedTier = (world: ECSWorld, entityId: number) => {
+  world.removeComponent(entityId, ComponentType.PHYSICS_TIER_POLICY);
+  const tier = world.getComponent(entityId, ComponentType.PHYSICS_SIM_TIER);
+  if (tier && tier.target !== tier.tier) tier.target = tier.tier;
+};
+
+/** 'DISABLE': the entity disabled (its OBJECT3D hidden). A frozen body (FIXED, it has joints) gets
+ * only the DISABLED component: world.setDisabled would disable a jointed body (i250). */
+const disableExited = (world: ECSWorld, entityId: number, frozen: boolean) => {
+  if (frozen) world.addComponent(entityId, ComponentType.DISABLED, true);
+  else world.setDisabled(entityId, true);
+};
+
+/** 'CALLBACK': calls `onExit`; a throw is logged, so the other exits are still handled. */
+const callOnExit = (
+  onExit: WorldBoundsExitCallback,
+  owner: PhysicsBodyOwner,
+  record: OutOfBoundsRecord
+) => {
+  const { world, entityId } = owner;
+  const { bodyId, step, x, y, z, source, frozen } = record;
+  try {
+    onExit({ entityId, world, bodyId, step, position: { x, y, z }, source, frozen });
+  } catch (err) {
+    lerror(`Physics world bounds: the onExit of entity ${entityId} threw.`, err);
+  }
+};
+
+/**
+ * The out-of-bounds handler (setOutOfBoundsHandler): handles each exited body's entity by its
+ * action (resolveAction): 'DISABLE' and 'CALLBACK' at once, in record order, 'DELETE' after going
+ * through every record. A body without a physics entity (made through the bare Physics API, or its
+ * entity already deleted: a scene exit, or an earlier onExit) is skipped and stays out of the
+ * simulation.
  * @internal
  */
 export const handleOutOfBounds = (records: readonly OutOfBoundsRecord[]) => {
   for (let i = 0; i < records.length; i++) {
-    const owner = getPhysicsBodyOwner(records[i].bodyId);
+    const record = records[i];
+    const owner = getPhysicsBodyOwner(record.bodyId);
     if (!owner || !owner.world.isAlive(owner.entityId)) continue;
-    if (IS_DEBUG_ENV) logExit(owner, records[i]);
-    exitedOwners.push(owner);
+    const { world, entityId } = owner;
+    const { action, onExit } = resolveAction(world, entityId);
+    if (IS_DEBUG_ENV) logExit(owner, record, action);
+    if (action === 'DELETE') {
+      exitedOwners.push(owner);
+      continue;
+    }
+    holdExitedTier(world, entityId);
+    if (action === 'DISABLE') disableExited(world, entityId, record.frozen);
+    else callOnExit(onExit!, owner, record);
   }
   for (let i = 0; i < exitedOwners.length; i++) {
     const { world, entityId } = exitedOwners[i];
@@ -113,26 +191,36 @@ export const handleOutOfBounds = (records: readonly OutOfBoundsRecord[]) => {
 };
 
 /**
- * Sets (or replaces) a physics entity's own world bounds, or removes them with null: they replace
- * the scene's bounds for its body (they aren't intersected with them; a missing side is open), or
- * exempt it with `ignore: true`. They apply from the body's next check on (before the next fixed
- * step), asleep or not. Set on an entity without a body yet (eg. a mesh entity before its
- * `createPhysicsEntity`), they go with its body's create. They go with the entity.
+ * Sets (or replaces) a physics entity's own world bounds, or removes them with null. With any side
+ * given, their box replaces the scene's for its body (it isn't intersected with it; a missing side
+ * is open); without one, the scene's box applies. `ignore: true` exempts it. Their `action` (and
+ * `onExit`) replaces the scene's for this entity. They apply from the body's next check on (before
+ * the next fixed step), asleep or not. Set on an entity without a body yet (eg. a mesh entity
+ * before its `createPhysicsEntity`), they go with its body's create. They go with the entity.
  * @param entityId the physics entity (or one that gets its body later)
- * @param bounds the box or `ignore`, or null to follow the scene's bounds again
+ * @param bounds the box, `ignore` and the action, or null to follow the scene's bounds again
  * @param ecsWorld the entity's world (the default one when left out)
  * @remarks Set them in scene-load code, in an `APP_PHYSICS_STEP` system or with
  * `createPhysicsEntity`'s `worldBounds` option (sent with the body, so they apply from its very
  * first check, in both worker targets). From a per-frame stage on `WORKER_THREAD`, the step they
  * start on depends on the frame timing. Only dynamic bodies are checked. A deleted entity is a
- * quiet no-op (a debug-env warning).
+ * quiet no-op (a debug-env warning). An entity handled by `'DISABLE'` or `'CALLBACK'` leaves the
+ * physics tier policy (`setPhysicsTierPolicyMember` adds it again).
  * @example
  * ```ts
  * import { setEntityWorldBounds } from 'aekasha/physics';
  *
  * declare const playerId: number;
- * // The player's own respawn logic catches its falls: the scene's kill height leaves it alone
- * setEntityWorldBounds(playerId, { ignore: true });
+ * // The scene's kill height, but the player respawns instead of being deleted
+ * setEntityWorldBounds(playerId, {
+ *   action: 'CALLBACK',
+ *   onExit: ({ world, entityId }) => {
+ *     const body = world.getRigidBody(entityId);
+ *     body?.setTranslation({ x: 0, y: 2, z: 0 }, true);
+ *     body?.setLinvel({ x: 0, y: 0, z: 0 }, true);
+ *     body?.setEnabled(true);
+ *   },
+ * });
  * ```
  */
 export const setEntityWorldBounds = (

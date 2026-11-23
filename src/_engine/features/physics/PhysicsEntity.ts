@@ -307,7 +307,7 @@ const createPhysicsEntityNow = async (
   // and no step can land between a body and its colliders.
   const createOpts = {
     tier: createTier,
-    worldBounds: boundsSent && toWireBodyWorldBounds(boundsSent),
+    worldBounds: (boundsSent && toWireBodyWorldBounds(boundsSent)) ?? undefined,
   };
   let created: RigidBodyWithColliders;
   try {

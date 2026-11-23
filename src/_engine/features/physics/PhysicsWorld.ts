@@ -94,7 +94,9 @@ export const initPhysics = async (doNotCreateWorld?: boolean) => {
     openWorkerTransport(startedWorker);
     const { worldCreated } = await messageWorkerAsync<InitPhysicsResponse>({
       type: PhysicsProtocolType.INIT_PHYSICS,
-      physicsState: facade.state,
+      // Plain data: the world bounds may hold an onExit callback, and the worker gets the box by
+      // SET_WORLD_BOUNDS anyway
+      physicsState: { ...facade.state, worldBounds: null },
       isDebugEnvironment: IS_DEBUG_ENV,
       loopState: getReadOnlyLoopState(),
       doNotCreateWorld,

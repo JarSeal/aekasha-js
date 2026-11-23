@@ -35,6 +35,8 @@ export type {
   WorldBoundsAction,
   WorldBoundsBox,
   WorldBoundsDef,
+  WorldBoundsExitCallback,
+  WorldBoundsExitEvent,
 } from './types/PhysicsWorldBoundsTypes';
 export type {
   PhysicsSimTierData,
