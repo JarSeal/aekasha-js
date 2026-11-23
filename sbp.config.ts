@@ -65,11 +65,12 @@ const profiles: SbpProfile[] = [
     // other groups' drift since p309's baseline (no engine code of p310's in it), took the initial
     // to 410.3 and `assets/index.js` to 406.1 KiB: 403 → 411 and 399 → 407 KiB. Their code is
     // lazy: the terrain material, the wet response, the scatter and the rocks are chunks of their
-    // own
+    // own. p102: the physics world bounds (`physics`' 1.5 KiB below) took the initial to 412.5 and
+    // `assets/index.js` to 408.2 KiB: 411 → 413 and 407 → 409 KiB
     budgets: {
-      initial: 411 * KIB,
+      initial: 413 * KIB,
       chunks: {
-        'assets/index.js': 407 * KIB,
+        'assets/index.js': 409 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
@@ -85,7 +86,8 @@ const profiles: SbpProfile[] = [
       // 254.5 KiB, physics 23.5 KiB); p057 lowered three to `suggestBudget` of r187's 239.3 KiB
       groups: {
         three: 249 * KIB,
-        '_engine/features/character': 5 * KIB,
+        // p102: `suggestBudget` of 2.7 KiB (2,766 B), reported well under 5 KiB
+        '_engine/features/character': 4 * KIB,
         // p354: the instance sets' front (createInstanceSetAsync, on the entry; its backends are
         // lazy) took it to 3.9 KiB in Phase 1, and Phase 3's `maxSlots` option to 4.0 KiB (4,102 B):
         // 4 → 5 KiB, for Phase 5's removeInstances / setInstanceMatrices on the front too
@@ -112,7 +114,10 @@ const profiles: SbpProfile[] = [
         // LOD level checks at a join and the later-LOD hook; S3-S4 add the LOD delegate's and the
         // LOD-cull hooks' forwarding stubs (the batch side is in the lazy batch chunk): 9 → 10 KiB
         '_engine/features/merging': 10 * KIB,
-        '_engine/features/physics': 25 * KIB,
+        // p102: the world bounds (`PhysicsWorldBounds.ts`, 1.2 KiB: the scene's and entities'
+        // bounds applied in the held scene load, the worker's out-of-bounds records handled every
+        // step, so not lazy) took it 24.7 → 26.2 KiB (26,822 B): 25 → 27 KiB
+        '_engine/features/physics': 27 * KIB,
         '_engine/features/postfx': 3 * KIB,
         '_engine/features/skybox': 19 * KIB,
         '_engine/features/spatial': 7 * KIB,
