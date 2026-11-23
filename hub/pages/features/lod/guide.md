@@ -67,8 +67,9 @@ matrix, and grows the mesh's bounds when the instance leaves them, so three neve
 mesh while a moved instance is on screen.
 
 The pools need `instancing()`, an instanced LOD pool's levels `lod()` too, and a pool's
-`spatialDomain` option `spatial()` (without it, the pool warns and indexes nothing). Give a pool
-a domain of its own: instances in `DEFAULT` [aren't a light's receivers](hub:issues/pool-instances-not-light-receivers).
+`spatialDomain` option `spatial()` (without it, the pool warns and indexes nothing). Instances in
+`DEFAULT` keep a point or spot light with object culling on as any mesh does, each measured where
+it's drawn; a LOD-culled instance lights nothing.
 
 The selection costs one distance and one multiply per entity, after frustum culling, and only an
 entity whose level changed is touched. `AppConfig.lod.maxSelectionsPerFrame`

@@ -80,8 +80,8 @@ the cell size, out of the oversized tier:
 ```
 
 Instanced pool instances can join a domain too (the pool's `spatialDomain` option): see
-[LOD and impostors](hub:features/lod#many-instances). Give them a domain of their own: in
-`DEFAULT` they never count as a light's receivers (see [Known issues](#known-issues)).
+[LOD and impostors](hub:features/lod#many-instances). In `DEFAULT` they count as a light's
+receivers like any mesh, each measured where it's drawn (a LOD-culled instance doesn't).
 
 ## The debug tab
 

@@ -410,10 +410,8 @@ export interface CreateInstancedMeshPoolOptions {
   /**
    * A registered spatial domain `spawn()` joins every instance to
    * (p346). Default: none.
-   * @remarks An instance in `DEFAULT` is never a light's receiver: light culling's receiver test
-   * reads a mesh's `OBJECT3D`, which an instance hasn't, so an object-culled light whose only
-   * nearby meshes are pool instances is culled (docs/issues/i100_pool-instances-not-light-receivers.md).
-   * Give the pool a domain of its own, or leave object culling off for the lights that light it.
+   * @remarks An instance in `DEFAULT` is a light's receiver like any mesh, measured by its drawn
+   * copy (one LOD culled lights nothing), so it keeps an object-culled point or spot light on.
    */
   spatialDomain?: string;
 }
@@ -554,10 +552,8 @@ export interface CreateInstancedLodPoolOptions {
   entityOpts?: CoreEntityOpts;
   /**
    * A registered spatial domain `spawn()` joins every instance to. Default: none.
-   * @remarks An instance in `DEFAULT` is never a light's receiver: light culling's receiver test
-   * reads a mesh's `OBJECT3D`, which an instance hasn't, so an object-culled light whose only
-   * nearby meshes are pool instances is culled (docs/issues/i100_pool-instances-not-light-receivers.md).
-   * Give the pool a domain of its own, or leave object culling off for the lights that light it.
+   * @remarks An instance in `DEFAULT` is a light's receiver like any mesh, measured by its drawn
+   * copy (one LOD culled lights nothing), so it keeps an object-culled point or spot light on.
    */
   spatialDomain?: string;
 }
