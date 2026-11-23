@@ -108,7 +108,14 @@ vi.mock(import('../../utils/Logger'), () => ({ lerror: vi.fn(), lwarn: vi.fn(), 
 
 import { setAppData } from './AppData';
 import { addSceneHooks } from './SceneHooks';
-import { createRootScene, createScene, getCurrentSceneId, getLoadingSceneId } from './Scene';
+import {
+  createRootScene,
+  createScene,
+  createSceneAppLooper,
+  getCurrentSceneId,
+  getLoadingSceneId,
+  runSceneAppLoopers,
+} from './Scene';
 import { areAllInputsEnabled, setAllInputsEnabled } from '../input/InputState';
 import {
   createSceneLoader,
@@ -251,6 +258,114 @@ describe('loadScene: a failed load', () => {
     setScene('unknownLoader');
     await expect(loadScene({ sceneId: 'unknownLoader', loaderId: 'nope' })).resolves.toBe(false);
     expect(isCurrentlyLoading()).toBe(false);
+  });
+});
+
+describe("loadScene: a failed load's scene (i110)", () => {
+  /** Records the exit hooks', the entity clears' and the releases' order from here */
+  const recordTeardown = (exit?: (sceneId: string | undefined) => void) => {
+    const order: string[] = [];
+    const removeHooks = addSceneHooks({
+      exit: (sceneId) => {
+        order.push(`exit:${sceneId}`);
+        exit?.(sceneId);
+      },
+    });
+    m.world.clearNonPersistent.mockImplementation(() => order.push('clear'));
+    fns.releaseSceneOwnedAssets.mockImplementation((sceneId: string) =>
+      order.push(`release:${sceneId}`)
+    );
+    return { order, removeHooks };
+  };
+
+  it('failed after the teardown: deletes what it built, then releases its assets', async () => {
+    setScene('i110Prev');
+    await loadScene({ sceneId: 'i110Prev' });
+    vi.clearAllMocks();
+    const { order, removeHooks } = recordTeardown();
+    const staleLooper = vi.fn();
+    let shouldFail = true;
+    setScene('i110Failing', () => {
+      if (!shouldFail) return;
+      createSceneAppLooper(staleLooper);
+      throw new Error('scene code failed');
+    });
+
+    await expect(loadScene({ sceneId: 'i110Failing' })).resolves.toBe(false);
+    // The previous scene's teardown, then the failed scene's parts and entities before its release
+    expect(order).toEqual([
+      'exit:i110Prev',
+      'clear',
+      'exit:i110Failing',
+      'clear',
+      'release:i110Failing',
+    ]);
+    expect(getCurrentSceneId()).toBe('i110Prev');
+    expect(areAllInputsEnabled()).toBe(true);
+    removeHooks();
+
+    // Its loopers went with it: its next visit runs only the ones that visit adds
+    shouldFail = false;
+    await expect(loadScene({ sceneId: 'i110Failing' })).resolves.toBe(true);
+    runSceneAppLoopers(16);
+    expect(staleLooper).not.toHaveBeenCalled();
+  });
+
+  it("failed before the teardown (the loader's loadStartFn): changes nothing", async () => {
+    setScene('i110BeforePrev');
+    await loadScene({ sceneId: 'i110BeforePrev' });
+    vi.clearAllMocks();
+    await createSceneLoader(
+      { id: 'i110StartFails', loadStartFn: () => Promise.reject(new Error('loader failed')) },
+      { isCurrent: false }
+    );
+    const { order, removeHooks } = recordTeardown();
+    setScene('i110NotStarted');
+
+    await expect(
+      loadScene({ sceneId: 'i110NotStarted', loaderId: 'i110StartFails' })
+    ).resolves.toBe(false);
+    expect(order).toEqual([]);
+    expect(getCurrentSceneId()).toBe('i110BeforePrev');
+    removeHooks();
+  });
+
+  it('failed after its scene became current: it stays current, with what it has', async () => {
+    setScene('i110CurrentPrev');
+    await loadScene({ sceneId: 'i110CurrentPrev' });
+    vi.clearAllMocks();
+    const { order, removeHooks } = recordTeardown();
+    const removeCreated = addSceneHooks({
+      created: (sceneId) => {
+        if (sceneId === 'i110Current') throw new Error('created hook failed');
+      },
+    });
+    setScene('i110Current');
+
+    await expect(loadScene({ sceneId: 'i110Current' })).resolves.toBe(false);
+    expect(order).toEqual(['exit:i110CurrentPrev', 'clear']);
+    expect(getCurrentSceneId()).toBe('i110Current');
+    removeCreated();
+    removeHooks();
+  });
+
+  it('a throw while deleting what it built: logged, and the load finishes as failed', async () => {
+    setScene('i110ThrowPrev');
+    await loadScene({ sceneId: 'i110ThrowPrev' });
+    vi.clearAllMocks();
+    const { order, removeHooks } = recordTeardown((sceneId) => {
+      if (sceneId === 'i110Throwing') throw new Error('exit hook failed');
+    });
+    setScene('i110Throwing', () => {
+      throw new Error('scene code failed');
+    });
+
+    await expect(loadScene({ sceneId: 'i110Throwing' })).resolves.toBe(false);
+    expect(order).toEqual(['exit:i110ThrowPrev', 'clear', 'exit:i110Throwing']);
+    expect(isCurrentlyLoading()).toBe(false);
+    expect(areAllInputsEnabled()).toBe(true);
+    expect(m.canvasStyle['pointer-events']).toBe('');
+    removeHooks();
   });
 });
 
