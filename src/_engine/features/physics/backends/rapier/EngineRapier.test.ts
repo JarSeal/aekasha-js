@@ -1,6 +1,6 @@
 import type Rapier from '@dimforge/rapier3d-compat';
 import * as THREE from 'three/webgpu';
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LoopState } from '../../../../kernel/loop/MainLoop';
 import type { PhysicsDownProtocol } from '../../protocol/PhysicsDownProtocol';
 import { PhysicsProtocolType } from '../../protocol/PhysicsProtocolType';
@@ -16,6 +16,7 @@ import { FeatureType, QueryFilterFlags } from '../../types/PhysicsQueryTypes';
 import type { WorldAPI } from '../../types/PhysicsWorldTypes';
 import { initPhysicsEngine } from '../../PhysicsUtils';
 import { physicsSwitchWorld } from '../../worker/PhysicsSwitchWorld';
+import { backend } from './RapierState';
 
 // The Rapier backend in Node: the compat build carries its WASM inline, so no GPU or DOM is needed.
 
@@ -338,5 +339,74 @@ describe('EngineRapier world bounds (p102)', () => {
     engAPI.setWorldBounds(killY);
     for (let i = 0; i < 30; i++) engAPI.step();
     expect(engAPI.drainPendingOutOfBoundsRecords().map((r) => r.bodyId)).toEqual([body.id]);
+  });
+});
+
+describe('EngineRapier snapshots (p500)', () => {
+  beforeEach(() => {
+    engAPI.deleteWorld();
+    world = engAPI.createWorld({ x: 0, y: -9.81, z: 0 }, { timestep: 1 / 60 });
+  });
+
+  /** A dynamic ball falling from y = 10, far from everything else. */
+  const createFallingBall = () => {
+    const body = engAPI.createRigidBody({
+      rigidType: 'DYNAMIC',
+      translation: { x: -50, y: 10, z: 0 },
+    });
+    engAPI.createCollider({ type: 'BALL', radius: 0.5 }, body.id);
+    return body;
+  };
+
+  const stepTimes = (n: number) => {
+    for (let i = 0; i < n; i++) engAPI.step();
+  };
+
+  it('takes nothing, and refuses a restore, without a world', () => {
+    const snapshot = engAPI.takeSnapshot()!;
+    engAPI.deleteWorld();
+    expect(engAPI.takeSnapshot()).toBeUndefined();
+    expect(() => engAPI.restoreSnapshot(snapshot)).toThrow(/no world/);
+  });
+
+  it('restores into a new Rapier world, keeps the API object and frees the replaced world', () => {
+    createFallingBall();
+    const snapshot = engAPI.takeSnapshot()!;
+    const replaced = backend.world;
+    const free = vi.spyOn(replaced, 'free');
+    expect(engAPI.restoreSnapshot(snapshot)).toBe(world);
+    expect(backend.world).not.toBe(replaced);
+    expect(free).toHaveBeenCalledOnce();
+    expect(world.restoringWorld).toBe(false);
+    // The world's own methods go through the one implementation
+    expect(world.restoreSnapshotSync(snapshot)).toBe(world);
+  });
+
+  it('restores the same snapshot twice to the same state', () => {
+    createFallingBall();
+    const snapshot = engAPI.takeSnapshot()!;
+    const readY = () => backend.world.bodies.getAll().map((rb) => rb.translation().y);
+    stepTimes(30);
+    engAPI.restoreSnapshot(snapshot);
+    expect(readY()).toEqual([10]);
+    stepTimes(30);
+    const afterFirst = readY();
+    engAPI.restoreSnapshot(snapshot);
+    expect(readY()).toEqual([10]);
+    stepTimes(30);
+    expect(readY()).toEqual(afterFirst);
+    expect(afterFirst[0]).toBeLessThan(10);
+  });
+
+  it("throws on bytes Rapier can't read, and keeps the world as it was", () => {
+    createFallingBall();
+    const snapshot = engAPI.takeSnapshot()!;
+    const current = backend.world;
+    // Rapier's World.fromRaw returns null for bytes it can't deserialize
+    vi.spyOn(RAPIER.World, 'restoreSnapshot').mockReturnValueOnce(null as unknown as Rapier.World);
+    expect(() => engAPI.restoreSnapshot(snapshot)).toThrow(/could not read/);
+    expect(backend.world).toBe(current);
+    expect(world.restoringWorld).toBe(false);
+    engAPI.step();
   });
 });

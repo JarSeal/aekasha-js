@@ -1,6 +1,6 @@
 // The Rapier backend's world: init, create, delete, step, snapshots and the debug render.
 
-import Rapier from '@dimforge/rapier3d-compat';
+import type Rapier from '@dimforge/rapier3d-compat';
 import { getPhysicsEngine } from '../../PhysicsUtils';
 import type { PhysVector } from '../../types/PhysicsCommonTypes';
 import type { PhysicsState } from '../../types/PhysicsConfigTypes';
@@ -124,36 +124,56 @@ export const deleteWorld = () => {
   clearWorldBounds();
 
   // Reset (the running id counters are deliberately kept, see RapierState.ts' maps)
+  const hadWorld = worldCreated;
   worldCreated = false;
   physicsWorldAPI = undefined;
   backend.stepCount = 0;
   backend.eventQueue?.free();
   backend.eventQueue = undefined;
 
-  // Free the world
-  backend.world.free();
+  // Free the world (without one, backend.world is the no-op stub)
+  if (hadWorld) backend.world.free();
   backend.world = { step: () => {} } as Rapier.World;
 
   return { worldDeleted: true };
 };
 
 /**
- * The world serialized by Rapier (undefined without a world); see p500.
+ * The world serialized by Rapier (undefined without a world); see p500. The one implementation:
+ * the world's API object delegates to it.
  * @internal
  */
-export const takeSnapshot = () => backend.world?.takeSnapshot();
+export const takeSnapshot = () => (worldCreated ? backend.world.takeSnapshot() : undefined);
 
 /**
- * Replaces the world with one restored from takeSnapshot's bytes. The id maps aren't rebuilt
- * (p500).
+ * Replaces the world with one restored from takeSnapshot's bytes and frees the one it replaces;
+ * the world's API object stays (it reads `backend.world`). The one implementation: the world's API
+ * object delegates to it. Throws without a world, or when Rapier can't read the bytes, and then the
+ * world is left as it was. The id maps aren't rebuilt yet (p500 Phase 1). Rapier leaks the small
+ * serialization pipeline it makes per restore (a few hundred bytes).
  * @internal
  */
 export const restoreSnapshot = (snapshot: Uint8Array) => {
-  // @TODO: we maybe need check all the rigidBodies and colliders
-  // and recreate all the maps (rigidBodies, rigidBodyAPIs, colliders, colliderAPIs) here.
-  backend.world = Rapier.World.restoreSnapshot(snapshot);
-  physicsWorldAPI = new EngineWorldProxyAPI();
-  return physicsWorldAPI;
+  const worldAPI = existsOrThrow(
+    worldCreated ? physicsWorldAPI : undefined,
+    'Could not restore a physics snapshot: there is no world to restore it into.'
+  );
+  // Typed as World, but Rapier's fromRaw returns null for bytes it can't read
+  const restored: Rapier.World | null = backend.RAPIER.World.restoreSnapshot(snapshot);
+  if (!restored) {
+    throw new Error('Could not restore a physics snapshot: Rapier could not read its bytes.');
+  }
+  const replaced = backend.world;
+  worldAPI.restoringWorld = true;
+  try {
+    backend.world = restored;
+  } finally {
+    worldAPI.restoringWorld = false;
+  }
+  // Freed last (p500 D10): anything that throws before this leaves the old world alive, not freed
+  // under a reference still held
+  replaced.free();
+  return worldAPI;
 };
 
 /**

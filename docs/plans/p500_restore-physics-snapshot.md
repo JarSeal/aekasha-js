@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 0 implemented
 Category: Physics
 Epic: https://trello.com/c/8ROzNdXe/161-make-a-possibility-to-run-the-physics-engine-in-a-thread-threading-architecture-for-all-upcoming-thread-implemantations-not-just
 Blocks: p512_client-prediction-and-reconciliation.md
@@ -378,7 +378,7 @@ All four `@CHORE` comments at `:1257-1265` are deleted as resolved.
 
 Each phase compiles clean, leaves the repo working, and is separately reviewable/committable.
 
-**Phase 0 — Reconcile the duplicates and fix the pre-existing bug.** Small and
+**Phase 0 — Reconcile the duplicates and fix the pre-existing bug — done.** Small and
 self-contained, no new feature. In the backend (`RapierWorld.ts`, `proxies/EngineWorldProxyAPI.ts`):
 collapse to one implementation per design decision 8, add the `free()` of the replaced world per
 decision 10, and add the `if (!newWorld) throw` guard for the `null` return. The
@@ -389,6 +389,27 @@ later world shows them stale.
 Manual verification: `physicsTest.ts` behaves exactly as before. From the console, run
 `deletePhysicsWorld()` then `createPhysicsWorld()` and confirm the physics debugger tab's entity
 list shows no stale entries. Both `workerTarget` modes.
+
+As built (Phase 0):
+
+- `RapierWorld.ts`' `takeSnapshot` / `restoreSnapshot` are the one implementation;
+  `EngineWorldProxyAPI`'s four snapshot methods delegate to them. That import makes a cycle
+  `RapierWorld` ↔ `proxies/EngineWorldProxyAPI` (calls inside methods only, like the facade's
+  `PhysicsWorld` ↔ `WorldProxyAPI`). The static `Rapier` import is now `import type`; the restore
+  uses `backend.RAPIER`.
+- **A restore keeps the world's API object** (decision 1 at the backend level):
+  `EngineWorldProxyAPI` holds no per-world state (it reads `backend.world`), so `restoreSnapshot`
+  returns the existing `physicsWorldAPI` instead of making a new one. The worker's
+  `physicsWorldAPI = engAPI.restoreSnapshot(...)` gets the same object back.
+- Restore order: no world → throw; `World.restoreSnapshot` → `null` → throw (the world is left as it
+  was); swap `backend.world` with `restoringWorld` set (a `try` / `finally`, where Phase 1's rebind
+  and sweep go); `free()` the replaced world last (decision 10).
+- `takeSnapshot` returns `undefined` without a world (it threw on the no-op stub), and
+  `deleteWorld` without a world is a quiet no-op (it threw freeing the stub).
+- Tests: `EngineRapier.test.ts`' "EngineRapier snapshots (p500)" (no world, the API object kept and
+  the old world freed, restore twice from one snapshot, `null` from Rapier).
+- The facade's `debugStateBuffer` and `resolvedTransportMode` aren't touched: the next world's
+  create (`resolvedTransportMode`) and tracking call (`debugStateBuffer`) set them again.
 
 **Phase 1 — Engine-side capture/restore and the rebind pass, `MAIN_THREAD` end to end.** Add the
 new types (but not yet the protocol union members). In `EngineRapier.ts`: add `worldEpoch` next to
