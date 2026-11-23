@@ -12,7 +12,12 @@ import { getCurrentSceneId, getLoadingSceneId } from '../../kernel/scene/Scene';
 import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
 import { setPhysicsBodyWorldBounds } from './PhysicsBodies';
-import { type PhysicsBodyOwner, getPhysicsBodyOwner, getPhysicsEntityBody } from './PhysicsEntity';
+import {
+  type PhysicsBodyOwner,
+  getPhysicsBodyOwner,
+  getPhysicsEntityBody,
+  warnWorldBoundsNotChecked,
+} from './PhysicsEntity';
 import { copyWorldBounds, setOutOfBoundsHandler, toWireBodyWorldBounds } from './PhysicsMessaging';
 import { facade } from './PhysicsState';
 import { setPhysicsWorldBounds } from './PhysicsWorld';
@@ -238,17 +243,29 @@ export const setEntityWorldBounds = (
   else world.addComponent(entityId, ComponentType.WORLD_BOUNDS, copyWorldBounds(bounds));
 };
 
-/** Sends an entity's own world bounds (or null) for its body, when it has one it owns: before its
- * createPhysicsEntity resolves it has none, and the create sends what the entity has then. */
+/** Sends an entity's own world bounds (or null) for its body, when it owns a DYNAMIC one: before
+ * its createPhysicsEntity resolves it has none, and the create sends what the entity has then.
+ * Set on a fixed or kinematic body, or on colliders without one, they're never read (a debug
+ * warning). */
 const sendEntityWorldBounds = (
   world: ECSWorld,
   entityId: number,
   bounds: EntityWorldBounds | null
 ) => {
   const body = getPhysicsEntityBody(world, entityId);
-  if (!body) return;
+  if (!body) {
+    // Colliders only (COLLIDER comes with the create's end, so not a create in flight)
+    if (bounds && world.hasComponent(entityId, ComponentType.COLLIDER)) {
+      warnWorldBoundsNotChecked(entityId, undefined);
+    }
+    return;
+  }
   const owner = getPhysicsBodyOwner(body.id);
   if (owner?.world !== world || owner.entityId !== entityId) return;
+  if (owner.rigidType !== 'DYNAMIC') {
+    if (bounds) warnWorldBoundsNotChecked(entityId, owner.rigidType);
+    return;
+  }
   setPhysicsBodyWorldBounds(body.id, bounds && toWireBodyWorldBounds(bounds));
 };
 

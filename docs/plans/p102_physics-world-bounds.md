@@ -227,6 +227,8 @@ As built (section 2, the actions; not committed yet):
 - **`INIT_PHYSICS`** sends the state with `worldBounds: null`: a config `onExit` can't be cloned, and the worker gets the box by `SET_WORLD_BOUNDS`.
 - §11's question 1 (the spatial index while disabled): unchanged, `'DISABLE'` does what `world.setDisabled` does.
 
+As built (section 3, the warning; not committed yet): the type checked is the one the body was created with (`PhysicsBodyOwner.rigidType`), so a `DYNAMIC` body a `STATIC` tier froze still gets its override. A fixed or kinematic body's override, or one on colliders without a body, isn't sent, and the debug env warns (`warnWorldBoundsNotChecked`, `PhysicsEntity.ts`), at the create or at the set; removing one warns about nothing. The component stays on the entity.
+
 ### Phase 3 — Debug tooling
 
 - Physics API debug tab: a "World bounds" folder (`DebuggerPaneItem`s next to the others in `debug/_dbg__PhysicsTabFolders.ts`: the UI kit's property grid, compact density) with the active global box (monitors, source: config / scene / none), the exit count for the current scene and a list of the last exits (a `debuggerListCMP` list, clicking a row opens the entity's edit window, `_dbg__PhysicsEntityWindow.ts`).

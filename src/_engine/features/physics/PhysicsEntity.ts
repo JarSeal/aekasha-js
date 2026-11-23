@@ -246,8 +246,8 @@ const createPhysicsEntityNow = async (
 
   world.addComponent(entityId, ComponentType.TAG_IS_PHYSICS_OBJECT, true);
 
-  // The entity's own world bounds (the option's, else a target's WORLD_BOUNDS) ride in the body's
-  // create, so they apply from its first check on. Its hooks send nothing yet: there's no body
+  // The entity's own world bounds (the option's, else a target's WORLD_BOUNDS) ride in a DYNAMIC
+  // body's create, so they apply from its first check on. Its hooks send nothing yet: no body
   const boundsBefore = world.getComponent(entityId, ComponentType.WORLD_BOUNDS);
   if (entityOpts?.worldBounds) {
     world.addComponent(
@@ -256,7 +256,8 @@ const createPhysicsEntityNow = async (
       copyWorldBounds(entityOpts.worldBounds)
     );
   }
-  const boundsSent = rigidBodyParams
+  const isDynamic = rigidBodyParams?.rigidType === 'DYNAMIC';
+  const boundsSent = isDynamic
     ? world.getComponent(entityId, ComponentType.WORLD_BOUNDS)
     : undefined;
 
@@ -408,10 +409,12 @@ const createPhysicsEntityNow = async (
     world.addComponent(entityId, bucket, rb!);
   }
   // Own world bounds set or removed while a WORKER_THREAD create was in flight: the hooks found no
-  // body then
-  const boundsNow = rb ? world.getComponent(entityId, ComponentType.WORLD_BOUNDS) : undefined;
-  if (rb && boundsNow !== boundsSent) {
+  // body then. Only a DYNAMIC body's are read
+  const boundsNow = world.getComponent(entityId, ComponentType.WORLD_BOUNDS);
+  if (isDynamic && rb && boundsNow !== boundsSent) {
     setPhysicsBodyWorldBounds(rb.id, boundsNow ? toWireBodyWorldBounds(boundsNow) : null);
+  } else if (!isDynamic && boundsNow) {
+    warnWorldBoundsNotChecked(entityId, rigidBodyParams?.rigidType);
   }
 
   // Data only: the policy's systems come with physicsTiers() (PhysicsTiersFeature.ts), so an app
@@ -440,6 +443,23 @@ const createPhysicsEntityNow = async (
   }
 
   return entityId;
+};
+
+/**
+ * Debug env: warns that an entity's own world bounds are never read, its body being fixed,
+ * kinematic or missing (colliders only): only dynamic bodies are checked (p102 §1.1).
+ * @internal
+ * @param rigidType the type the body was created with, none for colliders only
+ */
+export const warnWorldBoundsNotChecked = (
+  entityId: number,
+  rigidType: RigidBodyParams['rigidType'] | undefined
+) => {
+  if (!IS_DEBUG_ENV) return;
+  const body = rigidType ? `its body is ${rigidType}` : 'it has no body (colliders only)';
+  lwarn(
+    `World bounds: entity ${entityId}'s own world bounds are ignored: ${body}, and only DYNAMIC bodies are checked.`
+  );
 };
 
 /** The create-time tier of a `DYNAMIC` body (p353 Phase 4 D3): the option's, else the creation

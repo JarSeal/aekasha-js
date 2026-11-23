@@ -647,6 +647,41 @@ describe('the facade (MAIN_THREAD)', () => {
     }
   });
 
+  it('p102 Phase 2: own bounds on a fixed, kinematic or bodiless entity warn and are not sent', async () => {
+    await resetPhysicsWorld();
+    const world = new ECSWorld({ id: 'p102-not-dynamic' });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const sent = vi.spyOn(facade.engAPI!, 'setBodyWorldBounds');
+    const boundsWarnings = () =>
+      warn.mock.calls.filter((c) => String(c[0]).includes('only DYNAMIC bodies are checked'));
+    try {
+      await createPhysicsEntity(
+        { colliders: BALL, body: { rigidType: 'FIXED' } },
+        { world, worldBounds: { min: { y: 0 } } }
+      );
+      const kinematic = await createPhysicsEntity(
+        { colliders: BALL, body: { rigidType: 'POS_BASED' } },
+        { world }
+      );
+      setEntityWorldBounds(kinematic, { ignore: true }, world);
+      const bodiless = await createPhysicsEntity({ colliders: BALL }, { world });
+      setEntityWorldBounds(bodiless, { ignore: true }, world);
+      // Removing them warns about nothing
+      setEntityWorldBounds(kinematic, null, world);
+      expect(
+        boundsWarnings().map((c) => String(c[0]).match(/its body is \w+|no body/)?.[0])
+      ).toEqual(['its body is FIXED', 'its body is POS_BASED', 'no body']);
+      expect(sent).not.toHaveBeenCalled();
+      const dynamic = await createBall(world, 0);
+      setEntityWorldBounds(dynamic, { ignore: true }, world);
+      expect(sent).toHaveBeenCalledTimes(1);
+      expect(boundsWarnings()).toHaveLength(3);
+    } finally {
+      warn.mockRestore();
+      sent.mockRestore();
+    }
+  });
+
   it('A4: deletes without a world are quiet no-ops', async () => {
     await deletePhysicsWorld();
     expect(deleteRigidBodySync(1)).toBeUndefined();
