@@ -54,6 +54,7 @@ import {
   getWorldBoundsStats,
   handleOutOfBounds,
   installPhysicsWorldBounds,
+  registerSceneJsonWorldBounds,
   setEntityWorldBounds,
   setSceneWorldBounds,
 } from './PhysicsWorldBounds';
@@ -478,6 +479,51 @@ describe('the facade (MAIN_THREAD)', () => {
       // Another scene's bounds wait for its own world
       setSceneWorldBounds({ min: { y: 0 } }, 'p102Other');
       expect(createBelow().isEnabledSync()).toBe(true);
+    } finally {
+      facade.state.worldBounds = null;
+      setLoadingSceneId(null);
+      setPhysicsWorldBounds(null);
+      facade.engAPI!.drainPendingOutOfBoundsRecords();
+    }
+  });
+
+  it("p102 Phase 4: a scene's JSON bounds are its own, null over the config's, until its code sets them", async () => {
+    await resetPhysicsWorld();
+    const createBelow = () => {
+      const body = createRigidBodySync({
+        rigidType: 'DYNAMIC',
+        translation: { x: 50, y: -10, z: 0 },
+      });
+      facade.engAPI!.step();
+      return body;
+    };
+    const loadWorld = async (sceneId: string) => {
+      setLoadingSceneId(sceneId);
+      await resetPhysicsWorld();
+      applySceneWorldBounds();
+    };
+    facade.state.worldBounds = { min: { y: -5 } };
+    try {
+      // Registered before any load: kept, applied to the scene's worlds only
+      registerSceneJsonWorldBounds('p102Json', { worldBounds: { min: { y: -20 } } });
+      registerSceneJsonWorldBounds('p102JsonNull', { worldBounds: null });
+      registerSceneJsonWorldBounds('p102JsonNone', {});
+      await loadWorld('p102Json');
+      expect(createBelow().isEnabledSync()).toBe(true); // -10 is inside its own, not the config's
+      expect(getWorldBoundsStats()).toMatchObject({ def: { min: { y: -20 } }, source: 'SCENE' });
+      await loadWorld('p102JsonNull');
+      expect(createBelow().isEnabledSync()).toBe(true);
+      expect(getWorldBoundsStats()).toMatchObject({ def: null, source: 'SCENE' });
+      await loadWorld('p102JsonNone');
+      expect(createBelow().isEnabledSync()).toBe(false);
+      expect(getWorldBoundsStats().source).toBe('CONFIG');
+
+      // The scene's code replaces them, at once and for its later visits
+      await loadWorld('p102Json');
+      setSceneWorldBounds({ min: { y: 0 } });
+      await loadWorld('p102Json');
+      expect(createBelow().isEnabledSync()).toBe(false);
+      expect(getWorldBoundsStats().def).toEqual({ min: { y: 0 } });
     } finally {
       facade.state.worldBounds = null;
       setLoadingSceneId(null);

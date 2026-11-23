@@ -8,7 +8,7 @@ import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { type ECSWorld, getECSWorld, getStableAppId } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type { FeatureContext } from '../../kernel/init/Features';
-import { getCurrentSceneId, getLoadingSceneId } from '../../kernel/scene/Scene';
+import { getCurrentSceneId, getLoadingSceneId, type SceneData } from '../../kernel/scene/Scene';
 import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
 import { setPhysicsBodyWorldBounds } from './PhysicsBodies';
@@ -32,8 +32,9 @@ import type {
   WorldBoundsStats,
 } from './types/PhysicsWorldBoundsTypes';
 
-/** Each scene's own bounds (setSceneWorldBounds), null for none: kept across visits, as sky
- * boxes are. A scene without an entry gets `AppConfig.physics.worldBounds`. */
+/** Each scene's own bounds (its JSON's, registerSceneJsonWorldBounds, replaced by a
+ * setSceneWorldBounds), null for none: kept across visits, as sky boxes are. A scene without an
+ * entry gets `AppConfig.physics.worldBounds`. */
 const sceneDefs = new Map<string, WorldBoundsDef | null>();
 
 /** The definition applied to the current world (its box and action, its onExit): the scene's,
@@ -90,6 +91,20 @@ export const setSceneWorldBounds = (def: WorldBoundsDef | null, sceneId?: string
   activeDef = stored;
   activeSource = 'SCENE';
   setPhysicsWorldBounds(stored);
+};
+
+/**
+ * Keeps a scene's JSON world bounds (its `worldBounds`, `physicsSchemaPart`; `null` included) as
+ * its own, as `setSceneWorldBounds(def, sceneId)` does: physics' `sceneRegistered` hook. A scene
+ * without the key gets nothing here. A later `setSceneWorldBounds` for the scene (its code's, on
+ * every visit) replaces them, for its later visits too.
+ * @internal
+ */
+export const registerSceneJsonWorldBounds = (
+  sceneId: string,
+  { worldBounds }: Pick<SceneData, 'worldBounds'>
+) => {
+  if (worldBounds !== undefined) setSceneWorldBounds(worldBounds, sceneId);
 };
 
 /**

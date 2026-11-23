@@ -27,7 +27,11 @@ import {
   registerPhysicsWireframeDebugAsync,
   settlePendingPhysicsEntities,
 } from './PhysicsEntity';
-import { applySceneWorldBounds, installPhysicsWorldBounds } from './PhysicsWorldBounds';
+import {
+  applySceneWorldBounds,
+  installPhysicsWorldBounds,
+  registerSceneJsonWorldBounds,
+} from './PhysicsWorldBounds';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
 import { existsOrThrow } from '../../utils/Assert';
 
@@ -85,10 +89,14 @@ export const physics = (): EngineFeature => ({
 
 /**
  * Physics' part of a scene load (p101's deterministic loads): stepping is held from the start of
- * the load until every body of the next scene exists, which starts on a fresh world.
+ * the load until every body of the next scene exists, which starts on a fresh world with the
+ * scene's world bounds (its JSON's, kept when the scenes are registered, or its code's).
  * @internal
  */
 export const physicsSceneHooks: SceneHooks = {
+  // A scene's JSON world bounds become its own (p102 Phase 4), applied to each of its worlds in
+  // `beforeAssets`; its code's setSceneWorldBounds replaces them
+  sceneRegistered: registerSceneJsonWorldBounds,
   // No stepping until the whole next scene exists (released in `entered`), so a scene's physics
   // never depends on how long its assets took to load
   loadStart: holdPhysicsStepping,

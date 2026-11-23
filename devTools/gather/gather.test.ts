@@ -1762,7 +1762,7 @@ describe('p306 D2: terrain blocks', () => {
     expect(ids(out?.importedAssets)).toEqual(['ground']);
     expect(ids(out?.materials)).toEqual(['terrainMat']);
     expect(ids(out?.textures)).toEqual(['splat']);
-    // The collider needs physics(), which has no scene field
+    // The collider needs physics(), though the scene has none of its fields
     expect(out?.__features).toEqual(['terrain', 'physics']);
   });
 
@@ -2257,5 +2257,29 @@ describe('p311 D2: a cube texture asset', () => {
     expect(logged).toContain('faces[2] (+y): source file');
     expect(logged).toContain('a cube texture is a KTX2 file');
     expect(logged).toContain('the sky box "dunesSky" names the texture "noSuchCube"');
+  });
+});
+
+describe("p102 Phase 4: a scene's world bounds", () => {
+  it('passes them through, a null one too, and names physics for them once', () => {
+    const worldBounds = { min: { y: -50 }, max: { x: 100 }, action: 'DISABLE' };
+    const { isGathered, scene: get } = gather({
+      ...scene('a', { worldBounds }),
+      ...scene('b', { worldBounds: null }),
+      ...scene('c'),
+    });
+    expect(isGathered).toBe(true);
+    expect(get('a')?.worldBounds).toEqual(worldBounds);
+    expect(get('a')?.__features).toEqual(['physics']);
+    // null turns the app's default off; without physics() there's none to turn off
+    expect(get('b')?.worldBounds).toBeNull();
+    expect(get('b')?.__features).toEqual([]);
+    expect(get('c')).not.toHaveProperty('worldBounds');
+  });
+
+  it("fails on a 'CALLBACK' action and on a min not below its max", () => {
+    expect(gather(scene('a', { worldBounds: { action: 'CALLBACK' } })).isGathered).toBe(false);
+    const flat = { min: { y: 0 }, max: { y: -1 } };
+    expect(gather(scene('a', { worldBounds: flat })).isGathered).toBe(false);
   });
 });
