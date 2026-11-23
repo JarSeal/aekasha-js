@@ -501,7 +501,8 @@ export const buildPendingMergeGroupsAsync = async (world?: ECSWorld) => {
 };
 
 /** How many times the scene step builds again: a worker build dropped meanwhile (a member left
- * while it ran) marks its group again. */
+ * while it ran) marks its group again, and a group still building (started before the load) is
+ * built again after it lands when it's pending. */
 const SCENE_STEP_BUILD_ROUNDS = 3;
 
 /**
