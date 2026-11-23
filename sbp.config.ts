@@ -66,11 +66,15 @@ const profiles: SbpProfile[] = [
     // to 410.3 and `assets/index.js` to 406.1 KiB: 403 → 411 and 399 → 407 KiB. Their code is
     // lazy: the terrain material, the wet response, the scatter and the rocks are chunks of their
     // own. p102: the physics world bounds (`physics`' 1.5 KiB below) took the initial to 412.5 and
-    // `assets/index.js` to 408.2 KiB: 411 → 413 and 407 → 409 KiB
+    // `assets/index.js` to 408.2 KiB: 411 → 413 and 407 → 409 KiB. The light receiver fixes
+    // (i090, i100: the frustum culling system's receiver pass, the static cells' and pools' flags,
+    // `instancing` +143 B, `kernel/ecs` +127 B, `spatial` +51 B) and i110's release of a failed
+    // load's assets (`kernel/scene` +123 B) took the initial to 413.01 and `assets/index.js` to
+    // 408.8 KiB: 413 → 415 and 409 → 410 KiB (at least 1 KiB over each)
     budgets: {
-      initial: 413 * KIB,
+      initial: 415 * KIB,
       chunks: {
-        'assets/index.js': 409 * KIB,
+        'assets/index.js': 410 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
@@ -90,8 +94,10 @@ const profiles: SbpProfile[] = [
         '_engine/features/character': 4 * KIB,
         // p354: the instance sets' front (createInstanceSetAsync, on the entry; its backends are
         // lazy) took it to 3.9 KiB in Phase 1, and Phase 3's `maxSlots` option to 4.0 KiB (4,102 B):
-        // 4 → 5 KiB, for Phase 5's removeInstances / setInstanceMatrices on the front too
-        '_engine/features/instancing': 5 * KIB,
+        // 4 → 5 KiB, for Phase 5's removeInstances / setInstanceMatrices on the front too.
+        // i090 / i100: the static cells' and pools' light receiver flags took it to 4.97 KiB
+        // (5,087 B, 33 B under): 5 → 6 KiB
+        '_engine/features/instancing': 6 * KIB,
         '_engine/features/lines': 6 * KIB,
         '_engine/features/lod': 7 * KIB,
         // p372 Phase 1: the merge groups' API, hooks and build system (1.9 KiB gzip, two modules);
