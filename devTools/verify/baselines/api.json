@@ -1362,6 +1362,11 @@
       "workerCollisionEventFns": "Variable",
       "workerContactForceEventFns": "Variable"
     },
+    "src/_engine/features/physics/PhysicsSchema.ts": {
+      "physicsSchemaPart": "Variable",
+      "SceneWorldBounds": "TypeAlias",
+      "SceneWorldBoundsSchema": "Variable"
+    },
     "src/_engine/features/physics/PhysicsState.ts": {
       "assertMainThread": "Function",
       "assertPhysicsTiersInstalled": "Function",
@@ -1482,6 +1487,7 @@
       "getWorldBoundsStats": "Function",
       "handleOutOfBounds": "Function",
       "installPhysicsWorldBounds": "Function",
+      "registerSceneJsonWorldBounds": "Function",
       "setEntityWorldBounds": "Function",
       "setSceneWorldBounds": "Function"
     },
@@ -6611,6 +6617,8 @@
       "SceneSurfaceConditionsSchema",
       "SceneTextureSetArrayEntry",
       "SceneTextureSetArraySchema",
+      "SceneWorldBounds",
+      "SceneWorldBoundsSchema",
       "ShadowQuality",
       "SkyBoxAsset",
       "SkyBoxAssetSchema",
@@ -6676,6 +6684,7 @@
       "isTextureSetColorSlot",
       "lodSchemaPart",
       "mergingSchemaPart",
+      "physicsSchemaPart",
       "postFxSchemaPart",
       "skyBoxSchemaPart",
       "spatialSchemaPart",

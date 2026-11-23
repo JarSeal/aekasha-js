@@ -4,9 +4,9 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
-## 2026-11-23 — p102_physics-world-bounds (Phases 1-3)
+## 2026-11-23 — p102_physics-world-bounds (Phases 1-4)
 
-Physics world bounds (p102 Phase 1): a scene can set a box its dynamic bodies must stay in. A body that leaves it, falling through a floor or off the edge of the level, is taken out of the simulation on the fixed step it left the box and its entity deleted, instead of falling and stepping for the rest of the visit. It happens on the same step on every visit and in both worker targets, so scene loads stay deterministic, and the determinism probe leaves out the bodies that left by its step. The third-person gym deletes what falls 50 m below its ground. Phase 2 adds an entity's own bounds (its own box, or exempt) and what happens on an exit: the entity deleted, disabled, or handed to a callback (eg. a player's respawn). Phase 3 makes them visible: the bounds in use and the latest exits can be read from code, and the Physics API debug tab shows them, lists the exits and draws the boxes.
+Physics world bounds (p102 Phase 1): a scene can set a box its dynamic bodies must stay in. A body that leaves it, falling through a floor or off the edge of the level, is taken out of the simulation on the fixed step it left the box and its entity deleted, instead of falling and stepping for the rest of the visit. It happens on the same step on every visit and in both worker targets, so scene loads stay deterministic, and the determinism probe leaves out the bodies that left by its step. The third-person gym deletes what falls 50 m below its ground. Phase 2 adds an entity's own bounds (its own box, or exempt) and what happens on an exit: the entity deleted, disabled, or handed to a callback (eg. a player's respawn). Phase 3 makes them visible: the bounds in use and the latest exits can be read from code, and the Physics API debug tab shows them, lists the exits and draws the boxes. Phase 4 puts a scene's bounds in its JSON (`worldBounds`), so they change without code, and the gym's kill height moved there.
 
 ### Engine 6.22.0 (Sunset)
 
@@ -18,6 +18,7 @@ Physics world bounds (p102 Phase 1): a scene can set a box its dynamic bodies mu
 - The actions `'DISABLE'` (the entity disabled with `world.setDisabled`, its mesh hidden) and `'CALLBACK'` (`onExit`, with a `WorldBoundsExitEvent`: the entity, its world, the body, the step, the position, which bounds and whether the body was made `FIXED`), on a scene's definition, the config's or an entity's (`WorldBoundsAction`, `WorldBoundsExitCallback`). An entity handled so leaves the physics tier policy, and a tier requested and not applied is dropped. `'CALLBACK'` without `onExit` disables.
 - `createCharacter`'s and `createDynamicCharacter`'s `worldBounds` option (`aekasha/character`): a character's own bounds, eg. a respawn. No default: a character follows the scene's like any dynamic body.
 - `getWorldBoundsStats()` (`aekasha/physics`, types `WorldBoundsStats`, `WorldBoundsSource` and `WorldBoundsExitInfo`): the current scene's bounds and where they come from (the scene, the app's default or none), how many bodies have left them, and the last 20 exits, each with its entity's name, step, position, which bounds and the action taken. Both start over with each scene's world.
+- A scene's JSON `worldBounds` (`physicsSchemaPart`, `SceneWorldBoundsSchema` and the type `SceneWorldBounds` on `aekasha/schemas`; the scene JSON Schema in `.schemas/` has it): the box, every side optional, and `'DELETE'` or `'DISABLE'` (a callback is code), or `null` to turn `AppConfig.physics.worldBounds` off for the scene. The gather fails on an axis whose `min` isn't below its `max`, and a scene that sets them (not `null`) names `physics` in its feature manifest. Physics' new `sceneRegistered` hook keeps them as the scene's own, as `setSceneWorldBounds(def, sceneId)` would, so they apply to each of its worlds before its bodies; its code's `setSceneWorldBounds` replaces them, for its later visits too, and `getWorldBoundsStats` reads `'SCENE'` for both. `SceneData` has the field.
 - The Physics API debug tab's "World bounds (live)" folder (the box, its source and action, the exit count, the entities with their own bounds) with a toggle that draws the box (each closed side a grid, through the level; kept across reloads), and a list of the latest exits after the physics entities' list, a row opening the entity's edit window while it still exists. The edit window has a "World bounds" folder for a dynamic body: its own bounds, and a toggle that draws their box. Drawn with `lines()`; without it the toggles are left out.
 
 **Changed**
@@ -39,13 +40,13 @@ Physics world bounds (p102 Phase 1): a scene can set a box its dynamic bodies mu
 
 **Added**
 
-- `thirdPersonGymScene` sets its world bounds 50 m below the ground: a body that falls off the 200 m ground, or through it, is deleted there. Its probe hash and character paths are unchanged.
+- `thirdPersonGymScene` sets its world bounds 50 m below the ground, in its scene JSON (`worldBounds`): a body that falls off the 200 m ground, or through it, is deleted there. Its probe hash and character paths are unchanged.
 
 ### Project
 
 **Changed**
 
-- The docs: the physics `CLAUDE.md`'s World bounds section (and its tests' note on the worker harness), the character `CLAUDE.md`, the root `CLAUDE.md`'s Physics, the Hub's physics page (a World bounds section with the entity's bounds and the actions, the key APIs, `aek:covers`) and characters page (Falling out of the level), and p102's Phases 1-3 marked done with their As built lists (Phase 3: the stats and the debug tooling in the physics `CLAUDE.md`, the Hub's physics page, the root's Physics line).
+- The docs: the physics `CLAUDE.md`'s World bounds section (and its tests' note on the worker harness), the character `CLAUDE.md`, the root `CLAUDE.md`'s Physics, the Hub's physics page (a World bounds section with the entity's bounds and the actions, the scene JSON key, the key APIs, `aek:covers`), its scenes and assets page (the feature manifest names `worldBounds`) and characters page (Falling out of the level), the gather `CLAUDE.md` (physics' schema part; its list of parts had left out two), the readme (world bounds moved from the Roadmap into Features), and p102 marked done (`_DONE_p102_physics-world-bounds.md`) with its As built lists.
 - The physics worker test harness's fake `self` carries `performance`: Rapier's step reads its clock through it, so any `STEP` in `PhysicsWorkerRequests.test.ts` made Rapier panic with `unreachable` (on `main` too: no test stepped there before).
 - The layout check's and the module side effects test's tree-wide tests have a 30 s timeout: about 2 s alone, they ran past the 5 s default under the full suite's load.
 - The bundle, API and docs baselines recorded, with the previous merge's `kernel/assets` names (`AssetPropsDiff.ts`, `ImportPhysicsGroups.ts`) and its embed bundle sizes, which it didn't record.

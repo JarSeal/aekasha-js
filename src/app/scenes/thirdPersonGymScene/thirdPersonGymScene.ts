@@ -26,7 +26,7 @@ import {
   createFollowObjectCameraRig,
 } from 'aekasha/toolkit/ecs';
 import type { MovingPlatformPoint } from 'aekasha/toolkit/ecs';
-import { createPhysicsEntity, setSceneWorldBounds } from 'aekasha/physics';
+import { createPhysicsEntity } from 'aekasha/physics';
 import { createCharacterVisualAsync } from '../../shared/characterVisual';
 import { createGymStairsAndWallAsync } from './gymStairsAndWall';
 
@@ -596,16 +596,14 @@ const createPlatformAsync = async (platform: GymPlatform, materials: GymMaterial
  * boxes, the ground, the built stairs and wall, a spinning box, the characters, the props, six
  * moving platforms, then the imported course models (stairs of every collider kind, terrains,
  * obstacles). The camera and the lights come from thirdPersonGymScene.scene.json; the toolkit's
- * SunShadowFit effect fits the sun's shadow to the camera's view.
+ * SunShadowFit effect fits the sun's shadow to the camera's view. So does the kill height (its
+ * `worldBounds`, p102): a body that falls off the 200 m ground (or through it) is deleted 50 m
+ * below, instead of falling and stepping for the rest of the visit.
  */
 export const scene = async () => {
   const updateLoaderFn = getLoaderStatusUpdater();
   const totalCount = 4;
   updateLoaderFn({ loadedCount: 0, totalCount });
-
-  // A body that falls off the 200 m ground (or through it) is deleted 50 m below, instead of
-  // falling and stepping for the rest of the visit (p102). Set before any of the scene's bodies
-  setSceneWorldBounds({ min: { y: -50 } });
 
   // The JSON lights are created after this function runs, so the sun gets its shadow fit on
   // enter. The camera looks down from 20 m above and ~10 m behind the player (a ~64° pitch, a 60°

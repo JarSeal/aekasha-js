@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: implemented (Phases 1-4; Phase 5 dropped)
 Category: Physics
 Related: p101 scene-load determinism (implemented, see the Physics section of `.claude/CLAUDE.md` and `src/_engine/features/physics/CLAUDE.md`'s Deterministic scene loads: exits must happen on a fixed step, and the determinism probe must stay green), p500_restore-physics-snapshot.md (bounds are configuration, not simulation state, see §8), the `lines()` feature (`src/_engine/features/lines/`, `createLines`: Phase 3 draws the bounds with it), `src/_engine/features/physics/CLAUDE.md`'s Simulation tiers (p352, p343: the tiers and their distance policy, §8)
 
@@ -246,7 +246,7 @@ As built (engine 6.22.0, unchanged: the branch's minor bump covers it):
 - Checked in the gym (Chrome, WebGPU): with `{ min: { y: -50 }, max: { x: 5 }, action: 'DISABLE' }` set from the page, Suzanne exited and showed in the folder and the list, its row opened its window, and both boxes drew; no console errors.
 - Tests: `PhysicsFacade.test.ts` (the stats: the source, names and actions, the 20 limit, the reset), `debug/_dbg__WorldBoundsDraw.test.ts` (the box and the entity's bounds as text).
 
-### Phase 4 — Scene JSON
+### Phase 4 — Scene JSON — done
 
 From Phase 3 (see its As built): a JSON key applied through `setSceneWorldBounds` reads as `source: 'SCENE'` in `getWorldBoundsStats` and the tab. If the tab should tell the JSON's bounds from code's, widen `WorldBoundsSource` (a public type: a value added). The tab's folder and drawing need nothing else: they follow `activeDef`.
 
@@ -254,7 +254,17 @@ From Phase 3 (see its As built): a JSON key applied through `setSceneWorldBounds
 - `gatherAppData` passes it through; physics' scene hook calls `setSceneWorldBounds`. The JSON Schema for editor autocomplete updates automatically.
 - The Hub: the physics feature page (`hub/pages/features/physics/`) documents the bounds.
 
-### Phase 5 — Optional: non-physics entities
+As built (engine 6.22.0, app 1.34.0, unchanged: the branch's bumps cover it):
+
+- **The schema part** (section 1): physics had none, so `PhysicsSchema.ts` is new beside the feature: `SceneWorldBoundsSchema` (strict; each corner's `x` / `y` / `z` optional; `action` only `'DELETE'` or `'DISABLE'`: a callback is code, and a JSON `'CALLBACK'` would only act as `'DISABLE'`; a refinement fails an axis whose `min` isn't below its `max`, at `max.<axis>`) and `physicsSchemaPart` (feature `'physics'`, the scene field `worldBounds`, nullable), on `aekasha/schemas` with the type `SceneWorldBounds`, last in the gatherer's `ENGINE_SCHEMA_PARTS` (so `.schemas/`' property order moved for no other field). A `null` names no `physics` in the manifest (`isFieldUsed`): without physics there are no bounds to turn off. Nothing else in the gather changed: the part passes the key through.
+- **The scene hook** (section 2): `beforeAssets` gets no scene data, so physics' new `sceneRegistered` hook (`registerSceneJsonWorldBounds`, `PhysicsWorldBounds.ts`) keeps a scene's JSON bounds as its own through `setSceneWorldBounds(def, sceneId)` (a missing key does nothing), and `applySceneWorldBounds` applies them to each of its worlds as before. A code `setSceneWorldBounds` for the scene replaces them, for its later visits too (decided: the JSON is the scene's starting definition, the code's call wins, as it did over nothing). `WorldBoundsSource` wasn't widened: both read `'SCENE'`. `SceneData.worldBounds` (`kernel/scene/Scene.ts`, `import type` of the schema's type).
+- **The gym** moved its kill height from its code into its JSON (`thirdPersonGymScene.scene.json`); `getWorldBoundsStats` reads `{ min: { y: -50 } }`, `'SCENE'` there in the browser. Same box, applied in `beforeAssets` now rather than by the scene's code: no body starts outside it, so no step changes.
+- **The Hub** (section 3): the physics page's World bounds has the JSON form and its rules; the scenes and assets page's feature manifest names `worldBounds`.
+- Tests: `PhysicsSchema.test.ts`, `PhysicsFacade.test.ts` (the JSON's bounds over the config's, a `null`, a scene without the key, the code's replacing them), `gather.test.ts` (passed through, `null` too, the manifest, the refusals), `engineSchemas.test.ts` (the field list, the manifest).
+
+### Phase 5 — Optional: non-physics entities — dropped
+
+Dropped when the plan was closed: no use case has appeared. If one does, a plan of its own.
 
 Only if a real use case appears. A main-thread system in `APP_LOGIC` for entities with `WORLD_BOUNDS` + `TRANSFORM` and no rigid body. Not deterministic-relevant, since those entities are not simulated.
 
@@ -271,6 +281,8 @@ Only if a real use case appears. A main-thread system in `APP_LOGIC` for entitie
 
 ## 11. Open questions
 
-1. Should `'DISABLE'` also remove the entity from the spatial index (`SPATIAL_INDEXED`) while disabled, or is hiding the `OBJECT3D` enough?
-2. Should the global default action be configurable per scene only, or also globally in `AppConfig` (the sketch allows both, via `WorldBoundsDef.action`)?
-3. Is a body's translation always the right test point, or does a very large body (eg. a long plank) need a `margin`? Suggestion: leave it out until someone needs it.
+All answered:
+
+1. Should `'DISABLE'` also remove the entity from the spatial index (`SPATIAL_INDEXED`) while disabled, or is hiding the `OBJECT3D` enough? Phase 2: unchanged, `'DISABLE'` does what `world.setDisabled` does.
+2. Should the global default action be configurable per scene only, or also globally in `AppConfig` (the sketch allows both, via `WorldBoundsDef.action`)? Phase 2: both, and per entity; a scene's JSON takes `'DELETE'` or `'DISABLE'` (Phase 4).
+3. Is a body's translation always the right test point, or does a very large body (eg. a long plank) need a `margin`? Left out: nobody has needed it.

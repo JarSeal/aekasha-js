@@ -158,10 +158,26 @@ import { setSceneWorldBounds } from 'aekasha/physics';
 setSceneWorldBounds({ min: { y: -50 } });
 ```
 
-Every side of the box is optional, and a missing side is open. A scene keeps its bounds for its
-later visits; `AppConfig.physics.worldBounds` gives every scene without its own the same box, and
-`setSceneWorldBounds(null)` turns them off for one scene. Only dynamic bodies are checked, by
-their position, not their colliders. In the debug env each exit logs a warning naming the entity:
+Or without code, in the scene's JSON:
+
+```json title="myScene.scene.json"
+{
+  "id": "myScene",
+  "sceneFile": "scenes/myScene/myScene.ts",
+  "worldBounds": { "min": { "y": -50 }, "max": { "y": 500 }, "action": "DISABLE" }
+}
+```
+
+Every side of the box is optional, and a missing side is open; where both corners give an axis,
+`min` must be below `max`, or the gather fails. The JSON's `action` is `"DELETE"` or `"DISABLE"`: a
+callback is code, so a scene-wide `onExit` goes through `setSceneWorldBounds`. A scene keeps its
+bounds for its later visits, and its code's `setSceneWorldBounds` replaces its JSON's (for the
+later visits too). `AppConfig.physics.worldBounds` gives every scene without its own the same box,
+and `null` (`"worldBounds": null`, or `setSceneWorldBounds(null)`) turns them off for one scene.
+A scene whose JSON sets them needs `physics()` in `InitEngine`'s features (the
+[feature manifest](hub:features/scenes-and-assets#the-feature-manifest)); a `null` one doesn't.
+
+Only dynamic bodies are checked, by their position, not their colliders. In the debug env each exit logs a warning naming the entity:
 a body leaving the level is usually a bug (a collider smaller than its mesh, a body spawned inside
 another). The determinism probe leaves out the bodies that left by its step.
 
@@ -288,7 +304,8 @@ every body.
   [`getPhysicsTier`](api:getPhysicsTier) and [`setPhysicsTierPolicy`](api:setPhysicsTierPolicy).
 - [`getPhysicsSubStepIndex`](api:getPhysicsSubStepIndex): the step clock for `APP_PHYSICS_STEP`
   systems.
-- [`setSceneWorldBounds`](api:setSceneWorldBounds): the box a scene's bodies must stay in, and
+- [`setSceneWorldBounds`](api:setSceneWorldBounds) (or a scene's JSON `worldBounds`): the box a
+  scene's bodies must stay in, and
   [`setEntityWorldBounds`](api:setEntityWorldBounds): an entity's own, and what happens when it
   leaves them; [`getWorldBoundsStats`](api:getWorldBoundsStats): the bounds in use and their exits.
 
