@@ -7,6 +7,7 @@ import type {
 import type { PhysRotation, PhysVector } from '../types/PhysicsCommonTypes';
 import type { CollisionEventRecord, ContactForceEventRecord } from '../types/PhysicsEventTypes';
 import type { OutOfBoundsRecord } from '../types/PhysicsWorldBoundsTypes';
+import type { PhysicsSnapshot, RestoreSnapshotDelta } from '../types/PhysicsWorldTypes';
 import type {
   RayColliderHitAPI,
   RayColliderIntersectionAPI,
@@ -27,12 +28,12 @@ export type PhysicsDownProtocol =
   (
     | {
         type: PhysicsProtocolType.TAKE_SNAPSHOT;
-        snapshot: Uint8Array | undefined;
+        snapshot: PhysicsSnapshot | undefined;
       }
-    | {
+    | ({
         type: PhysicsProtocolType.RESTORE_SNAPSHOT;
         worldCreated: boolean;
-      }
+      } & RestoreSnapshotDelta)
     | {
         type: PhysicsProtocolType.INIT_PHYSICS;
         worldCreated: boolean;

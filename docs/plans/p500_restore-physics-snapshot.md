@@ -1,4 +1,4 @@
-Status: in progress | Phase 0 implemented
+Status: in progress | Phases 0-1 implemented
 Category: Physics
 Epic: https://trello.com/c/8ROzNdXe/161-make-a-possibility-to-run-the-physics-engine-in-a-thread-threading-architecture-for-all-upcoming-thread-implemantations-not-just
 Blocks: p512_client-prediction-and-reconciliation.md
@@ -411,7 +411,7 @@ As built (Phase 0):
 - The facade's `debugStateBuffer` and `resolvedTransportMode` aren't touched: the next world's
   create (`resolvedTransportMode`) and tracking call (`debugStateBuffer`) set them again.
 
-**Phase 1 — Engine-side capture/restore and the rebind pass, `MAIN_THREAD` end to end.** Add the
+**Phase 1 — Engine-side capture/restore and the rebind pass, `MAIN_THREAD` end to end — done.** Add the
 new types (but not yet the protocol union members). In `EngineRapier.ts`: add `worldEpoch` next to
 `worldCreated` (`:79`) and bump it in `createWorld`/`deleteWorld`; implement `takeSnapshot()`
 returning the envelope; implement `restoreSnapshot(snapshot, opts)` as — epoch guard → restore and
@@ -437,6 +437,84 @@ raycast where it was hits nothing. Restore twice from the same snapshot → iden
 times (this is what proves decision 9's no-transfer stance and the `old.free()` ordering).
 **Also run the decision-16 determinism check here**: capture, step N, record poses; restore, step N
 again, compare. Record the outcome in this document.
+
+As built (Phase 1):
+
+- **The types** are in `types/PhysicsWorldTypes.ts` and exported from `aekasha/physics`, because
+  `WorldAPI` (public) names them. That makes the `WorldAPI` snapshot signatures a public API change
+  (the API baseline shows it). `PhysicsSnapshot` is `{ bytes, worldEpoch, step }`: **`takenAt` became
+  `step`**, the backend's step count at capture. The physics files ban the wall clock (the
+  simulation lint), the step orders snapshots as well, and a restore puts it back.
+  `RestoreSnapshotDelta` also carries `maxCcdSubsteps` (p622 added it to the world settings) and
+  `step`.
+- **The protocol unions changed here, not in Phase 2:** the worker case has to compile against the
+  backend's new signature. It passes `snapshot` and `opts` and replies with the delta; freeing slots
+  and the write-back are still Phase 2's. Until then the facade's `WORKER_THREAD` restore throws
+  (`takePhysicsSnapshot` works in both targets).
+- **The backend:** the walk is in its own module, `backends/rapier/RapierRestore.ts`
+  (`rebindRestoredWorld`). `RapierWorld.ts`' `restoreSnapshot` runs: no world → epoch guard → Rapier
+  restore and the `null` check → swap `backend.world` → the walk → `backend.stepCount =
+  snapshot.step` → `free()` the replaced world. `worldEpoch` is bumped by `createWorld` and
+  `deleteWorld`. The walk:
+  - claims bodies, then colliders, then joints with the handle test, rebinding each survivor;
+  - forgets the reaped ones: their ids, reverse handles, a body's own world bounds, a collider's
+    event registrations;
+  - collects the orphans of all three kinds, then removes them (bodies first);
+  - checks every survivor with `isValid()`: a failure is reaped, with an `lerror` in debug builds;
+  - clears the event queue, the undelivered collision and contact-force records
+    (`clearPendingEventRecords`) and the undelivered world-bounds exits
+    (`clearPendingOutOfBoundsRecords`);
+  - queues every survivor for a world-bounds check (the bounds may have changed since the snapshot,
+    and a body restored asleep is never checked).
+
+  The D11 `lwarn` is in the backend (`backend.isDebugEnvironment`), so both targets log it.
+- **Decision 6 changed:** Rapier's `userData` isn't write-only after all: `detachRigidBody` reads it
+  and `reattachRigidBody` writes it back. Instead of a private mirror, the restore's
+  `_rebind(rb, true)` copies it from the old wrapper (a JS field, readable before the `free()`).
+  `EngineJointProxyAPI` got its `_rebind`; the body and collider proxies already had one (p352).
+- **The world bounds (risk table):** the backend keeps the global box and the bodies' own bounds
+  (by id) through a restore, `handleToRigidBodyId` needs no rebuild (handles are stable; the reaped
+  entries are removed), and `backend.stepCount` goes back to the snapshot's. So nothing is re-sent
+  from the ECS side.
+- **The facade:** `applyRestoreDelta` (`PhysicsWorld.ts`):
+  - forgets the reaped objects (`forgetRigidBody` / `forgetCollider` / `forgetJoint`: marked
+    `isBeingDeleted`, the worker callbacks dropped);
+  - writes the world settings into the physics state only where they differ at f32 (Rapier stores
+    f32, so an unchanged read-back would overwrite the state's doubles);
+  - **rewinds the step clock to the snapshot's step** (`resetSimClock(step)`, which now takes one,
+    and `dropStepAccumulator`). The plan didn't have this: `getPhysicsSubStepIndex` is the
+    simulation code's clock (the tier policy's cadence, the characters' durations), so a replay has
+    to run on the same step numbers. It drops the step gates and bumps both epochs, as a new
+    world's reset does;
+  - calls the hooks (`onPhysicsRestore`, a `Set`, each in a `try`).
+
+  `facade.isRestoringSnapshot` makes `stepPhysics` return 0 and drop the accumulator. On
+  `MAIN_THREAD` the restore is synchronous, so the guard is for Phase 2.
+- **Bypass:** `facade.world` on `MAIN_THREAD` is the engine's world proxy, so app code's
+  `getPhysicsWorld().restoreSnapshot()` bypasses the facade (no registry pruning, no step clock, no
+  hooks), as the world's own creates do. `WorldAPI`'s `@remarks` say so. On `WORKER_THREAD` the
+  proxy goes through the facade.
+- **Known limit (intersection semantics):** a body detached (`REMOVED` tier) at snapshot time and
+  reattached since isn't in the snapshot, so it's reaped, and Phase 3 will delete its entity. A body
+  detached since the snapshot stays detached, and its copy in the snapshot counts as an orphan.
+- **Determinism (D16), the outcome:** `EngineRapier.test.ts` drops 12 balls into a pile, steps 20,
+  snapshots, steps 120 and records every pose; then restores and steps 120 again. The poses are bit
+  for bit the same (Node, the compat build, Rapier 0.19.3). Restoring twice from one snapshot gives
+  the same state too.
+- Tests: `EngineRapier.test.ts`' "EngineRapier snapshots (p500)":
+  - the epoch guard, the API objects kept and the replaced world freed, the `null` bytes;
+  - the step count and the settings carried;
+  - survivors, reaped (bodies, colliders, joints), orphans with `DELETE` and `KEEP` (raw Rapier ray
+    casts, with a hit control: Rapier's queries see a collider only after a step);
+  - the handle generation (a body made at a deleted body's index), a joint rebound with the user
+    data kept, a detached body, and the determinism check above.
+
+  `PhysicsFacade.test.ts`' three p500 tests: the reaped objects forgotten before the hooks run, the
+  step clock rewound, the hook's remover; the settings, the doubles kept; another world refused,
+  nothing changed.
+- Not done: the manual browser checks with `physicsTest.ts`. Nothing calls the snapshot functions
+  outside the tests yet, and Phase 4's debugger tab is their surface (the plan allows pulling it
+  earlier).
 
 **Phase 2 — Worker protocol.** Add the three protocol union changes. In `physicsWorker.ts`:
 `TAKE_SNAPSHOT` replies with the transfer list per decision 9; `RESTORE_SNAPSHOT` calls

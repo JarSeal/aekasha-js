@@ -44,6 +44,9 @@ export const facade: {
    * the policy's setters throw without it, and createPhysicsEntity's `tierPolicy` warns. Here so
    * that reading it imports neither of their modules. */
   tiersInstalled: boolean;
+  /** Whether restorePhysicsSnapshot (PhysicsWorld.ts) is restoring: stepPhysics doesn't step
+   * meanwhile (p500). */
+  isRestoringSnapshot: boolean;
 } = {
   state: {
     enabled: false,
@@ -77,6 +80,7 @@ export const facade: {
   transformBuffer: undefined,
   debugStateBuffer: undefined,
   tiersInstalled: false,
+  isRestoringSnapshot: false,
 };
 
 /** Returns the current physicsState */

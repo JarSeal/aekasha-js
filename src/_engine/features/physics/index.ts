@@ -29,7 +29,13 @@ export type {
   PhysicsState,
   PhysicsWorkerTarget,
 } from './types/PhysicsConfigTypes';
-export type { WorldAPI } from './types/PhysicsWorldTypes';
+export type {
+  PhysicsSnapshot,
+  RestoreSnapshotDelta,
+  RestoreSnapshotOpts,
+  RestoreSnapshotResult,
+  WorldAPI,
+} from './types/PhysicsWorldTypes';
 export type {
   EntityWorldBounds,
   WorldBoundsAction,

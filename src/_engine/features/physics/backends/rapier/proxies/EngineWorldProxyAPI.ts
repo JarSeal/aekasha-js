@@ -18,7 +18,12 @@ import type {
   RayColliderIntersectionAPI,
   ShapeCastHitAPI,
 } from '../../../types/PhysicsQueryTypes';
-import type { WorldAPI } from '../../../types/PhysicsWorldTypes';
+import type {
+  PhysicsSnapshot,
+  RestoreSnapshotOpts,
+  RestoreSnapshotResult,
+  WorldAPI,
+} from '../../../types/PhysicsWorldTypes';
 import type { RayDebugOpts } from '../../../../../kernel/render/RayDebugTypes';
 import { createRigidBody, deleteRigidBody } from '../RapierBodies';
 import { createCollider, deleteCollider } from '../RapierColliders';
@@ -84,18 +89,21 @@ export class EngineWorldProxyAPI implements WorldAPI {
 
   // --- Snapshots ---
   // RapierWorld.ts' takeSnapshot / restoreSnapshot are the one implementation (p500 D8)
-  takeSnapshotSync(): Uint8Array | undefined {
+  takeSnapshotSync(): PhysicsSnapshot | undefined {
     return takeSnapshot();
   }
-  async takeSnapshot(): Promise<Uint8Array | undefined> {
+  async takeSnapshot(): Promise<PhysicsSnapshot | undefined> {
     return this.takeSnapshotSync();
   }
 
-  restoreSnapshotSync(data: Uint8Array): WorldAPI {
-    return restoreSnapshot(data);
+  restoreSnapshotSync(snapshot: PhysicsSnapshot, opts?: RestoreSnapshotOpts) {
+    return restoreSnapshot(snapshot, opts);
   }
-  async restoreSnapshot(data: Uint8Array): Promise<WorldAPI> {
-    return this.restoreSnapshotSync(data);
+  async restoreSnapshot(
+    snapshot: PhysicsSnapshot,
+    opts?: RestoreSnapshotOpts
+  ): Promise<RestoreSnapshotResult> {
+    return this.restoreSnapshotSync(snapshot, opts);
   }
 
   // --- Stepping & Propagation ---

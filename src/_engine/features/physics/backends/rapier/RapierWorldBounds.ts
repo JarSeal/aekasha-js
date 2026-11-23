@@ -195,6 +195,15 @@ export const drainPendingOutOfBoundsRecords = (): readonly OutOfBoundsRecord[] =
 };
 
 /**
+ * Drops the exits not drained yet, keeping the bounds (a snapshot restore: they describe the
+ * replaced world's steps).
+ * @internal
+ */
+export const clearPendingOutOfBoundsRecords = () => {
+  pendingRecords = [];
+};
+
+/**
  * Forgets the bounds, the bodies' own, the queued checks and the exits not drained yet
  * (deleteWorld).
  * @internal

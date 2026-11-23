@@ -105,10 +105,13 @@ export class EngineRigidBodyProxyAPI implements RigidBodyAPI {
   }
 
   /**
-   * Points the proxy at its re-created Rapier body (reattachRigidBody, p352).
+   * Points the proxy at its re-created Rapier body (reattachRigidBody, p352), or at its copy in a
+   * restored world (p500), which gets the Rapier-side user data with `keepUserData` (Rapier doesn't
+   * serialize it, and a detach reads it).
    * @internal
    */
-  _rebind(rb: Rapier.RigidBody) {
+  _rebind(rb: Rapier.RigidBody, keepUserData?: boolean) {
+    if (keepUserData) rb.userData = this.rb.userData;
     this.rb = rb;
   }
 

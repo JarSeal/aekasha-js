@@ -88,6 +88,16 @@ export const clearEventRegistrations = () => {
 };
 
 /**
+ * Drops the records not delivered yet, keeping the callbacks (a snapshot restore: they describe
+ * the replaced world's steps).
+ * @internal
+ */
+export const clearPendingEventRecords = () => {
+  pendingCollisionRecords = [];
+  pendingContactForceRecords = [];
+};
+
+/**
  * Drains the module's own backend.eventQueue (populated by backend.world.step()) into plain-data
  * records (pendingCollisionRecords/pendingContactForceRecords), gated by the counters so a scene
  * with no collision/contact-force callbacks pays zero per-step cost. Nothing is dispatched here:

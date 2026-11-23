@@ -4,11 +4,17 @@ import type Rapier from '@dimforge/rapier3d-compat';
 import { getPhysicsEngine } from '../../PhysicsUtils';
 import type { PhysVector } from '../../types/PhysicsCommonTypes';
 import type { PhysicsState } from '../../types/PhysicsConfigTypes';
-import type { WorldAPI } from '../../types/PhysicsWorldTypes';
+import type {
+  PhysicsSnapshot,
+  RestoreSnapshotOpts,
+  RestoreSnapshotResult,
+  WorldAPI,
+} from '../../types/PhysicsWorldTypes';
 import type { LoopState } from '../../../../kernel/loop/MainLoop';
 import { existsOrThrow } from '../../../../utils/Assert';
 import { EngineWorldProxyAPI } from './proxies/EngineWorldProxyAPI';
 import { clearEventRegistrations, drainAndDispatchEvents } from './RapierEvents';
+import { rebindRestoredWorld } from './RapierRestore';
 import { checkQueuedWorldBounds, checkWorldBounds, clearWorldBounds } from './RapierWorldBounds';
 import {
   backend,
@@ -22,6 +28,7 @@ import {
   joints,
   rigidBodies,
   rigidBodyAPIs,
+  toPlainVec,
 } from './RapierState';
 
 /** The settings init() was given: the facade's own (p612 D4, one owner of the defaults). */
@@ -29,6 +36,9 @@ let physicsState: PhysicsState | undefined;
 
 let worldCreated = false;
 let physicsWorldAPI: WorldAPI | undefined;
+/** Which world this is: bumped by every create and delete, so a snapshot names its world and a
+ * restore refuses one of another (p500 D5). */
+let worldEpoch = 0;
 
 /**
  * Keeps the settings and the debug flag, and creates the world from the settings (none with
@@ -98,6 +108,7 @@ export const createWorld = (
   if (maxCcdSubsteps !== undefined) backend.world.maxCcdSubsteps = maxCcdSubsteps;
   physicsWorldAPI = new EngineWorldProxyAPI();
   worldCreated = true;
+  worldEpoch++;
   backend.stepCount = 0;
   return physicsWorldAPI;
 };
@@ -126,6 +137,7 @@ export const deleteWorld = () => {
   // Reset (the running id counters are deliberately kept, see RapierState.ts' maps)
   const hadWorld = worldCreated;
   worldCreated = false;
+  worldEpoch++;
   physicsWorldAPI = undefined;
   backend.stepCount = 0;
   backend.eventQueue?.free();
@@ -139,41 +151,68 @@ export const deleteWorld = () => {
 };
 
 /**
- * The world serialized by Rapier (undefined without a world); see p500. The one implementation:
- * the world's API object delegates to it.
+ * The world's snapshot: Rapier's bytes, the world's epoch and its step count (undefined without a
+ * world); see p500. The one implementation: the world's API object delegates to it.
  * @internal
  */
-export const takeSnapshot = () => (worldCreated ? backend.world.takeSnapshot() : undefined);
+export const takeSnapshot = (): PhysicsSnapshot | undefined =>
+  worldCreated
+    ? { bytes: backend.world.takeSnapshot(), worldEpoch, step: backend.stepCount }
+    : undefined;
 
 /**
- * Replaces the world with one restored from takeSnapshot's bytes and frees the one it replaces;
- * the world's API object stays (it reads `backend.world`). The one implementation: the world's API
- * object delegates to it. Throws without a world, or when Rapier can't read the bytes, and then the
- * world is left as it was. The id maps aren't rebuilt yet (p500 Phase 1). Rapier leaks the small
- * serialization pipeline it makes per restore (a few hundred bytes).
+ * Puts the world back to a snapshot taken in it (p500): Rapier restores a new world from its
+ * bytes, which replaces the current one, the API objects both know are rebound to it, the rest are
+ * forgotten or taken out (RapierRestore.ts), the step count goes back to the snapshot's, and the
+ * replaced world is freed. The world's API object stays (it reads `backend.world`). The one
+ * implementation: the world's API object delegates to it. Throws without a world, for a snapshot
+ * of another world, or when Rapier can't read the bytes; then the world is left as it was. Rapier
+ * leaks the small serialization pipeline it makes per restore (a few hundred bytes).
  * @internal
  */
-export const restoreSnapshot = (snapshot: Uint8Array) => {
+export const restoreSnapshot = (
+  snapshot: PhysicsSnapshot,
+  opts?: RestoreSnapshotOpts
+): RestoreSnapshotResult => {
   const worldAPI = existsOrThrow(
     worldCreated ? physicsWorldAPI : undefined,
     'Could not restore a physics snapshot: there is no world to restore it into.'
   );
+  if (snapshot.worldEpoch !== worldEpoch) {
+    // Restoring it would reap every body of this world
+    throw new Error(
+      `Could not restore a physics snapshot: it was taken in another world (epoch ${snapshot.worldEpoch}, this one is ${worldEpoch}). A scene load, or a delete and create, replaces the world.`
+    );
+  }
   // Typed as World, but Rapier's fromRaw returns null for bytes it can't read
-  const restored: Rapier.World | null = backend.RAPIER.World.restoreSnapshot(snapshot);
+  const restored: Rapier.World | null = backend.RAPIER.World.restoreSnapshot(snapshot.bytes);
   if (!restored) {
     throw new Error('Could not restore a physics snapshot: Rapier could not read its bytes.');
   }
   const replaced = backend.world;
   worldAPI.restoringWorld = true;
+  let sweep;
   try {
     backend.world = restored;
+    sweep = rebindRestoredWorld(restored, opts);
   } finally {
     worldAPI.restoringWorld = false;
   }
-  // Freed last (p500 D10): anything that throws before this leaves the old world alive, not freed
-  // under a reference still held
+  backend.stepCount = snapshot.step;
+  // Freed last (p500 D10): a throw before this leaves the old world alive, not freed under a
+  // reference still held
   replaced.free();
-  return worldAPI;
+  return {
+    ...sweep,
+    // Rapier serializes these with the world, so the snapshot's are now the world's
+    gravity: toPlainVec(restored.gravity),
+    timestep: restored.timestep,
+    solverIterations: restored.numSolverIterations,
+    internalPgsIterations: restored.numInternalPgsIterations,
+    maxCcdSubsteps: restored.maxCcdSubsteps,
+    step: snapshot.step,
+    world: worldAPI,
+  };
 };
 
 /**

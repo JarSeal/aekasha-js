@@ -12,7 +12,12 @@ import type { PhysicsState } from './PhysicsConfigTypes';
 import type { CollisionEventRecord, ContactForceEventRecord } from './PhysicsEventTypes';
 import type { JointAPI, JointParams } from './PhysicsJointTypes';
 import type { PhysicsQueryObserver } from './PhysicsQueryTypes';
-import type { WorldAPI } from './PhysicsWorldTypes';
+import type {
+  PhysicsSnapshot,
+  RestoreSnapshotOpts,
+  RestoreSnapshotResult,
+  WorldAPI,
+} from './PhysicsWorldTypes';
 import type { BodyWorldBounds, OutOfBoundsRecord, WorldBoundsBox } from './PhysicsWorldBoundsTypes';
 
 /**
@@ -66,10 +71,11 @@ export type EngineAPIType = {
   deleteJoint: (id: number, wakeUp?: boolean) => { id: number };
   /** Deletes joints, each waking its bodies when its `wakeUps` entry is true. */
   deleteJoints: (ids: number[], wakeUps?: boolean[]) => { ids: number[] };
-  /** The world serialized by the backend (undefined without a world); see p500. */
-  takeSnapshot: () => Uint8Array | undefined;
-  /** Replaces the world with one restored from `takeSnapshot`'s bytes; see p500. */
-  restoreSnapshot: (snapshot: Uint8Array) => WorldAPI;
+  /** The world's snapshot (undefined without a world); see p500. */
+  takeSnapshot: () => PhysicsSnapshot | undefined;
+  /** Puts the world back to a snapshot taken in it, rebinding the API objects both know and
+   * deleting the rest (see `RestoreSnapshotDelta`); see p500. */
+  restoreSnapshot: (snapshot: PhysicsSnapshot, opts?: RestoreSnapshotOpts) => RestoreSnapshotResult;
   /** The body with this id, or undefined. */
   getRigidBodyAPIWithId: (id: number) => RigidBodyAPI | undefined;
   /** The collider with this id, or undefined. */

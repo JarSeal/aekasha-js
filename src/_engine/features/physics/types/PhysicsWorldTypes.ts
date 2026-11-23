@@ -18,6 +18,67 @@ import type {
 } from './PhysicsQueryTypes';
 
 /**
+ * A physics world's state, taken by `WorldAPI.takeSnapshot` (p500): the backend's serialized
+ * bytes, and what a restore checks them against. Restoring it into another world (one made since,
+ * by a scene load or a delete and create) is refused. It's plain data, kept by the caller as long
+ * as it likes, and restoring it doesn't consume it: one snapshot can be restored again and again.
+ */
+export type PhysicsSnapshot = {
+  /** The backend's serialized world (Rapier's own format, for this Rapier version only). */
+  bytes: Uint8Array;
+  /** Which world it was taken in: a restore into any other world throws. */
+  worldEpoch: number;
+  /** The fixed steps the world had run when it was taken: a restore sets the step clock
+   * (`getPhysicsSubStepIndex`) back to it, so step-timed code replays on the same steps. */
+  step: number;
+};
+
+/** `WorldAPI.restoreSnapshot`'s options. */
+export type RestoreSnapshotOpts = {
+  /** What to do with the bodies, colliders and joints the snapshot has but the API no longer
+   * knows (deleted since it was taken): `'DELETE'` (the default) takes them out of the restored
+   * world, `'KEEP'` leaves them in it, unreachable through the API. */
+  orphanPolicy?: 'DELETE' | 'KEEP';
+};
+
+/**
+ * What a restore changed besides the poses (p500 D3): the restored world holds exactly what both
+ * the snapshot and the API knew. Everything the API made after the snapshot is gone (reaped), and
+ * what the API deleted after it stays gone (the orphans). Both are empty when nothing was created
+ * or deleted since the snapshot, the only case where a restore is an exact rewind.
+ */
+export type RestoreSnapshotDelta = {
+  /** The bodies the API knew that the snapshot doesn't have (created after it): deleted. */
+  reapedRigidBodyIds: number[];
+  /** The colliders the API knew that the snapshot doesn't have: deleted. */
+  reapedColliderIds: number[];
+  /** The joints the API knew that the snapshot doesn't have: deleted. */
+  reapedJointIds: number[];
+  /** How many the snapshot had that the API no longer knew (deleted since): taken out of the
+   * restored world unless `orphanPolicy` is `'KEEP'`. A body detached by the `REMOVED` physics
+   * tier since the snapshot counts here: it stays detached. */
+  orphanCounts: { rigidBodies: number; colliders: number; joints: number };
+  /** The gravity the snapshot carried (now the world's). */
+  gravity: PhysVector;
+  /** The timestep the snapshot carried, in seconds (now the world's). */
+  timestep: number;
+  /** The solver iterations the snapshot carried (now the world's). */
+  solverIterations: number;
+  /** The internal PGS iterations the snapshot carried (now the world's). */
+  internalPgsIterations: number;
+  /** The CCD substeps the snapshot carried (now the world's; 0 is CCD off). */
+  maxCcdSubsteps: number;
+  /** The fixed steps the restored world has run: the snapshot's `step`. */
+  step: number;
+};
+
+/** A restore's result: its {@link RestoreSnapshotDelta} and the world, the same object as before. */
+export type RestoreSnapshotResult = RestoreSnapshotDelta & {
+  /** The world restored into: the same API object the world had before the restore. */
+  world: WorldAPI;
+};
+
+/**
  * The physics world, as `getPhysicsWorld` gives it.
  *
  * This contains all the data-structures necessary for creating and simulating
@@ -46,22 +107,28 @@ export type WorldAPI = {
    */
   free(): void;
   /**
-   * Takes a snapshot of this world.
-   *
-   * Use `World.restoreSnapshot` to create a new physics world with a state identical to
-   * the state when `.takeSnapshot()` is called.
+   * Takes a snapshot of this world: its state, to put it back later with `restoreSnapshot`. Only
+   * the physics state: no entity, mesh or creation params.
    */
-  takeSnapshot(): Promise<Uint8Array | undefined>; // @CHORE: change the type to have the rb and coll data
+  takeSnapshot(): Promise<PhysicsSnapshot | undefined>;
   /** `takeSnapshot()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
-  takeSnapshotSync(): Uint8Array | undefined; // @CHORE: change the type to have the rb and coll data
+  takeSnapshotSync(): PhysicsSnapshot | undefined;
   /**
-   * Creates a new physics world from a snapshot.
-   *
-   * This new physics world will be an identical copy of the snapshoted physics world.
+   * Puts the world back to a snapshot taken in it, keeping every API object that both know (see
+   * {@link RestoreSnapshotDelta} for the rest). Throws for a snapshot of another world, or bytes
+   * the backend can't read (then the world stays as it was).
+   * @remarks Restoring state doesn't replay a run: stepping on from it reproduces the original
+   * only when the caller also replays its own inputs (forces, impulses, creates, deletes, setting
+   * changes) on the same steps. On MAIN_THREAD the world's own restore bypasses the facade (its
+   * registries, the step clock, the restore hooks), as its creates do: the engine's restore
+   * calls go through the facade.
    */
-  restoreSnapshot(data: Uint8Array): Promise<WorldAPI>; // @CHORE: change the type to have the rb and coll data
+  restoreSnapshot(
+    snapshot: PhysicsSnapshot,
+    opts?: RestoreSnapshotOpts
+  ): Promise<RestoreSnapshotResult>;
   /** `restoreSnapshot()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
-  restoreSnapshotSync(data: Uint8Array): WorldAPI; // @CHORE: change the type to have the rb and coll data
+  restoreSnapshotSync(snapshot: PhysicsSnapshot, opts?: RestoreSnapshotOpts): RestoreSnapshotResult;
   /**
    * Computes all the lines (and their colors) needed to render the scene.
    * @param filterFlags Flags for excluding whole subsets of colliders from rendering.

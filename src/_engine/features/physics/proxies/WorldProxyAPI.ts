@@ -43,7 +43,12 @@ import type {
   RayColliderIntersectionAPI,
   ShapeCastHitAPI,
 } from '../types/PhysicsQueryTypes';
-import type { WorldAPI } from '../types/PhysicsWorldTypes';
+import type {
+  PhysicsSnapshot,
+  RestoreSnapshotOpts,
+  RestoreSnapshotResult,
+  WorldAPI,
+} from '../types/PhysicsWorldTypes';
 
 /** Logs a rejected delete that nobody awaits (WorldProxyAPI's removes). */
 const logFailedRemove = (err: unknown) =>
@@ -98,24 +103,26 @@ export class WorldProxyAPI implements WorldAPI {
     messageWorker({ type: PhysicsProtocolType.WORLD_FREE });
   }
 
-  async takeSnapshot(): Promise<Uint8Array | undefined> {
+  async takeSnapshot(): Promise<PhysicsSnapshot | undefined> {
     return await takePhysicsSnapshot();
   }
 
-  takeSnapshotSync(): Uint8Array | undefined {
+  takeSnapshotSync(): PhysicsSnapshot | undefined {
     throw new Error(
       'takeSnapshotSync is not supported in Worker thread mode. Use takeSnapshot(data).'
     );
   }
 
-  async restoreSnapshot(data: Uint8Array): Promise<WorldAPI> {
-    return restorePhysicsSnapshot(data);
+  async restoreSnapshot(
+    snapshot: PhysicsSnapshot,
+    opts?: RestoreSnapshotOpts
+  ): Promise<RestoreSnapshotResult> {
+    return restorePhysicsSnapshot(snapshot, opts);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  restoreSnapshotSync(_data: Uint8Array): WorldAPI {
+  restoreSnapshotSync(): RestoreSnapshotResult {
     throw new Error(
-      'restoreSnapshotSync is not supported in Worker thread mode. Use restoreSnapshot(data).'
+      'restoreSnapshotSync is not supported in Worker thread mode. Use restoreSnapshot(snapshot).'
     );
   }
 

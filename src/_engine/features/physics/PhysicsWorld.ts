@@ -19,7 +19,13 @@ import {
   toWireWorldBounds,
 } from './PhysicsMessaging';
 import { getPhysicsQueryObserver } from './PhysicsQueryStats';
-import { clearPhysicsRegistry, getBodyMovedListener } from './PhysicsRegistry';
+import {
+  clearPhysicsRegistry,
+  forgetCollider,
+  forgetJoint,
+  forgetRigidBody,
+  getBodyMovedListener,
+} from './PhysicsRegistry';
 import { facade, isWorkerTarget } from './PhysicsState';
 import { setStepStatsBuffer } from './PhysicsStepStats';
 import {
@@ -39,13 +45,18 @@ import type {
   DeleteWorldResponse,
   FlushResponse,
   InitPhysicsResponse,
-  RestoreSnapshotResponse,
   SetDebugStateTrackingResponse,
   TakeSnapshotResponse,
 } from './protocol/PhysicsResponses';
 import { WorldProxyAPI } from './proxies/WorldProxyAPI';
 import type { PhysVector } from './types/PhysicsCommonTypes';
-import type { WorldAPI } from './types/PhysicsWorldTypes';
+import type {
+  PhysicsSnapshot,
+  RestoreSnapshotDelta,
+  RestoreSnapshotOpts,
+  RestoreSnapshotResult,
+  WorldAPI,
+} from './types/PhysicsWorldTypes';
 import type { WorldBoundsBox } from './types/PhysicsWorldBoundsTypes';
 
 /** Set by stopPhysics (a mounted engine's unmount): no world is created after it. */
@@ -308,54 +319,116 @@ export const setPhysicsWorldBounds = (box: WorldBoundsBox | null) => {
 };
 
 /**
- * The world's state, serialized by the backend (p500: without the bodies' and colliders' user
- * data). Throws without a world.
+ * The world's snapshot (p500): its state serialized by the backend, the world it was taken in and
+ * its step. Only physics: no entity, mesh or creation params. Throws without a world.
  * @internal
  */
-export const takePhysicsSnapshot = async () => {
+export const takePhysicsSnapshot = async (): Promise<PhysicsSnapshot | undefined> => {
   existsOrThrow(
     facade.worldEnabled,
     'Physics world is not created. Create the world before taking a snapshot.'
   );
-  let snapshot;
-  if (!isWorkerTarget()) {
-    snapshot = facade.engAPI?.takeSnapshot();
-  } else {
-    // @TODO: we probably also need to save the userData for the rigid bodies and colliders (separate object/map).
-    const response = await messageWorkerAsync<TakeSnapshotResponse>({
-      type: PhysicsProtocolType.TAKE_SNAPSHOT,
-    });
-    snapshot = response.snapshot;
+  if (!isWorkerTarget()) return facade.engAPI?.takeSnapshot();
+  const response = await messageWorkerAsync<TakeSnapshotResponse>({
+    type: PhysicsProtocolType.TAKE_SNAPSHOT,
+  });
+  return response.snapshot;
+};
+
+/** Called after every snapshot restore (onPhysicsRestore). */
+type PhysicsRestoreFn = (delta: RestoreSnapshotDelta) => void;
+const restoreFns = new Set<PhysicsRestoreFn>();
+
+/**
+ * Calls `fn` after every snapshot restore, with the restore's delta, once the facade has applied
+ * it (the reaped objects forgotten, the world's settings and the step clock set; p500 D15).
+ * Returns its remover.
+ * @internal
+ */
+export const onPhysicsRestore = (fn: PhysicsRestoreFn) => {
+  restoreFns.add(fn);
+  return () => {
+    restoreFns.delete(fn);
+  };
+};
+
+/** Whether Rapier's read-back `value` differs from the state's copy at f32: Rapier stores f32, so
+ * writing an unchanged read-back over the state's double would change the state for nothing. */
+const isF32Changed = (stateValue: number, value: number) => Math.fround(stateValue) !== value;
+
+/**
+ * Brings the facade in line with a restore's delta, the same in both worker targets: forgets the
+ * reaped bodies, colliders and joints (marked `isBeingDeleted`, their worker callbacks dropped),
+ * takes the world's settings the snapshot carried into the physics state, restarts the step clock
+ * at the snapshot's step (dropping the gates and the time banked toward the next step), and calls
+ * the restore hooks.
+ */
+const applyRestoreDelta = (delta: RestoreSnapshotDelta) => {
+  for (const id of delta.reapedRigidBodyIds) forgetRigidBody(id);
+  for (const id of delta.reapedColliderIds) forgetCollider(id);
+  for (const id of delta.reapedJointIds) forgetJoint(id);
+
+  const { state } = facade;
+  const { gravity } = delta;
+  if (
+    isF32Changed(state.gravity.x, gravity.x) ||
+    isF32Changed(state.gravity.y, gravity.y) ||
+    isF32Changed(state.gravity.z, gravity.z)
+  ) {
+    state.gravity = { ...gravity };
   }
-  return snapshot;
+  if (isF32Changed(state.timestepRatio, delta.timestep)) {
+    state.timestepRatio = delta.timestep;
+    state.timestep = 1 / delta.timestep;
+  }
+  state.solverIterations = delta.solverIterations;
+  state.internalPgsIterations = delta.internalPgsIterations;
+  state.maxCcdSubsteps = delta.maxCcdSubsteps;
+
+  // Every body may have jumped: earlier poses no longer lead up to the restored ones, and
+  // step-timed code goes on from the snapshot's step
+  resetSimClock(delta.step);
+  dropStepAccumulator();
+
+  for (const fn of restoreFns) {
+    try {
+      fn(delta);
+    } catch (err) {
+      lerror('A physics restore hook failed:', err);
+    }
+  }
 };
 
 /**
- * Replaces the world with one restored from {@link takePhysicsSnapshot}'s bytes, and resolves with
- * it (p500: the facade's registry isn't rebuilt). Throws without a world.
+ * Puts the world back to a snapshot taken in it (p500), keeping every API object that both the
+ * snapshot and the API know (so their entities need nothing). What the API made after the snapshot
+ * is deleted and what it deleted since stays gone (`RestoreSnapshotDelta`), the world's settings
+ * become the snapshot's, the step clock goes back to its step, and the restore hooks run
+ * (onPhysicsRestore). Stepping waits meanwhile. Throws without a world, for a snapshot of another
+ * world (a scene load replaces the world), or for bytes the backend can't read; then nothing
+ * changed.
  * @internal
  */
-export const restorePhysicsSnapshot = async (snapshot: Uint8Array) => {
+export const restorePhysicsSnapshot = async (
+  snapshot: PhysicsSnapshot,
+  opts?: RestoreSnapshotOpts
+): Promise<RestoreSnapshotResult> => {
   existsOrThrow(
     facade.worldEnabled,
     'Physics world is not created. Create the world before restoring a snapshot.'
   );
-  if (!isWorkerTarget()) {
-    const response = facade.engAPI?.restoreSnapshot(snapshot);
-    if (response) facade.world = response;
-  } else {
-    // @TODO: we maybe need check all the rigidBodies and colliders
-    // and recreate all the maps here (maybe the new bodies and colliders can come in the response if we also send the next running ids).
-    // The problem is the userData. The snapshots do not have that data since the userData is on the rigidBodyAPI and colliderAPI.
-    const response = await messageWorkerAsync<RestoreSnapshotResponse>({
-      type: PhysicsProtocolType.RESTORE_SNAPSHOT,
-      snapshot,
-    });
-    if (response.worldCreated) facade.world = new WorldProxyAPI();
+  if (isWorkerTarget()) {
+    throw new Error('restorePhysicsSnapshot: WORKER_THREAD comes with p500 Phase 2.');
   }
-  // Every body may have jumped: earlier poses no longer lead up to the restored ones.
-  breakSimHistory();
-  return facade.world;
+  const engAPI = existsOrThrow(facade.engAPI, 'Physics engine is not initialized.');
+  facade.isRestoringSnapshot = true;
+  try {
+    const result = engAPI.restoreSnapshot(snapshot, opts);
+    applyRestoreDelta(result);
+    return result;
+  } finally {
+    facade.isRestoringSnapshot = false;
+  }
 };
 
 /**

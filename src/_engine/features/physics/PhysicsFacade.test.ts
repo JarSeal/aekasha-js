@@ -42,7 +42,11 @@ import type { PhysicsTier } from './PhysicsTierTypes';
 import { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import { getAllColliderEntries, getAllRigidBodyEntries } from './PhysicsRegistry';
 import { facade, getPhysicsState, getPhysicsWorld, isPhysicsWorldEnabled } from './PhysicsState';
-import { holdPhysicsStepping, isPhysicsSteppingHeld } from './PhysicsStepping';
+import {
+  getPhysicsSnapshotStepIndex,
+  holdPhysicsStepping,
+  isPhysicsSteppingHeld,
+} from './PhysicsStepping';
 import {
   flushPhysicsEvents,
   getOutOfBoundsExitSteps,
@@ -63,9 +67,12 @@ import {
   createPhysicsWorld,
   deletePhysicsWorld,
   initPhysics,
+  onPhysicsRestore,
   resetPhysicsWorld,
+  restorePhysicsSnapshot,
   setPhysicsWorldBounds,
   stopPhysics,
+  takePhysicsSnapshot,
 } from './PhysicsWorld';
 import {
   getAllRigidBodyIds,
@@ -809,6 +816,70 @@ describe('the facade (MAIN_THREAD)', () => {
       warn.mockRestore();
       sent.mockRestore();
     }
+  });
+
+  it('p500: a restore keeps the survivors, forgets what came after it before its hooks run, and rewinds the step clock', async () => {
+    await resetPhysicsWorld();
+    const body = createRigidBodySync({
+      rigidType: 'DYNAMIC',
+      translation: { x: -80, y: 10, z: 0 },
+    });
+    const collider = createColliderSync(BALL, body.id);
+    for (let i = 0; i < 10; i++) facade.engAPI!.step();
+    const snapshot = (await takePhysicsSnapshot())!;
+    expect(snapshot.step).toBe(10);
+    const y = body.pos.y;
+    for (let i = 0; i < 10; i++) facade.engAPI!.step();
+    const late = createRigidBodySync({
+      rigidType: 'DYNAMIC',
+      translation: { x: -90, y: 10, z: 0 },
+    });
+    const lateCollider = createColliderSync(BALL, late.id);
+    const seen: { reaped: number[]; isLateKnown: boolean }[] = [];
+    const remove = onPhysicsRestore((delta) => {
+      const isLateKnown = [...getAllRigidBodyEntries()].some(([id]) => id === late.id);
+      seen.push({ reaped: delta.reapedRigidBodyIds, isLateKnown });
+    });
+
+    const result = await restorePhysicsSnapshot(snapshot);
+    expect(result.world).toBe(getPhysicsWorld());
+    expect(result.reapedRigidBodyIds).toEqual([late.id]);
+    expect(result.reapedColliderIds).toEqual([lateCollider.id]);
+    expect(late.isBeingDeleted).toBe(true);
+    expect(lateCollider.isBeingDeleted).toBe(true);
+    expect(count(getAllColliderEntries())).toBe(1);
+    // The facade forgot the reaped body before the hooks ran
+    expect(seen).toEqual([{ reaped: [late.id], isLateKnown: false }]);
+    expect(body.pos.y).toBe(y);
+    expect(collider.isBeingDeleted).toBe(false);
+    expect(getPhysicsSnapshotStepIndex()).toBe(10);
+    expect(facade.isRestoringSnapshot).toBe(false);
+
+    remove();
+    await restorePhysicsSnapshot(snapshot);
+    expect(seen).toHaveLength(1);
+  });
+
+  it("p500: the world's settings come back with a snapshot, the state's doubles kept where unchanged", async () => {
+    const state = getPhysicsState();
+    const { gravity, timestepRatio } = state;
+    const snapshot = (await takePhysicsSnapshot())!;
+    getPhysicsWorld().setGravity({ x: 0, y: -1, z: 0 });
+    state.gravity = { x: 0, y: -1, z: 0 };
+    await restorePhysicsSnapshot(snapshot);
+    expect(state.gravity.y).toBeCloseTo(gravity.y, 5);
+    expect(getPhysicsWorld().getGravitySync().y).toBeCloseTo(gravity.y, 5);
+    expect(state.timestepRatio).toBe(timestepRatio);
+  });
+
+  it('p500: a snapshot of another world is refused, and nothing changes', async () => {
+    const snapshot = (await takePhysicsSnapshot())!;
+    await resetPhysicsWorld();
+    const body = createRigidBodySync({ rigidType: 'DYNAMIC' });
+    await expect(restorePhysicsSnapshot(snapshot)).rejects.toThrow(/another world/);
+    expect(facade.isRestoringSnapshot).toBe(false);
+    expect(body.isBeingDeleted).toBe(false);
+    expect(count(getAllRigidBodyEntries())).toBe(1);
   });
 
   it('A4: deletes without a world are quiet no-ops', async () => {

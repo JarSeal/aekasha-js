@@ -220,10 +220,12 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
         // TAKE_SNAPSHOT
         const snapshot = engAPI.takeSnapshot();
         return sendMessage({ type: data.type, snapshot }, data);
-      case PhysicsProtocolType.RESTORE_SNAPSHOT:
-        // RESTORE_SNAPSHOT
-        physicsWorldAPI = engAPI.restoreSnapshot(data.snapshot);
-        return sendMessage({ type: data.type, worldCreated: true }, data);
+      case PhysicsProtocolType.RESTORE_SNAPSHOT: {
+        // RESTORE_SNAPSHOT (p500 Phase 2 frees the reaped bodies' slots and writes back)
+        const { world, ...delta } = engAPI.restoreSnapshot(data.snapshot, data.opts);
+        physicsWorldAPI = world;
+        return sendMessage({ type: data.type, worldCreated: true, ...delta }, data);
+      }
       case PhysicsProtocolType.CREATE_WORLD: {
         // CREATE_WORLD
         physicsWorldAPI = engAPI.createWorld(data.gravity, data.opts);

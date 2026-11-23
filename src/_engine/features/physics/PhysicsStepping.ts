@@ -59,6 +59,11 @@ export const stepPhysics = (
   // Scene load in progress (holdPhysicsStepping): no timer update either, releasing it
   // resumes through the paused branch below.
   if (isSteppingHeld) return 0;
+  // A snapshot restore in flight (p500): its world replaces the one a step would run on
+  if (facade.isRestoringSnapshot) {
+    accDelta = 0;
+    return 0;
+  }
   const dt = takeFrameDelta(loopState);
   if (dt === null) return 0;
   const stepsTaken = takeDueSteps(loopState, dt);
@@ -412,11 +417,11 @@ const stampStepBatch = (stepsTaken: number) => {
 };
 
 /** A new world starts a new simulated timeline: the step count restarts with it (as the
- * worker's own count does at CREATE_WORLD).
+ * worker's own count does at CREATE_WORLD), at 0 or, for a restored snapshot, at its step (p500).
  * @internal
  */
-export const resetSimClock = () => {
-  stepsIssued = 0;
+export const resetSimClock = (step = 0) => {
+  stepsIssued = step;
   // A gate's step is the old world's: it would hold the new one at a step it has nothing for
   clearPhysicsStepGates();
   snapshotPhaseStep.fill(-1);
@@ -595,7 +600,7 @@ export const getPhysicsStepGateStats = () => ({
 export const getPhysicsSubStepTotal = () => subStepTotal;
 
 /**
- * Drops every step gate (stopPhysics, and a new world's resetSimClock).
+ * Drops every step gate (stopPhysics, and resetSimClock: a new world's, a restored snapshot's).
  * @internal
  */
 export const clearPhysicsStepGates = () => {

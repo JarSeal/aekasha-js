@@ -32,6 +32,14 @@ export class EngineJointProxyAPI implements JointAPI {
     );
   }
 
+  /**
+   * Points the proxy at its copy in a restored world (p500).
+   * @internal
+   */
+  _rebind(joint: Rapier.ImpulseJoint) {
+    this.joint = joint;
+  }
+
   /** Revolute/Prismatic only (Rapier's UnitImpulseJoint). Throws for every other joint type. */
   private asUnitJoint(): Rapier.UnitImpulseJoint {
     return existsOrThrow(
