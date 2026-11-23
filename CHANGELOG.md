@@ -4,13 +4,15 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
-## 2026-11-23 — issue-fixing-20261123 (i080, i090, i100)
+## 2026-11-23 — issue-fixing-20261123 (i080, i090, i100, i110)
 
 A merge group large enough to build in the assets worker (more than 65 536 vertices) now builds while its members change (i080). A member updated with `updateMergeMember` every frame, or a member joining every frame, dropped the running build and started another, which the next frame dropped again: the group never built, and every member stayed drawn on its own. The build is kept now, the members updated meanwhile are written where they are once it lands, and those that joined go into the build after it.
 
 Static instance cells (a scatter's, `createStaticInstances`', an import's GPU instances) are light receivers now (i090): a point or spot light with object culling whose only receivers in range were cells was culled, so a scatter on a target without a mesh went unlit near it. A cell joins the spatial index, measured by its bounds over every instance.
 
 Pool instances in the `DEFAULT` spatial domain (a pool's `spatialDomain: 'DEFAULT'`) are light receivers now too (i100): light culling found them but rejected every one, since an instance has no `Object3D` of its own to measure, so a point or spot light with object culling whose only receivers in range were pool instances was culled. Each instance is measured where its pool draws it.
+
+A scene load that fails after the previous scene's teardown no longer keeps what it loaded (i110): its textures, materials, geometries and imports stayed registered for the page's life unless that scene was loaded again and left. The failed load now deletes what it built of its scene and releases the assets the scene that's current doesn't share.
 
 ### Engine 6.23.0 (Sunset)
 
@@ -25,6 +27,7 @@ Pool instances in the `DEFAULT` spatial domain (a pool's `spatialDomain: 'DEFAUL
 - `updateMergeMember` during a group's worker build no longer drops it (i080): the member is marked, and once the build lands its part is written for its pose then, in place (the build read its pose at its start). A built member updated during a rebuild is written in the mesh drawn now too, as before. A member whose geometry was replaced meanwhile (another vertex count) doesn't drop the build either: it lands, warns, and the group builds again.
 - A member joining a group (`addToMergeGroup`, a mesh's `merge`) during its worker build no longer drops it, nor does `rebuildMergeGroup` or a removal past the waste share: the group stays pending until the build lands and builds again then. The scene step waits for a build that was running when the load began, then builds the group again. Only a member leaving or the group's deletion drops a worker build.
 - `endMergeMemberEdit` during a worker build, for a member waiting for that build, has it land at the session's end pose: it landed at the pose the build read when it started.
+- A `loadScene` that fails after the previous scene's teardown, before its scene is current, deletes what it built of that scene (the features' exit hooks with its id, its groups, loopers and entities; not its exit listeners) and then releases the assets its scene holds alone (i110): they stayed registered, GPU memory and the assets worker's ImageBitmaps, until that scene was loaded and left. What the current scene shares with it stays. Its loopers no longer run on its next visit beside the new ones, and its viewports go. A failure before the teardown changes nothing, as before, and a throw while deleting is logged: the load still resolves `false`.
 
 ### App 1.34.1 (Preschooler)
 
