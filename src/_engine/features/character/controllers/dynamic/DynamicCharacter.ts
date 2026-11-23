@@ -23,6 +23,7 @@ import { getECSWorld } from '../../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../../kernel/ecs/ECSCoreComponents';
 import type { RigidBodyParams } from '../../../physics/types/PhysicsBodyTypes';
 import type { ColliderParams } from '../../../physics/types/PhysicsColliderTypes';
+import type { EntityWorldBounds } from '../../../physics/types/PhysicsWorldBoundsTypes';
 import { createCast } from './Casts';
 import { updateCrouch } from './Crouch';
 import {
@@ -81,6 +82,9 @@ export type DynamicCharacterOpts = DynamicCharacterParams & {
   /** Called on every locomotion state change (the same as registering it with
    * `onLocomotionStateChange` right after creation). */
   onLocomotionStateChange?: LocomotionStateListener;
+  /** The character's own world bounds (`createCharacter`'s `worldBounds`): eg. a respawn,
+   * `{ action: 'CALLBACK', onExit }`, at the scene's kill height. */
+  worldBounds?: EntityWorldBounds;
 };
 
 /** What {@link createDynamicCharacter} returns. */
@@ -333,6 +337,7 @@ export const createDynamicCharacter = async (
       visual,
       intent,
       brain,
+      worldBounds: opts.worldBounds,
     });
   } catch (err) {
     brain?.dispose?.();

@@ -148,8 +148,8 @@ body's state, and compares the hash with the last run of the same scene.
 
 A body that tunnels through a floor or rolls off the edge of a level falls forever, stepping all
 the while. A scene's world bounds stop that: a dynamic body whose position leaves the box is taken
-out of the simulation on the step it left, and its entity is deleted, on that same step in every
-run and on either thread.
+out of the simulation on the step it left, on that same step in every run and on either thread,
+and its entity is deleted (or handled as its action says, below).
 
 ```ts
 import { setSceneWorldBounds } from 'aekasha/physics';
@@ -164,6 +164,36 @@ later visits; `AppConfig.physics.worldBounds` gives every scene without its own 
 their position, not their colliders. In the debug env each exit logs a warning naming the entity:
 a body leaving the level is usually a bug (a collider smaller than its mesh, a body spawned inside
 another). The determinism probe leaves out the bodies that left by its step.
+
+An entity can have bounds of its own, with
+[`setEntityWorldBounds`](api:setEntityWorldBounds) or `createPhysicsEntity`'s `worldBounds`
+option (sent with the body, so they apply from its first step). A box with any side replaces the
+scene's for that entity; `ignore: true` exempts it. The `action` says what happens to an entity
+whose body leaves, the entity's own or else the scene's:
+
+- `'DELETE'` (the default): the entity is deleted.
+- `'DISABLE'`: the entity stays, disabled (`world.setDisabled`), its mesh hidden.
+- `'CALLBACK'`: `onExit` is called with the exit, and the entity stays as it is, its body out of
+  the simulation until your code puts it back.
+
+```ts
+import { setEntityWorldBounds } from 'aekasha/physics';
+
+// No box: the scene's kill height applies, but the player respawns instead of being deleted
+setEntityWorldBounds(playerId, {
+  action: 'CALLBACK',
+  onExit: ({ world, entityId }) => {
+    const body = world.getRigidBody(entityId);
+    body?.setTranslation(spawnPoint, true);
+    body?.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    body?.setEnabled(true);
+  },
+});
+```
+
+Move a body inside before you enable it again, or the next step takes it out again. A body with
+joints is made `FIXED` instead of disabled (the event's `frozen`): put it back with `setBodyType`.
+Bounds on a fixed or kinematic body are never read, and the debug env says so.
 
 ## Queries, events and joints
 
@@ -250,7 +280,9 @@ every body.
   [`getPhysicsTier`](api:getPhysicsTier) and [`setPhysicsTierPolicy`](api:setPhysicsTierPolicy).
 - [`getPhysicsSubStepIndex`](api:getPhysicsSubStepIndex): the step clock for `APP_PHYSICS_STEP`
   systems.
-- [`setSceneWorldBounds`](api:setSceneWorldBounds): the box a scene's bodies must stay in.
+- [`setSceneWorldBounds`](api:setSceneWorldBounds): the box a scene's bodies must stay in, and
+  [`setEntityWorldBounds`](api:setEntityWorldBounds): an entity's own, and what happens when it
+  leaves them.
 
 ## Read more
 

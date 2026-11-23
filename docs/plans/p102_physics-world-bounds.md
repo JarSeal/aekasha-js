@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Physics
 Related: p101 scene-load determinism (implemented, see the Physics section of `.claude/CLAUDE.md` and `src/_engine/features/physics/CLAUDE.md`'s Deterministic scene loads: exits must happen on a fixed step, and the determinism probe must stay green), p500_restore-physics-snapshot.md (bounds are configuration, not simulation state, see §8), the `lines()` feature (`src/_engine/features/lines/`, `createLines`: Phase 3 draws the bounds with it), `src/_engine/features/physics/CLAUDE.md`'s Simulation tiers (p352, p343: the tiers and their distance policy, §8)
 
@@ -201,7 +201,7 @@ As built (engine 6.22.0, app 1.34.0; branch `p102_physics-world-bounds`):
 - **The gym:** `verify:scenes` against a baseline recorded on `main`: `mainThread`, `prodTest` and `debugger` pass (hash `84a78084`, character paths unchanged); the worker configurations' snapshots fail with or without the kill height (`main`'s worker recording was an odd run: `ca7ca2ad` against every other run's `84a78084`), so record them on `main` again.
 - **Hub:** a World bounds section on the physics feature page now (the root's rule: a public API updates its page in the same branch), not only in Phase 4.
 
-### Phase 2 — Per-entity overrides and actions
+### Phase 2 — Per-entity overrides and actions — done
 
 From Phase 1 (see its As built): widen `WorldBoundsAction` and `OutOfBoundsSource` (`'ENTITY'`) in `types/PhysicsWorldBoundsTypes.ts`; the per-body map goes in `RapierWorldBounds.ts` beside the box (cleared by `clearWorldBounds` and by the body's delete); the handler is `PhysicsWorldBounds.ts`' `handleOutOfBounds`, its action from the entity's `WORLD_BOUNDS`, else the scene's def, else `'DELETE'` (the scene's def is in `sceneDefs`; keep the active one beside it). On `WORKER_THREAD` the proxy's cached `isEnabledSync` / `bodyTypeSync` don't know the backend disabled (or froze) the body: `'DISABLE'` and `'CALLBACK'` must refresh them, and allow for a jointed body made `FIXED`.
 
@@ -210,7 +210,7 @@ From Phase 1 (see its As built): widen `WorldBoundsAction` and `OutOfBoundsSourc
 - Dev warning for overrides on fixed/kinematic bodies.
 - Character default (§8).
 
-As built so far (section 1, the overrides; not committed yet):
+As built (section 1, the overrides):
 
 - **The create-time check is queued now**, not run inside `createRigidBody`: an override sent with the create would otherwise come after the check that already took the body out. `queueBodyCheck` (create, reattach, `setBodyWorldBounds`); `checkQueuedWorldBounds` runs right before each `step()` and at the start of a drain, so a record keeps Phase 1's step value (the count before the next step). Two Phase 1 tests changed: a body created outside is still enabled right after its create.
 - **Backend:** `bodyBounds` (`Map<id, Float64Array | 'IGNORE'>`) in `RapierWorldBounds.ts`; a box open on every side is `'IGNORE'`; an unknown id is ignored, a detached one keeps its entry; the delete forgets it (`forgetBodyWorldBounds`), `clearWorldBounds` clears all. `setBodyWorldBounds` on `EngineAPIType`. The step check skips only when there are neither global nor per-body bounds.
@@ -218,7 +218,7 @@ As built so far (section 1, the overrides; not committed yet):
 - **ECS:** `WORLD_BOUNDS` in `ECSCoreComponents.ts` only (`ECSRegistry.ts` lists no core components). `setEntityWorldBounds` in `PhysicsWorldBounds.ts` (works on an entity without a body yet; a dead entity is a debug warning). Its hooks send when the entity owns a body; `createPhysicsEntity` sends the component in the create and again if it changed while the create was in flight; a failed create on a `target` restores the entity's previous `WORLD_BOUNDS`. `copyWorldBounds` / `toWireWorldBounds` / `toWireBodyWorldBounds` are in `PhysicsMessaging.ts` (so `PhysicsEntity.ts` uses them without a cycle). `installPhysicsWorldBounds` takes the `FeatureContext`.
 - `EntityWorldBounds` has only the box and `ignore` so far: `action` and `onExit` come with section 2.
 
-As built (section 2, the actions; not committed yet):
+As built (section 2, the actions):
 
 - **Types:** `WorldBoundsAction` is `'DELETE' | 'DISABLE' | 'CALLBACK'`; `WorldBoundsExitEvent` adds `world` and `frozen` to §3's sketch; `WorldBoundsExitCallback`. `onExit` is on `WorldBoundsDef` too (a scene-wide respawn; answers §11's question 2: the action is configurable per scene, in `AppConfig` and per entity). `'CALLBACK'` without `onExit` acts as `'DISABLE'` with a debug warning (a runtime rule, not a type union).
 - **An entity override without any side** (`{ action: 'CALLBACK', onExit }`) follows the scene's box: only the action is its own (`toWireBodyWorldBounds` returns null for it). That's §8's character case. A box open on every side stays `'IGNORE'` in the backend's raw API.
@@ -227,7 +227,9 @@ As built (section 2, the actions; not committed yet):
 - **`INIT_PHYSICS`** sends the state with `worldBounds: null`: a config `onExit` can't be cloned, and the worker gets the box by `SET_WORLD_BOUNDS`.
 - §11's question 1 (the spatial index while disabled): unchanged, `'DISABLE'` does what `world.setDisabled` does.
 
-As built (section 3, the warning; not committed yet): the type checked is the one the body was created with (`PhysicsBodyOwner.rigidType`), so a `DYNAMIC` body a `STATIC` tier froze still gets its override. A fixed or kinematic body's override, or one on colliders without a body, isn't sent, and the debug env warns (`warnWorldBoundsNotChecked`, `PhysicsEntity.ts`), at the create or at the set; removing one warns about nothing. The component stays on the entity.
+As built (section 3, the warning): the type checked is the one the body was created with (`PhysicsBodyOwner.rigidType`), so a `DYNAMIC` body a `STATIC` tier froze still gets its override. A fixed or kinematic body's override, or one on colliders without a body, isn't sent, and the debug env warns (`warnWorldBoundsNotChecked`, `PhysicsEntity.ts`), at the create or at the set; removing one warns about nothing. The component stays on the entity.
+
+As built (section 4, the character default): no engine default, decided in Phase 2: a character follows the scene's bounds like any dynamic body (deleted by default), since a respawn needs a place only the app knows, and `'CALLBACK'` without `onExit` would leave an invisible player. `createCharacter` and `createDynamicCharacter` take a `worldBounds` option, passed to `createPhysicsEntity` (so it rides in the create); `createCharacterOfKind` takes none (a callback isn't data): `setEntityWorldBounds(character.entityId, …)` after. The Hub's physics page (World bounds: the entity's bounds, the actions) and characters page (Falling out of the level) are updated here rather than in Phase 4.
 
 ### Phase 3 — Debug tooling
 
