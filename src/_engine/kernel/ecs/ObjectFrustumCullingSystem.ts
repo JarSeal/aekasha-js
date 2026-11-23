@@ -90,15 +90,23 @@ const _meshBoundingSphere = new THREE.Sphere();
 /**
  * A mesh entity's world-space bounding sphere: its geometry's (computed if missing) at its world
  * position, the radius scaled by its largest scale axis (conservative for a non-uniform scale,
- * p080 §2.2). Undefined for an entity without a mesh.
+ * p080 §2.2). An `InstancedMesh`'s is its own sphere over every instance (computed if missing)
+ * in its world space, so a cell of static instances is measured whole (i090). Undefined for an
+ * entity without a mesh.
  * Shared with the spatial feature's light culling.
  * @internal
  * @returns a scratch sphere, overwritten by the next call: copy it to keep it
- * @remarks `getWorldPosition` updates the mesh's world matrix (and its parents') first.
+ * @remarks The mesh's world matrix (and its parents') is updated first.
  */
 export const getMeshWorldBoundingSphere: BoundingVolumeProvider = (entityId, world) => {
   const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
   if (!(obj instanceof THREE.Mesh)) return undefined;
+
+  if (obj instanceof THREE.InstancedMesh) {
+    if (!obj.boundingSphere) obj.computeBoundingSphere();
+    obj.updateWorldMatrix(true, false);
+    return _meshBoundingSphere.copy(obj.boundingSphere!).applyMatrix4(obj.matrixWorld);
+  }
 
   const geometry = obj.geometry;
   if (!geometry.boundingSphere) geometry.computeBoundingSphere();

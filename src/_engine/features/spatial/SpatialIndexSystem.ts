@@ -166,8 +166,14 @@ const getLightRadius: SpatialRadiusProvider = (entityId, world) => {
     : undefined;
 };
 
+// An InstancedMesh by its own sphere over every instance, as frustum culling measures it (i090)
 const getMeshRadius: SpatialRadiusProvider = (entityId, world) => {
   const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
+  if (obj instanceof THREE.InstancedMesh) {
+    if (!obj.boundingSphere) obj.computeBoundingSphere();
+    const sphere = obj.boundingSphere!;
+    return sphere.center.length() + sphere.radius;
+  }
   return obj instanceof THREE.Mesh ? getConservativeGeometryRadius(obj.geometry) : undefined;
 };
 
