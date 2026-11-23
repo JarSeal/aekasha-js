@@ -20,6 +20,7 @@ import {
   createRigidBodyWithColliders,
   createRigidBodyWithCollidersSync,
   deleteRigidBody,
+  setPhysicsBodyWorldBounds,
 } from './PhysicsBodies';
 import type { CreateTier, RigidBodyWithColliders } from './PhysicsBodies';
 import { deleteColliders } from './PhysicsColliders';
@@ -29,12 +30,14 @@ import {
   resetPhysicsInterpolationHistory,
 } from './PhysicsInterpolation';
 import { endPhysicsRayStatsFrame } from './PhysicsQueryStats';
+import { copyWorldBounds, toWireBodyWorldBounds } from './PhysicsMessaging';
 import { setBodyMovedListener } from './PhysicsRegistry';
 import { facade, getPhysicsState } from './PhysicsState';
 import { getPhysicsSnapshotStepIndex, getPhysicsWriteVisibleStep } from './PhysicsStepping';
 import { flushPhysics } from './PhysicsWorld';
 import type { RigidBodyAPI, RigidBodyParams } from './types/PhysicsBodyTypes';
 import type { ColliderParams } from './types/PhysicsColliderTypes';
+import type { EntityWorldBounds } from './types/PhysicsWorldBoundsTypes';
 import { deriveColliderDimensionsFromMesh } from './ColliderDimensions';
 import {
   getCurrentSceneId,
@@ -167,6 +170,10 @@ export type PhysicsEntityOpts = CoreEntityOpts & {
    * inside a streaming cell's content load the cell's tier. Only with the `physicsTiers()` feature
    * installed (without it, ignored with one warning). */
   initialTier?: 'FULL' | 'STATIC' | 'DISABLED';
+  /** Code only: the entity's own world bounds (`setEntityWorldBounds`, p102), sent with its
+   * body's create so they apply from its first check on: they replace the scene's bounds for it,
+   * or exempt it (`ignore: true`). Only dynamic bodies are checked. */
+  worldBounds?: EntityWorldBounds;
 };
 
 /**
@@ -180,8 +187,8 @@ export type PhysicsEntityOpts = CoreEntityOpts & {
  * indices). Then nothing of it exists: a new entity is deleted, an existing `target` entity is
  * left as it was.
  * @param props the colliders, the body and the target
- * @param opts the new entity's options (for a `target` id only `tierPolicy` applies) and its
- * world (the default one when left out)
+ * @param opts the new entity's options (for a `target` id only the physics ones apply:
+ * `tierPolicy`, `initialTier`, `worldBounds`) and its world (the default one when left out)
  * @remarks An entity deleted while its `WORKER_THREAD` create is in flight (a scene exit) gets
  * nothing: what the create made is deleted again, and the promise resolves with the deleted
  * entity's id. Check `world.isAlive(id)` after the await before using it.
@@ -239,6 +246,21 @@ const createPhysicsEntityNow = async (
 
   world.addComponent(entityId, ComponentType.TAG_IS_PHYSICS_OBJECT, true);
 
+  // The entity's own world bounds (the option's, else a target's WORLD_BOUNDS) ride in a DYNAMIC
+  // body's create, so they apply from its first check on. Its hooks send nothing yet: no body
+  const boundsBefore = world.getComponent(entityId, ComponentType.WORLD_BOUNDS);
+  if (entityOpts?.worldBounds) {
+    world.addComponent(
+      entityId,
+      ComponentType.WORLD_BOUNDS,
+      copyWorldBounds(entityOpts.worldBounds)
+    );
+  }
+  const isDynamic = rigidBodyParams?.rigidType === 'DYNAMIC';
+  const boundsSent = isDynamic
+    ? world.getComponent(entityId, ComponentType.WORLD_BOUNDS)
+    : undefined;
+
   const isWorkerThread = getPhysicsState().workerTarget === 'WORKER_THREAD';
 
   // Attaching to an existing entity (e.g. one already positioned by createMeshEntity) whose
@@ -284,16 +306,25 @@ const createPhysicsEntityNow = async (
   // Body and colliders together, requested before this function's first await: in
   // WORKER_THREAD mode the worker then creates entities in call order (as MAIN_THREAD does),
   // and no step can land between a body and its colliders.
+  const createOpts = {
+    tier: createTier,
+    worldBounds: (boundsSent && toWireBodyWorldBounds(boundsSent)) ?? undefined,
+  };
   let created: RigidBodyWithColliders;
   try {
     created = isWorkerThread
-      ? await createRigidBodyWithColliders(rigidBodyParams, paramsArray, createTier)
-      : createRigidBodyWithCollidersSync(rigidBodyParams, paramsArray, createTier);
+      ? await createRigidBodyWithColliders(rigidBodyParams, paramsArray, createOpts)
+      : createRigidBodyWithCollidersSync(rigidBodyParams, paramsArray, createOpts);
   } catch (err) {
     // Refused (PhysicsCapacityError) or failed: nothing physics-side exists, so the entity
-    // goes back to how it was handed in (a new one is deleted, an existing one loses the tag).
+    // goes back to how it was handed in (a new one is deleted, an existing one loses the tag and
+    // gets its own world bounds back).
     world.removeComponent(entityId, ComponentType.TAG_IS_PHYSICS_OBJECT);
     if (typeof target !== 'number') world.deleteEntity(entityId);
+    else if (entityOpts?.worldBounds && world.isAlive(entityId)) {
+      if (boundsBefore) world.addComponent(entityId, ComponentType.WORLD_BOUNDS, boundsBefore);
+      else world.removeComponent(entityId, ComponentType.WORLD_BOUNDS);
+    }
     throw err;
   }
   // The create's await: the entity may have been deleted meanwhile (a scene exit's
@@ -377,6 +408,14 @@ const createPhysicsEntityNow = async (
       : ComponentType.BODY_DYNAMIC_HEADLESS;
     world.addComponent(entityId, bucket, rb!);
   }
+  // Own world bounds set or removed while a WORKER_THREAD create was in flight: the hooks found no
+  // body then. Only a DYNAMIC body's are read
+  const boundsNow = world.getComponent(entityId, ComponentType.WORLD_BOUNDS);
+  if (isDynamic && rb && boundsNow !== boundsSent) {
+    setPhysicsBodyWorldBounds(rb.id, boundsNow ? toWireBodyWorldBounds(boundsNow) : null);
+  } else if (!isDynamic && boundsNow) {
+    warnWorldBoundsNotChecked(entityId, rigidBodyParams?.rigidType);
+  }
 
   // Data only: the policy's systems come with physicsTiers() (PhysicsTiersFeature.ts), so an app
   // without it doesn't download them. A scope holding its entities out of the policy (a streaming
@@ -404,6 +443,23 @@ const createPhysicsEntityNow = async (
   }
 
   return entityId;
+};
+
+/**
+ * Debug env: warns that an entity's own world bounds are never read, its body being fixed,
+ * kinematic or missing (colliders only): only dynamic bodies are checked (p102 §1.1).
+ * @internal
+ * @param rigidType the type the body was created with, none for colliders only
+ */
+export const warnWorldBoundsNotChecked = (
+  entityId: number,
+  rigidType: RigidBodyParams['rigidType'] | undefined
+) => {
+  if (!IS_DEBUG_ENV) return;
+  const body = rigidType ? `its body is ${rigidType}` : 'it has no body (colliders only)';
+  lwarn(
+    `World bounds: entity ${entityId}'s own world bounds are ignored: ${body}, and only DYNAMIC bodies are checked.`
+  );
 };
 
 /** The create-time tier of a `DYNAMIC` body (p353 Phase 4 D3): the option's, else the creation

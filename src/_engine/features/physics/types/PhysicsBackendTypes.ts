@@ -13,7 +13,7 @@ import type { CollisionEventRecord, ContactForceEventRecord } from './PhysicsEve
 import type { JointAPI, JointParams } from './PhysicsJointTypes';
 import type { PhysicsQueryObserver } from './PhysicsQueryTypes';
 import type { WorldAPI } from './PhysicsWorldTypes';
-import type { OutOfBoundsRecord, WorldBoundsBox } from './PhysicsWorldBoundsTypes';
+import type { BodyWorldBounds, OutOfBoundsRecord, WorldBoundsBox } from './PhysicsWorldBoundsTypes';
 
 /**
  * The backend contract: what a physics backend module (`backends/rapier/EngineRapier.ts`) exports,
@@ -79,15 +79,21 @@ export type EngineAPIType = {
   /** Enumerates the ids of all currently-live rigid bodies. */
   getAllRigidBodyIds: () => IterableIterator<number>;
   /** Runs one fixed step, collecting its events for `dispatchPendingEventRecords` /
-   * `drainPendingEventRecords`, then takes the dynamic bodies that left the world bounds out of
+   * `drainPendingEventRecords`, then takes the dynamic bodies that left their world bounds out of
    * the simulation (disabled, or FIXED when jointed) and records them for
-   * `drainPendingOutOfBoundsRecords`. */
+   * `drainPendingOutOfBoundsRecords`. The bodies created, reattached or given their own bounds
+   * since the last step are checked before it, asleep or not. */
   step: (eventQueue?: unknown) => void;
   /** Sets (or clears, with null) the current world's bounds (p102), and checks every enabled
    * dynamic body against them at once. A new world starts without. */
   setWorldBounds: (box: WorldBoundsBox | null) => void;
-  /** Returns (and clears) the bodies found outside the world bounds since the last call, in
-   * order: by step(), setWorldBounds() or a dynamic body's create. */
+  /** Sets (or clears, with null) one body's own bounds (p102 Phase 2), which replace the world's
+   * for it; `'IGNORE'` exempts it. Checked before the next step. An unknown id is ignored; a
+   * body's delete forgets them. */
+  setBodyWorldBounds: (id: number, bounds: BodyWorldBounds | null) => void;
+  /** Returns (and clears) the bodies found outside their world bounds since the last call, in
+   * order: by step(), setWorldBounds() or the check of a body created, reattached or given its
+   * own bounds since the last step, which a drain runs first. */
   drainPendingOutOfBoundsRecords: () => readonly OutOfBoundsRecord[];
   /** The world's debug render lines (as {@link WorldAPI.debugRender}); needs a world. */
   debugRender: () => { vertices: Float32Array; colors: Float32Array } | undefined;

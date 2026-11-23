@@ -6,7 +6,12 @@ import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { lerror } from '../../utils/Logger';
 import { createNewResolver, rejectRequest, resolveRequest } from '../../utils/PromiseResolver';
 import { PhysicsDebugStateBuffer } from './PhysicsDebugStateBuffer';
-import { colliders, workerCollisionEventFns, workerContactForceEventFns } from './PhysicsRegistry';
+import {
+  colliders,
+  rigidBodies,
+  workerCollisionEventFns,
+  workerContactForceEventFns,
+} from './PhysicsRegistry';
 import { facade, isWorkerTarget } from './PhysicsState';
 import { recordPushedStepStats } from './PhysicsStepStats';
 import { PhysicsTransformBuffer } from './PhysicsTransformBuffer';
@@ -15,6 +20,7 @@ import type { PhysicsDownProtocol, PhysicsResponse } from './protocol/PhysicsDow
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
 import type { EventsPushMessage } from './protocol/PhysicsResponses';
 import type { PhysicsUpProtocol } from './protocol/PhysicsUpProtocol';
+import type { RigidBodyProxyAPI } from './proxies/RigidBodyProxyAPI';
 import type { PhysicsTransport } from './transport/PhysicsTransport';
 import { createWorkerTransport } from './transport/WorkerTransport';
 import type { RigidBodyParams } from './types/PhysicsBodyTypes';
@@ -22,6 +28,12 @@ import type { ColliderParams } from './types/PhysicsColliderTypes';
 import type { PhysRotation } from './types/PhysicsCommonTypes';
 import { ContactForceEventSnapshot } from './types/PhysicsEventTypes';
 import type { JointParams } from './types/PhysicsJointTypes';
+import type {
+  BodyWorldBounds,
+  EntityWorldBounds,
+  OutOfBoundsRecord,
+  WorldBoundsBox,
+} from './types/PhysicsWorldBoundsTypes';
 
 /** The channel to the worker (WORKER_THREAD mode, from initPhysics): every message to it and from
  * it goes through this (p614 D5). */
@@ -272,7 +284,9 @@ const onWorkerMessage = (data: PhysicsDownProtocol) => {
   } else if (type === PhysicsProtocolType.EVENTS_PUSH) {
     // Unsolicited push, only ever sent when at least one event occurred that step — no
     // requestId, not a response to resolve.
-    // Delivered by flushPhysicsEvents() at the start of the next sub-step, not right away.
+    // Delivered by flushPhysicsEvents() at the start of the next sub-step, not right away. The
+    // world bounds' exits are noted now: the determinism probe reads them before any flush.
+    noteOutOfBoundsExits(data.outOfBounds);
     pendingEventPushes.push(data);
     return;
   } else if (type === PhysicsProtocolType.DEBUG_STATE_PUSH) {
@@ -296,11 +310,65 @@ const onWorkerMessage = (data: PhysicsDownProtocol) => {
 let pendingEventPushes: EventsPushMessage[] = [];
 
 /**
- * Drops the event pushes not delivered yet: a new world's, or a deleted one's.
+ * What handles the bodies the backend found outside the world bounds (p102): told each push's or
+ * sub-step's records, in order.
+ * @internal
+ */
+export type OutOfBoundsHandler = (records: readonly OutOfBoundsRecord[]) => void;
+
+/** The world bounds' handler (PhysicsWorldBounds.ts', set at physics' install); without one, an
+ * exited body stays out of the simulation and nothing else happens. */
+let outOfBoundsHandler: OutOfBoundsHandler | null = null;
+
+/**
+ * Sets (or clears, with null) the one handler of the world bounds' exits, which
+ * flushPhysicsEvents calls after the collision and contact-force callbacks. The facade knows no
+ * entities: physics entities set it (PhysicsWorldBounds.ts).
+ * @internal
+ */
+export const setOutOfBoundsHandler = (handler: OutOfBoundsHandler | null) => {
+  outOfBoundsHandler = handler;
+};
+
+/**
+ * Drops the event pushes not delivered yet, and the world bounds' exits noted and not delivered:
+ * a new world's, or a deleted one's.
  * @internal
  */
 export const clearPendingEventPushes = () => {
   pendingEventPushes = [];
+  mainThreadExits = [];
+  exitStepByBodyId.clear();
+};
+
+/** The current world's exited bodies (p102), each body's exit step by its id: noted when the exit
+ * reaches the main thread, before its delivery. */
+const exitStepByBodyId = new Map<number, number>();
+/** MAIN_THREAD: the exits taken from the backend and not delivered yet. */
+let mainThreadExits: OutOfBoundsRecord[] = [];
+
+const noteOutOfBoundsExits = (records: readonly OutOfBoundsRecord[]) => {
+  for (let i = 0; i < records.length; i++) exitStepByBodyId.set(records[i].bodyId, records[i].step);
+};
+
+/** MAIN_THREAD: takes the backend's exits into mainThreadExits, noting them. */
+const takeMainThreadExits = () => {
+  const records = facade.engAPI?.drainPendingOutOfBoundsRecords();
+  if (!records?.length) return;
+  noteOutOfBoundsExits(records);
+  for (let i = 0; i < records.length; i++) mainThreadExits.push(records[i]);
+};
+
+/**
+ * The step each body of the current world left the world bounds on, by body id: every exit that
+ * has reached the main thread, delivered to the out-of-bounds handler or not (the determinism
+ * probe leaves them out of its hash, since their deletes land at different steps in the two
+ * worker targets).
+ * @internal
+ */
+export const getOutOfBoundsExitSteps = (): ReadonlyMap<number, number> => {
+  if (!isWorkerTarget()) takeMainThreadExits();
+  return exitStepByBodyId;
 };
 
 /**
@@ -315,13 +383,36 @@ export const clearPendingEventPushes = () => {
  */
 export const flushPhysicsEvents = () => {
   if (!isWorkerTarget()) {
-    facade.engAPI?.dispatchPendingEventRecords();
+    const engAPI = facade.engAPI;
+    if (!engAPI) return;
+    engAPI.dispatchPendingEventRecords();
+    // Taken without a handler too: the records are of this world only
+    takeMainThreadExits();
+    if (!mainThreadExits.length) return;
+    const exits = mainThreadExits;
+    mainThreadExits = [];
+    outOfBoundsHandler?.(exits);
     return;
   }
   if (!pendingEventPushes.length) return;
   const pushes = pendingEventPushes;
   pendingEventPushes = [];
-  for (let i = 0; i < pushes.length; i++) dispatchPushedEvents(pushes[i]);
+  for (let i = 0; i < pushes.length; i++) {
+    dispatchPushedEvents(pushes[i]);
+    const exits = pushes[i].outOfBounds;
+    if (!exits.length) continue;
+    noteProxyExits(exits);
+    outOfBoundsHandler?.(exits);
+  }
+};
+
+/** WORKER_THREAD: the exited bodies' proxies cache what the backend made of them (disabled, or
+ * FIXED), as their own setEnabled / setBodyType would have. */
+const noteProxyExits = (records: readonly OutOfBoundsRecord[]) => {
+  for (let i = 0; i < records.length; i++) {
+    const proxy = rigidBodies.get(records[i].bodyId) as RigidBodyProxyAPI | undefined;
+    proxy?._noteWorldBoundsExit(records[i].frozen);
+  }
 };
 
 /** Resolves an EVENTS_PUSH message's plain-data records back to ColliderAPIs (via the
@@ -361,6 +452,51 @@ const dispatchPushedEvents = (data: EventsPushMessage) => {
  */
 export const toWireRigidBodyParams = <T extends RigidBodyParams | undefined>(params: T): T =>
   params?.rotation ? { ...params, rotation: toPlainRot(params.rotation) } : params;
+
+/**
+ * A box as plain data with only its given sides: what crosses the worker boundary (a
+ * `THREE.Vector3` corner would arrive as a plain object with every field, its methods gone).
+ * @internal
+ */
+export const toWireWorldBounds = (box: WorldBoundsBox): WorldBoundsBox => {
+  const side = (v: WorldBoundsBox['min']) =>
+    v && {
+      ...(v.x !== undefined ? { x: v.x } : {}),
+      ...(v.y !== undefined ? { y: v.y } : {}),
+      ...(v.z !== undefined ? { z: v.z } : {}),
+    };
+  return {
+    ...(box.min ? { min: side(box.min) } : {}),
+    ...(box.max ? { max: side(box.max) } : {}),
+  };
+};
+
+/**
+ * A copy of a world bounds definition (a scene's, an entity's), its corners plain objects with
+ * only their given sides, its other fields as they are: what's stored, so a caller's later change
+ * to its own object reaches nothing.
+ * @template T the definition's type
+ * @internal
+ */
+export const copyWorldBounds = <T extends WorldBoundsBox>(bounds: T): T => ({
+  ...bounds,
+  ...toWireWorldBounds(bounds),
+});
+
+/** Whether a corner gives any side. */
+const hasSide = (v: WorldBoundsBox['min']) =>
+  v !== undefined && (v.x !== undefined || v.y !== undefined || v.z !== undefined);
+
+/**
+ * An entity's own world bounds as the backend takes them (plain data, its callback and action
+ * left out): `'IGNORE'`, the box, or null for a box without any side (the world's box applies;
+ * only the action is the entity's).
+ * @internal
+ */
+export const toWireBodyWorldBounds = (bounds: EntityWorldBounds): BodyWorldBounds | null => {
+  if (bounds.ignore) return 'IGNORE';
+  return hasSide(bounds.min) || hasSide(bounds.max) ? toWireWorldBounds(bounds) : null;
+};
 
 /** A JointParams for the postMessage boundary: a FIXED joint's frames as plain objects
  * (toPlainRot). Returns the original object for every other type.

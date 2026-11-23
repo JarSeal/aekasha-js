@@ -144,6 +144,81 @@ To check a scene, open it with `?isDebug=true&physicsProbe=N`, or use "Determini
 Physics API debug tab. It freezes physics N steps after the scene starts, hashes every dynamic
 body's state, and compares the hash with the last run of the same scene.
 
+## World bounds
+
+A body that tunnels through a floor or rolls off the edge of a level falls forever, stepping all
+the while. A scene's world bounds stop that: a dynamic body whose position leaves the box is taken
+out of the simulation on the step it left, on that same step in every run and on either thread,
+and its entity is deleted (or handled as its action says, below).
+
+```ts
+import { setSceneWorldBounds } from 'aekasha/physics';
+
+// In the scene's code: 50 m below the level, a body is gone
+setSceneWorldBounds({ min: { y: -50 } });
+```
+
+Or without code, in the scene's JSON:
+
+```json title="myScene.scene.json"
+{
+  "id": "myScene",
+  "sceneFile": "scenes/myScene/myScene.ts",
+  "worldBounds": { "min": { "y": -50 }, "max": { "y": 500 }, "action": "DISABLE" }
+}
+```
+
+Every side of the box is optional, and a missing side is open; where both corners give an axis,
+`min` must be below `max`, or the gather fails. The JSON's `action` is `"DELETE"` or `"DISABLE"`: a
+callback is code, so a scene-wide `onExit` goes through `setSceneWorldBounds`. A scene keeps its
+bounds for its later visits, and its code's `setSceneWorldBounds` replaces its JSON's (for the
+later visits too). `AppConfig.physics.worldBounds` gives every scene without its own the same box,
+and `null` (`"worldBounds": null`, or `setSceneWorldBounds(null)`) turns them off for one scene.
+A scene whose JSON sets them needs `physics()` in `InitEngine`'s features (the
+[feature manifest](hub:features/scenes-and-assets#the-feature-manifest)); a `null` one doesn't.
+
+Only dynamic bodies are checked, by their position, not their colliders. In the debug env each exit logs a warning naming the entity:
+a body leaving the level is usually a bug (a collider smaller than its mesh, a body spawned inside
+another). The determinism probe leaves out the bodies that left by its step.
+
+An entity can have bounds of its own, with
+[`setEntityWorldBounds`](api:setEntityWorldBounds) or `createPhysicsEntity`'s `worldBounds`
+option (sent with the body, so they apply from its first step). A box with any side replaces the
+scene's for that entity; `ignore: true` exempts it. The `action` says what happens to an entity
+whose body leaves, the entity's own or else the scene's:
+
+- `'DELETE'` (the default): the entity is deleted.
+- `'DISABLE'`: the entity stays, disabled (`world.setDisabled`), its mesh hidden.
+- `'CALLBACK'`: `onExit` is called with the exit, and the entity stays as it is, its body out of
+  the simulation until your code puts it back.
+
+```ts
+import { setEntityWorldBounds } from 'aekasha/physics';
+
+// No box: the scene's kill height applies, but the player respawns instead of being deleted
+setEntityWorldBounds(playerId, {
+  action: 'CALLBACK',
+  onExit: ({ world, entityId }) => {
+    const body = world.getRigidBody(entityId);
+    body?.setTranslation(spawnPoint, true);
+    body?.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    body?.setEnabled(true);
+  },
+});
+```
+
+Move a body inside before you enable it again, or the next step takes it out again. A body with
+joints is made `FIXED` instead of disabled (the event's `frozen`): put it back with `setBodyType`.
+Bounds on a fixed or kinematic body are never read, and the debug env says so.
+
+[`getWorldBoundsStats`](api:getWorldBoundsStats) reads the current scene's bounds (where they come
+from: the scene, the app's default or none), how many bodies have left them, and the last 20 exits,
+each with its entity's name, step, position and the action taken. In the debug env the Physics API
+tab shows the same in its "World bounds" folder, can draw the box (each closed side as a grid; an
+open side isn't drawn), and lists the latest exits: a row opens the entity's edit window while it
+still exists. That window's "World bounds" folder shows the entity's own bounds and draws their
+box.
+
 ## Queries, events and joints
 
 - Ray and shape casts go through the world: [`getPhysicsWorld`](api:getPhysicsWorld)`().castRay(…)`,
@@ -229,6 +304,10 @@ every body.
   [`getPhysicsTier`](api:getPhysicsTier) and [`setPhysicsTierPolicy`](api:setPhysicsTierPolicy).
 - [`getPhysicsSubStepIndex`](api:getPhysicsSubStepIndex): the step clock for `APP_PHYSICS_STEP`
   systems.
+- [`setSceneWorldBounds`](api:setSceneWorldBounds) (or a scene's JSON `worldBounds`): the box a
+  scene's bodies must stay in, and
+  [`setEntityWorldBounds`](api:setEntityWorldBounds): an entity's own, and what happens when it
+  leaves them; [`getWorldBoundsStats`](api:getWorldBoundsStats): the bounds in use and their exits.
 
 ## Read more
 

@@ -66,7 +66,8 @@ const findTopLevelStatements = (file: string) => {
 describe('module-level side effects', () => {
   // No allow-list: p607 moved every registration into an install (its `NOT_YET_INSTALLED` went
   // empty, then away with p619 §1.4 V6), so a registration goes in an install, never on a list
+  // Parses every module: about 2 s alone, past the 5 s default under the full suite's load
   it('no module runs a statement at load', () => {
     expect(listModules().flatMap(findTopLevelStatements)).toEqual([]);
-  });
+  }, 30_000);
 });

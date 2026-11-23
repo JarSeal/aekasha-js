@@ -3,6 +3,7 @@ import { createPhysicsEntity } from '../physics/PhysicsEntity';
 import { getPhysicsSubStepIndex } from '../physics/PhysicsStepping';
 import type { RigidBodyParams } from '../physics/types/PhysicsBodyTypes';
 import type { ColliderParams } from '../physics/types/PhysicsColliderTypes';
+import type { EntityWorldBounds } from '../physics/types/PhysicsWorldBoundsTypes';
 import { type ECSWorld, getECSWorld, getEntityIdByAppId } from '../../kernel/ecs/ECS';
 import type { FeatureContext } from '../../kernel/init/Features';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
@@ -132,6 +133,11 @@ export type CreateCharacterOpts = CharacterBodyKindField & {
    * creator (it may suggest controller configuration first). Disposed with the character; when
    * the creation rejects, it's still the caller's to dispose. */
   brain?: ActorBrain<CharacterIntent>;
+  /** The character's own world bounds (`setEntityWorldBounds`, p102), sent with its body's create.
+   * Without them it follows the scene's, deleted by default when it falls out: a player usually
+   * wants `{ action: 'CALLBACK', onExit }` (its respawn; no box keeps the scene's) or
+   * `{ ignore: true }`. */
+  worldBounds?: EntityWorldBounds;
 };
 
 /**
@@ -146,6 +152,7 @@ export type CreateCharacterOpts = CharacterBodyKindField & {
  */
 export const createCharacter = async (opts: CreateCharacterOpts) => {
   const { id, name, bodyKind, physicsParams, visual, intent = createIntent(), brain } = opts;
+  const { worldBounds } = opts;
 
   if (deleteCharacter(id)) {
     lwarn(`createCharacter: replaced the existing character with id '${id}'.`);
@@ -167,7 +174,7 @@ export const createCharacter = async (opts: CreateCharacterOpts) => {
   await createPhysicsEntity(
     { colliders: physicsParams.colliders, body: physicsParams.rigidBody, target: entityId },
     // FULL over a streaming cell's creation scope: characters have no tiers (p420 owns theirs)
-    { world: ecsWorld, initialTier: 'FULL' }
+    { world: ecsWorld, initialTier: 'FULL', ...(worldBounds ? { worldBounds } : {}) }
   );
   // The create's await: the visual's entity may have been deleted meanwhile (a scene exit during
   // a WORKER_THREAD create), and then it got no body. A character on it would never be cleaned up

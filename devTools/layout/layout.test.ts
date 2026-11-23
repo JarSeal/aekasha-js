@@ -12,6 +12,8 @@ import { findLayoutRule, getLayoutRules, toModuleFileName } from './layoutRules'
 // writes the whole picture, the allowed type-only edges included.
 
 describe('the working tree', () => {
+  // Reads and parses the whole tree: about 2 s alone, past the 5 s default under the full suite's
+  // load
   it('follows the layout', () => {
     const tree = readLayoutTree();
     const check = checkLayout({ ...tree, aliases: ENTRY_FILES });
@@ -19,7 +21,7 @@ describe('the working tree', () => {
     // Something was read: the rules apply to the engine, the toolkit and the app
     expect(check.moduleCount).toBeGreaterThan(500);
     expect(fs.existsSync(path.join(ROOT, 'src/_engine/index.ts'))).toBe(true);
-  });
+  }, 30_000);
 });
 
 /** A tree of modules, each `path → source`; every path is a file of the tree */

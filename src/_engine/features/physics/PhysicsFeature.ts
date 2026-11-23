@@ -27,6 +27,11 @@ import {
   registerPhysicsWireframeDebugAsync,
   settlePendingPhysicsEntities,
 } from './PhysicsEntity';
+import {
+  applySceneWorldBounds,
+  installPhysicsWorldBounds,
+  registerSceneJsonWorldBounds,
+} from './PhysicsWorldBounds';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
 import { existsOrThrow } from '../../utils/Assert';
 
@@ -54,6 +59,7 @@ export const physics = (): EngineFeature => ({
       ctx,
       existsOrThrow(getECSWorld(), 'Could not find the ECS world in the physics install.')
     );
+    installPhysicsWorldBounds(ctx);
     ctx.setFixedStepDriver(physicsFixedStepDriver);
     ctx.addSceneHooks(physicsSceneHooks);
     ctx.registerImportExtension(physicsImportExtension);
@@ -83,10 +89,14 @@ export const physics = (): EngineFeature => ({
 
 /**
  * Physics' part of a scene load (p101's deterministic loads): stepping is held from the start of
- * the load until every body of the next scene exists, which starts on a fresh world.
+ * the load until every body of the next scene exists, which starts on a fresh world with the
+ * scene's world bounds (its JSON's, kept when the scenes are registered, or its code's).
  * @internal
  */
 export const physicsSceneHooks: SceneHooks = {
+  // A scene's JSON world bounds become its own (p102 Phase 4), applied to each of its worlds in
+  // `beforeAssets`; its code's setSceneWorldBounds replaces them
+  sceneRegistered: registerSceneJsonWorldBounds,
   // No stepping until the whole next scene exists (released in `entered`), so a scene's physics
   // never depends on how long its assets took to load
   loadStart: holdPhysicsStepping,
@@ -96,8 +106,12 @@ export const physicsSceneHooks: SceneHooks = {
   // Every physics entity is gone by now: start the next scene on a fresh world, so a revisit
   // simulates exactly like the first visit (no leftover Rapier internal state). After the
   // cameras: in WORKER_THREAD mode this awaits the worker, and frames keep rendering meanwhile,
-  // which needs a camera. Before the assets: imports can spawn bodies.
-  beforeAssets: resetPhysicsWorld,
+  // which needs a camera. Before the assets: imports can spawn bodies. The world bounds go on the
+  // new world before any body, so the first step already uses them (p102).
+  beforeAssets: async () => {
+    await resetPhysicsWorld();
+    applySceneWorldBounds();
+  },
   entered: async () => {
     resetPhysicsRayStats();
     // Includes creates the scene code didn't await (and the prev scene's deletes, in

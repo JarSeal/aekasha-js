@@ -1,11 +1,15 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 // The physics create: resolves with its target, or first runs `during` (what happens while a
-// WORKER_THREAD create is in flight)
-const physics = vi.hoisted(() => ({ during: null as null | (() => void) }));
+// WORKER_THREAD create is in flight); keeps the options it was given
+const physics = vi.hoisted(() => ({
+  during: null as null | (() => void),
+  opts: undefined as unknown,
+}));
 vi.mock(import('../physics/PhysicsEntity'), async (importOriginal) => ({
   ...(await importOriginal()),
-  createPhysicsEntity: (async (props: { target: number }) => {
+  createPhysicsEntity: (async (props: { target: number }, opts: unknown) => {
+    physics.opts = opts;
     await Promise.resolve();
     physics.during?.();
     return props.target;
@@ -83,5 +87,32 @@ describe('a visual deleted while its body is created', () => {
     ).rejects.toThrow(/was deleted while its body was created/);
     expect(dispose).toHaveBeenCalledTimes(1);
     unregisterBrainKind('TEST_I040');
+  });
+});
+
+describe("a character's own world bounds (p102)", () => {
+  const onExit = () => {};
+
+  it('go with its body: createCharacter and createDynamicCharacter pass them on', async () => {
+    const { object } = createVisual('bounded');
+    await createCharacter({ ...charOpts('bounded', object), worldBounds: { ignore: true } });
+    expect(physics.opts).toMatchObject({ initialTier: 'FULL', worldBounds: { ignore: true } });
+
+    const { entityId, object: dynamicObject } = createVisual('boundedDynamic');
+    physics.during = () => world.deleteEntity(entityId);
+    await expect(
+      createDynamicCharacter({
+        id: 'boundedDynamic',
+        visual: dynamicObject,
+        worldBounds: { action: 'CALLBACK', onExit },
+      })
+    ).rejects.toThrow();
+    expect(physics.opts).toMatchObject({ worldBounds: { action: 'CALLBACK', onExit } });
+  });
+
+  it("are left out without the option: the scene's apply", async () => {
+    const { object } = createVisual('unbounded');
+    await createCharacter(charOpts('unbounded', object));
+    expect(physics.opts).not.toHaveProperty('worldBounds');
   });
 });

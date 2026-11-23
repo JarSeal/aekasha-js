@@ -34631,10 +34631,16 @@
         }
       ],
       "postFxEnabled": true,
+      "worldBounds": {
+        "min": {
+          "y": -50
+        }
+      },
       "id": "thirdPersonGymScene",
       "sceneFile": "./scenes/thirdPersonGymScene/thirdPersonGymScene.ts",
       "__features": [
-        "postfx"
+        "postfx",
+        "physics"
       ]
     },
     "topDownTestScene": {

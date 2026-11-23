@@ -4,6 +4,7 @@ import type {
   PhysicsInterpolationMode,
   PhysicsWorkerTarget,
 } from '../../features/physics/types/PhysicsConfigTypes';
+import type { WorldBoundsDef } from '../../features/physics/types/PhysicsWorldBoundsTypes';
 import type { AssetsWorkerTarget } from '../assets/AssetsAPITypes';
 import type { ECSStorageMode } from '../ecs/ECSComponentStorage';
 import { lsGetItem } from '../../utils/LocalAndSessionStorage';
@@ -161,6 +162,11 @@ export type AppConfig = {
      * for. The initial value: setPhysicsStepStatsEnabled() switches the measurement at runtime
      * (the profiler does while it shows it), but the PHY panel exists only when this is on. */
     stepStatsEnabled?: boolean;
+    /** The world bounds of every scene that doesn't set its own (`setSceneWorldBounds`): a
+     * dynamic body whose translation leaves the box is taken out of the simulation on that fixed
+     * step and its entity deleted. A missing side is open, so `{ min: { y: -50 } }` is a kill
+     * height. Default null (none). */
+    worldBounds?: WorldBoundsDef | null;
   };
   /** Where asset files are loaded and decoded.
    * Whatever the target, the public loading API stays the same, and a failed worker request

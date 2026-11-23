@@ -35,9 +35,12 @@ export const PHYSICS_UI_LS_KEY = 'AEK_debugPhysicsApiUI';
  * id without one, see getPhysWinKey) */
 export const EDIT_PHYS_ENTITY_WIN_ID = 'physicsApiEntityEditorWindow';
 
-type PhysicsUIState = { entityWireframeFolderExpanded: boolean };
+type PhysicsUIState = { entityWireframeFolderExpanded: boolean; worldBoundsBoxShown: boolean };
 
-let physicsUIState: PhysicsUIState = { entityWireframeFolderExpanded: false };
+let physicsUIState: PhysicsUIState = {
+  entityWireframeFolderExpanded: false,
+  worldBoundsBoxShown: false,
+};
 
 /** Reads the edit window's folder state from the UI key (the tab's registration) */
 export const loadPhysicsUIState = () => {
@@ -47,14 +50,28 @@ export const loadPhysicsUIState = () => {
 /** Whether the edit window's "Debug wireframe" folder opens, shared by every entity's window */
 export const isEntityWireframeFolderExpanded = () => physicsUIState.entityWireframeFolderExpanded;
 
-/** Saves the edit window's folder state, merged so the tab's own folder states in the same key are
- * kept */
-export const setEntityWireframeFolderExpanded = (expanded: boolean) => {
-  physicsUIState.entityWireframeFolderExpanded = expanded;
+/** Saves the UI state, merged so the tab's own folder states in the same key are kept */
+const savePhysicsUIState = () => {
   lsSetItem(PHYSICS_UI_LS_KEY, {
     ...(lsGetItem(PHYSICS_UI_LS_KEY, {}) as object),
     ...physicsUIState,
   });
+};
+
+/** Saves the edit window's folder state */
+export const setEntityWireframeFolderExpanded = (expanded: boolean) => {
+  physicsUIState.entityWireframeFolderExpanded = expanded;
+  savePhysicsUIState();
+};
+
+/** Whether the world bounds' box was drawn when last saved (the tab turns it on again at its
+ * registration, p102) */
+export const isWorldBoundsBoxShownSaved = () => physicsUIState.worldBoundsBoxShown;
+
+/** Saves whether the world bounds' box is drawn */
+export const setWorldBoundsBoxShownSaved = (shown: boolean) => {
+  physicsUIState.worldBoundsBoxShown = shown;
+  savePhysicsUIState();
 };
 
 type PersistedWireframeState = {

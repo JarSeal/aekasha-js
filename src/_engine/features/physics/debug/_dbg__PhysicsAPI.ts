@@ -1,6 +1,7 @@
 // The Physics API tab (p806 D11's split): the world's boot and live settings, the live readouts'
-// folders (_dbg__PhysicsTabFolders.ts) and the physics entities' list, whose rows open the entity's
-// edit window (_dbg__PhysicsEntityWindow.ts, imported here so its kind registers with the tab).
+// folders (_dbg__PhysicsTabFolders.ts), the world bounds' folder and exits list
+// (_dbg__PhysicsWorldBounds.ts) and the physics entities' list, whose rows open the entity's edit
+// window (_dbg__PhysicsEntityWindow.ts, imported here so its kind registers with the tab).
 import {
   createDebuggerTab,
   debuggerListCMP,
@@ -55,6 +56,12 @@ import {
   refreshPhysicsReadouts,
   type WireframeProxies,
 } from './_dbg__PhysicsTabFolders';
+import {
+  getWorldBoundsExitsList,
+  getWorldBoundsFolder,
+  refreshWorldBoundsReadout,
+  restoreWorldBoundsBoxShown,
+} from './_dbg__PhysicsWorldBounds';
 
 type Item = DebuggerPaneItem<PhysicsState>;
 
@@ -342,6 +349,7 @@ const TAB_LS_KEYS = [
 export const _createPhysicsAPIDebugGUI = () => {
   loadPhysicsUIState();
   restoreWireframeState();
+  restoreWorldBoundsBoxShown();
 
   const state = getPhysicsState();
 
@@ -365,7 +373,10 @@ export const _createPhysicsAPIDebugGUI = () => {
     // No entity create/delete hook to subscribe to: poll, same tradeoff as the spatial grid
     // debug panel's live readout (the list only re-renders when its rows changed)
     refreshIntervalMs: 500,
-    onRefresh: refreshPhysicsReadouts,
+    onRefresh: () => {
+      refreshPhysicsReadouts();
+      refreshWorldBoundsReadout();
+    },
     content: () => {
       const wireframeProxies: WireframeProxies = {
         colors: { ...getWireframeColors() } as Record<WireframeColorState, number>,
@@ -385,6 +396,7 @@ export const _createPhysicsAPIDebugGUI = () => {
             ...getInterpolationItems(wireframeProxies.pose),
             getBodiesFolder(),
             getTiersFolder(),
+            getWorldBoundsFolder(),
             getInterpolationClockFolder(),
             { type: 'separator' },
             getDeterminismProbeFolder(),
@@ -393,6 +405,9 @@ export const _createPhysicsAPIDebugGUI = () => {
           ],
         },
         getPhysicsEntitiesList(),
+        // After the entities' list: the scene runner's debugger script opens an entity's window
+        // through the tab's first list (devTools/verify/scenes.config.ts)
+        getWorldBoundsExitsList(),
       ];
     },
   });

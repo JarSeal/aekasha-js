@@ -596,7 +596,9 @@ const createPlatformAsync = async (platform: GymPlatform, materials: GymMaterial
  * boxes, the ground, the built stairs and wall, a spinning box, the characters, the props, six
  * moving platforms, then the imported course models (stairs of every collider kind, terrains,
  * obstacles). The camera and the lights come from thirdPersonGymScene.scene.json; the toolkit's
- * SunShadowFit effect fits the sun's shadow to the camera's view.
+ * SunShadowFit effect fits the sun's shadow to the camera's view. So does the kill height (its
+ * `worldBounds`, p102): a body that falls off the 200 m ground (or through it) is deleted 50 m
+ * below, instead of falling and stepping for the rest of the visit.
  */
 export const scene = async () => {
   const updateLoaderFn = getLoaderStatusUpdater();

@@ -60,6 +60,8 @@ export { createMeshAssetSchema } from './MeshSchema';
 export type { MeshAsset } from './MeshSchema';
 export { PostFxAssetSchema } from './PostFxSchema';
 export type { PostFxAsset, PostFxParamMeta } from './PostFxSchema';
+export { physicsSchemaPart, SceneWorldBoundsSchema } from '../features/physics/PhysicsSchema';
+export type { SceneWorldBounds } from '../features/physics/PhysicsSchema';
 export { postFxSchemaPart } from '../features/postfx/PostFXSchema';
 export { createSceneAssetSchema } from './SceneSchema';
 export type { SceneAsset } from './SceneSchema';

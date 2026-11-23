@@ -16,6 +16,8 @@ const bridge = vi.hoisted(() => {
     terminated: false,
     /** Every message posted to the worker, as it arrived there. */
     sent: [] as { type: number; [key: string]: unknown }[],
+    /** Every message the worker posted, as the main thread got it. */
+    received: [] as { type: number; [key: string]: unknown }[],
     instance: undefined as { deliver: (data: unknown) => void } | undefined,
     releaseReplies() {
       state.holdReplies = false;
@@ -37,6 +39,8 @@ const bridge = vi.hoisted(() => {
       state.instance = this;
       vi.stubGlobal('self', {
         crossOriginIsolated: false,
+        // Rapier's step reads its clock through `self` (a STEP panics with `unreachable` without)
+        performance: globalThis.performance,
         addEventListener: (_type: string, fn: Listener) => this.listeners.push(fn),
         removeEventListener: (_type: string, fn: Listener) => {
           this.listeners = this.listeners.filter((listener) => listener !== fn);
@@ -52,6 +56,7 @@ const bridge = vi.hoisted(() => {
 
     deliver(data: unknown) {
       if (state.terminated) return;
+      state.received.push(data as (typeof state.received)[number]);
       this.onmessage?.({ data });
       for (const fn of this.mainListeners) fn({ data });
     }
@@ -95,11 +100,32 @@ import {
   reattachRigidBody,
 } from './PhysicsBodies';
 import { createCollider, createColliders } from './PhysicsColliders';
-import { beginSubStepCapture, endSubStepCapture, messageWorker } from './PhysicsMessaging';
+import {
+  beginSubStepCapture,
+  endSubStepCapture,
+  flushPhysicsEvents,
+  getOutOfBoundsExitSteps,
+  messageWorker,
+  setOutOfBoundsHandler,
+} from './PhysicsMessaging';
+import type { OutOfBoundsRecord } from './types/PhysicsWorldBoundsTypes';
+import {
+  handleOutOfBounds,
+  installPhysicsWorldBounds,
+  setEntityWorldBounds,
+} from './PhysicsWorldBounds';
+import type { FeatureContext } from '../../kernel/init/Features';
 import { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import { createJoint } from './PhysicsJoints';
 import { facade, getPhysicsState, getPhysicsWorld } from './PhysicsState';
-import { createPhysicsWorld, initPhysics, resetPhysicsWorld, stopPhysics } from './PhysicsWorld';
+import {
+  createPhysicsWorld,
+  flushPhysics,
+  initPhysics,
+  resetPhysicsWorld,
+  setPhysicsWorldBounds,
+  stopPhysics,
+} from './PhysicsWorld';
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
 import { createPhysicsEntity, deleteAllPhysicsEntities } from './PhysicsEntity';
 import { WorldProxyAPI } from './proxies/WorldProxyAPI';
@@ -131,10 +157,24 @@ const lastSent = (type: PhysicsProtocolType) => {
   return undefined;
 };
 
+/** The last message of `type` the worker posted to the main thread. */
+const lastReceived = (type: PhysicsProtocolType) => {
+  const { received } = bridge.state;
+  for (let i = received.length - 1; i >= 0; i--) if (received[i].type === type) return received[i];
+  return undefined;
+};
+
 /** A rotation's fields as a plain object: what the worker must receive. */
 const plain = ({ x, y, z, w }: THREE.Quaternion) => ({ x, y, z, w });
 
 const countBodies = () => [...getAllRigidBodyIds()].length;
+
+/** The world bounds' install (p102): the WORLD_BOUNDS hooks are static, so installed once; the
+ * tests that deliver exits set the handler themselves. */
+installPhysicsWorldBounds({
+  registerComponentHooks: ECSWorld.registerComponentHooks.bind(ECSWorld),
+} as unknown as FeatureContext);
+setOutOfBoundsHandler(null);
 
 describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
   it('boots against the real worker and creates collider 0', async () => {
@@ -319,6 +359,192 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
   });
 
   // Replaces the world: after the tests that use the first world's collider 0
+  it("p102: the world bounds' exits reach the main thread in the next STEP's EVENTS_PUSH", async () => {
+    await resetPhysicsWorld();
+    // Outside before the bounds are set: their set catches it, on the new world's step 0
+    const below = await createRigidBody({
+      rigidType: 'DYNAMIC',
+      translation: { x: 50, y: -10, z: 0 },
+    });
+    // A corner given as a Vector3 goes as plain data, and a side not given isn't sent
+    setPhysicsWorldBounds({ min: { y: -5 }, max: new THREE.Vector3(1e6, 1e6, 1e6) });
+    // 10 m down in its first step: outside after step 1
+    const falling = await createRigidBody({
+      rigidType: 'DYNAMIC',
+      translation: { x: 60, y: 0, z: 0 },
+      linvel: { x: 0, y: -600, z: 0 },
+    });
+    await createCollider({ type: 'BALL', radius: 0.5 }, falling.id);
+    messageWorker({ type: PhysicsProtocolType.STEP, steps: 1, isOneWay: true });
+    // Replied after the STEP's push
+    await flushPhysics();
+    const push = lastReceived(PhysicsProtocolType.EVENTS_PUSH);
+    expect(push?.outOfBounds).toEqual([
+      { bodyId: below.id, step: 0, x: 50, y: -10, z: 0, source: 'GLOBAL', frozen: false },
+      expect.objectContaining({ bodyId: falling.id, step: 1, source: 'GLOBAL' }),
+    ]);
+    expect(getRigidBodyAPIWithId(falling.id)?.isEnabledSync()).toBe(false);
+    expect(lastSent(PhysicsProtocolType.SET_WORLD_BOUNDS)?.bounds).toEqual({
+      min: { y: -5 },
+      max: { x: 1e6, y: 1e6, z: 1e6 },
+    });
+
+    // Noted on arrival (the probe's read); the push waits for the next sub-step's flush, which hands
+    // the exits to the handler
+    expect(getOutOfBoundsExitSteps().get(falling.id)).toBe(1);
+    const handled: OutOfBoundsRecord[] = [];
+    setOutOfBoundsHandler((records) => handled.push(...records));
+    try {
+      flushPhysicsEvents();
+    } finally {
+      setOutOfBoundsHandler(null);
+    }
+    expect(handled.map((r) => r.bodyId)).toEqual([below.id, falling.id]);
+  });
+
+  it('p102: an entity whose body leaves the bounds is deleted at the flush after the push', async () => {
+    await resetPhysicsWorld();
+    setOutOfBoundsHandler(handleOutOfBounds);
+    const world = new ECSWorld({ id: 'p102-worker' });
+    try {
+      setPhysicsWorldBounds({ min: { y: -5 } });
+      const id = await createPhysicsEntity(
+        {
+          colliders: { type: 'BALL', radius: 0.5 },
+          body: {
+            rigidType: 'DYNAMIC',
+            translation: { x: 50, y: 0, z: 0 },
+            linvel: { x: 0, y: -600, z: 0 },
+          },
+        },
+        { world }
+      );
+      messageWorker({ type: PhysicsProtocolType.STEP, steps: 1, isOneWay: true });
+      await flushPhysics();
+      expect(world.isAlive(id)).toBe(true);
+      flushPhysicsEvents();
+      expect(world.isAlive(id)).toBe(false);
+    } finally {
+      setOutOfBoundsHandler(null);
+      setPhysicsWorldBounds(null);
+    }
+  });
+
+  it("p102 Phase 2: an entity's own bounds go with its create, a set and a set made in flight", async () => {
+    await resetPhysicsWorld();
+    setOutOfBoundsHandler(handleOutOfBounds);
+    const world = new ECSWorld({ id: 'p102-worker-own' });
+    /** A ball entity resting below the kill height (no gravity), with `opts`. */
+    const createLow = (x: number, opts?: Parameters<typeof createPhysicsEntity>[1]) =>
+      createPhysicsEntity(
+        {
+          colliders: { type: 'BALL', radius: 0.5 },
+          body: { rigidType: 'DYNAMIC', translation: { x, y: -10, z: 0 }, gravityScale: 0 },
+        },
+        { world, ...opts }
+      );
+    const subStep = async () => {
+      messageWorker({ type: PhysicsProtocolType.STEP, steps: 1, isOneWay: true });
+      await flushPhysics();
+      flushPhysicsEvents();
+    };
+    try {
+      setPhysicsWorldBounds({ min: { y: -5 } });
+      // The corner as plain data with its given sides only, the action and callback left out
+      const deep = await createLow(50, {
+        worldBounds: { min: new THREE.Vector3(-1e6, -100, -1e6) },
+      });
+      expect(lastSent(PhysicsProtocolType.CREATE_PHYSICS_ENTITY)?.worldBounds).toEqual({
+        min: { x: -1e6, y: -100, z: -1e6 },
+      });
+      const ignored = await createLow(60, { worldBounds: { ignore: true, min: { y: 0 } } });
+      expect(lastSent(PhysicsProtocolType.CREATE_PHYSICS_ENTITY)?.worldBounds).toBe('IGNORE');
+
+      // Set while the create is in flight: sent once the body is known
+      bridge.state.holdReplies = true;
+      const creation = createLow(70);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      const [inFlight] = [...world.getEntitiesWith(ComponentType.TAG_IS_PHYSICS_OBJECT)].filter(
+        (id) => id !== deep && id !== ignored
+      );
+      setEntityWorldBounds(inFlight, { ignore: true }, world);
+      expect(lastSent(PhysicsProtocolType.RIGID_SET_BOUNDS)).toBeUndefined();
+      bridge.state.releaseReplies();
+      await creation;
+      expect(lastSent(PhysicsProtocolType.RIGID_SET_BOUNDS)).toMatchObject({
+        rigidBodyId: world.getRigidBody(inFlight)!.id,
+        bounds: 'IGNORE',
+      });
+
+      await subStep();
+      expect([deep, ignored, inFlight].map((id) => world.isAlive(id))).toEqual([true, true, true]);
+
+      // A set on a live entity: RIGID_SET_BOUNDS, out by its own box on the next step
+      setEntityWorldBounds(deep, { min: { y: -1 } }, world);
+      expect(lastSent(PhysicsProtocolType.RIGID_SET_BOUNDS)?.bounds).toEqual({ min: { y: -1 } });
+      await subStep();
+      expect(world.isAlive(deep)).toBe(false);
+      expect(lastReceived(PhysicsProtocolType.EVENTS_PUSH)?.outOfBounds).toEqual([
+        expect.objectContaining({ source: 'ENTITY' }),
+      ]);
+    } finally {
+      bridge.state.releaseReplies();
+      setOutOfBoundsHandler(null);
+      setPhysicsWorldBounds(null);
+    }
+  });
+
+  it("p102 Phase 2: an exit's delivery updates the proxy's cached state, then DISABLE applies", async () => {
+    await resetPhysicsWorld();
+    setOutOfBoundsHandler(handleOutOfBounds);
+    const world = new ECSWorld({ id: 'p102-worker-actions' });
+    const createLow = (x: number) =>
+      createPhysicsEntity(
+        {
+          colliders: { type: 'BALL', radius: 0.5 },
+          body: { rigidType: 'DYNAMIC', translation: { x, y: -10, z: 0 }, gravityScale: 0 },
+        },
+        { world, worldBounds: { action: 'DISABLE' } }
+      );
+    try {
+      setPhysicsWorldBounds({ min: { y: -5 } });
+      const loose = await createLow(50);
+      const anchor = await createLow(60);
+      const hanging = await createLow(62);
+      await createJoint({
+        type: 'SPHERICAL',
+        body1Id: world.getRigidBody(anchor)!.id,
+        body2Id: world.getRigidBody(hanging)!.id,
+        anchor1: { x: 1, y: 0, z: 0 },
+        anchor2: { x: -1, y: 0, z: 0 },
+      });
+      messageWorker({ type: PhysicsProtocolType.STEP, steps: 1, isOneWay: true });
+      await flushPhysics();
+      // Not delivered yet: the proxies still cache what the main thread last set
+      expect(world.getRigidBody(loose)!.isEnabledSync()).toBe(true);
+      flushPhysicsEvents();
+      expect(world.getRigidBody(loose)!.isEnabledSync()).toBe(false);
+      expect(world.isDisabled(loose)).toBe(true);
+      for (const id of [anchor, hanging]) {
+        const body = world.getRigidBody(id)!;
+        expect([world.isDisabled(id), body.isEnabledSync(), body.bodyTypeSync()]).toEqual([
+          true,
+          true,
+          RigidBodyTypeAPI.Fixed,
+        ]);
+        // The worker agrees
+        expect([await body.isEnabled(), await body.bodyType()]).toEqual([
+          true,
+          RigidBodyTypeAPI.Fixed,
+        ]);
+      }
+      expect(await world.getRigidBody(loose)!.isEnabled()).toBe(false);
+    } finally {
+      setOutOfBoundsHandler(null);
+      setPhysicsWorldBounds(null);
+    }
+  });
+
   it("D7: every new world gets the config's maxCcdSubsteps, 0 included; the setter sets it", async () => {
     // The proxy's copy and the worker's world
     const read = async () => [

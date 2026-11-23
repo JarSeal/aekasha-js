@@ -89,6 +89,9 @@
     "scatters": {
       "$ref": "#/definitions/__schema656"
     },
+    "worldBounds": {
+      "$ref": "#/definitions/__schema658"
+    },
     "id": {
       "type": "string",
       "description": "The scene id: it keys the scene's save data, its saved state and ?startScene=."
@@ -108,7 +111,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema658"
+          "$ref": "#/definitions/__schema667"
         }
       ]
     }
@@ -8196,6 +8199,99 @@
       }
     },
     "__schema658": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "min": {
+              "$ref": "#/definitions/__schema659"
+            },
+            "max": {
+              "$ref": "#/definitions/__schema664"
+            },
+            "action": {
+              "$ref": "#/definitions/__schema665"
+            }
+          },
+          "additionalProperties": false,
+          "description": "The scene's world bounds (the physics() feature): a dynamic body that leaves the box is taken out of the simulation and its entity deleted (or disabled). Every side is optional, a missing one open: { min: { y: -50 } } is a kill height. null turns off AppConfig.physics.worldBounds for this scene."
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "__schema659": {
+      "description": "The lower corner: a dynamic body whose translation is below it on an axis is outside.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema660"
+        }
+      ]
+    },
+    "__schema660": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "description": "The world x, in metres. Missing: open on this axis.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema661"
+            }
+          ]
+        },
+        "y": {
+          "description": "The world y, in metres. Missing: open on this axis.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema662"
+            }
+          ]
+        },
+        "z": {
+          "description": "The world z, in metres. Missing: open on this axis.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/__schema663"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "__schema661": {
+      "type": "number"
+    },
+    "__schema662": {
+      "type": "number"
+    },
+    "__schema663": {
+      "type": "number"
+    },
+    "__schema664": {
+      "description": "The upper corner: a dynamic body whose translation is above it on an axis is outside.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema660"
+        }
+      ]
+    },
+    "__schema665": {
+      "description": "What happens to an exited body's entity, unless the entity has its own action: DELETE (the default) or DISABLE. A CALLBACK needs code: setSceneWorldBounds in the scene's code.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema666"
+        }
+      ]
+    },
+    "__schema666": {
+      "type": "string",
+      "enum": [
+        "DELETE",
+        "DISABLE"
+      ]
+    },
+    "__schema667": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -8298,6 +8394,9 @@
             },
             "scatters": {
               "$ref": "#/definitions/__schema656"
+            },
+            "worldBounds": {
+              "$ref": "#/definitions/__schema658"
             }
           },
           "additionalProperties": false

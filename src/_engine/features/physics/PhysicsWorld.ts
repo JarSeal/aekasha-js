@@ -13,8 +13,10 @@ import {
   clearPendingEventPushes,
   closeWorkerTransport,
   hasWorkerTransport,
+  messageWorker,
   messageWorkerAsync,
   openWorkerTransport,
+  toWireWorldBounds,
 } from './PhysicsMessaging';
 import { getPhysicsQueryObserver } from './PhysicsQueryStats';
 import { clearPhysicsRegistry, getBodyMovedListener } from './PhysicsRegistry';
@@ -44,6 +46,7 @@ import type {
 import { WorldProxyAPI } from './proxies/WorldProxyAPI';
 import type { PhysVector } from './types/PhysicsCommonTypes';
 import type { WorldAPI } from './types/PhysicsWorldTypes';
+import type { WorldBoundsBox } from './types/PhysicsWorldBoundsTypes';
 
 /** Set by stopPhysics (a mounted engine's unmount): no world is created after it. */
 let isPhysicsStopped = false;
@@ -91,7 +94,9 @@ export const initPhysics = async (doNotCreateWorld?: boolean) => {
     openWorkerTransport(startedWorker);
     const { worldCreated } = await messageWorkerAsync<InitPhysicsResponse>({
       type: PhysicsProtocolType.INIT_PHYSICS,
-      physicsState: facade.state,
+      // Plain data: the world bounds may hold an onExit callback, and the worker gets the box by
+      // SET_WORLD_BOUNDS anyway
+      physicsState: { ...facade.state, worldBounds: null },
       isDebugEnvironment: IS_DEBUG_ENV,
       loopState: getReadOnlyLoopState(),
       doNotCreateWorld,
@@ -281,6 +286,25 @@ export const resetPhysicsWorld = async () => {
   await flushPhysics();
   await deletePhysicsWorld();
   await createPhysicsWorld();
+};
+
+/**
+ * Sets (or clears, with null) the current world's bounds (p102): from then on, a dynamic body whose
+ * translation is outside the box after a step is taken out of the simulation on that step (disabled,
+ * or FIXED when jointed) and handed to the out-of-bounds handler (setOutOfBoundsHandler). Every
+ * enabled dynamic body is checked against them at once. A new world starts without (physics' scene
+ * hooks set a scene's). A no-op without a world. `WORKER_THREAD`: applies when the worker gets it;
+ * from an `APP_PHYSICS_STEP` system, before that sub-step, as on `MAIN_THREAD`.
+ * @internal
+ */
+export const setPhysicsWorldBounds = (box: WorldBoundsBox | null) => {
+  if (!facade.worldEnabled) return;
+  const bounds = box && toWireWorldBounds(box);
+  if (!isWorkerTarget()) {
+    facade.engAPI?.setWorldBounds(bounds);
+    return;
+  }
+  messageWorker({ type: PhysicsProtocolType.SET_WORLD_BOUNDS, bounds, isOneWay: true });
 };
 
 /**

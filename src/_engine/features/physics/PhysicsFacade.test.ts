@@ -16,6 +16,7 @@ import { initEnvironment, loadConfig } from '../../kernel/config/Config';
 import { DEFAULT_ECS_WORLD_ID, ECSWorld, getEntityIdByAppId } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { runInPhysicsCreationScope } from '../../kernel/ecs/PhysicsTierAccess';
+import type { FeatureContext } from '../../kernel/init/Features';
 import {
   createRigidBodySync,
   createRigidBodyWithCollidersSync,
@@ -43,10 +44,27 @@ import { getAllColliderEntries, getAllRigidBodyEntries } from './PhysicsRegistry
 import { facade, getPhysicsState, getPhysicsWorld, isPhysicsWorldEnabled } from './PhysicsState';
 import { holdPhysicsStepping, isPhysicsSteppingHeld } from './PhysicsStepping';
 import {
+  flushPhysicsEvents,
+  getOutOfBoundsExitSteps,
+  setOutOfBoundsHandler,
+} from './PhysicsMessaging';
+import type { OutOfBoundsRecord, WorldBoundsExitEvent } from './types/PhysicsWorldBoundsTypes';
+import {
+  applySceneWorldBounds,
+  getWorldBoundsStats,
+  handleOutOfBounds,
+  installPhysicsWorldBounds,
+  registerSceneJsonWorldBounds,
+  setEntityWorldBounds,
+  setSceneWorldBounds,
+} from './PhysicsWorldBounds';
+import { setLoadingSceneId } from '../../kernel/scene/Scene';
+import {
   createPhysicsWorld,
   deletePhysicsWorld,
   initPhysics,
   resetPhysicsWorld,
+  setPhysicsWorldBounds,
   stopPhysics,
 } from './PhysicsWorld';
 import {
@@ -74,6 +92,13 @@ const createBall = (world: ECSWorld, x: number, opts?: Parameters<typeof createP
 /** The tier an entity's request has queued (its PHYSICS_SIM_TIER target; none: FULL). */
 const targetOf = (world: ECSWorld, entityId: number) =>
   world.getComponent(entityId, ComponentType.PHYSICS_SIM_TIER)?.target ?? 'FULL';
+
+/** The world bounds' install (p102): the WORLD_BOUNDS hooks are static, so installed once; the
+ * tests that deliver exits set the handler themselves. */
+installPhysicsWorldBounds({
+  registerComponentHooks: ECSWorld.registerComponentHooks.bind(ECSWorld),
+} as unknown as FeatureContext);
+setOutOfBoundsHandler(null);
 
 describe('the facade (MAIN_THREAD)', () => {
   it('boots and creates the world', async () => {
@@ -349,6 +374,441 @@ describe('the facade (MAIN_THREAD)', () => {
     await resetPhysicsWorld();
     expect(getPhysicsWorld().getMaxCcdSubstepsSync()).toBe(0);
     getPhysicsState().maxCcdSubsteps = 3;
+  });
+
+  it('p102: the world bounds hand their exits to the handler at the next flush, in order', async () => {
+    await resetPhysicsWorld();
+    const handled: OutOfBoundsRecord[][] = [];
+    setOutOfBoundsHandler((records) => handled.push([...records]));
+    try {
+      const below = createRigidBodySync({
+        rigidType: 'DYNAMIC',
+        translation: { x: 50, y: -10, z: 0 },
+      });
+      setPhysicsWorldBounds({ min: { y: -5 } });
+      const falling = createRigidBodySync({
+        rigidType: 'DYNAMIC',
+        translation: { x: 60, y: 0, z: 0 },
+        linvel: { x: 0, y: -600, z: 0 },
+      });
+      createColliderSync(BALL, falling.id);
+      // A sub-step: its flush first (the set's exit), then the step (the fall's)
+      flushPhysicsEvents();
+      facade.engAPI!.step();
+      expect(handled).toEqual([
+        [{ bodyId: below.id, step: 0, x: 50, y: -10, z: 0, source: 'GLOBAL', frozen: false }],
+      ]);
+      // The probe's read: the step's exit before its flush delivers it
+      expect([...getOutOfBoundsExitSteps()]).toEqual([
+        [below.id, 0],
+        [falling.id, 1],
+      ]);
+      flushPhysicsEvents();
+      expect(handled[1]).toEqual([expect.objectContaining({ bodyId: falling.id, step: 1 })]);
+      facade.engAPI!.step();
+      flushPhysicsEvents();
+      expect(handled).toHaveLength(2);
+      expect(falling.isEnabledSync()).toBe(false);
+      await resetPhysicsWorld();
+      expect(getOutOfBoundsExitSteps().size).toBe(0);
+    } finally {
+      setOutOfBoundsHandler(null);
+    }
+  });
+
+  it('p102: an entity whose body leaves the bounds is deleted at the next flush', async () => {
+    await resetPhysicsWorld();
+    setOutOfBoundsHandler(handleOutOfBounds);
+    const world = new ECSWorld({ id: 'p102-delete' });
+    try {
+      const fallingId = await createPhysicsEntity(
+        {
+          colliders: BALL,
+          body: {
+            rigidType: 'DYNAMIC',
+            translation: { x: 50, y: 0, z: 0 },
+            linvel: { x: 0, y: -600, z: 0 },
+          },
+        },
+        { world }
+      );
+      const keptId = await createBall(world, 0);
+      setPhysicsWorldBounds({ min: { y: -5 } });
+      facade.engAPI!.step();
+      expect(world.isAlive(fallingId)).toBe(true);
+      flushPhysicsEvents();
+      expect(world.isAlive(fallingId)).toBe(false);
+      expect(world.isAlive(keptId)).toBe(true);
+    } finally {
+      setOutOfBoundsHandler(null);
+      setPhysicsWorldBounds(null);
+    }
+  });
+
+  it("p102: a scene's bounds apply at once and to its every new world, else the config's; null turns them off", async () => {
+    await resetPhysicsWorld();
+    // A body below the kill height, and a step (a new body is checked before the next one)
+    const createBelow = () => {
+      const body = createRigidBodySync({
+        rigidType: 'DYNAMIC',
+        translation: { x: 50, y: -10, z: 0 },
+      });
+      facade.engAPI!.step();
+      return body;
+    };
+    setLoadingSceneId('p102Own');
+    try {
+      const first = createBelow();
+      setSceneWorldBounds({ min: { y: -5 } });
+      expect(first.isEnabledSync()).toBe(false);
+      // A new world starts without, until the scene hook applies the scene's again
+      await resetPhysicsWorld();
+      const second = createBelow();
+      expect(second.isEnabledSync()).toBe(true);
+      applySceneWorldBounds();
+      expect(second.isEnabledSync()).toBe(false);
+
+      // A scene without its own gets the config's, until it sets null
+      facade.state.worldBounds = { min: { y: -5 } };
+      setLoadingSceneId('p102Default');
+      await resetPhysicsWorld();
+      applySceneWorldBounds();
+      expect(createBelow().isEnabledSync()).toBe(false);
+      setSceneWorldBounds(null);
+      expect(createBelow().isEnabledSync()).toBe(true);
+      // Another scene's bounds wait for its own world
+      setSceneWorldBounds({ min: { y: 0 } }, 'p102Other');
+      expect(createBelow().isEnabledSync()).toBe(true);
+    } finally {
+      facade.state.worldBounds = null;
+      setLoadingSceneId(null);
+      setPhysicsWorldBounds(null);
+      facade.engAPI!.drainPendingOutOfBoundsRecords();
+    }
+  });
+
+  it("p102 Phase 4: a scene's JSON bounds are its own, null over the config's, until its code sets them", async () => {
+    await resetPhysicsWorld();
+    const createBelow = () => {
+      const body = createRigidBodySync({
+        rigidType: 'DYNAMIC',
+        translation: { x: 50, y: -10, z: 0 },
+      });
+      facade.engAPI!.step();
+      return body;
+    };
+    const loadWorld = async (sceneId: string) => {
+      setLoadingSceneId(sceneId);
+      await resetPhysicsWorld();
+      applySceneWorldBounds();
+    };
+    facade.state.worldBounds = { min: { y: -5 } };
+    try {
+      // Registered before any load: kept, applied to the scene's worlds only
+      registerSceneJsonWorldBounds('p102Json', { worldBounds: { min: { y: -20 } } });
+      registerSceneJsonWorldBounds('p102JsonNull', { worldBounds: null });
+      registerSceneJsonWorldBounds('p102JsonNone', {});
+      await loadWorld('p102Json');
+      expect(createBelow().isEnabledSync()).toBe(true); // -10 is inside its own, not the config's
+      expect(getWorldBoundsStats()).toMatchObject({ def: { min: { y: -20 } }, source: 'SCENE' });
+      await loadWorld('p102JsonNull');
+      expect(createBelow().isEnabledSync()).toBe(true);
+      expect(getWorldBoundsStats()).toMatchObject({ def: null, source: 'SCENE' });
+      await loadWorld('p102JsonNone');
+      expect(createBelow().isEnabledSync()).toBe(false);
+      expect(getWorldBoundsStats().source).toBe('CONFIG');
+
+      // The scene's code replaces them, at once and for its later visits
+      await loadWorld('p102Json');
+      setSceneWorldBounds({ min: { y: 0 } });
+      await loadWorld('p102Json');
+      expect(createBelow().isEnabledSync()).toBe(false);
+      expect(getWorldBoundsStats().def).toEqual({ min: { y: 0 } });
+    } finally {
+      facade.state.worldBounds = null;
+      setLoadingSceneId(null);
+      setPhysicsWorldBounds(null);
+      facade.engAPI!.drainPendingOutOfBoundsRecords();
+    }
+  });
+
+  it('p102: a new world has no bounds', async () => {
+    setPhysicsWorldBounds({ min: { y: -5 } });
+    await resetPhysicsWorld();
+    const body = createRigidBodySync({
+      rigidType: 'DYNAMIC',
+      translation: { x: 50, y: -10, z: 0 },
+    });
+    facade.engAPI!.step();
+    expect(facade.engAPI!.drainPendingOutOfBoundsRecords()).toHaveLength(0);
+    expect(body.isEnabledSync()).toBe(true);
+  });
+
+  it("p102 Phase 2: an entity's own bounds replace the world's, from its create or a set", async () => {
+    await resetPhysicsWorld();
+    setOutOfBoundsHandler(handleOutOfBounds);
+    const world = new ECSWorld({ id: 'p102-own' });
+    /** A ball entity resting below the kill height (no gravity), with `opts`. */
+    const createLow = (x: number, opts?: Parameters<typeof createPhysicsEntity>[1]) =>
+      createPhysicsEntity(
+        {
+          colliders: BALL,
+          body: { rigidType: 'DYNAMIC', translation: { x, y: -10, z: 0 }, gravityScale: 0 },
+        },
+        { world, ...opts }
+      );
+    const subStep = () => {
+      flushPhysicsEvents();
+      facade.engAPI!.step();
+      flushPhysicsEvents();
+    };
+    try {
+      setPhysicsWorldBounds({ min: { y: -5 } });
+      const ignored = await createLow(50, { worldBounds: { ignore: true } });
+      const deep = await createLow(60, { worldBounds: { min: { y: -100 } } });
+      // Set on the target entity before its body: the create takes them
+      const targetId = world.createEntity();
+      setEntityWorldBounds(targetId, { ignore: true }, world);
+      const target = await createPhysicsEntity(
+        {
+          colliders: BALL,
+          body: { rigidType: 'DYNAMIC', translation: { x: 70, y: -10, z: 0 }, gravityScale: 0 },
+          target: targetId,
+        },
+        { world }
+      );
+      const plain = await createLow(80);
+      subStep();
+      expect([ignored, deep, target].map((id) => world.isAlive(id))).toEqual([true, true, true]);
+      expect(world.isAlive(plain)).toBe(false);
+      expect(world.getComponent(deep, ComponentType.WORLD_BOUNDS)).toEqual({ min: { y: -100 } });
+
+      // A set replaces them (out by its own box), null follows the world's again
+      const deepBodyId = world.getRigidBody(deep)!.id;
+      const ignoredBodyId = world.getRigidBody(ignored)!.id;
+      setEntityWorldBounds(deep, { min: { y: -1 } }, world);
+      setEntityWorldBounds(ignored, null, world);
+      expect(world.hasComponent(ignored, ComponentType.WORLD_BOUNDS)).toBe(false);
+      const handled: OutOfBoundsRecord[] = [];
+      setOutOfBoundsHandler((records) => {
+        handled.push(...records);
+        handleOutOfBounds(records);
+      });
+      subStep();
+      expect(handled.map((r) => [r.bodyId, r.source])).toEqual([
+        [deepBodyId, 'ENTITY'],
+        [ignoredBodyId, 'GLOBAL'],
+      ]);
+      expect(world.isAlive(deep)).toBe(false);
+      expect(world.isAlive(ignored)).toBe(false);
+      expect(world.isAlive(target)).toBe(true);
+    } finally {
+      setOutOfBoundsHandler(null);
+      setPhysicsWorldBounds(null);
+    }
+  });
+
+  it("p102 Phase 2: the actions: the entity's own, else the scene's; DISABLE, CALLBACK, frozen", async () => {
+    await resetPhysicsWorld();
+    setOutOfBoundsHandler(handleOutOfBounds);
+    const world = new ECSWorld({ id: 'p102-actions' });
+    const createLow = (x: number, opts?: Parameters<typeof createPhysicsEntity>[1]) =>
+      createPhysicsEntity(
+        {
+          colliders: BALL,
+          body: { rigidType: 'DYNAMIC', translation: { x, y: -10, z: 0 }, gravityScale: 0 },
+        },
+        { world, ...opts }
+      );
+    const subStep = () => {
+      flushPhysicsEvents();
+      facade.engAPI!.step();
+      flushPhysicsEvents();
+    };
+    setLoadingSceneId('p102Actions');
+    try {
+      setSceneWorldBounds({ min: { y: -5 }, action: 'DISABLE' });
+      const disabled = await createLow(50);
+      // Its tier policy membership goes (added here as the option would)
+      world.addComponent(disabled, ComponentType.PHYSICS_TIER_POLICY, {
+        refusedTier: null,
+        placed: false,
+      });
+      const events: WorldBoundsExitEvent[] = [];
+      // No side: the scene's box, the entity's own action
+      const called = await createLow(60, {
+        worldBounds: { action: 'CALLBACK', onExit: (e) => events.push(e) },
+      });
+      const deleted = await createLow(70, { worldBounds: { action: 'DELETE' } });
+      const noCallback = await createLow(80, { worldBounds: { action: 'CALLBACK' } });
+      // A jointed pair: frozen (FIXED), not disabled, and only the DISABLED component for DISABLE
+      const anchor = await createLow(90);
+      const hanging = await createLow(92);
+      createJointSync({
+        type: 'SPHERICAL',
+        body1Id: world.getRigidBody(anchor)!.id,
+        body2Id: world.getRigidBody(hanging)!.id,
+        anchor1: { x: 1, y: 0, z: 0 },
+        anchor2: { x: -1, y: 0, z: 0 },
+      });
+      subStep();
+
+      expect(world.isAlive(disabled) && world.isDisabled(disabled)).toBe(true);
+      expect(world.getRigidBody(disabled)!.isEnabledSync()).toBe(false);
+      expect(world.hasComponent(disabled, ComponentType.PHYSICS_TIER_POLICY)).toBe(false);
+      expect(world.isAlive(deleted)).toBe(false);
+      expect(world.isDisabled(noCallback)).toBe(true);
+      // CALLBACK leaves the entity as it is: alive, not disabled, its body out
+      expect([world.isAlive(called), world.isDisabled(called)]).toEqual([true, false]);
+      expect(events).toEqual([
+        {
+          entityId: called,
+          world,
+          bodyId: world.getRigidBody(called)!.id,
+          step: 0,
+          position: { x: 60, y: -10, z: 0 },
+          source: 'GLOBAL',
+          frozen: false,
+        },
+      ]);
+      for (const id of [anchor, hanging]) {
+        const body = world.getRigidBody(id)!;
+        expect([world.isDisabled(id), body.isEnabledSync(), body.bodyTypeSync()]).toEqual([
+          true,
+          true,
+          RigidBodyTypeAPI.Fixed,
+        ]);
+      }
+
+      // The callback's put-back: moved inside and enabled, it stays in
+      const body = world.getRigidBody(called)!;
+      body.setTranslation({ x: 60, y: 0, z: 0 }, true);
+      body.setEnabled(true);
+      subStep();
+      expect(events).toHaveLength(1);
+      expect(body.isEnabledSync()).toBe(true);
+    } finally {
+      setOutOfBoundsHandler(null);
+      setLoadingSceneId(null);
+      setPhysicsWorldBounds(null);
+    }
+  });
+
+  it("p102 Phase 3: getWorldBoundsStats: the bounds' source, the exits named with their actions, kept per scene", async () => {
+    await resetPhysicsWorld();
+    setOutOfBoundsHandler(handleOutOfBounds);
+    const world = new ECSWorld({ id: 'p102-stats' });
+    const createLow = (x: number, opts?: Parameters<typeof createPhysicsEntity>[1]) =>
+      createPhysicsEntity(
+        {
+          colliders: BALL,
+          body: { rigidType: 'DYNAMIC', translation: { x, y: -10, z: 0 }, gravityScale: 0 },
+        },
+        { world, ...opts }
+      );
+    const createBareLow = (x: number) =>
+      createRigidBodySync({ rigidType: 'DYNAMIC', translation: { x, y: -10, z: 0 } });
+    const subStep = () => {
+      flushPhysicsEvents();
+      facade.engAPI!.step();
+      flushPhysicsEvents();
+    };
+    try {
+      facade.state.worldBounds = { min: { y: -5 }, action: 'DISABLE' };
+      setLoadingSceneId('p102Stats');
+      applySceneWorldBounds();
+      expect(getWorldBoundsStats()).toEqual({
+        def: { min: { y: -5 }, action: 'DISABLE' },
+        source: 'CONFIG',
+        exitCount: 0,
+        recentExits: [],
+      });
+
+      const named = await createLow(50, { appId: 'p102Named' });
+      const deleted = await createLow(60, { worldBounds: { action: 'DELETE' } });
+      const bare = createBareLow(70);
+      subStep();
+      const stats = getWorldBoundsStats();
+      expect(stats.exitCount).toBe(3);
+      expect(stats.recentExits.map((e) => [e.name, e.entityId, e.action])).toEqual([
+        ['p102Named', named, 'DISABLE'],
+        [`entity ${deleted}`, deleted, 'DELETE'],
+        [`body ${bare.id}`, null, null],
+      ]);
+      expect(stats.recentExits[0]).toMatchObject({
+        world,
+        step: 0,
+        position: { x: 50, y: -10, z: 0 },
+        source: 'GLOBAL',
+        frozen: false,
+      });
+      // The entity is gone, its exit still listed
+      expect(world.isAlive(deleted)).toBe(false);
+
+      // The latest 20 only, every exit counted
+      for (let i = 0; i < 20; i++) createBareLow(100 + i);
+      subStep();
+      const { exitCount, recentExits } = getWorldBoundsStats();
+      expect(exitCount).toBe(23);
+      expect(recentExits).toHaveLength(20);
+      expect(recentExits[0].position.x).toBe(100);
+
+      // The scene's own, null included
+      setSceneWorldBounds(null);
+      expect(getWorldBoundsStats()).toMatchObject({ def: null, source: 'SCENE', exitCount: 23 });
+
+      // A new scene's world starts over, without bounds when neither sets them
+      facade.state.worldBounds = null;
+      setLoadingSceneId('p102StatsNext');
+      await resetPhysicsWorld();
+      applySceneWorldBounds();
+      expect(getWorldBoundsStats()).toEqual({
+        def: null,
+        source: 'NONE',
+        exitCount: 0,
+        recentExits: [],
+      });
+    } finally {
+      facade.state.worldBounds = null;
+      setOutOfBoundsHandler(null);
+      setLoadingSceneId(null);
+      setPhysicsWorldBounds(null);
+    }
+  });
+
+  it('p102 Phase 2: own bounds on a fixed, kinematic or bodiless entity warn and are not sent', async () => {
+    await resetPhysicsWorld();
+    const world = new ECSWorld({ id: 'p102-not-dynamic' });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const sent = vi.spyOn(facade.engAPI!, 'setBodyWorldBounds');
+    const boundsWarnings = () =>
+      warn.mock.calls.filter((c) => String(c[0]).includes('only DYNAMIC bodies are checked'));
+    try {
+      await createPhysicsEntity(
+        { colliders: BALL, body: { rigidType: 'FIXED' } },
+        { world, worldBounds: { min: { y: 0 } } }
+      );
+      const kinematic = await createPhysicsEntity(
+        { colliders: BALL, body: { rigidType: 'POS_BASED' } },
+        { world }
+      );
+      setEntityWorldBounds(kinematic, { ignore: true }, world);
+      const bodiless = await createPhysicsEntity({ colliders: BALL }, { world });
+      setEntityWorldBounds(bodiless, { ignore: true }, world);
+      // Removing them warns about nothing
+      setEntityWorldBounds(kinematic, null, world);
+      expect(
+        boundsWarnings().map((c) => String(c[0]).match(/its body is \w+|no body/)?.[0])
+      ).toEqual(['its body is FIXED', 'its body is POS_BASED', 'no body']);
+      expect(sent).not.toHaveBeenCalled();
+      const dynamic = await createBall(world, 0);
+      setEntityWorldBounds(dynamic, { ignore: true }, world);
+      expect(sent).toHaveBeenCalledTimes(1);
+      expect(boundsWarnings()).toHaveLength(3);
+    } finally {
+      warn.mockRestore();
+      sent.mockRestore();
+    }
   });
 
   it('A4: deletes without a world are quiet no-ops', async () => {

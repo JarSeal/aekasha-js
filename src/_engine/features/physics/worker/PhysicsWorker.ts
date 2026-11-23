@@ -209,6 +209,10 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
         // the next one. workerPhysicsState outlives world resets, so the flag does too.
         if (workerPhysicsState) workerPhysicsState.stepStatsEnabled = data.enabled;
         return;
+      case PhysicsProtocolType.SET_WORLD_BOUNDS:
+        // SET_WORLD_BOUNDS (one-way). The bodies it finds outside go with the next STEP's events
+        engAPI.setWorldBounds(data.bounds);
+        return;
       case PhysicsProtocolType.FLUSH:
         // FLUSH (ordering barrier: messages are handled in arrival order, so replying is enough)
         return sendMessage({ type: data.type }, data);
@@ -423,14 +427,20 @@ const writeBackDebugState = () => {
   }
 };
 
-/** Pushes whatever collision/contact-force events were collected during the STEP that
- * just ran, but only when at least one occurred — these are sparse and discrete, unlike
- * the continuously-valid transform buffer, so there's no reason to pay a postMessage
- * every frame when nothing collided. */
+/** Pushes whatever collision/contact-force events and world bounds exits (p102) were collected
+ * since the last push (the STEP that just ran, and the bounds' set and creates before it), but
+ * only when at least one occurred — these are sparse and discrete, unlike the continuously-valid
+ * transform buffer, so there's no reason to pay a postMessage every frame when nothing happened. */
 const pushPendingEvents = () => {
   const { collisions, contactForces } = engAPI.drainPendingEventRecords();
-  if (!collisions.length && !contactForces.length) return;
-  sendMessageSimple({ type: PhysicsProtocolType.EVENTS_PUSH, collisions, contactForces });
+  const outOfBounds = engAPI.drainPendingOutOfBoundsRecords();
+  if (!collisions.length && !contactForces.length && !outOfBounds.length) return;
+  sendMessageSimple({
+    type: PhysicsProtocolType.EVENTS_PUSH,
+    collisions,
+    contactForces,
+    outOfBounds,
+  });
 };
 
 const initPhysics = async (

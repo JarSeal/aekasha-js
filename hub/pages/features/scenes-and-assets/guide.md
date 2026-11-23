@@ -243,7 +243,8 @@ and `postFxEnabled` to PostFX (`postFx()`), `spatialDomains` to the spatial inde
 `impostors` and a mesh's `lod` to LOD (`lod()`), `mergeGroups` and a mesh's `merge` to mesh
 merging (`merging()`), and `textureSets` and `textureSetArrays` (which the gather fills from the
 materials' `{ textureSet }` and `{ textureSetArray }` inputs too) to texture sets
-(`textureSets()`). The gatherer writes the features each scene's data uses into the generated data
+(`textureSets()`), and `worldBounds` (unless `null`) to [physics](hub:features/physics#world-bounds)
+(`physics()`). The gatherer writes the features each scene's data uses into the generated data
 (the scene's `__features`), and `InitEngine` checks every scene, loaded or not, against its
 `features` before anything boots:
 

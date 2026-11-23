@@ -2,23 +2,23 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 4323,
-      "total": 4323
+      "documented": 4369,
+      "total": 4369
     },
     "members": {
-      "documented": 1145,
-      "total": 1145
+      "documented": 1147,
+      "total": 1147
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3750,
-        "total": 3750
+        "documented": 3796,
+        "total": 3796
       },
       "members": {
-        "documented": 969,
-        "total": 969
+        "documented": 971,
+        "total": 971
       }
     },
     "toolkit": {
@@ -189,8 +189,8 @@
     },
     "engine/features/physics": {
       "exports": {
-        "documented": 213,
-        "total": 213
+        "documented": 234,
+        "total": 234
       },
       "members": {
         "documented": 34,
@@ -217,8 +217,8 @@
     },
     "engine/features/physics/backends/rapier": {
       "exports": {
-        "documented": 58,
-        "total": 58
+        "documented": 67,
+        "total": 67
       },
       "members": {
         "documented": 0,
@@ -277,8 +277,8 @@
         "total": 4
       },
       "members": {
-        "documented": 265,
-        "total": 265
+        "documented": 266,
+        "total": 266
       },
       "undocumented": {
         "exports": [],
@@ -301,8 +301,8 @@
     },
     "engine/features/physics/types": {
       "exports": {
-        "documented": 46,
-        "total": 46
+        "documented": 58,
+        "total": 58
       },
       "members": {
         "documented": 20,
@@ -455,8 +455,8 @@
     },
     "engine/kernel/assets": {
       "exports": {
-        "documented": 190,
-        "total": 190
+        "documented": 192,
+        "total": 192
       },
       "members": {
         "documented": 0,
@@ -469,8 +469,8 @@
     },
     "engine/kernel/assets/import": {
       "exports": {
-        "documented": 75,
-        "total": 75
+        "documented": 77,
+        "total": 77
       },
       "members": {
         "documented": 0,
@@ -529,8 +529,8 @@
         "total": 101
       },
       "members": {
-        "documented": 164,
-        "total": 164
+        "documented": 165,
+        "total": 165
       },
       "undocumented": {
         "exports": [],

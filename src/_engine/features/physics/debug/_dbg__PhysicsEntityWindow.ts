@@ -1,8 +1,9 @@
 // The physics entity edit window (p806 D10): a debug window per physics entity on the UI kit's
 // property grid. Its pose rows (_dbg__BodyPoseItems.ts) edit a copy, which the Set buttons apply
 // to the body, recorded per scene for undo; the "Debug wireframe" folder shows the entity's
-// collider wireframe and overrides the global palette for it alone. The window's kind, its undo
-// handlers and the profiler's opener register at this module's load.
+// collider wireframe and overrides the global palette for it alone, the "World bounds" one its own
+// world bounds and draws their box (p102). The window's kind, its undo handlers and the profiler's
+// opener register at this module's load.
 import { CMP } from '../../../ui/core/CMP';
 import type { PropertyGridItem } from '../../../ui/forms/PropertyGridItems';
 import {
@@ -52,6 +53,13 @@ import {
   type PhysEntityWinData,
 } from './_dbg__PhysicsDebugState';
 import { getBodyPoseItems } from './_dbg__BodyPoseItems';
+import {
+  canDrawWorldBounds,
+  describeEntityWorldBounds,
+  isEntityWorldBoundsBoxShown,
+  setEntityWorldBoundsBoxShown,
+} from './_dbg__WorldBoundsDraw';
+import { getPhysicsBodyOwner } from '../PhysicsEntity';
 
 // Undo/redo
 
@@ -170,6 +178,32 @@ const getWireframeItems = (ctx: PhysWindowContext): PropertyGridItem[] => {
 };
 
 /**
+ * The "World bounds" folder's items (p102): the entity's own bounds as text, and the toggle that
+ * draws its own box (left out without the lines() feature). Only for a body created DYNAMIC, the
+ * only kind the bounds check.
+ */
+const getWorldBoundsItems = (ctx: PhysWindowContext): PropertyGridItem[] => {
+  const { entityId, world } = ctx;
+  const items: PropertyGridItem[] = [
+    {
+      label: 'Own bounds',
+      get: () =>
+        describeEntityWorldBounds(world.getComponent(entityId, ComponentType.WORLD_BOUNDS)),
+      readonly: true,
+      interval: 500,
+    },
+  ];
+  if (canDrawWorldBounds()) {
+    items.push({
+      label: 'Draw its own box (magenta)',
+      get: () => isEntityWorldBoundsBoxShown(entityId),
+      set: (shown) => setEntityWorldBoundsBoxShown(entityId, shown as boolean),
+    });
+  }
+  return items;
+};
+
+/**
  * The entity's info rows, its collider shapes last: a monitor that reads "Loading…" until the
  * shapes resolve (asynchronously: ColliderAPI.shapeType()), then refreshes the grid unless the
  * window closed meanwhile.
@@ -242,6 +276,17 @@ export const createEditPhysicsEntityContent = (data?: { [key: string]: unknown }
     ...getPoseItems(ctx),
     { type: 'separator' },
     { type: 'folder', id: 'wireframe', title: 'Debug wireframe', items: getWireframeItems(ctx) },
+    ...(getPhysicsBodyOwner(rigidBody.id)?.rigidType === 'DYNAMIC'
+      ? [
+          {
+            type: 'folder',
+            id: 'worldBounds',
+            title: 'World bounds',
+            expanded: false,
+            items: getWorldBoundsItems(ctx),
+          } as const,
+        ]
+      : []),
     {
       type: 'button',
       title: 'Log to the console',
@@ -266,7 +311,9 @@ export const createEditPhysicsEntityContent = (data?: { [key: string]: unknown }
   const { cmp, grid } = createDebugWindowGrid({
     items,
     folderExpanded: { wireframe: isEntityWireframeFolderExpanded() },
-    onFolderExpandedChange: (_id, expanded) => setEntityWireframeFolderExpanded(expanded),
+    onFolderExpandedChange: (id, expanded) => {
+      if (id === 'wireframe') setEntityWireframeFolderExpanded(expanded);
+    },
     onRemove: () => {
       isClosed = true;
     },

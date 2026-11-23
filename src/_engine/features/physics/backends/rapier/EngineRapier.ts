@@ -27,7 +27,11 @@ export {
   setBodyMovedObserver,
   setQueryObserver,
 } from './RapierState';
-export { drainPendingOutOfBoundsRecords, setWorldBounds } from './RapierWorldBounds';
+export {
+  drainPendingOutOfBoundsRecords,
+  setBodyWorldBounds,
+  setWorldBounds,
+} from './RapierWorldBounds';
 export {
   createWorld,
   debugRender,

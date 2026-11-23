@@ -8,5 +8,6 @@
   "lights": ["thirdPersonGymAmbient", "thirdPersonGymSun"],
   "materials": ["triplanarGrid", "triplanarCheckerboard"],
   "postFx": ["ambientOcclusion"],
-  "postFxEnabled": true
+  "postFxEnabled": true,
+  "worldBounds": { "min": { "y": -50 } }
 }

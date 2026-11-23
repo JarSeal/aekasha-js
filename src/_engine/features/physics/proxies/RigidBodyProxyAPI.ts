@@ -150,6 +150,17 @@ export class RigidBodyProxyAPI implements RigidBodyAPI {
     this.pendingRot = { value: { ...pose.rot }, visibleAt };
   }
 
+  /**
+   * The backend took the body out of the simulation for leaving its world bounds (p102): made
+   * FIXED (`frozen`, it has joints) or disabled. The cached type or enabled state follows, from the
+   * exit's delivery on.
+   * @internal
+   */
+  _noteWorldBoundsExit(frozen: boolean) {
+    if (frozen) this.cachedBodyType = RigidBodyTypeAPI.Fixed;
+    else this.cachedEnabled = false;
+  }
+
   // Hot path — reads straight from the shared/latest-pushed transform buffer by slot.
   // Returns zeroed defaults if no buffer has arrived yet (before the first step/push).
   get pos(): PhysVector {

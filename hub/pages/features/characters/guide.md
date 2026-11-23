@@ -103,6 +103,33 @@ world.addSystem(ECSSystemStage.APP_PHYSICS_STEP, 'guardBrain', () => {
 `moveX` / `moveZ` move in world directions, `moveForward` and `turn` relative to the facing,
 `faceYaw` turns it to face a direction, and `run` and `crouch` stay set until you change them.
 
+## Falling out of the level
+
+A character is a dynamic body, so a scene's
+[world bounds](hub:features/physics#world-bounds) apply to it: by default a character that falls
+out is deleted with its entity. Give a player a respawn with the `worldBounds` option, which takes
+what [`setEntityWorldBounds`](api:setEntityWorldBounds) does:
+
+```ts
+const player = await createDynamicCharacter({
+  id: 'player',
+  visual: playerMesh,
+  // The scene's kill height, and a respawn instead of the delete
+  worldBounds: {
+    action: 'CALLBACK',
+    onExit: ({ world, entityId }) => {
+      const body = world.getRigidBody(entityId);
+      body?.setTranslation(checkpoint, true);
+      body?.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      body?.setEnabled(true);
+    },
+  },
+});
+```
+
+`{ ignore: true }` leaves the character to your own fall handling. A character made from data
+(`createCharacterOfKind`) gets its bounds with `setEntityWorldBounds(character.entityId, …)`.
+
 ## Controllers
 
 The controller moves the body. Each physics step runs, in this order: your `APP_PHYSICS_STEP`

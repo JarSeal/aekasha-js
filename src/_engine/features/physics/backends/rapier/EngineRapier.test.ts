@@ -187,7 +187,7 @@ describe('EngineRapier world bounds (p102)', () => {
     expect(body.isEnabledSync()).toBe(true);
   });
 
-  it('catches a body created outside at its create, before any step', () => {
+  it('catches a body created outside before the next step, or at a drain before it', () => {
     engAPI.setWorldBounds(killY);
     engAPI.step();
     // A body that sleeps from its create on never becomes active: the step's check wouldn't see it
@@ -195,10 +195,17 @@ describe('EngineRapier world bounds (p102)', () => {
       rigidType: 'DYNAMIC',
       translation: { x: 50, y: -10, z: 0 },
     });
+    // Queued, not checked at its create: its own bounds set with it would apply first
+    expect(body.isEnabledSync()).toBe(true);
+    engAPI.step();
     expect(body.isEnabledSync()).toBe(false);
+    // The step count it had before that step, as at a create
     expect(engAPI.drainPendingOutOfBoundsRecords()).toEqual([
-      { bodyId: body.id, step: 1, x: 50, y: -10, z: 0, source: 'GLOBAL' },
+      { bodyId: body.id, step: 1, x: 50, y: -10, z: 0, source: 'GLOBAL', frozen: false },
     ]);
+    const drained = createBall(-10);
+    expect(engAPI.drainPendingOutOfBoundsRecords().map((r) => r.bodyId)).toEqual([drained.id]);
+    expect(drained.isEnabledSync()).toBe(false);
   });
 
   it('checks every body, the sleeping ones included, when the bounds are set', () => {
@@ -260,6 +267,68 @@ describe('EngineRapier world bounds (p102)', () => {
     engAPI.step();
     expect(engAPI.drainPendingOutOfBoundsRecords()).toHaveLength(0);
     expect(body.isEnabledSync()).toBe(true);
+  });
+
+  it("checks a body by its own bounds instead of the world's (p102 Phase 2)", () => {
+    engAPI.setWorldBounds(killY);
+    // Below the kill height, inside its own deeper box: kept
+    const deep = createBall(-10);
+    engAPI.setBodyWorldBounds(deep.id, { min: { y: -100 } });
+    // Above the kill height, outside its own box: out, by its own
+    const fenced = createBall(0, 0, { gravityScale: 0 });
+    engAPI.setBodyWorldBounds(fenced.id, { max: { x: 40 } });
+    const ignored = createBall(-10);
+    engAPI.setBodyWorldBounds(ignored.id, 'IGNORE');
+    const open = createBall(-10);
+    engAPI.setBodyWorldBounds(open.id, { min: {}, max: {} });
+    engAPI.step();
+    expect(engAPI.drainPendingOutOfBoundsRecords()).toEqual([
+      { bodyId: fenced.id, step: 0, x: 50, y: 0, z: 0, source: 'ENTITY', frozen: false },
+    ]);
+    expect(deep.isEnabledSync()).toBe(true);
+    expect(ignored.isEnabledSync()).toBe(true);
+    expect(open.isEnabledSync()).toBe(true);
+    // Null: the world's bounds again, checked before the next step
+    engAPI.setBodyWorldBounds(deep.id, null);
+    engAPI.step();
+    expect(engAPI.drainPendingOutOfBoundsRecords()).toEqual([
+      expect.objectContaining({ bodyId: deep.id, step: 1, source: 'GLOBAL' }),
+    ]);
+  });
+
+  it('checks the bodies with their own bounds without world bounds, and ignores unknown ids', () => {
+    const sleeper = createBall(0);
+    sleeper.sleep();
+    engAPI.step();
+    engAPI.setBodyWorldBounds(sleeper.id, { min: { y: 1 } });
+    engAPI.setBodyWorldBounds(9999, { min: { y: 1 } });
+    engAPI.step();
+    expect(engAPI.drainPendingOutOfBoundsRecords()).toEqual([
+      expect.objectContaining({ bodyId: sleeper.id, step: 1, source: 'ENTITY' }),
+    ]);
+  });
+
+  it("keeps a body's own bounds through a detach, and forgets them with the body", () => {
+    engAPI.setWorldBounds(killY);
+    const body = createBall(-10);
+    engAPI.setBodyWorldBounds(body.id, 'IGNORE');
+    engAPI.step();
+    engAPI.detachRigidBody(body.id);
+    engAPI.reattachRigidBody(body.id, { bodyType: RigidBodyTypeAPI.Dynamic, enabled: true });
+    engAPI.step();
+    expect(engAPI.drainPendingOutOfBoundsRecords()).toHaveLength(0);
+    // A detached body takes its own bounds too, for its return
+    engAPI.detachRigidBody(body.id);
+    engAPI.setBodyWorldBounds(body.id, null);
+    engAPI.reattachRigidBody(body.id, { bodyType: RigidBodyTypeAPI.Dynamic, enabled: true });
+    engAPI.step();
+    expect(engAPI.drainPendingOutOfBoundsRecords().map((r) => r.bodyId)).toEqual([body.id]);
+    engAPI.deleteRigidBody(body.id);
+    // Its entry went with it: a later set for its id is ignored, and nothing is checked
+    engAPI.setBodyWorldBounds(body.id, { min: { y: 0 } });
+    engAPI.setWorldBounds(null);
+    engAPI.step();
+    expect(engAPI.drainPendingOutOfBoundsRecords()).toHaveLength(0);
   });
 
   it('finds a body again after a detach and reattach (the REMOVED tier)', () => {

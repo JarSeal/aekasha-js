@@ -13,6 +13,7 @@ import type { PhysRotation, PhysVector } from '../types/PhysicsCommonTypes';
 import type { PhysicsState } from '../types/PhysicsConfigTypes';
 import type { JointMotorModel, JointParams } from '../types/PhysicsJointTypes';
 import type { PhysRay, QueryFilterFlags } from '../types/PhysicsQueryTypes';
+import type { BodyWorldBounds, WorldBoundsBox } from '../types/PhysicsWorldBoundsTypes';
 import type { PhysicsProtocolType } from './PhysicsProtocolType';
 
 /**
@@ -69,6 +70,11 @@ export type PhysicsUpProtocol =
         type: PhysicsProtocolType.SET_STEP_STATS;
         /** The worker's PhysicsState.stepStatsEnabled from the next STEP message on. */
         enabled: boolean;
+      }
+    | {
+        type: PhysicsProtocolType.SET_WORLD_BOUNDS;
+        /** The box (its open sides left out), or null for no bounds. */
+        bounds: WorldBoundsBox | null;
       }
     | { type: PhysicsProtocolType.FLUSH }
     // World --------------------------------------
@@ -175,6 +181,9 @@ export type PhysicsUpProtocol =
         /** A DYNAMIC body's create-time tier (p353 Phase 4 D3): switched to before the reply, so
          * it never takes a step as created. */
         tier?: 'STATIC' | 'DISABLED';
+        /** The body's own world bounds (p102 Phase 2), set with the body: they apply from its
+         * first check on. */
+        worldBounds?: BodyWorldBounds;
       }
     | { type: PhysicsProtocolType.CREATE_RIGID_BODIES; params: RigidBodyParams[] }
     | { type: PhysicsProtocolType.DELETE_RIGID_BODY; id: number }
@@ -182,6 +191,13 @@ export type PhysicsUpProtocol =
     | { type: PhysicsProtocolType.RIGID_DETACH; id: number }
     | { type: PhysicsProtocolType.RIGID_REATTACH; id: number; state: RigidBodyAttachState }
     | { type: PhysicsProtocolType.RIGID_READ_POSITIONS; ids: number[] }
+    | {
+        type: PhysicsProtocolType.RIGID_SET_BOUNDS;
+        rigidBodyId: number;
+        /** The body's own bounds (a box with only its given sides, or 'IGNORE'), or null to
+         * follow the world's again. */
+        bounds: BodyWorldBounds | null;
+      }
     | { type: PhysicsProtocolType.RIGID_GET_USERDATA; rigidBodyId: number }
     | {
         type: PhysicsProtocolType.RIGID_SET_USERDATA;

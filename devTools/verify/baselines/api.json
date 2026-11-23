@@ -1074,6 +1074,7 @@
       "detachRigidBody": "Reference",
       "dispatchPendingEventRecords": "Reference",
       "drainPendingEventRecords": "Reference",
+      "drainPendingOutOfBoundsRecords": "Reference",
       "getAllRigidBodyIds": "Reference",
       "getColliderAPIWithId": "Reference",
       "getJointAPIWithId": "Reference",
@@ -1083,7 +1084,9 @@
       "reattachRigidBody": "Reference",
       "restoreSnapshot": "Reference",
       "setBodyMovedObserver": "Reference",
+      "setBodyWorldBounds": "Reference",
       "setQueryObserver": "Reference",
+      "setWorldBounds": "Reference",
       "step": "Reference",
       "takeSnapshot": "Reference"
     },
@@ -1157,6 +1160,7 @@
       "getRigidBodyAPIWithId": "Function",
       "handleToColliderId": "Variable",
       "handleToJointId": "Variable",
+      "handleToRigidBodyId": "Variable",
       "jointAPIs": "Variable",
       "joints": "Variable",
       "rigidBodies": "Variable",
@@ -1174,6 +1178,16 @@
       "restoreSnapshot": "Function",
       "step": "Function",
       "takeSnapshot": "Function"
+    },
+    "src/_engine/features/physics/backends/rapier/RapierWorldBounds.ts": {
+      "checkQueuedWorldBounds": "Function",
+      "checkWorldBounds": "Function",
+      "clearWorldBounds": "Function",
+      "drainPendingOutOfBoundsRecords": "Function",
+      "forgetBodyWorldBounds": "Function",
+      "queueBodyCheck": "Function",
+      "setBodyWorldBounds": "Function",
+      "setWorldBounds": "Function"
     },
     "src/_engine/features/physics/ColliderDimensions.ts": {
       "deriveColliderDimensionsFromMesh": "Function"
@@ -1199,6 +1213,7 @@
       "deriveColliderFromGeometry": "Function"
     },
     "src/_engine/features/physics/PhysicsBodies.ts": {
+      "CreateBodyOpts": "TypeAlias",
       "createRigidBodies": "Function",
       "createRigidBodiesSync": "Function",
       "createRigidBody": "Function",
@@ -1218,7 +1233,8 @@
       "readBodyPositionsSync": "Function",
       "reattachRigidBody": "Function",
       "reattachRigidBodySync": "Function",
-      "RigidBodyWithColliders": "TypeAlias"
+      "RigidBodyWithColliders": "TypeAlias",
+      "setPhysicsBodyWorldBounds": "Function"
     },
     "src/_engine/features/physics/PhysicsColliders.ts": {
       "createCollider": "Function",
@@ -1251,7 +1267,8 @@
       "queueStaticBodySync": "Function",
       "registerPhysicsDeterminismProbe": "Function",
       "registerPhysicsWireframeDebugAsync": "Function",
-      "settlePendingPhysicsEntities": "Function"
+      "settlePendingPhysicsEntities": "Function",
+      "warnWorldBoundsNotChecked": "Function"
     },
     "src/_engine/features/physics/PhysicsFeature.ts": {
       "physics": "Function",
@@ -1282,23 +1299,29 @@
       "clearPendingEventPushes": "Function",
       "closeWorkerTransport": "Function",
       "commandWorker": "Function",
+      "copyWorldBounds": "Function",
       "DistributiveOmit": "TypeAlias",
       "endSubStepCapture": "Function",
       "flushPhysicsEvents": "Function",
+      "getOutOfBoundsExitSteps": "Function",
       "hasWorkerTransport": "Function",
       "messageWorker": "Function",
       "messageWorkerAsync": "Function",
       "messageWorkerAtStep": "Function",
       "openWorkerTransport": "Function",
+      "OutOfBoundsHandler": "TypeAlias",
       "PhysicsCommandFor": "TypeAlias",
       "PhysicsQueryType": "TypeAlias",
       "QueryTypeOf": "TypeAlias",
       "queryWorker": "Function",
+      "setOutOfBoundsHandler": "Function",
       "throwWorkerSync": "Function",
       "toPlainRot": "Function",
+      "toWireBodyWorldBounds": "Function",
       "toWireColliderParams": "Function",
       "toWireJointParams": "Function",
-      "toWireRigidBodyParams": "Function"
+      "toWireRigidBodyParams": "Function",
+      "toWireWorldBounds": "Function"
     },
     "src/_engine/features/physics/PhysicsProbeTypes.ts": {
       "PhysicsProbeReport": "TypeAlias"
@@ -1338,6 +1361,11 @@
       "setBodyMovedListener": "Function",
       "workerCollisionEventFns": "Variable",
       "workerContactForceEventFns": "Variable"
+    },
+    "src/_engine/features/physics/PhysicsSchema.ts": {
+      "physicsSchemaPart": "Variable",
+      "SceneWorldBounds": "TypeAlias",
+      "SceneWorldBoundsSchema": "Variable"
     },
     "src/_engine/features/physics/PhysicsState.ts": {
       "assertMainThread": "Function",
@@ -1449,8 +1477,19 @@
       "resetPhysicsWorld": "Function",
       "restorePhysicsSnapshot": "Function",
       "setPhysicsDebugStateTracking": "Function",
+      "setPhysicsWorldBounds": "Function",
       "stopPhysics": "Function",
       "takePhysicsSnapshot": "Function"
+    },
+    "src/_engine/features/physics/PhysicsWorldBounds.ts": {
+      "applySceneWorldBounds": "Function",
+      "getActiveWorldBoundsDef": "Function",
+      "getWorldBoundsStats": "Function",
+      "handleOutOfBounds": "Function",
+      "installPhysicsWorldBounds": "Function",
+      "registerSceneJsonWorldBounds": "Function",
+      "setEntityWorldBounds": "Function",
+      "setSceneWorldBounds": "Function"
     },
     "src/_engine/features/physics/protocol/PhysicsDownProtocol.ts": {
       "PhysicsDownProtocol": "TypeAlias",
@@ -1649,6 +1688,20 @@
       "RayColliderIntersectionAPI": "TypeAlias",
       "RayIntersection": "TypeAlias",
       "ShapeCastHitAPI": "TypeAlias"
+    },
+    "src/_engine/features/physics/types/PhysicsWorldBoundsTypes.ts": {
+      "BodyWorldBounds": "TypeAlias",
+      "EntityWorldBounds": "TypeAlias",
+      "OutOfBoundsRecord": "TypeAlias",
+      "OutOfBoundsSource": "TypeAlias",
+      "WorldBoundsAction": "TypeAlias",
+      "WorldBoundsBox": "TypeAlias",
+      "WorldBoundsDef": "TypeAlias",
+      "WorldBoundsExitCallback": "TypeAlias",
+      "WorldBoundsExitEvent": "TypeAlias",
+      "WorldBoundsExitInfo": "TypeAlias",
+      "WorldBoundsSource": "TypeAlias",
+      "WorldBoundsStats": "TypeAlias"
     },
     "src/_engine/features/physics/types/PhysicsWorldTypes.ts": {
       "WorldAPI": "TypeAlias",
@@ -2437,6 +2490,10 @@
       "runInAssetOwnerScope": "Function",
       "setAssetOwnerScene": "Function"
     },
+    "src/_engine/kernel/assets/AssetPropsDiff.ts": {
+      "getChangedPropPaths": "Function",
+      "warnIfAssetPropsIgnored": "Function"
+    },
     "src/_engine/kernel/assets/AssetsAPI.ts": {
       "createAssetsDebugGUI": "Function",
       "getAssetLoadReport": "Function",
@@ -2596,6 +2653,10 @@
       "ImportPhysicsSpawn": "TypeAlias",
       "registerImportExtension": "Function",
       "warnMissingImportExtension": "Function"
+    },
+    "src/_engine/kernel/assets/import/ImportPhysicsGroups.ts": {
+      "groupImportPhysicsNodes": "Function",
+      "ImportPhysicsGroup": "TypeAlias"
     },
     "src/_engine/kernel/assets/import/ImportRegistry.ts": {
       "getImportedAsset": "Function",
@@ -6389,6 +6450,7 @@
       "ColliderAPI",
       "ColliderParams",
       "ColliderSource",
+      "EntityWorldBounds",
       "EventQueue",
       "FeatureType",
       "HeightFieldData",
@@ -6427,6 +6489,14 @@
       "ShapeType",
       "TempContactForceEvent",
       "WorldAPI",
+      "WorldBoundsAction",
+      "WorldBoundsBox",
+      "WorldBoundsDef",
+      "WorldBoundsExitCallback",
+      "WorldBoundsExitEvent",
+      "WorldBoundsExitInfo",
+      "WorldBoundsSource",
+      "WorldBoundsStats",
       "addPhysicsStepGate",
       "createCollider",
       "createColliders",
@@ -6449,12 +6519,15 @@
       "getPhysicsTier",
       "getPhysicsWorld",
       "getRigidBody",
+      "getWorldBoundsStats",
       "physics",
       "physicsTiers",
       "readBodyPositionsAtStep",
       "requestPhysicsTier",
+      "setEntityWorldBounds",
       "setPhysicsTierPolicy",
       "setPhysicsTierPolicyMember",
+      "setSceneWorldBounds",
       "toHeightfieldColliderParams"
     ],
     "aekasha/postfx": [
@@ -6544,6 +6617,8 @@
       "SceneSurfaceConditionsSchema",
       "SceneTextureSetArrayEntry",
       "SceneTextureSetArraySchema",
+      "SceneWorldBounds",
+      "SceneWorldBoundsSchema",
       "ShadowQuality",
       "SkyBoxAsset",
       "SkyBoxAssetSchema",
@@ -6609,6 +6684,7 @@
       "isTextureSetColorSlot",
       "lodSchemaPart",
       "mergingSchemaPart",
+      "physicsSchemaPart",
       "postFxSchemaPart",
       "skyBoxSchemaPart",
       "spatialSchemaPart",

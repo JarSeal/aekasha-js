@@ -29,6 +29,7 @@ import type { TerrainBlockDef } from '../../features/terrain/TerrainBlockSchema'
 import type { ScatterDef } from '../../features/instancing/ScatterSchema';
 import type { DecalSetDef } from '../../features/terrain/DecalSetSchema';
 import type { SceneSurfaceConditions } from '../../features/surface/SurfaceConditionsSchema';
+import type { SceneWorldBounds } from '../../features/physics/PhysicsSchema';
 
 /** A scene looper: called once per frame with the frame's delta (seconds). */
 export type Looper = (delta: number) => void;
@@ -120,6 +121,10 @@ export type SceneData = {
   /** The scene's starting surface conditions, over the defaults (the `surfaceConditions()`
    * feature applies them before the scene code runs). */
   surfaceConditions?: SceneSurfaceConditions;
+  /** The scene's world bounds, or null for none over `AppConfig.physics.worldBounds` (the
+   * `physics()` feature keeps them as the scene's own when it's registered; its code's
+   * `setSceneWorldBounds` replaces them). */
+  worldBounds?: SceneWorldBounds | null;
   /** The features this scene's data needs (the gatherer's manifest, p607 D10): `InitEngine`
    * fails when its `features` doesn't list one. */
   __features?: string[];

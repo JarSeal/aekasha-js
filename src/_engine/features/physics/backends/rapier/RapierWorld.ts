@@ -9,7 +9,7 @@ import type { LoopState } from '../../../../kernel/loop/MainLoop';
 import { existsOrThrow } from '../../../../utils/Assert';
 import { EngineWorldProxyAPI } from './proxies/EngineWorldProxyAPI';
 import { clearEventRegistrations, drainAndDispatchEvents } from './RapierEvents';
-import { checkWorldBounds, clearWorldBounds } from './RapierWorldBounds';
+import { checkQueuedWorldBounds, checkWorldBounds, clearWorldBounds } from './RapierWorldBounds';
 import {
   backend,
   colliderAPIs,
@@ -168,10 +168,12 @@ export const debugRender = () => {
 /**
  * Runs one fixed step on Rapier's own event queue (the contract's `eventQueue` isn't read), collects
  * its events for dispatchPendingEventRecords / drainPendingEventRecords, and takes the bodies that
- * left the world bounds on it out of the simulation (RapierWorldBounds.ts).
+ * left the world bounds on it out of the simulation (RapierWorldBounds.ts); the bodies created
+ * since the last step are checked before it.
  * @internal
  */
 export const step = () => {
+  checkQueuedWorldBounds();
   backend.world.step(backend.eventQueue);
   backend.stepCount++;
   drainAndDispatchEvents();

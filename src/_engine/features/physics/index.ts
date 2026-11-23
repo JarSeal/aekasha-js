@@ -31,6 +31,17 @@ export type {
 } from './types/PhysicsConfigTypes';
 export type { WorldAPI } from './types/PhysicsWorldTypes';
 export type {
+  EntityWorldBounds,
+  WorldBoundsAction,
+  WorldBoundsBox,
+  WorldBoundsDef,
+  WorldBoundsExitCallback,
+  WorldBoundsExitEvent,
+  WorldBoundsExitInfo,
+  WorldBoundsSource,
+  WorldBoundsStats,
+} from './types/PhysicsWorldBoundsTypes';
+export type {
   PhysicsSimTierData,
   PhysicsTier,
   PhysicsTierBucket,
@@ -58,6 +69,11 @@ export { getCollider, getJoint, getRigidBody } from './PhysicsRegistry';
 export { getPhysicsState, getPhysicsWorld } from './PhysicsState';
 export { addPhysicsStepGate, getPhysicsSimClock, getPhysicsSubStepIndex } from './PhysicsStepping';
 export { createPhysicsEntity, getPhysicsEntityByAppId } from './PhysicsEntity';
+export {
+  getWorldBoundsStats,
+  setEntityWorldBounds,
+  setSceneWorldBounds,
+} from './PhysicsWorldBounds';
 export type { PhysicsEntityOpts, PhysicsEntityProps } from './PhysicsEntity';
 export { setPhysicsTierPolicy, setPhysicsTierPolicyMember } from './PhysicsTierPolicy';
 export { getPhysicsTier, requestPhysicsTier } from './PhysicsTiers';

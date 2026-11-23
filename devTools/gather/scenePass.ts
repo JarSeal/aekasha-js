@@ -98,8 +98,8 @@ const resolveScene = (
     sceneId,
     {
       ...scene,
-      // A terrain block's or a scatter item's collider needs physics(), which has no scene field
-      // (p306 D2, p308 D2), named once
+      // A terrain block's or a scatter item's collider needs physics(), whose one scene field is
+      // the world bounds (p306 D2, p308 D2, p102 Phase 4), named once
       __features: [
         ...new Set([
           ...getSceneFeatureIds(scene),
