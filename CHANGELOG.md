@@ -4,11 +4,13 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
-## 2026-11-23 — issue-fixing-20261123 (i080, i090)
+## 2026-11-23 — issue-fixing-20261123 (i080, i090, i100)
 
 A merge group large enough to build in the assets worker (more than 65 536 vertices) now builds while its members change (i080). A member updated with `updateMergeMember` every frame, or a member joining every frame, dropped the running build and started another, which the next frame dropped again: the group never built, and every member stayed drawn on its own. The build is kept now, the members updated meanwhile are written where they are once it lands, and those that joined go into the build after it.
 
 Static instance cells (a scatter's, `createStaticInstances`', an import's GPU instances) are light receivers now (i090): a point or spot light with object culling whose only receivers in range were cells was culled, so a scatter on a target without a mesh went unlit near it. A cell joins the spatial index, measured by its bounds over every instance.
+
+Pool instances in the `DEFAULT` spatial domain (a pool's `spatialDomain: 'DEFAULT'`) are light receivers now too (i100): light culling found them but rejected every one, since an instance has no `Object3D` of its own to measure, so a point or spot light with object culling whose only receivers in range were pool instances was culled. Each instance is measured where its pool draws it.
 
 ### Engine 6.23.0 (Sunset)
 
@@ -16,6 +18,7 @@ Static instance cells (a scatter's, `createStaticInstances`', an import's GPU in
 
 - An `InstancedMesh` entity is measured by its own bounds over every instance (`InstancedMesh.boundingSphere`, computed if missing) by ECS frustum culling, light culling's receiver test and the spatial index's mesh radius (i090); they read one instance's geometry at the mesh's origin. A plain mesh is measured as before.
 - `createInstancedMeshEntity` (so every static instance cell) keeps its entity options: a cell joins the spatial index by default, so it's a light receiver (`spatialIndex: false` keeps it out), and `ecsFrustumCullingEnabled` opts it into ECS frustum culling; both were forced off. After changing a cell's matrices, call `refreshSpatialRadius` too.
+- Light culling's receiver test measures an instanced mesh pool's instance (i100): its drawn copy's sphere (the instance matrix in the pool mesh's world space; an instanced LOD pool's over every level), its outgoing copy while it fades to LOD culled, and none while it's LOD culled, so it lights nothing then. It rejected every instance, which has no `OBJECT3D`. Plain meshes and static instance cells are measured as before.
 
 **Fixed**
 
@@ -28,6 +31,7 @@ Static instance cells (a scatter's, `createStaticInstances`', an import's GPU in
 **Changed**
 
 - `scatterTest` checks i090: 16 rocks scattered on a target with no mesh, away from every other mesh, must keep the object-culled point light over them on, and a second such light over nothing must be culled; the load logs an error otherwise.
+- `scatterTest` checks i100 beside it: a pool of 9 rocks joined to `DEFAULT`, front right, must keep the object-culled point light over it on (the pool's mesh isn't in the spatial index, so its instances are the light's only receivers). The light over nothing moved 20 m up, above the pool.
 
 ## 2026-11-23 — p102_physics-world-bounds (Phases 1-4)
 

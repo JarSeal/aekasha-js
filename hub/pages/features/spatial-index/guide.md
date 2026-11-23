@@ -93,8 +93,8 @@ have it checked too (it does nothing unless the check is on).
 
 ## Known issues
 
-- [Pool instances in `DEFAULT` never count as light receivers](hub:issues/pool-instances-not-light-receivers):
-  a light whose only receivers nearby are pool instances is culled.
+- [Pool instances in `DEFAULT` never count as light receivers](hub:issues/pool-instances-not-light-receivers)
+  (fixed): a light whose only receivers nearby were pool instances was culled.
 - [A large `DYNAMIC` domain costs about 0.2 µs per member every frame](hub:issues/spatial-refresh-and-rebuild-cost),
   even when nothing moved.
 

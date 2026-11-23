@@ -63,8 +63,8 @@ As the way out says, in engine 6.23.0:
 - `createInstancedMeshEntity` passes its entity options through: a cell joins `DEFAULT` by default
   (`spatialIndex: false` keeps it out) and ECS frustum culling stays opt-in. After changing a
   cell's matrices, compute its bounds again and call `refreshSpatialRadius` and `refreshLodBounds`.
-- The pools' meshes are measured the same way, but they aren't `SPATIAL_INDEXED` and their
-  instances still aren't receivers (`i100_pool-instances-not-light-receivers.md`).
+- The pools' meshes are measured the same way, but they aren't `SPATIAL_INDEXED`; their
+  instances weren't receivers either until i100 (`_DONE_i100_pool-instances-not-light-receivers.md`).
 - Checked by `ObjectFrustumCullingSystem.test.ts`, `SpatialIndexSystem.test.ts` and
   `StaticInstances.test.ts`, and in `scatterTest` (`lightReceivers.ts`): 16 rocks scattered on a
   target with no mesh, away from every other mesh, keep the object-culled point light over them on,
