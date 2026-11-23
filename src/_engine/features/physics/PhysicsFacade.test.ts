@@ -51,6 +51,7 @@ import {
 import type { OutOfBoundsRecord, WorldBoundsExitEvent } from './types/PhysicsWorldBoundsTypes';
 import {
   applySceneWorldBounds,
+  getWorldBoundsStats,
   handleOutOfBounds,
   installPhysicsWorldBounds,
   setEntityWorldBounds,
@@ -641,6 +642,88 @@ describe('the facade (MAIN_THREAD)', () => {
       expect(events).toHaveLength(1);
       expect(body.isEnabledSync()).toBe(true);
     } finally {
+      setOutOfBoundsHandler(null);
+      setLoadingSceneId(null);
+      setPhysicsWorldBounds(null);
+    }
+  });
+
+  it("p102 Phase 3: getWorldBoundsStats: the bounds' source, the exits named with their actions, kept per scene", async () => {
+    await resetPhysicsWorld();
+    setOutOfBoundsHandler(handleOutOfBounds);
+    const world = new ECSWorld({ id: 'p102-stats' });
+    const createLow = (x: number, opts?: Parameters<typeof createPhysicsEntity>[1]) =>
+      createPhysicsEntity(
+        {
+          colliders: BALL,
+          body: { rigidType: 'DYNAMIC', translation: { x, y: -10, z: 0 }, gravityScale: 0 },
+        },
+        { world, ...opts }
+      );
+    const createBareLow = (x: number) =>
+      createRigidBodySync({ rigidType: 'DYNAMIC', translation: { x, y: -10, z: 0 } });
+    const subStep = () => {
+      flushPhysicsEvents();
+      facade.engAPI!.step();
+      flushPhysicsEvents();
+    };
+    try {
+      facade.state.worldBounds = { min: { y: -5 }, action: 'DISABLE' };
+      setLoadingSceneId('p102Stats');
+      applySceneWorldBounds();
+      expect(getWorldBoundsStats()).toEqual({
+        def: { min: { y: -5 }, action: 'DISABLE' },
+        source: 'CONFIG',
+        exitCount: 0,
+        recentExits: [],
+      });
+
+      const named = await createLow(50, { appId: 'p102Named' });
+      const deleted = await createLow(60, { worldBounds: { action: 'DELETE' } });
+      const bare = createBareLow(70);
+      subStep();
+      const stats = getWorldBoundsStats();
+      expect(stats.exitCount).toBe(3);
+      expect(stats.recentExits.map((e) => [e.name, e.entityId, e.action])).toEqual([
+        ['p102Named', named, 'DISABLE'],
+        [`entity ${deleted}`, deleted, 'DELETE'],
+        [`body ${bare.id}`, null, null],
+      ]);
+      expect(stats.recentExits[0]).toMatchObject({
+        world,
+        step: 0,
+        position: { x: 50, y: -10, z: 0 },
+        source: 'GLOBAL',
+        frozen: false,
+      });
+      // The entity is gone, its exit still listed
+      expect(world.isAlive(deleted)).toBe(false);
+
+      // The latest 20 only, every exit counted
+      for (let i = 0; i < 20; i++) createBareLow(100 + i);
+      subStep();
+      const { exitCount, recentExits } = getWorldBoundsStats();
+      expect(exitCount).toBe(23);
+      expect(recentExits).toHaveLength(20);
+      expect(recentExits[0].position.x).toBe(100);
+
+      // The scene's own, null included
+      setSceneWorldBounds(null);
+      expect(getWorldBoundsStats()).toMatchObject({ def: null, source: 'SCENE', exitCount: 23 });
+
+      // A new scene's world starts over, without bounds when neither sets them
+      facade.state.worldBounds = null;
+      setLoadingSceneId('p102StatsNext');
+      await resetPhysicsWorld();
+      applySceneWorldBounds();
+      expect(getWorldBoundsStats()).toEqual({
+        def: null,
+        source: 'NONE',
+        exitCount: 0,
+        recentExits: [],
+      });
+    } finally {
+      facade.state.worldBounds = null;
       setOutOfBoundsHandler(null);
       setLoadingSceneId(null);
       setPhysicsWorldBounds(null);

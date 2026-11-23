@@ -27,6 +27,9 @@ import type {
   WorldBoundsAction,
   WorldBoundsDef,
   WorldBoundsExitCallback,
+  WorldBoundsExitInfo,
+  WorldBoundsSource,
+  WorldBoundsStats,
 } from './types/PhysicsWorldBoundsTypes';
 
 /** Each scene's own bounds (setSceneWorldBounds), null for none: kept across visits, as sky
@@ -36,6 +39,15 @@ const sceneDefs = new Map<string, WorldBoundsDef | null>();
 /** The definition applied to the current world (its box and action, its onExit): the scene's,
  * or the config's, or null. Its `action` is the exits' unless an entity has its own. */
 let activeDef: WorldBoundsDef | null = null;
+/** Where activeDef comes from (getWorldBoundsStats). */
+let activeSource: WorldBoundsSource = 'NONE';
+
+/** How many exits getWorldBoundsStats keeps. */
+const RECENT_EXITS_MAX = 20;
+/** The current scene's exits: their count and the latest ones, oldest first (reset with each
+ * scene's world, applySceneWorldBounds). */
+let exitCount = 0;
+const recentExits: WorldBoundsExitInfo[] = [];
 
 /** The entities a handler call deletes, after its loop. Reused, so a call allocates no array. */
 const exitedOwners: PhysicsBodyOwner[] = [];
@@ -76,24 +88,50 @@ export const setSceneWorldBounds = (def: WorldBoundsDef | null, sceneId?: string
   sceneDefs.set(targetSceneId, stored);
   if (targetSceneId !== getWorldSceneId()) return;
   activeDef = stored;
+  activeSource = 'SCENE';
   setPhysicsWorldBounds(stored);
 };
 
 /**
  * Applies the loading scene's world bounds to its new world: its own (setSceneWorldBounds), else
  * `AppConfig.physics.worldBounds`, else none. Physics' scene hooks call it right after the world's
- * reset (`beforeAssets`), before any of the scene's bodies exists.
+ * reset (`beforeAssets`), before any of the scene's bodies exists. The exits' stats start over.
  * @internal
  */
 export const applySceneWorldBounds = () => {
   const sceneId = getLoadingSceneId();
-  const def =
-    sceneId !== null && sceneDefs.has(sceneId)
-      ? sceneDefs.get(sceneId)!
-      : facade.state.worldBounds ?? null;
-  activeDef = def;
-  setPhysicsWorldBounds(def);
+  const isOwn = sceneId !== null && sceneDefs.has(sceneId);
+  const configDef = facade.state.worldBounds ?? null;
+  activeDef = isOwn ? sceneDefs.get(sceneId)! : configDef;
+  activeSource = isOwn ? 'SCENE' : configDef ? 'CONFIG' : 'NONE';
+  exitCount = 0;
+  recentExits.length = 0;
+  setPhysicsWorldBounds(activeDef);
 };
+
+/**
+ * The current scene's world bounds and their exits: the definition its world uses and where it
+ * comes from, how many bodies left it, and the latest exits (each entity's name and the action
+ * taken, read when the exit was handled). A snapshot: a new object every call. The Physics API
+ * debug tab shows it.
+ * @returns the bounds, their source, the exit count and the latest exits
+ * @remarks The count and the list start over with each scene's world, and count only the exits
+ * handled so far: an exit reaches them at the start of the sub-step after it, on `WORKER_THREAD`
+ * when its push has arrived.
+ * @example
+ * ```ts
+ * import { getWorldBoundsStats } from 'aekasha/physics';
+ *
+ * const { exitCount, recentExits } = getWorldBoundsStats();
+ * if (exitCount) console.log(`${exitCount} bodies fell out, the last: ${recentExits.at(-1)?.name}`);
+ * ```
+ */
+export const getWorldBoundsStats = (): WorldBoundsStats => ({
+  def: activeDef,
+  source: activeSource,
+  exitCount,
+  recentExits: recentExits.slice(),
+});
 
 const ACTION_LOG: Record<WorldBoundsAction, string> = {
   DELETE: 'deleted',
@@ -101,11 +139,37 @@ const ACTION_LOG: Record<WorldBoundsAction, string> = {
   CALLBACK: 'handed to its onExit',
 };
 
-const logExit = (owner: PhysicsBodyOwner, record: OutOfBoundsRecord, action: WorldBoundsAction) => {
-  const { world, entityId } = owner;
-  const name =
-    getStableAppId(entityId, world) ??
-    (world.getComponent(entityId, ComponentType.OBJECT3D)?.value.name || `entity ${entityId}`);
+/** An exited entity's name for the log and the stats: its stable app id, its object's name, or its
+ * id. */
+const getExitName = ({ world, entityId }: PhysicsBodyOwner) =>
+  getStableAppId(entityId, world) ??
+  (world.getComponent(entityId, ComponentType.OBJECT3D)?.value.name || `entity ${entityId}`);
+
+/** Counts an exit and keeps it in the latest ones (getWorldBoundsStats). `owner` null: a body
+ * without a live physics entity. */
+const recordExit = (
+  record: OutOfBoundsRecord,
+  owner: PhysicsBodyOwner | null,
+  name: string,
+  action: WorldBoundsAction | null
+) => {
+  exitCount++;
+  if (recentExits.length === RECENT_EXITS_MAX) recentExits.shift();
+  const { bodyId, step, x, y, z, source, frozen } = record;
+  recentExits.push({
+    entityId: owner?.entityId ?? null,
+    world: owner?.world ?? null,
+    name,
+    bodyId,
+    step,
+    position: { x, y, z },
+    source,
+    action,
+    frozen,
+  });
+};
+
+const logExit = (name: string, record: OutOfBoundsRecord, action: WorldBoundsAction) => {
   const pos = `${record.x.toFixed(2)}, ${record.y.toFixed(2)}, ${record.z.toFixed(2)}`;
   const own = record.source === 'ENTITY' ? 'its own world bounds' : 'the world bounds';
   lwarn(
@@ -169,17 +233,22 @@ const callOnExit = (
  * action (resolveAction): 'DISABLE' and 'CALLBACK' at once, in record order, 'DELETE' after going
  * through every record. A body without a physics entity (made through the bare Physics API, or its
  * entity already deleted: a scene exit, or an earlier onExit) is skipped and stays out of the
- * simulation.
+ * simulation. Every exit is counted (getWorldBoundsStats), before its action runs.
  * @internal
  */
 export const handleOutOfBounds = (records: readonly OutOfBoundsRecord[]) => {
   for (let i = 0; i < records.length; i++) {
     const record = records[i];
     const owner = getPhysicsBodyOwner(record.bodyId);
-    if (!owner || !owner.world.isAlive(owner.entityId)) continue;
+    if (!owner || !owner.world.isAlive(owner.entityId)) {
+      recordExit(record, null, `body ${record.bodyId}`, null);
+      continue;
+    }
     const { world, entityId } = owner;
     const { action, onExit } = resolveAction(world, entityId);
-    if (IS_DEBUG_ENV) logExit(owner, record, action);
+    const name = getExitName(owner);
+    recordExit(record, owner, name, action);
+    if (IS_DEBUG_ENV) logExit(name, record, action);
     if (action === 'DELETE') {
       exitedOwners.push(owner);
       continue;

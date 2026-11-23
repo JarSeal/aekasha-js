@@ -89,6 +89,54 @@ export type EntityWorldBounds = WorldBoundsBox & {
 };
 
 /**
+ * One exit from the world bounds as `getWorldBoundsStats` lists it, read when it was handled.
+ */
+export type WorldBoundsExitInfo = {
+  /** The body's entity then, or null for a body without a physics entity (made through the bare
+   * Physics API, or its entity deleted before the exit was handled). With `'DELETE'` it no longer
+   * exists. */
+  entityId: number | null;
+  /** The entity's ECS world, or null without an entity. */
+  world: ECSWorld | null;
+  /** The entity's stable app id, else its object's name, else `entity <id>` (`body <id>` without
+   * an entity). */
+  name: string;
+  /** The body's id. */
+  bodyId: number;
+  /** The steps the physics world had run when the body was taken out, the exit step included. */
+  step: number;
+  /** The body's translation then. */
+  position: { x: number; y: number; z: number };
+  /** Which bounds it left: the scene's (or the app's default), or the entity's own. */
+  source: 'GLOBAL' | 'ENTITY';
+  /** What was done to the entity (a `'CALLBACK'` without `onExit` is `'DISABLE'`), or null without
+   * an entity. */
+  action: WorldBoundsAction | null;
+  /** True when the body was made `FIXED` (it has joints), false when it was disabled. */
+  frozen: boolean;
+};
+
+/**
+ * Where the current world's bounds come from: the scene's own (`setSceneWorldBounds`; with a null
+ * `def` the scene turned them off), the app's default (`AppConfig.physics.worldBounds`), or none.
+ */
+export type WorldBoundsSource = 'SCENE' | 'CONFIG' | 'NONE';
+
+/**
+ * The current scene's world bounds and their exits, as `getWorldBoundsStats` reads them.
+ */
+export type WorldBoundsStats = {
+  /** The definition the current world uses (its box, action and onExit), or null for none. */
+  def: Readonly<WorldBoundsDef> | null;
+  /** Where `def` comes from. */
+  source: WorldBoundsSource;
+  /** The exits handled since the scene's world was made, a body without an entity included. */
+  exitCount: number;
+  /** The latest exits (at most the last 20), oldest first. */
+  recentExits: readonly WorldBoundsExitInfo[];
+};
+
+/**
  * A body's own bounds as the backend takes them: a box, or `'IGNORE'` (never checked; a box open
  * on every side is the same). Plain data.
  * @internal
