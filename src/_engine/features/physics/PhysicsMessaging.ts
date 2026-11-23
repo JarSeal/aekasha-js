@@ -22,7 +22,12 @@ import type { ColliderParams } from './types/PhysicsColliderTypes';
 import type { PhysRotation } from './types/PhysicsCommonTypes';
 import { ContactForceEventSnapshot } from './types/PhysicsEventTypes';
 import type { JointParams } from './types/PhysicsJointTypes';
-import type { OutOfBoundsRecord } from './types/PhysicsWorldBoundsTypes';
+import type {
+  BodyWorldBounds,
+  EntityWorldBounds,
+  OutOfBoundsRecord,
+  WorldBoundsBox,
+} from './types/PhysicsWorldBoundsTypes';
 
 /** The channel to the worker (WORKER_THREAD mode, from initPhysics): every message to it and from
  * it goes through this (p614 D5). */
@@ -429,6 +434,44 @@ const dispatchPushedEvents = (data: EventsPushMessage) => {
  */
 export const toWireRigidBodyParams = <T extends RigidBodyParams | undefined>(params: T): T =>
   params?.rotation ? { ...params, rotation: toPlainRot(params.rotation) } : params;
+
+/**
+ * A box as plain data with only its given sides: what crosses the worker boundary (a
+ * `THREE.Vector3` corner would arrive as a plain object with every field, its methods gone).
+ * @internal
+ */
+export const toWireWorldBounds = (box: WorldBoundsBox): WorldBoundsBox => {
+  const side = (v: WorldBoundsBox['min']) =>
+    v && {
+      ...(v.x !== undefined ? { x: v.x } : {}),
+      ...(v.y !== undefined ? { y: v.y } : {}),
+      ...(v.z !== undefined ? { z: v.z } : {}),
+    };
+  return {
+    ...(box.min ? { min: side(box.min) } : {}),
+    ...(box.max ? { max: side(box.max) } : {}),
+  };
+};
+
+/**
+ * A copy of a world bounds definition (a scene's, an entity's), its corners plain objects with
+ * only their given sides, its other fields as they are: what's stored, so a caller's later change
+ * to its own object reaches nothing.
+ * @template T the definition's type
+ * @internal
+ */
+export const copyWorldBounds = <T extends WorldBoundsBox>(bounds: T): T => ({
+  ...bounds,
+  ...toWireWorldBounds(bounds),
+});
+
+/**
+ * An entity's own world bounds as the backend takes them (plain data, its callback and action
+ * left out): `'IGNORE'`, or the box.
+ * @internal
+ */
+export const toWireBodyWorldBounds = (bounds: EntityWorldBounds): BodyWorldBounds =>
+  bounds.ignore ? 'IGNORE' : toWireWorldBounds(bounds);
 
 /** A JointParams for the postMessage boundary: a FIXED joint's frames as plain objects
  * (toPlainRot). Returns the original object for every other type.

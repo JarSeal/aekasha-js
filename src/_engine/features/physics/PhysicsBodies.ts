@@ -5,6 +5,7 @@
 import { existsOrThrow } from '../../utils/Assert';
 import { createColliderSync, deleteCollidersSync, registerColliderProxy } from './PhysicsColliders';
 import {
+  messageWorker,
   messageWorkerAsync,
   messageWorkerAtStep,
   toWireColliderParams,
@@ -39,6 +40,7 @@ import type {
   RigidBodyPose,
 } from './types/PhysicsBodyTypes';
 import type { ColliderAPI, ColliderParams } from './types/PhysicsColliderTypes';
+import type { BodyWorldBounds } from './types/PhysicsWorldBoundsTypes';
 
 /** Rigid body creates refused because the transform buffer was full (WORKER_THREAD), since boot. */
 let refusedBodyCount = 0;
@@ -382,6 +384,18 @@ export type RigidBodyWithColliders = {
  */
 export type CreateTier = 'STATIC' | 'DISABLED';
 
+/**
+ * What `createRigidBodyWithColliders` sets on its body in the same create, before any step.
+ * @internal
+ */
+export type CreateBodyOpts = {
+  /** A `DYNAMIC` body's create-time tier, switched to after its colliders. */
+  tier?: CreateTier;
+  /** The body's own world bounds (p102 Phase 2, `toWireBodyWorldBounds`), from its first check
+   * on (the backend checks a new body before the next step). */
+  worldBounds?: BodyWorldBounds;
+};
+
 /** The body params a proxy caches its type and enabled state from, after a create-time tier. */
 const paramsAfterTier = (
   params: RigidBodyParams,
@@ -397,24 +411,27 @@ const paramsAfterTier = (
  * parentId is set to it), all or nothing: when a collider throws, what was made before it is
  * deleted. In WORKER_THREAD mode this is one message, posted synchronously by this call: the
  * worker creates everything in the order these calls were made (like MAIN_THREAD does), and no
- * step can ever run between a body and its colliders. `tier` switches a `DYNAMIC` body to its
- * create-time tier in the same message, after its colliders.
+ * step can ever run between a body and its colliders. `opts` switches a `DYNAMIC` body to its
+ * create-time tier in the same message, after its colliders, and sets its own world bounds.
  * @internal
  */
 export const createRigidBodyWithColliders = async (
   rigidBodyParams: RigidBodyParams | undefined,
   colliderParams: ColliderParams[],
-  tier?: CreateTier
+  opts?: CreateBodyOpts
 ): Promise<RigidBodyWithColliders> => {
   if (!isWorkerTarget()) {
-    return createRigidBodyWithCollidersSync(rigidBodyParams, colliderParams, tier);
+    return createRigidBodyWithCollidersSync(rigidBodyParams, colliderParams, opts);
   }
   assertWorldCreated('a rigid body or colliders');
+  const tier = opts?.tier;
+  const worldBounds = opts?.worldBounds;
   const res = await messageWorkerAsync<CreatePhysicsEntityResponse>({
     type: PhysicsProtocolType.CREATE_PHYSICS_ENTITY,
     rigidBody: toWireRigidBodyParams(rigidBodyParams),
     colliders: colliderParams.map(toWireColliderParams),
     ...(tier && rigidBodyParams ? { tier } : {}),
+    ...(worldBounds && rigidBodyParams ? { worldBounds } : {}),
   });
   throwIfCapacityExceeded(res.capacityExceeded);
   const rigidBody =
@@ -435,8 +452,9 @@ export const createRigidBodyWithColliders = async (
 export const createRigidBodyWithCollidersSync = (
   rigidBodyParams: RigidBodyParams | undefined,
   colliderParams: ColliderParams[],
-  tier?: CreateTier
+  opts?: CreateBodyOpts
 ): RigidBodyWithColliders => {
+  const tier = opts?.tier;
   assertWorldCreated('a rigid body or colliders');
   const rigidBody = rigidBodyParams ? createRigidBodySync(rigidBodyParams) : undefined;
   const params = rigidBody
@@ -455,5 +473,29 @@ export const createRigidBodyWithCollidersSync = (
   // The create-time tier, after the colliders (their mass), as the worker's switch does
   if (rigidBody && tier === 'STATIC') rigidBody.setBodyType(RigidBodyTypeAPI.Fixed, false);
   else if (rigidBody && tier === 'DISABLED') rigidBody.setEnabled(false);
+  if (rigidBody && opts?.worldBounds) {
+    facade.engAPI!.setBodyWorldBounds(rigidBody.id, opts.worldBounds);
+  }
   return { rigidBody, colliders: colls };
+};
+
+/**
+ * Sets (or clears, with null) a body's own world bounds (p102 Phase 2), which replace the world's
+ * for it (`'IGNORE'` exempts it), checked before the next step. A no-op without a world, and for a
+ * deleted body. `WORKER_THREAD`: one-way; from an `APP_PHYSICS_STEP` system, applied before that
+ * sub-step, as on `MAIN_THREAD`. `bounds` is plain data (`toWireBodyWorldBounds`).
+ * @internal
+ */
+export const setPhysicsBodyWorldBounds = (rigidBodyId: number, bounds: BodyWorldBounds | null) => {
+  if (!facade.worldEnabled) return;
+  if (!isWorkerTarget()) {
+    facade.engAPI?.setBodyWorldBounds(rigidBodyId, bounds);
+    return;
+  }
+  messageWorker({
+    type: PhysicsProtocolType.RIGID_SET_BOUNDS,
+    rigidBodyId,
+    bounds,
+    isOneWay: true,
+  });
 };

@@ -1,18 +1,26 @@
 // The world bounds' ECS side (p102): each scene's bounds (or the app's default) applied to its
-// world, and the bodies the backend took out of the simulation for leaving them handed to their
-// entities. The backend's side is backends/rapier/RapierWorldBounds.ts, the delivery
-// PhysicsMessaging.ts' flushPhysicsEvents.
+// world, an entity's own bounds (the WORLD_BOUNDS component) sent for its body, and the bodies the
+// backend took out of the simulation for leaving them handed to their entities. The backend's
+// side is backends/rapier/RapierWorldBounds.ts, the delivery PhysicsMessaging.ts'
+// flushPhysicsEvents.
 
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
-import { getStableAppId } from '../../kernel/ecs/ECS';
+import { type ECSWorld, getECSWorld, getStableAppId } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
+import type { FeatureContext } from '../../kernel/init/Features';
 import { getCurrentSceneId, getLoadingSceneId } from '../../kernel/scene/Scene';
+import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
-import { type PhysicsBodyOwner, getPhysicsBodyOwner } from './PhysicsEntity';
-import { setOutOfBoundsHandler } from './PhysicsMessaging';
+import { setPhysicsBodyWorldBounds } from './PhysicsBodies';
+import { type PhysicsBodyOwner, getPhysicsBodyOwner, getPhysicsEntityBody } from './PhysicsEntity';
+import { copyWorldBounds, setOutOfBoundsHandler, toWireBodyWorldBounds } from './PhysicsMessaging';
 import { facade } from './PhysicsState';
 import { setPhysicsWorldBounds } from './PhysicsWorld';
-import type { OutOfBoundsRecord, WorldBoundsDef } from './types/PhysicsWorldBoundsTypes';
+import type {
+  EntityWorldBounds,
+  OutOfBoundsRecord,
+  WorldBoundsDef,
+} from './types/PhysicsWorldBoundsTypes';
 
 /** Each scene's own bounds (setSceneWorldBounds), null for none: kept across visits, as sky
  * boxes are. A scene without an entry gets `AppConfig.physics.worldBounds`. */
@@ -20,12 +28,6 @@ const sceneDefs = new Map<string, WorldBoundsDef | null>();
 
 /** The entities a handler call deletes, after its loop. Reused, so a call allocates no array. */
 const exitedOwners: PhysicsBodyOwner[] = [];
-
-const copyDef = (def: WorldBoundsDef): WorldBoundsDef => ({
-  ...def,
-  ...(def.min ? { min: { ...def.min } } : {}),
-  ...(def.max ? { max: { ...def.max } } : {}),
-});
 
 /** The scene whose world is the current one: the loading scene's from its `beforeAssets` on. */
 const getWorldSceneId = () => getLoadingSceneId() ?? getCurrentSceneId();
@@ -59,7 +61,7 @@ export const setSceneWorldBounds = (def: WorldBoundsDef | null, sceneId?: string
     lerror(msg);
     throw new Error(msg);
   }
-  const stored = def && copyDef(def);
+  const stored = def && copyWorldBounds(def);
   sceneDefs.set(targetSceneId, stored);
   if (targetSceneId === getWorldSceneId()) setPhysicsWorldBounds(stored);
 };
@@ -111,9 +113,72 @@ export const handleOutOfBounds = (records: readonly OutOfBoundsRecord[]) => {
 };
 
 /**
- * Physics' install: the world bounds' exits go to the physics entities.
+ * Sets (or replaces) a physics entity's own world bounds, or removes them with null: they replace
+ * the scene's bounds for its body (they aren't intersected with them; a missing side is open), or
+ * exempt it with `ignore: true`. They apply from the body's next check on (before the next fixed
+ * step), asleep or not. Set on an entity without a body yet (eg. a mesh entity before its
+ * `createPhysicsEntity`), they go with its body's create. They go with the entity.
+ * @param entityId the physics entity (or one that gets its body later)
+ * @param bounds the box or `ignore`, or null to follow the scene's bounds again
+ * @param ecsWorld the entity's world (the default one when left out)
+ * @remarks Set them in scene-load code, in an `APP_PHYSICS_STEP` system or with
+ * `createPhysicsEntity`'s `worldBounds` option (sent with the body, so they apply from its very
+ * first check, in both worker targets). From a per-frame stage on `WORKER_THREAD`, the step they
+ * start on depends on the frame timing. Only dynamic bodies are checked. A deleted entity is a
+ * quiet no-op (a debug-env warning).
+ * @example
+ * ```ts
+ * import { setEntityWorldBounds } from 'aekasha/physics';
+ *
+ * declare const playerId: number;
+ * // The player's own respawn logic catches its falls: the scene's kill height leaves it alone
+ * setEntityWorldBounds(playerId, { ignore: true });
+ * ```
+ */
+export const setEntityWorldBounds = (
+  entityId: number,
+  bounds: EntityWorldBounds | null,
+  ecsWorld?: ECSWorld
+) => {
+  const world =
+    ecsWorld || existsOrThrow(getECSWorld(), 'Could not get ECS world in setEntityWorldBounds.');
+  if (!world.isAlive(entityId)) {
+    if (IS_DEBUG_ENV) lwarn(`setEntityWorldBounds: entity ${entityId} doesn't exist. Ignored.`);
+    return;
+  }
+  if (bounds === null) world.removeComponent(entityId, ComponentType.WORLD_BOUNDS);
+  else world.addComponent(entityId, ComponentType.WORLD_BOUNDS, copyWorldBounds(bounds));
+};
+
+/** Sends an entity's own world bounds (or null) for its body, when it has one it owns: before its
+ * createPhysicsEntity resolves it has none, and the create sends what the entity has then. */
+const sendEntityWorldBounds = (
+  world: ECSWorld,
+  entityId: number,
+  bounds: EntityWorldBounds | null
+) => {
+  const body = getPhysicsEntityBody(world, entityId);
+  if (!body) return;
+  const owner = getPhysicsBodyOwner(body.id);
+  if (owner?.world !== world || owner.entityId !== entityId) return;
+  setPhysicsBodyWorldBounds(body.id, bounds && toWireBodyWorldBounds(bounds));
+};
+
+/**
+ * Physics' install: the entities' own world bounds reach their bodies (the WORLD_BOUNDS hooks; an
+ * entity's delete needs nothing, its body's delete forgets them), and the world bounds' exits go to
+ * the physics entities.
  * @internal
  */
-export const installPhysicsWorldBounds = () => {
+export const installPhysicsWorldBounds = (ctx: FeatureContext) => {
+  ctx.registerComponentHooks(ComponentType.WORLD_BOUNDS, {
+    onAddComponent: (entityId, world) =>
+      sendEntityWorldBounds(
+        world,
+        entityId,
+        world.getComponent(entityId, ComponentType.WORLD_BOUNDS) ?? null
+      ),
+    onRemoveComponent: (entityId, world) => sendEntityWorldBounds(world, entityId, null),
+  });
   setOutOfBoundsHandler(handleOutOfBounds);
 };

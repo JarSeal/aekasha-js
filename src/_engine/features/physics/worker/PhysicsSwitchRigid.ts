@@ -136,6 +136,8 @@ export const physicsSwitchRigid = async (
       // The create-time tier, after the colliders (their mass) and with the slot kept, as a
       // requested STATIC or DISABLED leaves a body: before any step can run
       applyCreateTier(rb, data.tier);
+      // The entity's own world bounds, before the body's first check (the next step)
+      if (data.worldBounds) engAPI.setBodyWorldBounds(rb.id, data.worldBounds);
       return sendMessage({ type: data.type, id: rb.id, slot, pose, colliderIds }, data);
     }
     case PhysicsProtocolType.CREATE_RIGID_BODIES: {
@@ -190,6 +192,9 @@ export const physicsSwitchRigid = async (
       if (slot !== -1) transformBuffer?.setTransform(slot, pose.pos, pose.rot);
       return sendMessage({ type: data.type, slot, pose }, data);
     }
+    case PhysicsProtocolType.RIGID_SET_BOUNDS:
+      // RIGID_SET_BOUNDS (one-way, p102): quiet for a body deleted meanwhile
+      return engAPI.setBodyWorldBounds(data.rigidBodyId, data.bounds);
     case PhysicsProtocolType.RIGID_READ_POSITIONS: {
       // RIGID_READ_POSITIONS (p343): replayed before its sub-step, so read before that step runs
       const positions = engAPI.readBodyPositions(data.ids, new Float32Array(data.ids.length * 3));

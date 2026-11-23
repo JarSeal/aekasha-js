@@ -210,6 +210,14 @@ From Phase 1 (see its As built): widen `WorldBoundsAction` and `OutOfBoundsSourc
 - Dev warning for overrides on fixed/kinematic bodies.
 - Character default (§8).
 
+As built so far (section 1, the overrides; not committed yet):
+
+- **The create-time check is queued now**, not run inside `createRigidBody`: an override sent with the create would otherwise come after the check that already took the body out. `queueBodyCheck` (create, reattach, `setBodyWorldBounds`); `checkQueuedWorldBounds` runs right before each `step()` and at the start of a drain, so a record keeps Phase 1's step value (the count before the next step). Two Phase 1 tests changed: a body created outside is still enabled right after its create.
+- **Backend:** `bodyBounds` (`Map<id, Float64Array | 'IGNORE'>`) in `RapierWorldBounds.ts`; a box open on every side is `'IGNORE'`; an unknown id is ignored, a detached one keeps its entry; the delete forgets it (`forgetBodyWorldBounds`), `clearWorldBounds` clears all. `setBodyWorldBounds` on `EngineAPIType`. The step check skips only when there are neither global nor per-body bounds.
+- **Protocol:** `RIGID_SET_BOUNDS = 476` (the rigid switchboard gets `engAPI`, so the rigid range works, unlike Phase 1's world message), quiet for an unknown body; `CREATE_PHYSICS_ENTITY.worldBounds`. `createRigidBodyWithColliders`' third argument is an options object `{ tier, worldBounds }`. Wire types: `BodyWorldBounds` (`WorldBoundsBox | 'IGNORE'`).
+- **ECS:** `WORLD_BOUNDS` in `ECSCoreComponents.ts` only (`ECSRegistry.ts` lists no core components). `setEntityWorldBounds` in `PhysicsWorldBounds.ts` (works on an entity without a body yet; a dead entity is a debug warning). Its hooks send when the entity owns a body; `createPhysicsEntity` sends the component in the create and again if it changed while the create was in flight; a failed create on a `target` restores the entity's previous `WORLD_BOUNDS`. `copyWorldBounds` / `toWireWorldBounds` / `toWireBodyWorldBounds` are in `PhysicsMessaging.ts` (so `PhysicsEntity.ts` uses them without a cycle). `installPhysicsWorldBounds` takes the `FeatureContext`.
+- `EntityWorldBounds` has only the box and `ignore` so far: `action` and `onExit` come with section 2.
+
 ### Phase 3 — Debug tooling
 
 - Physics API debug tab: a "World bounds" folder (`DebuggerPaneItem`s next to the others in `debug/_dbg__PhysicsTabFolders.ts`: the UI kit's property grid, compact density) with the active global box (monitors, source: config / scene / none), the exit count for the current scene and a list of the last exits (a `debuggerListCMP` list, clicking a row opens the entity's edit window, `_dbg__PhysicsEntityWindow.ts`).

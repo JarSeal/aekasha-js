@@ -16,6 +16,7 @@ import { initEnvironment, loadConfig } from '../../kernel/config/Config';
 import { DEFAULT_ECS_WORLD_ID, ECSWorld, getEntityIdByAppId } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { runInPhysicsCreationScope } from '../../kernel/ecs/PhysicsTierAccess';
+import type { FeatureContext } from '../../kernel/init/Features';
 import {
   createRigidBodySync,
   createRigidBodyWithCollidersSync,
@@ -50,7 +51,9 @@ import {
 import type { OutOfBoundsRecord } from './types/PhysicsWorldBoundsTypes';
 import {
   applySceneWorldBounds,
+  handleOutOfBounds,
   installPhysicsWorldBounds,
+  setEntityWorldBounds,
   setSceneWorldBounds,
 } from './PhysicsWorldBounds';
 import { setLoadingSceneId } from '../../kernel/scene/Scene';
@@ -87,6 +90,13 @@ const createBall = (world: ECSWorld, x: number, opts?: Parameters<typeof createP
 /** The tier an entity's request has queued (its PHYSICS_SIM_TIER target; none: FULL). */
 const targetOf = (world: ECSWorld, entityId: number) =>
   world.getComponent(entityId, ComponentType.PHYSICS_SIM_TIER)?.target ?? 'FULL';
+
+/** The world bounds' install (p102): the WORLD_BOUNDS hooks are static, so installed once; the
+ * tests that deliver exits set the handler themselves. */
+installPhysicsWorldBounds({
+  registerComponentHooks: ECSWorld.registerComponentHooks.bind(ECSWorld),
+} as unknown as FeatureContext);
+setOutOfBoundsHandler(null);
 
 describe('the facade (MAIN_THREAD)', () => {
   it('boots and creates the world', async () => {
@@ -406,7 +416,7 @@ describe('the facade (MAIN_THREAD)', () => {
 
   it('p102: an entity whose body leaves the bounds is deleted at the next flush', async () => {
     await resetPhysicsWorld();
-    installPhysicsWorldBounds();
+    setOutOfBoundsHandler(handleOutOfBounds);
     const world = new ECSWorld({ id: 'p102-delete' });
     try {
       const fallingId = await createPhysicsEntity(
@@ -435,8 +445,15 @@ describe('the facade (MAIN_THREAD)', () => {
 
   it("p102: a scene's bounds apply at once and to its every new world, else the config's; null turns them off", async () => {
     await resetPhysicsWorld();
-    const createBelow = () =>
-      createRigidBodySync({ rigidType: 'DYNAMIC', translation: { x: 50, y: -10, z: 0 } });
+    // A body below the kill height, and a step (a new body is checked before the next one)
+    const createBelow = () => {
+      const body = createRigidBodySync({
+        rigidType: 'DYNAMIC',
+        translation: { x: 50, y: -10, z: 0 },
+      });
+      facade.engAPI!.step();
+      return body;
+    };
     setLoadingSceneId('p102Own');
     try {
       const first = createBelow();
@@ -478,6 +495,70 @@ describe('the facade (MAIN_THREAD)', () => {
     facade.engAPI!.step();
     expect(facade.engAPI!.drainPendingOutOfBoundsRecords()).toHaveLength(0);
     expect(body.isEnabledSync()).toBe(true);
+  });
+
+  it("p102 Phase 2: an entity's own bounds replace the world's, from its create or a set", async () => {
+    await resetPhysicsWorld();
+    setOutOfBoundsHandler(handleOutOfBounds);
+    const world = new ECSWorld({ id: 'p102-own' });
+    /** A ball entity resting below the kill height (no gravity), with `opts`. */
+    const createLow = (x: number, opts?: Parameters<typeof createPhysicsEntity>[1]) =>
+      createPhysicsEntity(
+        {
+          colliders: BALL,
+          body: { rigidType: 'DYNAMIC', translation: { x, y: -10, z: 0 }, gravityScale: 0 },
+        },
+        { world, ...opts }
+      );
+    const subStep = () => {
+      flushPhysicsEvents();
+      facade.engAPI!.step();
+      flushPhysicsEvents();
+    };
+    try {
+      setPhysicsWorldBounds({ min: { y: -5 } });
+      const ignored = await createLow(50, { worldBounds: { ignore: true } });
+      const deep = await createLow(60, { worldBounds: { min: { y: -100 } } });
+      // Set on the target entity before its body: the create takes them
+      const targetId = world.createEntity();
+      setEntityWorldBounds(targetId, { ignore: true }, world);
+      const target = await createPhysicsEntity(
+        {
+          colliders: BALL,
+          body: { rigidType: 'DYNAMIC', translation: { x: 70, y: -10, z: 0 }, gravityScale: 0 },
+          target: targetId,
+        },
+        { world }
+      );
+      const plain = await createLow(80);
+      subStep();
+      expect([ignored, deep, target].map((id) => world.isAlive(id))).toEqual([true, true, true]);
+      expect(world.isAlive(plain)).toBe(false);
+      expect(world.getComponent(deep, ComponentType.WORLD_BOUNDS)).toEqual({ min: { y: -100 } });
+
+      // A set replaces them (out by its own box), null follows the world's again
+      const deepBodyId = world.getRigidBody(deep)!.id;
+      const ignoredBodyId = world.getRigidBody(ignored)!.id;
+      setEntityWorldBounds(deep, { min: { y: -1 } }, world);
+      setEntityWorldBounds(ignored, null, world);
+      expect(world.hasComponent(ignored, ComponentType.WORLD_BOUNDS)).toBe(false);
+      const handled: OutOfBoundsRecord[] = [];
+      setOutOfBoundsHandler((records) => {
+        handled.push(...records);
+        handleOutOfBounds(records);
+      });
+      subStep();
+      expect(handled.map((r) => [r.bodyId, r.source])).toEqual([
+        [deepBodyId, 'ENTITY'],
+        [ignoredBodyId, 'GLOBAL'],
+      ]);
+      expect(world.isAlive(deep)).toBe(false);
+      expect(world.isAlive(ignored)).toBe(false);
+      expect(world.isAlive(target)).toBe(true);
+    } finally {
+      setOutOfBoundsHandler(null);
+      setPhysicsWorldBounds(null);
+    }
   });
 
   it('A4: deletes without a world are quiet no-ops', async () => {

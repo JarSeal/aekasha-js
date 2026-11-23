@@ -55,7 +55,7 @@ export const physics = (): EngineFeature => ({
       ctx,
       existsOrThrow(getECSWorld(), 'Could not find the ECS world in the physics install.')
     );
-    installPhysicsWorldBounds();
+    installPhysicsWorldBounds(ctx);
     ctx.setFixedStepDriver(physicsFixedStepDriver);
     ctx.addSceneHooks(physicsSceneHooks);
     ctx.registerImportExtension(physicsImportExtension);

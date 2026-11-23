@@ -16,6 +16,7 @@ import {
   messageWorker,
   messageWorkerAsync,
   openWorkerTransport,
+  toWireWorldBounds,
 } from './PhysicsMessaging';
 import { getPhysicsQueryObserver } from './PhysicsQueryStats';
 import { clearPhysicsRegistry, getBodyMovedListener } from './PhysicsRegistry';
@@ -285,21 +286,6 @@ export const resetPhysicsWorld = async () => {
   await createPhysicsWorld();
 };
 
-/** A box as plain data with only its given sides: what crosses the worker boundary (a
- * `THREE.Vector3` corner would arrive as a plain object with every field, its methods gone). */
-const toWireBounds = (box: WorldBoundsBox): WorldBoundsBox => {
-  const side = (v: WorldBoundsBox['min']) =>
-    v && {
-      ...(v.x !== undefined ? { x: v.x } : {}),
-      ...(v.y !== undefined ? { y: v.y } : {}),
-      ...(v.z !== undefined ? { z: v.z } : {}),
-    };
-  return {
-    ...(box.min ? { min: side(box.min) } : {}),
-    ...(box.max ? { max: side(box.max) } : {}),
-  };
-};
-
 /**
  * Sets (or clears, with null) the current world's bounds (p102): from then on, a dynamic body whose
  * translation is outside the box after a step is taken out of the simulation on that step (disabled,
@@ -311,7 +297,7 @@ const toWireBounds = (box: WorldBoundsBox): WorldBoundsBox => {
  */
 export const setPhysicsWorldBounds = (box: WorldBoundsBox | null) => {
   if (!facade.worldEnabled) return;
-  const bounds = box && toWireBounds(box);
+  const bounds = box && toWireWorldBounds(box);
   if (!isWorkerTarget()) {
     facade.engAPI?.setWorldBounds(bounds);
     return;

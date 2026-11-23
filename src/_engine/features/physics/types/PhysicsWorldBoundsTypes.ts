@@ -29,10 +29,29 @@ export type WorldBoundsDef = WorldBoundsBox & {
 };
 
 /**
- * Which bounds a body left: the global ones (a scene's or the app's default).
+ * One physics entity's own world bounds (`setEntityWorldBounds`, `createPhysicsEntity`'s
+ * `worldBounds` option): its box replaces the global one for this entity (it isn't intersected
+ * with it), so a missing side is open even where the global box has one.
+ */
+export type EntityWorldBounds = WorldBoundsBox & {
+  /** Exempts the entity from every world bounds (eg. a player whose own respawn logic catches a
+   * fall). The box is then not read. */
+  ignore?: boolean;
+};
+
+/**
+ * A body's own bounds as the backend takes them: a box, or `'IGNORE'` (never checked; a box open
+ * on every side is the same). Plain data.
  * @internal
  */
-export type OutOfBoundsSource = 'GLOBAL';
+export type BodyWorldBounds = WorldBoundsBox | 'IGNORE';
+
+/**
+ * Which bounds a body left: the global ones (a scene's or the app's default), or its entity's own
+ * (`EntityWorldBounds`).
+ * @internal
+ */
+export type OutOfBoundsSource = 'GLOBAL' | 'ENTITY';
 
 /**
  * A body found outside its bounds and disabled by the backend: plain data, from the backend (or

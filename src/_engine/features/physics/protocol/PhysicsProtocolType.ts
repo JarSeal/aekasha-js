@@ -143,6 +143,8 @@ export enum PhysicsProtocolType {
   RIGID_REATTACH = 474,
   /** Body positions read on a fixed step (p343's deterministic tier policy) */
   RIGID_READ_POSITIONS = 475,
+  /** One-way: sets (or clears) a body's own world bounds (p102 Phase 2), replacing the world's */
+  RIGID_SET_BOUNDS = 476,
 
   // COLLIDER >= 600 && COLLIDER < 800
   CREATE_COLLIDER = 600,

@@ -7,6 +7,7 @@ import type {
   PhysicsSimTierData,
   PhysicsTierPolicyMemberData,
 } from '../../features/physics/PhysicsTierTypes';
+import type { EntityWorldBounds } from '../../features/physics/types/PhysicsWorldBoundsTypes';
 import type { PhysicsWireframeColors } from '../config/Config';
 import type { EntityDebugData, ManagedByData } from './ECSRegistry';
 import type { CharacterObject } from '../../features/character/CharacterTypes';
@@ -42,6 +43,7 @@ export const ComponentType = {
   BODY_STATIC: 'CORE_BODY_STATIC', // Never moves (or frozen by a physics tier)
   PHYSICS_SIM_TIER: 'CORE_PHYSICS_SIM_TIER', // runtime-only, see PhysicsTiers.ts (p352)
   PHYSICS_TIER_POLICY: 'CORE_PHYSICS_TIER_POLICY', // opt-in, see PhysicsTierPolicy.ts (p352)
+  WORLD_BOUNDS: 'CORE_WORLD_BOUNDS', // opt-in, see PhysicsWorldBounds.ts (p102)
   // Tags
   TAG_IS_MESH: 'CORE_TAG_IS_MESH',
   TAG_IS_GROUP: 'CORE_TAG_IS_GROUP',
@@ -172,6 +174,10 @@ export interface CoreComponentData {
   /** Added by createPhysicsEntity's `tierPolicy` option or setPhysicsTierPolicyMember
    * (features/physics/PhysicsTierPolicy.ts). */
   [ComponentType.PHYSICS_TIER_POLICY]: PhysicsTierPolicyMemberData;
+  /** The entity's own world bounds, replacing the scene's for its body (p102): set them with
+   * `setEntityWorldBounds` or `createPhysicsEntity`'s `worldBounds` option (a copy is stored, and
+   * a change made to the stored object reaches nothing). */
+  [ComponentType.WORLD_BOUNDS]: EntityWorldBounds;
   // Tags: present means yes. The kind tags come from the OBJECT3D's add hook
   /** The Object3D is a mesh (also a thick engine line). */
   [ComponentType.TAG_IS_MESH]: boolean;

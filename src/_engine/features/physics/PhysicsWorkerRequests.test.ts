@@ -109,7 +109,12 @@ import {
   setOutOfBoundsHandler,
 } from './PhysicsMessaging';
 import type { OutOfBoundsRecord } from './types/PhysicsWorldBoundsTypes';
-import { installPhysicsWorldBounds } from './PhysicsWorldBounds';
+import {
+  handleOutOfBounds,
+  installPhysicsWorldBounds,
+  setEntityWorldBounds,
+} from './PhysicsWorldBounds';
+import type { FeatureContext } from '../../kernel/init/Features';
 import { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import { createJoint } from './PhysicsJoints';
 import { facade, getPhysicsState, getPhysicsWorld } from './PhysicsState';
@@ -163,6 +168,13 @@ const lastReceived = (type: PhysicsProtocolType) => {
 const plain = ({ x, y, z, w }: THREE.Quaternion) => ({ x, y, z, w });
 
 const countBodies = () => [...getAllRigidBodyIds()].length;
+
+/** The world bounds' install (p102): the WORLD_BOUNDS hooks are static, so installed once; the
+ * tests that deliver exits set the handler themselves. */
+installPhysicsWorldBounds({
+  registerComponentHooks: ECSWorld.registerComponentHooks.bind(ECSWorld),
+} as unknown as FeatureContext);
+setOutOfBoundsHandler(null);
 
 describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
   it('boots against the real worker and creates collider 0', async () => {
@@ -392,7 +404,7 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
 
   it('p102: an entity whose body leaves the bounds is deleted at the flush after the push', async () => {
     await resetPhysicsWorld();
-    installPhysicsWorldBounds();
+    setOutOfBoundsHandler(handleOutOfBounds);
     const world = new ECSWorld({ id: 'p102-worker' });
     try {
       setPhysicsWorldBounds({ min: { y: -5 } });
@@ -413,6 +425,70 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
       flushPhysicsEvents();
       expect(world.isAlive(id)).toBe(false);
     } finally {
+      setOutOfBoundsHandler(null);
+      setPhysicsWorldBounds(null);
+    }
+  });
+
+  it("p102 Phase 2: an entity's own bounds go with its create, a set and a set made in flight", async () => {
+    await resetPhysicsWorld();
+    setOutOfBoundsHandler(handleOutOfBounds);
+    const world = new ECSWorld({ id: 'p102-worker-own' });
+    /** A ball entity resting below the kill height (no gravity), with `opts`. */
+    const createLow = (x: number, opts?: Parameters<typeof createPhysicsEntity>[1]) =>
+      createPhysicsEntity(
+        {
+          colliders: { type: 'BALL', radius: 0.5 },
+          body: { rigidType: 'DYNAMIC', translation: { x, y: -10, z: 0 }, gravityScale: 0 },
+        },
+        { world, ...opts }
+      );
+    const subStep = async () => {
+      messageWorker({ type: PhysicsProtocolType.STEP, steps: 1, isOneWay: true });
+      await flushPhysics();
+      flushPhysicsEvents();
+    };
+    try {
+      setPhysicsWorldBounds({ min: { y: -5 } });
+      // The corner as plain data with its given sides only, the action and callback left out
+      const deep = await createLow(50, {
+        worldBounds: { min: new THREE.Vector3(-1e6, -100, -1e6) },
+      });
+      expect(lastSent(PhysicsProtocolType.CREATE_PHYSICS_ENTITY)?.worldBounds).toEqual({
+        min: { x: -1e6, y: -100, z: -1e6 },
+      });
+      const ignored = await createLow(60, { worldBounds: { ignore: true, min: { y: 0 } } });
+      expect(lastSent(PhysicsProtocolType.CREATE_PHYSICS_ENTITY)?.worldBounds).toBe('IGNORE');
+
+      // Set while the create is in flight: sent once the body is known
+      bridge.state.holdReplies = true;
+      const creation = createLow(70);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      const [inFlight] = [...world.getEntitiesWith(ComponentType.TAG_IS_PHYSICS_OBJECT)].filter(
+        (id) => id !== deep && id !== ignored
+      );
+      setEntityWorldBounds(inFlight, { ignore: true }, world);
+      expect(lastSent(PhysicsProtocolType.RIGID_SET_BOUNDS)).toBeUndefined();
+      bridge.state.releaseReplies();
+      await creation;
+      expect(lastSent(PhysicsProtocolType.RIGID_SET_BOUNDS)).toMatchObject({
+        rigidBodyId: world.getRigidBody(inFlight)!.id,
+        bounds: 'IGNORE',
+      });
+
+      await subStep();
+      expect([deep, ignored, inFlight].map((id) => world.isAlive(id))).toEqual([true, true, true]);
+
+      // A set on a live entity: RIGID_SET_BOUNDS, out by its own box on the next step
+      setEntityWorldBounds(deep, { min: { y: -1 } }, world);
+      expect(lastSent(PhysicsProtocolType.RIGID_SET_BOUNDS)?.bounds).toEqual({ min: { y: -1 } });
+      await subStep();
+      expect(world.isAlive(deep)).toBe(false);
+      expect(lastReceived(PhysicsProtocolType.EVENTS_PUSH)?.outOfBounds).toEqual([
+        expect.objectContaining({ source: 'ENTITY' }),
+      ]);
+    } finally {
+      bridge.state.releaseReplies();
       setOutOfBoundsHandler(null);
       setPhysicsWorldBounds(null);
     }

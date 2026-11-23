@@ -14,7 +14,7 @@ import { EngineColliderProxyAPI } from './proxies/EngineColliderProxyAPI';
 import { EngineRigidBodyProxyAPI } from './proxies/EngineRigidBodyProxyAPI';
 import { toRapierBodyType } from './RapierEnums';
 import { cleanupColliderEventRegistrations } from './RapierEvents';
-import { checkBodyAtCreate } from './RapierWorldBounds';
+import { forgetBodyWorldBounds, queueBodyCheck } from './RapierWorldBounds';
 import {
   backend,
   colliderAPIs,
@@ -160,7 +160,9 @@ export const createRigidBody = (params: RigidBodyParams) => {
     rigidBodyAPI.writeOnly.additionalMass = { mass: params.additionalMass };
   }
   rigidBodyAPIs.set(id, rigidBodyAPI);
-  checkBodyAtCreate(rigidBody, id);
+  // Checked against the world bounds before the next step, not now: an entity's own bounds sent
+  // with the create (CREATE_PHYSICS_ENTITY) apply first
+  queueBodyCheck(id);
 
   return rigidBodyAPI;
 };
@@ -180,6 +182,7 @@ export const createRigidBodies = (paramsArray: RigidBodyParams[]) =>
 export const deleteRigidBody = (id: number) => {
   const colliderIds: number[] = [];
   const jointIds: number[] = [];
+  forgetBodyWorldBounds(id);
   // A detached body (p352 REMOVED tier) is only its kept state: nothing is in the world
   const detached = detachedBodies.get(id);
   if (detached) {
@@ -406,6 +409,8 @@ export const reattachRigidBody = (
   rigidBodies.set(id, rb.handle);
   handleToRigidBodyId.set(rb.handle, id);
   api._rebind(rb);
+  // It may have come back asleep outside its bounds
+  queueBodyCheck(id);
   rigidBodyAPIs.set(id, api);
 
   for (const c of detached.colliders) {
