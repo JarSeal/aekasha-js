@@ -371,7 +371,7 @@ describe('updateMergeMember', () => {
     ECSWorld.deleteWorld(typedWorld.id);
   });
 
-  test('drops a running worker build, which builds again from the new pose', async () => {
+  test("keeps a running worker build, which lands with the member's latest pose", async () => {
     const groupId = nextGroupId();
     const groupEntityId = createMergeGroup({ id: groupId });
     const sphere = createMeshEntity({
@@ -383,17 +383,27 @@ describe('updateMergeMember', () => {
     const build = buildPendingMergeGroupsAsync();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    world.setTransform(sphere, { pos: { x: 5, y: 0, z: 0 } });
-    updateMergeMember(sphere);
+    // Updated every frame while the merge runs
+    for (let frame = 1; frame <= 5; frame++) {
+      world.setTransform(sphere, { pos: { x: frame, y: 0, z: 0 } });
+      updateMergeMember(sphere);
+      world.updateAppLoop(0.016);
+    }
+    expect(fns.release).toHaveLength(1);
     await releaseWorkerBuildsAsync();
     await build;
-    expect(getMesh(groupEntityId)).toBeUndefined();
 
-    const next = buildPendingMergeGroupsAsync();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await releaseWorkerBuildsAsync();
-    await next;
-    expect(getMesh(groupEntityId)!.position.x).toBeCloseTo(5, 6);
+    // Built at the build's start (centred at 0), then written where the member is now
+    const groupMesh = getMesh(groupEntityId)!;
+    const group = world.getComponent(groupEntityId, ComponentType.MERGE_GROUP)!;
+    expect(group.rebuilds).toBe(1);
+    expect(group._isPending).toBe(false);
+    expect(groupMesh.position.x).toBeCloseTo(0, 6);
+    const box = getWorldBox(groupMesh.geometry, groupMesh);
+    expect(box.min.x).toBeCloseTo(4, 5);
+    expect(box.max.x).toBeCloseTo(6, 5);
+    expect(world.getComponent(sphere, ComponentType.MERGE_MEMBER)!._isMovedInBuild).toBe(false);
+    expect(getMesh(sphere)!.visible).toBe(false);
   });
 
   test('warns for a non-member, and builds again for a member whose geometry changed', async () => {

@@ -28,6 +28,7 @@ import { collapseDisabledMember } from './MergeInPlace';
 import { warnIfGroupSpansStreamingCells } from './MergeSceneSettings';
 import {
   getMemberMesh,
+  getMovedMemberRewriter,
   getPending,
   isMergeGroupShownUnmerged,
   markPending,
@@ -91,6 +92,8 @@ const getBuildParts = (members: number[], world: ECSWorld): BuildParts => {
   for (const entityId of members) {
     const mesh = getMemberMesh(entityId, world);
     syncMemberPose(entityId, mesh, world);
+    // Its pose now is the one built: an update from here on is written when the build lands
+    world.getComponent(entityId, ComponentType.MERGE_MEMBER)!._isMovedInBuild = false;
     if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
     groupBounds.union(scratchBox.copy(mesh.geometry.boundingBox!).applyMatrix4(mesh.matrixWorld));
   }
@@ -216,6 +219,18 @@ const applyBuild = (
   // Joined again, so the spatial index measures the new bounds
   world.removeComponent(groupEntityId, ComponentType.SPATIAL_INDEXED);
   world.addComponent(groupEntityId, ComponentType.SPATIAL_INDEXED, true);
+
+  // Members updated while a worker build ran were built at its start's pose: written for the
+  // pose now (a geometry replaced meanwhile makes the group build again). Only updateMergeMember
+  // marks one, and it sets the writer first.
+  const rewriteMovedMember = getMovedMemberRewriter();
+  if (!rewriteMovedMember) return;
+  for (const entityId of members) {
+    const member = world.getComponent(entityId, ComponentType.MERGE_MEMBER)!;
+    if (!member._isMovedInBuild) continue;
+    member._isMovedInBuild = false;
+    rewriteMovedMember(entityId, member, group, world);
+  }
 };
 
 /** A worker build's result is still the group's: no newer build started, and its members are

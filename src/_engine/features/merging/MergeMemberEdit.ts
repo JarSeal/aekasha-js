@@ -119,10 +119,11 @@ export const endMergeMemberEdit = (entityId: number, world?: ECSWorld): void => 
   if (transform) {
     ecsWorld.setTransform(entityId, { pos: transform.position, rot: transform.quaternion });
   }
-  if (member.partIndex === -1) return;
-  // Its vertices for the pose now (its collapsed index untouched), then the index with that
-  // pose's winding, unless it's disabled (enabling it writes the index then)
+  // Its vertices for the pose now (its collapsed index untouched; a running worker build writes
+  // them when it lands), then the index with that pose's winding, unless it's disabled (enabling
+  // it writes the index then)
   updateMergeMember(entityId, ecsWorld);
+  if (member.partIndex === -1) return;
   if (!ecsWorld.isDisabled(entityId)) restoreEnabledMember(entityId, ecsWorld);
   // The Merging tab's A/B (debug env only): a group shown unmerged keeps its members drawn
   const isShownUnmerged = IS_DEBUG_ENV && isMergeGroupShownUnmerged(member.groupEntityId, ecsWorld);

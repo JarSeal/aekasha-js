@@ -183,6 +183,9 @@ export type MergeMemberData = {
   /** Its range in the merged index is collapsed because it's disabled (`DISABLED`) or in an edit
    * session: enabling it (or the session's end) writes the range again from its geometry. */
   _isCollapsed: boolean;
+  /** `updateMergeMember` was called while its group's worker build ran: the build read an older
+   * pose, so its range is written again for the pose then once the build lands. */
+  _isMovedInBuild: boolean;
   /** A `BATCHED` member's own mesh's `OBJECT3D._lastVersion` its instance was last written at
    * (the batch sync writes it again when that changed). */
   _batchVersion?: number;

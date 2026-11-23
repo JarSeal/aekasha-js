@@ -7,7 +7,12 @@ import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { getCurrentSceneId, getLoadingSceneId } from '../../kernel/scene/Scene';
 import type { MergedGeometry } from '../../kernel/assets/GeometryMergeCore';
 import { findPaletteMaterial } from './MergePalettes';
-import type { MergeGroupData, MergeGroupSettings, MeshMergeDef } from './MergeTypes';
+import type {
+  MergeGroupData,
+  MergeGroupSettings,
+  MergeMemberData,
+  MeshMergeDef,
+} from './MergeTypes';
 
 /** Per world: the group entities by group id, the groups waiting for a build, and the meshes
  * whose `merge` waits for the next build to join. */
@@ -151,6 +156,33 @@ export const markPending = (world: ECSWorld, groupEntityId: number, group: Merge
   group._isPending = true;
   getPending(world).add(groupEntityId);
 };
+
+type MemberRewriter = (
+  entityId: number,
+  member: MergeMemberData,
+  group: MergeGroupData,
+  world: ECSWorld
+) => void;
+
+/** MergeInPlace.ts' `rewriteMember`, set by the first `updateMergeMember` during a worker build:
+ * a build that lands writes its moved members with it, and an app that never moves a member
+ * doesn't carry the in-place writes. */
+let movedMemberRewriter: MemberRewriter | null = null;
+
+/**
+ * Sets the writer for members moved during a worker build (`updateMergeMember`, before it marks
+ * one).
+ * @internal
+ */
+export const setMovedMemberRewriter = (rewriter: MemberRewriter) => {
+  movedMemberRewriter = rewriter;
+};
+
+/**
+ * The writer for members moved during a worker build, once one was (see `setMovedMemberRewriter`).
+ * @internal
+ */
+export const getMovedMemberRewriter = () => movedMemberRewriter;
 
 /**
  * A member's own mesh.
