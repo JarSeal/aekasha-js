@@ -11,6 +11,7 @@ import {
   instancingSchemaPart,
   lodSchemaPart,
   mergingSchemaPart,
+  physicsSchemaPart,
   postFxSchemaPart,
   skyBoxSchemaPart,
   spatialSchemaPart,
@@ -34,6 +35,7 @@ export const ENGINE_SCHEMA_PARTS = [
   terrainSchemaPart,
   surfaceConditionsSchemaPart,
   instancingSchemaPart,
+  physicsSchemaPart,
 ] as const;
 
 /** The scene schema with every engine feature's fields */

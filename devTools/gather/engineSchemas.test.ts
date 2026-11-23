@@ -66,6 +66,11 @@ describe('getSceneFeatureIds (the scene manifest)', () => {
     expect(getSceneFeatureIds({ id: 'a', skyboxes: [], postFx: undefined })).toEqual([]);
   });
 
+  it('lists physics for world bounds, not for a null one (p102 Phase 4)', () => {
+    expect(getSceneFeatureIds({ id: 'a', worldBounds: { min: { y: -50 } } })).toEqual(['physics']);
+    expect(getSceneFeatureIds({ id: 'a', worldBounds: null })).toEqual([]);
+  });
+
   it('reads the parts it’s given', () => {
     const fog = { feature: 'fog', scene: { fogDensity: z.number().optional() } };
     expect(getSceneFeatureIds({ fogDensity: 0 }, [fog])).toEqual(['fog']);
@@ -94,6 +99,7 @@ describe('getSceneFeatureIds (the scene manifest)', () => {
       'decalSets',
       'surfaceConditions',
       'scatters',
+      'worldBounds',
     ]);
   });
 });
