@@ -80,8 +80,8 @@ the cell size, out of the oversized tier:
 ```
 
 Instanced pool instances can join a domain too (the pool's `spatialDomain` option): see
-[LOD and impostors](hub:features/lod#many-instances). Give them a domain of their own: in
-`DEFAULT` they never count as a light's receivers (see [Known issues](#known-issues)).
+[LOD and impostors](hub:features/lod#many-instances). In `DEFAULT` they count as a light's
+receivers like any mesh, each measured where it's drawn (a LOD-culled instance doesn't).
 
 ## The debug tab
 
@@ -93,8 +93,8 @@ have it checked too (it does nothing unless the check is on).
 
 ## Known issues
 
-- [Pool instances in `DEFAULT` never count as light receivers](hub:issues/pool-instances-not-light-receivers):
-  a light whose only receivers nearby are pool instances is culled.
+- [Pool instances in `DEFAULT` never count as light receivers](hub:issues/pool-instances-not-light-receivers)
+  (fixed): a light whose only receivers nearby were pool instances was culled.
 - [A large `DYNAMIC` domain costs about 0.2 µs per member every frame](hub:issues/spatial-refresh-and-rebuild-cost),
   even when nothing moved.
 

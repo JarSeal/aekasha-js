@@ -71,11 +71,11 @@
     },
     "assets/GeometryMerge.js": {
       "bytes": 8249,
-      "gzip": 3427
+      "gzip": 3426
     },
     "assets/GeometryTransfer.js": {
       "bytes": 1933,
-      "gzip": 865
+      "gzip": 863
     },
     "assets/GeometryTransfer.js@AssetsWorker": {
       "bytes": 2051,
@@ -119,11 +119,11 @@
     },
     "assets/ImportRegistry.js": {
       "bytes": 20470,
-      "gzip": 8229
+      "gzip": 8227
     },
     "assets/KTX2Loader.js": {
       "bytes": 60311,
-      "gzip": 24499
+      "gzip": 24498
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2210,
@@ -143,7 +143,7 @@
     },
     "assets/TextureInputResolvers.js": {
       "bytes": 3306,
-      "gzip": 1366
+      "gzip": 1365
     },
     "assets/three.core.js": {
       "bytes": 199218,
@@ -151,7 +151,7 @@
     },
     "assets/three.module.js": {
       "bytes": 219,
-      "gzip": 184
+      "gzip": 183
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -162,8 +162,8 @@
       "gzip": 1987
     },
     "assets/uiKit.embed.js": {
-      "bytes": 974647,
-      "gzip": 272480
+      "bytes": 974646,
+      "gzip": 272482
     },
     "assets/uiKitEmbed.css": {
       "bytes": 18013,
@@ -179,7 +179,7 @@
     },
     "assets/uiKitEmbedData.js": {
       "bytes": 50878,
-      "gzip": 19022
+      "gzip": 19021
     },
     "assets/uiKitEmbedForm.css": {
       "bytes": 24068,
@@ -195,18 +195,18 @@
     },
     "assets/uiKitEmbedGame.js": {
       "bytes": 23040,
-      "gzip": 8594
+      "gzip": 8595
     },
     "uiKit.embed.js": {
       "bytes": 249,
-      "gzip": 212
+      "gzip": 210
     }
   },
   "main": {
     "chunk": "assets/uiKit.embed.js",
     "modules": 69,
-    "minified": 998781,
-    "gzip": 278720
+    "minified": 998780,
+    "gzip": 278719
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -221,8 +221,8 @@
     },
     "_engine/kernel/config": {
       "modules": 1,
-      "minified": 2433,
-      "gzip": 1083
+      "minified": 2432,
+      "gzip": 1082
     },
     "_engine/kernel/ecs": {
       "modules": 6,

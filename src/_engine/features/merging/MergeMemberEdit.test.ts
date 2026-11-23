@@ -265,6 +265,35 @@ describe('an edit session', () => {
     expect(isDrawnOnItsOwn(big)).toBe(false);
   });
 
+  test('begun and ended during a worker build: the build lands with the end pose', async () => {
+    const groupId = `editGroup${seq++}`;
+    const groupEntityId = createMergeGroup({ id: groupId });
+    const big = createMeshEntity({
+      geo: new THREE.SphereGeometry(1, 300, 300),
+      mat: 'mergeEditMat',
+      position: { x: 0 },
+    });
+    const box = createBox(3);
+    addToMergeGroup(groupId, [big, box]);
+    const build = buildPendingMergeGroupsAsync();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    beginMergeMemberEdit(box);
+    world.setTransform(box, { pos: { x: 7, y: 1, z: 0 } });
+    endMergeMemberEdit(box);
+    for (const release of fns.release.splice(0)) release();
+    await build;
+
+    // The box's part, built at x 3, written at x 7 and drawn merged
+    const merged = getMerged(groupEntityId);
+    const { vertexStart, vertexCount } = merged.userData.mergeParts[1];
+    const position = merged.getAttribute('position');
+    const groupX = getMesh(groupEntityId)!.position.x;
+    for (let i = vertexStart; i < vertexStart + vertexCount; i++) {
+      expect(Math.abs(position.getX(i) + groupX - 7)).toBeCloseTo(0.5, 5);
+    }
+    expect(isDrawnOnItsOwn(box)).toBe(false);
+  });
+
   test('of a disabled member: an enable during it keeps it collapsed, and the end leaves it for the enable', async () => {
     const { groupEntityId, members } = await createGroupAsync();
     const merged = getMerged(groupEntityId);

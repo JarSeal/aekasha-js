@@ -71,6 +71,7 @@ import {
   releaseMember,
   releaseSceneLoadHolds,
   setMergeSceneLoading,
+  setMovedMemberRewriter,
 } from './MergeState';
 import type {
   MergeGroupData,
@@ -261,6 +262,7 @@ const joinMergeGroup = (
       _wasSpatialIndexed: false,
       _bakedMatrix: new THREE.Matrix4(),
       _isCollapsed: false,
+      _isMovedInBuild: false,
       _paletteIndex: getGroupPaletteIndex(group, material),
     });
     group.members.push(entityId);
@@ -303,8 +305,11 @@ export const rebuildMergeGroup = (groupId: string, world?: ECSWorld) => {
  * Moves a merged member's part of its group's mesh to where the member is now: call it after
  * changing a member's `TRANSFORM` (`setTransform`, a fixed body moved). Only the member's range of
  * the merged geometry is written again, without a rebuild. A member waiting for its group's build
- * is merged where it is then and needs no call, and so does a `BATCHED` group's member's move (its
- * instance follows its `TRANSFORM` every frame). For a `BATCHED` member it writes the member's
+ * is merged where it is then and needs no call, unless the build is running in the assets worker
+ * (a group of more than 65 536 vertices): it read the pose at its start, so the call has the
+ * member written where it is once the build lands (the build isn't dropped, however often it's
+ * called). A `BATCHED` group's member's move needs none (its instance follows its `TRANSFORM`
+ * every frame). For a `BATCHED` member it writes the member's
  * geometry into the batch again instead: call it after changing its geometry's vertices or index
  * (every member sharing the geometry draws the new data), or after giving its mesh another
  * geometry. It counts as the member joining again: a `transparentOrder: 'JOIN'` batch draws it
@@ -332,11 +337,11 @@ export const updateMergeMember = (entityId: number, world?: ECSWorld) => {
     lwarn(`updateMergeMember: entity ${entityId} isn't in a merge group.`);
     return;
   }
-  // A running worker build read the old pose: it's dropped, and the group builds again
+  // A running worker build read an older pose: the member's range is written again once it lands
+  // (dropping the build would keep a member updated every frame from ever being built)
   if (group._isBuilding) {
-    group._buildToken++;
-    group._isBuilding = false;
-    markPending(ecsWorld, member.groupEntityId, group);
+    setMovedMemberRewriter(rewriteMember);
+    member._isMovedInBuild = true;
   }
   if (member.partIndex !== -1) rewriteMember(entityId, member, group, ecsWorld);
   else if (member.instanceId !== -1) {
@@ -499,7 +504,8 @@ export const buildPendingMergeGroupsAsync = async (world?: ECSWorld) => {
 };
 
 /** How many times the scene step builds again: a worker build dropped meanwhile (a member left
- * while it ran) marks its group again. */
+ * while it ran) marks its group again, and a group still building (started before the load) is
+ * built again after it lands when it's pending. */
 const SCENE_STEP_BUILD_ROUNDS = 3;
 
 /**

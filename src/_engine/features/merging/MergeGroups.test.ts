@@ -23,31 +23,12 @@ import {
   updateMergeMember,
 } from './MergeGroups';
 
-// The warning log, and the worker merge: held until the test lets it finish (the real merge on
-// the main thread then), so a test can change the group while it runs
-const fns = vi.hoisted(() => ({
-  lwarn: vi.fn(),
-  release: [] as (() => void)[],
-}));
+// The warning log (the worker builds are MergeWorkerBuilds.test.ts')
+const fns = vi.hoisted(() => ({ lwarn: vi.fn() }));
 vi.mock(import('../../utils/Logger'), async (importOriginal) => ({
   ...(await importOriginal()),
   lwarn: fns.lwarn,
 }));
-vi.mock(import('../../kernel/assets/GeometryMerge'), async (importOriginal) => {
-  const original = await importOriginal();
-  return {
-    ...original,
-    mergeGeometryPartsAsync: (parts, opts) => {
-      const geometry = original.mergeGeometryParts(parts, opts);
-      return new Promise((resolve) => fns.release.push(() => resolve(geometry)));
-    },
-  };
-});
-
-const releaseWorkerBuildsAsync = async () => {
-  for (const release of fns.release.splice(0)) release();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-};
 
 // The default world (the API's default) and the root scene; the hooks are static, registered once
 // for this file: the kernel's, then the feature's
@@ -73,7 +54,6 @@ beforeAll(() => {
 afterEach(() => {
   world.clearWorld();
   fns.lwarn.mockClear();
-  fns.release.length = 0;
 });
 
 let seq = 0;
@@ -369,31 +349,6 @@ describe('updateMergeMember', () => {
     merged.computeBoundingBox();
     expect(merged.boundingBox!.min.x).toBeCloseTo(-4.5, 6);
     ECSWorld.deleteWorld(typedWorld.id);
-  });
-
-  test('drops a running worker build, which builds again from the new pose', async () => {
-    const groupId = nextGroupId();
-    const groupEntityId = createMergeGroup({ id: groupId });
-    const sphere = createMeshEntity({
-      geo: new THREE.SphereGeometry(1, 300, 300),
-      mat: 'mergeTestMat',
-      position: { x: 0 },
-    });
-    addToMergeGroup(groupId, [sphere]);
-    const build = buildPendingMergeGroupsAsync();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    world.setTransform(sphere, { pos: { x: 5, y: 0, z: 0 } });
-    updateMergeMember(sphere);
-    await releaseWorkerBuildsAsync();
-    await build;
-    expect(getMesh(groupEntityId)).toBeUndefined();
-
-    const next = buildPendingMergeGroupsAsync();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await releaseWorkerBuildsAsync();
-    await next;
-    expect(getMesh(groupEntityId)!.position.x).toBeCloseTo(5, 6);
   });
 
   test('warns for a non-member, and builds again for a member whose geometry changed', async () => {
@@ -694,55 +649,6 @@ describe('refusals', () => {
     const box = createBox(0);
     addToMergeGroup(other, [box]);
     expect(getMergeGroupOf(box)).toBe(other);
-  });
-});
-
-describe('worker builds', () => {
-  /** A sphere mesh entity of 90,601 vertices: over the worker threshold alone. */
-  const createBigSphere = (x: number) =>
-    createMeshEntity({
-      geo: new THREE.SphereGeometry(1, 300, 300),
-      mat: 'mergeTestMat',
-      position: { x },
-    });
-
-  test('keep the members drawn on their own until the merge is in', async () => {
-    const groupId = nextGroupId();
-    const groupEntityId = createMergeGroup({ id: groupId });
-    const member = createBigSphere(0);
-    addToMergeGroup(groupId, [member]);
-
-    const build = buildPendingMergeGroupsAsync();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(fns.release).toHaveLength(1);
-    expect(getMesh(groupEntityId)).toBeUndefined();
-    expect(getMesh(member)!.visible).toBe(true);
-
-    await releaseWorkerBuildsAsync();
-    await build;
-    expect(getMesh(groupEntityId)!.geometry.getAttribute('position').count).toBe(90_601);
-    expect(getMesh(member)!.visible).toBe(false);
-  });
-
-  test("drop a merge whose member left while it ran, and the next build doesn't", async () => {
-    const groupId = nextGroupId();
-    const groupEntityId = createMergeGroup({ id: groupId });
-    const members = [createBigSphere(0), createBox(3)];
-    addToMergeGroup(groupId, members);
-
-    const build = buildPendingMergeGroupsAsync();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    world.deleteEntity(members[1]);
-    await releaseWorkerBuildsAsync();
-    await build;
-    expect(getMesh(groupEntityId)).toBeUndefined();
-    expect(getMesh(members[0])!.visible).toBe(true);
-
-    const next = buildPendingMergeGroupsAsync();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await releaseWorkerBuildsAsync();
-    await next;
-    expect(getMesh(groupEntityId)!.geometry.getAttribute('position').count).toBe(90_601);
   });
 });
 

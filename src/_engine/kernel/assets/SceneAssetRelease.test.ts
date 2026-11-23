@@ -32,6 +32,27 @@ describe('releaseSceneOwnedAssets', () => {
   });
 });
 
+describe("releaseSceneOwnedAssets for a failed load's scene (i110)", () => {
+  test('frees what the failed scene alone holds, and leaves what it shares with the current one', () => {
+    setAssetOwnerScene('i110Current');
+    const shared = saveTexture(new THREE.Texture(), 'i110Shared');
+    // The failed load lists the shared texture too (a cache hit re-tags it) and loads its own
+    setAssetOwnerScene('i110Failed');
+    retagAssetOwner(shared);
+    saveTexture(new THREE.Texture(), 'i110FailedOnly');
+    saveBufferGeometry(new THREE.BufferGeometry(), { id: 'i110FailedGeometry' });
+    setAssetOwnerScene('i110Current');
+
+    const released = releaseSceneOwnedAssets('i110Failed');
+
+    expect(released.textures).toEqual(['i110FailedOnly']);
+    expect(released.geometries).toEqual(['i110FailedGeometry']);
+    expect(getTexture('i110Shared')).toBe(shared);
+    expect(getAssetOwners(shared)).toEqual(['i110Current']);
+    setAssetOwnerScene(null);
+  });
+});
+
 describe("releaseSceneOwnedAssets and a texture that takes others with it (a bake's outputs)", () => {
   test('skips a texture an earlier one of the release deleted, without a warning', () => {
     setAssetOwnerScene('releaseBakeScene');

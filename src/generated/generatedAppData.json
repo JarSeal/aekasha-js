@@ -14819,7 +14819,7 @@
     "scatterTest": {
       "isDebugScene": true,
       "name": "Static scatter (p308)",
-      "description": "p308 Phase 1's verification scene: a flat 64 m terrain block whose scatter (scatterTestPebbles, its block's own) places 20,000 pebbles of two kinds by a test generator the scene registers, tinted per instance, in 16 m cells: one InstancedMesh entity per cell and kind, no entity per pebble. Each cell hides as a whole below its LOD's cullScreenSize (0.5): from the start camera the near half of the block shows and the far half is culled. Beside them, scatterTestBoulders places six hand-placed boulders (a PLACEMENTS source, spawnScatter on the block's centre), casting shadows. In front, one Blender Geometry Nodes scatter of two rocks (devTools/blender/buildScatterTest.py) twice, from IMPORTED sources: exported with GPU Instances on the left (scatterTestGnGpu), as a point cloud on the right (scatterTestGnPoints); the load checks they place the same rocks the same way. The load checks the counts and, a few frames in, that some cells are LOD-culled and some aren't, logging an error otherwise. Behind it, p308 Phase 3's rules block (scatterTestRulesBlock, a rulesTerrain block: rock on its slopes, sand on its flats) carries two scatters by the toolkit's terrainScatter: pebbles masked to the rock layer and slabs on the sand with CONVEXHULL colliders; the load checks the pebbles follow the rock, that a second spawn places them the same, a collider per slab, and that a box dropped on a slab rests on its top. window.__scatterTest holds the spawn results.",
+      "description": "p308 Phase 1's verification scene: a flat 64 m terrain block whose scatter (scatterTestPebbles, its block's own) places 20,000 pebbles of two kinds by a test generator the scene registers, tinted per instance, in 16 m cells: one InstancedMesh entity per cell and kind, no entity per pebble. Each cell hides as a whole below its LOD's cullScreenSize (0.5): from the start camera the near half of the block shows and the far half is culled. Beside them, scatterTestBoulders places six hand-placed boulders (a PLACEMENTS source, spawnScatter on the block's centre), casting shadows. In front, one Blender Geometry Nodes scatter of two rocks (devTools/blender/buildScatterTest.py) twice, from IMPORTED sources: exported with GPU Instances on the left (scatterTestGnGpu), as a point cloud on the right (scatterTestGnPoints); the load checks they place the same rocks the same way. The load checks the counts and, a few frames in, that some cells are LOD-culled and some aren't, logging an error otherwise. Behind it, p308 Phase 3's rules block (scatterTestRulesBlock, a rulesTerrain block: rock on its slopes, sand on its flats) carries two scatters by the toolkit's terrainScatter: pebbles masked to the rock layer and slabs on the sand with CONVEXHULL colliders; the load checks the pebbles follow the rock, that a second spawn places them the same, a collider per slab, and that a box dropped on a slab rests on its top. Front left, i090's check: 16 small rocks scattered on a target with no mesh, away from every other mesh, under a point light with object culling, which their cells must keep on; front right, i100's: a pool of 9 rocks joined to the DEFAULT spatial domain under a second such light, which its instances must keep on; and a third such light high over nothing, which must be culled. window.__scatterTest holds the spawn results.",
       "terrainBlocks": [
         {
           "id": "scatterTestBlock",
@@ -15061,6 +15061,37 @@
           "debugData": {
             "name": "Blender scatter (point cloud)",
             "description": "The same Geometry Nodes scatter as a point cloud: each point's _ITEM picks the rock (the collection's order: RockA, RockB)."
+          }
+        },
+        {
+          "id": "scatterTestLitRocks",
+          "items": [
+            {
+              "geometry": "scatterTestBoulder",
+              "material": "scatterTestStone",
+              "weight": 1,
+              "castShadow": false,
+              "receiveShadow": true,
+              "collider": "NONE"
+            }
+          ],
+          "source": {
+            "type": "PROCEDURAL",
+            "generator": "scatterTestUniform",
+            "params": {
+              "count": 16,
+              "scale": [
+                0.3,
+                0.6
+              ],
+              "tint": 0.25
+            },
+            "seed": 11
+          },
+          "cellSize": 16,
+          "debugData": {
+            "name": "Lit rocks",
+            "description": "16 small rocks over an 8 m square by the scene's test generator, spawned on a target with no mesh, away from every other mesh: their cells are the only receivers of the object-culled point light over them (i090)."
           }
         },
         {

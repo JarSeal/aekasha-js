@@ -316,7 +316,6 @@ The instance's colour (the scatter's `tint`) multiplies in. `leafLitter`: `albed
 - **Everything spawns at the block's centre or twice as far out (Blender):** the scatter object wasn't at the world origin, or the block wasn't at grid (0, 0) at the export.
 - **A huge GLB:** instances realized, or GPU Instances off (the exporter then writes every instance as a node).
 - **The density ignores the paint:** the mask names layer indices (`"1"` is the material's R), not texture set ids; a splat-mapped block needs `splatMaps`.
-- **Point and spot lights with object culling over a scatter alone:** cells aren't in the spatial index (it would measure one instance at the cell's centre), so light culling's receiver test never sees them: a light whose only receivers in range are scatter cells is culled, and the scatter goes unlit near it. On a block, the block is a receiver and keeps the light on. Read from the code: [the issue](../issues/i090_static-instance-cells-not-light-receivers.md), with the way out (the pools' case: [pool instances](../issues/i100_pool-instances-not-light-receivers.md)).
 - **A dropped frame when a block spawns during play:** the generator's cost (Performance). Raise `minSpacing`, or spawn at a load.
 
 ## Template file and example asset ids

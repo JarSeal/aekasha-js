@@ -17,6 +17,11 @@ import {
 import { spawnTerrainBlock } from 'aekasha/terrain';
 import { nextFrames } from '../../shared/verifyHarness';
 import {
+  createLightReceiversState,
+  spawnLightReceiversAsync,
+  type LightReceiversState,
+} from './lightReceivers';
+import {
   createRulesScatterState,
   spawnRulesScatterAsync,
   type RulesScatterState,
@@ -36,7 +41,9 @@ import {
  * cloud on the right (`scatterTestGnPoints`), and the load checks that both place the same rocks the
  * same way. Behind them, p308 Phase 3's rules block (`rulesScatter.ts`): the toolkit's
  * `terrainScatter` places pebbles on its rock layer and slabs with colliders on its sand, and a box
- * dropped on a slab must rest on it.
+ * dropped on a slab must rest on it. Front left, i090's check (`lightReceivers.ts`): rocks
+ * scattered on a target with no mesh keep the object-culled point light over them on; front right,
+ * i100's: a pool of rocks in the `DEFAULT` spatial domain does the same.
  *
  * The load checks the counts, then, once the LOD has selected every pebble cell, that some are
  * LOD-culled and some aren't, and logs an error otherwise, which fails the scene runner. `window.__scatterTest` holds the spawn results and the culled cells.
@@ -68,6 +75,8 @@ const state: {
   blender: { gpu: number; points: number; mismatches: number };
   /** p308 Phase 3's rules block: its scatters' counts and checks (`rulesScatter.ts`) */
   rules: RulesScatterState;
+  /** i090's lit rocks, i100's pool and their lights (`lightReceivers.ts`) */
+  lightReceivers: LightReceiversState;
 } = {
   pebbleCellIds: [],
   boulderCellIds: [],
@@ -76,6 +85,7 @@ const state: {
   culledCells: -1,
   blender: { gpu: 0, points: 0, mismatches: -1 },
   rules: createRulesScatterState(),
+  lightReceivers: createLightReceiversState(),
 };
 
 /** `params.count` instances uniform over the target's square, at its height, with a random yaw,
@@ -211,6 +221,7 @@ export const scene = async () => {
     culledCells: -1,
     blender: { gpu: 0, points: 0, mismatches: -1 },
     rules: createRulesScatterState(),
+    lightReceivers: createLightReceiversState(),
   });
   let isLoaded = true;
   registerOnSceneExit(SCENE_ID, () => {
@@ -261,6 +272,11 @@ export const scene = async () => {
   if (!(await spawnBlenderScattersAsync(() => isLoaded))) return;
   const settleDropAsync = await spawnRulesScatterAsync(state.rules, () => isLoaded);
   if (!isLoaded) return;
+  const checkLightReceiversAsync = await spawnLightReceiversAsync(
+    state.lightReceivers,
+    () => isLoaded
+  );
+  if (!checkLightReceiversAsync || !isLoaded) return;
   const world = getECSWorld();
   state.pebbles = block.scatterIds.reduce((sum, id) => {
     const mesh = world.getComponent(id, ComponentType.OBJECT3D)?.value as THREE.InstancedMesh;
@@ -281,4 +297,5 @@ export const scene = async () => {
   // once it's done
   void checkCulledCellsAsync(() => isLoaded);
   if (settleDropAsync) void settleDropAsync();
+  void checkLightReceiversAsync();
 };

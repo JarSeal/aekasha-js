@@ -1012,6 +1012,7 @@
       "getMemberMesh": "Function",
       "getMergeDebugStats": "Function",
       "getMergeUnmergedViews": "Function",
+      "getMovedMemberRewriter": "Function",
       "getPending": "Function",
       "getQueued": "Function",
       "holdForSceneLoad": "Function",
@@ -1027,6 +1028,7 @@
       "releaseMember": "Function",
       "releaseSceneLoadHolds": "Function",
       "setMergeSceneLoading": "Function",
+      "setMovedMemberRewriter": "Function",
       "syncMemberPose": "Function"
     },
     "src/_engine/features/merging/MergeTypes.ts": {

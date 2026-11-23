@@ -44,7 +44,7 @@ const saveAssets = (geoId: string, matId: string) => {
 };
 
 describe('createInstancedMeshEntity', () => {
-  test('writes the matrices and bounds over every instance, outside the spatial index', () => {
+  test('writes the matrices and bounds over every instance, in the spatial index', () => {
     saveAssets('siBoundsGeo', 'siBoundsMat');
     const entityId = createInstancedMeshEntity(
       {
@@ -63,11 +63,26 @@ describe('createInstancedMeshEntity', () => {
     expect(mesh.parent).toBe(getRootScene());
     expect(mesh.userData.entityId).toBe(entityId);
     expect(world.hasComponent(entityId, ComponentType.TAG_IS_MESH)).toBe(true);
-    expect(world.hasComponent(entityId, ComponentType.SPATIAL_INDEXED)).toBe(false);
+    // A light receiver, measured by its bounds over every instance (i090)
+    expect(world.hasComponent(entityId, ComponentType.SPATIAL_INDEXED)).toBe(true);
+    expect(world.hasComponent(entityId, ComponentType.FRUSTUM_CULLING_ENABLED)).toBe(false);
     for (const x of [-5.5, 5.5]) {
       expect(mesh.boundingSphere!.containsPoint(new THREE.Vector3(x, 0, 0))).toBe(true);
       expect(mesh.boundingBox!.containsPoint(new THREE.Vector3(x, 0, 0))).toBe(true);
     }
+    world.deleteEntity(entityId);
+  });
+
+  test("keeps the entity options' spatial index and ECS frustum culling", () => {
+    saveAssets('siOptsGeo', 'siOptsMat');
+    const props = { geo: 'siOptsGeo', mat: 'siOptsMat', instances: [placeAt(0)] };
+    const entityId = createInstancedMeshEntity(props, {
+      world,
+      spatialIndex: false,
+      ecsFrustumCullingEnabled: true,
+    });
+    expect(world.hasComponent(entityId, ComponentType.SPATIAL_INDEXED)).toBe(false);
+    expect(world.hasComponent(entityId, ComponentType.FRUSTUM_CULLING_ENABLED)).toBe(true);
     world.deleteEntity(entityId);
   });
 

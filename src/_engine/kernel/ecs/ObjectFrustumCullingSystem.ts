@@ -85,20 +85,61 @@ const getSpotLightBoundingSphere: BoundingVolumeProvider = (entityId, world) => 
   return _spotLightSphere;
 };
 
+// An entity drawn as an instance of another entity's mesh (a pool instance, drawn by its pool's
+// InstancedMesh) has no OBJECT3D of its own: the feature that draws it measures it (i100). The
+// first registered component type an entity has picks the provider, as the spatial index's radius
+// providers do (SpatialMembership.ts).
+const instanceBoundsProviders: [ComponentType, BoundingVolumeProvider][] = [];
+
+/**
+ * Measures the entities with `componentType` that are drawn as instances of another entity's mesh,
+ * for {@link getMeshWorldBoundingSphere}: the provider returns the instance's world-space sphere,
+ * or undefined while it isn't drawn. Registering a type again replaces its provider. Called from
+ * a feature's install (instancing's pools).
+ * @internal
+ */
+export function registerInstanceBoundsProvider(
+  componentType: ComponentType,
+  provider: BoundingVolumeProvider
+): void {
+  const index = instanceBoundsProviders.findIndex(([type]) => type === componentType);
+  if (index >= 0) instanceBoundsProviders[index][1] = provider;
+  else instanceBoundsProviders.push([componentType, provider]);
+}
+
+const getInstanceWorldBoundingSphere = (entityId: number, world: ECSWorld) => {
+  for (let i = 0; i < instanceBoundsProviders.length; i++) {
+    const [componentType, provider] = instanceBoundsProviders[i];
+    if (world.hasComponent(entityId, componentType)) return provider(entityId, world);
+  }
+  return undefined;
+};
+
 const _meshBoundingSphere = new THREE.Sphere();
 
 /**
  * A mesh entity's world-space bounding sphere: its geometry's (computed if missing) at its world
  * position, the radius scaled by its largest scale axis (conservative for a non-uniform scale,
- * p080 §2.2). Undefined for an entity without a mesh.
+ * p080 §2.2). An `InstancedMesh`'s is its own sphere over every instance (computed if missing)
+ * in its world space, so a cell of static instances is measured whole (i090). An entity without
+ * an `OBJECT3D` is measured by its instance bounds provider (`registerInstanceBoundsProvider`: a
+ * pool instance's drawn copy, i100). Undefined for an entity without a mesh, or an instance not
+ * drawn.
  * Shared with the spatial feature's light culling.
  * @internal
  * @returns a scratch sphere, overwritten by the next call: copy it to keep it
- * @remarks `getWorldPosition` updates the mesh's world matrix (and its parents') first.
+ * @remarks The mesh's world matrix (and its parents') is updated first.
  */
 export const getMeshWorldBoundingSphere: BoundingVolumeProvider = (entityId, world) => {
   const obj = world.getComponent(entityId, ComponentType.OBJECT3D)?.value;
+  if (!obj) return getInstanceWorldBoundingSphere(entityId, world);
   if (!(obj instanceof THREE.Mesh)) return undefined;
+
+  if (obj instanceof THREE.InstancedMesh) {
+    if (!obj.boundingSphere) obj.computeBoundingSphere();
+    obj.updateWorldMatrix(true, false);
+    return _meshBoundingSphere.copy(obj.boundingSphere!).applyMatrix4(obj.matrixWorld);
+  }
 
   const geometry = obj.geometry;
   if (!geometry.boundingSphere) geometry.computeBoundingSphere();

@@ -38,7 +38,9 @@ addToMergeGroup('ruins', walls);
 - **Built in the next frame**: what joins a group during a frame is merged once, in the next
   frame's render sync (an app's first build also waits a frame for the merge code to load). A
   group of more than 65 536 vertices merges in the assets worker, its new members drawn on their
-  own until it's in, so no frame goes without them.
+  own until it's in, so no frame goes without them. Changes meanwhile don't start it over: a
+  member moved with `updateMergeMember` is written where it is once it lands, and a member that
+  joins is merged by the build after it.
 - **Culled whole.** The group is one bounding sphere: in view, all of it is drawn. It's the entry
   in the spatial index too (its members leave the `DEFAULT` domain while merged), and a member's
   own culling and LOD settings do nothing while it's merged.

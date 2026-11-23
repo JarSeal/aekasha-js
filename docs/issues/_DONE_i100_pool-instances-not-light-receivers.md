@@ -1,6 +1,6 @@
 **Title:** Pool instances in the `DEFAULT` spatial domain never count as light receivers: a light near only them is culled
 
-Status: open | documented in p616, not fixed
+Status: fixed | 2026-11-23, a pool instance is measured by its drawn copy, through a provider the pools register
 Category: Spatial, Instancing, Rendering
 Found: 2026-10-19, p616 §1.4 S8 (read from the code)
 Our workaround: give a pool a spatial domain of its own (as largeWorld's tree pool joins `FOLIAGE`), or leave object culling off for the lights whose only receivers are pool instances
@@ -43,3 +43,29 @@ geometry's sphere. Which lights are culled could then move in the scene runner's
 
 Either is an engine minor: no API changes, only which lights a scene with pools in `DEFAULT`
 culls.
+
+## The fix
+
+The second way out, in engine 6.23.0, with the provider under `getMeshWorldBoundingSphere` rather
+than in frustum culling's table: there an undefined sphere means "always visible", in the receiver
+test "not a receiver".
+
+- `registerInstanceBoundsProvider(componentType, provider)` (`@internal`,
+  `kernel/ecs/ObjectFrustumCullingSystem.ts`): `getMeshWorldBoundingSphere` asks the first
+  registered type an entity without an `OBJECT3D` has. An entity with one is measured as before, so
+  plain meshes, static instance cells (i090) and ECS frustum culling don't change, and
+  `LightObjectCullingSystem.ts` doesn't either.
+- The pools register one for `INSTANCED_MESH_SLOT` (`installInstancedMeshPools`): the drawn
+  copy's sphere, from the instance matrix `instancedMeshPoolSyncSystem` baked this frame (it runs
+  before light culling) in the pool mesh's world space; an instanced LOD pool's local sphere over
+  every level; the outgoing copy while an instance fades to LOD culled; none while it's culled, so
+  it lights nothing. Not the grid's position and radius (the first way out): that would put the
+  slot and its fade copies in the spatial feature, needs the slot the visit doesn't pass, and is
+  looser than the drawn copy's sphere.
+- The grid still finds an instance by its pool's radius, level 0's conservative one (unchanged):
+  an instanced LOD pool whose lower level is larger than level 0 could be missed by a light that
+  reaches only that larger level's edge.
+- Checked by `InstancedMeshPool.test.ts` (a moved instance in a moved pool mesh, LOD culled and
+  fading out, an LOD pool's larger level), and in `scatterTest` (`lightReceivers.ts`): a pool of 9
+  rocks joined to `DEFAULT`, away from every other mesh, keeps the object-culled point light over it
+  on, while the pool's mesh isn't in the spatial index; the load logs an error otherwise.

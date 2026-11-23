@@ -3,6 +3,7 @@ import * as THREE from 'three/webgpu';
 import { ECSWorld } from '../../kernel/ecs/ECS';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import { getLodTargets } from '../../kernel/ecs/LodTargets';
+import { getMeshWorldBoundingSphere } from '../../kernel/ecs/ObjectFrustumCullingSystem';
 import type { FeatureContext } from '../../kernel/init/Features';
 import {
   createInstancedLodPool,
@@ -51,6 +52,10 @@ const createLodPool = () =>
     ],
     maxInstances: 4,
   });
+
+const getInstanceLodTarget = () =>
+  getLodTargets().find((entry) => entry.componentType === ComponentType.INSTANCED_MESH_SLOT)!
+    .target;
 
 const xOf = (mesh: THREE.InstancedMesh, index: number) =>
   new THREE.Vector3().setFromMatrixPosition(mesh.getMatrixAt(index, new THREE.Matrix4())).x;
@@ -207,9 +212,7 @@ describe('createInstancedLodPool', () => {
   test('grows the bounds for an instance that moved while it was LOD culled', () => {
     const pool = createLodPool();
     const [entityId] = pool.spawn([placeAt(0)]);
-    const target = getLodTargets().find(
-      (entry) => entry.componentType === ComponentType.INSTANCED_MESH_SLOT
-    )!.target;
+    const target = getInstanceLodTarget();
 
     target.setCulled!(entityId, world, true, false);
     moveTo(entityId, -100);
@@ -263,5 +266,64 @@ describe('TYPED_ARRAY storage', () => {
     instancedMeshPoolSyncSystem(typedWorld);
 
     expect(pool.mesh.instanceMatrix.version).toBe(version);
+  });
+});
+
+// i100: an instance has no OBJECT3D, so light culling's receiver test measured none of them
+describe('the light receiver bounds', () => {
+  test("an instance's sphere is its drawn copy's, in the pool mesh's world space", () => {
+    const pool = createInstancedMeshPool({
+      world,
+      geometry: new THREE.BoxGeometry(),
+      material: new THREE.MeshBasicNodeMaterial(),
+      maxInstances: 2,
+    });
+    const [entityId] = pool.spawn([placeAt(10)]);
+    pool.mesh.position.set(0, 5, 0);
+
+    moveTo(entityId, 20);
+    instancedMeshPoolSyncSystem(world);
+
+    const sphere = getMeshWorldBoundingSphere(entityId, world)!;
+    expect(sphere.center.toArray()).toEqual([20, 5, 0]);
+    expect(sphere.radius).toBeCloseTo(Math.sqrt(3) / 2, 5);
+  });
+
+  test('a LOD-culled instance has none, one fading out to culled still has its copy', () => {
+    const pool = createLodPool();
+    const [faded, culled] = pool.spawn([placeAt(1), placeAt(-1)]);
+    const target = getInstanceLodTarget();
+
+    target.setCulled!(culled, world, true, false);
+    target.setCulled!(faded, world, true, true);
+
+    expect(getMeshWorldBoundingSphere(culled, world)).toBeUndefined();
+    expect(getMeshWorldBoundingSphere(faded, world)!.center.x).toBeCloseTo(1, 5);
+  });
+
+  test("an instance of an instanced LOD pool is measured by every level's sphere", () => {
+    const pool = createInstancedLodPool({
+      world,
+      levels: [
+        {
+          geometry: new THREE.BoxGeometry(),
+          material: new THREE.MeshBasicNodeMaterial(),
+          screenSize: 0.5,
+        },
+        {
+          geometry: new THREE.BoxGeometry(4, 4, 4),
+          material: new THREE.MeshBasicNodeMaterial(),
+          screenSize: 0.1,
+        },
+      ],
+      maxInstances: 2,
+    });
+    const [entityId] = pool.spawn([placeAt(0)]);
+
+    // In level 0's mesh, the larger level 1's sphere
+    expect(world.getComponent(entityId, ComponentType.INSTANCED_MESH_SLOT)!.mesh).toBe(
+      pool.meshes[0]
+    );
+    expect(getMeshWorldBoundingSphere(entityId, world)!.radius).toBeCloseTo(2 * Math.sqrt(3), 5);
   });
 });

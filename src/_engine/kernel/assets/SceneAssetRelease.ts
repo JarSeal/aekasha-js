@@ -101,7 +101,8 @@ export const countReleasedAssets = (released: ReleasedAssets) =>
  * and environment). An asset another owner holds too only loses the scene's keys; one still in use
  * keeps them, for the scene's next release. SceneLoader runs this for the previous scene once the
  * next one has loaded, so whatever the next scene shares has been re-tagged to it (or has taken
- * refs) and stays.
+ * refs) and stays, and for a failed load's scene once what it built is deleted (i110), so what it
+ * shares with the current scene stays the current scene's.
  *
  * A released material disposes the texture clones it holds alone; registered textures are only
  * released here by owner, never through a material.

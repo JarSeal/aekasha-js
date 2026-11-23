@@ -67,8 +67,9 @@ matrix, and grows the mesh's bounds when the instance leaves them, so three neve
 mesh while a moved instance is on screen.
 
 The pools need `instancing()`, an instanced LOD pool's levels `lod()` too, and a pool's
-`spatialDomain` option `spatial()` (without it, the pool warns and indexes nothing). Give a pool
-a domain of its own: instances in `DEFAULT` [aren't a light's receivers](hub:issues/pool-instances-not-light-receivers).
+`spatialDomain` option `spatial()` (without it, the pool warns and indexes nothing). Instances in
+`DEFAULT` keep a point or spot light with object culling on as any mesh does, each measured where
+it's drawn; a LOD-culled instance lights nothing.
 
 The selection costs one distance and one multiply per entity, after frustum culling, and only an
 entity whose level changed is touched. `AppConfig.lod.maxSelectionsPerFrame`
@@ -136,9 +137,10 @@ The seed mixes the world seed, the target's grid place and the scatter's id, so 
 its own placements and every visit the same. An import's GPU instances spawned with
 `spawnImportedAsset` become static cells too.
 
-Cells aren't in the spatial index (it would measure one instance at the mesh's origin), so a
-point or spot light with object culling whose only receivers in range are cells is culled; a
-terrain block under them keeps it on ([the issue](hub:issues/static-instance-cells-not-light-receivers)).
+A cell is in the spatial index, measured by its bounds over every instance, so it keeps a point
+or spot light with object culling on as any mesh does. After changing a cell's matrices, compute
+its bounds again and call [`refreshSpatialRadius`](api:refreshSpatialRadius) and
+[`refreshLodBounds`](api:refreshLodBounds).
 
 ## Instance sets
 

@@ -243,6 +243,9 @@ type ActiveLoad = {
   loader: SceneLoader;
   loaderContainer: CMPHandle | null;
   deletePrevScene: boolean;
+  /** The previous scene's teardown has started: from here a failed load has built (and loaded)
+   * parts of its scene, which {@link tearDownFailedLoadAsync} deletes and releases */
+  isTornDown: boolean;
 };
 
 /**
@@ -367,21 +370,22 @@ const beginLoad = (loadSceneProps: LoadSceneProps): ActiveLoad => {
     loader,
     loaderContainer,
     deletePrevScene: Boolean(loadSceneProps.deletePrevScene),
+    isTornDown: false,
   };
 };
 
-/** Tears the previous scene down: the features' exit hooks, the groups, its loopers, its exit
- * listeners, the secondary worlds and the default world's non-persistent entities. */
-const tearDownPrevScene = (load: ActiveLoad, prevSceneId: string | undefined) => {
-  // The features tear down the previous scene (in reverse install order: the viewports,
-  // PostFX and lines, the sky box, characters, then physics entities), then the groups,
-  // loopers and non-persistent entities go
-  runSceneExitHooks(prevSceneId);
+/** Deletes a scene's parts that the features and the kernel keep apart from its entities: the
+ * features' exit hooks' (in reverse install order: the viewports, PostFX and lines, the sky box,
+ * characters, then physics entities), the groups and the scene's loopers. */
+const deleteSceneParts = (sceneId: string | undefined) => {
+  runSceneExitHooks(sceneId);
   deleteAllGroupEntities();
-  if (prevSceneId) deleteAllSceneLoopers(prevSceneId);
+  if (sceneId) deleteAllSceneLoopers(sceneId);
+};
 
-  runOnSceneExit(prevSceneId);
-  runOnAllSceneExits();
+/** Deletes the ray helpers, the secondary worlds and the default world's non-persistent entities.
+ * Returns the default world. */
+const deleteSceneEntities = () => {
   deleteAllRayHelpers();
 
   // Secondary ECS worlds (eg. created ad-hoc by a scene) are scene-scoped and
@@ -392,6 +396,21 @@ const tearDownPrevScene = (load: ActiveLoad, prevSceneId: string | undefined) =>
 
   const ecsWorld = existsOrThrow(getECSWorld(), 'Could not find ECS World in loadScene');
   ecsWorld.clearNonPersistent();
+  return ecsWorld;
+};
+
+/** Tears the previous scene down: the features' exit hooks, the groups, its loopers, its exit
+ * listeners, the secondary worlds and the default world's non-persistent entities. */
+const tearDownPrevScene = (load: ActiveLoad, prevSceneId: string | undefined) => {
+  // From its first step: a teardown that throws halfway has changed the page too
+  load.isTornDown = true;
+  // The features tear down the previous scene, then the groups, loopers and non-persistent
+  // entities go
+  deleteSceneParts(prevSceneId);
+
+  runOnSceneExit(prevSceneId);
+  runOnAllSceneExits();
+  const ecsWorld = deleteSceneEntities();
   // The features' part, before anything of the next scene exists (spatial's scene domains)
   runSceneWorldClearedHooks(ecsWorld, prevSceneId, load.sceneData);
   if (load.deletePrevScene && prevSceneId && prevSceneId !== load.sceneId) {
@@ -479,9 +498,34 @@ const runLoadPhasesAsync = async (load: ActiveLoad) => {
   if (loader.loadEndFn) await loader.loadEndFn(loader);
 };
 
-/** Ends a started load, loaded or failed: a failed one also undoes what {@link beginLoad} and the
- * phases it reached changed (the inputs, the canvas's pointer events, the debugger, the loading
- * scene and the asset owner), so the page stays usable on the scene that is current. The
+/** A failed load's part of its scene (i110): when it failed after the teardown, before its scene
+ * became current, deletes what it built (the features' parts, its groups, loopers and entities,
+ * which hold refs on its materials and geometries), then releases the assets the scene holds alone
+ * (`releaseSceneOwnedAssets`: what the scene that's current, or a `retainedTextures` hook, holds
+ * too stays). The scene's exit listeners don't run: it never entered. A failure before the
+ * teardown changed nothing, and a scene that became current stays current with what it has.
+ * Resolves `false`, and never rejects: a throw (a feature's exit hook) is logged, and the load
+ * finishes as failed. */
+const tearDownFailedLoadAsync = (load: ActiveLoad): Promise<false> =>
+  new Promise<void>((resolve) => {
+    if (load.isTornDown && load.sceneId !== getCurrentSceneId()) {
+      deleteSceneParts(load.sceneId);
+      deleteSceneEntities();
+      releaseSceneOwnedAssets(load.sceneId);
+    }
+    resolve();
+  }).then(
+    () => false as const,
+    (reason: unknown) => {
+      lerror(`Could not delete what the failed load of scene "${load.sceneId}" built.`, reason);
+      return false as const;
+    }
+  );
+
+/** Ends a started load, loaded or failed (a failed one after {@link tearDownFailedLoadAsync}): a
+ * failed one also undoes what {@link beginLoad} and the phases it reached changed (the inputs, the
+ * canvas's pointer events, the debugger, the loading scene and the asset owner), so the page stays
+ * usable on the scene that is current. The
  * `loadSettled` scene hooks run right after it (the draggable windows close the ones the load
  * suspended). */
 const finishLoad = (load: ActiveLoad, isLoaded: boolean) => {
@@ -523,6 +567,7 @@ const runLoadAsync = (loadSceneProps: LoadSceneProps): Promise<boolean> => {
         return false;
       }
     )
+    .then((isLoaded) => (isLoaded || !load ? isLoaded : tearDownFailedLoadAsync(load)))
     .then((isLoaded) => {
       if (load) finishLoad(load, isLoaded);
       // Failed or not (a failed load must not leave physics held)
@@ -558,7 +603,8 @@ const runQueuedLoadAsync = (loadSceneProps: LoadSceneProps): Promise<boolean> =>
  * wins).
  * @param loadSceneProps the scene, its code and the loader
  * @returns `true` once the scene is current, `false` when the load failed (logged, and undone so
- * the page stays usable) or was replaced while it waited. It never rejects.
+ * the page stays usable: what it built of its scene deleted, and the assets it loaded released
+ * but for those something else holds) or was replaced while it waited. It never rejects.
  * @remarks Never await it from a scene's code or a scene hook: the call waits for the load it runs
  * in, which waits for it. Call it without `await` there (it runs once the load has finished).
  * @example

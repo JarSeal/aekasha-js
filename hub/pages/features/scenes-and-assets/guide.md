@@ -311,8 +311,9 @@ if (!isLoaded) showMenu(); // It failed, or a later call took its place
 - It resolves `true` once the scene is current, and `false` when the load failed or another call
   replaced it. It never rejects: a failed load is logged, the input and the debugger come back,
   and the scene that was current stays current (torn down, when the load failed after the
-  teardown: load another scene). A broken scene's assets aren't released yet (see
-  [the issue](hub:issues/failed-scene-load-keeps-its-assets)).
+  teardown: load another scene). What the load built of the broken scene goes with it: its
+  entities, groups and loopers are deleted, and the assets it loaded are released, but for those
+  something else still holds.
 - Never `await` it in a scene file or a scene hook: the call would wait for the load it runs in.
   Call it without `await` there, and it runs once that load has finished.
 

@@ -61,3 +61,25 @@ describe.each<ECSStorageMode>(['MAP', 'TYPED_ARRAY'])('the refresh (%s storage)'
     expect(grid.getRadius(first)).toBeCloseTo(localRadius, 5);
   });
 });
+
+describe('the mesh radius', () => {
+  test("measures an InstancedMesh by its sphere over every instance, not one instance's", () => {
+    const world = new ECSWorld({ id: 'spatial-instanced', maxEntities: 64 });
+    registerSpatialDomain(world, { id: 'D', cellSize: 10, maxMembers: 8, update: 'MANUAL' });
+    const entityId = world.createEntity();
+    // Two unit boxes 8 m apart, both off the mesh's origin: a cell of static instances (i090)
+    const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), undefined, 2);
+    mesh.setMatrixAt(0, new THREE.Matrix4().makeTranslation(2, 0, 0));
+    mesh.setMatrixAt(1, new THREE.Matrix4().makeTranslation(10, 0, 0));
+    mesh.computeBoundingSphere();
+    world.addComponent(entityId, ComponentType.OBJECT3D, { value: mesh, _lastVersion: -1 });
+    world.addComponent(entityId, ComponentType.TAG_IS_MESH, true);
+    joinSpatialDomain(world, entityId, 'D');
+    rebuildSpatialDomain(world, 'D');
+
+    const sphere = mesh.boundingSphere!;
+    const radius = getSpatialDomain(world, 'D')!.getRadius(entityId)!;
+    expect(radius).toBeCloseTo(sphere.center.length() + sphere.radius, 5);
+    expect(queryAt(world, 10)).toEqual([entityId]);
+  });
+});

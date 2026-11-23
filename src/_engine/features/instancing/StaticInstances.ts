@@ -73,10 +73,10 @@ export type InstancedMeshEntityProps = Omit<MeshProps, 'merge'> & {
  * @returns the mesh's entity id
  * @throws without instances, for colours that aren't one per instance, and for a geometry or
  *   material id that isn't registered
- * @remarks The entity joins neither the spatial index nor ECS frustum culling, whatever `opts`
- * say: both read one instance's geometry at the mesh's origin. After changing the matrices
- * (`mesh.setMatrixAt`), compute the mesh's bounds again and call `refreshLodBounds` when it has a
- * LOD.
+ * @remarks The spatial index (`opts.spatialIndex`, on by default, so the cell is a light
+ * receiver) and ECS frustum culling (`opts.ecsFrustumCullingEnabled`) measure the whole mesh by
+ * its bounds. After changing the matrices (`mesh.setMatrixAt`), compute the mesh's bounds again,
+ * call `refreshSpatialRadius` when it's in the index and `refreshLodBounds` when it has a LOD.
  * @example
  * ```ts
  * import * as THREE from 'three/webgpu';
@@ -109,14 +109,11 @@ export const createInstancedMeshEntity = (
   if (props.colors) {
     mesh.instanceColor = new THREE.InstancedBufferAttribute(props.colors.slice(), COLOR_SIZE);
   }
-  // Over every instance (InstancedMesh's own): without them three culls by the geometry's
+  // Over every instance (InstancedMesh's own): without them three culls by the geometry's, and
+  // the spatial index and ECS frustum culling measure the mesh by them
   mesh.computeBoundingBox();
   mesh.computeBoundingSphere();
-  return addMeshEntity(mesh, props, {
-    ...opts,
-    spatialIndex: false,
-    ecsFrustumCullingEnabled: false,
-  });
+  return addMeshEntity(mesh, props, opts);
 };
 
 /** What {@link createStaticInstances} takes. */
