@@ -305,8 +305,11 @@ export const rebuildMergeGroup = (groupId: string, world?: ECSWorld) => {
  * Moves a merged member's part of its group's mesh to where the member is now: call it after
  * changing a member's `TRANSFORM` (`setTransform`, a fixed body moved). Only the member's range of
  * the merged geometry is written again, without a rebuild. A member waiting for its group's build
- * is merged where it is then and needs no call, and so does a `BATCHED` group's member's move (its
- * instance follows its `TRANSFORM` every frame). For a `BATCHED` member it writes the member's
+ * is merged where it is then and needs no call, unless the build is running in the assets worker
+ * (a group of more than 65 536 vertices): it read the pose at its start, so the call has the
+ * member written where it is once the build lands (the build isn't dropped, however often it's
+ * called). A `BATCHED` group's member's move needs none (its instance follows its `TRANSFORM`
+ * every frame). For a `BATCHED` member it writes the member's
  * geometry into the batch again instead: call it after changing its geometry's vertices or index
  * (every member sharing the geometry draws the new data), or after giving its mesh another
  * geometry. It counts as the member joining again: a `transparentOrder: 'JOIN'` batch draws it

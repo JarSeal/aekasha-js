@@ -96,8 +96,9 @@ export const beginMergeMemberEdit = (entityId: number, world?: ECSWorld): void =
  * Ends a merge member's edit session: its part of the group's mesh is written for its pose now
  * (in place, without a rebuild, as `updateMergeMember`) and drawn again, its own mesh hidden. Its
  * physics body is moved to its `TRANSFORM` (`setTransform`): a fixed body doesn't follow its mesh.
- * A member waiting for its group's first build needs no write (the build reads its pose). Without
- * an open session it does nothing.
+ * A member waiting for its group's first build is merged at its pose then (a build running in the
+ * assets worker read an older one: the member is written once it lands). Without an open session
+ * it does nothing.
  * @param world the member's world (default: the default world)
  * @throws without the `merging()` feature
  * @example
