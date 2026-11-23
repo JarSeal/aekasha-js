@@ -195,6 +195,14 @@ Move a body inside before you enable it again, or the next step takes it out aga
 joints is made `FIXED` instead of disabled (the event's `frozen`): put it back with `setBodyType`.
 Bounds on a fixed or kinematic body are never read, and the debug env says so.
 
+[`getWorldBoundsStats`](api:getWorldBoundsStats) reads the current scene's bounds (where they come
+from: the scene, the app's default or none), how many bodies have left them, and the last 20 exits,
+each with its entity's name, step, position and the action taken. In the debug env the Physics API
+tab shows the same in its "World bounds" folder, can draw the box (each closed side as a grid; an
+open side isn't drawn), and lists the latest exits: a row opens the entity's edit window while it
+still exists. That window's "World bounds" folder shows the entity's own bounds and draws their
+box.
+
 ## Queries, events and joints
 
 - Ray and shape casts go through the world: [`getPhysicsWorld`](api:getPhysicsWorld)`().castRay(…)`,
@@ -282,7 +290,7 @@ every body.
   systems.
 - [`setSceneWorldBounds`](api:setSceneWorldBounds): the box a scene's bodies must stay in, and
   [`setEntityWorldBounds`](api:setEntityWorldBounds): an entity's own, and what happens when it
-  leaves them.
+  leaves them; [`getWorldBoundsStats`](api:getWorldBoundsStats): the bounds in use and their exits.
 
 ## Read more
 

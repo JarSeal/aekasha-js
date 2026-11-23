@@ -2,23 +2,23 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 4346,
-      "total": 4346
+      "documented": 4365,
+      "total": 4365
     },
     "members": {
-      "documented": 1145,
-      "total": 1145
+      "documented": 1147,
+      "total": 1147
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3773,
-        "total": 3773
+        "documented": 3792,
+        "total": 3792
       },
       "members": {
-        "documented": 969,
-        "total": 969
+        "documented": 971,
+        "total": 971
       }
     },
     "toolkit": {
@@ -189,8 +189,8 @@
     },
     "engine/features/physics": {
       "exports": {
-        "documented": 221,
-        "total": 221
+        "documented": 230,
+        "total": 230
       },
       "members": {
         "documented": 34,
@@ -217,8 +217,8 @@
     },
     "engine/features/physics/backends/rapier": {
       "exports": {
-        "documented": 64,
-        "total": 64
+        "documented": 67,
+        "total": 67
       },
       "members": {
         "documented": 0,
@@ -277,8 +277,8 @@
         "total": 4
       },
       "members": {
-        "documented": 265,
-        "total": 265
+        "documented": 266,
+        "total": 266
       },
       "undocumented": {
         "exports": [],
@@ -301,8 +301,8 @@
     },
     "engine/features/physics/types": {
       "exports": {
-        "documented": 51,
-        "total": 51
+        "documented": 58,
+        "total": 58
       },
       "members": {
         "documented": 20,
@@ -529,8 +529,8 @@
         "total": 101
       },
       "members": {
-        "documented": 164,
-        "total": 164
+        "documented": 165,
+        "total": 165
       },
       "undocumented": {
         "exports": [],

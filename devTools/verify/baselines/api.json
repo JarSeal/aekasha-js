@@ -1084,6 +1084,7 @@
       "reattachRigidBody": "Reference",
       "restoreSnapshot": "Reference",
       "setBodyMovedObserver": "Reference",
+      "setBodyWorldBounds": "Reference",
       "setQueryObserver": "Reference",
       "setWorldBounds": "Reference",
       "step": "Reference",
@@ -1179,10 +1180,13 @@
       "takeSnapshot": "Function"
     },
     "src/_engine/features/physics/backends/rapier/RapierWorldBounds.ts": {
-      "checkBodyAtCreate": "Function",
+      "checkQueuedWorldBounds": "Function",
       "checkWorldBounds": "Function",
       "clearWorldBounds": "Function",
       "drainPendingOutOfBoundsRecords": "Function",
+      "forgetBodyWorldBounds": "Function",
+      "queueBodyCheck": "Function",
+      "setBodyWorldBounds": "Function",
       "setWorldBounds": "Function"
     },
     "src/_engine/features/physics/ColliderDimensions.ts": {
@@ -1209,6 +1213,7 @@
       "deriveColliderFromGeometry": "Function"
     },
     "src/_engine/features/physics/PhysicsBodies.ts": {
+      "CreateBodyOpts": "TypeAlias",
       "createRigidBodies": "Function",
       "createRigidBodiesSync": "Function",
       "createRigidBody": "Function",
@@ -1228,7 +1233,8 @@
       "readBodyPositionsSync": "Function",
       "reattachRigidBody": "Function",
       "reattachRigidBodySync": "Function",
-      "RigidBodyWithColliders": "TypeAlias"
+      "RigidBodyWithColliders": "TypeAlias",
+      "setPhysicsBodyWorldBounds": "Function"
     },
     "src/_engine/features/physics/PhysicsColliders.ts": {
       "createCollider": "Function",
@@ -1261,7 +1267,8 @@
       "queueStaticBodySync": "Function",
       "registerPhysicsDeterminismProbe": "Function",
       "registerPhysicsWireframeDebugAsync": "Function",
-      "settlePendingPhysicsEntities": "Function"
+      "settlePendingPhysicsEntities": "Function",
+      "warnWorldBoundsNotChecked": "Function"
     },
     "src/_engine/features/physics/PhysicsFeature.ts": {
       "physics": "Function",
@@ -1292,6 +1299,7 @@
       "clearPendingEventPushes": "Function",
       "closeWorkerTransport": "Function",
       "commandWorker": "Function",
+      "copyWorldBounds": "Function",
       "DistributiveOmit": "TypeAlias",
       "endSubStepCapture": "Function",
       "flushPhysicsEvents": "Function",
@@ -1309,9 +1317,11 @@
       "setOutOfBoundsHandler": "Function",
       "throwWorkerSync": "Function",
       "toPlainRot": "Function",
+      "toWireBodyWorldBounds": "Function",
       "toWireColliderParams": "Function",
       "toWireJointParams": "Function",
-      "toWireRigidBodyParams": "Function"
+      "toWireRigidBodyParams": "Function",
+      "toWireWorldBounds": "Function"
     },
     "src/_engine/features/physics/PhysicsProbeTypes.ts": {
       "PhysicsProbeReport": "TypeAlias"
@@ -1468,8 +1478,11 @@
     },
     "src/_engine/features/physics/PhysicsWorldBounds.ts": {
       "applySceneWorldBounds": "Function",
+      "getActiveWorldBoundsDef": "Function",
+      "getWorldBoundsStats": "Function",
       "handleOutOfBounds": "Function",
       "installPhysicsWorldBounds": "Function",
+      "setEntityWorldBounds": "Function",
       "setSceneWorldBounds": "Function"
     },
     "src/_engine/features/physics/protocol/PhysicsDownProtocol.ts": {
@@ -1671,11 +1684,18 @@
       "ShapeCastHitAPI": "TypeAlias"
     },
     "src/_engine/features/physics/types/PhysicsWorldBoundsTypes.ts": {
+      "BodyWorldBounds": "TypeAlias",
+      "EntityWorldBounds": "TypeAlias",
       "OutOfBoundsRecord": "TypeAlias",
       "OutOfBoundsSource": "TypeAlias",
       "WorldBoundsAction": "TypeAlias",
       "WorldBoundsBox": "TypeAlias",
-      "WorldBoundsDef": "TypeAlias"
+      "WorldBoundsDef": "TypeAlias",
+      "WorldBoundsExitCallback": "TypeAlias",
+      "WorldBoundsExitEvent": "TypeAlias",
+      "WorldBoundsExitInfo": "TypeAlias",
+      "WorldBoundsSource": "TypeAlias",
+      "WorldBoundsStats": "TypeAlias"
     },
     "src/_engine/features/physics/types/PhysicsWorldTypes.ts": {
       "WorldAPI": "TypeAlias",
@@ -6424,6 +6444,7 @@
       "ColliderAPI",
       "ColliderParams",
       "ColliderSource",
+      "EntityWorldBounds",
       "EventQueue",
       "FeatureType",
       "HeightFieldData",
@@ -6465,6 +6486,11 @@
       "WorldBoundsAction",
       "WorldBoundsBox",
       "WorldBoundsDef",
+      "WorldBoundsExitCallback",
+      "WorldBoundsExitEvent",
+      "WorldBoundsExitInfo",
+      "WorldBoundsSource",
+      "WorldBoundsStats",
       "addPhysicsStepGate",
       "createCollider",
       "createColliders",
@@ -6487,10 +6513,12 @@
       "getPhysicsTier",
       "getPhysicsWorld",
       "getRigidBody",
+      "getWorldBoundsStats",
       "physics",
       "physicsTiers",
       "readBodyPositionsAtStep",
       "requestPhysicsTier",
+      "setEntityWorldBounds",
       "setPhysicsTierPolicy",
       "setPhysicsTierPolicyMember",
       "setSceneWorldBounds",

@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Physics
 Related: p101 scene-load determinism (implemented, see the Physics section of `.claude/CLAUDE.md` and `src/_engine/features/physics/CLAUDE.md`'s Deterministic scene loads: exits must happen on a fixed step, and the determinism probe must stay green), p500_restore-physics-snapshot.md (bounds are configuration, not simulation state, see §8), the `lines()` feature (`src/_engine/features/lines/`, `createLines`: Phase 3 draws the bounds with it), `src/_engine/features/physics/CLAUDE.md`'s Simulation tiers (p352, p343: the tiers and their distance policy, §8)
 
@@ -110,7 +110,7 @@ Public functions:
 - `setSceneWorldBounds(def: WorldBoundsDef | null, sceneId?: string)` (`PhysicsEntity.ts`): per-scene registration. Default target is the loading scene, else the current one — the same rule as `registerSkyBox`. `null` explicitly turns bounds off for that scene even if `AppConfig` has a default.
 - `setEntityWorldBounds(entityId: number, bounds: EntityWorldBounds | null, ecsWorld?)` (`PhysicsEntity.ts`): adds, replaces or removes the override.
 - `createPhysicsEntity(..., entityOpts)`: `entityOpts.worldBounds?: EntityWorldBounds` as a shorthand for calling `setEntityWorldBounds` right after creation, applied before the creation promise resolves (so it is in place before the scene-load hold is released).
-- `getWorldBoundsStats()`: exit count for the current scene, last N exits. Used by the debug tab (Phase 3).
+- `getWorldBoundsStats()`: exit count for the current scene, last N exits. Used by the debug tab (Phase 3; as built: the definition and its source too, the last 20 exits).
 
 ---
 
@@ -231,13 +231,24 @@ As built (section 3, the warning): the type checked is the one the body was crea
 
 As built (section 4, the character default): no engine default, decided in Phase 2: a character follows the scene's bounds like any dynamic body (deleted by default), since a respawn needs a place only the app knows, and `'CALLBACK'` without `onExit` would leave an invisible player. `createCharacter` and `createDynamicCharacter` take a `worldBounds` option, passed to `createPhysicsEntity` (so it rides in the create); `createCharacterOfKind` takes none (a callback isn't data): `setEntityWorldBounds(character.entityId, …)` after. The Hub's physics page (World bounds: the entity's bounds, the actions) and characters page (Falling out of the level) are updated here rather than in Phase 4.
 
-### Phase 3 — Debug tooling
+### Phase 3 — Debug tooling — done
 
 - Physics API debug tab: a "World bounds" folder (`DebuggerPaneItem`s next to the others in `debug/_dbg__PhysicsTabFolders.ts`: the UI kit's property grid, compact density) with the active global box (monitors, source: config / scene / none), the exit count for the current scene and a list of the last exits (a `debuggerListCMP` list, clicking a row opens the entity's edit window, `_dbg__PhysicsEntityWindow.ts`).
 - A toggle that draws the global box with the `lines()` feature (`createLines`), open sides clipped to a large finite size, and per-entity boxes for selected entities (the entity window's own toggle). Implementation in a `_dbg__` file, dynamically imported; without `lines()` installed, the toggle is left out.
 - Optional: live editing of the scene's global box, stored as a debug override with an undo action (`registerUndoRedoActionHandler`, `src/_engine/debug/UndoRedo.ts`; the world settings' undo in `_dbg__PhysicsSettingsUndo.ts` is the pattern). Skip if it isn't needed.
 
+As built (engine 6.22.0, unchanged: the branch's minor bump covers it):
+
+- **`getWorldBoundsStats()`** (section 1) is in `PhysicsWorldBounds.ts`, not beside the facade's exit steps (`getOutOfBoundsExitSteps` is a body id → step map without names or actions), public on `aekasha/physics` as §3 lists it: `{ def, source, exitCount, recentExits }` (types `WorldBoundsStats`, `WorldBoundsSource`: `'SCENE'` (a scene's `null` included), `'CONFIG'`, `'NONE'`; `WorldBoundsExitInfo`), the last 20 exits, a new snapshot per call. `activeSource` is kept beside `activeDef`. `handleOutOfBounds` records every exit before its action (a deleted entity is still named; a body without a live entity as `body <id>` with a null entity and action); the name is the debug log's (`getExitName`), so it's computed in production too now. The count and list start over in `applySceneWorldBounds` (each scene's world), not in `resetPhysicsWorld`. `getActiveWorldBoundsDef` (`@internal`) is the definition without the snapshot's allocation, for the drawing.
+- **The tab** (section 2): a new `debug/_dbg__PhysicsWorldBounds.ts` (the tab's folders module doesn't import the entity window, and the exits list opens it): the "World bounds (live)" folder after the tiers' (the box as text, its source and action, the exit count, the entities with `WORLD_BOUNDS`, the box toggle) and a "World bounds exits (latest 20)" list, **after** the entities' list: the scene runner's `debugger` script opens the physics entity window through row 0 of the tab's first list (`devTools/verify/scenes.config.ts`). Newest first; a row opens the entity's window while it's alive with a body in the default world, else it's dimmed with the reason in its tooltip.
+- **The drawing** (section 3): `debug/_dbg__WorldBoundsDraw.ts`, imported **statically** (the tab already loads the lines modules through `_dbg__PhysicsDebugDraw.ts`, so a chunk of its own saves nothing; the streaming overlay does the same). A 2 px `FAT` line per box at 0.8 opacity, `depthTest: false`; each closed side a 10 × 10 grid, an open side not drawn, the closed sides reaching 250 m past the box's other side (or the origin). A `LATE_MAIN` system, registered on the first toggle, compares references per frame (the active definition, each entity's `WORLD_BOUNDS`: a set always stores a copy) and refills a line only on a change, so a scene change or a mid-scene set redraws by itself; an entity's line goes with the entity. The global toggle ("Draw the box (orange)") is saved as `worldBoundsBoxShown` in `PHYSICS_UI_LS_KEY` and turned on again at the tab's registration. The entity window's "World bounds" folder (bodies created `DYNAMIC` only, closed by default): the entity's own bounds as text (`describeEntityWorldBounds`, through `toWireBodyWorldBounds`) and "Draw its own box (magenta)"; the window's folder-state callback now saves only the wireframe folder's. Without `lines()` both toggles are left out.
+- **Live editing** (section 4): skipped. The bounds are set in a scene's code, so an edit lasts until the reload unless kept as a new kind of debug override; Phase 4's scene JSON key is where they change without code.
+- Checked in the gym (Chrome, WebGPU): with `{ min: { y: -50 }, max: { x: 5 }, action: 'DISABLE' }` set from the page, Suzanne exited and showed in the folder and the list, its row opened its window, and both boxes drew; no console errors.
+- Tests: `PhysicsFacade.test.ts` (the stats: the source, names and actions, the 20 limit, the reset), `debug/_dbg__WorldBoundsDraw.test.ts` (the box and the entity's bounds as text).
+
 ### Phase 4 — Scene JSON
+
+From Phase 3 (see its As built): a JSON key applied through `setSceneWorldBounds` reads as `source: 'SCENE'` in `getWorldBoundsStats` and the tab. If the tab should tell the JSON's bounds from code's, widen `WorldBoundsSource` (a public type: a value added). The tab's folder and drawing need nothing else: they follow `activeDef`.
 
 - Optional `worldBounds` scene key, same shape as `WorldBoundsDef` without callbacks, as physics' part of the scene schema (a `FeatureSchemaPart`, `src/_engine/schemas/FeatureSchemas.ts`: a feature brings its own scene fields, the kernel's `SceneSchema.ts` imports none), so a scene that sets it names `physics` in its feature manifest (`devTools/gather/CLAUDE.md`).
 - `gatherAppData` passes it through; physics' scene hook calls `setSceneWorldBounds`. The JSON Schema for editor autocomplete updates automatically.
