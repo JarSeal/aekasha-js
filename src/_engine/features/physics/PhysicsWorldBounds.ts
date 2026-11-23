@@ -110,6 +110,14 @@ export const applySceneWorldBounds = () => {
 };
 
 /**
+ * The definition the current world uses, or null. Never changed in place (a set stores a copy),
+ * so the debug drawing compares it every frame by reference, without the allocation of
+ * getWorldBoundsStats.
+ * @internal
+ */
+export const getActiveWorldBoundsDef = (): Readonly<WorldBoundsDef> | null => activeDef;
+
+/**
  * The current scene's world bounds and their exits: the definition its world uses and where it
  * comes from, how many bodies left it, and the latest exits (each entity's name and the action
  * taken, read when the exit was handled). A snapshot: a new object every call. The Physics API

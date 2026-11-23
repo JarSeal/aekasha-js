@@ -60,6 +60,7 @@ import {
   getWorldBoundsExitsList,
   getWorldBoundsFolder,
   refreshWorldBoundsReadout,
+  restoreWorldBoundsBoxShown,
 } from './_dbg__PhysicsWorldBounds';
 
 type Item = DebuggerPaneItem<PhysicsState>;
@@ -348,6 +349,7 @@ const TAB_LS_KEYS = [
 export const _createPhysicsAPIDebugGUI = () => {
   loadPhysicsUIState();
   restoreWireframeState();
+  restoreWorldBoundsBoxShown();
 
   const state = getPhysicsState();
 
@@ -402,8 +404,10 @@ export const _createPhysicsAPIDebugGUI = () => {
             getWireframeFolder(wireframeProxies),
           ],
         },
-        getWorldBoundsExitsList(),
         getPhysicsEntitiesList(),
+        // After the entities' list: the scene runner's debugger script opens an entity's window
+        // through the tab's first list (devTools/verify/scenes.config.ts)
+        getWorldBoundsExitsList(),
       ];
     },
   });

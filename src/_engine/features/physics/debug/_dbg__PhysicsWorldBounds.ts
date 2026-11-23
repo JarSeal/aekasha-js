@@ -1,6 +1,6 @@
 // The Physics API tab's world bounds (p102 Phase 3): the "World bounds" folder (the current world's
-// box, where it comes from, its action, the scene's exit count) and the list of the latest exits,
-// whose rows open the exited entity's edit window. Its own module: the list opens the window, and
+// box, where it comes from, its action, the scene's exit count, the toggle that draws it) and the
+// list of the latest exits, whose rows open the exited entity's edit window. Its own module: the list opens the window, and
 // the tab's folders module doesn't import the window's (see _dbg__PhysicsDebugState.ts).
 import {
   debuggerListCMP,
@@ -12,39 +12,22 @@ import { getECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
 import { getWorldBoundsStats } from '../PhysicsWorldBounds';
 import type { PhysicsState } from '../types/PhysicsConfigTypes';
-import type {
-  WorldBoundsBox,
-  WorldBoundsExitInfo,
-  WorldBoundsStats,
-} from '../types/PhysicsWorldBoundsTypes';
+import type { WorldBoundsExitInfo, WorldBoundsStats } from '../types/PhysicsWorldBoundsTypes';
 import {
   EDIT_PHYS_ENTITY_WIN_ID,
   getPhysWinEntityId,
   getPhysicsEntityRigidBody,
+  isWorldBoundsBoxShownSaved,
+  setWorldBoundsBoxShownSaved,
 } from './_dbg__PhysicsDebugState';
 import { toggleEditPhysicsEntityWindow } from './_dbg__PhysicsEntityWindow';
-
-const AXES = ['x', 'y', 'z'] as const;
-
-const formatNumber = (v: number) => String(Number(v.toFixed(3)));
-
-/**
- * A box as text, an axis per part: `-10 ≤ x ≤ 10, y ≥ -50` (an open axis left out), or "Open on
- * every side". A side that isn't a finite number reads as given (a NaN side takes every body out).
- */
-export const formatWorldBoundsBox = (box: Readonly<WorldBoundsBox>) => {
-  const parts: string[] = [];
-  for (const axis of AXES) {
-    const min = box.min?.[axis];
-    const max = box.max?.[axis];
-    const hasMin = min !== undefined && min !== -Infinity;
-    const hasMax = max !== undefined && max !== Infinity;
-    if (hasMin && hasMax) parts.push(`${formatNumber(min)} ≤ ${axis} ≤ ${formatNumber(max)}`);
-    else if (hasMin) parts.push(`${axis} ≥ ${formatNumber(min)}`);
-    else if (hasMax) parts.push(`${axis} ≤ ${formatNumber(max)}`);
-  }
-  return parts.length ? parts.join(', ') : 'Open on every side';
-};
+import {
+  canDrawWorldBounds,
+  formatBoundsNumber,
+  formatWorldBoundsBox,
+  isWorldBoundsBoxShown,
+  setWorldBoundsBoxShown,
+} from './_dbg__WorldBoundsDraw';
 
 const SOURCE_LABELS: Record<WorldBoundsStats['source'], string> = {
   SCENE: "The scene's (setSceneWorldBounds)",
@@ -70,6 +53,27 @@ export const refreshWorldBoundsReadout = () => {
   boundsReadout.ownBounds = getECSWorld().getStorage(ComponentType.WORLD_BOUNDS).size;
 };
 
+/** The box toggle's value: the drawing module's, read again on every refresh. */
+const boxToggleProxy = { shown: false };
+
+const getBoxToggleItem = (): DebuggerPaneItem<PhysicsState> => {
+  boxToggleProxy.shown = isWorldBoundsBoxShown();
+  return {
+    key: 'shown',
+    target: boxToggleProxy,
+    label: 'Draw the box (orange)',
+    onChange: (value) => {
+      setWorldBoundsBoxShown(Boolean(value));
+      setWorldBoundsBoxShownSaved(isWorldBoundsBoxShown());
+    },
+  };
+};
+
+/** Turns the box drawing on when it was on at the last save: the tab's registration. */
+export const restoreWorldBoundsBoxShown = () => {
+  if (isWorldBoundsBoxShownSaved() && canDrawWorldBounds()) setWorldBoundsBoxShown(true);
+};
+
 /** The current world's bounds (p102): its box, where it comes from and its action, the scene's
  * exits, and how many entities have bounds of their own (the default world's). */
 export const getWorldBoundsFolder = (): DebuggerPaneItem<PhysicsState> => {
@@ -91,6 +95,8 @@ export const getWorldBoundsFolder = (): DebuggerPaneItem<PhysicsState> => {
       { key: 'action', target: boundsReadout, label: 'Action', readonly: true },
       count('exits', 'Exits (this scene)'),
       count('ownBounds', 'Entities with their own bounds'),
+      // Without the lines() feature the toggle is left out
+      ...(canDrawWorldBounds() ? [getBoxToggleItem()] : []),
     ] as DebuggerPaneItem<PhysicsState>[],
   };
 };
@@ -108,7 +114,7 @@ const exitsByItemId = new Map<string, WorldBoundsExitInfo>();
 
 const toExitRow = (exit: WorldBoundsExitInfo): DebuggerListItem => {
   const { x, y, z } = exit.position;
-  const pos = `${formatNumber(x)}, ${formatNumber(y)}, ${formatNumber(z)}`;
+  const pos = `${formatBoundsNumber(x)}, ${formatBoundsNumber(y)}, ${formatBoundsNumber(z)}`;
   const details = [`step ${exit.step} at (${pos})`];
   if (exit.source === 'ENTITY') details.push('its own bounds');
   if (exit.frozen) details.push('frozen (jointed)');
