@@ -960,9 +960,8 @@ handbook's matrix.
 
 ## Related issues
 
-- [Static instance cells aren't light receivers](hub:issues/static-instance-cells-not-light-receivers):
-  a point or spot light with object culling over a scatter alone is culled; a block in range keeps
-  it on.
+- [Static instance cells aren't light receivers](hub:issues/static-instance-cells-not-light-receivers)
+  (fixed): a point or spot light with object culling over a scatter alone was culled.
 - [VSM stripes on unshadowed slopes](hub:issues/vsm-stripes-on-unshadowed-slopes): why the
   gallery's blocks cast and receive no shadows.
 - [Texture array image layers premultiplied](hub:issues/texture-array-image-layers-premultiplied):

@@ -1,6 +1,6 @@
 **Title:** Static instance cells never count as light receivers: a light near only scatter cells is culled
 
-Status: open | documented in p308, not fixed
+Status: fixed | 2026-11-23, an `InstancedMesh` is measured by its bounds over every instance, and cells join the spatial index
 Category: Spatial, Instancing, Rendering
 Found: 2026-11-18, p308 Phase 5 (read from the code; no scene has such a light)
 Our workaround: keep a plain mesh in the light's range (a terrain block under its scatter is one), or leave object culling off for the lights whose only receivers are scatter cells
@@ -51,3 +51,21 @@ changes both, for every mesh.
   `terrainGallery`): which lights are culled can change their hashes.
 
 An engine minor: no API changes, only which lights a scene with cells culls.
+
+## The fix
+
+As the way out says, in engine 6.23.0:
+
+- Both measures take an `InstancedMesh`'s own `boundingSphere` (over every instance, computed if
+  missing): `getMeshWorldBoundingSphere` moves it into world space with the mesh's world matrix,
+  and `getMeshRadius` returns its `|center| + radius`, which the refresh scales by the
+  `Transform`. A plain mesh is measured as before.
+- `createInstancedMeshEntity` passes its entity options through: a cell joins `DEFAULT` by default
+  (`spatialIndex: false` keeps it out) and ECS frustum culling stays opt-in. After changing a
+  cell's matrices, compute its bounds again and call `refreshSpatialRadius` and `refreshLodBounds`.
+- The pools' meshes are measured the same way, but they aren't `SPATIAL_INDEXED` and their
+  instances still aren't receivers (`i100_pool-instances-not-light-receivers.md`).
+- Checked by `ObjectFrustumCullingSystem.test.ts`, `SpatialIndexSystem.test.ts` and
+  `StaticInstances.test.ts`, and in `scatterTest` (`lightReceivers.ts`): 16 rocks scattered on a
+  target with no mesh, away from every other mesh, keep the object-culled point light over them on,
+  and a second such light over nothing is culled; the load logs an error otherwise.

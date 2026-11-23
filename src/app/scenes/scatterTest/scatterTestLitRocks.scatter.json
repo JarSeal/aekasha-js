@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../.schemas/scatter.schema.json",
+  "items": [{ "geometry": "scatterTestBoulder", "material": "scatterTestStone" }],
+  "source": {
+    "type": "PROCEDURAL",
+    "generator": "scatterTestUniform",
+    "params": { "count": 16, "scale": [0.3, 0.6], "tint": 0.25 },
+    "seed": 11
+  },
+  "debugData": {
+    "name": "Lit rocks",
+    "description": "16 small rocks over an 8 m square by the scene's test generator, spawned on a target with no mesh, away from every other mesh: their cells are the only receivers of the object-culled point light over them (i090)."
+  }
+}

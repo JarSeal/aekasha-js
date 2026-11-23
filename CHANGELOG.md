@@ -4,17 +4,30 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
-## 2026-11-23 — issue-fixing-20261123 (i080)
+## 2026-11-23 — issue-fixing-20261123 (i080, i090)
 
 A merge group large enough to build in the assets worker (more than 65 536 vertices) now builds while its members change (i080). A member updated with `updateMergeMember` every frame, or a member joining every frame, dropped the running build and started another, which the next frame dropped again: the group never built, and every member stayed drawn on its own. The build is kept now, the members updated meanwhile are written where they are once it lands, and those that joined go into the build after it.
 
-### Engine 6.22.1 (Sunset)
+Static instance cells (a scatter's, `createStaticInstances`', an import's GPU instances) are light receivers now (i090): a point or spot light with object culling whose only receivers in range were cells was culled, so a scatter on a target without a mesh went unlit near it. A cell joins the spatial index, measured by its bounds over every instance.
+
+### Engine 6.23.0 (Sunset)
+
+**Changed**
+
+- An `InstancedMesh` entity is measured by its own bounds over every instance (`InstancedMesh.boundingSphere`, computed if missing) by ECS frustum culling, light culling's receiver test and the spatial index's mesh radius (i090); they read one instance's geometry at the mesh's origin. A plain mesh is measured as before.
+- `createInstancedMeshEntity` (so every static instance cell) keeps its entity options: a cell joins the spatial index by default, so it's a light receiver (`spatialIndex: false` keeps it out), and `ecsFrustumCullingEnabled` opts it into ECS frustum culling; both were forced off. After changing a cell's matrices, call `refreshSpatialRadius` too.
 
 **Fixed**
 
 - `updateMergeMember` during a group's worker build no longer drops it (i080): the member is marked, and once the build lands its part is written for its pose then, in place (the build read its pose at its start). A built member updated during a rebuild is written in the mesh drawn now too, as before. A member whose geometry was replaced meanwhile (another vertex count) doesn't drop the build either: it lands, warns, and the group builds again.
 - A member joining a group (`addToMergeGroup`, a mesh's `merge`) during its worker build no longer drops it, nor does `rebuildMergeGroup` or a removal past the waste share: the group stays pending until the build lands and builds again then. The scene step waits for a build that was running when the load began, then builds the group again. Only a member leaving or the group's deletion drops a worker build.
 - `endMergeMemberEdit` during a worker build, for a member waiting for that build, has it land at the session's end pose: it landed at the pose the build read when it started.
+
+### App 1.34.1 (Preschooler)
+
+**Changed**
+
+- `scatterTest` checks i090: 16 rocks scattered on a target with no mesh, away from every other mesh, must keep the object-culled point light over them on, and a second such light over nothing must be culled; the load logs an error otherwise.
 
 ## 2026-11-23 — p102_physics-world-bounds (Phases 1-4)
 
