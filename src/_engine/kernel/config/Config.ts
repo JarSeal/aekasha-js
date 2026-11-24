@@ -6,6 +6,7 @@ import type {
 } from '../../features/physics/types/PhysicsConfigTypes';
 import type { WorldBoundsDef } from '../../features/physics/types/PhysicsWorldBoundsTypes';
 import type { AssetsWorkerTarget } from '../assets/AssetsAPITypes';
+import type { DeviceCapabilitiesConfig } from '../deviceCapabilities/DeviceCapabilitiesTypes';
 import type { ECSStorageMode } from '../ecs/ECSComponentStorage';
 import { lsGetItem } from '../../utils/LocalAndSessionStorage';
 import type { DebugKeyBindingConfig } from '../../debug/DefaultDebugKeyBindings';
@@ -36,6 +37,7 @@ export const DEFAULT_DEBUG_DRAWER_TAB_ORDER = [
   'lodControls',
   'streamingControls',
   'mergingControls',
+  'deviceCapabilitiesControls',
 ];
 
 /**
@@ -286,6 +288,10 @@ export type AppConfig = {
      * the profiler switch it on and off live too. Default false. */
     measureEnabled?: boolean;
   };
+  /** The device capability check (`runDeviceCapabilityCheckAsync`,
+   * `kernel/deviceCapabilities/`): whether the boot runs it, its stored result and the targets it
+   * rates the device against ({@link DeviceCapabilitiesConfig}). */
+  deviceCapabilities?: DeviceCapabilitiesConfig;
   /** Debug drawer settings (debug-only, see `debug/DebuggerGUI.ts`). */
   debugDrawer?: {
     /** Tab ids in menu order. Replaces the engine default (`DEFAULT_DEBUG_DRAWER_TAB_ORDER`)

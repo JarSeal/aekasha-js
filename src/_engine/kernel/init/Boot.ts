@@ -126,6 +126,10 @@ export const bootEngineAsync = async ({ config, data, features, start, hudSlot }
   // Logs the engine, toolkit and app versions (they are in the HTML meta tags too)
   consoleBootText();
 
+  // The device capability check (p240), opt-in: before the kernel and the features install, so
+  // its measuring competes with no boot work, and its report is ready for the app's `start`
+  if (getConfig().deviceCapabilities?.runAtInit) await runDeviceCapabilityCheckAtBootAsync();
+
   // Create base scene
   createRootScene();
 
@@ -183,16 +187,38 @@ export const bootEngineAsync = async ({ config, data, features, start, hudSlot }
   if (IS_DEBUG_ENV) void restoreSavedView();
 };
 
+/** `runAtInit`'s check. Its module is imported here only, so an app that doesn't ask for the check
+ * doesn't download it. A failed check is warned and the boot goes on without a report. */
+const runDeviceCapabilityCheckAtBootAsync = async () => {
+  try {
+    const { runDeviceCapabilityCheckAsync } = await import(
+      '../deviceCapabilities/DeviceCapabilities'
+    );
+    await runDeviceCapabilityCheckAsync();
+  } catch (err) {
+    lwarn(
+      'The device capability check (runAtInit) failed: the boot goes on without a report.',
+      err
+    );
+  }
+};
+
 // The boot's debug steps: called only behind the debug flags, so a production build drops them
 // with the modules they load. Outside a `try` (Rollup keeps a try block's calls whole).
 
 /** Debug env: the 3D symbols, the camera and light GUIs and the debug camera, in this order (it
- * fixes their systems' and hooks' order) */
+ * fixes their systems' and hooks' order), then the device capabilities tab (its saved forced
+ * levels apply before the app's `start`) */
 const bootKernelDebugAsync = async (ecsWorld: ECSWorld) => {
   await load3DSymbols();
   await registerCameraDebugGUI();
   await registerLightDebugGUI(ecsWorld);
   await initDebugCamera(ecsWorld);
+  // Imported here, as `runAtInit`'s check imports it: its module stays a chunk of its own
+  const { registerDeviceCapabilitiesDebugGUI } = await import(
+    '../deviceCapabilities/DeviceCapabilities'
+  );
+  await registerDeviceCapabilitiesDebugGUI();
 };
 
 /** Debug env and prod test mode: the debug tools and GUIs (some debug env only), the features'

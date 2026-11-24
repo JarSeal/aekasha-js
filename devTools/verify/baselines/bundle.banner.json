@@ -30,12 +30,12 @@
       "gzip": 1987
     },
     "assets/banner.embed.js": {
-      "bytes": 976900,
-      "gzip": 273370
+      "bytes": 977764,
+      "gzip": 273704
     },
     "assets/banner.js": {
       "bytes": 483,
-      "gzip": 340
+      "gzip": 339
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
@@ -52,6 +52,18 @@
     "assets/BufferGeometryUtils.js": {
       "bytes": 2284,
       "gzip": 1061
+    },
+    "assets/DeviceBenchmark.js": {
+      "bytes": 13838,
+      "gzip": 5871
+    },
+    "assets/DeviceCapabilities.js": {
+      "bytes": 18922,
+      "gzip": 7372
+    },
+    "assets/DeviceObserver.js": {
+      "bytes": 2735,
+      "gzip": 1471
     },
     "assets/draco_decoder.js": {
       "bytes": 719410,
@@ -75,15 +87,15 @@
     },
     "assets/DRACOLoader.js": {
       "bytes": 7637,
-      "gzip": 3099
+      "gzip": 3096
     },
     "assets/GeometryMerge.js": {
-      "bytes": 8248,
-      "gzip": 3426
+      "bytes": 8249,
+      "gzip": 3428
     },
     "assets/GeometryTransfer.js": {
-      "bytes": 1933,
-      "gzip": 865
+      "bytes": 1934,
+      "gzip": 864
     },
     "assets/GeometryTransfer.js@AssetsWorker": {
       "bytes": 2051,
@@ -91,19 +103,19 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 47088,
-      "gzip": 14024
+      "gzip": 14028
     },
     "assets/HDRLoader.js": {
       "bytes": 3407,
-      "gzip": 1635
+      "gzip": 1633
     },
     "assets/ImportRegistry.js": {
-      "bytes": 20473,
-      "gzip": 8229
+      "bytes": 20477,
+      "gzip": 8233
     },
     "assets/KTX2Loader.js": {
       "bytes": 60312,
-      "gzip": 24498
+      "gzip": 24500
     },
     "assets/LodChainGLTF.js": {
       "bytes": 2210,
@@ -123,7 +135,7 @@
     },
     "assets/TextureInputResolvers.js": {
       "bytes": 3306,
-      "gzip": 1367
+      "gzip": 1365
     },
     "assets/three.core.js": {
       "bytes": 199218,
@@ -139,14 +151,14 @@
     },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 211
+      "gzip": 210
     }
   },
   "main": {
     "chunk": "assets/banner.embed.js",
     "modules": 68,
-    "minified": 1001240,
-    "gzip": 279636
+    "minified": 1002050,
+    "gzip": 279997
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -171,8 +183,8 @@
     },
     "_engine/kernel/init": {
       "modules": 5,
-      "minified": 7608,
-      "gzip": 3229
+      "minified": 8081,
+      "gzip": 3446
     },
     "_engine/kernel/input": {
       "modules": 1,
@@ -186,8 +198,8 @@
     },
     "_engine/kernel/loop": {
       "modules": 3,
-      "minified": 4666,
-      "gzip": 2025
+      "minified": 5003,
+      "gzip": 2170
     },
     "_engine/kernel/mesh": {
       "modules": 1,
@@ -212,12 +224,12 @@
     "_engine/utils": {
       "modules": 7,
       "minified": 1756,
-      "gzip": 876
+      "gzip": 877
     },
     "app": {
       "modules": 4,
       "minified": 1351,
-      "gzip": 717
+      "gzip": 715
     },
     "three": {
       "modules": 4,

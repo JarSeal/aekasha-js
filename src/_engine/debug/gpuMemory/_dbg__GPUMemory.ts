@@ -4,6 +4,12 @@ import { GPU_MEMORY_TAB_ID } from '../GPUMemory';
 import { createProfilerTab, updateProfilerTab } from '../Profiler';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { llog } from '../../utils/Logger';
+import { lsGetItem } from '../../utils/LocalAndSessionStorage';
+import type { QualityLevel } from '../../utils/QualityLevel';
+import {
+  getDeviceCapabilityReport,
+  onDeviceCapabilityReport,
+} from '../../kernel/deviceCapabilities/DeviceCapabilityReports';
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
 import { getRenderer, onRendererCreated } from '../../kernel/render/Renderer';
@@ -49,10 +55,23 @@ import {
  * The sections are the UI kit's tables and stacked bar (p807 D8: the live ones in
  * `_dbg__GPUMemoryView.ts`, the snapshot's in `_dbg__GPUMemorySnapshotView.ts`), built once per
  * mount and written in place on each refresh (D9).
+ *
+ * The budget's default follows the device's GPU memory level (p240 Phase 3: the device capability
+ * check's report, a forced level included) until a budget is saved here.
  */
 
 const LS_KEY = 'AEK_debugGPUMemory';
+/** The budget without a saved one or a device GPU memory level. */
 const DEFAULT_BUDGET_MB = 512;
+/** The budget by the device's GPU memory level: half the least GPU memory of the level's default
+ * band (`gpuMemoryMB` in `DeviceScoring.ts`), so the browser and the rest of the system keep the
+ * other half; `LOW` (under 1024 MB) a quarter of `MEDIUM`'s. */
+const DEVICE_BUDGET_MB: Record<QualityLevel, number> = {
+  LOW: 256,
+  MEDIUM: 512,
+  HIGH: 1024,
+  ULTRA: 2048,
+};
 /** Frame counters are summarised (min / avg / max) per window of this length. */
 const FRAME_WINDOW_MS = 500;
 /** No sampled frame for this long reads as a paused main loop. */
@@ -67,6 +86,29 @@ const bootPeak: GPUMemoryPeak = { bytes: 0, at: 0 };
 const scenePeak: GPUMemoryPeak = { bytes: 0, at: 0 };
 /** Over-budget toast shown in the current scene (reset on scene enter and on a budget change). */
 let isBudgetToastShown = false;
+/** A budget is saved in this browser: it wins over the device's. */
+let isBudgetSaved = false;
+
+/** The device's GPU memory level, null without a report or a guess (common on a discrete GPU). */
+const getDeviceGpuMemoryLevel = () => getDeviceCapabilityReport()?.verdict.levels.gpuMemory ?? null;
+
+/** Without a saved budget, the device's (or the default), re-checked from the next frame on. */
+const applyDefaultBudget = () => {
+  if (isBudgetSaved) return;
+  const level = getDeviceGpuMemoryLevel();
+  const budgetMB = level ? DEVICE_BUDGET_MB[level] : DEFAULT_BUDGET_MB;
+  if (budgetMB === state.budgetMB) return;
+  state.budgetMB = budgetMB;
+  isBudgetToastShown = false;
+  updateProfilerTab(GPU_MEMORY_TAB_ID);
+};
+
+/** Where the budget comes from, for the tab. */
+const getBudgetSourceText = () => {
+  if (isBudgetSaved) return 'Saved in this browser';
+  const level = getDeviceGpuMemoryLevel();
+  return level ? `The device (GPU memory ${level})` : 'The default (no device GPU memory level)';
+};
 
 const raisePeak = (peak: GPUMemoryPeak, bytes: number) => {
   if (bytes <= peak.bytes) return;
@@ -198,6 +240,11 @@ export const _createGPUMemoryDebugGUI = () => {
     lsKey: LS_KEY,
     state,
     persistKeys: ['budgetMB', 'recordSites'],
+    // The saved budget went: the device's again
+    onClearLS: () => {
+      isBudgetSaved = false;
+      applyDefaultBudget();
+    },
     // Only writes the figures; the sampling runs in gpuMemorySamplerSystem
     refreshIntervalMs: 500,
     // Its figures span scenes (the peaks, a snapshot's diff): kept (p807 D9)
@@ -222,9 +269,17 @@ export const _createGPUMemoryDebugGUI = () => {
               min: 16,
               step: 16,
               onChange: (_value, e) => {
-                // Re-checked against the new budget from the next frame on
-                if (e.last) isBudgetToastShown = false;
+                // Re-checked against the new budget from the next frame on; saved, it wins
+                if (!e.last) return;
+                isBudgetToastShown = false;
+                isBudgetSaved = true;
               },
+            },
+            {
+              label: 'Budget from',
+              get: getBudgetSourceText,
+              readonly: true,
+              interval: 'refresh',
             },
             // Drawer tabs: there is no drawer in prodTest mode
             {
@@ -289,6 +344,11 @@ export const _createGPUMemoryDebugGUI = () => {
 
   // Hydrated above; the tracker is installed before the renderer's init(), so it sees everything
   setRecordAllocationSites(state.recordSites);
+  // Only the changed key is written, so a budget in the saved object is one set here
+  const saved = lsGetItem(LS_KEY, {}) as Record<string, unknown> | null;
+  isBudgetSaved = typeof saved?.budgetMB === 'number';
+  applyDefaultBudget();
+  onDeviceCapabilityReport(applyDefaultBudget);
   onRendererCreated(installCompressedTextureSizer);
   onRendererCreated(installAllocationTracker);
   registerEngineGPUMemorySources();

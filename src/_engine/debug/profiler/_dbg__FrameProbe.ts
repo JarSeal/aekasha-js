@@ -1,4 +1,4 @@
-import { setFrameProbe, type FrameProbe } from '../../kernel/loop/MainLoop';
+import { addFrameProbe, type FrameProbe } from '../../kernel/loop/MainLoop';
 
 /** Rendered frames kept (about 4 s at 240 Hz), enough for one summary window at any rate. */
 const CAPACITY = 1024;
@@ -100,20 +100,23 @@ export const _getFrameProbeSummary = (now = performance.now()) => {
 };
 
 let holders = 0;
+let removeProbe: (() => void) | null = null;
 
-/** Sets the frame probe on the main loop (the first holder starts from an empty history). */
+/** Adds the frame probe to the main loop (the first holder starts from an empty history). */
 export const _acquireFrameProbe = () => {
   holders++;
   if (holders > 1) return;
   reset();
-  setFrameProbe(probe);
+  removeProbe = addFrameProbe(probe);
 };
 
-/** Clears the frame probe from the main loop when the last holder releases it. */
+/** Removes the frame probe from the main loop when the last holder releases it. */
 export const _releaseFrameProbe = () => {
   if (holders === 0) return;
   holders--;
-  if (holders === 0) setFrameProbe(null);
+  if (holders > 0) return;
+  removeProbe?.();
+  removeProbe = null;
 };
 
 export const _isFrameProbeSet = () => holders > 0;

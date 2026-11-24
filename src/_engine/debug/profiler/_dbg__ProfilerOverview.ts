@@ -12,6 +12,7 @@ import { formatBytes, formatNumber } from '../../kernel/assets/debug/_dbg__Asset
 import { _getFrameProbeSummary, type FrameProbeSummary } from './_dbg__FrameProbe';
 import {
   PROFILER_SOURCE,
+  type DeviceStats,
   type DrawStats,
   type GpuFrameStats,
   type GpuMemoryStats,
@@ -276,6 +277,22 @@ const OVERVIEW_METRICS: OverviewMetric[] = [
     read: fromSource<GpuMemoryStats>(PROFILER_SOURCE.MEMORY_GPU, (m) => ({
       value: formatBytes(m.bytes),
       sub: "three's own estimate",
+    })),
+  },
+  {
+    // The device's levels (p240) next to what the frame takes: the budgets it was rated for
+    id: 'device',
+    label: 'Device level',
+    defaultVisible: true,
+    sources: [PROFILER_SOURCE.DEVICE],
+    read: fromSource<DeviceStats>(PROFILER_SOURCE.DEVICE, ({ levels, observedCorrection }) => ({
+      value: levels.forced ? `${levels.overall} (forced)` : levels.overall,
+      sub:
+        `GPU ${levels.gpu} · CPU ${levels.cpu} · memory ${levels.memory ?? 'unknown'}` +
+        ` · GPU memory ${levels.gpuMemory ?? 'unknown'}` +
+        // The app's scenes ran slower than the benchmark predicted (the observer)
+        (observedCorrection ? ` · observed ×${observedCorrection}` : ''),
+      warn: levels.forced ? 'forced in the Device capabilities tab' : undefined,
     })),
   },
   censusRow('instances', 'Instances', false, (c) => c.meshes.instances),

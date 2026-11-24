@@ -11,6 +11,9 @@ The app creates the renderer once, first thing in its start callback (`src/index
 - The options are three's: antialiasing (off unless you ask for it), tone mapping and its
   exposure, the output colour space, a transparent canvas (`alpha`), shadows and the shadow map
   type (three's PCF by default).
+- The pixel ratio is the window's by default. The example app takes the one the
+  [device capability check](hub:features/device-capabilities) suggests: the largest at which
+  this device holds the target frame rate.
 - In the debug env, the drawer's Renderer tab changes them and keeps the change for the next
   reload.
 - **Draw order:** a mesh's `renderOrder` ([`MeshProps`](api:MeshProps), and a mesh JSON's

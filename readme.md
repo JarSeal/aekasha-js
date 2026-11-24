@@ -32,6 +32,7 @@ Each feature has a page in the Ækasha Hub's Features section (`/hub/features/`:
 - **Smallest build possible**: `yarn sbp` reports each build's first download and what loads later, each feature's size and the import chain that put it there, and checks the budgets in `sbp.config.ts` (`yarn build` fails over one). A profile is a build to measure: the template app, and embeds like the banner, one scene made in code with no engine feature, the measured floor.
 - **Embedding**: `mountAekasha({ target, width, height, layout })` mounts the engine into an element of a page it doesn't own (a hero, a product view, a background behind the content), without touching the page's styles or input. The canvas follows its container, the scene pauses out of view and respects reduced motion, and the handle loads scenes, pauses and unmounts (which stops the workers, physics' with its world). An embed profile builds as an ES module a site imports.
 - **Rendering**: Three.js `WebGPURenderer` with automatic WebGL fallback, configurable tone mapping, color space and shadow maps. A mesh's `renderOrder` (in its JSON or `createMeshEntity`'s props, kept through its LOD's swaps and fades) orders it within its pass: terrain 0, decals 10, other transparents 20 and up.
+- **Device capabilities**: `runDeviceCapabilityCheckAsync`, or `AppConfig.deviceCapabilities.runAtInit` before the app's start, measures the device once: the WebGPU adapter, memory, cores and display, and a GPU and CPU benchmark of about 1.5 s. It rates the GPU, CPU, memory and GPU memory `LOW` to `ULTRA` (the shadow presets' scale), checks them against targets you set (a frame rate at the canvas's resolution, memory, WebGPU, least levels) and suggests settings (the pixel ratio that holds the frame rate, antialias, shadow quality, PostFX). It's advisory: the app applies what it wants. The measurements stay in localStorage until the device, browser or display changes, so later boots skip the benchmark (and its download), and the debug drawer's tab forces levels to try the low end on a strong machine. With `observe` on it then watches the game's own scenes once they run: when the GPU holds them clearly slower than predicted, it corrects the prediction (stored with the measurements, so later boots start corrected) and reports lower suggestions with `isSuggestionLowered`, for the app to offer lower settings.
 - **ECS**: entity ids pack an index and a generation. Plugins and component hooks register from a feature's install and apply to every world, systems run in fixed stages, and transform storage is either a `Map` or a typed-array (SoA) store.
 - **Physics API**: an engine-agnostic facade with Rapier as the backend. It covers rigid bodies, colliders (including heightfields, read by position from an imported grid or made from a row-major height grid with `toHeightfieldColliderParams`, and the bodies and colliders an imported glTF node's custom properties describe), impulse joints, ray casts and shape casts, contact and collision events, and fixed-timestep stepping with render interpolation.
 - **Threaded physics**: `WORKER_THREAD` or `MAIN_THREAD` mode. The worker syncs every body's transform through one shared buffer per frame, never one message per body. The buffer is a lock-free triple buffer, so every system in a frame reads the same complete physics step. Every message between the threads goes through one transport, as plain data and in order: the seam a network channel will plug into.
@@ -549,6 +550,7 @@ const config: AppConfig = {
   },
   debugKeys: [{ id: 'sc-toggle-debug-drawer', chord: { key: 'j' } }], // the drawer on j, not h
   debugDrawer: { theme: 'light' }, // the debugger light, not dark ('app': your app's theme)
+  deviceCapabilities: { runAtInit: true }, // measure the device first: getDeviceCapabilityReport() in start
 };
 ```
 
@@ -590,7 +592,6 @@ Planned work is specified in [`docs/plans/`](docs/plans/), and the app's own in 
 
 - Saving the material editor's edits to the material JSON, and editing textures and more material properties there
 - Physics objects in the scene JSON schema and multibody joints
-- A client device capability sniffer
 
 ---
 

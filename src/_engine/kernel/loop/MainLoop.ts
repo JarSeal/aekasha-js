@@ -176,24 +176,45 @@ export const transformAppSpeedValue = (unitsPerSecond: number) => deltaApp * uni
 export const transformTimeValue = (durationInMs: number) =>
   durationInMs * loopState.playSpeedMultiplier;
 
-/** Measures every main loop frame (see {@link setFrameProbe}). */
+/**
+ * Measures every main loop frame (see {@link addFrameProbe}).
+ * @internal
+ */
 export type FrameProbe = {
   /** At the start of the loop function. */
   begin: (now: number) => void;
-  /** At the end of the loop function. `rendered` is false on a frame the max FPS limiter skipped. */
-  end: (now: number, rendered: boolean) => void;
+  /** At the end of the loop function. `rendered` is false on a frame the max FPS limiter skipped.
+   * `loopState` is the loop's own state (not a copy: read it, never keep or change it). */
+  end: (now: number, rendered: boolean, loopState: Readonly<LoopState>) => void;
 };
 
-let frameProbe: FrameProbe | null = null;
+/** Replaced, never changed in place: a probe removed during a frame doesn't shift the loop's walk */
+let frameProbes: readonly FrameProbe[] = [];
 
 /**
- * Sets (or with null clears) the frame probe the main loop calls at the start and end of every
- * frame. Only the profiler sets one, while its window is open, so without it a frame costs two null
- * checks.
- * @param probe ({@link FrameProbe} | null)
+ * Adds a frame probe, called at the start and end of every frame: the profiler's while its window
+ * is open, the device capability check's observer while it observes (p240 Phase 4). Without one a
+ * frame costs two length checks. Adding the same probe again does nothing.
+ * @internal
+ * @returns its remover
  */
-export const setFrameProbe = (probe: FrameProbe | null) => {
-  frameProbe = probe;
+export const addFrameProbe = (probe: FrameProbe) => {
+  if (!frameProbes.includes(probe)) frameProbes = [...frameProbes, probe];
+  return () => {
+    frameProbes = frameProbes.filter((p) => p !== probe);
+  };
+};
+
+const beginFrameProbes = () => {
+  const probes = frameProbes;
+  const now = performance.now();
+  for (let i = 0; i < probes.length; i++) probes[i].begin(now);
+};
+
+const endFrameProbes = (rendered: boolean) => {
+  const probes = frameProbes;
+  const now = performance.now();
+  for (let i = 0; i < probes.length; i++) probes[i].end(now, rendered, loopState);
 };
 
 /**
@@ -440,7 +461,7 @@ const runFrame = () => {
 
 const runFrameWork = () => {
   frameCounter++;
-  frameProbe?.begin(performance.now());
+  if (frameProbes.length) beginFrameProbes();
   if (IS_DEBUG_ENV) startCustomMeasurements();
 
   timer.update();
@@ -495,7 +516,7 @@ const runFrameWork = () => {
   }
 
   if (skipFrame) {
-    frameProbe?.end(performance.now(), false);
+    if (frameProbes.length) endFrameProbes(false);
     return;
   }
 
@@ -510,7 +531,7 @@ const runFrameWork = () => {
   }
 
   if (IS_DEBUG_ENV) updateRestOfStats();
-  frameProbe?.end(performance.now(), true);
+  if (frameProbes.length) endFrameProbes(true);
 };
 
 /** Runs the resizers. */

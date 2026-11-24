@@ -15,6 +15,43 @@ export type {
   DebugPhysicsWireframeConfig,
   PhysicsWireframeColors,
 } from './kernel/config/Config';
+export {
+  clearStoredDeviceCapabilityReport,
+  evaluateDeviceCapabilities,
+  runDeviceCapabilityCheckAsync,
+} from './kernel/deviceCapabilities/DeviceCapabilities';
+export type { DeviceCapabilityCheckOpts } from './kernel/deviceCapabilities/DeviceCapabilities';
+export {
+  getDeviceCapabilityReport,
+  onDeviceCapabilityReport,
+} from './kernel/deviceCapabilities/DeviceCapabilityReports';
+export type { DeviceCapabilityListener } from './kernel/deviceCapabilities/DeviceCapabilityReports';
+export type {
+  DeviceBenchmarkMeasurements,
+  DeviceCapabilitiesConfig,
+  DeviceCapabilityCheck,
+  DeviceCapabilityCheckPhase,
+  DeviceCapabilityChecks,
+  DeviceCapabilityMeasurements,
+  DeviceCapabilityRecommendations,
+  DeviceCapabilityReport,
+  DeviceCapabilityTargets,
+  DeviceCapabilityVerdict,
+  DeviceCheckResult,
+  DeviceGpuBenchmark,
+  DeviceGpuMeasurements,
+  DeviceGpuMemorySource,
+  DeviceLevelBands,
+  DeviceLevelCategory,
+  DeviceLevels,
+  DeviceLevelSource,
+  DeviceLevelThresholds,
+  DeviceObservation,
+  DeviceObservationLimit,
+  DeviceObserveConfig,
+  DeviceReferenceFrame,
+  ResolvedDeviceCapabilityTargets,
+} from './kernel/deviceCapabilities/DeviceCapabilitiesTypes';
 export { ECSWorld, getECSWorld, getEntityIdByAppId } from './kernel/ecs/ECS';
 export type {
   ComponentHook,
@@ -401,6 +438,8 @@ export type { CreateEntityOpts } from './kernel/ecs/ECSHelpers';
 export { initECSStressTest } from './kernel/ecs/ECSStressTest';
 export type { TypedArrayTransformStore } from './kernel/ecs/TypedArrayTransformStore';
 export { getQuatFromAngle, smoothDampVec3 } from './kernel/render/ThreeMath';
+export { compareQualityLevels, minQualityLevel, QUALITY_LEVELS } from './utils/QualityLevel';
+export type { QualityLevel } from './utils/QualityLevel';
 export { toUniqueJsIdentifier } from './utils/JsIdentifier';
 export { getLogger, lerror, llog, lwarn } from './utils/Logger';
 export { getRandomSeed, getRandomStream, setRandomSeed } from './utils/RandomStreams';

@@ -20,6 +20,7 @@ export type BuiltInIconName =
   | 'cameraReels'
   | 'circleCheckCutout'
   | 'cloudSun'
+  | 'cpu'
   | 'databaseX'
   | 'droplet'
   | 'easel'
@@ -75,6 +76,7 @@ const BUILT_IN_ICONS = {
   cameraReels: builtIn.cameraReelsIcon,
   circleCheckCutout: builtIn.circleCheckCutoutIcon,
   cloudSun: builtIn.cloudSunIcon,
+  cpu: builtIn.cpuIcon,
   databaseX: builtIn.databaseXIcon,
   droplet: builtIn.dropletIcon,
   easel: builtIn.easelIcon,

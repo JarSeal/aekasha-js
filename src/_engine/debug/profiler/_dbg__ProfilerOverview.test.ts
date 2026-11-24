@@ -266,3 +266,47 @@ describe('profiler Overview: the table updated in place (p807 D6)', () => {
     expect(renderOverview(settings)).toContain('No rows are shown. Pick them in the Settings tab.');
   });
 });
+
+describe('profiler Overview: the device level (p240)', () => {
+  it('shows the overall level and the categories, a forced one with a warning', () => {
+    let forced = false;
+    const remove = registerStatsSource({
+      id: 'device',
+      label: 'Device level',
+      read: () => ({
+        levels: {
+          overall: 'MEDIUM',
+          gpu: 'HIGH',
+          cpu: 'MEDIUM',
+          memory: null,
+          gpuMemory: 'HIGH',
+          sources: {
+            gpu: 'BENCHMARK',
+            cpu: 'BENCHMARK',
+            memory: 'UNKNOWN',
+            gpuMemory: 'HEURISTIC',
+          },
+          forced,
+        },
+      }),
+    });
+    const settings: ProfilerSettings = {
+      ...DEFAULT_PROFILER_SETTINGS,
+      overviewMetrics: sanitizeOverviewMetrics([]).map((e) => ({
+        ...e,
+        visible: e.id === 'device',
+      })),
+    };
+
+    const text = renderOverview(settings);
+    expect(text).toContain('Device levelMEDIUM');
+    expect(text).toContain('GPU HIGH · CPU MEDIUM · memory unknown · GPU memory HIGH');
+    expect(text).not.toContain('forced');
+
+    forced = true;
+    const forcedText = renderOverview(settings);
+    expect(forcedText).toContain('MEDIUM (forced)');
+    expect(forcedText).toContain('forced in the Device capabilities tab');
+    remove();
+  });
+});
