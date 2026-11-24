@@ -14,6 +14,7 @@ import type { PhysicsState } from '../types/PhysicsConfigTypes';
 import type { JointMotorModel, JointParams } from '../types/PhysicsJointTypes';
 import type { PhysRay, QueryFilterFlags } from '../types/PhysicsQueryTypes';
 import type { BodyWorldBounds, WorldBoundsBox } from '../types/PhysicsWorldBoundsTypes';
+import type { PhysicsSnapshot, RestoreSnapshotOpts } from '../types/PhysicsWorldTypes';
 import type { PhysicsProtocolType } from './PhysicsProtocolType';
 
 /**
@@ -31,7 +32,8 @@ export type PhysicsUpProtocol =
       }
     | {
         type: PhysicsProtocolType.RESTORE_SNAPSHOT;
-        snapshot: Uint8Array;
+        snapshot: PhysicsSnapshot;
+        opts?: RestoreSnapshotOpts;
       }
     | {
         type: PhysicsProtocolType.INIT_PHYSICS;

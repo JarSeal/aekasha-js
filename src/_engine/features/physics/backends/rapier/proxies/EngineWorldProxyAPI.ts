@@ -18,13 +18,20 @@ import type {
   RayColliderIntersectionAPI,
   ShapeCastHitAPI,
 } from '../../../types/PhysicsQueryTypes';
-import type { WorldAPI } from '../../../types/PhysicsWorldTypes';
+import type {
+  PhysicsSnapshot,
+  RestoreSnapshotOpts,
+  RestoreSnapshotResult,
+  WorldAPI,
+} from '../../../types/PhysicsWorldTypes';
 import type { RayDebugOpts } from '../../../../../kernel/render/RayDebugTypes';
 import { createRigidBody, deleteRigidBody } from '../RapierBodies';
 import { createCollider, deleteCollider } from '../RapierColliders';
 import { drainAndDispatchEvents } from '../RapierEvents';
 import { createJoint, deleteJoint } from '../RapierJoints';
 import { paramsToShape } from '../RapierShapes';
+// A cycle (RapierWorld.ts makes this class): calls inside methods only
+import { restoreSnapshot, takeSnapshot } from '../RapierWorld';
 import {
   backend,
   getCollider,
@@ -61,7 +68,7 @@ const toRapierRay = (ray: PhysRay) => {
 export class EngineWorldProxyAPI implements WorldAPI {
   restoringWorld: boolean = false;
 
-  /** The world's API object; createWorld and restoreSnapshot make one per world. */
+  /** The world's API object; createWorld makes one per world, and a restore keeps it. */
   constructor() {}
 
   // --- Gravity ---
@@ -81,23 +88,22 @@ export class EngineWorldProxyAPI implements WorldAPI {
   }
 
   // --- Snapshots ---
-  takeSnapshotSync(): Uint8Array | undefined {
-    return backend.world.takeSnapshot();
+  // RapierWorld.ts' takeSnapshot / restoreSnapshot are the one implementation (p500 D8)
+  takeSnapshotSync(): PhysicsSnapshot | undefined {
+    return takeSnapshot();
   }
-  async takeSnapshot(): Promise<Uint8Array | undefined> {
+  async takeSnapshot(): Promise<PhysicsSnapshot | undefined> {
     return this.takeSnapshotSync();
   }
 
-  restoreSnapshotSync(data: Uint8Array): WorldAPI {
-    this.restoringWorld = true;
-    backend.world = backend.RAPIER.World.restoreSnapshot(data);
-    // Note: In Rapier, you usually need to re-initialize your local ID maps
-    // after a snapshot if the handles changed.
-    this.restoringWorld = false;
-    return this;
+  restoreSnapshotSync(snapshot: PhysicsSnapshot, opts?: RestoreSnapshotOpts) {
+    return restoreSnapshot(snapshot, opts);
   }
-  async restoreSnapshot(data: Uint8Array): Promise<WorldAPI> {
-    return this.restoreSnapshotSync(data);
+  async restoreSnapshot(
+    snapshot: PhysicsSnapshot,
+    opts?: RestoreSnapshotOpts
+  ): Promise<RestoreSnapshotResult> {
+    return this.restoreSnapshotSync(snapshot, opts);
   }
 
   // --- Stepping & Propagation ---

@@ -1,6 +1,6 @@
 Status: implemented (Phases 1-4; Phase 5 dropped)
 Category: Physics
-Related: p101 scene-load determinism (implemented, see the Physics section of `.claude/CLAUDE.md` and `src/_engine/features/physics/CLAUDE.md`'s Deterministic scene loads: exits must happen on a fixed step, and the determinism probe must stay green), p500_restore-physics-snapshot.md (bounds are configuration, not simulation state, see §8), the `lines()` feature (`src/_engine/features/lines/`, `createLines`: Phase 3 draws the bounds with it), `src/_engine/features/physics/CLAUDE.md`'s Simulation tiers (p352, p343: the tiers and their distance policy, §8)
+Related: p101 scene-load determinism (implemented, see the Physics section of `.claude/CLAUDE.md` and `src/_engine/features/physics/CLAUDE.md`'s Deterministic scene loads: exits must happen on a fixed step, and the determinism probe must stay green), _DONE_p500_restore-physics-snapshot.md (bounds are configuration, not simulation state, see §8), the `lines()` feature (`src/_engine/features/lines/`, `createLines`: Phase 3 draws the bounds with it), `src/_engine/features/physics/CLAUDE.md`'s Simulation tiers (p352, p343: the tiers and their distance policy, §8)
 
 # Physics World Bounds (Kill Volume) — Plan
 

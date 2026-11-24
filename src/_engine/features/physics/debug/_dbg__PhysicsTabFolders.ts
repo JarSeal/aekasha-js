@@ -1,14 +1,19 @@
 // The Physics API tab's folders: the live readouts (bodies, simulation tiers, the interpolation
-// clock) with their refresh, the determinism probe, and the global wireframe palette.
-import type { DebuggerPaneItem } from '../../../debug/DebuggerGUI';
+// clock) with their refresh, the determinism probe, the snapshot (p500), and the global wireframe
+// palette.
+import { addDebugToast, type DebuggerPaneItem } from '../../../debug/DebuggerGUI';
 import { lsRemoveItem } from '../../../utils/LocalAndSessionStorage';
+import { lerror, llog } from '../../../utils/Logger';
 import { getECSWorld } from '../../../kernel/ecs/ECS';
 import { ComponentType } from '../../../kernel/ecs/ECSCoreComponents';
+import { getCurrentSceneId, registerOnAllSceneExits } from '../../../kernel/scene/Scene';
 import { getPhysicsBodyCapacity } from '../PhysicsBodies';
 import { getPhysicsBodyOwner } from '../PhysicsEntity';
 import { getPhysicsInterpolationReadout } from '../PhysicsInterpolation';
+import { isPhysicsWorldEnabled } from '../PhysicsState';
 import { getLastPhysicsBodyActivity } from '../PhysicsStepStats';
 import { getPhysicsStepGateStats } from '../PhysicsStepping';
+import { restorePhysicsSnapshot, takePhysicsSnapshot } from '../PhysicsWorld';
 import {
   getPhysicsTierPolicy,
   getPhysicsTierPolicyFreezeSources,
@@ -19,6 +24,7 @@ import {
 import type { PhysicsTierPolicy } from '../PhysicsTierTypes';
 import type { RigidBodyAPI } from '../types/PhysicsBodyTypes';
 import type { PhysicsState } from '../types/PhysicsConfigTypes';
+import type { PhysicsSnapshot, RestoreSnapshotOpts } from '../types/PhysicsWorldTypes';
 import {
   DEFAULT_WIREFRAME_POSE_SOURCE,
   getWireframeColorDefault,
@@ -147,6 +153,140 @@ export const getDeterminismProbeFolder = (): DebuggerPaneItem<PhysicsState> => {
         title: 'Stop probe (resumes physics)',
         onClick: () => disarmPhysicsDeterminismProbe(),
       },
+    ],
+  };
+};
+
+/** The snapshot the "Snapshot" folder holds (one at a time), and the scene it was taken in */
+let heldSnapshot: { snapshot: PhysicsSnapshot; sceneId: string } | null = null;
+/** A take or restore in flight (a worker round trip): the buttons wait for it */
+let isSnapshotBusy = false;
+
+/** The "Snapshot" folder's values, written by its buttons (readonly bindings poll them) */
+const snapshotReadout = {
+  size: '-',
+  step: '-',
+  sceneId: '-',
+  takeMs: '-',
+  restoreMs: '-',
+  reaped: '-',
+  orphans: '-',
+};
+const snapshotOptions: Required<RestoreSnapshotOpts> = { orphanPolicy: 'DELETE' };
+
+const formatDuration = (ms: number) => `${ms.toFixed(2)} ms`;
+
+const syncHeldSnapshotReadout = () => {
+  const held = heldSnapshot;
+  snapshotReadout.size = held ? `${(held.snapshot.bytes.byteLength / 1024).toFixed(1)} kB` : '-';
+  snapshotReadout.step = held ? String(held.snapshot.step) : '-';
+  snapshotReadout.sceneId = held?.sceneId ?? '-';
+};
+
+const clearHeldSnapshot = () => {
+  heldSnapshot = null;
+  syncHeldSnapshotReadout();
+};
+
+// A scene load replaces the world, and a restore refuses another world's snapshot
+registerOnAllSceneExits('physicsDebugSnapshot', clearHeldSnapshot);
+
+/** Runs a take or restore, one at a time; a failure goes to the console and a toast */
+const runSnapshotAction = async (failure: string, action: () => Promise<void>) => {
+  if (isSnapshotBusy) return;
+  isSnapshotBusy = true;
+  refreshPhysicsTab();
+  try {
+    await action();
+  } catch (err) {
+    lerror(`[PhysicsSnapshot] ${failure}:`, err);
+    addDebugToast({
+      type: 'alert',
+      title: failure,
+      message: err instanceof Error ? err.message : String(err),
+    });
+  } finally {
+    isSnapshotBusy = false;
+    refreshPhysicsTab();
+  }
+};
+
+const takeHeldSnapshot = () =>
+  runSnapshotAction('Could not take a snapshot', async () => {
+    const start = performance.now();
+    const snapshot = await takePhysicsSnapshot();
+    snapshotReadout.takeMs = formatDuration(performance.now() - start);
+    if (!snapshot) throw new Error('The backend has no world to take a snapshot of.');
+    heldSnapshot = { snapshot, sceneId: getCurrentSceneId() ?? '-' };
+    syncHeldSnapshotReadout();
+  });
+
+const restoreHeldSnapshot = () =>
+  runSnapshotAction('Could not restore the snapshot', async () => {
+    if (!heldSnapshot) return;
+    const start = performance.now();
+    const { world: _world, ...delta } = await restorePhysicsSnapshot(heldSnapshot.snapshot, {
+      ...snapshotOptions,
+    });
+    snapshotReadout.restoreMs = formatDuration(performance.now() - start);
+    const { reapedRigidBodyIds, reapedColliderIds, reapedJointIds, orphanCounts } = delta;
+    snapshotReadout.reaped = `${reapedRigidBodyIds.length} bodies, ${reapedColliderIds.length} colliders, ${reapedJointIds.length} joints`;
+    snapshotReadout.orphans = `${orphanCounts.rigidBodies} bodies, ${orphanCounts.colliders} colliders, ${orphanCounts.joints} joints`;
+    llog(`[PhysicsSnapshot] restored step ${delta.step}:`, delta);
+  });
+
+/** Takes, restores and clears one held snapshot of the world (p500), with its size and step, the
+ * take's and the last restore's time (on WORKER_THREAD the round trip), and what the last restore
+ * reaped (made since the snapshot: deleted with their entities) and found orphaned (deleted
+ * since). The restore's whole delta goes to the console. Dropped on every scene exit. */
+export const getSnapshotFolder = (): DebuggerPaneItem<PhysicsState> => {
+  const monitor = (key: keyof typeof snapshotReadout, label: string) =>
+    ({ key, target: snapshotReadout, label, readonly: true }) as DebuggerPaneItem<PhysicsState>;
+  return {
+    type: 'folder',
+    id: 'snapshot',
+    title: 'Snapshot',
+    expanded: false,
+    content: [
+      {
+        type: 'button',
+        title: 'Take snapshot',
+        disabled: () => isSnapshotBusy || !isPhysicsWorldEnabled(),
+        onClick: () => void takeHeldSnapshot(),
+      },
+      {
+        type: 'button',
+        title: 'Restore snapshot',
+        disabled: () => isSnapshotBusy || !heldSnapshot,
+        onClick: () => void restoreHeldSnapshot(),
+      },
+      {
+        type: 'button',
+        title: 'Clear snapshot',
+        disabled: () => isSnapshotBusy || !heldSnapshot,
+        onClick: () => {
+          clearHeldSnapshot();
+          refreshPhysicsTab();
+        },
+      },
+      {
+        key: 'orphanPolicy',
+        target: snapshotOptions,
+        label: 'Orphans (deleted since the snapshot)',
+        options: [
+          { value: 'DELETE', text: 'Take out of the restored world' },
+          { value: 'KEEP', text: 'Keep (unreachable through the API)' },
+        ],
+      },
+      { type: 'separator' },
+      monitor('size', 'Size'),
+      monitor('step', 'Step'),
+      monitor('sceneId', 'Scene'),
+      monitor('takeMs', 'Take time'),
+      { type: 'separator' },
+      monitor('restoreMs', 'Last restore time'),
+      monitor('reaped', 'Last restore reaped'),
+      monitor('orphans', 'Last restore orphans'),
     ],
   };
 };

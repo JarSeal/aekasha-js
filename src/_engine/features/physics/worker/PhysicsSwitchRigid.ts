@@ -8,8 +8,11 @@ import type { PhysRotation, PhysVector } from '../types/PhysicsCommonTypes';
 import type { WorldAPI } from '../types/PhysicsWorldTypes';
 import type { PhysicsTransformBuffer } from '../PhysicsTransformBuffer';
 
-/** Copies a pose into plain objects, so it posts as exactly these fields. */
-const toPlainPose = (pos: PhysVector, rot: PhysRotation): RigidBodyPose => ({
+/**
+ * Copies a pose into plain objects, so it posts as exactly these fields.
+ * @internal
+ */
+export const toPlainPose = (pos: PhysVector, rot: PhysRotation): RigidBodyPose => ({
   pos: { x: pos.x, y: pos.y, z: pos.z },
   rot: { x: rot.x, y: rot.y, z: rot.z, w: rot.w },
 });

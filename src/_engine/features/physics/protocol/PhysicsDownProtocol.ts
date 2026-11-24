@@ -7,6 +7,7 @@ import type {
 import type { PhysRotation, PhysVector } from '../types/PhysicsCommonTypes';
 import type { CollisionEventRecord, ContactForceEventRecord } from '../types/PhysicsEventTypes';
 import type { OutOfBoundsRecord } from '../types/PhysicsWorldBoundsTypes';
+import type { PhysicsSnapshot, RestoreSnapshotDelta } from '../types/PhysicsWorldTypes';
 import type {
   RayColliderHitAPI,
   RayColliderIntersectionAPI,
@@ -14,6 +15,24 @@ import type {
 } from '../types/PhysicsQueryTypes';
 import type { PhysicsProtocolType } from './PhysicsProtocolType';
 import type { PhysicsUpProtocol } from './PhysicsUpProtocol';
+
+/**
+ * A body a snapshot restore kept (p500 Phase 2), with what its `WORKER_THREAD` proxy keeps a copy
+ * of, read off the restored world: the snapshot may hold another type, enabled state or pose than
+ * the proxy last cached.
+ * @internal
+ */
+export type RestoredBodyState = {
+  /** The body's id. */
+  id: number;
+  /** Its type in the restored world. */
+  bodyType: RigidBodyTypeAPI;
+  /** Whether it's enabled in the restored world. */
+  enabled: boolean;
+  /** Its pose, only for a body without a transform-buffer slot (created FIXED), whose proxy keeps
+   * its own. */
+  pose?: RigidBodyPose;
+};
 
 /**
  * Physics worker DOWN protocol (from worker to main thread): each request's reply, under the
@@ -27,12 +46,14 @@ export type PhysicsDownProtocol =
   (
     | {
         type: PhysicsProtocolType.TAKE_SNAPSHOT;
-        snapshot: Uint8Array | undefined;
+        snapshot: PhysicsSnapshot | undefined;
       }
-    | {
+    | ({
         type: PhysicsProtocolType.RESTORE_SNAPSHOT;
         worldCreated: boolean;
-      }
+        /** Every body the restore kept, as the restored world has it. */
+        bodies: RestoredBodyState[];
+      } & RestoreSnapshotDelta)
     | {
         type: PhysicsProtocolType.INIT_PHYSICS;
         worldCreated: boolean;

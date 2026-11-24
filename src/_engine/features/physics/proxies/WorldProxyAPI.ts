@@ -9,7 +9,7 @@ import { messageWorker, messageWorkerAsync, toPlainRot } from '../PhysicsMessagi
 import { getPhysicsQueryObserver } from '../PhysicsQueryStats';
 import { colliders, joints, rigidBodies } from '../PhysicsRegistry';
 import { facade } from '../PhysicsState';
-import { getCollOrRigidId } from '../PhysicsUtils';
+import { getCollOrRigidId, isF32Changed } from '../PhysicsUtils';
 import { restorePhysicsSnapshot, takePhysicsSnapshot } from '../PhysicsWorld';
 import type { PhysicsResponse } from '../protocol/PhysicsDownProtocol';
 import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
@@ -43,7 +43,13 @@ import type {
   RayColliderIntersectionAPI,
   ShapeCastHitAPI,
 } from '../types/PhysicsQueryTypes';
-import type { WorldAPI } from '../types/PhysicsWorldTypes';
+import type {
+  PhysicsSnapshot,
+  RestoreSnapshotDelta,
+  RestoreSnapshotOpts,
+  RestoreSnapshotResult,
+  WorldAPI,
+} from '../types/PhysicsWorldTypes';
 
 /** Logs a rejected delete that nobody awaits (WorldProxyAPI's removes). */
 const logFailedRemove = (err: unknown) =>
@@ -98,24 +104,47 @@ export class WorldProxyAPI implements WorldAPI {
     messageWorker({ type: PhysicsProtocolType.WORLD_FREE });
   }
 
-  async takeSnapshot(): Promise<Uint8Array | undefined> {
+  async takeSnapshot(): Promise<PhysicsSnapshot | undefined> {
     return await takePhysicsSnapshot();
   }
 
-  takeSnapshotSync(): Uint8Array | undefined {
+  takeSnapshotSync(): PhysicsSnapshot | undefined {
     throw new Error(
       'takeSnapshotSync is not supported in Worker thread mode. Use takeSnapshot(data).'
     );
   }
 
-  async restoreSnapshot(data: Uint8Array): Promise<WorldAPI> {
-    return restorePhysicsSnapshot(data);
+  async restoreSnapshot(
+    snapshot: PhysicsSnapshot,
+    opts?: RestoreSnapshotOpts
+  ): Promise<RestoreSnapshotResult> {
+    return restorePhysicsSnapshot(snapshot, opts);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  restoreSnapshotSync(_data: Uint8Array): WorldAPI {
+  /**
+   * A snapshot restore's world settings (p500 D7: Rapier restores them), each taken where it
+   * differs from this copy at f32 (an unchanged read-back would replace the copy's double).
+   * @internal
+   */
+  _restoreSettings(delta: RestoreSnapshotDelta) {
+    const cache = this._cache;
+    const { gravity } = delta;
+    if (
+      isF32Changed(cache.gravity.x, gravity.x) ||
+      isF32Changed(cache.gravity.y, gravity.y) ||
+      isF32Changed(cache.gravity.z, gravity.z)
+    ) {
+      cache.gravity = { ...gravity };
+    }
+    if (isF32Changed(cache.timestep, delta.timestep)) cache.timestep = delta.timestep;
+    cache.solverIters = delta.solverIterations;
+    cache.pgsIters = delta.internalPgsIterations;
+    cache.ccdSubsteps = delta.maxCcdSubsteps;
+  }
+
+  restoreSnapshotSync(): RestoreSnapshotResult {
     throw new Error(
-      'restoreSnapshotSync is not supported in Worker thread mode. Use restoreSnapshot(data).'
+      'restoreSnapshotSync is not supported in Worker thread mode. Use restoreSnapshot(snapshot).'
     );
   }
 

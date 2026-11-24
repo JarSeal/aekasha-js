@@ -1,8 +1,8 @@
 // The Rapier backend (p614 D7): the Physics API's backend contract (EngineAPIType) on Rapier, the
 // one backend. EngineRapier.ts is the module the facade and the worker load (backends/Engines.ts),
 // and re-exports the contract from these modules: this one (the state they share, a leaf),
-// RapierEvents, RapierShapes, RapierBodies, RapierColliders, RapierJoints, RapierWorld and
-// proxies/ (the API objects).
+// RapierEvents, RapierShapes, RapierBodies, RapierColliders, RapierJoints, RapierRestore,
+// RapierWorld and proxies/ (the API objects).
 
 import type Rapier from '@dimforge/rapier3d-compat';
 import type { Collider, RigidBody } from '@dimforge/rapier3d-compat';

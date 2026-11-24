@@ -1,6 +1,6 @@
 import type Rapier from '@dimforge/rapier3d-compat';
 import * as THREE from 'three/webgpu';
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LoopState } from '../../../../kernel/loop/MainLoop';
 import type { PhysicsDownProtocol } from '../../protocol/PhysicsDownProtocol';
 import { PhysicsProtocolType } from '../../protocol/PhysicsProtocolType';
@@ -16,6 +16,7 @@ import { FeatureType, QueryFilterFlags } from '../../types/PhysicsQueryTypes';
 import type { WorldAPI } from '../../types/PhysicsWorldTypes';
 import { initPhysicsEngine } from '../../PhysicsUtils';
 import { physicsSwitchWorld } from '../../worker/PhysicsSwitchWorld';
+import { backend, colliders, rigidBodies } from './RapierState';
 
 // The Rapier backend in Node: the compat build carries its WASM inline, so no GPU or DOM is needed.
 
@@ -338,5 +339,257 @@ describe('EngineRapier world bounds (p102)', () => {
     engAPI.setWorldBounds(killY);
     for (let i = 0; i < 30; i++) engAPI.step();
     expect(engAPI.drainPendingOutOfBoundsRecords().map((r) => r.bodyId)).toEqual([body.id]);
+  });
+});
+
+describe('EngineRapier snapshots (p500)', () => {
+  beforeEach(() => {
+    engAPI.deleteWorld();
+    world = engAPI.createWorld({ x: 0, y: -9.81, z: 0 }, { timestep: 1 / 60 });
+  });
+
+  /** A dynamic ball with a collider falling from y = 10 at `x`, far from everything else. */
+  const createFallingBall = (x = -50, extra: Partial<RigidBodyParams> = {}) => {
+    const body = engAPI.createRigidBody({
+      rigidType: 'DYNAMIC',
+      translation: { x, y: 10, z: 0 },
+      ...extra,
+    });
+    const collider = engAPI.createCollider({ type: 'BALL', radius: 0.5 }, body.id);
+    return { body, collider };
+  };
+
+  const stepTimes = (n: number) => {
+    for (let i = 0; i < n; i++) engAPI.step();
+  };
+
+  const countWorld = () => ({
+    bodies: backend.world.bodies.len(),
+    colliders: backend.world.colliders.len(),
+    joints: backend.world.impulseJoints.len(),
+  });
+
+  const NO_ORPHANS = { rigidBodies: 0, colliders: 0, joints: 0 };
+
+  it('takes nothing, and refuses a restore, without a world', () => {
+    const snapshot = engAPI.takeSnapshot()!;
+    engAPI.deleteWorld();
+    expect(engAPI.takeSnapshot()).toBeUndefined();
+    expect(() => engAPI.restoreSnapshot(snapshot)).toThrow(/no world/);
+  });
+
+  it('refuses a snapshot of another world (D5)', () => {
+    createFallingBall();
+    const snapshot = engAPI.takeSnapshot()!;
+    engAPI.deleteWorld();
+    engAPI.createWorld({ x: 0, y: -9.81, z: 0 });
+    const { body } = createFallingBall();
+    expect(() => engAPI.restoreSnapshot(snapshot)).toThrow(/another world/);
+    expect(engAPI.getRigidBodyAPIWithId(body.id)).toBe(body);
+  });
+
+  it('restores into a new Rapier world, keeps every API object and frees the replaced world', () => {
+    const { body, collider } = createFallingBall();
+    const snapshot = engAPI.takeSnapshot()!;
+    stepTimes(30);
+    const replaced = backend.world;
+    const free = vi.spyOn(replaced, 'free');
+    const result = engAPI.restoreSnapshot(snapshot);
+    expect(result.world).toBe(world);
+    expect(backend.world).not.toBe(replaced);
+    expect(free).toHaveBeenCalledOnce();
+    expect(world.restoringWorld).toBe(false);
+    expect(result).toMatchObject({
+      reapedRigidBodyIds: [],
+      reapedColliderIds: [],
+      reapedJointIds: [],
+      orphanCounts: NO_ORPHANS,
+    });
+    // The same proxies, now on the restored world's objects
+    expect(engAPI.getRigidBodyAPIWithId(body.id)).toBe(body);
+    expect(engAPI.getColliderAPIWithId(collider.id)).toBe(collider);
+    expect(body.pos.y).toBe(10);
+    expect(collider.translationSync().y).toBe(10);
+    // The world's own methods go through the one implementation
+    expect(world.restoreSnapshotSync(snapshot).world).toBe(world);
+  });
+
+  it('restores the same snapshot twice to the same state', () => {
+    const { body } = createFallingBall();
+    const snapshot = engAPI.takeSnapshot()!;
+    stepTimes(30);
+    engAPI.restoreSnapshot(snapshot);
+    expect(body.pos.y).toBe(10);
+    stepTimes(30);
+    const afterFirst = body.pos.y;
+    engAPI.restoreSnapshot(snapshot);
+    expect(body.pos.y).toBe(10);
+    stepTimes(30);
+    expect(body.pos.y).toBe(afterFirst);
+    expect(afterFirst).toBeLessThan(10);
+  });
+
+  it("throws on bytes Rapier can't read, and keeps the world as it was", () => {
+    const { body } = createFallingBall();
+    const snapshot = engAPI.takeSnapshot()!;
+    const current = backend.world;
+    // Rapier's World.fromRaw returns null for bytes it can't deserialize
+    vi.spyOn(RAPIER.World, 'restoreSnapshot').mockReturnValueOnce(null as unknown as Rapier.World);
+    expect(() => engAPI.restoreSnapshot(snapshot)).toThrow(/could not read/);
+    expect(backend.world).toBe(current);
+    expect(world.restoringWorld).toBe(false);
+    engAPI.step();
+    expect(body.pos.y).toBeLessThan(10);
+  });
+
+  it('carries the step count and the world settings in the snapshot', () => {
+    stepTimes(10);
+    const snapshot = engAPI.takeSnapshot()!;
+    expect(snapshot.step).toBe(10);
+    stepTimes(5);
+    world.setGravity({ x: 0, y: -1, z: 0 });
+    const result = engAPI.restoreSnapshot(snapshot);
+    expect(result.step).toBe(10);
+    expect(backend.stepCount).toBe(10);
+    expect(result.gravity.y).toBeCloseTo(-9.81, 5);
+    expect(world.getGravitySync().y).toBeCloseTo(-9.81, 5);
+    expect(result.timestep).toBeCloseTo(1 / 60, 7);
+    expect(result).toMatchObject({ solverIterations: 4, internalPgsIterations: 1 });
+  });
+
+  it('reaps the bodies, colliders and joints made after the snapshot', () => {
+    const { body: anchor } = createFallingBall(-50);
+    const snapshot = engAPI.takeSnapshot()!;
+    const before = countWorld();
+    const { body: late, collider: lateCollider } = createFallingBall(-60);
+    const extraCollider = engAPI.createCollider({ type: 'BALL', radius: 0.2 }, anchor.id);
+    const joint = engAPI.createJoint({
+      type: 'ROPE',
+      body1Id: anchor.id,
+      body2Id: late.id,
+      length: 20,
+      anchor1: { x: 0, y: 0, z: 0 },
+      anchor2: { x: 0, y: 0, z: 0 },
+    });
+    const result = engAPI.restoreSnapshot(snapshot);
+    expect(result.reapedRigidBodyIds).toEqual([late.id]);
+    expect(result.reapedColliderIds.sort()).toEqual([lateCollider.id, extraCollider.id].sort());
+    expect(result.reapedJointIds).toEqual([joint.id]);
+    expect(result.orphanCounts).toEqual(NO_ORPHANS);
+    expect(engAPI.getRigidBodyAPIWithId(late.id)).toBeUndefined();
+    expect(engAPI.getColliderAPIWithId(extraCollider.id)).toBeUndefined();
+    expect(engAPI.getJointAPIWithId(joint.id)).toBeUndefined();
+    expect(countWorld()).toEqual(before);
+    // A reaped id's delete is the quiet no-op of an unknown id
+    expect(engAPI.deleteRigidBody(late.id)).toEqual({ id: late.id, colliderIds: [], jointIds: [] });
+  });
+
+  it('takes out what was deleted since the snapshot, or keeps it with KEEP', () => {
+    const { body: kept, collider: keptCollider } = createFallingBall(-50);
+    const { body: deleted } = createFallingBall(-60);
+    const snapshot = engAPI.takeSnapshot()!;
+    const deletedAt = { x: -60, y: 10, z: 0 };
+    engAPI.deleteRigidBody(deleted.id);
+    const result = engAPI.restoreSnapshot(snapshot);
+    expect(result.orphanCounts).toEqual({ rigidBodies: 1, colliders: 1, joints: 0 });
+    expect(result.reapedRigidBodyIds).toEqual([]);
+    expect(countWorld()).toEqual({ bodies: 1, colliders: 1, joints: 0 });
+    expect(engAPI.getRigidBodyAPIWithId(kept.id)).toBe(kept);
+    // Rapier's queries see a collider from the first step it's in the world on. Asked of Rapier
+    // itself: the world API leaves out a hit on a collider it doesn't know
+    engAPI.step();
+    const rayDown = (x: number) => new RAPIER.Ray({ x, y: 20, z: 0 }, { x: 0, y: -1, z: 0 });
+    expect(backend.world.castRay(rayDown(deletedAt.x), 100, true)).toBeNull();
+    // The control: the survivor is hit, so the miss isn't the queries missing everything
+    expect(backend.world.castRay(rayDown(-50), 100, true)?.collider.handle).toBe(
+      colliders.get(keptCollider.id)
+    );
+
+    const kept2 = engAPI.restoreSnapshot(snapshot, { orphanPolicy: 'KEEP' });
+    expect(kept2.orphanCounts).toEqual({ rigidBodies: 1, colliders: 1, joints: 0 });
+    expect(countWorld()).toEqual({ bodies: 2, colliders: 2, joints: 0 });
+    engAPI.step();
+    expect(backend.world.castRay(rayDown(deletedAt.x), 100, true)).not.toBeNull();
+  });
+
+  it("tells a body made since at a deleted body's index from it (the handle generation)", () => {
+    const { body: old } = createFallingBall(-50);
+    const snapshot = engAPI.takeSnapshot()!;
+    const oldHandle = rigidBodies.get(old.id)!;
+    engAPI.deleteRigidBody(old.id);
+    const { body: reused } = createFallingBall(-60);
+    const reusedHandle = rigidBodies.get(reused.id)!;
+    // Rapier's arena reuses the freed index with the next generation
+    expect(reusedHandle).not.toBe(oldHandle);
+    const result = engAPI.restoreSnapshot(snapshot);
+    expect(result.reapedRigidBodyIds).toEqual([reused.id]);
+    expect(result.orphanCounts.rigidBodies).toBe(1);
+    expect(countWorld().bodies).toBe(0);
+  });
+
+  it('rebinds a joint and keeps the Rapier-side user data', () => {
+    const { body: a } = createFallingBall(-50, { lockRotations: { x: true, y: false, z: true } });
+    const { body: b } = createFallingBall(-52);
+    const joint = engAPI.createJoint({
+      type: 'ROPE',
+      body1Id: a.id,
+      body2Id: b.id,
+      length: 4,
+      anchor1: { x: 0, y: 0, z: 0 },
+      anchor2: { x: 0, y: 0, z: 0 },
+    });
+    const snapshot = engAPI.takeSnapshot()!;
+    stepTimes(10);
+    const result = engAPI.restoreSnapshot(snapshot);
+    expect(result.reapedJointIds).toEqual([]);
+    expect(engAPI.getJointAPIWithId(joint.id)).toBe(joint);
+    expect(joint.body1IdSync()).toBe(a.id);
+    expect(joint.isValidSync()).toBe(true);
+    const restoredA = backend.world.getRigidBody(rigidBodies.get(a.id)!);
+    expect(restoredA.userData).toMatchObject({ lockRotationsX: true, lockRotationsZ: true });
+  });
+
+  it('leaves a body detached since the snapshot detached, and an orphan in the restored world', () => {
+    const { body } = createFallingBall(-50);
+    const snapshot = engAPI.takeSnapshot()!;
+    engAPI.detachRigidBody(body.id);
+    const result = engAPI.restoreSnapshot(snapshot);
+    expect(result.orphanCounts).toEqual({ rigidBodies: 1, colliders: 1, joints: 0 });
+    expect(countWorld().bodies).toBe(0);
+    engAPI.reattachRigidBody(body.id, { bodyType: RigidBodyTypeAPI.Dynamic, enabled: true });
+    expect(countWorld().bodies).toBe(1);
+    expect(body.pos.y).toBe(10);
+  });
+
+  it('replays the same steps the same, bit for bit, after a restore (D16)', () => {
+    // A small pile falling onto a ground and onto itself
+    engAPI.createCollider({
+      type: 'CUBOID',
+      hx: 10,
+      hy: 0.5,
+      hz: 10,
+      translation: { x: 0, y: -1, z: 0 },
+    });
+    const bodies: ReturnType<typeof createFallingBall>['body'][] = [];
+    for (let i = 0; i < 12; i++) {
+      bodies.push(
+        createFallingBall((i % 3) * 0.6, {
+          translation: { x: (i % 3) * 0.6, y: 1 + i * 0.9, z: (i % 2) * 0.3 },
+          angvel: { x: i * 0.1, y: 0, z: 0 },
+        }).body
+      );
+    }
+    stepTimes(20);
+    const snapshot = engAPI.takeSnapshot()!;
+    const readPoses = () => {
+      const out = new Float32Array(bodies.length * 7);
+      bodies.forEach((b, i) => b.readPoseInto(out, i * 7));
+      return out;
+    };
+    stepTimes(120);
+    const first = readPoses();
+    engAPI.restoreSnapshot(snapshot);
+    stepTimes(120);
+    expect(readPoses()).toEqual(first);
   });
 });

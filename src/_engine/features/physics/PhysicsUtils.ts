@@ -33,6 +33,14 @@ export const ValidProtocolTypes = new Set(
 );
 
 /**
+ * Whether a setting Rapier read back (`value`) differs from a copy's (`copied`) at f32: Rapier
+ * stores f32, so writing an unchanged read-back over the copy's double would change it for nothing
+ * (a snapshot restore's settings, p500).
+ * @internal
+ */
+export const isF32Changed = (copied: number, value: number) => Math.fround(copied) !== value;
+
+/**
  * The id of a body or collider given as itself or its id.
  * @internal
  */

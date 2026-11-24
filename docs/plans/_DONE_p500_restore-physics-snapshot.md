@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: implemented (Phases 0-4)
 Category: Physics
 Epic: https://trello.com/c/8ROzNdXe/161-make-a-possibility-to-run-the-physics-engine-in-a-thread-threading-architecture-for-all-upcoming-thread-implemantations-not-just
 Blocks: p512_client-prediction-and-reconciliation.md
@@ -378,7 +378,7 @@ All four `@CHORE` comments at `:1257-1265` are deleted as resolved.
 
 Each phase compiles clean, leaves the repo working, and is separately reviewable/committable.
 
-**Phase 0 — Reconcile the duplicates and fix the pre-existing bug.** Small and
+**Phase 0 — Reconcile the duplicates and fix the pre-existing bug — done.** Small and
 self-contained, no new feature. In the backend (`RapierWorld.ts`, `proxies/EngineWorldProxyAPI.ts`):
 collapse to one implementation per design decision 8, add the `free()` of the replaced world per
 decision 10, and add the `if (!newWorld) throw` guard for the `null` return. The
@@ -390,7 +390,28 @@ Manual verification: `physicsTest.ts` behaves exactly as before. From the consol
 `deletePhysicsWorld()` then `createPhysicsWorld()` and confirm the physics debugger tab's entity
 list shows no stale entries. Both `workerTarget` modes.
 
-**Phase 1 — Engine-side capture/restore and the rebind pass, `MAIN_THREAD` end to end.** Add the
+As built (Phase 0):
+
+- `RapierWorld.ts`' `takeSnapshot` / `restoreSnapshot` are the one implementation;
+  `EngineWorldProxyAPI`'s four snapshot methods delegate to them. That import makes a cycle
+  `RapierWorld` ↔ `proxies/EngineWorldProxyAPI` (calls inside methods only, like the facade's
+  `PhysicsWorld` ↔ `WorldProxyAPI`). The static `Rapier` import is now `import type`; the restore
+  uses `backend.RAPIER`.
+- **A restore keeps the world's API object** (decision 1 at the backend level):
+  `EngineWorldProxyAPI` holds no per-world state (it reads `backend.world`), so `restoreSnapshot`
+  returns the existing `physicsWorldAPI` instead of making a new one. The worker's
+  `physicsWorldAPI = engAPI.restoreSnapshot(...)` gets the same object back.
+- Restore order: no world → throw; `World.restoreSnapshot` → `null` → throw (the world is left as it
+  was); swap `backend.world` with `restoringWorld` set (a `try` / `finally`, where Phase 1's rebind
+  and sweep go); `free()` the replaced world last (decision 10).
+- `takeSnapshot` returns `undefined` without a world (it threw on the no-op stub), and
+  `deleteWorld` without a world is a quiet no-op (it threw freeing the stub).
+- Tests: `EngineRapier.test.ts`' "EngineRapier snapshots (p500)" (no world, the API object kept and
+  the old world freed, restore twice from one snapshot, `null` from Rapier).
+- The facade's `debugStateBuffer` and `resolvedTransportMode` aren't touched: the next world's
+  create (`resolvedTransportMode`) and tracking call (`debugStateBuffer`) set them again.
+
+**Phase 1 — Engine-side capture/restore and the rebind pass, `MAIN_THREAD` end to end — done.** Add the
 new types (but not yet the protocol union members). In `EngineRapier.ts`: add `worldEpoch` next to
 `worldCreated` (`:79`) and bump it in `createWorld`/`deleteWorld`; implement `takeSnapshot()`
 returning the envelope; implement `restoreSnapshot(snapshot, opts)` as — epoch guard → restore and
@@ -417,7 +438,83 @@ times (this is what proves decision 9's no-transfer stance and the `old.free()` 
 **Also run the decision-16 determinism check here**: capture, step N, record poses; restore, step N
 again, compare. Record the outcome in this document.
 
-**Phase 2 — Worker protocol.** Add the three protocol union changes. In `physicsWorker.ts`:
+As built (Phase 1):
+
+- **The types** are in `types/PhysicsWorldTypes.ts` and exported from `aekasha/physics`, because
+  `WorldAPI` (public) names them. That makes the `WorldAPI` snapshot signatures a public API change
+  (the API baseline shows it). `PhysicsSnapshot` is `{ bytes, worldEpoch, step }`: **`takenAt` became
+  `step`**, the backend's step count at capture. The physics files ban the wall clock (the
+  simulation lint), the step orders snapshots as well, and a restore puts it back.
+  `RestoreSnapshotDelta` also carries `maxCcdSubsteps` (p622 added it to the world settings) and
+  `step`.
+- **The protocol unions changed here, not in Phase 2:** the worker case has to compile against the
+  backend's new signature. It passes `snapshot` and `opts` and replies with the delta; freeing slots
+  and the write-back are still Phase 2's. Until then the facade's `WORKER_THREAD` restore throws
+  (`takePhysicsSnapshot` works in both targets).
+- **The backend:** the walk is in its own module, `backends/rapier/RapierRestore.ts`
+  (`rebindRestoredWorld`). `RapierWorld.ts`' `restoreSnapshot` runs: no world → epoch guard → Rapier
+  restore and the `null` check → swap `backend.world` → the walk → `backend.stepCount =
+  snapshot.step` → `free()` the replaced world. `worldEpoch` is bumped by `createWorld` and
+  `deleteWorld`. The walk:
+  - claims bodies, then colliders, then joints with the handle test, rebinding each survivor;
+  - forgets the reaped ones: their ids, reverse handles, a body's own world bounds, a collider's
+    event registrations;
+  - collects the orphans of all three kinds, then removes them (bodies first);
+  - checks every survivor with `isValid()`: a failure is reaped, with an `lerror` in debug builds;
+  - clears the event queue, the undelivered collision and contact-force records
+    (`clearPendingEventRecords`) and the undelivered world-bounds exits
+    (`clearPendingOutOfBoundsRecords`);
+  - queues every survivor for a world-bounds check (the bounds may have changed since the snapshot,
+    and a body restored asleep is never checked).
+
+  The D11 `lwarn` is in the backend (`backend.isDebugEnvironment`), so both targets log it.
+- **Decision 6 changed:** Rapier's `userData` isn't write-only after all: `detachRigidBody` reads it
+  and `reattachRigidBody` writes it back. Instead of a private mirror, the restore's
+  `_rebind(rb, true)` copies it from the old wrapper (a JS field, readable before the `free()`).
+  `EngineJointProxyAPI` got its `_rebind`; the body and collider proxies already had one (p352).
+- **The world bounds (risk table):** the backend keeps the global box and the bodies' own bounds
+  (by id) through a restore, `handleToRigidBodyId` needs no rebuild (handles are stable; the reaped
+  entries are removed), and `backend.stepCount` goes back to the snapshot's. So nothing is re-sent
+  from the ECS side.
+- **The facade:** `applyRestoreDelta` (`PhysicsWorld.ts`):
+  - forgets the reaped objects (`forgetRigidBody` / `forgetCollider` / `forgetJoint`: marked
+    `isBeingDeleted`, the worker callbacks dropped);
+  - writes the world settings into the physics state only where they differ at f32 (Rapier stores
+    f32, so an unchanged read-back would overwrite the state's doubles);
+  - **rewinds the step clock to the snapshot's step** (`resetSimClock(step)`, which now takes one,
+    and `dropStepAccumulator`). The plan didn't have this: `getPhysicsSubStepIndex` is the
+    simulation code's clock (the tier policy's cadence, the characters' durations), so a replay has
+    to run on the same step numbers. It drops the step gates and bumps both epochs, as a new
+    world's reset does;
+  - calls the hooks (`onPhysicsRestore`, a `Set`, each in a `try`).
+
+  `facade.isRestoringSnapshot` makes `stepPhysics` return 0 and drop the accumulator. On
+  `MAIN_THREAD` the restore is synchronous, so the guard is for Phase 2.
+- **Bypass:** `facade.world` on `MAIN_THREAD` is the engine's world proxy, so app code's
+  `getPhysicsWorld().restoreSnapshot()` bypasses the facade (no registry pruning, no step clock, no
+  hooks), as the world's own creates do. `WorldAPI`'s `@remarks` say so. On `WORKER_THREAD` the
+  proxy goes through the facade.
+- **Known limit (intersection semantics):** a body detached (`REMOVED` tier) at snapshot time and
+  reattached since isn't in the snapshot, so it's reaped, and Phase 3 will delete its entity. A body
+  detached since the snapshot stays detached, and its copy in the snapshot counts as an orphan.
+- **Determinism (D16), the outcome:** `EngineRapier.test.ts` drops 12 balls into a pile, steps 20,
+  snapshots, steps 120 and records every pose; then restores and steps 120 again. The poses are bit
+  for bit the same (Node, the compat build, Rapier 0.19.3). Restoring twice from one snapshot gives
+  the same state too.
+- Tests: `EngineRapier.test.ts`' "EngineRapier snapshots (p500)":
+  - the epoch guard, the API objects kept and the replaced world freed, the `null` bytes;
+  - the step count and the settings carried;
+  - survivors, reaped (bodies, colliders, joints), orphans with `DELETE` and `KEEP` (raw Rapier ray
+    casts, with a hit control: Rapier's queries see a collider only after a step);
+  - the handle generation (a body made at a deleted body's index), a joint rebound with the user
+    data kept, a detached body, and the determinism check above.
+
+  `PhysicsFacade.test.ts`' three p500 tests: the reaped objects forgotten before the hooks run, the
+  step clock rewound, the hook's remover; the settings, the doubles kept; another world refused,
+  nothing changed.
+- The manual browser checks ran in Phase 4, from its tab (see its As built), all passing.
+
+**Phase 2 — Worker protocol — done.** Add the three protocol union changes. In `physicsWorker.ts`:
 `TAKE_SNAPSHOT` replies with the transfer list per decision 9; `RESTORE_SNAPSHOT` calls
 `engAPI.restoreSnapshot(data.snapshot, data.opts)`, then calls `transformBuffer?.freeSlot(id)` for
 every reaped rigid body — the identical call `physicsSwitchRigid.ts:59` makes on
@@ -435,7 +532,50 @@ Manual verification: flip `CONFIG.physics.workerTarget` to `'WORKER_THREAD'` and
 without stepping). Confirm pending resolver requests return to zero after each restore. Confirm slot
 reuse: create → restore (reaps it) → create again, and check the new body reuses the freed slot.
 
-**Phase 3 — ECS reconciliation (`PhysicsEntity.ts`).** Add
+As built (Phase 2):
+
+- **The protocol unions** were Phase 1's. Phase 2 added `bodies: RestoredBodyState[]` to the
+  `RESTORE_SNAPSHOT` reply (`protocol/PhysicsDownProtocol.ts`), see the proxies below.
+- **The worker** (`worker/PhysicsWorker.ts`): `TAKE_SNAPSHOT` transfers the bytes' buffer (D9),
+  only when the bytes own all of it (a view into Rapier's memory would detach it; Rapier 0.19.3's
+  bytes do own theirs). `RESTORE_SNAPSHOT` frees the reaped bodies' slots, **sets `stepsExecuted`
+  to the snapshot's step** (the plan's comment kept it going: Phase 1 rewinds the main thread's
+  clock, and the pending writes compare their step with the buffer's stamp, so the two have to go
+  back together), writes the transforms and the debug state back (D13, D14), and replies with the
+  delta and every body the backend still has (a detached one isn't in its map).
+- **The `WORKER_THREAD` proxies weren't zero work (D1 holds on `MAIN_THREAD` only).**
+  `RigidBodyProxyAPI` caches the type and enabled state (a tier change or a world bounds exit since
+  the snapshot leaves them wrong), a body created `FIXED` keeps its own pose (a move since leaves it
+  wrong), and a write not shown yet is kept until the buffer's stamp reaches its step, which after
+  the rewind would hide the restored pose for as many steps as were taken back. So the reply lists
+  each kept body's type, enabled state and, without a slot, pose (`RestoredBodyState`), and
+  `RigidBodyProxyAPI._restore` takes them and drops the writes not shown yet. The cached mass stays:
+  reading it makes the backend recompute the mass properties, a write. A write made while a restore
+  is in flight reaches the restored world, but its proxy drops it at the reply, so it shows a frame
+  late.
+- **The facade** (`PhysicsWorld.ts`): `restorePhysicsSnapshot` sends the restore (the response
+  typed as itself, `RestoreSnapshotResponse`; the delta is its rest), gives each kept body's proxy
+  its state, refreshes the existing world proxy's settings (`WorldProxyAPI._restoreSettings`, D7,
+  with Phase 1's f32 compare, now `isF32Changed` in `PhysicsUtils.ts`), then runs
+  `applyRestoreDelta`. `facade.isRestoringSnapshot` is now a count of the restores in flight
+  (`restoresInFlight`): overlapping restores apply in call order, the last wins, and stepping waits
+  for every one.
+- **Events:** `applyRestoreDelta` drops the event pushes and the world bounds exits not delivered
+  yet, and the noted exit steps after the restored step (`dropEventPushesAfterRestore`,
+  `PhysicsMessaging.ts`), in both targets: on `MAIN_THREAD` the backend dropped its own records in
+  Phase 1, but the exits the facade had taken from it stayed.
+- The two `@TODO` blocks were gone with Phase 1.
+- Tests: `PhysicsWorkerRequests.test.ts`' p500 tests, the matrix in `MESSAGE_BATCH` and
+  `SHARED_MEMORY` (the harness boots with `useSAB: true` behind a `self` that isn't cross-origin
+  isolated, and the SAB test makes it so): the transfer, the world proxy kept, reaped and orphans,
+  the pose and velocity shown without a step on the snapshot's step, a write not shown dropped,
+  the proxies' type, enabled state and fixed pose, the settings, the slot reused, a second restore
+  from the same bytes, no request left pending; overlapping restores; a world bounds exit taken
+  back and the bounds kept. Each change, removed alone, fails at least one of them.
+- The manual browser checks ran in Phase 4 (both transports; slot reuse included), all passing.
+  Pending requests returning to zero is the unit tests' only: the facade doesn't expose the count.
+
+**Phase 3 — ECS reconciliation (`PhysicsEntity.ts`) — done.** Add
 `reconcilePhysicsEntitiesAfterRestore(delta, world?)`:
 walk `world.getStorage(ComponentType.TAG_IS_PHYSICS_OBJECT)`, resolve each entity's body via
 `ECSWorld.getRigidBody(entityId)` (`ECS.ts:776-782`), and if its id is in `reapedRigidBodyIds`
@@ -453,19 +593,120 @@ assertion is not reached. If the worker path diverges, add an `opts.skipEngineDi
 `disposePhysicsEntity` rather than loosening that assertion. Iterate a materialized array of entity
 ids, never the live storage.
 
+Found in Phase 2, for this phase to settle (both targets):
+
+- **A `BODY_STATIC` entity's `TRANSFORM`.** `BODY_STATIC` isn't synced per frame; a moved body
+  reaches its transform through the body-moved listener (`queueStaticBodySync`). A body moved since
+  the snapshot (a `FIXED` one, or one a `STATIC` / `DISABLED` tier holds) is put back by the
+  restore with no move to report, so its entity keeps the moved pose. Queue every survivor in
+  `BODY_STATIC` for that sync (the delta doesn't list survivors: walk the storage).
+- **`PHYSICS_SIM_TIER` and the `BODY_*` bucket.** A tier applied since the snapshot is undone in
+  the backend (the body's type and enabled state are the snapshot's; the `WORKER_THREAD` proxy now
+  says so) but not in the entity's component, its bucket or the policy's view. A body detached
+  since stays detached (Phase 1's known limit). Decide whether the reconciler re-applies the
+  entity's tier, or resets the component to what the body is.
+
 Manual verification: snapshot → `createPhysicsEntity(...)` a new body → restore → its ECS entity is
 gone, its mesh is out of the scene, no console errors, and the debugger tab's entity list matches
 the ECS entity count. Both thread modes, both `useSAB` settings.
 
-**Phase 4 — Debugger tab affordance (`debug/_dbg__PhysicsTabFolders.ts`).** A "Snapshot" folder
+As built (Phase 3):
+
+- **Two restore hooks, not one.** Physics' install registers `PhysicsEntity.ts`'
+  `reconcilePhysicsEntitiesAfterRestore(delta)` (no `world` parameter: it covers every ECS world);
+  `physicsTiers()`' install (`installPhysicsTiers`) registers `PhysicsTiers.ts`'
+  `resetPhysicsTiersAfterRestore`, so a build without the tiers has none of it (and `PhysicsEntity.ts`
+  can't import the tiers: they import it). Install order runs physics' first.
+- **The reaped entities:** found through the body → entity map (`bodyOwners`, every ECS world, one
+  lookup per reaped body), not a storage walk; an entity given another body since keeps it. A reaped
+  body's entity is deleted (`world.deleteEntity`, its visual with it: a `target` mesh entity that got
+  its physics after the snapshot goes whole). The reaped colliders left over (one added to a kept body,
+  or a colliders-only entity's) are filtered out of the entities' colliders in place (a `REMOVED`
+  tier's copy is the same array), the only storage walk, over every world's physics entities; an
+  entity without a body left with none is deleted. Ids are collected first and deleted last. A
+  restore that reaped nothing costs nothing there.
+- **The ordering constraint holds, no `skipEngineDispose`:** the delete hook ends in the async
+  `deleteRigidBody` / `deleteColliders` in both targets, which return early for an id the facade
+  forgot; no delete reaches the worker (tested).
+- **`BODY_STATIC` (the first Phase 2 note):** every `BODY_STATIC` entity of every world is queued for
+  the transform sync (`queueStaticBodySync`) on every restore: after the clock's rewind it syncs until
+  the first step after the restore, and the restored pose is there by then (the buffer, the worker's
+  write-back, or a `FIXED` proxy's own pose).
+- **The tiers (the second note): reset to the body, not re-applied.** Tier changes aren't creates or
+  deletes, so the restore stays exact for them (re-applying a freeze would zero the restored
+  velocities), and the policy decides again from the snapshot's step. Each tiered entity gets the tier
+  its restored body is in (`FIXED`: `STATIC`; dynamic and enabled: `FULL`; dynamic and disabled:
+  `DISABLED`) and its bucket (`moveToTierBucket`, taken out of `applyTier`); `target` = `tier`, so a
+  request not applied yet finds nothing to do when its queue runs. The policy reads `target`, and drops
+  its measurements on the restore's epoch: nothing of its own to reset. A world-disabled entity's body
+  is disabled in `FULL` and `DISABLED` alike, so it keeps whichever it had (`STATIC` becomes `FULL`). A
+  `REMOVED` entity stays; one in flight back gets its bucket from the reply as before. On
+  `WORKER_THREAD` the proxies hold the reply's state when the hooks run.
+- **Bodies of a deleted world are skipped** by both walks (`isBeingDeleted`): a scene load deletes the
+  default world's physics entities only, so another ECS world can keep entities whose bodies went with
+  an earlier world, and reading one crashed the facade test.
+- **Known limit:** the entity's `DISABLED` component isn't reset. An entity disabled since the snapshot
+  (app code's `world.setDisabled`, a world bounds `DISABLE` exit) keeps it while its restored body is
+  enabled.
+- Tests, in `PhysicsFacade.test.ts` and `PhysicsWorkerRequests.test.ts` (the entities' and the tiers'
+  installs with stub contexts, once per file): the reaped entities deleted and colliders filtered, no
+  delete sent and nothing pending; the moved `BODY_STATIC` entities synced (`FIXED` and a tier's, with
+  and without a slot); the tiers and buckets reset, a pending request dropped, the world-disabled rule,
+  `REMOVED` kept. Each change, removed alone, fails at least one of them.
+- The manual browser checks ran in Phase 4 (the reaped entity gone, the entity count back), all
+  passing.
+
+**Phase 4 — Debugger tab affordance (`debug/_dbg__PhysicsTabFolders.ts`) — done.** A "Snapshot" folder
 of `DebuggerPaneItem`s next to the determinism probe's (`Take snapshot` / `Restore snapshot` /
 `Clear snapshot` `button`s), holding the last `PhysicsSnapshot` in a module-local, plus monitors
-of `bytes.byteLength`, `takenAt`, and the last restore's reaped/orphan counts. This is the
-primary manual-verification surface for every other phase and should not be skipped — pull it
-earlier if any phase proves fiddly.
+of `bytes.byteLength`, `step` (Phase 1's `takenAt`), and the last restore's reaped/orphan counts.
+This is the primary manual-verification surface for every other phase and should not be skipped —
+pull it earlier if any phase proves fiddly. The manual checks Phases 1-3 left (their "Not done"
+lines) run from it.
 
 Manual verification: take/restore/clear from the tab in all four configurations (`MAIN_THREAD`;
 `WORKER_THREAD` × `useSAB` true/false).
+
+As built (Phase 4):
+
+- **The folder** (`getSnapshotFolder`, after the determinism probe's): `Take snapshot`, `Restore
+  snapshot`, `Clear snapshot` and an orphan policy select (`DELETE` / `KEEP`, not in the plan: the
+  `KEEP` path by hand too); monitors of the size (kB), the step, the scene it was taken in, the
+  take's time, and the last restore's time (the round trip on `WORKER_THREAD`) and its reaped and
+  orphan counts per kind. Every restore logs its whole delta (`[PhysicsSnapshot] restored step N:`).
+  The buttons are disabled without a world or a snapshot, and while a take or restore is in flight;
+  a failure goes to the console and an alert toast.
+- **The held snapshot is dropped on every scene exit** (`registerOnAllSceneExits` at the module's
+  load, as the merging debug modules do): a scene load replaces the world, so it couldn't be
+  restored (the risk table's "reject or drop"). A world deleted and created from the console isn't
+  caught: the restore refuses it, with the toast.
+- **Public API (not in the plan):** `takePhysicsSnapshot` and `restorePhysicsSnapshot` are on
+  `aekasha/physics`. `getPhysicsWorld().restoreSnapshot()` was app code's only way, and on
+  `MAIN_THREAD` it restores the backend alone (Phase 1's bypass: no entity reconciled, no step
+  clock), so the facade's pair is the app's, the same in both targets. `onPhysicsRestore` stays
+  `@internal`. Engine minor bump: the `WorldAPI` snapshot signatures changed in Phase 1, but the old
+  ones were broken and unused.
+- **Fixed:** the D11 warning's wording (`RapierRestore.ts`).
+- **Docs:** the Hub's physics guide has a Snapshots section (the two functions, the intersection
+  rule, the replay caveat, the tab), the readme a Physics snapshots feature (its roadmap item
+  dropped), physics' `CLAUDE.md` the tab and the public pair. The baselines were recorded: the
+  Rapier chunk grew 1.1 kB gzip (both copies) and the worker 0.2 kB; the API baseline also took
+  `registerInstanceBoundsProvider` and the embeds' few hundred bytes, which main's i090-i110 merge
+  left unrecorded.
+- **The manual checks** (all of Phases 1-4), driven through the tab's buttons by a Playwright
+  script (the scene runner's server and browser: WebGPU in the Windows Chrome), `physicsTest`, in
+  `MAIN_THREAD`, `WORKER_THREAD` with SAB and without (the "four configurations" are three): 61
+  checks, all passing, no console error. In each: the take's size (15.6 kB) and step shown; a
+  restore puts the 9 dynamic bodies back on the snapshot's poses exactly (after 0.8-2.1 m of
+  movement), its delta empty, the step clock on the snapshot's step; restoring twice gives the same
+  state; **90 steps after a restore replay bit for bit** (D16, in all three targets); a ball made
+  since is reaped (body and collider in the delta, its entity deleted, the entity count back; on
+  the worker its slot freed and the next ball given the same one); a joint demo's body deleted since
+  is an orphan (1 body, 1 collider, 1 joint) and a ray cast where it was hits the ground below it;
+  clear disables restore and empties the readouts. Measured: take 1.1-1.7 ms, restore 4 ms on
+  `MAIN_THREAD` and 8-9 ms on the worker (round trip), for 18 bodies.
+- Not checked: the meshes following (the checks read the bodies' poses; the screenshots look
+  right), pending requests (unit tests only).
 
 ## Non-goals
 

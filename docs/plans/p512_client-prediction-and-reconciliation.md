@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Networking, Characters, Physics
-Blocked by: p500_restore-physics-snapshot.md (restore that rebinds the proxies), p428_character-determinism-in-worker-targets.md (deterministic characters in the worker targets, the default), p511_network-transport-and-replication.md (the snapshots it reconciles against)
+Blocked by: p428_character-determinism-in-worker-targets.md (deterministic characters in the worker targets, the default), p511_network-transport-and-replication.md (the snapshots it reconciles against)
 Related: `src/_engine/features/character/CLAUDE.md` and `src/_engine/kernel/input/CLAUDE.md` (deterministic characters on `MAIN_THREAD`, the per-step action recording), p510_headless-simulation-runtime.md (The multiplayer path: model 2, the measurements), p421_kinematic-character-controller.md (the controller the local player is predicted with), p423_vehicles.md (a vehicle the local player drives)
 
 # Client Prediction and Reconciliation — Stub
@@ -31,8 +31,12 @@ since. Remote entities stay interpolated (p511).
   snapshot and async casts (p428), and the KCC's sweeps must run inside the step (p421's open
   question 1, the same decision). Prediction needs the client's character to match the server's
   for the same actions, but not bit for bit across machines: small differences are corrected.
-- p500 makes a physics snapshot restorable with the API's proxies rebound; its non-goals are ECS
-  rewind and character state, which this plan adds for the predicted entity.
+- p500 (implemented) made a physics snapshot restorable: `takePhysicsSnapshot` /
+  `restorePhysicsSnapshot` on `aekasha/physics`, in both worker targets, the API's proxies rebound,
+  the step clock set back to the snapshot's step, and what was created since deleted with its
+  entities (`src/_engine/features/physics/CLAUDE.md`'s Deterministic scene loads). A 90-step replay
+  after a restore came out bit for bit in all three targets. Its non-goals are ECS rewind and
+  character state, which this plan adds for the predicted entity.
 
 ## Open questions
 

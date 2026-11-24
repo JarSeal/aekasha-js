@@ -16,6 +16,7 @@ import {
   createPhysicsAPIDebugGUI,
   createPhysicsWorld,
   initPhysics,
+  onPhysicsRestore,
   registerPhysicsAPIDebugGUI,
   resetPhysicsWorld,
   stopPhysics,
@@ -23,6 +24,7 @@ import {
 import {
   deleteAllPhysicsEntities,
   installPhysicsEntities,
+  reconcilePhysicsEntitiesAfterRestore,
   registerPhysicsDeterminismProbe,
   registerPhysicsWireframeDebugAsync,
   settlePendingPhysicsEntities,
@@ -60,6 +62,9 @@ export const physics = (): EngineFeature => ({
       existsOrThrow(getECSWorld(), 'Could not find the ECS world in the physics install.')
     );
     installPhysicsWorldBounds(ctx);
+    // A snapshot restore's entities (p500 D15): through the hook, as PhysicsEntity.ts imports the
+    // facade's modules
+    onPhysicsRestore(reconcilePhysicsEntitiesAfterRestore);
     ctx.setFixedStepDriver(physicsFixedStepDriver);
     ctx.addSceneHooks(physicsSceneHooks);
     ctx.registerImportExtension(physicsImportExtension);

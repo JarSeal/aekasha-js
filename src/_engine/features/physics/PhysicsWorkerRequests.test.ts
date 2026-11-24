@@ -18,6 +18,8 @@ const bridge = vi.hoisted(() => {
     sent: [] as { type: number; [key: string]: unknown }[],
     /** Every message the worker posted, as the main thread got it. */
     received: [] as { type: number; [key: string]: unknown }[],
+    /** The transfer list of every message the worker posted with one, by the message's type. */
+    transfers: [] as { type: number; transfer: unknown[] }[],
     instance: undefined as { deliver: (data: unknown) => void } | undefined,
     releaseReplies() {
       state.holdReplies = false;
@@ -45,7 +47,10 @@ const bridge = vi.hoisted(() => {
         removeEventListener: (_type: string, fn: Listener) => {
           this.listeners = this.listeners.filter((listener) => listener !== fn);
         },
-        postMessage: (message: unknown) => {
+        postMessage: (message: unknown, transfer?: unknown[]) => {
+          if (transfer) {
+            state.transfers.push({ type: (message as { type: number }).type, transfer });
+          }
           const copy = structuredClone(message);
           if (state.holdReplies) state.held.push(copy);
           else setTimeout(() => this.deliver(copy));
@@ -116,19 +121,38 @@ import {
 } from './PhysicsWorldBounds';
 import type { FeatureContext } from '../../kernel/init/Features';
 import { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
+import type { RigidBodyAPI } from './types/PhysicsBodyTypes';
 import { createJoint } from './PhysicsJoints';
 import { facade, getPhysicsState, getPhysicsWorld } from './PhysicsState';
 import {
   createPhysicsWorld,
   flushPhysics,
+  getResolvedTransportMode,
   initPhysics,
+  onPhysicsRestore,
   resetPhysicsWorld,
+  restorePhysicsSnapshot,
   setPhysicsWorldBounds,
   stopPhysics,
+  takePhysicsSnapshot,
 } from './PhysicsWorld';
+import {
+  getPhysicsSimClock,
+  getPhysicsSnapshotStepIndex,
+  latchPhysicsSnapshot,
+  resetSimClock,
+} from './PhysicsStepping';
+import { getResolverStats } from '../../utils/PromiseResolver';
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
-import { createPhysicsEntity, deleteAllPhysicsEntities } from './PhysicsEntity';
+import {
+  createPhysicsEntity,
+  deleteAllPhysicsEntities,
+  installPhysicsEntities,
+  physicsToTransformSystem,
+  reconcilePhysicsEntitiesAfterRestore,
+} from './PhysicsEntity';
 import { WorldProxyAPI } from './proxies/WorldProxyAPI';
+import { getPhysicsTier, installPhysicsTiers, requestPhysicsTier } from './PhysicsTiers';
 // The worker's own backend module: the in-process worker imports the same instance
 import {
   getAllRigidBodyIds,
@@ -176,11 +200,44 @@ installPhysicsWorldBounds({
 } as unknown as FeatureContext);
 setOutOfBoundsHandler(null);
 
+let isEntitiesInstalled = false;
+/** Physics' install of its entities (the TAG_IS_PHYSICS_OBJECT delete hook disposes a deleted
+ * entity's body) and their restore hook (p500 Phase 3). Static, so installed once, by the first
+ * test that needs them: the tests after it have them too. */
+const installEntities = () => {
+  if (isEntitiesInstalled) return;
+  isEntitiesInstalled = true;
+  installPhysicsEntities(
+    {
+      registerTransformResetListener: () => {},
+      registerComponentHooks: ECSWorld.registerComponentHooks.bind(ECSWorld),
+    } as unknown as FeatureContext,
+    new ECSWorld({ id: 'p500-worker-entity-systems' })
+  );
+  onPhysicsRestore(reconcilePhysicsEntitiesAfterRestore);
+};
+
+type WorldPlugin = (world: ECSWorld) => void;
+let tiersPlugin: WorldPlugin | undefined;
+/** The tiers' install (their hooks, the joint listener, the restore hook) and its system on `world`.
+ * The install is static, so it runs once, by the first test that needs it. */
+const installTiers = (world: ECSWorld) => {
+  if (!tiersPlugin) {
+    installPhysicsTiers({
+      registerPlugin: (plugin: WorldPlugin) => (tiersPlugin = plugin),
+      registerComponentHooks: ECSWorld.registerComponentHooks.bind(ECSWorld),
+    } as unknown as FeatureContext);
+  }
+  tiersPlugin!(world);
+};
+
 describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
   it('boots against the real worker and creates collider 0', async () => {
     initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
     loadConfig({
-      physics: { enabled: true, workerTarget: 'WORKER_THREAD', useSAB: false, maxCcdSubsteps: 3 },
+      // useSAB: the stubbed `self` isn't cross-origin isolated, so MESSAGE_BATCH until a test makes
+      // it so (the p500 restores in SHARED_MEMORY)
+      physics: { enabled: true, workerTarget: 'WORKER_THREAD', useSAB: true, maxCcdSubsteps: 3 },
     });
     await initPhysics(true);
     // doNotCreateWorld: the worker answers worldCreated false, so no world proxy yet
@@ -542,6 +599,284 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
     } finally {
       setOutOfBoundsHandler(null);
       setPhysicsWorldBounds(null);
+    }
+  });
+
+  /** Steps the worker's world `steps` times (the tests step by message, not by stepPhysics) and
+   * waits for the write-back, latched as a frame would. */
+  const stepWorker = async (steps: number) => {
+    messageWorker({ type: PhysicsProtocolType.STEP, steps, isOneWay: true });
+    await flushPhysics();
+    latchPhysicsSnapshot();
+  };
+
+  /** A body proxy's transform-buffer slot (-1 without one). */
+  const slotOf = (body: RigidBodyAPI) => (body as unknown as { slot: number }).slot;
+
+  /** p500 Phase 2's matrix, on a fresh world in the transport `mode`. */
+  const checkRestoreMatrix = async (mode: 'MESSAGE_BATCH' | 'SHARED_MEMORY') => {
+    await resetPhysicsWorld();
+    expect(getResolvedTransportMode()).toBe(mode);
+    const falling = await createRigidBody({
+      rigidType: 'DYNAMIC',
+      translation: { x: 0, y: 10, z: 0 },
+    });
+    const switched = await createRigidBody({
+      rigidType: 'DYNAMIC',
+      translation: { x: 3, y: 10, z: 0 },
+    });
+    const fixed = await createRigidBody({ rigidType: 'FIXED', translation: { x: 5, y: 0, z: 0 } });
+    const deletedSince = await createRigidBody({
+      rigidType: 'DYNAMIC',
+      translation: { x: 9, y: 10, z: 0 },
+    });
+    await stepWorker(10);
+
+    const snapshot = await takePhysicsSnapshot();
+    expect(snapshot?.step).toBe(10);
+    // The worker transferred its bytes' buffer (D9)
+    const { transfers } = bridge.state;
+    expect(transfers[transfers.length - 1].type).toBe(PhysicsProtocolType.TAKE_SNAPSHOT);
+    const [transferred] = transfers[transfers.length - 1].transfer as ArrayBuffer[];
+    expect(transferred.byteLength).toBe(snapshot!.bytes.byteLength);
+    const byteLength = snapshot!.bytes.byteLength;
+    const atSnapshot = { pos: falling.pos, linvel: falling.linvel() };
+
+    // Since the snapshot: a body made (with a collider) and one deleted, a body's type and enabled
+    // state switched, the fixed one moved, the gravity set; then a write not shown yet, on the
+    // main thread's clock as 35 issued steps would leave it (these tests step by message)
+    const late = await createRigidBody({
+      rigidType: 'DYNAMIC',
+      translation: { x: 12, y: 10, z: 0 },
+    });
+    const lateCollider = await createCollider({ type: 'BALL', radius: 0.5 }, late.id);
+    const lateSlot = slotOf(late);
+    await deleteRigidBody(deletedSince.id);
+    switched.setEnabled(false);
+    switched.setBodyType(RigidBodyTypeAPI.Fixed, false);
+    fixed.setTranslation({ x: 5, y: 3, z: 0 }, false);
+    getPhysicsWorld().setGravity({ x: 0, y: -20, z: 0 });
+    await stepWorker(25);
+    resetSimClock(35);
+    falling.setLinvel({ x: 7, y: 7, z: 7 }, true);
+    expect(falling.linvel()).toEqual({ x: 7, y: 7, z: 7 });
+
+    const world = getPhysicsWorld();
+    const result = await restorePhysicsSnapshot(snapshot!);
+    expect(facade.isRestoringSnapshot).toBe(false);
+    expect(result.world).toBe(world);
+    expect(getPhysicsWorld()).toBe(world);
+    expect(result.reapedRigidBodyIds).toEqual([late.id]);
+    expect(result.reapedColliderIds).toEqual([lateCollider.id]);
+    expect(result.orphanCounts.rigidBodies).toBe(1);
+    expect(late.isBeingDeleted).toBe(true);
+
+    // Shown without a step (D13), on the snapshot's step, the write not shown dropped
+    latchPhysicsSnapshot();
+    expect(getPhysicsSnapshotStepIndex()).toBe(10);
+    expect(getPhysicsSimClock()).toBe(10);
+    expect(falling.pos).toEqual(atSnapshot.pos);
+    expect(falling.linvel()).toEqual(atSnapshot.linvel);
+    // The proxies' and the world proxy's copies are the restored world's
+    expect([switched.isEnabledSync(), switched.bodyTypeSync()]).toEqual([
+      true,
+      RigidBodyTypeAPI.Dynamic,
+    ]);
+    expect(fixed.pos).toEqual({ x: 5, y: 0, z: 0 });
+    expect(world.getGravitySync().y).toBeCloseTo(-9.81, 5);
+    expect(await world.getGravity()).toEqual(world.getGravitySync());
+
+    // The reaped body's slot is free again: the next create takes it
+    const again = await createRigidBody({ rigidType: 'DYNAMIC' });
+    expect(slotOf(again)).toBe(lateSlot);
+
+    // The same snapshot again: its bytes were copied to the worker, not transferred
+    expect(snapshot!.bytes.byteLength).toBe(byteLength);
+    await stepWorker(5);
+    const second = await restorePhysicsSnapshot(snapshot!);
+    expect(second.reapedRigidBodyIds).toEqual([again.id]);
+    latchPhysicsSnapshot();
+    expect(falling.pos).toEqual(atSnapshot.pos);
+    expect(getResolverStats().pendingRequests).toBe(0);
+  };
+
+  it('p500: a restore through the worker (MESSAGE_BATCH)', async () => {
+    await checkRestoreMatrix('MESSAGE_BATCH');
+  });
+
+  it('p500: a restore through the worker (SHARED_MEMORY)', async () => {
+    const self = globalThis.self as unknown as { crossOriginIsolated: boolean };
+    self.crossOriginIsolated = true;
+    try {
+      await checkRestoreMatrix('SHARED_MEMORY');
+    } finally {
+      self.crossOriginIsolated = false;
+      await resetPhysicsWorld();
+    }
+  });
+
+  it('p500: overlapping restores apply in order, and stepping waits for the last', async () => {
+    await resetPhysicsWorld();
+    await createRigidBody({ rigidType: 'DYNAMIC', translation: { x: 0, y: 10, z: 0 } });
+    const snapshot = (await takePhysicsSnapshot())!;
+    const first = restorePhysicsSnapshot(snapshot);
+    const last = restorePhysicsSnapshot(snapshot);
+    await first;
+    expect(facade.isRestoringSnapshot).toBe(true);
+    await last;
+    expect(facade.isRestoringSnapshot).toBe(false);
+  });
+
+  it("p500: a restore drops the world bounds' exits not delivered, and the bounds stay", async () => {
+    await resetPhysicsWorld();
+    const handled: OutOfBoundsRecord[] = [];
+    setOutOfBoundsHandler((records) => handled.push(...records));
+    try {
+      setPhysicsWorldBounds({ min: { y: -5 } });
+      const body = await createRigidBody({
+        rigidType: 'DYNAMIC',
+        translation: { x: 50, y: 0, z: 0 },
+        linvel: { x: 0, y: -600, z: 0 },
+      });
+      const snapshot = (await takePhysicsSnapshot())!;
+      await stepWorker(1);
+      expect(getOutOfBoundsExitSteps().get(body.id)).toBe(1);
+      await restorePhysicsSnapshot(snapshot);
+      // Taken back with its step: neither noted nor delivered
+      expect(getOutOfBoundsExitSteps().has(body.id)).toBe(false);
+      flushPhysicsEvents();
+      expect(handled).toEqual([]);
+      expect(await body.isEnabled()).toBe(true);
+      // The bounds survived the restore: the same step leaves them again
+      await stepWorker(1);
+      flushPhysicsEvents();
+      expect(handled.map((r) => [r.bodyId, r.step])).toEqual([[body.id, 1]]);
+    } finally {
+      setOutOfBoundsHandler(null);
+      setPhysicsWorldBounds(null);
+    }
+  });
+
+  it('p500 Phase 3: the entities made after the snapshot go, and their deletes send nothing', async () => {
+    installEntities();
+    await resetPhysicsWorld();
+    const world = new ECSWorld({ id: 'p500-worker-reconcile' });
+    const BALL = { type: 'BALL', radius: 0.5 } as const;
+    const ball = (x: number) =>
+      createPhysicsEntity(
+        { colliders: BALL, body: { rigidType: 'DYNAMIC', translation: { x, y: 10, z: 0 } } },
+        { world }
+      );
+    const kept = await ball(0);
+    const wall = await createPhysicsEntity({ colliders: BALL }, { world });
+    const snapshot = (await takePhysicsSnapshot())!;
+
+    // Since the snapshot: an entity with a body, one with a collider only, and a collider on the
+    // kept entity's body
+    const late = await ball(3);
+    const lateWall = await createPhysicsEntity({ colliders: BALL }, { world });
+    const keptColliders = world.getComponent(kept, ComponentType.COLLIDER)!;
+    const [keptCollider] = keptColliders;
+    keptColliders.push(await createCollider(BALL, world.getRigidBody(kept)!.id));
+
+    const sentBefore = bridge.state.sent.length;
+    await restorePhysicsSnapshot(snapshot);
+    expect([late, lateWall].map((id) => world.isAlive(id))).toEqual([false, false]);
+    expect([kept, wall].map((id) => world.isAlive(id))).toEqual([true, true]);
+    expect(keptColliders).toEqual([keptCollider]);
+    // The delete hook's disposal found the ids forgotten: no delete reached the worker
+    await flushPhysics();
+    const deletes = [
+      PhysicsProtocolType.DELETE_RIGID_BODY,
+      PhysicsProtocolType.DELETE_RIGID_BODIES,
+      PhysicsProtocolType.DELETE_COLLIDER,
+      PhysicsProtocolType.DELETE_COLLIDERS,
+    ];
+    expect(bridge.state.sent.slice(sentBefore).filter((m) => deletes.includes(m.type))).toEqual([]);
+    expect(countBodies()).toBe(1);
+    expect(getResolverStats().pendingRequests).toBe(0);
+  });
+
+  it('p500 Phase 3: BODY_STATIC entities moved since the snapshot get their restored pose', async () => {
+    installEntities();
+    await resetPhysicsWorld();
+    const world = new ECSWorld({ id: 'p500-worker-static-sync' });
+    facade.tiersInstalled = true;
+    try {
+      const create = (x: number, rigidType: 'FIXED' | 'DYNAMIC', initialTier?: 'STATIC') =>
+        createPhysicsEntity(
+          {
+            colliders: { type: 'BALL', radius: 0.5 },
+            body: { rigidType, translation: { x, y: 0, z: 0 } },
+          },
+          { world, initialTier }
+        );
+      // No transform slot (its proxy keeps its pose), and a tier's (its pose in the buffer)
+      const fixedId = await create(5, 'FIXED');
+      const frozenId = await create(7, 'DYNAMIC', 'STATIC');
+      const ids = [fixedId, frozenId];
+      const positionsX = () =>
+        ids.map((id) => world.getComponent(id, ComponentType.TRANSFORM)!.position.x);
+      const snapshot = (await takePhysicsSnapshot())!;
+      for (const id of ids) world.getRigidBody(id)!.setTranslation({ x: 20, y: 0, z: 0 }, false);
+      // A step later the moves are shown, and their syncs are done
+      await stepWorker(1);
+      physicsToTransformSystem(world);
+      expect(positionsX()).toEqual([20, 20]);
+
+      await restorePhysicsSnapshot(snapshot);
+      latchPhysicsSnapshot();
+      physicsToTransformSystem(world);
+      expect(positionsX()).toEqual([5, 7]);
+    } finally {
+      facade.tiersInstalled = false;
+    }
+  });
+
+  it('p500 Phase 3: the tiers become what the restored bodies are, from the reply', async () => {
+    installEntities();
+    await resetPhysicsWorld();
+    const world = new ECSWorld({ id: 'p500-worker-tiers' });
+    installTiers(world);
+    facade.tiersInstalled = true;
+    try {
+      const create = (x: number, initialTier?: 'STATIC') =>
+        createPhysicsEntity(
+          {
+            colliders: { type: 'BALL', radius: 0.5 },
+            body: { rigidType: 'DYNAMIC', translation: { x, y: 10, z: 0 } },
+          },
+          { world, initialTier }
+        );
+      const frozen = await create(0); // FULL, STATIC since
+      const thawed = await create(2, 'STATIC'); // FULL since
+      const removed = await create(4); // REMOVED since
+      const snapshot = (await takePhysicsSnapshot())!;
+      requestPhysicsTier(frozen, 'STATIC', world);
+      requestPhysicsTier(thawed, 'FULL', world);
+      requestPhysicsTier(removed, 'REMOVED', world);
+      world.updatePhysicsStep(0);
+      await stepWorker(1);
+      expect(world.getRigidBody(frozen)!.bodyTypeSync()).toBe(RigidBodyTypeAPI.Fixed);
+
+      await restorePhysicsSnapshot(snapshot);
+      const ids = [frozen, thawed, removed];
+      expect(
+        ids.map((id) => {
+          const { tier, pending } = getPhysicsTier(id, world);
+          return [tier, pending, world.hasComponent(id, ComponentType.BODY_STATIC)];
+        })
+      ).toEqual([
+        ['FULL', null, false],
+        ['STATIC', null, true],
+        ['REMOVED', null, false],
+      ]);
+      expect(world.hasComponent(frozen, ComponentType.BODY_DYNAMIC_HEADLESS)).toBe(true);
+      // The worker agrees
+      expect(await world.getRigidBody(frozen)!.bodyType()).toBe(RigidBodyTypeAPI.Dynamic);
+      expect(await world.getRigidBody(thawed)!.bodyType()).toBe(RigidBodyTypeAPI.Fixed);
+    } finally {
+      facade.tiersInstalled = false;
     }
   });
 

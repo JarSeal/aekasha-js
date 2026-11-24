@@ -1,7 +1,11 @@
 /// <reference lib="webworker" />
 
 import type { LoopState } from '../../../kernel/loop/MainLoop';
-import type { PhysicsDownProtocol, PhysicsWorkerReply } from '../protocol/PhysicsDownProtocol';
+import type {
+  PhysicsDownProtocol,
+  PhysicsWorkerReply,
+  RestoredBodyState,
+} from '../protocol/PhysicsDownProtocol';
 import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
 import type { PhysicsUpProtocol } from '../protocol/PhysicsUpProtocol';
 import type { EngineAPIType } from '../types/PhysicsBackendTypes';
@@ -28,7 +32,7 @@ import {
 } from '../PhysicsStepStatsBuffer';
 import { physicsSwitchColl } from './PhysicsSwitchColl';
 import { physicsSwitchJoint } from './PhysicsSwitchJoint';
-import { physicsSwitchRigid } from './PhysicsSwitchRigid';
+import { physicsSwitchRigid, toPlainPose } from './PhysicsSwitchRigid';
 import { physicsSwitchWorld } from './PhysicsSwitchWorld';
 import { createWorkerScopeTransport } from '../transport/WorkerScopeTransport';
 
@@ -46,8 +50,8 @@ let transformBuffer: PhysicsTransformBuffer | undefined;
 let resolvedUseSAB = false;
 /** Steps executed on the current world since CREATE_WORLD — the step index every transform
  * write-back is stamped with. Mirrors the main thread's own count of steps issued (reset at the
- * same CREATE_WORLD), so the two agree exactly once a STEP has been processed. Deliberately
- * not reset by RESTORE_SNAPSHOT: the timeline keeps going, only the poses jump. */
+ * same CREATE_WORLD), so the two agree exactly once a STEP has been processed. RESTORE_SNAPSHOT
+ * sets it to the snapshot's step, as the main thread sets its own (p500). */
 let stepsExecuted = 0;
 /** Debug wireframe state mirror. Stays undefined until the main thread enables
  * tracking, which is what keeps the feature's cost at zero while no wireframe is on. */
@@ -216,14 +220,37 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
       case PhysicsProtocolType.FLUSH:
         // FLUSH (ordering barrier: messages are handled in arrival order, so replying is enough)
         return sendMessage({ type: data.type }, data);
-      case PhysicsProtocolType.TAKE_SNAPSHOT:
-        // TAKE_SNAPSHOT
+      case PhysicsProtocolType.TAKE_SNAPSHOT: {
+        // TAKE_SNAPSHOT: the bytes are transferred, not copied (p500 D9; a restore's are cloned,
+        // so its caller keeps them). Only a buffer of their own: a view into Rapier's memory
+        // would detach it.
         const snapshot = engAPI.takeSnapshot();
-        return sendMessage({ type: data.type, snapshot }, data);
-      case PhysicsProtocolType.RESTORE_SNAPSHOT:
-        // RESTORE_SNAPSHOT
-        physicsWorldAPI = engAPI.restoreSnapshot(data.snapshot);
-        return sendMessage({ type: data.type, worldCreated: true }, data);
+        const bytes = snapshot?.bytes;
+        const ownsBuffer = bytes?.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength;
+        return sendMessage(
+          { type: data.type, snapshot },
+          data,
+          false,
+          ownsBuffer ? [bytes.buffer] : undefined
+        );
+      }
+      case PhysicsProtocolType.RESTORE_SNAPSHOT: {
+        // RESTORE_SNAPSHOT (p500 D13, D14): the reaped bodies' slots freed (a leaked one caps
+        // maxBodies silently), the step count back to the snapshot's (the main thread's clock
+        // goes back with the reply), and the restored poses written back before the reply, so
+        // they show without a step (MESSAGE_BATCH: pushed ahead of it). The debug state's
+        // tracked ids stay: they're positional, and a reaped one's flags are written as zero.
+        const { world, ...delta } = engAPI.restoreSnapshot(data.snapshot, data.opts);
+        physicsWorldAPI = world;
+        for (const id of delta.reapedRigidBodyIds) transformBuffer?.freeSlot(id);
+        stepsExecuted = delta.step;
+        writeBackTransforms();
+        writeBackDebugState();
+        return sendMessage(
+          { type: data.type, worldCreated: true, ...delta, bodies: readRestoredBodies() },
+          data
+        );
+      }
       case PhysicsProtocolType.CREATE_WORLD: {
         // CREATE_WORLD
         physicsWorldAPI = engAPI.createWorld(data.gravity, data.opts);
@@ -425,6 +452,25 @@ const writeBackDebugState = () => {
     const copy = debugStateBuffer.buffer.slice(0) as ArrayBuffer;
     sendMessageSimple({ type: PhysicsProtocolType.DEBUG_STATE_PUSH, buffer: copy }, [copy]);
   }
+};
+
+/** Every body a snapshot restore kept (the backend's bodies after it: a reaped one is gone, a
+ * detached one isn't listed), with what its main-thread proxy keeps a copy of (RESTORE_SNAPSHOT's
+ * reply, p500). */
+const readRestoredBodies = () => {
+  const bodies: RestoredBodyState[] = [];
+  for (const id of engAPI.getAllRigidBodyIds()) {
+    const rb = engAPI.getRigidBodyAPIWithId(id);
+    if (!rb) continue;
+    const body: RestoredBodyState = {
+      id,
+      bodyType: rb.bodyTypeSync(),
+      enabled: rb.isEnabledSync(),
+    };
+    if ((transformBuffer?.getSlot(id) ?? -1) === -1) body.pose = toPlainPose(rb.pos, rb.rot);
+    bodies.push(body);
+  }
+  return bodies;
 };
 
 /** Pushes whatever collision/contact-force events and world bounds exits (p102) were collected

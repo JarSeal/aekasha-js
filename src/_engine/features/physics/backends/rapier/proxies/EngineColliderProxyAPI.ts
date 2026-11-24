@@ -79,7 +79,8 @@ export class EngineColliderProxyAPI implements ColliderAPI {
   }
 
   /**
-   * Points the proxy at its re-created Rapier collider (reattachRigidBody, p352).
+   * Points the proxy at its re-created Rapier collider (reattachRigidBody, p352), or at its copy in
+   * a restored world (p500).
    * @internal
    */
   _rebind(coll: Rapier.Collider) {

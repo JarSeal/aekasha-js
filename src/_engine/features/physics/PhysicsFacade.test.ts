@@ -35,14 +35,28 @@ import {
   createPhysicsEntity,
   getPhysicsEntityBody,
   getPhysicsEntityByAppId,
+  installPhysicsEntities,
+  physicsToTransformSystem,
+  reconcilePhysicsEntitiesAfterRestore,
 } from './PhysicsEntity';
 import { createJointSync, deleteJoint, deleteJointSync } from './PhysicsJoints';
-import { onPhysicsJointCreated, requestPhysicsTier, requestPhysicsTierWants } from './PhysicsTiers';
+import {
+  getPhysicsTier,
+  installPhysicsTiers,
+  onPhysicsJointCreated,
+  requestPhysicsTier,
+  requestPhysicsTierWants,
+} from './PhysicsTiers';
 import type { PhysicsTier } from './PhysicsTierTypes';
 import { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import { getAllColliderEntries, getAllRigidBodyEntries } from './PhysicsRegistry';
 import { facade, getPhysicsState, getPhysicsWorld, isPhysicsWorldEnabled } from './PhysicsState';
-import { holdPhysicsStepping, isPhysicsSteppingHeld } from './PhysicsStepping';
+import {
+  getPhysicsSnapshotStepIndex,
+  holdPhysicsStepping,
+  isPhysicsSteppingHeld,
+  resetSimClock,
+} from './PhysicsStepping';
 import {
   flushPhysicsEvents,
   getOutOfBoundsExitSteps,
@@ -63,9 +77,12 @@ import {
   createPhysicsWorld,
   deletePhysicsWorld,
   initPhysics,
+  onPhysicsRestore,
   resetPhysicsWorld,
+  restorePhysicsSnapshot,
   setPhysicsWorldBounds,
   stopPhysics,
+  takePhysicsSnapshot,
 } from './PhysicsWorld';
 import {
   getAllRigidBodyIds,
@@ -99,6 +116,37 @@ installPhysicsWorldBounds({
   registerComponentHooks: ECSWorld.registerComponentHooks.bind(ECSWorld),
 } as unknown as FeatureContext);
 setOutOfBoundsHandler(null);
+
+let isEntitiesInstalled = false;
+/** Physics' install of its entities (the TAG_IS_PHYSICS_OBJECT delete hook disposes a deleted
+ * entity's body) and their restore hook (p500 Phase 3). Static, so installed once, by the first
+ * test that needs them: the tests after it have them too. */
+const installEntities = () => {
+  if (isEntitiesInstalled) return;
+  isEntitiesInstalled = true;
+  installPhysicsEntities(
+    {
+      registerTransformResetListener: () => {},
+      registerComponentHooks: ECSWorld.registerComponentHooks.bind(ECSWorld),
+    } as unknown as FeatureContext,
+    new ECSWorld({ id: 'p500-entity-systems' })
+  );
+  onPhysicsRestore(reconcilePhysicsEntitiesAfterRestore);
+};
+
+type WorldPlugin = (world: ECSWorld) => void;
+let tiersPlugin: WorldPlugin | undefined;
+/** The tiers' install (their hooks, the joint listener, the restore hook) and its system on `world`.
+ * The install is static, so it runs once, by the first test that needs it. */
+const installTiers = (world: ECSWorld) => {
+  if (!tiersPlugin) {
+    installPhysicsTiers({
+      registerPlugin: (plugin: WorldPlugin) => (tiersPlugin = plugin),
+      registerComponentHooks: ECSWorld.registerComponentHooks.bind(ECSWorld),
+    } as unknown as FeatureContext);
+  }
+  tiersPlugin!(world);
+};
 
 describe('the facade (MAIN_THREAD)', () => {
   it('boots and creates the world', async () => {
@@ -808,6 +856,190 @@ describe('the facade (MAIN_THREAD)', () => {
     } finally {
       warn.mockRestore();
       sent.mockRestore();
+    }
+  });
+
+  it('p500: a restore keeps the survivors, forgets what came after it before its hooks run, and rewinds the step clock', async () => {
+    await resetPhysicsWorld();
+    const body = createRigidBodySync({
+      rigidType: 'DYNAMIC',
+      translation: { x: -80, y: 10, z: 0 },
+    });
+    const collider = createColliderSync(BALL, body.id);
+    for (let i = 0; i < 10; i++) facade.engAPI!.step();
+    const snapshot = (await takePhysicsSnapshot())!;
+    expect(snapshot.step).toBe(10);
+    const y = body.pos.y;
+    for (let i = 0; i < 10; i++) facade.engAPI!.step();
+    const late = createRigidBodySync({
+      rigidType: 'DYNAMIC',
+      translation: { x: -90, y: 10, z: 0 },
+    });
+    const lateCollider = createColliderSync(BALL, late.id);
+    const seen: { reaped: number[]; isLateKnown: boolean }[] = [];
+    const remove = onPhysicsRestore((delta) => {
+      const isLateKnown = [...getAllRigidBodyEntries()].some(([id]) => id === late.id);
+      seen.push({ reaped: delta.reapedRigidBodyIds, isLateKnown });
+    });
+
+    const result = await restorePhysicsSnapshot(snapshot);
+    expect(result.world).toBe(getPhysicsWorld());
+    expect(result.reapedRigidBodyIds).toEqual([late.id]);
+    expect(result.reapedColliderIds).toEqual([lateCollider.id]);
+    expect(late.isBeingDeleted).toBe(true);
+    expect(lateCollider.isBeingDeleted).toBe(true);
+    expect(count(getAllColliderEntries())).toBe(1);
+    // The facade forgot the reaped body before the hooks ran
+    expect(seen).toEqual([{ reaped: [late.id], isLateKnown: false }]);
+    expect(body.pos.y).toBe(y);
+    expect(collider.isBeingDeleted).toBe(false);
+    expect(getPhysicsSnapshotStepIndex()).toBe(10);
+    expect(facade.isRestoringSnapshot).toBe(false);
+
+    remove();
+    await restorePhysicsSnapshot(snapshot);
+    expect(seen).toHaveLength(1);
+  });
+
+  it("p500: the world's settings come back with a snapshot, the state's doubles kept where unchanged", async () => {
+    const state = getPhysicsState();
+    const { gravity, timestepRatio } = state;
+    const snapshot = (await takePhysicsSnapshot())!;
+    getPhysicsWorld().setGravity({ x: 0, y: -1, z: 0 });
+    state.gravity = { x: 0, y: -1, z: 0 };
+    await restorePhysicsSnapshot(snapshot);
+    expect(state.gravity.y).toBeCloseTo(gravity.y, 5);
+    expect(getPhysicsWorld().getGravitySync().y).toBeCloseTo(gravity.y, 5);
+    expect(state.timestepRatio).toBe(timestepRatio);
+  });
+
+  it('p500: a snapshot of another world is refused, and nothing changes', async () => {
+    const snapshot = (await takePhysicsSnapshot())!;
+    await resetPhysicsWorld();
+    const body = createRigidBodySync({ rigidType: 'DYNAMIC' });
+    await expect(restorePhysicsSnapshot(snapshot)).rejects.toThrow(/another world/);
+    expect(facade.isRestoringSnapshot).toBe(false);
+    expect(body.isBeingDeleted).toBe(false);
+    expect(count(getAllRigidBodyEntries())).toBe(1);
+  });
+
+  it('p500 Phase 3: the entities whose body or colliders came after the snapshot go, and their deletes delete nothing', async () => {
+    installEntities();
+    await resetPhysicsWorld();
+    const world = new ECSWorld({ id: 'p500-reconcile' });
+    const kept = await createBall(world, -80);
+    const wall = await createPhysicsEntity({ colliders: BALL }, { world });
+    const snapshot = (await takePhysicsSnapshot())!;
+
+    // Since the snapshot: an entity with a body, one with a collider only, and a collider on the
+    // kept entity's body
+    const late = await createBall(world, -84);
+    const lateWall = await createPhysicsEntity({ colliders: BALL }, { world });
+    const keptColliders = world.getComponent(kept, ComponentType.COLLIDER)!;
+    const [keptCollider] = keptColliders;
+    keptColliders.push(createColliderSync(BALL, world.getRigidBody(kept)!.id));
+
+    const errors = vi.spyOn(console, 'error');
+    try {
+      await restorePhysicsSnapshot(snapshot);
+      expect([late, lateWall].map((id) => world.isAlive(id))).toEqual([false, false]);
+      expect([kept, wall].map((id) => world.isAlive(id))).toEqual([true, true]);
+      // Filtered in place
+      expect(world.getComponent(kept, ComponentType.COLLIDER)).toBe(keptColliders);
+      expect(keptColliders).toEqual([keptCollider]);
+      // The delete hook's disposal (async) found the ids forgotten: the survivors are all there
+      await new Promise((resolve) => setTimeout(resolve));
+      expect(count(getAllRigidBodyIds())).toBe(1);
+      expect(count(getAllColliderEntries())).toBe(2);
+      expect(world.getRigidBody(kept)!.isBeingDeleted).toBe(false);
+      expect(errors).not.toHaveBeenCalled();
+
+      // Nothing reaped: nothing changes
+      await restorePhysicsSnapshot(snapshot);
+      expect([kept, wall].map((id) => world.isAlive(id))).toEqual([true, true]);
+      expect(keptColliders).toEqual([keptCollider]);
+    } finally {
+      errors.mockRestore();
+    }
+  });
+
+  it('p500 Phase 3: a BODY_STATIC entity moved since the snapshot gets its restored pose', async () => {
+    installEntities();
+    await resetPhysicsWorld();
+    const world = new ECSWorld({ id: 'p500-static-sync' });
+    const fixedId = await createPhysicsEntity(
+      { colliders: BALL, body: { rigidType: 'FIXED', translation: { x: 5, y: 0, z: 0 } } },
+      { world }
+    );
+    const positionX = () => world.getComponent(fixedId, ComponentType.TRANSFORM)!.position.x;
+    const snapshot = (await takePhysicsSnapshot())!;
+    world.getRigidBody(fixedId)!.setTranslation({ x: 9, y: 0, z: 0 }, false);
+    physicsToTransformSystem(world);
+    expect(positionX()).toBe(9);
+    // A step later the move is shown, and its sync is done
+    resetSimClock(getPhysicsSnapshotStepIndex() + 1);
+    physicsToTransformSystem(world);
+
+    await restorePhysicsSnapshot(snapshot);
+    physicsToTransformSystem(world);
+    expect(positionX()).toBe(5);
+  });
+
+  it('p500 Phase 3: the tiers become what the restored bodies are, with their buckets, and the requests not applied are dropped', async () => {
+    installEntities();
+    await resetPhysicsWorld();
+    const world = new ECSWorld({ id: 'p500-tiers' });
+    installTiers(world);
+    facade.tiersInstalled = true;
+    try {
+      const frozen = await createBall(world, -80); // FULL, STATIC since
+      const thawed = await createBall(world, -82, { initialTier: 'STATIC' }); // FULL since
+      const disabled = await createBall(world, -84, { initialTier: 'DISABLED' }); // FULL asked
+      const removed = await createBall(world, -86); // REMOVED since
+      // World-disabled, STATIC since: its body is disabled in FULL and DISABLED alike
+      const hidden = await createBall(world, -88);
+      world.setDisabled(hidden, true);
+      const snapshot = (await takePhysicsSnapshot())!;
+      requestPhysicsTier(frozen, 'STATIC', world);
+      requestPhysicsTier(thawed, 'FULL', world);
+      requestPhysicsTier(removed, 'REMOVED', world);
+      requestPhysicsTier(hidden, 'STATIC', world);
+      world.updatePhysicsStep(0);
+      requestPhysicsTier(disabled, 'FULL', world); // not applied before the restore
+
+      /** [tier, pending, in BODY_STATIC] */
+      const tiersOf = (ids: number[]) =>
+        ids.map((id) => {
+          const { tier, pending } = getPhysicsTier(id, world);
+          return [tier, pending, world.hasComponent(id, ComponentType.BODY_STATIC)];
+        });
+      const ids = [frozen, thawed, disabled, removed, hidden];
+      expect(tiersOf(ids)).toEqual([
+        ['STATIC', null, true],
+        ['FULL', null, false],
+        ['DISABLED', 'FULL', true],
+        ['REMOVED', null, false],
+        ['STATIC', null, true],
+      ]);
+
+      await restorePhysicsSnapshot(snapshot);
+      world.updatePhysicsStep(0); // the dropped request doesn't apply
+      expect(tiersOf(ids)).toEqual([
+        ['FULL', null, false],
+        ['STATIC', null, true],
+        ['DISABLED', null, true],
+        ['REMOVED', null, false],
+        ['FULL', null, false],
+      ]);
+      for (const id of [frozen, hidden]) {
+        expect(world.getRigidBody(id)).toBe(
+          world.getComponent(id, ComponentType.BODY_DYNAMIC_HEADLESS)
+        );
+      }
+      expect(world.getRigidBody(disabled)!.isEnabledSync()).toBe(false);
+      expect(world.getRigidBody(removed)).toBeUndefined();
+    } finally {
+      facade.tiersInstalled = false;
     }
   });
 

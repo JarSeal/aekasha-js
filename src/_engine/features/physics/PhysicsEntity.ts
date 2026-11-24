@@ -7,7 +7,7 @@ import { lerror, lwarn } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { DebugModuleRef } from '../../kernel/config/DebugModules';
 import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
-import { type ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
+import { type ECSWorld, getAllECSWorlds, getECSWorld } from '../../kernel/ecs/ECS';
 import type { FeatureContext } from '../../kernel/init/Features';
 import type { CreateEntityOpts } from '../../kernel/ecs/ECSHelpers';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
@@ -38,6 +38,7 @@ import { flushPhysics } from './PhysicsWorld';
 import type { RigidBodyAPI, RigidBodyParams } from './types/PhysicsBodyTypes';
 import type { ColliderParams } from './types/PhysicsColliderTypes';
 import type { EntityWorldBounds } from './types/PhysicsWorldBoundsTypes';
+import type { RestoreSnapshotDelta } from './types/PhysicsWorldTypes';
 import { deriveColliderDimensionsFromMesh } from './ColliderDimensions';
 import {
   getCurrentSceneId,
@@ -580,6 +581,82 @@ const bodyOwners = new Map<number, PhysicsBodyOwner>();
  */
 export const getPhysicsBodyOwner = (rigidBodyId: number): Readonly<PhysicsBodyOwner> | undefined =>
   bodyOwners.get(rigidBodyId);
+
+/** An entity and its world. */
+type EntityRef = { world: ECSWorld; entityId: number };
+
+/** The entity's colliders, also while a REMOVED physics tier keeps them off its COLLIDER. */
+const getPhysicsEntityColliders = (world: ECSWorld, entityId: number) =>
+  world.getComponent(entityId, ComponentType.COLLIDER) ??
+  world.getComponent(entityId, ComponentType.PHYSICS_SIM_TIER)?.colliders;
+
+/**
+ * Physics' restore hook (p500 Phase 3, `onPhysicsRestore`): brings the physics entities of every
+ * ECS world in line with a snapshot restore.
+ * - An entity whose body the restore reaped (made after the snapshot) is deleted, as the
+ *   debugger's delete does, its visual with it; a reaped collider leaves its entity's colliders,
+ *   and an entity without a body left with none is deleted. The facade forgot the reaped ids
+ *   before its hooks ran, so the entities' delete hook deletes nothing physics side.
+ * - Every BODY_STATIC entity is synced once: a body moved since the snapshot (a FIXED one, or one
+ *   a STATIC or DISABLED tier holds) is put back with no move to report.
+ * @internal
+ */
+export const reconcilePhysicsEntitiesAfterRestore = (delta: RestoreSnapshotDelta) => {
+  deleteReapedPhysicsEntities(delta);
+  queueRestoredStaticBodies();
+};
+
+/** The reaped part of reconcilePhysicsEntitiesAfterRestore: nothing to do when nothing was reaped. */
+const deleteReapedPhysicsEntities = (delta: RestoreSnapshotDelta) => {
+  const { reapedRigidBodyIds, reapedColliderIds } = delta;
+  if (!reapedRigidBodyIds.length && !reapedColliderIds.length) return;
+  const reapedColliders = new Set(reapedColliderIds);
+  // Collected first and deleted last: a delete runs the entity's hooks
+  const doomed: EntityRef[] = [];
+  for (const bodyId of reapedRigidBodyIds) {
+    const owner = bodyOwners.get(bodyId);
+    if (!owner) continue; // made through the bare Physics API: no entity
+    bodyOwners.delete(bodyId);
+    const { world, entityId } = owner;
+    // An entity given another body since keeps it
+    if (!world.isAlive(entityId) || getPhysicsEntityBody(world, entityId)?.id !== bodyId) continue;
+    // Its colliders went with its body
+    const colls = getPhysicsEntityColliders(world, entityId);
+    if (colls) for (const coll of colls) reapedColliders.delete(coll.id);
+    doomed.push(owner);
+  }
+  if (reapedColliders.size) dropReapedColliders(reapedColliders, doomed);
+  for (const { world, entityId } of doomed) world.deleteEntity(entityId);
+};
+
+/** Queues every BODY_STATIC entity of every ECS world for the transform sync (queueStaticBodySync),
+ * until the first step after the restore: BODY_STATIC isn't synced per frame. */
+const queueRestoredStaticBodies = () => {
+  for (const world of getAllECSWorlds()) {
+    const bodies: IComponentStorage<RigidBodyAPI> = world.getStorage(ComponentType.BODY_STATIC);
+    for (const entityId of bodies.keys()) {
+      // A deleted world's body (an entity of another ECS world left from an earlier scene)
+      if (!bodies.get(entityId)!.isBeingDeleted) queueStaticBodySync(world, entityId);
+    }
+  }
+};
+
+/** Takes the `reaped` colliders out of every physics entity's colliders (in place: a REMOVED
+ * tier's copy is the same array), adding an entity without a body left with none to `doomed`.
+ * Walks every ECS world's physics entities: there's no collider → entity map. */
+const dropReapedColliders = (reaped: ReadonlySet<number>, doomed: EntityRef[]) => {
+  for (const world of getAllECSWorlds()) {
+    for (const entityId of world.getEntitiesWith(ComponentType.TAG_IS_PHYSICS_OBJECT)) {
+      const colls = getPhysicsEntityColliders(world, entityId);
+      if (!colls?.length) continue;
+      let kept = 0;
+      for (let i = 0; i < colls.length; i++) if (!reaped.has(colls[i].id)) colls[kept++] = colls[i];
+      if (kept === colls.length) continue;
+      colls.length = kept;
+      if (!kept && !getPhysicsEntityBody(world, entityId)) doomed.push({ world, entityId });
+    }
+  }
+};
 
 /** Per world: BODY_STATIC entities to sync, each until the snapshot step that shows its change
  * (getPhysicsWriteVisibleStep at the change). */

@@ -341,6 +341,20 @@ export const clearPendingEventPushes = () => {
   exitStepByBodyId.clear();
 };
 
+/**
+ * A snapshot restore (p500): drops the event pushes and the world bounds' exits not delivered yet,
+ * which belong to the steps the restore took back (on `MAIN_THREAD` the backend drops its own
+ * records), and the exits noted after the restored `step`.
+ * @internal
+ */
+export const dropEventPushesAfterRestore = (step: number) => {
+  pendingEventPushes = [];
+  mainThreadExits = [];
+  for (const [bodyId, exitStep] of exitStepByBodyId) {
+    if (exitStep > step) exitStepByBodyId.delete(bodyId);
+  }
+};
+
 /** The current world's exited bodies (p102), each body's exit step by its id: noted when the exit
  * reaches the main thread, before its delivery. */
 const exitStepByBodyId = new Map<number, number>();

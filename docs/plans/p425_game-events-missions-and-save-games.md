@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Gameplay, Save games
-Related: p420_npc-simulation-tiers.md (The gameplay contracts: C7's events, missions and the save service; `ABSTRACT` NPC state is game state), p510_headless-simulation-runtime.md (The multiplayer path, rule 7: serializable components, shared with network replication), p511_network-transport-and-replication.md (what is replicated), p500_restore-physics-snapshot.md (the physics part of a save), `src/_engine/features/character/CLAUDE.md` (controllers and brains rebuilt from `{ kind, params }`, `createCharacterOfKind`), p355_save-menu-and-file-server-settings.md (not this: it saves debug edits into asset JSONs)
+Related: p420_npc-simulation-tiers.md (The gameplay contracts: C7's events, missions and the save service; `ABSTRACT` NPC state is game state), p510_headless-simulation-runtime.md (The multiplayer path, rule 7: serializable components, shared with network replication), p511_network-transport-and-replication.md (what is replicated), _DONE_p500_restore-physics-snapshot.md (the physics part of a save), `src/_engine/features/character/CLAUDE.md` (controllers and brains rebuilt from `{ kind, params }`, `createCharacterOfKind`), p355_save-menu-and-file-server-settings.md (not this: it saves debug edits into asset JSONs)
 
 # Game Events, Missions and Save Games — Stub
 
@@ -32,8 +32,9 @@ implements them. This plan decides their shapes.
   `onGeometryDeleted`.
 - No missions and no save games. `__saveData` is the debug tools' per-scene asset overrides, and
   p355 is about writing those into the repo.
-- No ECS serializer. `takePhysicsSnapshot` / `restorePhysicsSnapshot` exist (`@internal`) but don't
-  rebind the cached proxies (p500 repairs them). Entity ids are per world (index + generation);
+- No ECS serializer. `takePhysicsSnapshot` / `restorePhysicsSnapshot` (`aekasha/physics`, p500) take
+  and restore the physics world within one scene visit only: a snapshot names its world, and every
+  scene load makes a new one, so a save across loads needs more than them (p500's non-goals). Entity ids are per world (index + generation);
   `appId` (the `APP_ID` component) is the stable id, looked up by a map (`getEntityIdByAppId`,
   `getPhysicsEntityByAppId`).
 - Components holding closures exist (a collider's event callbacks, a brain's state inside its

@@ -29,7 +29,13 @@ export type {
   PhysicsState,
   PhysicsWorkerTarget,
 } from './types/PhysicsConfigTypes';
-export type { WorldAPI } from './types/PhysicsWorldTypes';
+export type {
+  PhysicsSnapshot,
+  RestoreSnapshotDelta,
+  RestoreSnapshotOpts,
+  RestoreSnapshotResult,
+  WorldAPI,
+} from './types/PhysicsWorldTypes';
 export type {
   EntityWorldBounds,
   WorldBoundsAction,
@@ -69,6 +75,7 @@ export { getCollider, getJoint, getRigidBody } from './PhysicsRegistry';
 export { getPhysicsState, getPhysicsWorld } from './PhysicsState';
 export { addPhysicsStepGate, getPhysicsSimClock, getPhysicsSubStepIndex } from './PhysicsStepping';
 export { createPhysicsEntity, getPhysicsEntityByAppId } from './PhysicsEntity';
+export { restorePhysicsSnapshot, takePhysicsSnapshot } from './PhysicsWorld';
 export {
   getWorldBoundsStats,
   setEntityWorldBounds,
