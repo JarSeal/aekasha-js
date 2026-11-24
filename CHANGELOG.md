@@ -4,6 +4,19 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-24 — p240_client-device-capability-sniffer (Phase 1)
+
+The device capability check (p240): the engine reads what the device can do (the GPU, memory, CPU cores, display and page) and tells the app, so it can pick its settings before and during play. It rates the device on the shadow presets' scale, `LOW` to `ULTRA`, per category and overall, checks it against targets with engine defaults the app overrides, and suggests settings (pixel ratio, antialias, shadow quality, PostFX, backend, physics thread). It's advice: the engine applies none of it. It runs only when asked, at boot (`AppConfig.deviceCapabilities.runAtInit`) or from app code, and keeps its measurements in localStorage, so a later boot measures again only on another device, browser or display. This phase reads what the browser tells; the GPU and CPU benchmarks and the frame-rate prediction come next.
+
+### Engine 6.26.0 (Sunset)
+
+**Added**
+
+- `runDeviceCapabilityCheckAsync({ force?, saveToLS?, targets? })` (`aekasha`): probes the device and returns a `DeviceCapabilityReport` (its `measurements` and a `verdict`: each target's check, `meetsTargets`, `failedTargets`, the levels, scores and `recommendations`). A stored result (`AEK_deviceCapabilities`) is reused while its version and the device's fingerprint (the user agent, the GPU, the screen and pixel ratio, the cores) match and it's younger than `maxAgeDays`; only the measurements are stored, so the verdict follows the current targets. Overlapping calls share one check. `getDeviceCapabilityReport()`, `evaluateDeviceCapabilities(targets)` (scores the last measurements against other targets without measuring), `clearStoredDeviceCapabilityReport()` and `onDeviceCapabilityReport(listener)` with it.
+- `AppConfig.deviceCapabilities` (`DeviceCapabilitiesConfig`): `runAtInit` (default false) runs the check in the boot, before the kernel and the features install, so the report is there in the app's `start`; a failed check is warned and the boot goes on. `saveToLS` (default true), `maxAgeDays` (30), `targets` (`DeviceCapabilityTargets`: `fps`, `resolution`, `minDeviceMemoryGB`, `minGPUMemoryMB`, `minCpuCores`, `requireWebGPU`, `requiredGPUFeatures`, `minLevels`, `unknownIs`) and `levelThresholds`. The module loads only when the check runs.
+- The levels (`DeviceLevels`): the GPU from its adapter (software or no API `LOW`, WebGL2 only or integrated `MEDIUM`, discrete or unified memory `HIGH`), the CPU from its cores, the memory from `navigator.deviceMemory` and the GPU memory from a guess for a GPU that shares the system memory (no browser tells it). The overall level is the lowest known one; an unknown category and a capped 8 GB memory reading don't lower it. The `fps` check is `UNKNOWN` until the benchmark comes.
+- `QUALITY_LEVELS`, `QualityLevel`, `compareQualityLevels` and `minQualityLevel` (`aekasha`): the one `LOW`…`ULTRA` scale of the shadow presets and the device levels. A light's `ShadowQuality` is the same scale, and its JSON Schema is unchanged.
+
 ## 2026-11-24 — p150_current-entity-data-source-info-on-edit-windows (Phases 1-3)
 
 The camera and light edit windows say where the entity's values come from (p150): its origin (the scene's JSON or code), whether its edits are saved at all (only with an app ID, the usual reason an edit didn't survive a reload), which saved values override its creation props now, and the order they apply in. The values saved from those windows apply in prod test mode too (`?isProdTest=true`), not only in the debug env, without loading the debugger's camera and light modules there.

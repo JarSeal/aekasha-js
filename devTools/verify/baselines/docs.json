@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 4396,
-      "total": 4396
+      "documented": 4453,
+      "total": 4453
     },
     "members": {
       "documented": 1197,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3823,
-        "total": 3823
+        "documented": 3880,
+        "total": 3880
       },
       "members": {
         "documented": 1021,
@@ -537,6 +537,20 @@
         "members": []
       }
     },
+    "engine/kernel/deviceCapabilities": {
+      "exports": {
+        "documented": 52,
+        "total": 52
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
     "engine/kernel/ecs": {
       "exports": {
         "documented": 102,
@@ -665,8 +679,8 @@
     },
     "engine/schemas": {
       "exports": {
-        "documented": 119,
-        "total": 119
+        "documented": 120,
+        "total": 120
       },
       "members": {
         "documented": 0,
@@ -959,8 +973,8 @@
     },
     "engine/utils": {
       "exports": {
-        "documented": 67,
-        "total": 67
+        "documented": 71,
+        "total": 71
       },
       "members": {
         "documented": 9,

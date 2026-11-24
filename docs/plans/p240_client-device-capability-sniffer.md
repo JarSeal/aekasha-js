@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 implemented
 Category: Performance, Settings
 Related: the PostFX feature (`aekasha/postfx`, `features/postfx/PostFX.ts`: `setPostFxEnabled` is one of the switches the recommendations target), the LOD feature (`src/_engine/features/lod/CLAUDE.md`, p350: the device levels are a natural LOD budget input, eg. `setLodBias`, `setLodMaxSelectionsPerFrame`), the profiler's GPU memory tab (`src/_engine/debug/CLAUDE.md`; p345 §2.4: a device memory level is its natural default budget, see Phase 3), the physics transform buffer (`features/physics/CLAUDE.md`: a `SharedArrayBuffer` only when the page is cross-origin-isolated, so `crossOriginIsolated` is part of the probe), the sky box (`features/skybox/SkyLights.ts`: its sun light's `shadowPreset` uses the same `LOW`…`ULTRA` scale as the device levels, see §3.1)
 
@@ -282,7 +282,7 @@ The dynamic import keeps the module out of the main chunk for apps that don't us
 
 ## 6. Phases
 
-### Phase 1: Probe, config, cache, API (no benchmark)
+### Phase 1: Probe, config, cache, API (no benchmark) — done
 
 - `QualityLevelSchema`/`QualityLevel` in `schemas/_HelperSchemas.ts`, with `ShadowQualitySchema` aliased to it, and the helpers (§3.1).
 - `DeviceCapabilitiesTypes.ts`, `DeviceProbe.ts`, `DeviceScoring.ts` (levels from probe data only: GPU from heuristics, CPU from cores, memory and GPU memory from the API and heuristics), `DeviceCapabilities.ts` (API, LS cache, fingerprint, listeners), with `*.test.ts` next to each (`yarn test`, in Node: no module reads a browser global at load).
@@ -292,9 +292,27 @@ The dynamic import keeps the module out of the main chunk for apps that don't us
 - FPS check is `UNKNOWN` in this phase.
 - Engine minor bump + CHANGELOG entry.
 
+As built (where the code differs from §2-§5 above; later phases build on this):
+
+- **Names** (the coding standards): `runDeviceCapabilityCheckAsync` (returns a promise), `onDeviceCapabilityReport(listener)` returning its remover (not `addDeviceCapabilityListener`). `evaluateDeviceCapabilities` returns `null` before any check (it has no measurements to score). `clearStoredDeviceCapabilityReport` keeps the last report.
+- **Defaults live in the modules, not `Config.ts`** (p612 D4: `loadConfig` holds none): the targets' and thresholds' in `DeviceScoring.ts` (`DEFAULT_DEVICE_TARGETS`, `DEFAULT_DEVICE_LEVEL_THRESHOLDS`), `saveToLS` / `maxAgeDays` in `DeviceCapabilities.ts`. `AppConfig.deviceCapabilities` is the type `DeviceCapabilitiesConfig` (`DeviceCapabilitiesTypes.ts`).
+- **The config holds only what runs**: `runAtInit`, `saveToLS`, `maxAgeDays`, `targets`, `levelThresholds`. Phase 2 adds `benchmark` (`enabled`, `budgetMs`), `targets.referenceFrame`, the check's `benchmark` / `pauseMainLoop` / `onProgress` options and the GPU-headroom and CPU-score thresholds.
+- **Thresholds** are `DeviceLevelBands` per input (the least value for each level above `LOW`): `cpuCores` `{ MEDIUM: 4, HIGH: 6, ULTRA: 12 }`, `deviceMemoryGB` `{ MEDIUM: 4, HIGH: 8 }` (no `ULTRA`: the browser's cap), `gpuMemoryMB` `{ MEDIUM: 1024, HIGH: 2048, ULTRA: 4096 }`.
+- **The scale is zod-free**: `QUALITY_LEVELS`, `QualityLevel`, `compareQualityLevels`, `minQualityLevel` in `utils/QualityLevel.ts` (on `aekasha`), so the check compares levels without loading zod; `_HelperSchemas.ts`' `QualityLevelSchema = z.enum(QUALITY_LEVELS)` and `ShadowQualitySchema` its `.describe`d copy (`.schemas/` unchanged).
+- **No WebGPU typings** (TypeScript 5.4, `types: ["node"]`): `requiredGPUFeatures` is `string[]`, and `DeviceProbe.ts` types the adapter fields it reads (`ProbeGpu`, `ProbeGpuAdapter`). The probe takes its browser inputs as a `DeviceProbeEnv` (`readBrowserProbeEnv()` reads them at the call), so its tests pass fakes.
+- **The probe**: WebGPU adapter (high performance; a null or thrown request is no WebGPU), `info` or the older `requestAdapterInfo()`, the features, 17 limits read by name, the canvas format; the WebGL2 context always (`RENDERER` first, `WEBGL_debug_renderer_info` only when it's masked, then the context lost). `classifyGpu` reads the identity strings, the WebGL renderer string added to WebGPU's coarse info: software (SwiftShader, llvmpipe, …), Apple silicon (unified), integrated (Intel but Arc, AMD APUs, mobile GPUs), discrete (NVIDIA, AMD RX). `isFallbackAdapter` is also true for a renderer named like software. GPU memory: 50 % of `deviceMemory` unified, 25 % integrated, else `UNKNOWN`. `display.width` / `height` are `screen`'s; `refreshHz` is null until Phase 2.
+- **The fingerprint**: an FNV-1a hash of the UA, the adapter's vendor / architecture / device / description (else WebGL's unmasked vendor and renderer), `screen` size × DPR and the cores. Its adapter request is reused by the probe on a miss.
+- **Scoring without a benchmark**: GPU `LOW` (no API, software), `MEDIUM` (WebGL2, integrated, or unknown), `HIGH` (discrete or unified); CPU from the cores (unknown: `MEDIUM`, source `UNKNOWN`, not counted overall); the GPU's score is null. A memory target over 8 is checked against 8, warned once per page.
+- **Recommendations from the levels** (`recommendDeviceSettings(levels, measurements)`, which the Phase 3 forced levels reuse): pixel ratio `min(DPR, { LOW: 1, MEDIUM: 1.5, HIGH: 2, ULTRA: 2 }[gpu])` (Phase 2 solves it against the FPS target), antialias at GPU ≥ `HIGH`, PostFX at ≥ `MEDIUM`, shadows `min(gpu, gpuMemory)`, backend WebGL2 without WebGPU or on a fallback adapter, physics `MAIN_THREAD` on a `LOW` CPU.
+- **Checks**: `failedTargets` is the check names; `gpuFeatures`' `measured` is the required features present, `minLevels`' the levels checked (`"overall: HIGH"`). With `unknownIs: 'FAIL'` every device fails until Phase 2 (the `fps` check is always `UNKNOWN`).
+- **The boot hook** (`Boot.ts`' `runDeviceCapabilityCheckAtBootAsync`) catches a failed check and warns: the boot goes on without a report.
+- The Hub page and the readme stay in Phase 3, on this branch.
+
 ### Phase 2: Benchmarks and FPS target
 
 - Refresh-rate sampling, `GpuBenchmark.ts` (WebGPU + WebGL2 paths), `CpuBenchmark.ts`, `budgetMs`, the hidden-tab deferral, main-loop pausing for runtime calls and `onProgress`.
+- The config and option keys Phase 1 left out (see its As built), `DEVICE_CAPABILITY_REPORT_VERSION` bumped (the measurements gain `benchmark` and `cpu.benchScore`), and the GPU level from the benchmark's headroom (`sources.gpu: 'BENCHMARK'`, `ULTRA` possible).
+- `resolution: 'CANVAS'` reads `getCanvasSize()` (`kernel/render/CanvasSize.ts`) × DPR, not the window: in an embed (`mountAekasha`) the canvas is the container's size.
 - The full verdict with `estimatedFps` and the pixel-ratio solver.
 - Calibrate the `referenceFrame` defaults: run the example app's `sceneTestECS` on 2–3 machines (integrated laptop GPU, Apple silicon, a discrete GPU). Compare the predicted and observed FPS (debug stats panel) and tune the constants. Record the numbers in this plan.
 - Calibrate the level thresholds on the same machines: the GPU headroom bands and the CPU benchmark-score bands. As a sanity check, each machine's GPU level should match the shadow preset it actually runs at the target FPS.

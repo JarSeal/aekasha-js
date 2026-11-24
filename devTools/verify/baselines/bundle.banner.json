@@ -30,16 +30,16 @@
       "gzip": 1987
     },
     "assets/banner.embed.js": {
-      "bytes": 976900,
-      "gzip": 273370
+      "bytes": 977319,
+      "gzip": 273542
     },
     "assets/banner.js": {
       "bytes": 483,
-      "gzip": 340
+      "gzip": 338
     },
     "assets/bannerAether.tsl.js": {
       "bytes": 407,
-      "gzip": 285
+      "gzip": 286
     },
     "assets/basis_transcoder.js": {
       "bytes": 57529,
@@ -52,6 +52,10 @@
     "assets/BufferGeometryUtils.js": {
       "bytes": 2284,
       "gzip": 1061
+    },
+    "assets/DeviceCapabilities.js": {
+      "bytes": 11997,
+      "gzip": 4769
     },
     "assets/draco_decoder.js": {
       "bytes": 719410,
@@ -78,12 +82,12 @@
       "gzip": 3099
     },
     "assets/GeometryMerge.js": {
-      "bytes": 8248,
+      "bytes": 8249,
       "gzip": 3426
     },
     "assets/GeometryTransfer.js": {
-      "bytes": 1933,
-      "gzip": 865
+      "bytes": 1934,
+      "gzip": 864
     },
     "assets/GeometryTransfer.js@AssetsWorker": {
       "bytes": 2051,
@@ -91,15 +95,15 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 47088,
-      "gzip": 14024
+      "gzip": 14025
     },
     "assets/HDRLoader.js": {
       "bytes": 3407,
-      "gzip": 1635
+      "gzip": 1633
     },
     "assets/ImportRegistry.js": {
-      "bytes": 20473,
-      "gzip": 8229
+      "bytes": 20474,
+      "gzip": 8231
     },
     "assets/KTX2Loader.js": {
       "bytes": 60312,
@@ -123,7 +127,7 @@
     },
     "assets/TextureInputResolvers.js": {
       "bytes": 3306,
-      "gzip": 1367
+      "gzip": 1365
     },
     "assets/three.core.js": {
       "bytes": 199218,
@@ -139,14 +143,14 @@
     },
     "banner.embed.js": {
       "bytes": 251,
-      "gzip": 211
+      "gzip": 210
     }
   },
   "main": {
     "chunk": "assets/banner.embed.js",
     "modules": 68,
-    "minified": 1001240,
-    "gzip": 279636
+    "minified": 1001700,
+    "gzip": 279845
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -171,8 +175,8 @@
     },
     "_engine/kernel/init": {
       "modules": 5,
-      "minified": 7608,
-      "gzip": 3229
+      "minified": 8068,
+      "gzip": 3439
     },
     "_engine/kernel/input": {
       "modules": 1,
@@ -212,12 +216,12 @@
     "_engine/utils": {
       "modules": 7,
       "minified": 1756,
-      "gzip": 876
+      "gzip": 877
     },
     "app": {
       "modules": 4,
       "minified": 1351,
-      "gzip": 717
+      "gzip": 715
     },
     "three": {
       "modules": 4,
