@@ -97,7 +97,8 @@ export type DeviceGpuMeasurements = {
   device: string | null;
   /** The adapter's description (`GPUAdapterInfo.description`, else WebGL's unmasked renderer). */
   description: string | null;
-  /** A software (fallback) adapter: no real GPU. Null without WebGPU. */
+  /** A software renderer, no real GPU: WebGPU's fallback adapter, or a renderer named like one
+   * (SwiftShader, llvmpipe). Null when it can't be told. */
   isFallbackAdapter: boolean | null;
   /** The GPU shares the system memory (Apple silicon). Null when it can't be told. */
   isUnifiedMemory: boolean | null;
