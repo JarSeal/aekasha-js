@@ -70,11 +70,13 @@ const profiles: SbpProfile[] = [
     // (i090, i100: the frustum culling system's receiver pass, the static cells' and pools' flags,
     // `instancing` +143 B, `kernel/ecs` +127 B, `spatial` +51 B) and i110's release of a failed
     // load's assets (`kernel/scene` +123 B) took the initial to 413.01 and `assets/index.js` to
-    // 408.8 KiB: 413 → 415 and 409 → 410 KiB (at least 1 KiB over each)
+    // 408.8 KiB: 413 → 415 and 409 → 410 KiB (at least 1 KiB over each). p500: physics
+    // snapshots (`physics`' 0.9 KiB below) took the initial to 414.0 and `assets/index.js` to
+    // 409.8 KiB: 410 → 411 KiB (the initial stays within 415)
     budgets: {
       initial: 415 * KIB,
       chunks: {
-        'assets/index.js': 410 * KIB,
+        'assets/index.js': 411 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
@@ -122,8 +124,11 @@ const profiles: SbpProfile[] = [
         '_engine/features/merging': 10 * KIB,
         // p102: the world bounds (`PhysicsWorldBounds.ts`, 1.2 KiB: the scene's and entities'
         // bounds applied in the held scene load, the worker's out-of-bounds records handled every
-        // step, so not lazy) took it 24.7 → 26.2 KiB (26,822 B): 25 → 27 KiB
-        '_engine/features/physics': 27 * KIB,
+        // step, so not lazy) took it 24.7 → 26.2 KiB (26,822 B): 25 → 27 KiB. p500: physics
+        // snapshots (`takePhysicsSnapshot`, `restorePhysicsSnapshot` on the entry, the restore's
+        // entity follow-up: reaped entities, static bodies' sync, tiers) took it to 27.1 KiB
+        // (27,784 B, +962 B): 27 → 29 KiB (at least 1 KiB over)
+        '_engine/features/physics': 29 * KIB,
         '_engine/features/postfx': 3 * KIB,
         '_engine/features/skybox': 19 * KIB,
         '_engine/features/spatial': 7 * KIB,
