@@ -2861,7 +2861,6 @@
       "getCameraByAppId": "Function",
       "getMainAppCameraId": "Function",
       "getMainCamera": "Function",
-      "getSavedCameraDebugProps": "Function",
       "initDebugCamera": "Function",
       "installCameras": "Function",
       "isAnyCameraHelperVisible": "Function",
@@ -2874,6 +2873,14 @@
       "toggleAllCameraHelpers": "Function",
       "toggleDebugCamera": "Function",
       "updateAllCameraAspectRatios": "Function"
+    },
+    "src/_engine/kernel/camera/debug/CameraDebugStorage.ts": {
+      "CamDebugLSData": "Interface",
+      "CamEntityDebugState": "Interface",
+      "CamSceneDebugState": "Interface",
+      "DebugCamLSProps": "Interface",
+      "LS_KEY": "Variable",
+      "readCameraDebugData": "Function"
     },
     "src/_engine/kernel/config/Config.ts": {
       "AppConfig": "TypeAlias",
@@ -3230,12 +3237,18 @@
       "TouchPinchBinding": "TypeAlias",
       "TouchTapBinding": "TypeAlias"
     },
+    "src/_engine/kernel/light/debug/LightDebugStorage.ts": {
+      "LightDebugLSData": "Interface",
+      "LightEntityDebugState": "Interface",
+      "LightSceneDebugState": "Interface",
+      "LS_LIGHTS_KEY": "Variable",
+      "readLightDebugData": "Function"
+    },
     "src/_engine/kernel/light/Light.ts": {
       "createLightEntity": "Function",
       "disposeLight": "Function",
       "getLightByAppId": "Function",
       "getLightTargetId": "Function",
-      "getSavedLightDebugProps": "Function",
       "getShadowPresetBias": "Function",
       "installLights": "Function",
       "isAnyLightHelperVisible": "Function",

@@ -4,6 +4,7 @@ import type { SceneData } from './Scene';
 import type { ScenePrimitiveAssets } from './SceneLoader';
 import { getECSWorld, getEntityIdByAppId } from '../ecs/ECS';
 import { ComponentType } from '../ecs/ECSCoreComponents';
+import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../config/Config';
 import type { CoreEntityOpts } from '../../schemas/_HelperSchemas';
 import { getTexture, loadTextureAsync } from '../assets/Texture';
 import { createMaterial, getMaterial } from '../assets/Material';
@@ -35,6 +36,14 @@ const findLivePersistentEntity = (
     : undefined;
 };
 
+/** Tags an entity created from a scene's data as such (its `DEBUG_DATA.source`, p150): the camera
+ * and light edit windows show where its values came from. Debug env and prod test only. */
+const tagSceneJsonEntity = (entityId: number) => {
+  if (!IS_DEBUG_ENV && !IS_PROD_TEST_MODE) return;
+  const debugData = getECSWorld().getComponent(entityId, ComponentType.DEBUG_DATA);
+  if (debugData) debugData.source = 'SCENE_JSON';
+};
+
 /** Creates a scene's cameras from its data. A scene needs at least one it creates (or reuses: a
  * persistent camera an earlier load created, made active again when its props say `active`);
  * without an active one, the first camera it names by id (a persistent one) becomes active. Throws
@@ -57,7 +66,7 @@ export const createCameras = (sceneData: SceneData) => {
     }
     const keptId = findLivePersistentEntity(props.camProps.appId, props.entityOpts);
     if (keptId === undefined) {
-      createCameraEntity(props.camProps, props.entityOpts);
+      tagSceneJsonEntity(createCameraEntity(props.camProps, props.entityOpts));
     } else if (props.camProps.active) {
       setActiveCamera(keptId);
     }
@@ -301,7 +310,9 @@ export const createSceneObject3Ds = (sceneData: SceneObject3DLists): number[] =>
     const props = lightProps[i];
     if (typeof props === 'string') continue;
     if (findLivePersistentEntity(props.lightProps.appId, props.entityOpts) !== undefined) continue;
-    entityIds.push(createLightEntity(props.lightProps, props.entityOpts));
+    const lightId = createLightEntity(props.lightProps, props.entityOpts);
+    tagSceneJsonEntity(lightId);
+    entityIds.push(lightId);
   }
 
   // Create meshes
@@ -334,7 +345,9 @@ export const createSceneObject3Ds = (sceneData: SceneObject3DLists): number[] =>
       }
       mat = foundMat;
     }
-    entityIds.push(createMeshEntity({ ...props.props, geo, mat }, props.entityOpts));
+    const meshId = createMeshEntity({ ...props.props, geo, mat }, props.entityOpts);
+    tagSceneJsonEntity(meshId);
+    entityIds.push(meshId);
   }
   return entityIds;
 };

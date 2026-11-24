@@ -11,7 +11,11 @@ import {
   closeDraggableWindow,
   getKindWindowId,
 } from '../../../ui/overlays/windows/DraggableWindow';
-import { createDebugWindowGrid, getEntityInfoItems } from '../../../debug/_dbg__DebugWindowGrid';
+import {
+  createDebugWindowGrid,
+  getEntityInfoItems,
+  getValueSourceItems,
+} from '../../../debug/_dbg__DebugWindowGrid';
 import {
   setLightEnabled,
   setLightFrustumCullingEnabled,
@@ -26,6 +30,7 @@ import {
   LIGHTS_TAB_ID,
   clearLightFromLS,
   getLightDebugVisibilityPref,
+  getLightOverriddenKeys,
   loadLightDebugData,
   saveLightToLS,
   setLightHelperVisible,
@@ -317,6 +322,11 @@ export const createEditLightContent = (data?: { [key: string]: unknown }) => {
       type: light.type,
       name: debugData?.name,
       description: debugData?.description,
+    }),
+    ...getValueSourceItems({
+      source: debugData?.source,
+      persistable: ctx.stableAppId !== undefined,
+      getOverriddenKeys: () => getLightOverriddenKeys(appId),
     }),
   ];
 

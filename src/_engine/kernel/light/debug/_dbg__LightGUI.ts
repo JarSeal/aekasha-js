@@ -49,7 +49,6 @@ import { createEditLightContent } from './_dbg__LightEditWindow';
 export {
   _toggleAllLightHelpers,
   globalHelpersVisible,
-  loadLightDebugData,
   syncDebugVisualsFromLS,
   updateLightsDebuggerGUI,
 } from './_dbg__LightDebugState';

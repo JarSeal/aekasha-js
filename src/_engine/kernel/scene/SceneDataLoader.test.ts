@@ -7,6 +7,8 @@ import { getGeometry, getGeometryRegistry, saveBufferGeometry } from '../assets/
 import { getMaterial } from '../assets/Material';
 import { saveTexture } from '../assets/Texture';
 import { createCameraEntity, getActiveCameraId } from '../camera/Camera';
+import { createLightEntity } from '../light/Light';
+import { initEnvironment } from '../config/Config';
 import { createRootScene, type SceneData } from './Scene';
 import {
   createCameras,
@@ -205,5 +207,33 @@ describe('persistent JSON entities', () => {
     expect(getActiveCameraId()).toBe(keptCamId);
     expect(countAppId('keptCam')).toBe(1);
     world.deleteEntity(keptCamId);
+  });
+});
+
+// p150: where an entity's values came from, for the camera and light edit windows
+describe("the entities' source", () => {
+  // Last in the file: DEBUG_DATA is stored only in the debug env and prod test mode
+  test('a scene’s data tags its entities SCENE_JSON, code’s are CODE, the data left as it was', () => {
+    initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
+    const debugData = { name: 'Source lamp' };
+    createCameras({
+      id: 'loaderSource',
+      cameras: [{ camProps: { type: 'PERSPECTIVE', appId: 'sourceCam' } }],
+    } as SceneData);
+    const [lampId, boxId] = createSceneObject3Ds({
+      lights: [{ lightProps: { type: 'POINT', appId: 'sourceLamp' }, entityOpts: { debugData } }],
+      meshes: [{ props: { appId: 'sourceBox', geo: { type: 'BOX' }, mat: { type: 'BASIC' } } }],
+    });
+    const codeLampId = createLightEntity({ type: 'POINT' }, { debugData: { name: 'Code lamp' } });
+    const camId = getEntityIdByAppId('sourceCam')!;
+
+    const getDebugData = (id: number) => world.getComponent(id, ComponentType.DEBUG_DATA);
+    expect(getDebugData(camId)?.source).toBe('SCENE_JSON');
+    expect(getDebugData(lampId)).toEqual({ name: 'Source lamp', source: 'SCENE_JSON' });
+    expect(getDebugData(boxId)?.source).toBe('SCENE_JSON');
+    expect(getDebugData(codeLampId)).toEqual({ name: 'Code lamp', source: 'CODE' });
+    // A copy: the cached scene data never gets the tag
+    expect(debugData).toEqual({ name: 'Source lamp' });
+    for (const id of [camId, lampId, boxId, codeLampId]) world.deleteEntity(id);
   });
 });

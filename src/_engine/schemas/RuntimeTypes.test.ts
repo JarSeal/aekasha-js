@@ -186,8 +186,9 @@ describe('the asset JSONs fit their runtime types', () => {
   });
 
   test('debugData (an entity’s or an asset’s) → EntityDebugData', () => {
-    // The same fields: ECSRegistry.ts imports nothing, so it writes the type out
-    expectTypeOf<DebugData>().toEqualTypeOf<EntityDebugData>();
+    // The same fields: ECSRegistry.ts imports nothing, so it writes the type out. Its `source` is
+    // the engine's alone (p150): the scene loader sets it, never a JSON
+    expectTypeOf<DebugData>().toEqualTypeOf<Omit<EntityDebugData, 'source'>>();
   });
 
   test('scene (*.scene.json, its inline entries as the gatherer keeps them) → SceneData', () => {

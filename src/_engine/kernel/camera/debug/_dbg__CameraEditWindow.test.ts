@@ -31,6 +31,7 @@ import { ECSWorld } from '../../ecs/ECS';
 import { ComponentType } from '../../ecs/ECSCoreComponents';
 import { createFeatureHost } from '../../init/Features';
 import { createRootScene } from '../../scene/Scene';
+import { initEnvironment } from '../../config/Config';
 import { createCameraEntity, installCameras } from '../Camera';
 import { _getUndoRedoHistory, _initUndoRedo, _undoLastAction } from '../../../debug/_dbg__UndoRedo';
 import { createEditCameraContent } from './_dbg__CameraEditWindow';
@@ -68,6 +69,8 @@ const getField = (root: Element, label: string) => {
   if (!field) throw new Error(`No field "${label}"`);
   return field;
 };
+const getMonitorText = (root: Element, label: string) =>
+  getField(root, label).querySelector('.aekMonitor__value')?.textContent;
 const getButton = (root: Element, text: string) =>
   [...root.querySelectorAll<HTMLButtonElement>('button')].find(
     (button) => button.textContent === text
@@ -143,5 +146,42 @@ describe('the camera edit window (p806 D10)', () => {
     expect(getSaved('lensCam')?._lensSettingsOpen).toBe(true);
     // An orthographic camera's base is its frustum size
     expect(getField(root, 'Frustum size').hidden).toBe(false);
+  });
+});
+
+// p150: where the camera's values come from
+describe('the camera edit window: where its values come from', () => {
+  // Last in the file: DEBUG_DATA, which holds the origin, is stored only in the debug env
+  beforeAll(() => {
+    initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
+  });
+
+  it("lists the saved values in force, not the debugger's own preferences", () => {
+    const entityId = createCameraEntity({ type: 'PERSPECTIVE' }, { appId: 'sourceCam' });
+    const root = openWindow('sourceCam');
+    expect(getMonitorText(root, 'Origin')).toBe('Code');
+    expect(getMonitorText(root, 'Persistable')).toBe('Yes');
+    expect(getMonitorText(root, 'Local storage override')).toBe('None');
+
+    // The folder's open state is saved, but it's no override
+    root.querySelector<HTMLButtonElement>('.aekFolder__toggle')!.click();
+    expect(getSaved('sourceCam')?._lensSettingsOpen).toBe(true);
+    expect(getMonitorText(root, 'Local storage override')).toBe('None');
+
+    getField(root, 'Responsive aspect').querySelector('input')!.click();
+    expect(getMonitorText(root, 'Local storage override')).toBe('Active: responsiveAspect');
+    getButton(root, 'Clear local storage').click();
+    expect(getMonitorText(root, 'Local storage override')).toBe('None');
+    world.deleteEntity(entityId);
+  });
+
+  it('says a camera without an app ID saves nothing', () => {
+    const entityId = createCameraEntity({ type: 'PERSPECTIVE' });
+    const appId = world.getComponent(entityId, ComponentType.APP_ID)!.id;
+    const root = openWindow(appId);
+    expect(getMonitorText(root, 'Origin')).toBe('Code');
+    expect(getMonitorText(root, 'Persistable')).toBe('No, no app ID set');
+    expect(root.textContent).toContain('Without an app ID nothing here is saved');
+    world.deleteEntity(entityId);
   });
 });

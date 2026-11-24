@@ -12,46 +12,30 @@ import {
 import { getCurrentSceneId } from '../../scene/Scene';
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
 import { DEFAULT_DEBUG_CAM_PROPS } from './_dbg__DebugCamera';
+import {
+  LS_KEY,
+  readCameraDebugData,
+  type CamDebugLSData,
+  type CamEntityDebugState,
+  type CamSceneDebugState,
+  type DebugCamLSProps,
+} from './CameraDebugStorage';
 import { updateOnScreenTools } from '../../../debug/OnScreenTools';
 
-export interface CamEntityDebugState {
-  helperVisible?: boolean;
-  position?: { x: number; y: number; z: number };
-  fov?: number;
-  near?: number;
-  far?: number;
-  frustumSize?: number;
-  responsiveAspect?: boolean;
-  referenceAspect?: number;
-  _lensSettingsOpen?: boolean;
-}
+// The saved state and its read moved out for the property loader (p150): the debugger's modules
+// keep importing them from here
+export { LS_KEY };
+export type { CamDebugLSData, CamEntityDebugState, CamSceneDebugState, DebugCamLSProps };
 
-/** The debug orbit camera's saved state, per scene */
-export interface DebugCamLSProps {
-  position: { x: number; y: number; z: number };
-  target: { x: number; y: number; z: number };
-  enabled: boolean;
-  latestAppCameraId: string | null;
-  fov: number;
-  near: number;
-  far: number;
-  zoom: number;
-}
-
-export interface CamSceneDebugState {
-  /** By the cameras' fixed app ids */
-  cams: Record<string, CamEntityDebugState>;
-  debugCam: DebugCamLSProps;
-}
-
-/** The structure of 'AEK_debugCams' in LocalStorage */
-export interface CamDebugLSData {
-  [sceneId: string]: CamSceneDebugState;
-}
+/**
+ * Returns a camera's saved debugger state.
+ * @param sceneId the scene whose data to read, defaults to the current scene
+ */
+export const loadCameraDebugData = (appId?: string, sceneId: string | null = getCurrentSceneId()) =>
+  readCameraDebugData(appId, sceneId);
 
 /** The edit windows' kind: one window per camera, keyed by its app id */
 export const EDIT_CAMERA_WIN_ID = 'cameraEditorWindow';
-export const LS_KEY = 'AEK_debugCams';
 export const CAMERAS_TAB_ID = 'camerasControls';
 
 /**
@@ -110,28 +94,15 @@ export const getDebugCamProps = (sceneId: string) => {
   return saved[sceneId].debugCam;
 };
 
+/** The saved keys that are the debugger's own preferences, not creation props */
+const CAM_DEBUGGER_ONLY_KEYS: ReadonlySet<string> = new Set(['helperVisible', '_lensSettingsOpen']);
+
 /**
- * Returns a camera's saved debugger state.
- * @param appId (string) the camera's app id
- * @param sceneId (string) scene whose data to read, defaults to the current scene
+ * The saved values of a camera in the current scene that override its creation props (p150): its
+ * saved keys but the debugger's own preferences (the helper, the folder).
  */
-export const loadCameraDebugData = (
-  appId?: string,
-  sceneId: string | null = getCurrentSceneId()
-): CamEntityDebugState | undefined => {
-  if (!appId) return;
-  const currentData = lsGetItem(LS_KEY, {}) as CamDebugLSData;
-  if (
-    !sceneId ||
-    !currentData ||
-    !currentData[sceneId] ||
-    !currentData[sceneId].cams ||
-    !currentData[sceneId].cams[appId]
-  ) {
-    return;
-  }
-  return currentData[sceneId].cams[appId];
-};
+export const getCameraOverriddenKeys = (appId?: string): string[] =>
+  Object.keys(loadCameraDebugData(appId) ?? {}).filter((key) => !CAM_DEBUGGER_ONLY_KEYS.has(key));
 
 export const saveCameraToLS = <K extends keyof CamEntityDebugState>(
   entityId: number,

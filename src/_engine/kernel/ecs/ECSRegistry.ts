@@ -29,4 +29,10 @@ export type EntityDebugData = {
   todo?: { [key: string]: unknown };
   /** Anything else a debug tool keeps for the entity. */
   debugObj?: Record<string, unknown>;
+  /**
+   * Where its creation props came from (p150): `'SCENE_JSON'`, a scene's data (its JSON cameras,
+   * lights and meshes, a streaming cell's too), or `'CODE'` (scene, app or engine code; the
+   * default). Set by the engine, never by the creator's options.
+   */
+  source?: 'SCENE_JSON' | 'CODE';
 };

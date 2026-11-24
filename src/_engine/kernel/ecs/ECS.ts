@@ -542,7 +542,8 @@ export class ECSWorld {
 
   /**
    * Creates an entity with the core components: `APP_ID` (`opts.appId`, else a generated UUID),
-   * `TRANSFORM` (identity), `USER_DATA`, `DEBUG_DATA` (debug env and prod test only), `MANAGED_BY`
+   * `TRANSFORM` (identity), `USER_DATA`, `DEBUG_DATA` (debug env and prod test only, a copy of
+   * `opts.debugData` with its `source` `'CODE'`; the scene loader re-tags its own), `MANAGED_BY`
    * when given, `DISABLED` when `opts.disabled` and `PERSISTENT` when `opts.persistent`.
    * @returns the new entity's id
    * @remarks A persistent entity outlives the scene switch, so code that runs on every visit
@@ -558,7 +559,10 @@ export class ECSWorld {
     });
     this.addComponent(id, ComponentType.TRANSFORM, new Transform());
     this.addComponent(id, ComponentType.USER_DATA, opts?.userData || {});
-    this.addComponent(id, ComponentType.DEBUG_DATA, opts?.debugData || {});
+    // A copy, so the scene loader's source tag never writes into the scene data (p150)
+    if (IS_DEBUG_ENV || IS_PROD_TEST_MODE) {
+      this.addComponent(id, ComponentType.DEBUG_DATA, { ...opts?.debugData, source: 'CODE' });
+    }
     if (opts?.managedBy) this.addComponent(id, ComponentType.MANAGED_BY, { ...opts.managedBy });
     if (opts?.persistent) this.addComponent(id, ComponentType.PERSISTENT, true);
     this.setDisabled(id, Boolean(opts?.disabled));

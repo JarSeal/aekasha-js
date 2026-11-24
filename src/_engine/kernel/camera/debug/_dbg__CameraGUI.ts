@@ -43,11 +43,7 @@ import {
 import { createEditCameraContent } from './_dbg__CameraEditWindow';
 
 // What `Camera.ts` reads of this module
-export {
-  getDebugCamProps,
-  loadCameraDebugData,
-  updateCamerasDebuggerGUI,
-} from './_dbg__CameraDebugState';
+export { getDebugCamProps, updateCamerasDebuggerGUI } from './_dbg__CameraDebugState';
 
 /** Finds a list row's camera (the row id is the app id, or the entity id without one). */
 const resolveCameraListItem = (itemId: string) => {
