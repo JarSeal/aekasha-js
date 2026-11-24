@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AppConfig } from '../config/Config';
+import type { DeviceBenchmarkOpts, DeviceBenchmarkResult } from './DeviceBenchmark';
 import type { DeviceProbeEnv } from './DeviceProbe';
 
 // localStorage before anything reads it (the storage helpers check it once): items as own
@@ -34,6 +35,59 @@ vi.mock(import('./DeviceProbe'), async (importOriginal) => {
     },
   };
 });
+
+// The benchmark: its calls' options, and the result it gives (a stalled one when `isStalled`)
+const bench = vi.hoisted(() => ({
+  calls: [] as DeviceBenchmarkOpts[],
+  isStalled: false,
+  // Called while it "runs": what the main loop's state is then
+  during: null as (() => void) | null,
+}));
+vi.mock(import('./DeviceBenchmark'), () => ({
+  runDeviceBenchmarkAsync: async (opts: DeviceBenchmarkOpts): Promise<DeviceBenchmarkResult> => {
+    bench.calls.push(opts);
+    bench.during?.();
+    opts.onProgress?.('PROBE', 0.15);
+    opts.onProgress?.('GPU', 0.5);
+    opts.onProgress?.('CPU', 0.85);
+    return {
+      refreshHz: 120,
+      cpuScore: 5000,
+      benchmark: {
+        gpu: {
+          api: 'WEBGPU',
+          width: opts.width,
+          height: opts.height,
+          fillRateMPixOpsPerMs: 20,
+          trianglesPerMs: 1e6,
+          usedTimestampQuery: true,
+        },
+        durationMs: 1200,
+        isStalled: bench.isStalled,
+      },
+    };
+  },
+}));
+
+// The main loop's play state, which the check pauses and resumes
+const loop = vi.hoisted(() => ({
+  masterPlay: true,
+  isMasterPlaying: false,
+  toggles: [] as boolean[],
+}));
+vi.mock(import('../loop/MainLoop'), () => ({
+  getReadOnlyLoopState: () => ({ ...loop }) as never,
+  toggleMainPlay: (value?: boolean) => {
+    loop.masterPlay = value ?? !loop.masterPlay;
+    loop.toggles.push(loop.masterPlay);
+  },
+}));
+
+// The canvas's size, CSS pixels
+const canvas = vi.hoisted(() => ({ width: 800, height: 600 }));
+vi.mock(import('../render/CanvasSize'), () => ({
+  getCanvasSize: () => ({ ...canvas, aspect: canvas.width / Math.max(1, canvas.height) }),
+}));
 
 const LS_KEY = 'AEK_deviceCapabilities';
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -75,6 +129,11 @@ beforeEach(() => {
   storage.removeItem(LS_KEY);
   probe.env = createEnv();
   probe.probeCalls = 0;
+  bench.calls = [];
+  bench.isStalled = false;
+  bench.during = null;
+  Object.assign(loop, { masterPlay: true, isMasterPlaying: false, toggles: [] });
+  Object.assign(canvas, { width: 800, height: 600 });
 });
 
 afterEach(() => {
@@ -98,7 +157,7 @@ describe('runDeviceCapabilityCheckAsync', () => {
     expect(dc.getDeviceCapabilityReport()).toBe(report);
 
     const stored = readStored();
-    expect(stored).toMatchObject({ reportVersion: 1, measuredAt: report.measuredAt });
+    expect(stored).toMatchObject({ reportVersion: 2, measuredAt: report.measuredAt });
     expect(stored.measurements).toEqual(report.measurements);
     // Only the measurements are stored, never a verdict
     expect(stored.verdict).toBeUndefined();
@@ -225,5 +284,112 @@ describe('evaluateDeviceCapabilities and clearStoredDeviceCapabilityReport', () 
     expect(storage.getItem(LS_KEY)).toBeNull();
     expect(dc.getDeviceCapabilityReport()).not.toBeNull();
     expect((await dc.runDeviceCapabilityCheckAsync()).fromCache).toBe(false);
+  });
+});
+
+describe('the benchmark', () => {
+  it('adds its measurements, at the canvas size × the pixel ratio', async () => {
+    probe.env = createEnv({ devicePixelRatio: 2 });
+    const report = await (await loadAsync()).runDeviceCapabilityCheckAsync();
+    expect(bench.calls).toHaveLength(1);
+    expect(bench.calls[0]).toMatchObject({ width: 1600, height: 1200, budgetMs: 1500 });
+    expect(report.measurements.display.refreshHz).toBe(120);
+    expect(report.measurements.cpu.benchScore).toBe(5000);
+    expect(report.measurements.benchmark).toMatchObject({ durationMs: 1200, isStalled: false });
+    expect(readStored().measurements.benchmark.gpu.fillRateMPixOpsPerMs).toBe(20);
+  });
+
+  it("measures a target resolution as given, and a canvas with no size at 1280×720's", async () => {
+    await (
+      await loadAsync({ targets: { resolution: { width: 1920, height: 1080 } } })
+    ).runDeviceCapabilityCheckAsync();
+    expect(bench.calls[0]).toMatchObject({ width: 1920, height: 1080 });
+
+    Object.assign(canvas, { width: 0, height: 0 });
+    await (
+      await loadAsync({ benchmark: { budgetMs: 800 } })
+    ).runDeviceCapabilityCheckAsync({
+      force: true,
+    });
+    expect(bench.calls[1]).toMatchObject({ width: 1280, height: 720, budgetMs: 800 });
+  });
+
+  it("doesn't run when off, and a stored result without one is measured again when on", async () => {
+    const report = await (
+      await loadAsync({ benchmark: { enabled: false } })
+    ).runDeviceCapabilityCheckAsync();
+    expect(bench.calls).toHaveLength(0);
+    expect(report.measurements.benchmark).toBeNull();
+    expect(report.measurements.display.refreshHz).toBeNull();
+
+    // The option wins over the config
+    const dc = await loadAsync({ benchmark: { enabled: false } });
+    expect((await dc.runDeviceCapabilityCheckAsync()).fromCache).toBe(true);
+    expect((await dc.runDeviceCapabilityCheckAsync({ benchmark: true })).fromCache).toBe(false);
+    expect(bench.calls).toHaveLength(1);
+    // A benchmarked result serves a check without one
+    expect((await dc.runDeviceCapabilityCheckAsync()).fromCache).toBe(true);
+  });
+
+  it("doesn't store a stalled run", async () => {
+    bench.isStalled = true;
+    const report = await (await loadAsync()).runDeviceCapabilityCheckAsync();
+    expect(report.measurements.benchmark?.isStalled).toBe(true);
+    expect(storage.getItem(LS_KEY)).toBeNull();
+  });
+
+  it('pauses a running main loop meanwhile and resumes it', async () => {
+    loop.isMasterPlaying = true;
+    let masterPlayDuring: boolean | null = null;
+    bench.during = () => (masterPlayDuring = loop.masterPlay);
+    const dc = await loadAsync();
+    await dc.runDeviceCapabilityCheckAsync();
+    expect(masterPlayDuring).toBe(false);
+    expect(loop.toggles).toEqual([false, true]);
+
+    // Not with pauseMainLoop off, nor when paused already, nor from a stored result
+    loop.toggles = [];
+    await dc.runDeviceCapabilityCheckAsync({ force: true, pauseMainLoop: false });
+    loop.masterPlay = false;
+    await dc.runDeviceCapabilityCheckAsync({ force: true });
+    loop.masterPlay = true;
+    await dc.runDeviceCapabilityCheckAsync();
+    expect(loop.toggles).toEqual([]);
+  });
+
+  it("doesn't start a main loop that isn't running yet (the boot's check)", async () => {
+    await (await loadAsync()).runDeviceCapabilityCheckAsync();
+    expect(loop.toggles).toEqual([]);
+  });
+
+  it('reports its progress, growing only, and a throwing callback fails nothing', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const progress: [string, number][] = [];
+    const dc = await loadAsync();
+    await dc.runDeviceCapabilityCheckAsync({ onProgress: (...args) => progress.push(args) });
+    expect(progress).toEqual([
+      ['PROBE', 0],
+      ['PROBE', 0.05],
+      ['PROBE', 0.15],
+      ['GPU', 0.5],
+      ['CPU', 0.85],
+      ['DONE', 1],
+    ]);
+
+    progress.length = 0;
+    await dc.runDeviceCapabilityCheckAsync({ onProgress: (...args) => progress.push(args) });
+    expect(progress).toEqual([
+      ['PROBE', 0],
+      ['DONE', 1],
+    ]);
+
+    const report = await dc.runDeviceCapabilityCheckAsync({
+      force: true,
+      onProgress: () => {
+        throw new Error('progress');
+      },
+    });
+    expect(report.fromCache).toBe(false);
+    expect(error).toHaveBeenCalledTimes(6);
   });
 });

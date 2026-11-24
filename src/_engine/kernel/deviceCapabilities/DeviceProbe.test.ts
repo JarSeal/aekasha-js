@@ -189,7 +189,7 @@ describe('probeDeviceAsync', () => {
     expect(m.gpu.webgl2?.maxTextureSize).toBe(16384);
     expect(m.gpuMemoryMB).toEqual({ value: null, source: 'UNKNOWN' });
     expect(m.memory).toEqual({ deviceMemoryGB: 8, jsHeapLimitMB: 4096 });
-    expect(m.cpu).toEqual({ cores: 12 });
+    expect(m.cpu).toEqual({ cores: 12, benchScore: null });
     expect(m.display).toEqual({
       width: 1920,
       height: 1080,

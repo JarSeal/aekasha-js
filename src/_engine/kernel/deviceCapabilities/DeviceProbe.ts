@@ -32,6 +32,8 @@ export type ProbeGpuAdapter = {
   info?: ProbeGpuAdapterInfo;
   requestAdapterInfo?: () => Promise<ProbeGpuAdapterInfo>;
   isFallbackAdapter?: boolean;
+  /** The benchmark's device (`GpuBenchmarkWebGPU.ts` types what it gives). */
+  requestDevice?: (descriptor?: object) => Promise<unknown>;
 };
 
 /**
@@ -68,8 +70,10 @@ export type DeviceProbeEnv = {
   hasOffscreenCanvas: boolean;
   /** `performance.memory.jsHeapSizeLimit` (Chromium only), bytes. */
   jsHeapSizeLimit: number | null;
-  /** Creates a small, throwaway WebGL2 context, null when there's none. */
-  createWebGL2Context: (() => WebGL2RenderingContext | null) | null;
+  /** Creates a small, throwaway WebGL2 context (with `attributes`), null when there's none. */
+  createWebGL2Context:
+    | ((attributes?: WebGLContextAttributes) => WebGL2RenderingContext | null)
+    | null;
 };
 
 /**
@@ -133,12 +137,12 @@ export const readBrowserProbeEnv = (): DeviceProbeEnv => {
     crossOriginIsolated: window.crossOriginIsolated === true,
     hasOffscreenCanvas: typeof OffscreenCanvas !== 'undefined',
     jsHeapSizeLimit: perf.memory?.jsHeapSizeLimit ?? null,
-    createWebGL2Context: () => {
+    createWebGL2Context: (attributes) => {
       const canvas =
         typeof OffscreenCanvas !== 'undefined'
           ? new OffscreenCanvas(1, 1)
           : document.createElement('canvas');
-      return canvas.getContext('webgl2') as WebGL2RenderingContext | null;
+      return canvas.getContext('webgl2', attributes) as WebGL2RenderingContext | null;
     },
   };
 };
@@ -362,7 +366,7 @@ const readIsMobile = (nav: DeviceProbeEnv['navigator']) => {
 };
 
 /**
- * The static probe: everything the browser tells, without the benchmark. `adapter` is the one
+ * The static probe: everything the browser tells, without the benchmark (its fields null). `adapter` is the one
  * the caller already requested (the fingerprint's), else one is requested here.
  * @internal
  */
@@ -392,6 +396,7 @@ export const probeDeviceAsync = async (
         typeof nav.hardwareConcurrency === 'number' && nav.hardwareConcurrency > 0
           ? nav.hardwareConcurrency
           : null,
+      benchScore: null,
     },
     display: {
       width: env.screen?.width ?? 0,
@@ -407,6 +412,7 @@ export const probeDeviceAsync = async (
       isMobile: readIsMobile(nav),
       coarsePointer: matches('(pointer: coarse)'),
     },
+    benchmark: null,
   };
 };
 

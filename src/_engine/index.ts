@@ -27,8 +27,10 @@ export type {
   DeviceCapabilityListener,
 } from './kernel/deviceCapabilities/DeviceCapabilities';
 export type {
+  DeviceBenchmarkMeasurements,
   DeviceCapabilitiesConfig,
   DeviceCapabilityCheck,
+  DeviceCapabilityCheckPhase,
   DeviceCapabilityChecks,
   DeviceCapabilityMeasurements,
   DeviceCapabilityRecommendations,
@@ -36,6 +38,7 @@ export type {
   DeviceCapabilityTargets,
   DeviceCapabilityVerdict,
   DeviceCheckResult,
+  DeviceGpuBenchmark,
   DeviceGpuMeasurements,
   DeviceGpuMemorySource,
   DeviceLevelBands,

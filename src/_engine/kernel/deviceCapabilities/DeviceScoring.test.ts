@@ -12,8 +12,10 @@ import {
 } from './DeviceScoring';
 
 type MeasurementOverrides = {
-  [K in keyof DeviceCapabilityMeasurements]?: Partial<DeviceCapabilityMeasurements[K]>;
-};
+  [K in Exclude<keyof DeviceCapabilityMeasurements, 'benchmark'>]?: Partial<
+    DeviceCapabilityMeasurements[K]
+  >;
+} & { benchmark?: DeviceCapabilityMeasurements['benchmark'] };
 
 // A discrete GPU on WebGPU, 8 cores, a capped 8 GB, unknown GPU memory
 const createMeasurements = (
@@ -36,7 +38,7 @@ const createMeasurements = (
   },
   gpuMemoryMB: { value: null, source: 'UNKNOWN', ...overrides.gpuMemoryMB },
   memory: { deviceMemoryGB: 8, jsHeapLimitMB: 4096, ...overrides.memory },
-  cpu: { cores: 8, ...overrides.cpu },
+  cpu: { cores: 8, benchScore: null, ...overrides.cpu },
   display: {
     width: 2560,
     height: 1440,
@@ -53,6 +55,7 @@ const createMeasurements = (
     coarsePointer: false,
     ...overrides.env,
   },
+  benchmark: overrides.benchmark ?? null,
 });
 
 const score = (

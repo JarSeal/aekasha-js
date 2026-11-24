@@ -10,6 +10,10 @@ export type DeviceLevelCategory = 'gpu' | 'cpu' | 'memory' | 'gpuMemory';
 /** A target check's result: `UNKNOWN` when the browser doesn't tell (`targets.unknownIs` counts it). */
 export type DeviceCheckResult = 'PASS' | 'FAIL' | 'UNKNOWN';
 
+/** A device capability check's phase, as its `onProgress` reports it: the probe (the refresh
+ * rate's sampling included), the GPU benchmark, the CPU benchmark, and done. */
+export type DeviceCapabilityCheckPhase = 'PROBE' | 'GPU' | 'CPU' | 'DONE';
+
 /** How a device level was decided: measured, guessed from the adapter, read from an API, or not at all. */
 export type DeviceLevelSource = 'BENCHMARK' | 'HEURISTIC' | 'API' | 'UNKNOWN';
 
@@ -79,6 +83,15 @@ export type DeviceCapabilitiesConfig = {
   saveToLS?: boolean;
   /** Days before a stored result is measured again; 0 never expires it. Default 30. */
   maxAgeDays?: number;
+  /** The GPU and CPU benchmark and the refresh rate's sampling, which the frame rate's prediction
+   * and the benchmarked levels need. */
+  benchmark?: {
+    /** Run them; false probes only what the browser tells (the GPU's and the CPU's levels then
+     * come from the adapter and the cores). Default true. */
+    enabled?: boolean;
+    /** How long they may take, ms: the first boot's (or a re-check's) delay. Default 1500. */
+    budgetMs?: number;
+  };
   /** What the device should manage ({@link DeviceCapabilityTargets}), over the engine's defaults. */
   targets?: DeviceCapabilityTargets;
   /** The device levels' thresholds ({@link DeviceLevelThresholds}), over the engine's. */
@@ -150,6 +163,9 @@ export type DeviceCapabilityMeasurements = {
   cpu: {
     /** `navigator.hardwareConcurrency`: logical cores. */
     cores: number | null;
+    /** The CPU benchmark's score: 4×4 matrix multiplies per ms on the main thread. Null when not
+     * benchmarked. */
+    benchScore: number | null;
   };
   /** The display. */
   display: {
@@ -159,7 +175,8 @@ export type DeviceCapabilityMeasurements = {
     height: number;
     /** `window.devicePixelRatio` when measured. */
     devicePixelRatio: number;
-    /** The display's refresh rate, Hz, null when not measured. */
+    /** The display's refresh rate, Hz (the median frame interval, snapped to a common rate),
+     * null when not benchmarked or the frames didn't come. */
     refreshHz: number | null;
     /** The display is HDR (`dynamic-range: high`). */
     hdr: boolean;
@@ -177,6 +194,37 @@ export type DeviceCapabilityMeasurements = {
     /** The main pointer is coarse (touch). */
     coarsePointer: boolean;
   };
+  /** The benchmark, null when it didn't run. */
+  benchmark: DeviceBenchmarkMeasurements | null;
+};
+
+/** The GPU benchmark's throughputs: synthetic workloads on a device of its own, at the target
+ * resolution (3840×2160's pixels at most). */
+export type DeviceGpuBenchmark = {
+  /** The API measured: the one the renderer would use. */
+  api: 'WEBGPU' | 'WEBGL2';
+  /** The benchmark's render target, pixels. */
+  width: number;
+  /** The benchmark's render target, pixels. */
+  height: number;
+  /** Fill rate: millions of pixels per ms of a fixed-cost fragment shader (an ALU loop and two
+   * texture samples, blended), what `referenceFrame.fullscreenPasses` counts in. */
+  fillRateMPixOpsPerMs: number;
+  /** Geometry: tiny triangles per ms (non-indexed, a transform per vertex). */
+  trianglesPerMs: number;
+  /** A GPU timer query timed every batch; else the wall time to the batch's completion did. */
+  usedTimestampQuery: boolean;
+};
+
+/** The benchmark's run. */
+export type DeviceBenchmarkMeasurements = {
+  /** The GPU benchmark, null when it failed (no device, a lost one). */
+  gpu: DeviceGpuBenchmark | null;
+  /** The whole benchmark's time, ms: the refresh rate's sampling, the GPU and the CPU. */
+  durationMs: number;
+  /** The page was hidden meanwhile, or it took over twice its budget: its readings are suspect,
+   * so it isn't stored and the next check measures again. */
+  isStalled: boolean;
 };
 
 /** One target check: its result, what was measured and what was required. */
