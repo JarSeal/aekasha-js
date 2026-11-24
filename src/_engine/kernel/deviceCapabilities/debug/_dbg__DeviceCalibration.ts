@@ -299,7 +299,8 @@ export const traceGpuBenchmarkAsync = async (
       const batches: GpuBenchmarkBatch[] = [];
       const result = await runGpuBenchmarkAsync({
         api,
-        adapter: api === 'WEBGPU' ? adapter : null,
+        // An adapter makes one device: each run requests its own (the first, the one above)
+        adapter: api === 'WEBGPU' && i === 0 ? adapter : null,
         requestAdapterAsync: () => requestProbeAdapterAsync(probeEnv),
         createWebGL2Context: probeEnv.createWebGL2Context,
         width,
