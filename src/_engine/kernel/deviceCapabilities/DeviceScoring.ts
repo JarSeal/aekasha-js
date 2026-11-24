@@ -58,9 +58,13 @@ export const DEFAULT_DEVICE_TARGETS: ResolvedDeviceCapabilityTargets = {
  * @internal
  */
 export const DEFAULT_DEVICE_LEVEL_THRESHOLDS: ResolvedDeviceLevelThresholds = {
-  gpuHeadroom: { MEDIUM: 1, HIGH: 2, ULTRA: 4 },
+  // The reference frame is fitted to scenes of HIGH shadows and the AO PostFX, so holding it at
+  // the target is HIGH; ULTRA at twice it keeps a desktop discrete GPU ULTRA up to 4K (p240
+  // Phase 2's calibration)
+  gpuHeadroom: { MEDIUM: 0.5, HIGH: 1, ULTRA: 2 },
   cpuCores: { MEDIUM: 4, HIGH: 6, ULTRA: 12 },
-  cpuBenchScore: { MEDIUM: 8000, HIGH: 15000, ULTRA: 25000 },
+  // One main-thread core: a 2022+ desktop or Apple silicon core scores 25-27k
+  cpuBenchScore: { MEDIUM: 6000, HIGH: 12000, ULTRA: 20000 },
   deviceMemoryGB: { MEDIUM: 4, HIGH: 8, ULTRA: 16 },
   gpuMemoryMB: { MEDIUM: 1024, HIGH: 2048, ULTRA: 4096 },
 };

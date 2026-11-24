@@ -31,11 +31,17 @@ export const NOISE_TEXTURE_SIZE = 64;
 export const BATCH_TIMEOUT_MS = 2000;
 
 /**
- * One timed batch: its GPU time, ms, and whether a timer query measured it (else the wall time
- * around the submit and its completion).
+ * One timed batch: its GPU time, ms, whether a timer query measured it (else the wall time around
+ * the submit and its completion), and both raw readings (the calibration's trace shows them).
  * @internal
  */
-export type GpuBatchTiming = { ms: number; usedTimestampQuery: boolean };
+export type GpuBatchTiming = {
+  ms: number;
+  usedTimestampQuery: boolean;
+  wallMs: number;
+  /** The timer query's reading, null without one */
+  queryMs: number | null;
+};
 
 /**
  * A GPU benchmark backend: a device with the two workloads' pipelines and a render target ready.
@@ -75,8 +81,8 @@ export const createNoiseTexels = () => {
  */
 export const pickBatchTiming = (wallMs: number, queryMs: number | null): GpuBatchTiming =>
   queryMs !== null && queryMs > 0 && queryMs <= wallMs * 1.5 + 1
-    ? { ms: queryMs, usedTimestampQuery: true }
-    : { ms: wallMs, usedTimestampQuery: false };
+    ? { ms: queryMs, usedTimestampQuery: true, wallMs, queryMs }
+    : { ms: wallMs, usedTimestampQuery: false, wallMs, queryMs };
 
 /**
  * `promise`, or a rejection after {@link BATCH_TIMEOUT_MS}: a lost or hung device's completion

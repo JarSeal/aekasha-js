@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { GpuBenchmarkBatch } from './GpuBenchmark';
 import type { GpuBatchTiming, GpuBenchmarkBackend } from './GpuBenchmarkWorkloads';
 
 // The backends: a fake one per test (no GPU in Node)
@@ -29,7 +30,7 @@ const createRun =
   async (count: number): Promise<GpuBatchTiming> => {
     const ms = count * msPerUnit;
     clock.time += ms;
-    return { ms, usedTimestampQuery };
+    return { ms, usedTimestampQuery, wallMs: ms, queryMs: usedTimestampQuery ? ms : null };
   };
 
 /** A fake backend: fill 0.5 ms a pass, geometry 1 µs a triangle, at 100×100. */
@@ -58,7 +59,7 @@ describe('measureThroughputAsync', () => {
       now: clock.now,
     });
     expect(run.mock.calls.map(([count]) => count)).toEqual([1, 16, 256, 1024]);
-    expect(result).toEqual({ count: 1024, ms: 10.24, usedTimestampQuery: true });
+    expect(result).toMatchObject({ count: 1024, ms: 10.24, usedTimestampQuery: true });
   });
 
   it('stops at max, and before a batch that would end past the deadline', async () => {
@@ -138,6 +139,24 @@ describe('runGpuBenchmarkAsync', () => {
       usedTimestampQuery: true,
     });
     expect(backend.destroy).toHaveBeenCalledOnce();
+  });
+
+  it('reports every batch to onBatchTiming, the warm-ups first', async () => {
+    const clock = createClock();
+    backends.webgpu = createBackend(clock);
+    const batches: GpuBenchmarkBatch[] = [];
+    await runGpuBenchmarkAsync({
+      ...baseOpts(clock),
+      api: 'WEBGPU',
+      onBatchTiming: (batch) => batches.push(batch),
+    });
+    expect(batches.slice(0, 2)).toMatchObject([
+      { workload: 'FILL', isWarmUp: true, count: 1, ms: 0.5, wallMs: 0.5, queryMs: 0.5 },
+      { workload: 'GEOMETRY', isWarmUp: true, count: 1 << 15 },
+    ]);
+    const measured = batches.slice(2);
+    expect(measured.some((b) => b.workload === 'FILL')).toBe(true);
+    expect(measured.at(-1)).toMatchObject({ workload: 'GEOMETRY', isWarmUp: false });
   });
 
   it('uses the WebGL2 backend for WebGL2, and is null without a device', async () => {

@@ -111,6 +111,19 @@ export type GpuBenchmarkOpts = {
   now: () => number;
   /** Called as the batches run, with the share of the time to the deadline used, 0-1. */
   onProgress?: (progress01: number) => void;
+  /** Called with each batch's timing, the warm-ups' included (the calibration's trace). */
+  onBatchTiming?: (batch: GpuBenchmarkBatch) => void;
+};
+
+/**
+ * One batch the benchmark ran: its workload, whether it was the warm-up, its count (passes or
+ * triangles) and its timing.
+ * @internal
+ */
+export type GpuBenchmarkBatch = GpuBatchTiming & {
+  workload: 'FILL' | 'GEOMETRY';
+  isWarmUp: boolean;
+  count: number;
 };
 
 /** A backend for the API: WebGPU's device, else WebGL2's context; null when neither comes. */
@@ -139,21 +152,34 @@ export const runGpuBenchmarkAsync = async (
   const backend = await createBackendAsync(opts, clampBenchmarkSize(opts.width, opts.height));
   if (!backend) return null;
   try {
-    const { now, deadline, onProgress } = opts;
+    const { now, deadline, onProgress, onBatchTiming } = opts;
+    const timed =
+      (
+        workload: GpuBenchmarkBatch['workload'],
+        run: (count: number) => Promise<GpuBatchTiming>,
+        isWarmUp = false
+      ) =>
+      async (count: number) => {
+        const timing = await run(count);
+        onBatchTiming?.({ ...timing, workload, isWarmUp, count });
+        return timing;
+      };
+    const runFillAsync = timed('FILL', backend.runFillAsync);
+    const runGeometryAsync = timed('GEOMETRY', backend.runGeometryAsync);
     // The warm-up: the first submit of each pipeline pays its driver-side setup
-    await backend.runFillAsync(FILL_START);
-    await backend.runGeometryAsync(GEOMETRY_START);
+    await timed('FILL', backend.runFillAsync, true)(FILL_START);
+    await timed('GEOMETRY', backend.runGeometryAsync, true)(GEOMETRY_START);
 
     const startedAt = now();
     const fillDeadline = startedAt + (deadline - startedAt) * FILL_BUDGET_SHARE;
-    const fill = await measureThroughputAsync((passes) => backend.runFillAsync(passes), {
+    const fill = await measureThroughputAsync(runFillAsync, {
       start: FILL_START,
       max: FILL_MAX,
       deadline: fillDeadline,
       now,
       onBatch: (p) => onProgress?.(p * FILL_BUDGET_SHARE),
     });
-    const geometry = await measureThroughputAsync((tris) => backend.runGeometryAsync(tris), {
+    const geometry = await measureThroughputAsync(runGeometryAsync, {
       start: GEOMETRY_START,
       max: GEOMETRY_MAX,
       deadline,

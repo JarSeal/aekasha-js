@@ -22,15 +22,20 @@ describe('createNoiseTexels', () => {
 
 describe('pickBatchTiming', () => {
   it("keeps a timer query's reading within the wall time", () => {
-    expect(pickBatchTiming(10, 8)).toEqual({ ms: 8, usedTimestampQuery: true });
+    expect(pickBatchTiming(10, 8)).toEqual({
+      ms: 8,
+      usedTimestampQuery: true,
+      wallMs: 10,
+      queryMs: 8,
+    });
   });
 
-  it('falls back to the wall time without a reading, or a zero or broken one', () => {
-    const wall = { ms: 10, usedTimestampQuery: false };
-    expect(pickBatchTiming(10, null)).toEqual(wall);
-    expect(pickBatchTiming(10, 0)).toEqual(wall);
-    expect(pickBatchTiming(10, -3)).toEqual(wall);
-    expect(pickBatchTiming(10, 500)).toEqual(wall);
+  it('falls back to the wall time without a reading, or a zero or broken one, keeping both', () => {
+    const wall = { ms: 10, usedTimestampQuery: false, wallMs: 10 };
+    expect(pickBatchTiming(10, null)).toEqual({ ...wall, queryMs: null });
+    expect(pickBatchTiming(10, 0)).toEqual({ ...wall, queryMs: 0 });
+    expect(pickBatchTiming(10, -3)).toEqual({ ...wall, queryMs: -3 });
+    expect(pickBatchTiming(10, 500)).toEqual({ ...wall, queryMs: 500 });
   });
 });
 

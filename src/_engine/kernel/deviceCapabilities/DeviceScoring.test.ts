@@ -66,6 +66,11 @@ const CANVAS = { width: 1280, height: 720 };
 
 // The tests' own reference frame, so a calibration of the defaults changes none of them
 const TEST_FRAME = { fixedMPixOps: 0, fullscreenPasses: 6, trianglesPerFrame: 1e6 };
+// The tests' own benchmark bands, for the same reason
+const TEST_BANDS = {
+  gpuHeadroom: { MEDIUM: 1, HIGH: 2, ULTRA: 4 },
+  cpuBenchScore: { MEDIUM: 8000, HIGH: 15000, ULTRA: 25000 },
+};
 
 const score = (
   overrides: MeasurementOverrides = {},
@@ -75,7 +80,7 @@ const score = (
   scoreDeviceCapabilities(
     createMeasurements(overrides),
     resolveDeviceTargets({ referenceFrame: TEST_FRAME }, targets),
-    resolveDeviceLevelThresholds(thresholds),
+    resolveDeviceLevelThresholds(TEST_BANDS, thresholds),
     CANVAS
   );
 
@@ -143,7 +148,7 @@ describe('rateGpuHeuristic', () => {
 
 describe('rateDeviceLevels', () => {
   const rate = (overrides: MeasurementOverrides) =>
-    rateDeviceLevels(createMeasurements(overrides), resolveDeviceLevelThresholds());
+    rateDeviceLevels(createMeasurements(overrides), resolveDeviceLevelThresholds(TEST_BANDS));
 
   it('rates each category and takes the lowest known one overall', () => {
     const levels = rate({ cpu: { cores: 4 } });
@@ -175,7 +180,7 @@ describe('rateDeviceLevels', () => {
   });
 
   it('rates the GPU by its benchmark headroom, ULTRA included', () => {
-    const thresholds = DEFAULT_DEVICE_LEVEL_THRESHOLDS;
+    const thresholds = resolveDeviceLevelThresholds(TEST_BANDS);
     const at = (headroom: number) =>
       rateDeviceLevels(createMeasurements({ cpu: { cores: 16 } }), thresholds, headroom);
     expect(at(0.9).gpu).toBe('LOW');
