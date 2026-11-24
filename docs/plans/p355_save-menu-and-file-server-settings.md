@@ -3,7 +3,7 @@ Category: Debug, Dev tooling
 Related: `devTools/devFiles/CLAUDE.md` (the dev file server this builds on, p342: the routes,
 `writeDevFiles`, save entry writes, the "File server" folder; this plan is p342's §5 question 4),
 `src/_engine/debug/editors/CLAUDE.md` (the material editor's per-material record, p084-p085: the
-overrides this plan saves), p150_current-entity-data-source-info-on-edit-windows.md
+overrides this plan saves), _DONE_p150_current-entity-data-source-info-on-edit-windows.md
 (origin info on the same camera and light data)
 
 # Save Menu and File Server Settings

@@ -5,7 +5,8 @@ production build:
 
 - `?isDebug=true`: every tool.
 - `?isProdTest=true`: the app as it runs in production, plus a few tools: play and stop (`F5`),
-  the loop switches (`Shift+F7`, `F7`), and the profiler (`F8`) when you enable it there.
+  the loop switches (`Shift+F7`, `F7`), and the profiler (`F8`) when you enable it there. The
+  camera and light values you saved from their edit windows in the debug env apply here too.
 
 Next to either, `?startScene=<scene id>` picks the first scene.
 
@@ -28,6 +29,12 @@ From the drawer, an entity opens in an edit window: lights, cameras, ECS worlds,
 physics entities, assets, characters, merge groups and their members. Several can be open at
 once, and they're kept over reloads and scene changes (but for a streaming cell's and a merge
 group's or member's, which close with their scene).
+
+A camera's or light's edits are saved in localStorage per scene and applied when it's created
+again, over its scene JSON's or code's values. Its window says where its values come from: its
+origin (the scene's JSON or code), whether its edits are saved at all (only with an app ID: give
+one to an entity you create in code) and which saved values override it now. "Clear local
+storage" goes back to the JSON's or code's values on the next load.
 
 ## Write your own tab
 

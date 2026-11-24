@@ -17,6 +17,7 @@ import {
   createDebugWindowGrid,
   getEntityInfoItems,
   getReasonedButtonItem,
+  getValueSourceItems,
 } from '../../../debug/_dbg__DebugWindowGrid';
 import { getActiveCameraId, getAllCamerasAsArray, applyCameraProjection } from '../Camera';
 import { getCanvasSize } from '../../render/CanvasSize';
@@ -30,6 +31,7 @@ import {
   CAMERAS_TAB_ID,
   EDIT_CAMERA_WIN_ID,
   clearCameraFromLS,
+  getCameraOverriddenKeys,
   loadCameraDebugData,
   saveCameraToLS,
   setCameraHelperVisible,
@@ -375,6 +377,11 @@ export const createEditCameraContent = (data?: { [key: string]: unknown }) => {
       type: settings.type,
       name: debugData?.name,
       description: debugData?.description,
+    }),
+    ...getValueSourceItems({
+      source: debugData?.source,
+      persistable: ctx.stableAppId !== undefined,
+      getOverriddenKeys: () => getCameraOverriddenKeys(appId),
     })
   );
 

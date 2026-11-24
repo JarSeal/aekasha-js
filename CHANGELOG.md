@@ -4,6 +4,23 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-24 — p150_current-entity-data-source-info-on-edit-windows (Phases 1-3)
+
+The camera and light edit windows say where the entity's values come from (p150): its origin (the scene's JSON or code), whether its edits are saved at all (only with an app ID, the usual reason an edit didn't survive a reload), which saved values override its creation props now, and the order they apply in. The values saved from those windows apply in prod test mode too (`?isProdTest=true`), not only in the debug env, without loading the debugger's camera and light modules there.
+
+### Engine 6.25.0 (Sunset)
+
+**Added**
+
+- `EntityDebugData.source`: `'SCENE_JSON'` for an entity the scene loader creates from a scene's data (its JSON cameras, lights and meshes, a streaming cell's too), `'CODE'` for every other (the default). Set by the engine in the debug env and prod test mode, never by the creator's options.
+- The camera and light edit windows' rows after the entity info (not a managed light's): Origin, Persistable (with a note when the entity has no app ID), "Local storage override" ("None", or "Active" with the saved keys that override its creation props, read on every refresh, so an edit and "Clear local storage" show at once; the debugger's own preferences, the helper, the symbol and the folders, don't count) and a note on the precedence: the JSON's or code's values, then the asset's saved entry for the scene (JSON only), then local storage.
+
+**Changed**
+
+- A camera's or light's saved debugger values (`AEK_debugCams`, `AEK_debugLights`) are merged over its creation props in prod test mode too: they were in the debug env only. The read is in two lean modules (`kernel/camera/debug/CameraDebugStorage.ts`, `kernel/light/debug/LightDebugStorage.ts`) behind the debug flags, so a production build drops it as before; the writes stay in the debugger.
+- `createEntity` stores a copy of `opts.debugData` as the entity's `DEBUG_DATA`: it stored the options' own object (for a scene's JSON entity, the cached scene data's). A production build skips the copy too, not only the store.
+- The `@internal` `getSavedCameraDebugProps` / `getSavedLightDebugProps` are gone: the property loader reads the lean modules.
+
 ## 2026-11-23 — p500_restore-physics-snapshot (Phases 0-4)
 
 Physics snapshots work (p500): `takePhysicsSnapshot` takes the physics world's state at a fixed step, and `restorePhysicsSnapshot` puts it back, as often as you like, on the main thread or the worker. Every body that both know comes back with its pose and velocity, the step clock goes back to the snapshot's step, and an entity whose body was made after the snapshot is deleted with its mesh. When nothing was created or deleted since, it's an exact rewind: 90 steps after a restore came out bit for bit the same in all three physics configurations. The skeleton that was there before was dead and broken: a restore left every cached body pointing at freed memory, leaked the old world, and crashed on bytes it couldn't read. The Physics API debug tab has a Snapshot folder that takes, restores and clears one, with its size, step and timings.

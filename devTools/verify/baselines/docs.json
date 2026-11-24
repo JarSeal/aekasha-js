@@ -2,23 +2,23 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 4387,
-      "total": 4387
+      "documented": 4396,
+      "total": 4396
     },
     "members": {
-      "documented": 1150,
-      "total": 1150
+      "documented": 1197,
+      "total": 1197
     }
   },
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3814,
-        "total": 3814
+        "documented": 3823,
+        "total": 3823
       },
       "members": {
-        "documented": 974,
-        "total": 974
+        "documented": 1021,
+        "total": 1021
       }
     },
     "toolkit": {
@@ -497,12 +497,26 @@
     },
     "engine/kernel/camera": {
       "exports": {
-        "documented": 25,
-        "total": 25
+        "documented": 24,
+        "total": 24
       },
       "members": {
         "documented": 0,
         "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/kernel/camera/debug": {
+      "exports": {
+        "documented": 6,
+        "total": 6
+      },
+      "members": {
+        "documented": 19,
+        "total": 19
       },
       "undocumented": {
         "exports": [],
@@ -567,12 +581,26 @@
     },
     "engine/kernel/light": {
       "exports": {
-        "documented": 18,
-        "total": 18
+        "documented": 17,
+        "total": 17
       },
       "members": {
         "documented": 0,
         "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/kernel/light/debug": {
+      "exports": {
+        "documented": 5,
+        "total": 5
+      },
+      "members": {
+        "documented": 28,
+        "total": 28
       },
       "undocumented": {
         "exports": [],

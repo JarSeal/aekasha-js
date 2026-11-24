@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: implemented (Phases 1-3)
 Category: Debugger
 Related: p355_save-menu-and-file-server-settings.md (saves the same camera and light edits into the asset JSONs)
 
@@ -52,7 +52,7 @@ The LS-override merge is gated **exclusively on `IS_DEBUG_ENV`**, at every layer
 
 ---
 
-## 3. Design — Phase 1: Tag entities with their config origin (non-breaking, isolated)
+## 3. Design — Phase 1: Tag entities with their config origin (non-breaking, isolated) — done
 
 Add an optional `source` field to the entity's debug data, defaulted generically, tagged explicitly for the JSON path:
 
@@ -73,7 +73,14 @@ No change needed in `createCameraEntity`/`createLightEntity` — `entityOpts` al
 
 This phase alone is invisible (no UI change yet) and safely committable on its own.
 
-## 4. Design — Phase 2: Show origin + precedence on the edit windows
+As built:
+
+- The values are `'SCENE_JSON' | 'CODE'` (the codebase's upper-case literals), not `'sceneConfig' | 'sceneCode'`: `CODE` because the engine's own entities (the debug camera, the sky box's lights, terrain blocks) get the default too.
+- `CoreEntityOpts.debugData` is the schema's `DebugData`, which has no `source`, so the loader can't pass one in the options without a cast: `createEntity` stores `{ ...opts?.debugData, source: 'CODE' }` (behind `IS_DEBUG_ENV || IS_PROD_TEST_MODE`, so a production build doesn't even copy), and `SceneDataLoader.ts`' `tagSceneJsonEntity(id)` sets `'SCENE_JSON'` on the created entity's component. The copy matters: before, `DEBUG_DATA` was the cached scene data's own `debugData` object.
+- The JSON lights and meshes loop is `createSceneObject3Ds` (which `createNextSceneObject3Ds` wraps and a streaming cell's load reuses), so a cell's entities are tagged too; JSON meshes are tagged as well, so none reads `CODE`.
+- `schemas/RuntimeTypes.test.ts` compares `DebugData` with `Omit<EntityDebugData, 'source'>`. `SceneDataLoader.test.ts` checks the tags and that the scene data stays untagged.
+
+## 4. Design — Phase 2: Show origin + precedence on the edit windows — done
 
 Add rows next to the entity info rows (after `getEntityInfoItems`, or as `DebugEntityInfo` fields it renders):
 
@@ -89,7 +96,14 @@ Per window, as grid items:
 
 Depends on Phase 1 for `Origin`; independently committable otherwise.
 
-## 5. Design — Phase 3: Extend the localStorage override to `?isProdTest=true`
+As built:
+
+- One shared helper, `getValueSourceItems({ source, persistable, getOverriddenKeys })` in `debug/_dbg__DebugWindowGrid.ts`, after `getEntityInfoItems` in both windows (not the managed light's, whose "Managed by" row was already there). Origin reads "Scene config (JSON)" / "Code" ("Unknown" without a source); Persistable "Yes" / "No, no app ID set" from the window's `stableAppId` (`APP_ID.isFixed`), with the note when "No".
+- "Local storage override" is "None" or "Active: <keys>", a `{ get }` monitor read on every refresh. The keys are `getCameraOverriddenKeys` / `getLightOverriddenKeys` (in the `_dbg__*DebugState.ts` modules): the saved entry's keys without the debugger's own preferences (the helper, the symbol, the folders' open states), which share the entry but aren't creation props, so opening a folder doesn't read "Active". The clear button still checks the whole entry.
+- Seen while building it (not changed): `saveLightToLS` starts a new entry with `enabled: true`, and `loadPersistentProps` merges it, so toggling a JSON light's helper or symbol makes a light with `enabled: false` come back enabled after a reload. The row shows it ("Active: enabled"). Filed as `docs/issues/i165_light-debug-save-reenables-disabled-light.md`.
+- Tests: each window's test file ends with a `describe` in the debug env (`initEnvironment`; `DEBUG_DATA` is stored only there and in prod test mode).
+
+## 5. Design — Phase 3: Extend the localStorage override to `?isProdTest=true` — done
 
 Read-only extension — writing remains `IS_DEBUG_ENV`-only (the edit windows are the only writer, per §2.2). To avoid loading the edit-window modules in prod test mode just to read two localStorage keys, extract the plain read functions into small, dependency-free modules:
 
@@ -101,6 +115,15 @@ Read-only extension — writing remains `IS_DEBUG_ENV`-only (the edit windows ar
 - No change to how `Camera.ts`/`Light.ts` load the edit-window, helper and debug camera modules — they remain `IS_DEBUG_ENV`-only exactly as today; only the LS-read side becomes available in prod-test mode.
 
 Independently committable; benefits from (but doesn't strictly require) Phases 1-2.
+
+As built:
+
+- The lean modules' reader is `readCameraDebugData(appId, sceneId)` / `readLightDebugData(appId, sceneId)`, the scene required, and they don't import `Scene.ts` (only `lsGetItem`): `Scene.ts` → the main loop → … → `Light.ts` → `PropertyLoader.ts` → the module → `Scene.ts` is a cycle, and inside it a test's `vi.mock` of `Scene.ts` (the `importOriginal()` factory) handed the module the unmocked `getCurrentSceneId`. `loadCameraDebugData` / `loadLightDebugData` (the current scene by default) stay in the `_dbg__*DebugState.ts` modules as wrappers, so the debugger's call sites didn't change; the types and the LS keys are re-exported from there.
+- The moved types got their summaries and every member one (the docs ratchet counts a non-`_dbg__` module's members; a new folder starts at none).
+- `getSavedCameraDebugProps` / `getSavedLightDebugProps` went, and with them the `_dbg__CameraGUI.ts` / `_dbg__LightGUI.ts` re-exports they read. `PropertyLoader.ts` no longer imports `Camera.ts` and `Light.ts` (they import it).
+- `PropertyLoader.test.ts` (new): no merge in production, the merge in the debug env and in prod test mode, the props kept without an app id or an entry.
+- `yarn verify:baselines`: no debug code in the production build or the embeds; `api.json` records the two readers' removal and the two modules' exports (no entry changed), `docs.json` the two `debug/` folders. The main chunk is 21 B smaller: `kernel/ecs` -79 B (`DEBUG_DATA`'s add behind the flags), `kernel/scene` +42 B (`tagSceneJsonEntity`'s body folds, the empty function and its three calls stay).
+- The Hub's debug suite guide says the saved values apply in prod test mode and what the windows' rows show; `src/_engine/debug/CLAUDE.md` names the storage modules.
 
 ---
 
@@ -114,3 +137,8 @@ Independently committable; benefits from (but doesn't strictly require) Phases 1
 3. Reload with `?isProdTest=true` (no `?isDebug=true`) after saving overrides in step 2 — confirm camera/light entities pick up the previously-saved localStorage values, and (Network tab) that `_dbg__CameraGUI`/`_dbg__LightGUI` and the edit-window modules are *not* loaded in this mode.
 4. `yarn verify:baselines` — no debug code in the production build (the new `debug/` modules folded away), the bundle unchanged.
 5. `yarn lint` — Stop hook runs lint + type-check; confirm clean.
+
+As verified (2026-11-24, steps 2-3 by a Playwright script through the test bridge, WebGL on SwiftShader):
+
+- Debug env: Origin right on all 14 of largeWorld's cameras and lights (the overview, ambient and sun "Scene config (JSON)", the dynamic camera and the lanterns "Code"), all "Persistable: Yes" and "None" at first; the sun isn't managed there. An edit on a JSON and a code camera and light each read "Active" at once and survived a reload; opening the Lens settings folder kept "None"; "Clear local storage" turned it to "None" in the open window. A camera made from the console without an app ID read "Persistable: No" with the note, and its edit saved nothing.
+- Prod test mode, after those saves: all four values applied. Not loaded: `_dbg__CameraGUI`, `_dbg__LightGUI`, both edit windows, `_dbg__LightDebugState`; loaded: the two storage modules, and `_dbg__CameraDebugState` through the debug camera (`_dbg__DebugCamera.ts`, `_dbg__DebugCameraFolder.ts`), which already imported it before this plan.

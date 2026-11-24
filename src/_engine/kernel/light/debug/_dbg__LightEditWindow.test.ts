@@ -31,6 +31,7 @@ import type { CMPHandle } from '../../../ui/core/CMPTypes';
 import { ECSWorld } from '../../ecs/ECS';
 import { ComponentType } from '../../ecs/ECSCoreComponents';
 import { createRootScene } from '../../scene/Scene';
+import { initEnvironment } from '../../config/Config';
 import { createLightEntity } from '../Light';
 import { _getUndoRedoHistory, _initUndoRedo, _undoLastAction } from '../../../debug/_dbg__UndoRedo';
 import { createEditLightContent } from './_dbg__LightEditWindow';
@@ -186,6 +187,46 @@ describe('the light edit window (p806 D10)', () => {
     clearButton.click();
     expect(getSaved('clearSun')).toBeUndefined();
     expect(clearButton.disabled).toBe(true);
+    world.deleteEntity(entityId);
+  });
+});
+
+// p150: where the light's values come from
+describe('the light edit window: where its values come from', () => {
+  // Last in the file: DEBUG_DATA, which holds the origin, is stored only in the debug env
+  beforeAll(() => {
+    initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
+  });
+
+  it('shows the origin and the saved values in force, read again on each change', () => {
+    const { entityId } = createSun('sourceSun');
+    const root = openWindow('sourceSun');
+    expect(getMonitorText(root, 'Origin')).toBe('Code');
+    expect(getMonitorText(root, 'Persistable')).toBe('Yes');
+    expect(getMonitorText(root, 'Local storage override')).toBe('None');
+
+    getField(root, 'Enabled').querySelector<HTMLInputElement>('input')!.click();
+    expect(getMonitorText(root, 'Local storage override')).toBe('Active: enabled');
+    [...root.querySelectorAll<HTMLButtonElement>('button')]
+      .find((button) => button.textContent === 'Clear local storage')!
+      .click();
+    expect(getMonitorText(root, 'Local storage override')).toBe('None');
+    world.deleteEntity(entityId);
+  });
+
+  it("names a scene config light's origin", () => {
+    const { entityId } = createSun('jsonSun');
+    world.getComponent(entityId, ComponentType.DEBUG_DATA)!.source = 'SCENE_JSON';
+    expect(getMonitorText(openWindow('jsonSun'), 'Origin')).toBe('Scene config (JSON)');
+    world.deleteEntity(entityId);
+  });
+
+  it('says a light without an app ID saves nothing', () => {
+    const entityId = createLightEntity({ type: 'POINT' });
+    const appId = world.getComponent(entityId, ComponentType.APP_ID)!.id;
+    const root = openWindow(appId);
+    expect(getMonitorText(root, 'Persistable')).toBe('No, no app ID set');
+    expect(root.textContent).toContain('Without an app ID nothing here is saved');
     world.deleteEntity(entityId);
   });
 });

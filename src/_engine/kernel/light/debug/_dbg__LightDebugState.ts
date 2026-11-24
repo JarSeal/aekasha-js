@@ -11,56 +11,33 @@ import {
   updateDraggableWindow,
   updateDraggableWindowsOfKind,
 } from '../../../ui/overlays/windows/DraggableWindow';
-import type { ShadowQuality } from '../../../schemas/_HelperSchemas';
 import { getCurrentSceneId, getRootScene } from '../../scene/Scene';
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
 import { getActiveCameraId } from '../../camera/Camera';
 import { updateOnScreenTools } from '../../../debug/OnScreenTools';
 import { lerror } from '../../../utils/Logger';
+import {
+  LS_LIGHTS_KEY,
+  readLightDebugData,
+  type LightDebugLSData,
+  type LightEntityDebugState,
+  type LightSceneDebugState,
+} from './LightDebugStorage';
 
-export interface LightEntityDebugState {
-  enabled: boolean;
-  helperVisible: boolean;
-  symbolVisible: boolean;
-  color?: number;
-  groundColor?: number;
-  intensity?: number;
-  distance?: number;
-  angle?: number;
-  penumbra?: number;
-  decay?: number;
-  position?: { x: number; y: number; z: number };
-  targetPos?: { x: number; y: number; z: number };
-  castShadow?: boolean;
-  frustumCullingEnabled?: boolean;
-  objectCullingEnabled?: boolean;
-  shadowPreset?: ShadowQuality;
-  shadowBias?: number;
-  shadowNormalBias?: number;
-  shadowMapSize?: [number, number];
-  shadowCameraNearFar?: [number, number];
-  shadowCameraFrustum?: [number, number, number, number]; // Left, Right, Top, Bottom
-  shadowBlurSamples?: number;
-  shadowRadius?: number;
-  shadowIntensity?: number;
-  _shadowFolderOpen?: boolean;
-  _shadowCameraFolderOpen?: boolean;
-}
+// The saved state and its read moved out for the property loader (p150): the debugger's modules
+// keep importing them from here
+export { LS_LIGHTS_KEY };
+export type { LightDebugLSData, LightEntityDebugState, LightSceneDebugState };
 
-export interface LightSceneDebugState {
-  globalHelpersVisible: boolean;
-  /** Map of fixed appId to light-specific debug state */
-  lights: Record<string, LightEntityDebugState>;
-}
-
-/** The structure of 'AEK_debugLights' in LocalStorage */
-export interface LightDebugLSData {
-  [sceneId: string]: LightSceneDebugState;
-}
+/**
+ * Returns a light's saved debugger state.
+ * @param sceneId the scene whose data to read, defaults to the current scene
+ */
+export const loadLightDebugData = (appId?: string, sceneId: string | null = getCurrentSceneId()) =>
+  readLightDebugData(appId, sceneId);
 
 /** The edit windows' kind: one window per light, keyed by its app id */
 export const EDIT_LIGHT_WIN_ID = 'lightEditorWindow';
-export const LS_LIGHTS_KEY = 'AEK_debugLights';
 export const LIGHTS_TAB_ID = 'lightsControls';
 export let globalHelpersVisible = false;
 
@@ -338,28 +315,20 @@ export const refreshLightShadows = (light: THREE.Light, entityId: number, world:
   });
 };
 
+/** The saved keys that are the debugger's own preferences, not creation props */
+const LIGHT_DEBUGGER_ONLY_KEYS: ReadonlySet<string> = new Set([
+  'helperVisible',
+  'symbolVisible',
+  '_shadowFolderOpen',
+  '_shadowCameraFolderOpen',
+]);
+
 /**
- * Returns a light's saved debugger state.
- * @param appId (string) the light's app id
- * @param sceneId (string) scene whose data to read, defaults to the current scene
+ * The saved values of a light in the current scene that override its creation props (p150): its
+ * saved keys but the debugger's own preferences (the helper, the symbol, the folders).
  */
-export const loadLightDebugData = (
-  appId?: string,
-  sceneId: string | null = getCurrentSceneId()
-): LightEntityDebugState | undefined => {
-  if (!appId) return;
-  const currentData = lsGetItem(LS_LIGHTS_KEY, {}) as LightDebugLSData;
-  if (
-    !sceneId ||
-    !currentData ||
-    !currentData[sceneId] ||
-    !currentData[sceneId].lights ||
-    !currentData[sceneId].lights[appId]
-  ) {
-    return;
-  }
-  return currentData[sceneId].lights[appId];
-};
+export const getLightOverriddenKeys = (appId?: string): string[] =>
+  Object.keys(loadLightDebugData(appId) ?? {}).filter((key) => !LIGHT_DEBUGGER_ONLY_KEYS.has(key));
 
 export const clearLightFromLS = (appId: string) => {
   const sceneId = getCurrentSceneId();

@@ -13,6 +13,7 @@ import {
   type PropertyGridFieldItem,
   type PropertyGridItem,
 } from '../ui/forms/PropertyGridItems';
+import type { EntityDebugData } from '../kernel/ecs/ECSRegistry';
 import styles from './DebugWindowGrid.module.scss';
 
 /** The label column's width: the kit's 40 %, not the drawer's 50 % (p806 Phase 0): a window is
@@ -92,6 +93,46 @@ export const getEntityInfoItems = (info: DebugEntityInfo): PropertyGridItem[] =>
   getInfoRowItem('Type', info.type),
   ...(info.name ? [getInfoRowItem('Name', info.name)] : []),
   ...(info.description ? [getInfoRowItem('Description', info.description)] : []),
+];
+
+/** Where an edited entity's values come from (p150): what {@link getValueSourceItems} shows. */
+export type DebugValueSourceInfo = {
+  /** Its `DEBUG_DATA.source`: a scene's data or code */
+  source: EntityDebugData['source'];
+  /** Whether its edits are saved: only an entity with a fixed app id (`APP_ID.isFixed`) */
+  persistable: boolean;
+  /** The saved values that override its creation props in the current scene (none: empty), read
+   * on every refresh: the window's edits and its clear button change them */
+  getOverriddenKeys: () => readonly string[];
+};
+
+const SOURCE_LABELS: Record<NonNullable<EntityDebugData['source']>, string> = {
+  SCENE_JSON: 'Scene config (JSON)',
+  CODE: 'Code',
+};
+
+/**
+ * Where an edited entity's values come from (p150), after its info rows: its origin, whether its
+ * edits are saved, the saved values in force and the order they apply in.
+ */
+export const getValueSourceItems = (info: DebugValueSourceInfo): PropertyGridItem[] => [
+  getInfoRowItem('Origin', info.source ? SOURCE_LABELS[info.source] : 'Unknown'),
+  getInfoRowItem('Persistable', info.persistable ? 'Yes' : 'No, no app ID set'),
+  ...(info.persistable
+    ? []
+    : [getNoteItem("Without an app ID nothing here is saved: the edits don't survive a reload.")]),
+  {
+    label: 'Local storage override',
+    get: () => {
+      const keys = info.getOverriddenKeys();
+      return keys.length ? `Active: ${keys.join(', ')}` : 'None';
+    },
+    readonly: true,
+    interval: 'refresh',
+  },
+  getNoteItem(
+    "At creation: the scene config (JSON) or code, then the asset's saved entry for this scene (JSON only), then local storage (this window's edits), which wins."
+  ),
 ];
 
 /** What {@link getReasonedButtonItem} makes a button from. */
