@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DeviceCapabilityMeasurements } from './DeviceCapabilitiesTypes';
 import {
+  applyForcedDeviceLevels,
   DEFAULT_DEVICE_LEVEL_THRESHOLDS,
   DEFAULT_DEVICE_TARGETS,
   estimateFps,
@@ -211,6 +212,50 @@ describe('rateDeviceLevels', () => {
   });
 });
 
+describe('applyForcedDeviceLevels', () => {
+  // GPU HIGH, CPU MEDIUM (4 cores), memory HIGH (a capped 8 GB), GPU memory unknown
+  const measurements = createMeasurements({ cpu: { cores: 4 } });
+  const levels = rateDeviceLevels(measurements, resolveDeviceLevelThresholds(TEST_BANDS));
+  const force = (forced: Parameters<typeof applyForcedDeviceLevels>[1]) =>
+    applyForcedDeviceLevels(levels, forced, measurements);
+
+  it('keeps the levels when nothing is forced', () => {
+    expect(force({})).toBe(levels);
+  });
+
+  it('forces a category, the overall the lowest again, the sources kept', () => {
+    expect(force({ gpu: 'LOW' })).toMatchObject({
+      gpu: 'LOW',
+      cpu: 'MEDIUM',
+      overall: 'LOW',
+      forced: true,
+      sources: levels.sources,
+    });
+    expect(force({ cpu: 'ULTRA' })).toMatchObject({ cpu: 'ULTRA', overall: 'HIGH' });
+  });
+
+  it('sets every category not forced on its own to a forced overall, an unknown one kept', () => {
+    expect(force({ overall: 'ULTRA' })).toMatchObject({
+      gpu: 'ULTRA',
+      cpu: 'ULTRA',
+      memory: 'ULTRA',
+      gpuMemory: null,
+      overall: 'ULTRA',
+    });
+    expect(force({ overall: 'HIGH', gpu: 'LOW' })).toMatchObject({
+      gpu: 'LOW',
+      cpu: 'HIGH',
+      overall: 'LOW',
+    });
+  });
+
+  it('counts a forced category the device would skip', () => {
+    // The capped 8 GB doesn't count, unless forced; a forced GPU memory level is set
+    expect(force({ memory: 'LOW' })).toMatchObject({ memory: 'LOW', overall: 'LOW' });
+    expect(force({ gpuMemory: 'LOW' })).toMatchObject({ gpuMemory: 'LOW', overall: 'LOW' });
+  });
+});
+
 describe('scoreDeviceCapabilities', () => {
   it('passes a strong device, the fps check unknown without a benchmark', () => {
     const verdict = score();
@@ -396,6 +441,31 @@ describe('scoreDeviceCapabilities with a benchmark', () => {
     expect(score(benchmarked(10), undefined, { gpuHeadroom: { ULTRA: 10 } }).levels.gpu).toBe(
       'HIGH'
     );
+  });
+
+  it('checks and recommends from forced levels, the measured figures kept', () => {
+    const verdict = scoreDeviceCapabilities(
+      createMeasurements(benchmarked(10)),
+      resolveDeviceTargets({ referenceFrame: TEST_FRAME, minLevels: { gpu: 'HIGH' } }),
+      resolveDeviceLevelThresholds(TEST_BANDS),
+      CANVAS,
+      { gpu: 'LOW' }
+    );
+    expect(verdict.levels).toMatchObject({
+      gpu: 'LOW',
+      forced: true,
+      sources: { gpu: 'BENCHMARK' },
+    });
+    expect(verdict.estimatedFps).toBe(311.3);
+    expect(verdict.scores.gpu).toBe(100);
+    expect(verdict.checks.minLevels.result).toBe('FAIL');
+    // The LOW level's table, not the solved ratio (2)
+    expect(verdict.recommendations).toMatchObject({
+      pixelRatio: 1,
+      antialias: false,
+      shadowQuality: 'LOW',
+      postFx: false,
+    });
   });
 
   it('rates the GPU by its adapter when the GPU benchmark failed', () => {

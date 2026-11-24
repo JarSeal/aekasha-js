@@ -2,8 +2,11 @@
 // measurements in localStorage, and scores them against the targets on every check. Advisory: the
 // engine applies none of its recommendations. Nothing here runs unless the boot (`runAtInit`) or
 // the app calls the check, and the boot imports this module only then; the benchmark
-// (`DeviceBenchmark.ts` and the modules it imports) is `import()`ed only when it measures.
-import { getConfig } from '../config/Config';
+// (`DeviceBenchmark.ts` and the modules it imports) is `import()`ed only when it measures. The
+// debug tab (`debug/_dbg__DeviceCapabilities.ts`) is loaded by the boot's debug step, and its
+// forced levels reach the verdict only in the debug env.
+import { getConfig, IS_DEBUG_ENV } from '../config/Config';
+import { loadDebugModuleAsync, useDebug } from '../config/DebugModules';
 import { getReadOnlyLoopState, toggleMainPlay } from '../loop/MainLoop';
 import { getCanvasSize } from '../render/CanvasSize';
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../utils/LocalAndSessionStorage';
@@ -21,6 +24,7 @@ import {
   resolveDeviceTargets,
   resolveTargetPixelSize,
   scoreDeviceCapabilities,
+  type ForcedDeviceLevels,
 } from './DeviceScoring';
 import type {
   DeviceCapabilityCheckPhase,
@@ -82,6 +86,10 @@ export type DeviceCapabilityCheckOpts = {
 export type DeviceCapabilityListener = (report: DeviceCapabilityReport) => void;
 
 let lastReport: DeviceCapabilityReport | null = null;
+/** The last check's own targets, which a re-score of its report keeps. */
+let lastTargets: DeviceCapabilityTargets | undefined;
+/** The debug tab's forced levels (debug env only), null when none is. */
+let forcedLevels: ForcedDeviceLevels | null = null;
 let inFlight: Promise<DeviceCapabilityReport> | null = null;
 const listeners = new Set<DeviceCapabilityListener>();
 
@@ -99,16 +107,19 @@ const readCanvasSize = () => {
   return width > 0 && height > 0 ? { width, height } : FALLBACK_CANVAS_SIZE;
 };
 
-/** The verdict for the measurements and the targets. */
+/** The verdict for the measurements and the targets, with the debug tab's forced levels unless
+ * `isUnforced`. */
 const scoreMeasurements = (
   measurements: DeviceCapabilityMeasurements,
-  targets?: DeviceCapabilityTargets
+  targets?: DeviceCapabilityTargets,
+  isUnforced = false
 ): DeviceCapabilityVerdict =>
   scoreDeviceCapabilities(
     measurements,
     getTargets(targets),
     resolveDeviceLevelThresholds(getSettings().levelThresholds),
-    readCanvasSize()
+    readCanvasSize(),
+    IS_DEBUG_ENV && !isUnforced ? forcedLevels : null
   );
 
 /** The stored result when it's valid for this device (p240 §4): the same version and fingerprint,
@@ -258,6 +269,7 @@ const runCheckAsync = async (opts: DeviceCapabilityCheckOpts) => {
     verdict: scoreMeasurements(measurements, opts.targets),
   };
   lastReport = report;
+  lastTargets = opts.targets;
   reportProgress('DONE', 1);
   notifyListeners(report);
   return report;
@@ -343,7 +355,8 @@ export const clearStoredDeviceCapabilityReport = () => lsRemoveItem(DEVICE_CAPAB
 
 /**
  * Calls `listener` with every report a check makes from now on (not the one there already is:
- * read {@link getDeviceCapabilityReport} for it).
+ * read {@link getDeviceCapabilityReport} for it), and in the debug env with the last report scored
+ * again when the debug tab's forced levels change.
  * @param listener called with the report
  * @returns the remover
  * @example
@@ -358,4 +371,39 @@ export const onDeviceCapabilityReport = (listener: DeviceCapabilityListener) => 
   return () => {
     listeners.delete(listener);
   };
+};
+
+/**
+ * Sets the debug tab's forced levels (null or none set: the device's own), scores the last report
+ * again with them (its own check's targets kept) and calls the report listeners with it. A no-op
+ * outside the debug env. The debug tab calls it at its registration (its saved levels) and on
+ * every change.
+ * @internal
+ */
+export const _setForcedDeviceLevels = (levels: ForcedDeviceLevels | null) => {
+  if (!IS_DEBUG_ENV) return;
+  const next = levels && Object.values(levels).some(Boolean) ? { ...levels } : null;
+  if (JSON.stringify(next) === JSON.stringify(forcedLevels)) return;
+  forcedLevels = next;
+  if (!lastReport) return;
+  lastReport = { ...lastReport, verdict: scoreMeasurements(lastReport.measurements, lastTargets) };
+  notifyListeners(lastReport);
+};
+
+/**
+ * The last report's verdict without the forced levels: the device's own, which the debug tab shows
+ * next to the forced ones. Null before a check.
+ * @internal
+ */
+export const _getUnforcedDeviceVerdict = () =>
+  lastReport ? scoreMeasurements(lastReport.measurements, lastTargets, true) : null;
+
+/**
+ * Registers the Device capabilities debug tab (debug env; the boot's kernel debug step, before the
+ * features install and after a `runAtInit` check), which applies its saved forced levels.
+ * @internal
+ */
+export const registerDeviceCapabilitiesDebugGUI = async () => {
+  const debugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__DeviceCapabilities'));
+  useDebug(debugGUI)?.initDeviceCapabilitiesDebugGUI();
 };

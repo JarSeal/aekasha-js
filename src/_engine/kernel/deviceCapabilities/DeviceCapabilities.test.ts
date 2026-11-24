@@ -279,6 +279,49 @@ describe('evaluateDeviceCapabilities and clearStoredDeviceCapabilityReport', () 
   });
 });
 
+describe("the debug tab's forced levels", () => {
+  it('scores the last report again with them in the debug env, and reports it', async () => {
+    const dc = await loadAsync();
+    const { initEnvironment } = await import('../config/Config');
+    initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
+    await dc.runDeviceCapabilityCheckAsync({ targets: { fps: 30 } });
+    const measured = dc.getDeviceCapabilityReport()?.verdict.levels.gpu;
+    const listener = vi.fn();
+    dc.onDeviceCapabilityReport(listener);
+
+    dc._setForcedDeviceLevels({ gpu: 'LOW' });
+    const forced = dc.getDeviceCapabilityReport()?.verdict;
+    expect(forced?.levels).toMatchObject({ gpu: 'LOW', forced: true });
+    expect(forced?.recommendations.shadowQuality).toBe('LOW');
+    // The check's own targets kept
+    expect(forced?.targets.fps).toBe(30);
+    expect(dc._getUnforcedDeviceVerdict()?.levels.gpu).toBe(measured);
+    expect(dc.evaluateDeviceCapabilities({ minLevels: { gpu: 'MEDIUM' } })?.meetsTargets).toBe(
+      false
+    );
+    expect(listener).toHaveBeenCalledOnce();
+
+    // The same levels again change nothing; none puts the device's back
+    dc._setForcedDeviceLevels({ gpu: 'LOW' });
+    expect(listener).toHaveBeenCalledOnce();
+    dc._setForcedDeviceLevels({});
+    expect(dc.getDeviceCapabilityReport()?.verdict.levels).toMatchObject({
+      gpu: measured,
+      forced: false,
+    });
+    expect(listener).toHaveBeenCalledTimes(2);
+    // Stored measurements only: never a forced level
+    expect(readStored().verdict).toBeUndefined();
+  });
+
+  it('does nothing outside the debug env', async () => {
+    const dc = await loadAsync();
+    await dc.runDeviceCapabilityCheckAsync();
+    dc._setForcedDeviceLevels({ gpu: 'LOW' });
+    expect(dc.getDeviceCapabilityReport()?.verdict.levels.forced).toBe(false);
+  });
+});
+
 describe('the benchmark', () => {
   it('adds its measurements, at the canvas size × the pixel ratio', async () => {
     probe.env = createEnv({ devicePixelRatio: 2 });

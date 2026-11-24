@@ -251,6 +251,53 @@ export const rateDeviceLevels = (
 };
 
 /**
+ * The debug tab's forced levels (p240 Phase 3), by category and overall; a category left out keeps
+ * the device's level.
+ * @internal
+ */
+export type ForcedDeviceLevels = Partial<Record<DeviceLevelCategory | 'overall', QualityLevel>>;
+
+/**
+ * The levels with the forced ones in place (`forced: true` when any is): a forced category takes
+ * its level; a forced `overall` sets every category not forced on its own (an unknown one stays
+ * unknown), so the recommendations follow it. The overall level is then the lowest again, a forced
+ * category counted even where the device's wouldn't be (an unknown CPU, a memory reading of 8 GB).
+ * The sources stay the device's.
+ * @internal
+ */
+export const applyForcedDeviceLevels = (
+  levels: DeviceLevels,
+  forced: ForcedDeviceLevels,
+  measurements: DeviceCapabilityMeasurements
+): DeviceLevels => {
+  if (!Object.values(forced).some(Boolean)) return levels;
+  const { overall } = forced;
+  const gpu = forced.gpu ?? overall ?? levels.gpu;
+  const cpu = forced.cpu ?? overall ?? levels.cpu;
+  const memory = forced.memory ?? (levels.memory === null ? null : overall ?? levels.memory);
+  const gpuMemory =
+    forced.gpuMemory ?? (levels.gpuMemory === null ? null : overall ?? levels.gpuMemory);
+  const isCpuCounted = Boolean(forced.cpu ?? overall) || levels.sources.cpu !== 'UNKNOWN';
+  const isMemoryCounted =
+    Boolean(forced.memory ?? overall) ||
+    measurements.memory.deviceMemoryGB !== DEVICE_MEMORY_CAP_GB;
+  return {
+    overall: minQualityLevel(
+      gpu,
+      isCpuCounted ? cpu : null,
+      isMemoryCounted ? memory : null,
+      gpuMemory
+    ) as QualityLevel, // the GPU's level is always set
+    gpu,
+    cpu,
+    memory,
+    gpuMemory,
+    sources: levels.sources,
+    forced: true,
+  };
+};
+
+/**
  * The settings suggested for the levels (a debug override's levels too): the pixel ratio solved
  * against the frame rate (`solvedPixelRatio`; without one, by the GPU's level), the antialias and
  * PostFX by the GPU's level, the shadow quality the lower of the GPU's and the GPU
@@ -368,14 +415,17 @@ export const checkDeviceTargets = (
 /**
  * The verdict: the measurements rated, checked against the targets and turned into suggested
  * settings, the frame rate predicted at the target resolution (`canvas` for `'CANVAS'` and the
- * pixel ratio's solver). An `UNKNOWN` check counts as `targets.unknownIs` says.
+ * pixel ratio's solver). An `UNKNOWN` check counts as `targets.unknownIs` says. With `forced`
+ * levels (the debug tab's) the `minLevels` check and the recommendations read them, and a forced
+ * GPU level (or overall) suggests its level's pixel ratio, not the solved one.
  * @internal
  */
 export const scoreDeviceCapabilities = (
   measurements: DeviceCapabilityMeasurements,
   targets: ResolvedDeviceCapabilityTargets,
   thresholds: ResolvedDeviceLevelThresholds,
-  canvas: DeviceScoringCanvas
+  canvas: DeviceScoringCanvas,
+  forced: ForcedDeviceLevels | null = null
 ): DeviceCapabilityVerdict => {
   const gpuBenchmark = measurements.benchmark?.gpu ?? null;
   const dpr = measurements.display.devicePixelRatio || 1;
@@ -395,7 +445,11 @@ export const scoreDeviceCapabilities = (
   }
   const gpuHeadroom = estimatedFps !== null ? estimatedFps / effectiveFpsTarget : null;
 
-  const levels = rateDeviceLevels(measurements, thresholds, gpuHeadroom);
+  const measuredLevels = rateDeviceLevels(measurements, thresholds, gpuHeadroom);
+  const levels = forced
+    ? applyForcedDeviceLevels(measuredLevels, forced, measurements)
+    : measuredLevels;
+  if (forced?.gpu ?? forced?.overall) solvedPixelRatio = null;
   const { checks } = checkDeviceTargets(measurements, levels, targets, estimatedFps);
   const failedTargets = (Object.keys(checks) as (keyof DeviceCapabilityChecks)[]).filter(
     (name) =>

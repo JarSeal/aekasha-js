@@ -30,6 +30,7 @@ export { default as cameraIcon } from './svg/camera2.svg?raw';
 export { default as cameraReelsIcon } from './svg/camera-reels.svg?raw';
 export { default as circleCheckCutoutIcon } from './svg/circle-check-cutout.svg?raw';
 export { default as cloudSunIcon } from './svg/cloud-sun-fill.svg?raw';
+export { default as cpuIcon } from './svg/cpu.svg?raw';
 export { default as databaseXIcon } from './svg/database-fill-x.svg?raw';
 export { default as dropletIcon } from './svg/droplet-fill.svg?raw';
 export { default as easelIcon } from './svg/easel-fill.svg?raw';

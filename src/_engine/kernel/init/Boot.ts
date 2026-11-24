@@ -207,12 +207,18 @@ const runDeviceCapabilityCheckAtBootAsync = async () => {
 // with the modules they load. Outside a `try` (Rollup keeps a try block's calls whole).
 
 /** Debug env: the 3D symbols, the camera and light GUIs and the debug camera, in this order (it
- * fixes their systems' and hooks' order) */
+ * fixes their systems' and hooks' order), then the device capabilities tab (its saved forced
+ * levels apply before the app's `start`) */
 const bootKernelDebugAsync = async (ecsWorld: ECSWorld) => {
   await load3DSymbols();
   await registerCameraDebugGUI();
   await registerLightDebugGUI(ecsWorld);
   await initDebugCamera(ecsWorld);
+  // Imported here, as `runAtInit`'s check imports it: its module stays a chunk of its own
+  const { registerDeviceCapabilitiesDebugGUI } = await import(
+    '../deviceCapabilities/DeviceCapabilities'
+  );
+  await registerDeviceCapabilitiesDebugGUI();
 };
 
 /** Debug env and prod test mode: the debug tools and GUIs (some debug env only), the features'

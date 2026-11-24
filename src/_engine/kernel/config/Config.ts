@@ -37,6 +37,7 @@ export const DEFAULT_DEBUG_DRAWER_TAB_ORDER = [
   'lodControls',
   'streamingControls',
   'mergingControls',
+  'deviceCapabilitiesControls',
 ];
 
 /**
