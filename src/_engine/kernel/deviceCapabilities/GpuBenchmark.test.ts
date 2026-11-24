@@ -83,6 +83,28 @@ describe('measureThroughputAsync', () => {
     expect(result).toMatchObject({ count: 8, ms: 9 });
   });
 
+  it('grows a repeat that a faster clock brings under 8 ms, and compares them per unit', async () => {
+    const clock = createClock();
+    // 3 units at 3 ms a unit (9 ms), then 1.5 (4.5 ms: grows to 6), then 1.6 (9.6 ms, at 23.1:
+    // the next would end past 30)
+    const msPerUnit = [3, 1.5, 1.6];
+    let calls = 0;
+    const run = vi.fn(async (count: number): Promise<GpuBatchTiming> => {
+      const ms = count * msPerUnit[calls++];
+      clock.time += ms;
+      return { ms, usedTimestampQuery: true, wallMs: ms, queryMs: ms };
+    });
+    const result = await measureThroughputAsync(run, {
+      start: 3,
+      max: 1e6,
+      deadline: 30,
+      now: clock.now,
+    });
+    expect(run.mock.calls.map(([count]) => count)).toEqual([3, 3, 6]);
+    // 6 units in 9.6 ms beats 3 in 9 ms, though it's the longer batch
+    expect(result).toMatchObject({ count: 6, ms: expect.closeTo(9.6) });
+  });
+
   it('repeats a grown batch 256 times at most', async () => {
     const clock = createClock();
     const run = vi.fn(createRun(clock, 1));

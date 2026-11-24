@@ -1,16 +1,19 @@
 // The device capability check's calibration (p240 Phase 2, section 3; debug env): the current
-// scene's real GPU frame time (`onGpuFrameTime`, the mean of a number of frames after a warm-up)
-// at three renderer pixel ratios, its triangles and draw calls, next to what the check predicts
-// for the reference frame at the same pixels, and the reference frame fitted to it: the GPU time
-// less its triangles' is a line over the pixels, whose slope is the fill passes and whose
-// intercept the fixed work. Run it from the browser's console in `yarn dev` (`?isDebug=true`)
-// with the scene running:
+// scene's frame interval and GPU time (`onGpuFrameTime`, the mean of a number of frames after a
+// warm-up) at three renderer pixel ratios, its triangles and draw calls, next to what the check
+// predicts for the reference frame at the same pixels, and the reference frame fitted to it: the
+// frame's time less its triangles' is a line over the pixels, whose slope is the fill passes and
+// whose intercept the fixed work. Run it from the browser's console in `yarn dev`
+// (`?isDebug=true`) with the scene running:
 //   (await import('/_engine/kernel/deviceCapabilities/debug/_dbg__DeviceCalibration.ts'))
 //     .measureDeviceCalibrationAsync()
-// GPU time, not frames per second: a frame rate is capped at the display's refresh rate, the GPU's
-// time isn't. On WebGPU the passes' times are summed, which overcounts a frame of several passes
-// on a tile-based GPU (Apple silicon, mobile; an M2 summed 60-80 ms in scenes holding 60 fps): a
-// sample whose GPU time is over its frame interval is marked and left out of the fit.
+// Only a GPU-bound sample is fitted (its frame rate under the refresh rate, the GPU busy): the
+// benchmark measures a GPU clocked up by its repeats, and a GPU at a light load runs at a lower
+// clock (a 7900 XT's scenes at 144 Hz took the time of its idle clock), so a light load's time
+// doesn't compare with it. The frame interval is its time, not the GPU time: WebGPU's summed pass
+// times overcount a frame of several passes on a tile-based GPU (an M2 summed 60-80 ms in scenes
+// holding 60 fps). On a display without variable refresh a frame waits for the next refresh, so a
+// GPU-bound frame interval can be over the GPU's time: the fit errs high (conservative).
 import { onGpuFrameTime } from '../../../debug/GPUFrameTime';
 import { llog } from '../../../utils/Logger';
 import { getRenderer, isWebGPURenderer } from '../../render/Renderer';
@@ -33,6 +36,25 @@ const SAMPLE_TIMEOUT_MS = 30000;
 
 /** How far a sample's GPU time may pass its frame interval before it's marked as overcounted */
 const GPU_OVER_FRAME_TOLERANCE = 1.1;
+/** How far a sample's frame interval must pass the refresh interval to be under the refresh rate */
+const UNDER_REFRESH_TOLERANCE = 1.1;
+/** The share of the frame interval under which a trusted GPU time leaves the frame CPU-bound */
+const CPU_BOUND_GPU_SHARE = 0.7;
+
+/**
+ * What held a sample's frame rate: the refresh rate (`REFRESH`: the GPU idles between frames, at
+ * a lower clock), the CPU (`CPU`: under the refresh rate, the GPU time well under the interval) or
+ * the GPU (`GPU`: under the refresh rate otherwise, an overcounted GPU time included); null without
+ * a refresh rate.
+ */
+export const classifyCalibrationSample = (
+  sample: { gpuMs: number; frameMs: number },
+  refreshHz: number | null
+): 'GPU' | 'CPU' | 'REFRESH' | null => {
+  if (!refreshHz) return null;
+  if (sample.frameMs <= (1000 / refreshHz) * UNDER_REFRESH_TOLERANCE) return 'REFRESH';
+  return sample.gpuMs < sample.frameMs * CPU_BOUND_GPU_SHARE ? 'CPU' : 'GPU';
+};
 
 /** A frame sample: the mean GPU ms, frame interval ms, triangles and draw calls of its frames */
 export type CalibrationFrameSample = {
@@ -49,10 +71,13 @@ export type CalibrationSizeSample = CalibrationFrameSample & {
   width: number;
   height: number;
   predictedMs: number | null;
-  /** observed ÷ predicted: 1 is a perfect prediction */
+  /** What held the frame rate ({@link classifyCalibrationSample}): only `GPU` is fitted */
+  limitedBy: ReturnType<typeof classifyCalibrationSample>;
+  /** The frame interval ÷ predicted for a GPU-bound sample (1 is a perfect prediction), else null:
+   * a frame held by the refresh rate or the CPU doesn't show the GPU's time */
   observedOverPredicted: number | null;
   /** The GPU time is over the frame interval, so it isn't the frame's GPU time (summed passes
-   * overcounting on a tile-based GPU): left out of the fit */
+   * overcounting on a tile-based GPU) */
   isGpuTimeOverFrame: boolean;
 };
 
@@ -67,24 +92,26 @@ export type DeviceCalibration = {
   fillRateMPixOpsPerMs: number;
   trianglesPerMs: number;
   samples: CalibrationSizeSample[];
-  /** The reference frame that fits the samples not over their frame interval (the scene's own
-   * triangles); null when every sample is */
+  /** The reference frame that fits the GPU-bound samples (the scene's own triangles); null when
+   * none is */
   fit: ReturnType<typeof fitReferenceFrame> | null;
 };
 
 /**
- * The reference frame that fits samples of one scene at several sizes: the GPU time less the
+ * The reference frame that fits samples of one scene at several sizes: the frame's time less the
  * triangles' (at the benchmark's rate) as a least-squares line over the megapixels, its slope × the
  * fill rate the fill passes, its intercept × the fill rate the fixed work (each 0 at least), and
- * the samples' mean triangles. One sample (or one size) fits the passes alone, the fixed work 0.
+ * the samples' mean triangles. One sample (or one size) can't tell the two apart: it keeps
+ * `fixedMPixOps` (default 0) and fits the passes.
  */
 export const fitReferenceFrame = (
   benchmark: Pick<DeviceGpuBenchmark, 'fillRateMPixOpsPerMs' | 'trianglesPerMs'>,
-  samples: { pixels: number; gpuMs: number; triangles: number }[]
+  samples: { pixels: number; ms: number; triangles: number }[],
+  fixedMPixOps = 0
 ) => {
   const points = samples.map((sample) => ({
     x: sample.pixels / 1e6,
-    y: sample.gpuMs - sample.triangles / benchmark.trianglesPerMs,
+    y: sample.ms - sample.triangles / benchmark.trianglesPerMs,
   }));
   const n = points.length;
   const meanX = points.reduce((sum, p) => sum + p.x, 0) / n;
@@ -96,8 +123,8 @@ export const fitReferenceFrame = (
     slope = points.reduce((sum, p) => sum + (p.x - meanX) * (p.y - meanY), 0) / varX;
     intercept = meanY - slope * meanX;
   } else {
-    slope = meanY / meanX;
-    intercept = 0;
+    intercept = fixedMPixOps / benchmark.fillRateMPixOpsPerMs;
+    slope = (meanY - intercept) / meanX;
   }
   const round1 = (value: number) => Math.round(Math.max(0, value) * 10) / 10;
   return {
@@ -169,12 +196,15 @@ const describeMachine = (gpu: {
  * Measures the running scene against the device capability check's prediction: benchmarks first
  * when the last report has no GPU benchmark or `rebenchmark` asks (the main loop paused meanwhile),
  * then samples the scene's GPU frame time and frame interval at the renderer's pixel ratio, 0.7 ×
- * it and 0.5 × it (put back after), fits the reference frame to the samples whose GPU time isn't
- * over their frame interval, and logs and returns the calibration row.
+ * it and 0.5 × it (put back after), fits the reference frame to the GPU-bound samples' frame
+ * intervals (with one size, the passes alone at the reference frame's fixed work), and logs and
+ * returns the calibration row. A scene that holds the refresh rate at every ratio fits nothing: a
+ * higher pixel ratio, or a heavier scene, makes it GPU-bound.
  * @param opts.warmUpFrames frames let pass first at each ratio (default 30)
  * @param opts.frames frames averaged at each ratio (default 120)
- * @param opts.rebenchmark measure the benchmark again now, with the scene's GPU at its clock,
- * not the stored one (maybe measured at boot), and store it (default false)
+ * @param opts.rebenchmark measure the benchmark again now and store it, not the stored one (default
+ * false). Right after the scene, a GPU still clocked up can read above a cold check (an M2 up to
+ * 1.4×): the boot's reading is the one the check rates with
  * @throws when there's no renderer, no GPU benchmark or no frame time (no timer queries)
  */
 export const measureDeviceCalibrationAsync = async (
@@ -191,6 +221,7 @@ export const measureDeviceCalibrationAsync = async (
   if (!benchmark)
     throw new Error('Device calibration: the GPU benchmark failed (see the warning).');
   const { referenceFrame } = resolveDeviceTargets(getConfig().deviceCapabilities?.targets);
+  const { refreshHz } = report.measurements.display;
 
   const ownPixelRatio = renderer.getPixelRatio();
   const samples: CalibrationSizeSample[] = [];
@@ -209,6 +240,7 @@ export const measureDeviceCalibrationAsync = async (
       const { width, height } = renderer.domElement;
       const predictedFps = estimateFps(benchmark, width * height, referenceFrame);
       const predictedMs = predictedFps ? 1000 / predictedFps : null;
+      const limitedBy = classifyCalibrationSample(sample, refreshHz);
       samples.push({
         pixelRatio: renderer.getPixelRatio(),
         width,
@@ -218,8 +250,11 @@ export const measureDeviceCalibrationAsync = async (
         triangles: sample.triangles,
         drawCalls: sample.drawCalls,
         predictedMs: predictedMs !== null ? Math.round(predictedMs * 1000) / 1000 : null,
+        limitedBy,
         observedOverPredicted:
-          predictedMs !== null ? Math.round((sample.gpuMs / predictedMs) * 100) / 100 : null,
+          predictedMs !== null && limitedBy === 'GPU'
+            ? Math.round((sample.frameMs / predictedMs) * 100) / 100
+            : null,
         isGpuTimeOverFrame: sample.gpuMs > sample.frameMs * GPU_OVER_FRAME_TOLERANCE,
       });
     }
@@ -227,17 +262,21 @@ export const measureDeviceCalibrationAsync = async (
     renderer.setPixelRatio(ownPixelRatio);
   }
 
-  const fitted = samples.filter((s) => !s.isGpuTimeOverFrame);
+  const fitted = samples.filter((s) => s.limitedBy === 'GPU');
   if (fitted.length < samples.length) {
+    const reasons = samples
+      .filter((s) => s.limitedBy !== 'GPU')
+      .map((s) => `ratio ${s.pixelRatio.toFixed(2)}: ${s.limitedBy ?? 'no refresh rate'}`)
+      .join(', ');
     llog(
-      `Device calibration: ${samples.length - fitted.length} of ${samples.length} samples' GPU time is over their frame interval (summed passes overcounting?): left out of the fit.`
+      `Device calibration: ${samples.length - fitted.length} of ${samples.length} samples aren't GPU-bound, left out of the fit (${reasons}).`
     );
   }
   const calibration: DeviceCalibration = {
     machine: describeMachine(report.measurements.gpu),
     api: isWebGPURenderer() ? 'WEBGPU' : 'WEBGL2',
     sceneId: getCurrentSceneId() ?? null,
-    refreshHz: report.measurements.display.refreshHz,
+    refreshHz,
     cpuScore: report.measurements.cpu.benchScore,
     fillRateMPixOpsPerMs: Math.round(benchmark.fillRateMPixOpsPerMs * 100) / 100,
     trianglesPerMs: benchmark.trianglesPerMs,
@@ -247,9 +286,10 @@ export const measureDeviceCalibrationAsync = async (
           benchmark,
           fitted.map((s) => ({
             pixels: s.width * s.height,
-            gpuMs: s.gpuMs,
+            ms: s.frameMs,
             triangles: s.triangles,
-          }))
+          })),
+          referenceFrame.fixedMPixOps
         )
       : null,
   };

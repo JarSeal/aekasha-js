@@ -67,8 +67,10 @@ export const measureThroughputAsync = async (
     const t = now();
     onBatch?.(Math.min(1, (t - startedAt) / Math.max(1, deadline - startedAt)));
     if (timing.ms >= TARGET_BATCH_MS || count >= max) {
-      // The same count each repeat, so the fastest is the shortest
-      if (!fastest || timing.ms < fastest.ms) fastest = { count, ...timing };
+      // By the time a unit takes: a repeat that a faster clock brings under the target grows again
+      if (!fastest || timing.ms / count < fastest.ms / fastest.count) {
+        fastest = { count, ...timing };
+      }
       if (++repeats >= MAX_REPEATS || t + timing.ms > deadline) return fastest;
       continue;
     }
