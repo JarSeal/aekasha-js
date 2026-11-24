@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 4453,
-      "total": 4453
+      "documented": 4498,
+      "total": 4498
     },
     "members": {
       "documented": 1197,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 3880,
-        "total": 3880
+        "documented": 3925,
+        "total": 3925
       },
       "members": {
         "documented": 1021,
@@ -539,8 +539,8 @@
     },
     "engine/kernel/deviceCapabilities": {
       "exports": {
-        "documented": 52,
-        "total": 52
+        "documented": 97,
+        "total": 97
       },
       "members": {
         "documented": 0,

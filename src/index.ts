@@ -1,5 +1,12 @@
 import * as THREE from 'three/webgpu';
-import { createRenderer, InitEngine, createSceneLoader, loadScene, IS_DEBUG_ENV } from 'aekasha';
+import {
+  createRenderer,
+  InitEngine,
+  createSceneLoader,
+  getDeviceCapabilityReport,
+  loadScene,
+  IS_DEBUG_ENV,
+} from 'aekasha';
 import { character } from 'aekasha/character';
 import { instancing } from 'aekasha/instancing';
 import { lines } from 'aekasha/lines';
@@ -45,7 +52,13 @@ InitEngine({
   start: async () => {
     // The renderer first: everything drawn needs it
     // #region create-renderer (shown in the Hub: hub/pages/features/rendering/)
+    // The device capability check's suggestions (CONFIG.ts' runAtInit ran it before start): the
+    // pixel ratio at which this device holds the target frame rate. `recommended.antialias` is the
+    // other renderer setting; the example keeps antialias on, so the scene runner's snapshots
+    // compare across machines
+    const recommended = getDeviceCapabilityReport()?.verdict.recommendations;
     await createRenderer({
+      devicePixelRatio: recommended?.pixelRatio,
       antialias: true,
       forceWebGL: false,
       toneMapping: THREE.ACESFilmicToneMapping,

@@ -2913,20 +2913,38 @@
       "isDeterminismProbeArmed": "Function",
       "setDeterminismProbeArmed": "Function"
     },
+    "src/_engine/kernel/deviceCapabilities/CpuBenchmark.ts": {
+      "CpuBenchmarkOpts": "TypeAlias",
+      "getCpuBenchmarkChecksum": "Function",
+      "runCpuBenchmark": "Function"
+    },
+    "src/_engine/kernel/deviceCapabilities/DeviceBenchmark.ts": {
+      "DeviceBenchmarkEnv": "TypeAlias",
+      "DeviceBenchmarkOpts": "TypeAlias",
+      "DeviceBenchmarkResult": "TypeAlias",
+      "readBrowserBenchmarkEnv": "Function",
+      "refreshHzFromFrameTimes": "Function",
+      "runDeviceBenchmarkAsync": "Function",
+      "sampleRefreshRateAsync": "Function",
+      "splitBenchmarkBudget": "Function",
+      "waitUntilVisibleAsync": "Function"
+    },
     "src/_engine/kernel/deviceCapabilities/DeviceCapabilities.ts": {
+      "_getUnforcedDeviceVerdict": "Function",
+      "_setForcedDeviceLevels": "Function",
       "clearStoredDeviceCapabilityReport": "Function",
       "DEVICE_CAPABILITIES_LS_KEY": "Variable",
       "DEVICE_CAPABILITY_REPORT_VERSION": "Variable",
       "DeviceCapabilityCheckOpts": "TypeAlias",
-      "DeviceCapabilityListener": "TypeAlias",
       "evaluateDeviceCapabilities": "Function",
-      "getDeviceCapabilityReport": "Function",
-      "onDeviceCapabilityReport": "Function",
+      "registerDeviceCapabilitiesDebugGUI": "Function",
       "runDeviceCapabilityCheckAsync": "Function"
     },
     "src/_engine/kernel/deviceCapabilities/DeviceCapabilitiesTypes.ts": {
+      "DeviceBenchmarkMeasurements": "TypeAlias",
       "DeviceCapabilitiesConfig": "TypeAlias",
       "DeviceCapabilityCheck": "TypeAlias",
+      "DeviceCapabilityCheckPhase": "TypeAlias",
       "DeviceCapabilityChecks": "TypeAlias",
       "DeviceCapabilityMeasurements": "TypeAlias",
       "DeviceCapabilityRecommendations": "TypeAlias",
@@ -2934,6 +2952,7 @@
       "DeviceCapabilityTargets": "TypeAlias",
       "DeviceCapabilityVerdict": "TypeAlias",
       "DeviceCheckResult": "TypeAlias",
+      "DeviceGpuBenchmark": "TypeAlias",
       "DeviceGpuMeasurements": "TypeAlias",
       "DeviceGpuMemorySource": "TypeAlias",
       "DeviceLevelBands": "TypeAlias",
@@ -2941,8 +2960,15 @@
       "DeviceLevels": "TypeAlias",
       "DeviceLevelSource": "TypeAlias",
       "DeviceLevelThresholds": "TypeAlias",
+      "DeviceReferenceFrame": "TypeAlias",
       "ResolvedDeviceCapabilityTargets": "TypeAlias",
       "ResolvedDeviceLevelThresholds": "TypeAlias"
+    },
+    "src/_engine/kernel/deviceCapabilities/DeviceCapabilityReports.ts": {
+      "_setDeviceCapabilityReport": "Function",
+      "DeviceCapabilityListener": "TypeAlias",
+      "getDeviceCapabilityReport": "Function",
+      "onDeviceCapabilityReport": "Function"
     },
     "src/_engine/kernel/deviceCapabilities/DeviceProbe.ts": {
       "classifyGpu": "Function",
@@ -2961,17 +2987,50 @@
       "requestProbeAdapterAsync": "Function"
     },
     "src/_engine/kernel/deviceCapabilities/DeviceScoring.ts": {
+      "applyForcedDeviceLevels": "Function",
       "checkDeviceTargets": "Function",
       "DEFAULT_DEVICE_LEVEL_THRESHOLDS": "Variable",
       "DEFAULT_DEVICE_TARGETS": "Variable",
       "DEVICE_MEMORY_CAP_GB": "Variable",
+      "DeviceScoringCanvas": "TypeAlias",
+      "estimateFps": "Function",
+      "ForcedDeviceLevels": "TypeAlias",
+      "PIXEL_RATIO_STEPS": "Variable",
       "rateDeviceLevels": "Function",
       "rateGpuHeuristic": "Function",
       "rateLevel": "Function",
+      "readEffectiveFpsTarget": "Function",
       "recommendDeviceSettings": "Function",
       "resolveDeviceLevelThresholds": "Function",
       "resolveDeviceTargets": "Function",
-      "scoreDeviceCapabilities": "Function"
+      "resolveTargetPixelSize": "Function",
+      "scoreDeviceCapabilities": "Function",
+      "solvePixelRatio": "Function"
+    },
+    "src/_engine/kernel/deviceCapabilities/GpuBenchmark.ts": {
+      "clampBenchmarkSize": "Function",
+      "GpuBenchmarkBatch": "TypeAlias",
+      "GpuBenchmarkOpts": "TypeAlias",
+      "measureThroughputAsync": "Function",
+      "runGpuBenchmarkAsync": "Function",
+      "ThroughputOpts": "TypeAlias"
+    },
+    "src/_engine/kernel/deviceCapabilities/GpuBenchmarkWebGL2.ts": {
+      "createWebGL2BenchmarkBackend": "Function"
+    },
+    "src/_engine/kernel/deviceCapabilities/GpuBenchmarkWebGPU.ts": {
+      "createWebGPUBenchmarkBackendAsync": "Function"
+    },
+    "src/_engine/kernel/deviceCapabilities/GpuBenchmarkWorkloads.ts": {
+      "BATCH_TIMEOUT_MS": "Variable",
+      "createNoiseTexels": "Function",
+      "FILL_ALU_ITERATIONS": "Variable",
+      "GEOMETRY_TRIANGLE_PX": "Variable",
+      "GpuBatchTiming": "TypeAlias",
+      "GpuBenchmarkBackend": "TypeAlias",
+      "NOISE_TEXTURE_SIZE": "Variable",
+      "pickBatchTiming": "Function",
+      "withBatchTimeoutAsync": "Function"
     },
     "src/_engine/kernel/ecs/ECS.ts": {
       "ComponentHook": "TypeAlias",
@@ -3977,6 +4036,7 @@
       "cameraReelsIcon": "Reference",
       "circleCheckCutoutIcon": "Reference",
       "cloudSunIcon": "Reference",
+      "cpuIcon": "Reference",
       "databaseXIcon": "Reference",
       "dropletIcon": "Reference",
       "easelIcon": "Reference",
@@ -5942,9 +6002,11 @@
       "CreateEntityOpts",
       "CreateRendererOptions",
       "DebugPhysicsWireframeConfig",
+      "DeviceBenchmarkMeasurements",
       "DeviceCapabilitiesConfig",
       "DeviceCapabilityCheck",
       "DeviceCapabilityCheckOpts",
+      "DeviceCapabilityCheckPhase",
       "DeviceCapabilityChecks",
       "DeviceCapabilityListener",
       "DeviceCapabilityMeasurements",
@@ -5953,6 +6015,7 @@
       "DeviceCapabilityTargets",
       "DeviceCapabilityVerdict",
       "DeviceCheckResult",
+      "DeviceGpuBenchmark",
       "DeviceGpuMeasurements",
       "DeviceGpuMemorySource",
       "DeviceLevelBands",
@@ -5960,6 +6023,7 @@
       "DeviceLevelSource",
       "DeviceLevelThresholds",
       "DeviceLevels",
+      "DeviceReferenceFrame",
       "DracoConfig",
       "ECSPosition",
       "ECSRotation",

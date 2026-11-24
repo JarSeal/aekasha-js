@@ -2,8 +2,9 @@
 // measurements in localStorage, and scores them against the targets on every check. Advisory: the
 // engine applies none of its recommendations. Nothing here runs unless the boot (`runAtInit`) or
 // the app calls the check, and the boot imports this module only then; the benchmark
-// (`DeviceBenchmark.ts` and the modules it imports) is `import()`ed only when it measures. The
-// debug tab (`debug/_dbg__DeviceCapabilities.ts`) is loaded by the boot's debug step, and its
+// (`DeviceBenchmark.ts` and the modules it imports) is `import()`ed only when it measures. The last
+// report and its listeners are `DeviceCapabilityReports.ts`', which an app reads without loading
+// this module. The debug tab (`debug/_dbg__DeviceCapabilities.ts`) is loaded by the boot's debug step, and its
 // forced levels reach the verdict only in the debug env.
 import { getConfig, IS_DEBUG_ENV } from '../config/Config';
 import { loadDebugModuleAsync, useDebug } from '../config/DebugModules';
@@ -12,6 +13,7 @@ import { getCanvasSize } from '../render/CanvasSize';
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../utils/LocalAndSessionStorage';
 import { hashStringFNV1a } from '../../utils/Hash';
 import { lerror, lwarn } from '../../utils/Logger';
+import { _setDeviceCapabilityReport, getDeviceCapabilityReport } from './DeviceCapabilityReports';
 import {
   type DeviceProbeEnv,
   probeDeviceAsync,
@@ -82,16 +84,11 @@ export type DeviceCapabilityCheckOpts = {
   onProgress?: (phase: DeviceCapabilityCheckPhase, progress01: number) => void;
 };
 
-/** A listener of {@link onDeviceCapabilityReport}. */
-export type DeviceCapabilityListener = (report: DeviceCapabilityReport) => void;
-
-let lastReport: DeviceCapabilityReport | null = null;
 /** The last check's own targets, which a re-score of its report keeps. */
 let lastTargets: DeviceCapabilityTargets | undefined;
 /** The debug tab's forced levels (debug env only), null when none is. */
 let forcedLevels: ForcedDeviceLevels | null = null;
 let inFlight: Promise<DeviceCapabilityReport> | null = null;
-const listeners = new Set<DeviceCapabilityListener>();
 
 /** The config's section, or none. */
 const getSettings = () => getConfig().deviceCapabilities ?? {};
@@ -144,17 +141,6 @@ const readStored = (fingerprint: string, now: number, wantsBenchmark: boolean) =
   const age = now - stored.measuredAt;
   if (age < 0 || (maxAgeDays > 0 && age > maxAgeDays * DAY_MS)) return null;
   return stored as StoredDeviceCapabilities;
-};
-
-/** Calls the listeners; one that throws is logged and doesn't stop the others. */
-const notifyListeners = (report: DeviceCapabilityReport) => {
-  for (const listener of [...listeners]) {
-    try {
-      listener(report);
-    } catch (err) {
-      lerror('Device capabilities: a report listener threw.', err);
-    }
-  }
 };
 
 /** Pauses the main loop when it's running; returns its resume, null when it wasn't paused. */
@@ -268,10 +254,9 @@ const runCheckAsync = async (opts: DeviceCapabilityCheckOpts) => {
     measurements,
     verdict: scoreMeasurements(measurements, opts.targets),
   };
-  lastReport = report;
   lastTargets = opts.targets;
   reportProgress('DONE', 1);
-  notifyListeners(report);
+  _setDeviceCapabilityReport(report);
   return report;
 };
 
@@ -286,8 +271,8 @@ const runCheckAsync = async (opts: DeviceCapabilityCheckOpts) => {
  * @param opts what to measure and score against ({@link DeviceCapabilityCheckOpts})
  * @returns the report, which {@link getDeviceCapabilityReport} also returns from then on
  * @remarks Overlapping calls share one check: a call made while one runs gets that check's report,
- * its own options ignored. A report reaches the {@link onDeviceCapabilityReport} listeners before
- * the promise resolves. The browser's readings are fingerprinting-grade data: the engine never
+ * its own options ignored. A report reaches the report listeners (`onDeviceCapabilityReport`, in
+ * `DeviceCapabilityReports.ts`) before the promise resolves. The browser's readings are fingerprinting-grade data: the engine never
  * sends them anywhere.
  * @example
  * ```ts
@@ -309,22 +294,6 @@ export const runDeviceCapabilityCheckAsync = (
 };
 
 /**
- * The last check's report (the boot's with `runAtInit`, or the app's), or null before one has run.
- * @returns the report; don't change it, it's the one every caller gets
- * @example
- * ```ts
- * import { createRenderer, getDeviceCapabilityReport } from 'aekasha';
- *
- * const recommended = getDeviceCapabilityReport()?.verdict.recommendations;
- * await createRenderer({
- *   devicePixelRatio: recommended?.pixelRatio,
- *   antialias: recommended?.antialias,
- * });
- * ```
- */
-export const getDeviceCapabilityReport = () => lastReport;
-
-/**
  * Scores the last check's measurements against other targets, without measuring: eg. whether the
  * device meets a settings preset's targets.
  * @param targets the targets, over the config's
@@ -338,8 +307,10 @@ export const getDeviceCapabilityReport = () => lastReport;
  */
 export const evaluateDeviceCapabilities = (
   targets: DeviceCapabilityTargets
-): DeviceCapabilityVerdict | null =>
-  lastReport ? scoreMeasurements(lastReport.measurements, targets) : null;
+): DeviceCapabilityVerdict | null => {
+  const report = getDeviceCapabilityReport();
+  return report ? scoreMeasurements(report.measurements, targets) : null;
+};
 
 /**
  * Removes the stored measurements, so the next check measures again. The last report stays.
@@ -354,26 +325,6 @@ export const evaluateDeviceCapabilities = (
 export const clearStoredDeviceCapabilityReport = () => lsRemoveItem(DEVICE_CAPABILITIES_LS_KEY);
 
 /**
- * Calls `listener` with every report a check makes from now on (not the one there already is:
- * read {@link getDeviceCapabilityReport} for it), and in the debug env with the last report scored
- * again when the debug tab's forced levels change.
- * @param listener called with the report
- * @returns the remover
- * @example
- * ```ts
- * import { onDeviceCapabilityReport } from 'aekasha';
- *
- * const stop = onDeviceCapabilityReport((report) => console.log(report.verdict.levels.overall));
- * ```
- */
-export const onDeviceCapabilityReport = (listener: DeviceCapabilityListener) => {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-};
-
-/**
  * Sets the debug tab's forced levels (null or none set: the device's own), scores the last report
  * again with them (its own check's targets kept) and calls the report listeners with it. A no-op
  * outside the debug env. The debug tab calls it at its registration (its saved levels) and on
@@ -385,9 +336,12 @@ export const _setForcedDeviceLevels = (levels: ForcedDeviceLevels | null) => {
   const next = levels && Object.values(levels).some(Boolean) ? { ...levels } : null;
   if (JSON.stringify(next) === JSON.stringify(forcedLevels)) return;
   forcedLevels = next;
-  if (!lastReport) return;
-  lastReport = { ...lastReport, verdict: scoreMeasurements(lastReport.measurements, lastTargets) };
-  notifyListeners(lastReport);
+  const report = getDeviceCapabilityReport();
+  if (!report) return;
+  _setDeviceCapabilityReport({
+    ...report,
+    verdict: scoreMeasurements(report.measurements, lastTargets),
+  });
 };
 
 /**
@@ -395,8 +349,10 @@ export const _setForcedDeviceLevels = (levels: ForcedDeviceLevels | null) => {
  * next to the forced ones. Null before a check.
  * @internal
  */
-export const _getUnforcedDeviceVerdict = () =>
-  lastReport ? scoreMeasurements(lastReport.measurements, lastTargets, true) : null;
+export const _getUnforcedDeviceVerdict = () => {
+  const report = getDeviceCapabilityReport();
+  return report ? scoreMeasurements(report.measurements, lastTargets, true) : null;
+};
 
 /**
  * Registers the Device capabilities debug tab (debug env; the boot's kernel debug step, before the

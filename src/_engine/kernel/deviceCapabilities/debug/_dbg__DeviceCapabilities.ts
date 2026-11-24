@@ -14,10 +14,9 @@ import {
   _getUnforcedDeviceVerdict,
   _setForcedDeviceLevels,
   clearStoredDeviceCapabilityReport,
-  getDeviceCapabilityReport,
-  onDeviceCapabilityReport,
   runDeviceCapabilityCheckAsync,
 } from '../DeviceCapabilities';
+import { getDeviceCapabilityReport, onDeviceCapabilityReport } from '../DeviceCapabilityReports';
 import type {
   DeviceCapabilityCheckPhase,
   DeviceCapabilityChecks,

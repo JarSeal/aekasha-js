@@ -9,7 +9,7 @@ import type { QualityLevel } from '../../utils/QualityLevel';
 import {
   getDeviceCapabilityReport,
   onDeviceCapabilityReport,
-} from '../../kernel/deviceCapabilities/DeviceCapabilities';
+} from '../../kernel/deviceCapabilities/DeviceCapabilityReports';
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
 import { getRenderer, onRendererCreated } from '../../kernel/render/Renderer';

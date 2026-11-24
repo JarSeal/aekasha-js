@@ -48,6 +48,14 @@ const config: AppConfig = {
   devFiles: {
     saveHistorySize: 20,
   },
+  // #region device-capabilities (shown in the Hub: hub/pages/features/device-capabilities/)
+  // The device capability check: measured at the boot (stored in this browser for 30 days, so a
+  // later boot only fingerprints the device), its report read in index.ts' start. Advisory: the
+  // engine applies none of it
+  deviceCapabilities: {
+    runAtInit: true,
+  },
+  // #endregion device-capabilities
   debugCamera: {
     position: { x: 3, y: 3, z: 1.5 },
     target: { x: 0, y: 0, z: 0 },

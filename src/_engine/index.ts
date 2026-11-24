@@ -18,14 +18,14 @@ export type {
 export {
   clearStoredDeviceCapabilityReport,
   evaluateDeviceCapabilities,
-  getDeviceCapabilityReport,
-  onDeviceCapabilityReport,
   runDeviceCapabilityCheckAsync,
 } from './kernel/deviceCapabilities/DeviceCapabilities';
-export type {
-  DeviceCapabilityCheckOpts,
-  DeviceCapabilityListener,
-} from './kernel/deviceCapabilities/DeviceCapabilities';
+export type { DeviceCapabilityCheckOpts } from './kernel/deviceCapabilities/DeviceCapabilities';
+export {
+  getDeviceCapabilityReport,
+  onDeviceCapabilityReport,
+} from './kernel/deviceCapabilities/DeviceCapabilityReports';
+export type { DeviceCapabilityListener } from './kernel/deviceCapabilities/DeviceCapabilityReports';
 export type {
   DeviceBenchmarkMeasurements,
   DeviceCapabilitiesConfig,
@@ -46,6 +46,7 @@ export type {
   DeviceLevels,
   DeviceLevelSource,
   DeviceLevelThresholds,
+  DeviceReferenceFrame,
   ResolvedDeviceCapabilityTargets,
 } from './kernel/deviceCapabilities/DeviceCapabilitiesTypes';
 export { ECSWorld, getECSWorld, getEntityIdByAppId } from './kernel/ecs/ECS';

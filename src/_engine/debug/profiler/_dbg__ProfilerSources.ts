@@ -24,7 +24,7 @@ import {
   setRayCastStatsEnabled,
 } from '../../kernel/render/Raycast';
 import { getRenderer } from '../../kernel/render/Renderer';
-import { getDeviceCapabilityReport } from '../../kernel/deviceCapabilities/DeviceCapabilities';
+import { getDeviceCapabilityReport } from '../../kernel/deviceCapabilities/DeviceCapabilityReports';
 import type { DeviceLevels } from '../../kernel/deviceCapabilities/DeviceCapabilitiesTypes';
 import { getCurrentSceneId } from '../../kernel/scene/Scene';
 import { getNextSceneId, isCurrentlyLoading } from '../../kernel/scene/SceneLoader';

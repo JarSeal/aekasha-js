@@ -120,7 +120,11 @@ const loadAsync = async (config: AppConfig['deviceCapabilities'] = {}) => {
   vi.resetModules();
   const { loadConfig } = await import('../config/Config');
   loadConfig({ deviceCapabilities: config });
-  return import('./DeviceCapabilities');
+  // The check and its report store, of the same fresh module graph
+  return {
+    ...(await import('./DeviceCapabilities')),
+    ...(await import('./DeviceCapabilityReports')),
+  };
 };
 
 const readStored = () => JSON.parse(storage.getItem(LS_KEY) as string);
