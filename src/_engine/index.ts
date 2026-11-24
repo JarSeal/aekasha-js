@@ -15,6 +15,36 @@ export type {
   DebugPhysicsWireframeConfig,
   PhysicsWireframeColors,
 } from './kernel/config/Config';
+export {
+  clearStoredDeviceCapabilityReport,
+  evaluateDeviceCapabilities,
+  getDeviceCapabilityReport,
+  onDeviceCapabilityReport,
+  runDeviceCapabilityCheckAsync,
+} from './kernel/deviceCapabilities/DeviceCapabilities';
+export type {
+  DeviceCapabilityCheckOpts,
+  DeviceCapabilityListener,
+} from './kernel/deviceCapabilities/DeviceCapabilities';
+export type {
+  DeviceCapabilitiesConfig,
+  DeviceCapabilityCheck,
+  DeviceCapabilityChecks,
+  DeviceCapabilityMeasurements,
+  DeviceCapabilityRecommendations,
+  DeviceCapabilityReport,
+  DeviceCapabilityTargets,
+  DeviceCapabilityVerdict,
+  DeviceCheckResult,
+  DeviceGpuMeasurements,
+  DeviceGpuMemorySource,
+  DeviceLevelBands,
+  DeviceLevelCategory,
+  DeviceLevels,
+  DeviceLevelSource,
+  DeviceLevelThresholds,
+  ResolvedDeviceCapabilityTargets,
+} from './kernel/deviceCapabilities/DeviceCapabilitiesTypes';
 export { ECSWorld, getECSWorld, getEntityIdByAppId } from './kernel/ecs/ECS';
 export type {
   ComponentHook,
