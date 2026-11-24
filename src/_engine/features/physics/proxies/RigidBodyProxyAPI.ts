@@ -13,6 +13,7 @@ import type { PhysicsCommandFor, PhysicsQueryType } from '../PhysicsMessaging';
 import { colliders, getBodyMovedListener } from '../PhysicsRegistry';
 import { facade } from '../PhysicsState';
 import { getWriteVisibleStep, isWritePending } from '../PhysicsStepping';
+import type { RestoredBodyState } from '../protocol/PhysicsDownProtocol';
 import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
 import type {
   RigidColliderResponse,
@@ -159,6 +160,24 @@ export class RigidBodyProxyAPI implements RigidBodyAPI {
   _noteWorldBoundsExit(frozen: boolean) {
     if (frozen) this.cachedBodyType = RigidBodyTypeAPI.Fixed;
     else this.cachedEnabled = false;
+  }
+
+  /**
+   * A snapshot restore kept the body (p500): its cached type, enabled state and (without a slot)
+   * pose become the restored world's, and the writes the buffer doesn't show yet are dropped (the
+   * restore replaced them, and their steps are on the clock it took back). The cached mass stays.
+   * @internal
+   */
+  _restore(state: RestoredBodyState) {
+    this.cachedBodyType = state.bodyType;
+    this.cachedEnabled = state.enabled;
+    if (state.pose && this.slot === -1) {
+      this.staticPose = { pos: { ...state.pose.pos }, rot: { ...state.pose.rot } };
+    }
+    this.pendingPos = undefined;
+    this.pendingRot = undefined;
+    this.pendingLvel = undefined;
+    this.pendingAvel = undefined;
   }
 
   // Hot path — reads straight from the shared/latest-pushed transform buffer by slot.

@@ -12,6 +12,7 @@ import { PhysicsDebugStateBuffer } from './PhysicsDebugStateBuffer';
 import {
   clearPendingEventPushes,
   closeWorkerTransport,
+  dropEventPushesAfterRestore,
   hasWorkerTransport,
   messageWorker,
   messageWorkerAsync,
@@ -25,6 +26,7 @@ import {
   forgetJoint,
   forgetRigidBody,
   getBodyMovedListener,
+  rigidBodies,
 } from './PhysicsRegistry';
 import { facade, isWorkerTarget } from './PhysicsState';
 import { setStepStatsBuffer } from './PhysicsStepStats';
@@ -37,7 +39,7 @@ import {
   resetSimClock,
 } from './PhysicsStepping';
 import { PhysicsTransformBuffer } from './PhysicsTransformBuffer';
-import { initPhysicsEngine } from './PhysicsUtils';
+import { initPhysicsEngine, isF32Changed } from './PhysicsUtils';
 import type { PhysicsDownProtocol } from './protocol/PhysicsDownProtocol';
 import { PhysicsProtocolType } from './protocol/PhysicsProtocolType';
 import type {
@@ -45,9 +47,11 @@ import type {
   DeleteWorldResponse,
   FlushResponse,
   InitPhysicsResponse,
+  RestoreSnapshotResponse,
   SetDebugStateTrackingResponse,
   TakeSnapshotResponse,
 } from './protocol/PhysicsResponses';
+import type { RigidBodyProxyAPI } from './proxies/RigidBodyProxyAPI';
 import { WorldProxyAPI } from './proxies/WorldProxyAPI';
 import type { PhysVector } from './types/PhysicsCommonTypes';
 import type {
@@ -65,6 +69,8 @@ let isPhysicsStopped = false;
 let removeVisibilityListener: (() => void) | null = null;
 /** Which hot-path transport createPhysicsWorld() resolved to for the current world (WORKER_THREAD only). */
 let resolvedTransportMode: 'SHARED_MEMORY' | 'MESSAGE_BATCH' | undefined;
+/** Snapshot restores called and not resolved yet (only WORKER_THREAD's can overlap). */
+let restoresInFlight = 0;
 
 /**
  * Initializes physics from `AppConfig.physics` (a no-op when it isn't enabled): loads the backend
@@ -319,9 +325,20 @@ export const setPhysicsWorldBounds = (box: WorldBoundsBox | null) => {
 };
 
 /**
- * The world's snapshot (p500): its state serialized by the backend, the world it was taken in and
- * its step. Only physics: no entity, mesh or creation params. Throws without a world.
- * @internal
+ * Takes a snapshot of the physics world (p500), to put it back later with
+ * {@link restorePhysicsSnapshot}: its state serialized by the backend, the world it was taken in
+ * and its step. Only physics: no entity, mesh or creation params. Throws without a world.
+ * @returns the snapshot, plain data the caller keeps as long as it likes
+ * @remarks A snapshot belongs to its world: every scene load makes a new one, so a snapshot never
+ * outlives its scene's visit (restoring it after a load throws).
+ * @example
+ * ```ts
+ * import { restorePhysicsSnapshot, takePhysicsSnapshot } from 'aekasha/physics';
+ *
+ * // A checkpoint, and back to it: the bodies made since are deleted with their entities
+ * const checkpoint = await takePhysicsSnapshot();
+ * if (checkpoint) await restorePhysicsSnapshot(checkpoint);
+ * ```
  */
 export const takePhysicsSnapshot = async (): Promise<PhysicsSnapshot | undefined> => {
   existsOrThrow(
@@ -352,21 +369,18 @@ export const onPhysicsRestore = (fn: PhysicsRestoreFn) => {
   };
 };
 
-/** Whether Rapier's read-back `value` differs from the state's copy at f32: Rapier stores f32, so
- * writing an unchanged read-back over the state's double would change the state for nothing. */
-const isF32Changed = (stateValue: number, value: number) => Math.fround(stateValue) !== value;
-
 /**
  * Brings the facade in line with a restore's delta, the same in both worker targets: forgets the
  * reaped bodies, colliders and joints (marked `isBeingDeleted`, their worker callbacks dropped),
- * takes the world's settings the snapshot carried into the physics state, restarts the step clock
- * at the snapshot's step (dropping the gates and the time banked toward the next step), and calls
- * the restore hooks.
+ * drops the events not delivered yet, takes the world's settings the snapshot carried into the
+ * physics state, restarts the step clock at the snapshot's step (dropping the gates and the time
+ * banked toward the next step), and calls the restore hooks.
  */
 const applyRestoreDelta = (delta: RestoreSnapshotDelta) => {
   for (const id of delta.reapedRigidBodyIds) forgetRigidBody(id);
   for (const id of delta.reapedColliderIds) forgetCollider(id);
   for (const id of delta.reapedJointIds) forgetJoint(id);
+  dropEventPushesAfterRestore(delta.step);
 
   const { state } = facade;
   const { gravity } = delta;
@@ -400,14 +414,38 @@ const applyRestoreDelta = (delta: RestoreSnapshotDelta) => {
 };
 
 /**
- * Puts the world back to a snapshot taken in it (p500), keeping every API object that both the
- * snapshot and the API know (so their entities need nothing). What the API made after the snapshot
- * is deleted and what it deleted since stays gone (`RestoreSnapshotDelta`), the world's settings
- * become the snapshot's, the step clock goes back to its step, and the restore hooks run
- * (onPhysicsRestore). Stepping waits meanwhile. Throws without a world, for a snapshot of another
- * world (a scene load replaces the world), or for bytes the backend can't read; then nothing
- * changed.
- * @internal
+ * Puts the physics world back to a snapshot taken in it (p500), keeping every body, collider and
+ * joint that both the snapshot and the API know (their entities need nothing). What was made after
+ * the snapshot is deleted, physics entities included, and what was deleted since stays gone
+ * ({@link RestoreSnapshotDelta}); the world's settings become the snapshot's, and the step clock
+ * (`getPhysicsSubStepIndex`) goes back to its step. Stepping waits meanwhile. The snapshot isn't
+ * used up: restore it again and again. Throws without a world, for a snapshot of another world (a
+ * scene load replaces the world), or for bytes the backend can't read; then nothing changed.
+ *
+ * `WORKER_THREAD`: the snapshot is copied to the worker (p500 D9: the caller's stays usable, to
+ * restore again), and the restored poses are in the transform buffer when it resolves. The worker
+ * handles messages in order: steps and commands sent before the call run on the replaced world,
+ * those sent after on the restored one. Overlapping restores apply in call order, the last one
+ * wins, and stepping waits until every one has resolved.
+ * @param snapshot a snapshot {@link takePhysicsSnapshot} took in the current world
+ * @param opts what to do with the bodies deleted since (default: take them out)
+ * @returns what the restore changed besides the poses, and the world
+ * @remarks An exact rewind only when nothing was created or deleted since the snapshot (the debug
+ * env warns otherwise). Stepping on from it reproduces the original run only when the app replays
+ * its own inputs (forces, impulses, creates, deletes, setting changes) on the same steps. An
+ * entity's `DISABLED` component isn't reset. Use this rather than `getPhysicsWorld()`'s
+ * `restoreSnapshot`, which on `MAIN_THREAD` restores the backend alone.
+ * @example
+ * ```ts
+ * import { restorePhysicsSnapshot, takePhysicsSnapshot } from 'aekasha/physics';
+ *
+ * const snapshot = await takePhysicsSnapshot();
+ * // … later, in the same scene visit
+ * if (snapshot) {
+ *   const { reapedRigidBodyIds } = await restorePhysicsSnapshot(snapshot);
+ *   console.log(`${reapedRigidBodyIds.length} bodies made since were deleted`);
+ * }
+ * ```
  */
 export const restorePhysicsSnapshot = async (
   snapshot: PhysicsSnapshot,
@@ -417,17 +455,40 @@ export const restorePhysicsSnapshot = async (
     facade.worldEnabled,
     'Physics world is not created. Create the world before restoring a snapshot.'
   );
-  if (isWorkerTarget()) {
-    throw new Error('restorePhysicsSnapshot: WORKER_THREAD comes with p500 Phase 2.');
-  }
-  const engAPI = existsOrThrow(facade.engAPI, 'Physics engine is not initialized.');
+  const engAPI = isWorkerTarget()
+    ? undefined
+    : existsOrThrow(facade.engAPI, 'Physics engine is not initialized.');
+  restoresInFlight++;
   facade.isRestoringSnapshot = true;
   try {
-    const result = engAPI.restoreSnapshot(snapshot, opts);
-    applyRestoreDelta(result);
-    return result;
+    if (engAPI) {
+      const result = engAPI.restoreSnapshot(snapshot, opts);
+      applyRestoreDelta(result);
+      return result;
+    }
+    // A world delete or create sent meanwhile is replied to after this, and stopPhysics rejects
+    // it: the world it resolves in is the one it was sent to
+    const {
+      type: _type,
+      requestId: _requestId,
+      worldCreated: _worldCreated,
+      bodies,
+      ...delta
+    } = await messageWorkerAsync<RestoreSnapshotResponse>({
+      type: PhysicsProtocolType.RESTORE_SNAPSHOT,
+      snapshot,
+      opts,
+    });
+    for (let i = 0; i < bodies.length; i++) {
+      const proxy = rigidBodies.get(bodies[i].id) as RigidBodyProxyAPI | undefined;
+      proxy?._restore(bodies[i]);
+    }
+    if (facade.world instanceof WorldProxyAPI) facade.world._restoreSettings(delta);
+    applyRestoreDelta(delta);
+    return { ...delta, world: facade.world };
   } finally {
-    facade.isRestoringSnapshot = false;
+    restoresInFlight--;
+    facade.isRestoringSnapshot = restoresInFlight > 0;
   }
 };
 

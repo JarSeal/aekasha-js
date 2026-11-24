@@ -9,7 +9,7 @@ import { messageWorker, messageWorkerAsync, toPlainRot } from '../PhysicsMessagi
 import { getPhysicsQueryObserver } from '../PhysicsQueryStats';
 import { colliders, joints, rigidBodies } from '../PhysicsRegistry';
 import { facade } from '../PhysicsState';
-import { getCollOrRigidId } from '../PhysicsUtils';
+import { getCollOrRigidId, isF32Changed } from '../PhysicsUtils';
 import { restorePhysicsSnapshot, takePhysicsSnapshot } from '../PhysicsWorld';
 import type { PhysicsResponse } from '../protocol/PhysicsDownProtocol';
 import { PhysicsProtocolType } from '../protocol/PhysicsProtocolType';
@@ -45,6 +45,7 @@ import type {
 } from '../types/PhysicsQueryTypes';
 import type {
   PhysicsSnapshot,
+  RestoreSnapshotDelta,
   RestoreSnapshotOpts,
   RestoreSnapshotResult,
   WorldAPI,
@@ -118,6 +119,27 @@ export class WorldProxyAPI implements WorldAPI {
     opts?: RestoreSnapshotOpts
   ): Promise<RestoreSnapshotResult> {
     return restorePhysicsSnapshot(snapshot, opts);
+  }
+
+  /**
+   * A snapshot restore's world settings (p500 D7: Rapier restores them), each taken where it
+   * differs from this copy at f32 (an unchanged read-back would replace the copy's double).
+   * @internal
+   */
+  _restoreSettings(delta: RestoreSnapshotDelta) {
+    const cache = this._cache;
+    const { gravity } = delta;
+    if (
+      isF32Changed(cache.gravity.x, gravity.x) ||
+      isF32Changed(cache.gravity.y, gravity.y) ||
+      isF32Changed(cache.gravity.z, gravity.z)
+    ) {
+      cache.gravity = { ...gravity };
+    }
+    if (isF32Changed(cache.timestep, delta.timestep)) cache.timestep = delta.timestep;
+    cache.solverIters = delta.solverIterations;
+    cache.pgsIters = delta.internalPgsIterations;
+    cache.ccdSubsteps = delta.maxCcdSubsteps;
   }
 
   restoreSnapshotSync(): RestoreSnapshotResult {

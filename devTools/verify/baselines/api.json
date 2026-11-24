@@ -1130,6 +1130,7 @@
     "src/_engine/features/physics/backends/rapier/RapierEvents.ts": {
       "cleanupColliderEventRegistrations": "Function",
       "clearEventRegistrations": "Function",
+      "clearPendingEventRecords": "Function",
       "dispatchPendingEventRecords": "Function",
       "drainAndDispatchEvents": "Function",
       "drainPendingEventRecords": "Function",
@@ -1140,6 +1141,10 @@
       "createJoints": "Function",
       "deleteJoint": "Function",
       "deleteJoints": "Function"
+    },
+    "src/_engine/features/physics/backends/rapier/RapierRestore.ts": {
+      "rebindRestoredWorld": "Function",
+      "RestoreSweep": "TypeAlias"
     },
     "src/_engine/features/physics/backends/rapier/RapierShapes.ts": {
       "paramsToShape": "Function"
@@ -1184,6 +1189,7 @@
     "src/_engine/features/physics/backends/rapier/RapierWorldBounds.ts": {
       "checkQueuedWorldBounds": "Function",
       "checkWorldBounds": "Function",
+      "clearPendingOutOfBoundsRecords": "Function",
       "clearWorldBounds": "Function",
       "drainPendingOutOfBoundsRecords": "Function",
       "forgetBodyWorldBounds": "Function",
@@ -1267,6 +1273,7 @@
       "PhysicsEntityProps": "TypeAlias",
       "physicsToTransformSystem": "Function",
       "queueStaticBodySync": "Function",
+      "reconcilePhysicsEntitiesAfterRestore": "Function",
       "registerPhysicsDeterminismProbe": "Function",
       "registerPhysicsWireframeDebugAsync": "Function",
       "settlePendingPhysicsEntities": "Function",
@@ -1303,6 +1310,7 @@
       "commandWorker": "Function",
       "copyWorldBounds": "Function",
       "DistributiveOmit": "TypeAlias",
+      "dropEventPushesAfterRestore": "Function",
       "endSubStepCapture": "Function",
       "flushPhysicsEvents": "Function",
       "getOutOfBoundsExitSteps": "Function",
@@ -1439,7 +1447,8 @@
       "isPhysicsEntityJointed": "Function",
       "onPhysicsJointCreated": "Function",
       "requestPhysicsTier": "Function",
-      "requestPhysicsTierWants": "Function"
+      "requestPhysicsTierWants": "Function",
+      "resetPhysicsTiersAfterRestore": "Function"
     },
     "src/_engine/features/physics/PhysicsTiersFeature.ts": {
       "physicsTiers": "Function",
@@ -1465,6 +1474,7 @@
       "getCollOrRigidId": "Function",
       "getPhysicsEngine": "Function",
       "initPhysicsEngine": "Function",
+      "isF32Changed": "Function",
       "ValidProtocolTypes": "Variable"
     },
     "src/_engine/features/physics/PhysicsWorld.ts": {
@@ -1475,6 +1485,7 @@
       "getPhysicsDebugStateBuffer": "Function",
       "getResolvedTransportMode": "Function",
       "initPhysics": "Function",
+      "onPhysicsRestore": "Function",
       "registerPhysicsAPIDebugGUI": "Function",
       "resetPhysicsWorld": "Function",
       "restorePhysicsSnapshot": "Function",
@@ -1496,7 +1507,8 @@
     "src/_engine/features/physics/protocol/PhysicsDownProtocol.ts": {
       "PhysicsDownProtocol": "TypeAlias",
       "PhysicsResponse": "TypeAlias",
-      "PhysicsWorkerReply": "TypeAlias"
+      "PhysicsWorkerReply": "TypeAlias",
+      "RestoredBodyState": "TypeAlias"
     },
     "src/_engine/features/physics/protocol/PhysicsProtocolType.ts": {
       "PhysicsProtocolType": "Enum"
@@ -1706,6 +1718,10 @@
       "WorldBoundsStats": "TypeAlias"
     },
     "src/_engine/features/physics/types/PhysicsWorldTypes.ts": {
+      "PhysicsSnapshot": "TypeAlias",
+      "RestoreSnapshotDelta": "TypeAlias",
+      "RestoreSnapshotOpts": "TypeAlias",
+      "RestoreSnapshotResult": "TypeAlias",
       "WorldAPI": "TypeAlias",
       "WorldProxyAPIType": "TypeAlias"
     },
@@ -1716,7 +1732,8 @@
       "physicsSwitchJoint": "Function"
     },
     "src/_engine/features/physics/worker/PhysicsSwitchRigid.ts": {
-      "physicsSwitchRigid": "Function"
+      "physicsSwitchRigid": "Function",
+      "toPlainPose": "Function"
     },
     "src/_engine/features/physics/worker/PhysicsSwitchWorld.ts": {
       "physicsSwitchWorld": "Function"
@@ -2988,6 +3005,7 @@
       "installObjectFrustumCulling": "Function",
       "MAX_SPOT_ANGLE": "Variable",
       "objectFrustumCullingSystem": "Function",
+      "registerInstanceBoundsProvider": "Function",
       "setFrustumCullingEnabled": "Function"
     },
     "src/_engine/kernel/ecs/PhysicsTierAccess.ts": {
@@ -6471,6 +6489,7 @@
       "PhysicsEntityProps",
       "PhysicsInterpolationMode",
       "PhysicsSimTierData",
+      "PhysicsSnapshot",
       "PhysicsState",
       "PhysicsTier",
       "PhysicsTierBucket",
@@ -6483,6 +6502,9 @@
       "QueryFilterFlags",
       "RayColliderHitAPI",
       "RayColliderIntersectionAPI",
+      "RestoreSnapshotDelta",
+      "RestoreSnapshotOpts",
+      "RestoreSnapshotResult",
       "RigidBodyAPI",
       "RigidBodyParams",
       "RigidBodyTypeAPI",
@@ -6526,10 +6548,12 @@
       "physicsTiers",
       "readBodyPositionsAtStep",
       "requestPhysicsTier",
+      "restorePhysicsSnapshot",
       "setEntityWorldBounds",
       "setPhysicsTierPolicy",
       "setPhysicsTierPolicyMember",
       "setSceneWorldBounds",
+      "takePhysicsSnapshot",
       "toHeightfieldColliderParams"
     ],
     "aekasha/postfx": [

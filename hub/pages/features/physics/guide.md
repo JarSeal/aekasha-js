@@ -144,6 +144,38 @@ To check a scene, open it with `?isDebug=true&physicsProbe=N`, or use "Determini
 Physics API debug tab. It freezes physics N steps after the scene starts, hashes every dynamic
 body's state, and compares the hash with the last run of the same scene.
 
+## Snapshots
+
+A snapshot is the physics world's state at one fixed step, to put it back later: a checkpoint to
+return to, or a point to rewind to and step again.
+[takePhysicsSnapshot](api:takePhysicsSnapshot) takes one, and
+[restorePhysicsSnapshot](api:restorePhysicsSnapshot) restores it, as often as you like, in either
+thread mode:
+
+```ts
+import { restorePhysicsSnapshot, takePhysicsSnapshot } from 'aekasha/physics';
+
+const checkpoint = await takePhysicsSnapshot();
+// … later, in the same scene visit
+if (checkpoint) await restorePhysicsSnapshot(checkpoint);
+```
+
+A restore puts every body back where it was, with its velocity, and sets the step clock back to
+the snapshot's step, so step-timed code goes on from there. It's an exact rewind when nothing was
+created or deleted since the snapshot. Otherwise the restored world holds what both know: a body
+created since is deleted with its entity, and one deleted since stays gone (the debug build warns
+when either happens). The restore's result lists them.
+
+- A snapshot belongs to its scene's visit: every scene load makes a new physics world, and a
+  snapshot of an earlier one is refused.
+- Only physics is in it: no entity, mesh or game state of your own.
+- Stepping on from a restore reproduces the original run only when you replay your own inputs
+  (forces, impulses, creates and deletes) on the same steps. On one machine it does: 90 steps
+  after a restore came out bit for bit the same, on either thread.
+
+In debug mode the Physics API tab's "Snapshot" folder takes, restores and clears one snapshot, and
+shows its size and step, the time each took and what the last restore deleted.
+
 ## World bounds
 
 A body that tunnels through a floor or rolls off the edge of a level falls forever, stepping all

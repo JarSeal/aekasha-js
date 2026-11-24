@@ -444,7 +444,8 @@ export const latchPhysicsSnapshot = () => {
  * been executed on the current world when its poses were captured (0 before the first one).
  * MAIN_THREAD steps synchronously, so it is simply the steps issued; WORKER_THREAD reads the
  * stamp the worker writes into the transform buffer with every write-back. Changes exactly when
- * a new snapshot becomes visible, and only ever increases within one world.
+ * a new snapshot becomes visible, and only ever increases within one world, except at a snapshot
+ * restore, which sets it back to the restored step (p500).
  * @internal
  */
 export const getPhysicsSnapshotStepIndex = () =>

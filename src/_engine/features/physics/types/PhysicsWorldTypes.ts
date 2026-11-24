@@ -120,8 +120,8 @@ export type WorldAPI = {
    * @remarks Restoring state doesn't replay a run: stepping on from it reproduces the original
    * only when the caller also replays its own inputs (forces, impulses, creates, deletes, setting
    * changes) on the same steps. On MAIN_THREAD the world's own restore bypasses the facade (its
-   * registries, the step clock, the restore hooks), as its creates do: the engine's restore
-   * calls go through the facade.
+   * registries, the step clock, the physics entities), as its creates do: app code restores with
+   * `restorePhysicsSnapshot`, the same in both worker targets.
    */
   restoreSnapshot(
     snapshot: PhysicsSnapshot,

@@ -8,7 +8,7 @@ import { ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from '../../kernel/config/Config';
-import { type ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
+import { type ECSWorld, getAllECSWorlds, getECSWorld } from '../../kernel/ecs/ECS';
 import type { FeatureContext } from '../../kernel/init/Features';
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import {
@@ -29,6 +29,7 @@ import type { PhysicsSimTierData, PhysicsTier } from './PhysicsTierTypes';
 import type { PhysicsTierWant } from '../../kernel/ecs/PhysicsTierAccess';
 import { getPhysicsBodyOwner, getPhysicsEntityBody, queueStaticBodySync } from './PhysicsEntity';
 import { resetPhysicsInterpolationHistory } from './PhysicsInterpolation';
+import { onPhysicsRestore } from './PhysicsWorld';
 
 /** First in APP_PHYSICS_STEP (higher runs first), so the other systems of that sub-step see
  * the new tiers and buckets. */
@@ -455,12 +456,23 @@ const applyTier = (world: ECSWorld, entityId: number, data: PhysicsSimTierData) 
     rb.setEnabled(to !== 'DISABLED');
   }
   data.tier = to;
-  // In flight back from REMOVED: placeInWorld picks the bucket for the tier it has by then
-  if (data.inFlight) return;
+  moveToTierBucket(world, entityId, data, from, to);
+};
 
+/** Moves an entity whose tier went `from` → `to` (neither REMOVED) between its dynamic bucket
+ * (FULL) and BODY_STATIC (STATIC, DISABLED). Not while in flight back from REMOVED: placeInWorld
+ * picks the bucket for the tier it has by then. */
+const moveToTierBucket = (
+  world: ECSWorld,
+  entityId: number,
+  data: PhysicsSimTierData,
+  from: PhysicsTier,
+  to: PhysicsTier
+) => {
+  if (data.inFlight || (from === 'FULL') === (to === 'FULL')) return;
   if (from === 'FULL') {
     world.removeComponent(entityId, ComponentType[data.bucket]);
-    world.addComponent(entityId, ComponentType.BODY_STATIC, rb);
+    world.addComponent(entityId, ComponentType.BODY_STATIC, data.body);
     // The mesh shows the interpolated pose, which can be behind: the transform is marked dirty
     // so object3DSyncSystem copies it, and synced until a snapshot includes the frozen pose.
     const transform = world.getComponent(entityId, ComponentType.TRANSFORM);
@@ -469,10 +481,10 @@ const applyTier = (world: ECSWorld, entityId: number, data: PhysicsSimTierData) 
       world.commitTransform(entityId, transform);
     }
     queueStaticBodySync(world, entityId);
-  } else if (to === 'FULL') {
+  } else {
     // Its interpolation history has a gap now, so it starts over from the current pose
     world.removeComponent(entityId, ComponentType.BODY_STATIC);
-    world.addComponent(entityId, ComponentType[data.bucket], rb);
+    world.addComponent(entityId, ComponentType[data.bucket], data.body);
   }
 };
 
@@ -504,13 +516,51 @@ export const onPhysicsJointCreated = (body1Id: number, body2Id: number) => {
   }
 };
 
+/** The tier a restored body is in: its type and enabled state are the snapshot's. A world-disabled
+ * entity's body is disabled in FULL too (ECSWorld.setDisabled), so it keeps FULL or DISABLED, as it
+ * can't be told which. */
+const getRestoredTier = (world: ECSWorld, entityId: number, data: PhysicsSimTierData) => {
+  if (data.body.bodyTypeSync() === RigidBodyTypeAPI.Fixed) return 'STATIC';
+  if (data.body.isEnabledSync()) return 'FULL';
+  if (world.isDisabled(entityId) && data.tier !== 'DISABLED') return 'FULL';
+  return 'DISABLED';
+};
+
 /**
- * Installs the tiers' `APP_PHYSICS_STEP` system, the `PHYSICS_SIM_TIER` hooks and the joint
- * listener (the `physicsTiers()` feature's install).
+ * The tiers' restore hook (p500 Phase 3, `onPhysicsRestore`): a snapshot restore puts every body's
+ * type and enabled state back to the snapshot's, so each tiered entity of every ECS world gets the
+ * tier its body is in (FIXED: `STATIC`; dynamic and enabled: `FULL`; dynamic and disabled:
+ * `DISABLED`) and that tier's bucket, and the requests not applied yet are dropped: the tiers are
+ * the snapshot's, and the policy decides again from its step. A `REMOVED` entity stays: its body is
+ * out of the world (one detached since the snapshot stays so, its copy in the snapshot an orphan).
+ * The body proxies hold the restored state when the hooks run (WORKER_THREAD: the reply's).
+ * @internal
+ */
+export const resetPhysicsTiersAfterRestore = () => {
+  for (const world of getAllECSWorlds()) {
+    for (const entityId of world.getEntitiesWith(ComponentType.PHYSICS_SIM_TIER)) {
+      const data = world.getComponent(entityId, ComponentType.PHYSICS_SIM_TIER)!;
+      // A deleted world's body (an entity of another ECS world left from an earlier scene)
+      if (data.body.isBeingDeleted) continue;
+      const from = data.tier;
+      const to = from === 'REMOVED' ? from : getRestoredTier(world, entityId, data);
+      data.tier = to;
+      // A request not applied yet is dropped: still queued, it finds nothing to do
+      data.target = to;
+      if (to !== 'REMOVED') moveToTierBucket(world, entityId, data, from, to);
+    }
+  }
+};
+
+/**
+ * Installs the tiers' `APP_PHYSICS_STEP` system, the `PHYSICS_SIM_TIER` hooks, the joint
+ * listener and the restore hook (the `physicsTiers()` feature's install).
  * @internal
  */
 export const installPhysicsTiers = (ctx: FeatureContext) => {
   setJointCreatedListener(onPhysicsJointCreated);
+  // After physics' own restore hook (install order): the reaped entities are gone
+  onPhysicsRestore(resetPhysicsTiersAfterRestore);
   ctx.registerPlugin((world) => {
     world.addSystem(
       ECSSystemStage.APP_PHYSICS_STEP,

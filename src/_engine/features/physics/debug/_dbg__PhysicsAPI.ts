@@ -50,6 +50,7 @@ import { applySettingToWorld, copySetting, recordSettingChange } from './_dbg__P
 import {
   getBodiesFolder,
   getDeterminismProbeFolder,
+  getSnapshotFolder,
   getInterpolationClockFolder,
   getTiersFolder,
   getWireframeFolder,
@@ -400,6 +401,7 @@ export const _createPhysicsAPIDebugGUI = () => {
             getInterpolationClockFolder(),
             { type: 'separator' },
             getDeterminismProbeFolder(),
+            getSnapshotFolder(),
             { type: 'separator' },
             getWireframeFolder(wireframeProxies),
           ],

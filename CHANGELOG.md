@@ -4,6 +4,28 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-23 — p500_restore-physics-snapshot (Phases 0-4)
+
+Physics snapshots work (p500): `takePhysicsSnapshot` takes the physics world's state at a fixed step, and `restorePhysicsSnapshot` puts it back, as often as you like, on the main thread or the worker. Every body that both know comes back with its pose and velocity, the step clock goes back to the snapshot's step, and an entity whose body was made after the snapshot is deleted with its mesh. When nothing was created or deleted since, it's an exact rewind: 90 steps after a restore came out bit for bit the same in all three physics configurations. The skeleton that was there before was dead and broken: a restore left every cached body pointing at freed memory, leaked the old world, and crashed on bytes it couldn't read. The Physics API debug tab has a Snapshot folder that takes, restores and clears one, with its size, step and timings.
+
+### Engine 6.24.0 (Sunset)
+
+**Added**
+
+- `takePhysicsSnapshot()` and `restorePhysicsSnapshot(snapshot, opts?)` (`aekasha/physics`): the same in both worker targets. A `PhysicsSnapshot` is plain data (`bytes`, `worldEpoch`, `step`), not used up by a restore, and refused by any other world (a scene load makes a new one). A restore keeps every body, collider and joint the snapshot and the API both know (the same API objects, so their entities need nothing), deletes what was made since with its entities (reaped), takes out what was deleted since (orphans; `orphanPolicy: 'KEEP'` leaves them), sets the world's settings and the step clock (`getPhysicsSubStepIndex`) to the snapshot's, and drops the events and world bounds exits not delivered yet. Stepping waits for it. Its result (`RestoreSnapshotResult`, `RestoreSnapshotDelta`) lists the reaped ids and the orphan counts; the debug env warns when either isn't empty.
+- On `WORKER_THREAD` the snapshot goes to the worker as a copy (the caller's bytes stay usable) and comes back transferred; the worker frees the reaped bodies' transform slots and writes the restored poses back before it replies, so they show without a step, with `useSAB` on or off.
+- The entities follow a restore: a reaped body's entity is deleted, a reaped collider is taken out of its entity's colliders, every `BODY_STATIC` entity's transform is synced again, and a tiered entity (`physicsTiers()`) gets the tier its restored body is in, dropping a tier requested and not applied.
+- The Physics API debug tab's "Snapshot" folder: take, restore and clear one snapshot, an orphan policy, the snapshot's size, step and scene, the take's and the last restore's time and what it reaped and found orphaned; each restore logs its delta. The snapshot is dropped on a scene exit.
+
+**Changed**
+
+- `WorldAPI.takeSnapshot` / `takeSnapshotSync` return a `PhysicsSnapshot` (they returned the bytes), and `restoreSnapshot` / `restoreSnapshotSync` take one with `RestoreSnapshotOpts` and return a `RestoreSnapshotResult` (they returned the world). A restore keeps the world's API object. On `MAIN_THREAD` the world's own `restoreSnapshot` restores the backend alone (no entity, no step clock): use `restorePhysicsSnapshot`.
+
+**Fixed**
+
+- A snapshot restore rebinds every body, collider and joint proxy to the restored world's objects: they pointed at the replaced world's freed memory. It frees the replaced world (it leaked one per restore), throws on bytes Rapier can't read instead of leaving no world, and has one implementation (there were two, on different Rapier namespaces).
+- `takeSnapshot` without a world returns `undefined`, and deleting a world that isn't there is a quiet no-op (both threw).
+
 ## 2026-11-23 — issue-fixing-20261123 (i080, i090, i100, i110)
 
 A merge group large enough to build in the assets worker (more than 65 536 vertices) now builds while its members change (i080). A member updated with `updateMergeMember` every frame, or a member joining every frame, dropped the running build and started another, which the next frame dropped again: the group never built, and every member stayed drawn on its own. The build is kept now, the members updated meanwhile are written where they are once it lands, and those that joined go into the build after it.

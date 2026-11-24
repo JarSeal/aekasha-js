@@ -1,7 +1,7 @@
 Status: stub — not-implemented
 Category: Networking, Architecture, Physics
 Blocks: p511_network-transport-and-replication.md, p512_client-prediction-and-reconciliation.md
-Related: `src/_engine/kernel/init/CLAUDE.md` (the boot and the feature installs a headless runner picks from), `src/_engine/features/physics/CLAUDE.md` (the worker, its bundle check and the transport), the Hub's coding standards (`hub/pages/documentation/coding-standards/intro.md`, The simulation: the rules below as the code follows them), p420_npc-simulation-tiers.md (The gameplay contracts: C4, a network brain is a brain), p500_restore-physics-snapshot.md, p428_character-determinism-in-worker-targets.md
+Related: `src/_engine/kernel/init/CLAUDE.md` (the boot and the feature installs a headless runner picks from), `src/_engine/features/physics/CLAUDE.md` (the worker, its bundle check and the transport), the Hub's coding standards (`hub/pages/documentation/coding-standards/intro.md`, The simulation: the rules below as the code follows them), p420_npc-simulation-tiers.md (The gameplay contracts: C4, a network brain is a brain), _DONE_p500_restore-physics-snapshot.md, p428_character-determinism-in-worker-targets.md
 
 # Headless Simulation Runtime — Stub
 

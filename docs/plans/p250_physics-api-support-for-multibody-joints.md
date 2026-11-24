@@ -1,6 +1,6 @@
 Status: draft | not-implemented | needs-replanning
 Category: Physics
-Related: p026 (impulse joints, implemented; its plan file has been removed, so replan against the shipped code, named below), p500_restore-physics-snapshot.md (a restore rebinds every joint proxy: multibody joints need their own pass), p422_animation-state-graph-and-ik.md (ragdoll joints)
+Related: p026 (impulse joints, implemented; its plan file has been removed, so replan against the shipped code, named below), _DONE_p500_restore-physics-snapshot.md (a restore rebinds every joint proxy: multibody joints need their own pass), p422_animation-state-graph-and-ik.md (ragdoll joints)
 Epic: https://trello.com/c/8ROzNdXe/161-make-a-possibility-to-run-the-physics-engine-in-a-thread-threading-architecture-for-all-upcoming-thread-implemantations-not-just
 
 # Physics API Support for Multibody Joints — Plan
@@ -67,9 +67,10 @@ wakeUp): MultibodyJoint`, `RAPIER.World.multibodyJoints: MultibodyJointSet` (`cr
 5. **The simulation tiers count multibody joints too:** jointed bodies change tier as a group and
    can't be `REMOVED` (`isBodyJointed`, `PhysicsJoints.ts`; `src/_engine/features/physics/CLAUDE.md`'s
    Simulation tiers), so `isBodyJointed` and the tier group walk read both registries.
-6. **Snapshots (p500):** Rapier serializes multibody joints, so p500's restore needs a fourth
-   rebind pass (survivors rebound, reaped and orphans swept) for them; p500 lists it in its
-   non-goals for this plan.
+6. **Snapshots (p500, implemented):** Rapier serializes multibody joints, so the restore's walk
+   (`backends/rapier/RapierRestore.ts`' `rebindRestoredWorld`: bodies, colliders and impulse joints
+   claimed by the handle test, survivors rebound, reaped and orphans swept) needs a fourth pass for
+   them.
 7. **Test scene example**: add one demo to the physics test scene (e.g. a short articulated chain
    of 3-4 links connected by multibody `REVOLUTE` joints) placed near the joint demos' row
    (`JOINT_DEMO_Z`), ideally positioned so it can be visually compared against the impulse-joint

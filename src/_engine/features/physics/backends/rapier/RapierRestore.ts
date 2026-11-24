@@ -246,7 +246,7 @@ export const rebindRestoredWorld = (
       orphanJoints.length)
   ) {
     lwarn(
-      `Physics snapshot restore wasn't an exact rewind (p500 D11): reaped ${reapedRigidBodyIds.length} bodies, ${reapedColliderIds.length} colliders and ${reapedJointIds.length} joints made after the snapshot; ${orphanBodies.length} bodies, ${orphanColliders.length} colliders and ${orphanJoints.length} joints deleted since it ${opts?.orphanPolicy === 'KEEP' ? 'kept' : 'taken out'}.`
+      `Physics snapshot restore wasn't an exact rewind (p500 D11): reaped ${reapedRigidBodyIds.length} bodies, ${reapedColliderIds.length} colliders and ${reapedJointIds.length} joints made after the snapshot; ${orphanBodies.length} bodies, ${orphanColliders.length} colliders and ${orphanJoints.length} joints deleted since were ${opts?.orphanPolicy === 'KEEP' ? 'kept' : 'taken out'}.`
     );
   }
   return { reapedRigidBodyIds, reapedColliderIds, reapedJointIds, orphanCounts };
