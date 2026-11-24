@@ -24,6 +24,8 @@ import {
   setRayCastStatsEnabled,
 } from '../../kernel/render/Raycast';
 import { getRenderer } from '../../kernel/render/Renderer';
+import { getDeviceCapabilityReport } from '../../kernel/deviceCapabilities/DeviceCapabilities';
+import type { DeviceLevels } from '../../kernel/deviceCapabilities/DeviceCapabilitiesTypes';
 import { getCurrentSceneId } from '../../kernel/scene/Scene';
 import { getNextSceneId, isCurrentlyLoading } from '../../kernel/scene/SceneLoader';
 import { addViewFrameListener, isRuntimeViewActive } from '../../kernel/render/Views';
@@ -56,6 +58,7 @@ export const PROFILER_SOURCE = {
   PHYSICS_OBJECTS: 'physics.objects',
   MEMORY_JS: 'memory.js',
   MEMORY_GPU: 'memory.gpu',
+  DEVICE: 'device',
   RAYS: 'rays',
   POSTFX: 'postFx',
   LONG_TASKS: 'longTasks',
@@ -230,6 +233,9 @@ export type PostFxGpuStats = {
 export type LongTaskStats = { count: number; longestMs: number };
 
 export type SceneStats = { currentId: string | null; isLoading: boolean; nextId: string | null };
+
+/** The device capability check's levels (p240), a debug tab's forced ones included. */
+export type DeviceStats = { levels: DeviceLevels };
 
 type ChromiumMemory = { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number };
 const getChromiumMemory = () =>
@@ -414,6 +420,16 @@ const registerMemorySources = () => {
     read: () => {
       const renderer = getRenderer();
       return renderer ? { bytes: renderer.info.memory.total } : null;
+    },
+  });
+
+  registerStatsSource<DeviceStats>({
+    id: PROFILER_SOURCE.DEVICE,
+    label: 'Device level',
+    availability: () => (getDeviceCapabilityReport() ? true : 'no device capability check yet'),
+    read: () => {
+      const report = getDeviceCapabilityReport();
+      return report ? { levels: report.verdict.levels } : null;
     },
   });
 };
