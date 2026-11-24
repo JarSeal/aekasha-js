@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { ManagedByData } from '../kernel/ecs/ECSRegistry';
+import { QUALITY_LEVELS } from '../utils/QualityLevel';
 
 /**
  * A point or direction: `{ x, y, z }`. The camera, light and mesh schemas use it.
@@ -181,12 +182,20 @@ export type CoreEntityOpts = z.infer<typeof CoreEntityOptsSchema> & {
 };
 
 /**
- * A light's `shadowPreset` ({@link ShadowQuality}). The light and sky box schemas use it.
+ * A quality level, `LOW` to `ULTRA` (`QualityLevel`, `utils/QualityLevel.ts`, built from its
+ * `QUALITY_LEVELS`): the one scale of the shadow presets and the device levels (p240 §3.1).
  * @internal
  */
-export const ShadowQualitySchema = z
-  .enum(['LOW', 'MEDIUM', 'HIGH', 'ULTRA'])
-  .describe('The shadow quality preset (default MEDIUM), which the shadow* fields fine-tune.');
+export const QualityLevelSchema = z.enum(QUALITY_LEVELS);
+
+/**
+ * A light's `shadowPreset` ({@link ShadowQuality}): {@link QualityLevelSchema} with the preset's
+ * description. The light and sky box schemas use it.
+ * @internal
+ */
+export const ShadowQualitySchema = QualityLevelSchema.describe(
+  'The shadow quality preset (default MEDIUM), which the shadow* fields fine-tune.'
+);
 
 /**
  * A light's shadow quality preset (`MEDIUM` by default): the light's `shadowPreset`. The runtime's

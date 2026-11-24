@@ -401,6 +401,8 @@ export type { CreateEntityOpts } from './kernel/ecs/ECSHelpers';
 export { initECSStressTest } from './kernel/ecs/ECSStressTest';
 export type { TypedArrayTransformStore } from './kernel/ecs/TypedArrayTransformStore';
 export { getQuatFromAngle, smoothDampVec3 } from './kernel/render/ThreeMath';
+export { compareQualityLevels, minQualityLevel, QUALITY_LEVELS } from './utils/QualityLevel';
+export type { QualityLevel } from './utils/QualityLevel';
 export { toUniqueJsIdentifier } from './utils/JsIdentifier';
 export { getLogger, lerror, llog, lwarn } from './utils/Logger';
 export { getRandomSeed, getRandomStream, setRandomSeed } from './utils/RandomStreams';
