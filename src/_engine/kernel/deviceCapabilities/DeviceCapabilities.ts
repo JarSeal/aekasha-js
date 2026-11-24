@@ -17,9 +17,9 @@ import {
   readDeviceFingerprintInputAsync,
 } from './DeviceProbe';
 import {
-  DEVICE_MEMORY_CAP_GB,
   resolveDeviceLevelThresholds,
   resolveDeviceTargets,
+  resolveTargetPixelSize,
   scoreDeviceCapabilities,
 } from './DeviceScoring';
 import type {
@@ -46,8 +46,8 @@ export const DEVICE_CAPABILITIES_LS_KEY = 'AEK_deviceCapabilities';
 const DEFAULT_MAX_AGE_DAYS = 30;
 const DEFAULT_BENCHMARK_BUDGET_MS = 1500;
 const DAY_MS = 24 * 60 * 60 * 1000;
-/** The target resolution when the canvas has no size (a hidden container), CSS pixels. */
-const FALLBACK_TARGET_SIZE = { width: 1280, height: 720 };
+/** The canvas's size while it has none (a hidden container), CSS pixels. */
+const FALLBACK_CANVAS_SIZE = { width: 1280, height: 720 };
 /** The check's progress when the probe is done (the benchmark's steps follow). */
 const PROGRESS_PROBE_END = 0.05;
 
@@ -83,25 +83,20 @@ export type DeviceCapabilityListener = (report: DeviceCapabilityReport) => void;
 
 let lastReport: DeviceCapabilityReport | null = null;
 let inFlight: Promise<DeviceCapabilityReport> | null = null;
-let hasWarnedMemoryCap = false;
 const listeners = new Set<DeviceCapabilityListener>();
-
-type ResolvedTargets = ReturnType<typeof resolveDeviceTargets>;
 
 /** The config's section, or none. */
 const getSettings = () => getConfig().deviceCapabilities ?? {};
 
-/** The targets: the engine's, the config's, then `targets`. Warns once on a memory target the
- * browser can't report. */
-const getTargets = (targets?: DeviceCapabilityTargets) => {
-  const resolved = resolveDeviceTargets(getSettings().targets, targets);
-  if (resolved.minDeviceMemoryGB > DEVICE_MEMORY_CAP_GB && !hasWarnedMemoryCap) {
-    hasWarnedMemoryCap = true;
-    lwarn(
-      `Device capabilities: minDeviceMemoryGB ${resolved.minDeviceMemoryGB} is over what browsers report (${DEVICE_MEMORY_CAP_GB} GB at most): it's checked against ${DEVICE_MEMORY_CAP_GB}.`
-    );
-  }
-  return resolved;
+/** The targets: the engine's, the config's, then `targets`. */
+const getTargets = (targets?: DeviceCapabilityTargets) =>
+  resolveDeviceTargets(getSettings().targets, targets);
+
+/** The canvas's size, CSS pixels (`getCanvasSize`: the window, or a mounted engine's container);
+ * a fallback while it has none (a hidden container). */
+const readCanvasSize = () => {
+  const { width, height } = getCanvasSize();
+  return width > 0 && height > 0 ? { width, height } : FALLBACK_CANVAS_SIZE;
 };
 
 /** The verdict for the measurements and the targets. */
@@ -112,7 +107,8 @@ const scoreMeasurements = (
   scoreDeviceCapabilities(
     measurements,
     getTargets(targets),
-    resolveDeviceLevelThresholds(getSettings().levelThresholds)
+    resolveDeviceLevelThresholds(getSettings().levelThresholds),
+    readCanvasSize()
   );
 
 /** The stored result when it's valid for this device (p240 §4): the same version and fingerprint,
@@ -150,24 +146,6 @@ const notifyListeners = (report: DeviceCapabilityReport) => {
   }
 };
 
-/**
- * The target resolution in pixels: `'CANVAS'` is the canvas's size (`getCanvasSize`: the window,
- * or a mounted engine's container) × `devicePixelRatio`.
- * @internal
- */
-export const readTargetPixelSize = (
-  resolution: ResolvedTargets['resolution'],
-  devicePixelRatio: number
-) => {
-  if (resolution !== 'CANVAS') return { width: resolution.width, height: resolution.height };
-  const canvas = getCanvasSize();
-  const size = canvas.width > 0 && canvas.height > 0 ? canvas : FALLBACK_TARGET_SIZE;
-  return {
-    width: Math.round(size.width * devicePixelRatio),
-    height: Math.round(size.height * devicePixelRatio),
-  };
-};
-
 /** Pauses the main loop when it's running; returns its resume, null when it wasn't paused. */
 const pauseRunningMainLoop = () => {
   const { masterPlay, isMasterPlaying } = getReadOnlyLoopState();
@@ -196,8 +174,9 @@ const benchmarkAsync = async (
   }
   const resume = opts.pauseMainLoop ?? true ? pauseRunningMainLoop() : null;
   try {
-    const { width, height } = readTargetPixelSize(
+    const { width, height } = resolveTargetPixelSize(
       getTargets(opts.targets).resolution,
+      readCanvasSize(),
       env.devicePixelRatio
     );
     const result = await benchmarkModule.runDeviceBenchmarkAsync({

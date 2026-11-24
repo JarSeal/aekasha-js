@@ -25,11 +25,15 @@ export type DeviceLevelSource = 'BENCHMARK' | 'HEURISTIC' | 'API' | 'UNKNOWN';
 export type DeviceCapabilityTargets = {
   /** The frame rate to hold; the check uses the lower of it and the display's refresh rate. Default 60. */
   fps?: number;
-  /** The resolution the frame rate is held at: `'CANVAS'` is the canvas's size (`getCanvasSize`)
-   * × `devicePixelRatio`. Default `'CANVAS'`. */
+  /** The resolution the frame rate is held at, pixels: `'CANVAS'` is the canvas's size
+   * (`getCanvasSize`: the window, or a mounted engine's container) × `devicePixelRatio`. Default
+   * `'CANVAS'`. */
   resolution?: 'CANVAS' | { width: number; height: number };
-  /** The least system memory, GB (`navigator.deviceMemory`, Chromium only). The browser reports 8 at
-   * most, so a higher target is clamped to 8, with a warning. Default 4. */
+  /** The frame the frame rate is predicted for, in the GPU benchmark's units: a stand-in for the
+   * app's scenes ({@link DeviceReferenceFrame}). */
+  referenceFrame?: DeviceReferenceFrame;
+  /** The least system memory, GB (`navigator.deviceMemory`, Chromium only, bucketed). Older
+   * browsers report 8 at most: a reading of 8 checks a higher target as `UNKNOWN`. Default 4. */
   minDeviceMemoryGB?: number;
   /** The least GPU memory, MB: only ever a guess (no browser tells it), `UNKNOWN` on most discrete
    * GPUs. Default 2048. */
@@ -49,8 +53,27 @@ export type DeviceCapabilityTargets = {
   unknownIs?: 'PASS' | 'FAIL';
 };
 
+/**
+ * The frame the frame rate is predicted for: its fill and its geometry in the GPU benchmark's
+ * units, so its time is `fullscreenPasses` × the target's pixels ÷ the fill rate +
+ * `trianglesPerFrame` ÷ the triangle rate. Tune it so the prediction matches the app's own scenes
+ * (the debug stats panel's frame time).
+ */
+export type DeviceReferenceFrame = {
+  /** The fill: passes over every pixel of the benchmark's fragment shader (an ALU loop and two
+   * texture samples, blended), standing for the scene, its shadows and its PostFX. */
+  fullscreenPasses?: number;
+  /** The geometry: small triangles drawn, shadow passes included. */
+  trianglesPerFrame?: number;
+};
+
 /** {@link DeviceCapabilityTargets} with every default filled in: what a verdict was scored against. */
-export type ResolvedDeviceCapabilityTargets = Required<DeviceCapabilityTargets>;
+export type ResolvedDeviceCapabilityTargets = Required<
+  Omit<DeviceCapabilityTargets, 'referenceFrame'>
+> & {
+  /** The reference frame, every default filled in. */
+  referenceFrame: Required<DeviceReferenceFrame>;
+};
 
 /** The least value for each level above `LOW`: a reading under `MEDIUM`'s is `LOW`, and a level
  * without a value is never given. */
@@ -61,10 +84,17 @@ export type DeviceLevelBands = Partial<Record<Exclude<QualityLevel, 'LOW'>, numb
  * level whose value its reading meets. Each is merged over the engine's.
  */
 export type DeviceLevelThresholds = {
-  /** CPU logical cores. Default `{ MEDIUM: 4, HIGH: 6, ULTRA: 12 }`. */
+  /** The GPU's headroom: the predicted frame rate ÷ the frame rate the check asks for, at the
+   * target resolution. Default `{ MEDIUM: 1, HIGH: 2, ULTRA: 4 }`. */
+  gpuHeadroom?: DeviceLevelBands;
+  /** CPU logical cores; the CPU's level is the lower of this one and the benchmark score's.
+   * Default `{ MEDIUM: 4, HIGH: 6, ULTRA: 12 }`. */
   cpuCores?: DeviceLevelBands;
-  /** System memory, GB. The browser reports 8 at most, so no `ULTRA` by default. Default
-   * `{ MEDIUM: 4, HIGH: 8 }`. */
+  /** The CPU benchmark's score (`cpu.benchScore`, matrix multiplies per ms on the main thread).
+   * Default `{ MEDIUM: 8000, HIGH: 15000, ULTRA: 25000 }`. */
+  cpuBenchScore?: DeviceLevelBands;
+  /** System memory, GB. Older browsers report 8 at most (`ULTRA` needs one that reports more).
+   * Default `{ MEDIUM: 4, HIGH: 8, ULTRA: 16 }`. */
   deviceMemoryGB?: DeviceLevelBands;
   /** GPU memory, MB (a guess). Default `{ MEDIUM: 1024, HIGH: 2048, ULTRA: 4096 }`. */
   gpuMemoryMB?: DeviceLevelBands;
@@ -248,12 +278,14 @@ export type DeviceCapabilityChecks = Record<
  * used as a light's `shadowPreset`.
  */
 export type DeviceLevels = {
-  /** The lowest of the known categories' levels (the weakest part is the bottleneck); a capped 8 GB
-   * memory reading doesn't lower it. */
+  /** The lowest of the known categories' levels (the weakest part is the bottleneck); a memory
+   * reading of 8 GB (maybe an older browser's cap) doesn't lower it. */
   overall: QualityLevel;
-  /** The GPU's level: from the adapter when not benchmarked, never `ULTRA` then. */
+  /** The GPU's level: from the benchmark's headroom at the target resolution, else from the
+   * adapter (never `ULTRA` then). */
   gpu: QualityLevel;
-  /** The CPU's level: from the cores when not benchmarked. */
+  /** The CPU's level: the lower of the cores' and the benchmark score's, the cores' alone when not
+   * benchmarked. */
   cpu: QualityLevel;
   /** The system memory's level, null when the browser doesn't tell. */
   memory: QualityLevel | null;
@@ -267,7 +299,10 @@ export type DeviceLevels = {
 
 /** Suggested settings for the device: advisory, the engine applies none of them. */
 export type DeviceCapabilityRecommendations = {
-  /** The renderer's pixel ratio (`createRenderer`'s `devicePixelRatio`). */
+  /** The renderer's pixel ratio (`createRenderer`'s `devicePixelRatio`): the largest of the
+   * device's pixel ratio, 2, 1.75, 1.5, 1.25, 1, 0.75 and 0.5 (none over the device's) at which
+   * the predicted frame rate holds at the canvas's size, 0.5 when none; from the GPU's level when
+   * not benchmarked. */
   pixelRatio: number;
   /** The renderer's `antialias`. */
   antialias: boolean;
@@ -289,7 +324,8 @@ export type DeviceCapabilityVerdict = {
   targets: ResolvedDeviceCapabilityTargets;
   /** Each target's check. */
   checks: DeviceCapabilityChecks;
-  /** The frame rate predicted at the target resolution, null when not benchmarked. */
+  /** The frame rate predicted for the reference frame at the target resolution, null when not
+   * benchmarked (or its GPU part failed). */
   estimatedFps: number | null;
   /** The frame rate the `fps` check asks for: the lower of `targets.fps` and the refresh rate. */
   effectiveFpsTarget: number;
@@ -299,8 +335,9 @@ export type DeviceCapabilityVerdict = {
   failedTargets: (keyof DeviceCapabilityChecks)[];
   /** The device's levels. */
   levels: DeviceLevels;
-  /** Each category's reading as 0-100 of its highest threshold, null when there's no reading (a
-   * GPU rated from the adapter alone has none). */
+  /** Each category's reading as 0-100 of its highest threshold (the GPU's headroom, the lower of
+   * the CPU's cores and benchmark score), null when there's no reading (a GPU not benchmarked).
+   */
   scores: Record<DeviceLevelCategory, number | null>;
   /** Suggested settings. */
   recommendations: DeviceCapabilityRecommendations;

@@ -52,7 +52,7 @@ vi.mock(import('./DeviceBenchmark'), () => ({
     opts.onProgress?.('CPU', 0.85);
     return {
       refreshHz: 120,
-      cpuScore: 5000,
+      cpuScore: 20000,
       benchmark: {
         gpu: {
           api: 'WEBGPU',
@@ -239,14 +239,6 @@ describe('runDeviceCapabilityCheckAsync', () => {
     expect(report.verdict.failedTargets).toEqual(['cpuCores']);
   });
 
-  it('warns once on a memory target over what browsers report', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const dc = await loadAsync({ targets: { minDeviceMemoryGB: 16 } });
-    await dc.runDeviceCapabilityCheckAsync();
-    await dc.runDeviceCapabilityCheckAsync({ force: true });
-    expect(warn).toHaveBeenCalledOnce();
-  });
-
   it('keeps calling the listeners when one throws, and stops a removed one', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const dc = await loadAsync();
@@ -294,7 +286,7 @@ describe('the benchmark', () => {
     expect(bench.calls).toHaveLength(1);
     expect(bench.calls[0]).toMatchObject({ width: 1600, height: 1200, budgetMs: 1500 });
     expect(report.measurements.display.refreshHz).toBe(120);
-    expect(report.measurements.cpu.benchScore).toBe(5000);
+    expect(report.measurements.cpu.benchScore).toBe(20000);
     expect(report.measurements.benchmark).toMatchObject({ durationMs: 1200, isStalled: false });
     expect(readStored().measurements.benchmark.gpu.fillRateMPixOpsPerMs).toBe(20);
   });

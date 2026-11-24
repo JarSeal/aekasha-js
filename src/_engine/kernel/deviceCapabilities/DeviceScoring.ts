@@ -11,6 +11,7 @@ import type {
   DeviceCapabilityTargets,
   DeviceCapabilityVerdict,
   DeviceCheckResult,
+  DeviceGpuBenchmark,
   DeviceLevelBands,
   DeviceLevelCategory,
   DeviceLevels,
@@ -20,11 +21,18 @@ import type {
 } from './DeviceCapabilitiesTypes';
 
 /**
- * The most `navigator.deviceMemory` reports, GB: a reading of it is capped (the device may have
- * more), so it doesn't lower the overall level, and a higher memory target is clamped to it.
+ * The most `navigator.deviceMemory` reported, GB, before Chrome reported more: a reading of it may
+ * be capped (the device may have more), so it doesn't lower the overall level, and a higher memory
+ * target is checked as `UNKNOWN` against it.
  * @internal
  */
 export const DEVICE_MEMORY_CAP_GB = 8;
+
+/**
+ * The pixel ratios the solver tries, down from the device's own (none over it).
+ * @internal
+ */
+export const PIXEL_RATIO_STEPS = [2, 1.75, 1.5, 1.25, 1, 0.75, 0.5];
 
 /**
  * The engine's targets, under `AppConfig.deviceCapabilities.targets` and a check's own.
@@ -33,6 +41,7 @@ export const DEVICE_MEMORY_CAP_GB = 8;
 export const DEFAULT_DEVICE_TARGETS: ResolvedDeviceCapabilityTargets = {
   fps: 60,
   resolution: 'CANVAS',
+  referenceFrame: { fullscreenPasses: 6, trianglesPerFrame: 1_000_000 },
   minDeviceMemoryGB: 4,
   minGPUMemoryMB: 2048,
   minCpuCores: 4,
@@ -47,8 +56,10 @@ export const DEFAULT_DEVICE_TARGETS: ResolvedDeviceCapabilityTargets = {
  * @internal
  */
 export const DEFAULT_DEVICE_LEVEL_THRESHOLDS: ResolvedDeviceLevelThresholds = {
+  gpuHeadroom: { MEDIUM: 1, HIGH: 2, ULTRA: 4 },
   cpuCores: { MEDIUM: 4, HIGH: 6, ULTRA: 12 },
-  deviceMemoryGB: { MEDIUM: 4, HIGH: 8 },
+  cpuBenchScore: { MEDIUM: 8000, HIGH: 15000, ULTRA: 25000 },
+  deviceMemoryGB: { MEDIUM: 4, HIGH: 8, ULTRA: 16 },
   gpuMemoryMB: { MEDIUM: 1024, HIGH: 2048, ULTRA: 4096 },
 };
 
@@ -95,6 +106,73 @@ const scoreReading = (value: number | null, bands: DeviceLevelBands) => {
   return Math.round(Math.min(100, (value / top) * 100));
 };
 
+/** The lower of two scores, either missing. */
+const minScore = (a: number | null, b: number | null) =>
+  a === null ? b : b === null ? a : Math.min(a, b);
+
+/**
+ * The canvas the check scores for: its size in CSS pixels (`getCanvasSize`, or a fallback when it
+ * has none) and the device's pixel ratio.
+ * @internal
+ */
+export type DeviceScoringCanvas = { width: number; height: number };
+
+/**
+ * The target resolution in pixels: `'CANVAS'` is the canvas's size × `devicePixelRatio`, rounded.
+ * @internal
+ */
+export const resolveTargetPixelSize = (
+  resolution: ResolvedDeviceCapabilityTargets['resolution'],
+  canvas: DeviceScoringCanvas,
+  devicePixelRatio: number
+) =>
+  resolution === 'CANVAS'
+    ? {
+        width: Math.round(canvas.width * devicePixelRatio),
+        height: Math.round(canvas.height * devicePixelRatio),
+      }
+    : { width: resolution.width, height: resolution.height };
+
+/**
+ * The frame rate predicted for the reference frame over `pixels`: its fill at the benchmark's
+ * fill rate plus its triangles at the triangle rate (p240 §1.2).
+ * @internal
+ * @returns the frame rate, null without throughputs to predict from
+ */
+export const estimateFps = (
+  benchmark: DeviceGpuBenchmark,
+  pixels: number,
+  frame: ResolvedDeviceCapabilityTargets['referenceFrame']
+) => {
+  if (!(benchmark.fillRateMPixOpsPerMs > 0) || !(benchmark.trianglesPerMs > 0)) return null;
+  const fillMs = (frame.fullscreenPasses * pixels) / (benchmark.fillRateMPixOpsPerMs * 1e6);
+  const geometryMs = frame.trianglesPerFrame / benchmark.trianglesPerMs;
+  const frameMs = fillMs + geometryMs;
+  return frameMs > 0 ? Math.round((1000 / frameMs) * 10) / 10 : null;
+};
+
+/**
+ * The largest pixel ratio, from the device's own down {@link PIXEL_RATIO_STEPS}, at which the
+ * reference frame's predicted frame rate over the canvas holds `fps`; the smallest step when none
+ * does.
+ * @internal
+ */
+export const solvePixelRatio = (
+  benchmark: DeviceGpuBenchmark,
+  canvas: DeviceScoringCanvas,
+  devicePixelRatio: number,
+  frame: ResolvedDeviceCapabilityTargets['referenceFrame'],
+  fps: number
+) => {
+  const ratios = [devicePixelRatio, ...PIXEL_RATIO_STEPS.filter((r) => r < devicePixelRatio)];
+  for (const ratio of ratios) {
+    const pixels = canvas.width * ratio * canvas.height * ratio;
+    const estimated = estimateFps(benchmark, pixels, frame);
+    if (estimated !== null && estimated >= fps) return ratio;
+  }
+  return ratios[ratios.length - 1];
+};
+
 /**
  * The GPU's level from its adapter alone (p240 §3.1, the benchmark off): `LOW` for software or no
  * GPU API, `MEDIUM` for WebGL2 only or an integrated GPU, `HIGH` for a discrete or unified-memory
@@ -109,30 +187,42 @@ export const rateGpuHeuristic = (gpu: DeviceCapabilityMeasurements['gpu']): Qual
 };
 
 /**
- * The device's levels per category and overall (p240 §3.1). The overall level is the lowest of
- * the categories that were measured: an unknown one is skipped, and so is a capped memory reading
- * (8 GB may be more).
+ * The device's levels per category and overall (p240 §3.1): the GPU's from its benchmark headroom
+ * (`gpuHeadroom`, null when not benchmarked: from the adapter then). The overall level is the
+ * lowest of the categories that were measured: an unknown one is skipped, and so is a memory
+ * reading of 8 GB (an older browser's cap: it may be more).
  * @internal
  */
 export const rateDeviceLevels = (
   measurements: DeviceCapabilityMeasurements,
-  thresholds: ResolvedDeviceLevelThresholds
+  thresholds: ResolvedDeviceLevelThresholds,
+  gpuHeadroom: number | null = null
 ): DeviceLevels => {
-  const { cores } = measurements.cpu;
+  const { cores, benchScore } = measurements.cpu;
   const { deviceMemoryGB } = measurements.memory;
   const gpuMemoryMB = measurements.gpuMemoryMB.value;
 
-  const gpu = rateGpuHeuristic(measurements.gpu);
-  // Unknown cores rate MEDIUM, the level of the common case, and don't count toward the overall
-  const cpu = cores !== null ? rateLevel(cores, thresholds.cpuCores) : 'MEDIUM';
+  const gpu =
+    gpuHeadroom !== null
+      ? rateLevel(gpuHeadroom, thresholds.gpuHeadroom)
+      : rateGpuHeuristic(measurements.gpu);
+  // The lower of the cores' and the score's. Neither known rates MEDIUM, the level of the common
+  // case, and doesn't count toward the overall
+  const isCpuKnown = cores !== null || benchScore !== null;
+  const cpu = isCpuKnown
+    ? (minQualityLevel(
+        cores !== null ? rateLevel(cores, thresholds.cpuCores) : null,
+        benchScore !== null ? rateLevel(benchScore, thresholds.cpuBenchScore) : null
+      ) as QualityLevel)
+    : 'MEDIUM';
   const memory =
     deviceMemoryGB !== null ? rateLevel(deviceMemoryGB, thresholds.deviceMemoryGB) : null;
   const gpuMemory = gpuMemoryMB !== null ? rateLevel(gpuMemoryMB, thresholds.gpuMemoryMB) : null;
-  const isMemoryCapped = deviceMemoryGB !== null && deviceMemoryGB >= DEVICE_MEMORY_CAP_GB;
+  const isMemoryCapped = deviceMemoryGB === DEVICE_MEMORY_CAP_GB;
 
   const overall = minQualityLevel(
     gpu,
-    cores !== null ? cpu : null,
+    isCpuKnown ? cpu : null,
     isMemoryCapped ? null : memory,
     gpuMemory
   ) as QualityLevel; // the GPU's level is always set
@@ -144,8 +234,8 @@ export const rateDeviceLevels = (
     memory,
     gpuMemory,
     sources: {
-      gpu: 'HEURISTIC',
-      cpu: cores !== null ? 'API' : 'UNKNOWN',
+      gpu: gpuHeadroom !== null ? 'BENCHMARK' : 'HEURISTIC',
+      cpu: benchScore !== null ? 'BENCHMARK' : cores !== null ? 'API' : 'UNKNOWN',
       memory: memory !== null ? 'API' : 'UNKNOWN',
       gpuMemory: gpuMemory !== null ? 'HEURISTIC' : 'UNKNOWN',
     },
@@ -154,20 +244,22 @@ export const rateDeviceLevels = (
 };
 
 /**
- * The settings suggested for the levels (a debug override's levels too): the pixel ratio, the
- * antialias and PostFX by the GPU's level, the shadow quality the lower of the GPU's and the GPU
+ * The settings suggested for the levels (a debug override's levels too): the pixel ratio solved
+ * against the frame rate (`solvedPixelRatio`; without one, by the GPU's level), the antialias and
+ * PostFX by the GPU's level, the shadow quality the lower of the GPU's and the GPU
  * memory's, the backend and the physics target by the device.
  * @internal
  */
 export const recommendDeviceSettings = (
   levels: DeviceLevels,
-  measurements: DeviceCapabilityMeasurements
+  measurements: DeviceCapabilityMeasurements,
+  solvedPixelRatio: number | null = null
 ): DeviceCapabilityRecommendations => {
   const { gpu } = measurements;
   const dpr = measurements.display.devicePixelRatio || 1;
   const maxPixelRatio = { LOW: 1, MEDIUM: 1.5, HIGH: 2, ULTRA: 2 }[levels.gpu];
   return {
-    pixelRatio: Math.min(dpr, maxPixelRatio),
+    pixelRatio: solvedPixelRatio ?? Math.min(dpr, maxPixelRatio),
     antialias: compareQualityLevels(levels.gpu, 'HIGH') >= 0,
     shadowQuality: minQualityLevel(levels.gpu, levels.gpuMemory) as QualityLevel,
     postFx: compareQualityLevels(levels.gpu, 'MEDIUM') >= 0,
@@ -176,6 +268,13 @@ export const recommendDeviceSettings = (
     physicsWorkerTarget: levels.cpu === 'LOW' ? 'MAIN_THREAD' : 'WORKER_THREAD',
   };
 };
+
+/** The memory check: a reading of 8 GB (maybe an older browser's cap) is `UNKNOWN` against a
+ * higher target. */
+const checkDeviceMemory = (measured: number | null, required: number) =>
+  measured === DEVICE_MEMORY_CAP_GB && required > DEVICE_MEMORY_CAP_GB
+    ? { result: 'UNKNOWN' as const, measured, required }
+    : checkAtLeast(measured, required);
 
 /** A numeric check: `UNKNOWN` without a reading. */
 const checkAtLeast = (measured: number | null, required: number): DeviceCapabilityCheck => ({
@@ -209,29 +308,39 @@ const checkMinLevels = (
 };
 
 /**
- * Each target's check (p240 §1.1). The `fps` check is `UNKNOWN` until the benchmark predicts a
- * frame rate; a memory target over the browser's cap is checked against the cap.
+ * The frame rate the `fps` check asks for: the lower of the target and the display's refresh rate
+ * (a 60 Hz display never shows more).
+ * @internal
+ */
+export const readEffectiveFpsTarget = (
+  measurements: DeviceCapabilityMeasurements,
+  targets: ResolvedDeviceCapabilityTargets
+) => {
+  const refreshHz = measurements.display.refreshHz;
+  return refreshHz ? Math.min(targets.fps, refreshHz) : targets.fps;
+};
+
+/**
+ * Each target's check (p240 §1.1). The `fps` check is `UNKNOWN` without a predicted frame rate (not
+ * benchmarked); a memory reading of 8 GB is `UNKNOWN` against a higher target (an older browser's
+ * cap).
  * @internal
  */
 export const checkDeviceTargets = (
   measurements: DeviceCapabilityMeasurements,
   levels: DeviceLevels,
-  targets: ResolvedDeviceCapabilityTargets
+  targets: ResolvedDeviceCapabilityTargets,
+  estimatedFps: number | null = null
 ) => {
   const { gpu } = measurements;
-  const refreshHz = measurements.display.refreshHz;
-  const effectiveFpsTarget = refreshHz ? Math.min(targets.fps, refreshHz) : targets.fps;
-  const estimatedFps: number | null = null;
+  const effectiveFpsTarget = readEffectiveFpsTarget(measurements, targets);
 
   const hasWebGPU = gpu.api === 'WEBGPU';
   const presentFeatures = targets.requiredGPUFeatures.filter((f) => gpu.features.includes(f));
 
   const checks: DeviceCapabilityChecks = {
     fps: checkAtLeast(estimatedFps, effectiveFpsTarget),
-    deviceMemory: checkAtLeast(
-      measurements.memory.deviceMemoryGB,
-      Math.min(targets.minDeviceMemoryGB, DEVICE_MEMORY_CAP_GB)
-    ),
+    deviceMemory: checkDeviceMemory(measurements.memory.deviceMemoryGB, targets.minDeviceMemoryGB),
     gpuMemory: checkAtLeast(measurements.gpuMemoryMB.value, targets.minGPUMemoryMB),
     cpuCores: checkAtLeast(measurements.cpu.cores, targets.minCpuCores),
     webgpu: {
@@ -246,25 +355,41 @@ export const checkDeviceTargets = (
     },
     minLevels: checkMinLevels(levels, targets.minLevels),
   };
-  return { checks, effectiveFpsTarget, estimatedFps };
+  return { checks, effectiveFpsTarget };
 };
 
 /**
  * The verdict: the measurements rated, checked against the targets and turned into suggested
- * settings. An `UNKNOWN` check counts as `targets.unknownIs` says.
+ * settings, the frame rate predicted at the target resolution (`canvas` for `'CANVAS'` and the
+ * pixel ratio's solver). An `UNKNOWN` check counts as `targets.unknownIs` says.
  * @internal
  */
 export const scoreDeviceCapabilities = (
   measurements: DeviceCapabilityMeasurements,
   targets: ResolvedDeviceCapabilityTargets,
-  thresholds: ResolvedDeviceLevelThresholds
+  thresholds: ResolvedDeviceLevelThresholds,
+  canvas: DeviceScoringCanvas
 ): DeviceCapabilityVerdict => {
-  const levels = rateDeviceLevels(measurements, thresholds);
-  const { checks, effectiveFpsTarget, estimatedFps } = checkDeviceTargets(
-    measurements,
-    levels,
-    targets
-  );
+  const gpuBenchmark = measurements.benchmark?.gpu ?? null;
+  const dpr = measurements.display.devicePixelRatio || 1;
+  const effectiveFpsTarget = readEffectiveFpsTarget(measurements, targets);
+  let estimatedFps: number | null = null;
+  let solvedPixelRatio: number | null = null;
+  if (gpuBenchmark) {
+    const size = resolveTargetPixelSize(targets.resolution, canvas, dpr);
+    estimatedFps = estimateFps(gpuBenchmark, size.width * size.height, targets.referenceFrame);
+    solvedPixelRatio = solvePixelRatio(
+      gpuBenchmark,
+      canvas,
+      dpr,
+      targets.referenceFrame,
+      effectiveFpsTarget
+    );
+  }
+  const gpuHeadroom = estimatedFps !== null ? estimatedFps / effectiveFpsTarget : null;
+
+  const levels = rateDeviceLevels(measurements, thresholds, gpuHeadroom);
+  const { checks } = checkDeviceTargets(measurements, levels, targets, estimatedFps);
   const failedTargets = (Object.keys(checks) as (keyof DeviceCapabilityChecks)[]).filter(
     (name) =>
       checks[name].result === 'FAIL' ||
@@ -279,11 +404,14 @@ export const scoreDeviceCapabilities = (
     failedTargets,
     levels,
     scores: {
-      gpu: null,
-      cpu: scoreReading(measurements.cpu.cores, thresholds.cpuCores),
+      gpu: scoreReading(gpuHeadroom, thresholds.gpuHeadroom),
+      cpu: minScore(
+        scoreReading(measurements.cpu.cores, thresholds.cpuCores),
+        scoreReading(measurements.cpu.benchScore, thresholds.cpuBenchScore)
+      ),
       memory: scoreReading(measurements.memory.deviceMemoryGB, thresholds.deviceMemoryGB),
       gpuMemory: scoreReading(measurements.gpuMemoryMB.value, thresholds.gpuMemoryMB),
     },
-    recommendations: recommendDeviceSettings(levels, measurements),
+    recommendations: recommendDeviceSettings(levels, measurements, solvedPixelRatio),
   };
 };
