@@ -5,15 +5,19 @@
 // (`DeviceBenchmark.ts` and the modules it imports) is `import()`ed only when it measures. The last
 // report and its listeners are `DeviceCapabilityReports.ts`', which an app reads without loading
 // this module. The debug tab (`debug/_dbg__DeviceCapabilities.ts`) is loaded by the boot's debug step, and its
-// forced levels reach the verdict only in the debug env.
+// forced levels reach the verdict only in the debug env. With `observe.enabled` the first report
+// with a GPU benchmark starts the observer (`DeviceObserver.ts`, `import()`ed then), which watches
+// the running scenes' frames against the benchmark's prediction (p240 Phase 4).
 import { getConfig, IS_DEBUG_ENV } from '../config/Config';
 import { loadDebugModuleAsync, useDebug } from '../config/DebugModules';
 import { getReadOnlyLoopState, toggleMainPlay } from '../loop/MainLoop';
 import { getCanvasSize } from '../render/CanvasSize';
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../utils/LocalAndSessionStorage';
 import { hashStringFNV1a } from '../../utils/Hash';
-import { lerror, lwarn } from '../../utils/Logger';
+import { lerror, llog, lwarn } from '../../utils/Logger';
 import { _setDeviceCapabilityReport, getDeviceCapabilityReport } from './DeviceCapabilityReports';
+import { readObservedOverPredicted } from './DeviceObservation';
+import type { DeviceObserver } from './DeviceObserver';
 import {
   type DeviceProbeEnv,
   probeDeviceAsync,
@@ -34,6 +38,7 @@ import type {
   DeviceCapabilityReport,
   DeviceCapabilityTargets,
   DeviceCapabilityVerdict,
+  DeviceObservation,
 } from './DeviceCapabilitiesTypes';
 
 /**
@@ -89,6 +94,9 @@ let lastTargets: DeviceCapabilityTargets | undefined;
 /** The debug tab's forced levels (debug env only), null when none is. */
 let forcedLevels: ForcedDeviceLevels | null = null;
 let inFlight: Promise<DeviceCapabilityReport> | null = null;
+/** The observer, once started (`observe.enabled`); its start, once asked for */
+let observer: DeviceObserver | null = null;
+let observerStart: Promise<void> | null = null;
 
 /** The config's section, or none. */
 const getSettings = () => getConfig().deviceCapabilities ?? {};
@@ -170,6 +178,8 @@ const benchmarkAsync = async (
     return measurements;
   }
   const resume = opts.pauseMainLoop ?? true ? pauseRunningMainLoop() : null;
+  // The frames meanwhile share the GPU and the CPU with the benchmark (or don't run)
+  const releaseObserver = observer?.hold();
   try {
     const { width, height } = resolveTargetPixelSize(
       getTargets(opts.targets).resolution,
@@ -193,6 +203,7 @@ const benchmarkAsync = async (
     };
   } finally {
     resume?.();
+    releaseObserver?.();
   }
 };
 
@@ -257,7 +268,40 @@ const runCheckAsync = async (opts: DeviceCapabilityCheckOpts) => {
   lastTargets = opts.targets;
   reportProgress('DONE', 1);
   _setDeviceCapabilityReport(report);
+  startObserverIfAsked(report);
   return report;
+};
+
+/** An observed window (p240 Phase 4 section 1: logged in the debug env, not yet scored). */
+const handleObservedWindow = (observation: DeviceObservation) => {
+  if (!IS_DEBUG_ENV) return;
+  const gpuBenchmark = getDeviceCapabilityReport()?.measurements.benchmark?.gpu;
+  const ratio = gpuBenchmark
+    ? readObservedOverPredicted(observation, gpuBenchmark, getTargets(lastTargets).referenceFrame)
+    : null;
+  llog('Device capabilities: observed window', { ...observation, observedOverPredicted: ratio });
+};
+
+const startObserverAsync = async () => {
+  try {
+    const { startDeviceObserver } = await import('./DeviceObserver');
+    observer = startDeviceObserver({
+      ...getSettings().observe,
+      getRefreshHz: () => getDeviceCapabilityReport()?.measurements.display.refreshHz ?? null,
+      onWindow: handleObservedWindow,
+    });
+  } catch (err) {
+    lwarn('Device capabilities: the observer failed to load (the frames are not observed).', err);
+  }
+};
+
+/** Starts the observer once, with `observe.enabled` and a report with a GPU benchmark (nothing to
+ * compare the frames with without one). Not awaited: the check doesn't wait for its download. */
+const startObserverIfAsked = (report: DeviceCapabilityReport) => {
+  if (observerStart || !getSettings().observe?.enabled || !report.measurements.benchmark?.gpu) {
+    return;
+  }
+  observerStart = startObserverAsync();
 };
 
 /**

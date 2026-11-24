@@ -131,6 +131,64 @@ export type DeviceCapabilitiesConfig = {
   targets?: DeviceCapabilityTargets;
   /** The device levels' thresholds ({@link DeviceLevelThresholds}), over the engine's. */
   levelThresholds?: DeviceLevelThresholds;
+  /** Watching the app's own frames once a scene runs, against the benchmark's prediction
+   * ({@link DeviceObserveConfig}). */
+  observe?: DeviceObserveConfig;
+};
+
+/**
+ * `AppConfig.deviceCapabilities.observe`: the observer, which samples the running scene's frames in
+ * windows and tells which ones the GPU held (p240 Phase 4). It starts once a check has a report
+ * with a GPU benchmark, and its code is downloaded only when it's enabled.
+ */
+export type DeviceObserveConfig = {
+  /** Observe the frames. Default false. */
+  enabled?: boolean;
+  /** How long after a scene's load the frames are left out, ms: its first frames compile
+   * pipelines and stream assets. Default 5000. */
+  warmUpMs?: number;
+  /** Rendered frames a window, 30-2000. Default 300. */
+  frames?: number;
+  /** The scenes observed, by id; the others' frames are left out (a test or stress scene heavier
+   * than the app's real ones). Default every scene. */
+  sceneIds?: string[];
+};
+
+/**
+ * What held an observed window's frame rate: the display or the max FPS limiter (`REFRESH`: the
+ * frames come as fast as allowed, which says nothing about how far above it the device is), the GPU
+ * (`GPU`: below that, the GPU still busy when the next frame began), the main thread (`CPU`) or a
+ * cap the engine doesn't know (`CAPPED`: neither busy, eg. the browser throttling the page's frames).
+ */
+export type DeviceObservationLimit = 'REFRESH' | 'GPU' | 'CPU' | 'CAPPED';
+
+/** A window of a scene's frames, as the observer measured it. */
+export type DeviceObservation = {
+  /** The scene that ran. */
+  sceneId: string;
+  /** When the window ended, ms since the epoch. */
+  at: number;
+  /** The rendered frames in it. */
+  frames: number;
+  /** The median interval between two rendered frames, ms. */
+  p50FrameMs: number;
+  /** The 95th percentile interval, ms: the hitches. */
+  p95FrameMs: number;
+  /** The median main loop CPU time of a rendered frame (the frames the max FPS limiter skipped
+   * before it included), ms. */
+  p50CpuMs: number;
+  /** The share of the checked frames that began with the previous frame's GPU work still running,
+   * 0-1; null when the GPU's queue can't be checked. */
+  gpuBusyShare: number | null;
+  /** The interval the frames were compared with, ms: the longer of the display's refresh interval
+   * and the max FPS limiter's. */
+  comparedIntervalMs: number;
+  /** The drawing buffer, pixels. */
+  pixelWidth: number;
+  /** The drawing buffer, pixels. */
+  pixelHeight: number;
+  /** What held the frame rate. */
+  limitedBy: DeviceObservationLimit;
 };
 
 /** The GPU as the browser describes it. A field the browser hides is null. */

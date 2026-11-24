@@ -140,12 +140,12 @@ export const resolveTargetPixelSize = (
     : { width: resolution.width, height: resolution.height };
 
 /**
- * The frame rate predicted for the reference frame over `pixels`: its fixed work and its fill at
- * the benchmark's fill rate plus its triangles at the triangle rate (p240 §1.2).
+ * The reference frame's predicted GPU time over `pixels`, ms: its fixed work and its fill at the
+ * benchmark's fill rate plus its triangles at the triangle rate (p240 §1.2).
  * @internal
- * @returns the frame rate, null without throughputs to predict from
+ * @returns the time, null without throughputs to predict from
  */
-export const estimateFps = (
+export const predictFrameMs = (
   benchmark: DeviceGpuBenchmark,
   pixels: number,
   frame: ResolvedDeviceCapabilityTargets['referenceFrame']
@@ -155,7 +155,22 @@ export const estimateFps = (
     (frame.fixedMPixOps + (frame.fullscreenPasses * pixels) / 1e6) / benchmark.fillRateMPixOpsPerMs;
   const geometryMs = frame.trianglesPerFrame / benchmark.trianglesPerMs;
   const frameMs = fillMs + geometryMs;
-  return frameMs > 0 ? Math.round((1000 / frameMs) * 10) / 10 : null;
+  return frameMs > 0 ? frameMs : null;
+};
+
+/**
+ * The frame rate predicted for the reference frame over `pixels` (`predictFrameMs`), rounded
+ * to 0.1.
+ * @internal
+ * @returns the frame rate, null without throughputs to predict from
+ */
+export const estimateFps = (
+  benchmark: DeviceGpuBenchmark,
+  pixels: number,
+  frame: ResolvedDeviceCapabilityTargets['referenceFrame']
+) => {
+  const frameMs = predictFrameMs(benchmark, pixels, frame);
+  return frameMs === null ? null : Math.round((1000 / frameMs) * 10) / 10;
 };
 
 /**
