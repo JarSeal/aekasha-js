@@ -100,7 +100,7 @@ vi.mock(import('./DeviceObserver'), () => ({
         observing.holds++;
         return () => observing.holds--;
       },
-      getProgress: () => ({ state: 'WAITING' as const, frames: 0 }),
+      getProgress: () => ({ state: 'WAITING' as const, frames: 0, windowFrames: 300 }),
       stop: () => undefined,
     };
   },
@@ -563,6 +563,34 @@ describe('the observed windows (p240 Phase 4)', () => {
     const measured = await dc.runDeviceCapabilityCheckAsync({ force: true });
     expect(measured.measurements.observed).toBeUndefined();
     expect(measured.verdict.observedCorrection).toBeNull();
+    expect(readStored().measurements.observed).toBeUndefined();
+  });
+
+  it('gives the debug tab the windows with their ratios, and clears them', async () => {
+    const { dc, options } = await observeAsync();
+    options.onWindow(createWindow(2, { limitedBy: 'REFRESH' }));
+    options.onWindow(createWindow(20));
+    const state = dc._getDeviceObservationState();
+    expect(state).toMatchObject({
+      isEnabled: true,
+      progress: { state: 'WAITING', windowFrames: 300 },
+    });
+    expect(state.lastWindows.map((w) => [w.limitedBy, w.ratio])).toEqual([
+      ['REFRESH', 2],
+      ['GPU', 20],
+    ]);
+    expect(state.keptWindows).toHaveLength(1);
+
+    const listener = vi.fn();
+    dc.onDeviceCapabilityReport(listener);
+    dc._clearDeviceObservations();
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isSuggestionLowered: false,
+        verdict: expect.objectContaining({ observedCorrection: null }),
+      })
+    );
+    expect(dc._getDeviceObservationState()).toMatchObject({ lastWindows: [], keptWindows: [] });
     expect(readStored().measurements.observed).toBeUndefined();
   });
 

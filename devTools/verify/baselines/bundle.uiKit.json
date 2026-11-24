@@ -47,11 +47,15 @@
     },
     "assets/DeviceBenchmark.js": {
       "bytes": 13882,
-      "gzip": 5897
+      "gzip": 5895
     },
     "assets/DeviceCapabilities.js": {
-      "bytes": 14508,
-      "gzip": 5863
+      "bytes": 18113,
+      "gzip": 7105
+    },
+    "assets/DeviceObserver.js": {
+      "bytes": 2777,
+      "gzip": 1499
     },
     "assets/draco_decoder.js": {
       "bytes": 719410,
@@ -79,11 +83,11 @@
     },
     "assets/GeometryMerge.js": {
       "bytes": 8249,
-      "gzip": 3431
+      "gzip": 3429
     },
     "assets/GeometryTransfer.js": {
       "bytes": 1933,
-      "gzip": 865
+      "gzip": 864
     },
     "assets/GeometryTransfer.js@AssetsWorker": {
       "bytes": 2051,
@@ -91,11 +95,11 @@
     },
     "assets/GLTFLoader.js": {
       "bytes": 47087,
-      "gzip": 14027
+      "gzip": 14028
     },
     "assets/HDRLoader.js": {
       "bytes": 3406,
-      "gzip": 1634
+      "gzip": 1633
     },
     "assets/hsva.js": {
       "bytes": 6262,
@@ -127,11 +131,11 @@
     },
     "assets/ImportRegistry.js": {
       "bytes": 20470,
-      "gzip": 8232
+      "gzip": 8233
     },
     "assets/KTX2Loader.js": {
       "bytes": 60311,
-      "gzip": 24500
+      "gzip": 24501
     },
     "assets/LocalAndSessionStorage.js": {
       "bytes": 930,
@@ -155,7 +159,7 @@
     },
     "assets/TextureInputResolvers.js": {
       "bytes": 3306,
-      "gzip": 1368
+      "gzip": 1366
     },
     "assets/three.core.js": {
       "bytes": 199218,
@@ -163,7 +167,7 @@
     },
     "assets/three.module.js": {
       "bytes": 219,
-      "gzip": 184
+      "gzip": 182
     },
     "assets/three.module.js@AssetsWorker": {
       "bytes": 218,
@@ -174,8 +178,8 @@
       "gzip": 1987
     },
     "assets/uiKit.embed.js": {
-      "bytes": 975767,
-      "gzip": 272933
+      "bytes": 976137,
+      "gzip": 273061
     },
     "assets/uiKitEmbed.css": {
       "bytes": 18013,
@@ -183,7 +187,7 @@
     },
     "assets/uiKitEmbed.js": {
       "bytes": 45867,
-      "gzip": 16629
+      "gzip": 16627
     },
     "assets/uiKitEmbedData.css": {
       "bytes": 24414,
@@ -191,7 +195,7 @@
     },
     "assets/uiKitEmbedData.js": {
       "bytes": 50923,
-      "gzip": 19050
+      "gzip": 19053
     },
     "assets/uiKitEmbedForm.css": {
       "bytes": 24068,
@@ -207,18 +211,18 @@
     },
     "assets/uiKitEmbedGame.js": {
       "bytes": 23085,
-      "gzip": 8625
+      "gzip": 8626
     },
     "uiKit.embed.js": {
       "bytes": 249,
-      "gzip": 213
+      "gzip": 212
     }
   },
   "main": {
     "chunk": "assets/uiKit.embed.js",
     "modules": 69,
-    "minified": 999834,
-    "gzip": 279156
+    "minified": 1000156,
+    "gzip": 279292
   },
   "mainGroups": {
     "_engine/kernel/assets": {
@@ -258,8 +262,8 @@
     },
     "_engine/kernel/loop": {
       "modules": 3,
-      "minified": 4681,
-      "gzip": 2034
+      "minified": 5003,
+      "gzip": 2170
     },
     "_engine/kernel/mesh": {
       "modules": 1,

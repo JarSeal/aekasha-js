@@ -290,6 +290,18 @@ const runCheckAsync = async (opts: DeviceCapabilityCheckOpts) => {
   return report;
 };
 
+/** Rewrites the stored entry the last report's measurements came from (its windows changed);
+ * nothing when they aren't stored. */
+const rewriteStoredMeasurements = (measurements: DeviceCapabilityMeasurements) => {
+  if (!storedEntry) return;
+  const toStore: StoredDeviceCapabilities = {
+    reportVersion: DEVICE_CAPABILITY_REPORT_VERSION,
+    ...storedEntry,
+    measurements,
+  };
+  lsSetItem(DEVICE_CAPABILITIES_LS_KEY, toStore);
+};
+
 /** An observed window (p240 D6-D8): a `GPU` window slower than its scene's kept one goes into the
  * measurements and the stored result, and the report is scored again with it. A window that comes
  * while a check runs is dropped: the check's report replaces the one it would go into. */
@@ -305,14 +317,7 @@ const handleObservedWindow = (observation: DeviceObservation) => {
   if (!observed) return;
 
   const measurements = { ...report.measurements, observed };
-  if (storedEntry) {
-    const toStore: StoredDeviceCapabilities = {
-      reportVersion: DEVICE_CAPABILITY_REPORT_VERSION,
-      ...storedEntry,
-      measurements,
-    };
-    lsSetItem(DEVICE_CAPABILITIES_LS_KEY, toStore);
-  }
+  rewriteStoredMeasurements(measurements);
   const verdict = scoreMeasurements(measurements, lastTargets);
   if (IS_DEBUG_ENV) {
     const ratio = readObservedOverPredicted(observation, gpuBenchmark, frame);
@@ -444,6 +449,57 @@ export const _setForcedDeviceLevels = (levels: ForcedDeviceLevels | null) => {
 export const _getUnforcedDeviceVerdict = () => {
   const report = getDeviceCapabilityReport();
   return report ? scoreMeasurements(report.measurements, lastTargets, true) : null;
+};
+
+/**
+ * A window as the debug tab shows it: with its frame time over the prediction (`ratio`, null
+ * without a GPU benchmark).
+ * @internal
+ */
+export type DeviceObservationWithRatio = DeviceObservation & { ratio: number | null };
+
+/**
+ * The observer's state for the debug tab: whether `observe` is on, the observer's progress (null
+ * until it starts), the last window of each kind and the kept ones, each with its ratio.
+ * @internal
+ */
+export const _getDeviceObservationState = () => {
+  const report = getDeviceCapabilityReport();
+  const gpuBenchmark = report?.measurements.benchmark?.gpu;
+  const frame = getTargets(lastTargets).referenceFrame;
+  const withRatio = (observation: DeviceObservation): DeviceObservationWithRatio => ({
+    ...observation,
+    ratio: gpuBenchmark ? readObservedOverPredicted(observation, gpuBenchmark, frame) : null,
+  });
+  return {
+    isEnabled: Boolean(getSettings().observe?.enabled),
+    progress: observer?.getProgress() ?? null,
+    lastWindows: Object.values(lastObservations).map(withRatio),
+    keptWindows: (report?.measurements.observed ?? []).map(withRatio),
+  };
+};
+
+/**
+ * Drops the kept windows (the debug tab's "Clear observations"): from the last report's
+ * measurements and the stored result, the report scored again without them and reported. The
+ * observer keeps observing.
+ * @internal
+ */
+export const _clearDeviceObservations = () => {
+  for (const key of Object.keys(lastObservations) as DeviceObservationLimit[]) {
+    delete lastObservations[key];
+  }
+  const report = getDeviceCapabilityReport();
+  if (!report?.measurements.observed) return;
+  const measurements: DeviceCapabilityMeasurements = { ...report.measurements };
+  delete measurements.observed;
+  rewriteStoredMeasurements(measurements);
+  _setDeviceCapabilityReport({
+    ...report,
+    measurements,
+    isSuggestionLowered: false,
+    verdict: scoreMeasurements(measurements, lastTargets),
+  });
 };
 
 /**

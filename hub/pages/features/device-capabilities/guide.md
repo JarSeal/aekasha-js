@@ -43,6 +43,9 @@ const canRunUltra = evaluateDeviceCapabilities({ minLevels: { gpu: 'ULTRA' } })?
 - **A check while a scene runs** pauses the main loop while it measures, so the game's frames
   don't share the GPU with the benchmark, and plays it again after (`pauseMainLoop: false` keeps
   it going).
+- **The observer** (see [Checking the prediction in play](#checking-the-prediction-in-play)) is a
+  chunk of its own too, downloaded only with `observe.enabled`. Per frame it costs a few writes
+  into typed arrays, and every 4th frame one GPU queue mark.
 
 ## What it measures
 
@@ -128,6 +131,57 @@ The levels go further than these: the GPU's for the LOD bias and the density of 
 CPU's for physics sub-steps and entity counts, the memory's for texture sizes and the streaming
 radius.
 
+## Checking the prediction in play
+
+The prediction compares a synthetic benchmark with a reference frame, and on a device nobody
+calibrated it can be off. With `observe` on, the check watches your scenes' own frames once they
+run and, when they're clearly slower than predicted, corrects the prediction and tells you. The
+example app's config in [Running the check](#running-the-check) turns it on for its three
+game-like scenes: `sceneIds` names the scenes the reference frame stands for, since a test or
+stress scene would lower the device for the whole app.
+
+- **Windows of frames:** after a scene's load and a warm-up (`warmUpMs`, 5 s: its first frames
+  compile pipelines and stream assets), it measures windows of `frames` (300) rendered frames: the
+  time between them, the main loop's CPU time, and whether the GPU was still busy with the last
+  frame when the next began. Loads, editor views, a hidden page, a paused loop, a check measuring
+  and a resize break a window, which starts again.
+- **What held a window:** the refresh rate (or the max FPS limiter: the frames came as fast as
+  allowed, which says nothing about how much faster the device could go), the GPU (slower than
+  that, the GPU busy), the CPU, or a cap the engine doesn't know (the browser throttling the
+  page's frames, as iOS's Low Power Mode does). Only a GPU-held window says something about the
+  GPU, so only it is compared with the prediction.
+- **The correction:** a GPU-held window's frame time over the reference frame's predicted time
+  at its pixels. Each scene keeps its slowest window, stored with the measurements, and the
+  slowest of them over `slowerThan` (1.25) divides the benchmark's throughputs before scoring:
+  the predicted frame rate, the GPU's level and the pixel ratio all follow, and
+  `verdict.observedCorrection` gives the factor.
+- **Only lowering, and it stays:** a scene that holds the refresh rate proves nothing for a
+  heavier one, so the correction never raises the prediction. A scene keeps its slowest window,
+  not its latest: once your app lowers its settings, the same scene runs lighter than the
+  reference frame stands for, and a latest window would raise them again on the next boot. A new
+  measuring (`force: true`, another device, `maxAgeDays`) starts without windows.
+- **It's this app on this device:** a scene heavier than the reference frame rates the device
+  lower for your app, which is the point. On a display without variable refresh a GPU-held frame
+  waits for the next refresh (a 17 ms frame shows at 33 ms), so the correction can run high, up
+  to twice: it's what the player sees.
+
+The engine changes nothing. A report whose levels or recommendations went down because of a
+window has `isSuggestionLowered: true`: that's the one to offer lower settings on.
+
+```ts
+import { onDeviceCapabilityReport } from 'aekasha';
+
+onDeviceCapabilityReport((report) => {
+  if (!report.isSuggestionLowered) return;
+  // Your settings menu: "The game runs slower than expected. Lower the settings?"
+  const { pixelRatio, shadowQuality, postFx } = report.verdict.recommendations;
+  settingsMenu.offerLowerSettings({ pixelRatio, shadowQuality, postFx });
+});
+```
+
+A later boot reads the stored windows and starts corrected (its report's `isSuggestionLowered`
+is false: it's the boot's, read in `start` as any other).
+
 ## The stored result
 
 - With `saveToLS` (the default) the measurements are stored in the browser's localStorage
@@ -151,8 +205,12 @@ measurement. Its buttons run the check, measure again and clear the stored resul
   browser. The report then gives the forced levels and the recommendations they make (its
   listeners hear it), so you can test your app's `LOW` path on a strong machine. The measured
   figures stay, and a production build has none of it.
-- **The profiler** shows the device's level as an Overview row, and the GPU memory tab's budget
-  follows the device's GPU memory level until you set one.
+- **The observer:** the tab's Observation folder shows what it's doing (waiting, warming up,
+  measuring n / 300), the last window of each kind with what held it and its ratio, each scene's
+  kept window and the correction; "Clear observations" drops the kept ones.
+- **The profiler** shows the device's level as an Overview row (with the correction, "observed
+  ×1.5", when there's one), and the GPU memory tab's budget follows the device's GPU memory level
+  until you set one.
 - **Calibrating the reference frame:** the tab's Calibration folder measures the running scene at
   three pixel ratios and logs what it fits. Only a scene that holds the GPU busy (its frame rate
   under the refresh rate) compares with the benchmark: on a strong GPU, a heavier scene or a
@@ -166,6 +224,7 @@ measurement. Its buttons run the check, measure again and clear the stored resul
   [`evaluateDeviceCapabilities`](api:evaluateDeviceCapabilities) and
   [`clearStoredDeviceCapabilityReport`](api:clearStoredDeviceCapabilityReport).
 - [`DeviceCapabilitiesConfig`](api:DeviceCapabilitiesConfig) (`AppConfig.deviceCapabilities`),
+  [`DeviceObserveConfig`](api:DeviceObserveConfig) (its `observe`),
   [`DeviceCapabilityTargets`](api:DeviceCapabilityTargets) and
   [`DeviceCapabilityReport`](api:DeviceCapabilityReport).
 - [`QualityLevel`](api:QualityLevel), [`compareQualityLevels`](api:compareQualityLevels) and

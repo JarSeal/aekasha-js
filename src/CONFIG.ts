@@ -51,9 +51,15 @@ const config: AppConfig = {
   // #region device-capabilities (shown in the Hub: hub/pages/features/device-capabilities/)
   // The device capability check: measured at the boot (stored in this browser for 30 days, so a
   // later boot only fingerprints the device), its report read in index.ts' start. Advisory: the
-  // engine applies none of it
+  // engine applies none of it. The observer compares the game-like scenes' frames with the
+  // benchmark's prediction and corrects it when they run clearly slower (the test and stress
+  // scenes aren't what the reference frame stands for)
   deviceCapabilities: {
     runAtInit: true,
+    observe: {
+      enabled: true,
+      sceneIds: ['thirdPersonGymScene', 'terrainShowcase', 'largeWorld'],
+    },
   },
   // #endregion device-capabilities
   debugCamera: {

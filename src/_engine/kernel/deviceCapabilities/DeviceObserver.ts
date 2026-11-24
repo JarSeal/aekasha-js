@@ -92,9 +92,9 @@ export type DeviceObserverOptions = DeviceObserveConfig & {
 export type DeviceObserver = {
   /** Leaves frames out until the returned release is called (a check measuring). */
   hold: () => () => void;
-  /** The observer's state (no frames to measure, a scene's warm-up, measuring) and the current
-   * window's frames so far, for the debug tab. */
-  getProgress: () => { state: DeviceObserverState; frames: number };
+  /** The observer's state (no frames to measure, a scene's warm-up, measuring), the current
+   * window's frames so far and a window's size, for the debug tab. */
+  getProgress: () => { state: DeviceObserverState; frames: number; windowFrames: number };
   /** Stops observing: the probe and the hooks removed. */
   stop: () => void;
 };
@@ -352,7 +352,7 @@ export const startDeviceObserver = (
         holds--;
       };
     },
-    getProgress: () => ({ state, frames: current.count }),
+    getProgress: () => ({ state, frames: current.count, windowFrames: frameCount }),
     stop: () => {
       breakWindow();
       for (const remove of removers.splice(0)) remove();

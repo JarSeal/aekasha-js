@@ -285,11 +285,13 @@ const OVERVIEW_METRICS: OverviewMetric[] = [
     label: 'Device level',
     defaultVisible: true,
     sources: [PROFILER_SOURCE.DEVICE],
-    read: fromSource<DeviceStats>(PROFILER_SOURCE.DEVICE, ({ levels }) => ({
+    read: fromSource<DeviceStats>(PROFILER_SOURCE.DEVICE, ({ levels, observedCorrection }) => ({
       value: levels.forced ? `${levels.overall} (forced)` : levels.overall,
       sub:
         `GPU ${levels.gpu} · CPU ${levels.cpu} · memory ${levels.memory ?? 'unknown'}` +
-        ` · GPU memory ${levels.gpuMemory ?? 'unknown'}`,
+        ` · GPU memory ${levels.gpuMemory ?? 'unknown'}` +
+        // The app's scenes ran slower than the benchmark predicted (the observer)
+        (observedCorrection ? ` · observed ×${observedCorrection}` : ''),
       warn: levels.forced ? 'forced in the Device capabilities tab' : undefined,
     })),
   },

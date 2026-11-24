@@ -1,8 +1,9 @@
 // The Device capabilities tab (p240 Phase 3): the last check's levels, target checks,
 // recommendations and measurements, the buttons that run the check again or clear its stored
-// result, the forced levels (a debug override of the levels the report gives, saved per browser)
-// and the calibration tool's buttons. Everything is read through getters on a refresh, so the tab
-// is kept on a scene change, and every report refreshes it.
+// result, the forced levels (a debug override of the levels the report gives, saved per browser),
+// the observer's state, windows and correction (Phase 4) and the calibration tool's buttons.
+// Everything is read through getters on a refresh, so the tab is kept on a scene change; every
+// report refreshes it, and a refresh a second follows the observer's progress.
 import { createDebuggerTab, updateDebuggerTab, addDebugToast } from '../../../debug/DebuggerGUI';
 import type { DebuggerPaneItem } from '../../../debug/DebuggerGUI';
 import { getNoteItem } from '../../../debug/_dbg__DebugWindowGrid';
@@ -11,9 +12,12 @@ import type { TableColumn } from '../../../ui/data/TableTypes';
 import { lerror } from '../../../utils/Logger';
 import { QUALITY_LEVELS, type QualityLevel } from '../../../utils/QualityLevel';
 import {
+  _clearDeviceObservations,
+  _getDeviceObservationState,
   _getUnforcedDeviceVerdict,
   _setForcedDeviceLevels,
   clearStoredDeviceCapabilityReport,
+  type DeviceObservationWithRatio,
   runDeviceCapabilityCheckAsync,
 } from '../DeviceCapabilities';
 import { getDeviceCapabilityReport, onDeviceCapabilityReport } from '../DeviceCapabilityReports';
@@ -244,7 +248,8 @@ const CHECK_COLUMNS: TableColumn<CheckRow>[] = [
 const tableItem = <T extends { id: string }>(
   caption: string,
   columns: TableColumn<T>[],
-  getRows: () => T[]
+  getRows: () => T[],
+  empty = 'No report yet'
 ): DebuggerPaneItem => ({
   type: 'custom',
   build: (container) => {
@@ -253,12 +258,135 @@ const tableItem = <T extends { id: string }>(
       captionHidden: true,
       columns,
       rows: getRows,
-      empty: 'No report yet',
+      empty,
       class: styles.table,
     });
     container.add(table.cmp);
     return () => table.refresh();
   },
+});
+
+const OBSERVER_STATE_TEXTS = {
+  WAITING: 'Waiting (a load, an editor view, a paused loop, a hidden page or a scene not observed)',
+  WARMING_UP: "Warming up (the scene's first frames)",
+  MEASURING: 'Measuring',
+} as const;
+
+const LIMIT_TEXTS: Record<DeviceObservationWithRatio['limitedBy'], string> = {
+  REFRESH: 'Refresh rate',
+  GPU: 'GPU',
+  CPU: 'CPU',
+  CAPPED: 'A cap',
+};
+
+const readObserverText = () => {
+  const { isEnabled, progress } = _getDeviceObservationState();
+  if (!isEnabled) return 'Off (AppConfig.deviceCapabilities.observe.enabled)';
+  if (!progress) return 'Not started: it starts with a report that has a GPU benchmark';
+  const text = OBSERVER_STATE_TEXTS[progress.state];
+  return progress.state === 'MEASURING'
+    ? `${text} ${progress.frames} / ${progress.windowFrames}`
+    : text;
+};
+
+type ObservationRow = {
+  id: string;
+  label: string;
+  scene: string;
+  frameMs: string;
+  cpuMs: string;
+  busy: string;
+  pixels: string;
+  ratio: string;
+};
+
+const toObservationRow =
+  (label: (o: DeviceObservationWithRatio) => string) =>
+  (o: DeviceObservationWithRatio): ObservationRow => ({
+    id: `${o.limitedBy}:${o.sceneId}`,
+    label: label(o),
+    scene: o.sceneId,
+    frameMs: `${round(o.p50FrameMs)} / ${round(o.p95FrameMs)}`,
+    cpuMs: String(round(o.p50CpuMs)),
+    busy: o.gpuBusyShare === null ? NONE : `${Math.round(o.gpuBusyShare * 100)} %`,
+    pixels: `${o.pixelWidth} × ${o.pixelHeight}`,
+    ratio: o.ratio === null ? NONE : `×${o.ratio}`,
+  });
+
+const OBSERVATION_COLUMNS: TableColumn<ObservationRow>[] = [
+  { key: 'label', label: 'Held by', rowHeader: true },
+  { key: 'scene', label: 'Scene' },
+  { key: 'frameMs', label: 'Frame ms', headerTooltip: 'The median and the 95th percentile' },
+  { key: 'cpuMs', label: 'CPU ms', align: 'end', headerTooltip: "The main loop's median" },
+  {
+    key: 'busy',
+    label: 'GPU busy',
+    align: 'end',
+    headerTooltip: 'The checked frames that began with the GPU still busy',
+  },
+  { key: 'pixels', label: 'Pixels' },
+  {
+    key: 'ratio',
+    label: 'Ratio',
+    align: 'end',
+    headerTooltip: "The frame time over the reference frame's predicted time (GPU windows only)",
+  },
+];
+
+const getLastWindowRows = () =>
+  _getDeviceObservationState().lastWindows.map(toObservationRow((o) => LIMIT_TEXTS[o.limitedBy]));
+
+const getKeptWindowRows = () =>
+  _getDeviceObservationState().keptWindows.map(toObservationRow(() => LIMIT_TEXTS.GPU));
+
+const getObservationFolder = (): DebuggerPaneItem => ({
+  type: 'folder',
+  id: 'observation',
+  title: 'Observation',
+  content: [
+    getNoteItem(
+      "The running scene's frames against the benchmark's prediction: each scene's slowest GPU-held window is kept (with the stored result), and one slower than observe.slowerThan corrects the prediction (p240 Phase 4)."
+    ),
+    { label: 'Observer', get: readObserverText, readonly: true, interval: 'refresh' },
+    reportRow('Correction', (r) =>
+      r.verdict.observedCorrection === null ? 'None' : `×${r.verdict.observedCorrection}`
+    ),
+    reportRow('Lowered the suggestion', (r) => r.isSuggestionLowered),
+    {
+      type: 'folder',
+      id: 'lastWindows',
+      title: 'The last window of each kind',
+      content: [
+        tableItem(
+          'The last window of each kind',
+          OBSERVATION_COLUMNS,
+          getLastWindowRows,
+          'None yet'
+        ),
+      ],
+    },
+    {
+      type: 'folder',
+      id: 'keptWindows',
+      title: 'Kept windows (the slowest per scene)',
+      content: [
+        tableItem('Kept windows', OBSERVATION_COLUMNS, getKeptWindowRows, 'No GPU-held window yet'),
+      ],
+    },
+    {
+      type: 'button',
+      title: 'Clear observations',
+      disabled: () => {
+        const { lastWindows, keptWindows } = _getDeviceObservationState();
+        return lastWindows.length === 0 && keptWindows.length === 0;
+      },
+      onClick: () => {
+        _clearDeviceObservations();
+        status = 'Observations cleared';
+        refreshTab();
+      },
+    },
+  ],
 });
 
 const getGpuKind = ({ gpu }: DeviceCapabilityReport['measurements']) => {
@@ -445,6 +573,7 @@ const getContent = (): DebuggerPaneItem<typeof deviceCapabilitiesState>[] => [
       reportRow('Physics worker', (r) => r.verdict.recommendations.physicsWorkerTarget),
     ],
   },
+  getObservationFolder(),
   getMeasurementsFolder(),
   {
     type: 'folder',
@@ -489,6 +618,8 @@ export const initDeviceCapabilitiesDebugGUI = () => {
     icon: 'cpu',
     // Everything is read through getters on a refresh
     keepOnSceneChange: true,
+    // The observer's progress (only while the tab shows)
+    refreshIntervalMs: 1000,
     lsKey: LS_KEY,
     state: deviceCapabilitiesState,
     persistKeys: ['forced'],

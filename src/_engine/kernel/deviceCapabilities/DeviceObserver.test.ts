@@ -80,7 +80,7 @@ describe('the device observer', () => {
     expect(windows).toHaveLength(0);
     expect(observer.getProgress().state).toBe('WARMING_UP');
     runFrames(41, 1000 / 60);
-    expect(observer.getProgress()).toEqual({ state: 'MEASURING', frames: 0 });
+    expect(observer.getProgress()).toEqual({ state: 'MEASURING', frames: 0, windowFrames: 40 });
     expect(windows).toHaveLength(1);
     expect(windows[0]).toMatchObject({
       sceneId: 'gym',

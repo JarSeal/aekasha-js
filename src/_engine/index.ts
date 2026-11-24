@@ -46,6 +46,9 @@ export type {
   DeviceLevels,
   DeviceLevelSource,
   DeviceLevelThresholds,
+  DeviceObservation,
+  DeviceObservationLimit,
+  DeviceObserveConfig,
   DeviceReferenceFrame,
   ResolvedDeviceCapabilityTargets,
 } from './kernel/deviceCapabilities/DeviceCapabilitiesTypes';
