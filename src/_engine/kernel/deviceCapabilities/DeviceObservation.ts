@@ -1,19 +1,15 @@
 // The device capability check's observed windows (p240 Phase 4, D4-D5): a window of a running
 // scene's frames summarized, what held its frame rate, and how its frame time compares with the
 // reference frame's prediction. Pure functions: the observer (`DeviceObserver.ts`) samples the
-// frames, the scoring reads the windows.
+// frames, the check keeps the slowest of each scene (`mergeObservation`), and the scoring
+// (`DeviceScoring.ts`' `readObservedOverPredicted`, `readObservedCorrection`) reads them.
 //
 // Production has no GPU timer, so what held a window is told from the frame interval, the main
 // loop's CPU time and the GPU-busy marks (whether the previous frame's GPU work was still running
 // when a frame began). The interval alone can't tell a slow GPU from a cap: the max FPS limiter, or
 // the browser throttling the page's frames (iOS Low Power Mode, battery saver, an embed's iframe),
 // so a window is `GPU` only on the marks.
-import { predictFrameMs } from './DeviceScoring';
-import type {
-  DeviceGpuBenchmark,
-  DeviceObservationLimit,
-  ResolvedDeviceCapabilityTargets,
-} from './DeviceCapabilitiesTypes';
+import type { DeviceObservation, DeviceObservationLimit } from './DeviceCapabilitiesTypes';
 
 /**
  * How far over the compared interval a window's median interval must be to be under the refresh
@@ -117,23 +113,33 @@ export const classifyObservation = (
 };
 
 /**
- * A window's median interval over the reference frame's predicted time at its drawing buffer's
- * pixels (p240 D5), from the measured benchmark: 1 is the prediction, 2 twice as slow. Meaningful
- * for a `GPU` window only.
+ * The most scenes whose windows are kept (the oldest dropped).
  * @internal
- * @returns the ratio, rounded to 0.01; null without a prediction
  */
-export const readObservedOverPredicted = (
-  observation: { p50FrameMs: number; pixelWidth: number; pixelHeight: number },
-  benchmark: DeviceGpuBenchmark,
-  frame: ResolvedDeviceCapabilityTargets['referenceFrame']
-) => {
-  const predictedMs = predictFrameMs(
-    benchmark,
-    observation.pixelWidth * observation.pixelHeight,
-    frame
-  );
-  return predictedMs === null
-    ? null
-    : Math.round((observation.p50FrameMs / predictedMs) * 100) / 100;
+export const MAX_OBSERVED_SCENES = 8;
+
+/**
+ * The kept windows with `observation` merged in (p240 D6-D7): a `GPU` window is kept when its scene
+ * has none or a faster one (by `readRatio`, its frame time over the prediction), and moves to the
+ * end; past `MAX_OBSERVED_SCENES` the oldest goes. The slowest, not the latest: once the app lowers
+ * its settings, the scene runs lighter than the reference frame stands for, and a latest window
+ * would relax the correction and raise the settings again.
+ * @internal
+ * @returns the new list, null when `observation` changes nothing
+ */
+export const mergeObservation = (
+  observed: readonly DeviceObservation[],
+  observation: DeviceObservation,
+  readRatio: (observation: DeviceObservation) => number | null
+): DeviceObservation[] | null => {
+  if (observation.limitedBy !== 'GPU') return null;
+  const ratio = readRatio(observation);
+  if (ratio === null) return null;
+  const kept = observed.find((o) => o.sceneId === observation.sceneId);
+  if (kept) {
+    const keptRatio = readRatio(kept);
+    if (keptRatio !== null && keptRatio >= ratio) return null;
+  }
+  const next = [...observed.filter((o) => o !== kept), observation];
+  return next.slice(Math.max(0, next.length - MAX_OBSERVED_SCENES));
 };

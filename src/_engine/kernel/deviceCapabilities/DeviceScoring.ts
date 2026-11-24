@@ -1,6 +1,8 @@
 // The device capability check's scoring (p240 §3.1, §5 step 5): the measurements rated into
 // device levels, checked against the targets, and turned into suggested settings. Pure functions:
-// a stored result is scored again on every read, so new targets need no new measuring.
+// a stored result is scored again on every read, so new targets need no new measuring. The
+// observed windows (p240 Phase 4) correct the GPU benchmark's prediction here: each window's ratio
+// is worked out against the measured benchmark and the current reference frame, never stored.
 import { deepMerge } from '../../utils/DeepMerge';
 import { compareQualityLevels, minQualityLevel, type QualityLevel } from '../../utils/QualityLevel';
 import type {
@@ -16,6 +18,7 @@ import type {
   DeviceLevelCategory,
   DeviceLevels,
   DeviceLevelThresholds,
+  DeviceObservation,
   ResolvedDeviceCapabilityTargets,
   ResolvedDeviceLevelThresholds,
 } from './DeviceCapabilitiesTypes';
@@ -33,6 +36,12 @@ export const DEVICE_MEMORY_CAP_GB = 8;
  * @internal
  */
 export const PIXEL_RATIO_STEPS = [2, 1.75, 1.5, 1.25, 1, 0.75, 0.5];
+
+/**
+ * `observe.slowerThan`'s default: a window this much slower than predicted corrects the prediction.
+ * @internal
+ */
+export const DEFAULT_OBSERVE_SLOWER_THAN = 1.25;
 
 /**
  * The engine's targets, under `AppConfig.deviceCapabilities.targets` and a check's own.
@@ -171,6 +180,49 @@ export const estimateFps = (
 ) => {
   const frameMs = predictFrameMs(benchmark, pixels, frame);
   return frameMs === null ? null : Math.round((1000 / frameMs) * 10) / 10;
+};
+
+/**
+ * A window's median interval over the reference frame's predicted time at its drawing buffer's
+ * pixels (p240 D5), from the measured benchmark: 1 is the prediction, 2 twice as slow. Meaningful
+ * for a `GPU` window only.
+ * @internal
+ * @returns the ratio, rounded to 0.01; null without a prediction
+ */
+export const readObservedOverPredicted = (
+  observation: Pick<DeviceObservation, 'p50FrameMs' | 'pixelWidth' | 'pixelHeight'>,
+  benchmark: DeviceGpuBenchmark,
+  frame: ResolvedDeviceCapabilityTargets['referenceFrame']
+) => {
+  const predictedMs = predictFrameMs(
+    benchmark,
+    observation.pixelWidth * observation.pixelHeight,
+    frame
+  );
+  return predictedMs === null
+    ? null
+    : Math.round((observation.p50FrameMs / predictedMs) * 100) / 100;
+};
+
+/**
+ * The observed windows' correction (p240 D6): the largest ratio of their `GPU` windows when it's
+ * over `slowerThan`, else null. Only lowering: a window faster than predicted corrects nothing.
+ * @internal
+ */
+export const readObservedCorrection = (
+  observed: DeviceCapabilityMeasurements['observed'],
+  benchmark: DeviceGpuBenchmark,
+  frame: ResolvedDeviceCapabilityTargets['referenceFrame'],
+  slowerThan: number
+) => {
+  if (!Array.isArray(observed)) return null;
+  let largest = 0;
+  for (const observation of observed) {
+    if (observation.limitedBy !== 'GPU') continue;
+    const ratio = readObservedOverPredicted(observation, benchmark, frame);
+    if (ratio !== null && ratio > largest) largest = ratio;
+  }
+  return largest > slowerThan ? largest : null;
 };
 
 /**
@@ -428,11 +480,24 @@ export const checkDeviceTargets = (
 };
 
 /**
+ * {@link scoreDeviceCapabilities}' optional inputs.
+ * @internal
+ */
+export type DeviceScoringOpts = {
+  /** The debug tab's forced levels. */
+  forced?: ForcedDeviceLevels | null;
+  /** `observe.slowerThan`, default `DEFAULT_OBSERVE_SLOWER_THAN`. */
+  observedSlowerThan?: number;
+};
+
+/**
  * The verdict: the measurements rated, checked against the targets and turned into suggested
  * settings, the frame rate predicted at the target resolution (`canvas` for `'CANVAS'` and the
- * pixel ratio's solver). An `UNKNOWN` check counts as `targets.unknownIs` says. With `forced`
- * levels (the debug tab's) the `minLevels` check and the recommendations read them, and a forced
- * GPU level (or overall) suggests its level's pixel ratio, not the solved one.
+ * pixel ratio's solver). An `UNKNOWN` check counts as `targets.unknownIs` says. The observed
+ * windows' correction (`readObservedCorrection`) divides the GPU benchmark's throughputs first, so
+ * the frame rate, the GPU's level and the pixel ratio all follow it. With `forced` levels (the
+ * debug tab's) the `minLevels` check and the recommendations read them, and a forced GPU level (or
+ * overall) suggests its level's pixel ratio, not the solved one.
  * @internal
  */
 export const scoreDeviceCapabilities = (
@@ -440,9 +505,26 @@ export const scoreDeviceCapabilities = (
   targets: ResolvedDeviceCapabilityTargets,
   thresholds: ResolvedDeviceLevelThresholds,
   canvas: DeviceScoringCanvas,
-  forced: ForcedDeviceLevels | null = null
+  { forced = null, observedSlowerThan = DEFAULT_OBSERVE_SLOWER_THAN }: DeviceScoringOpts = {}
 ): DeviceCapabilityVerdict => {
-  const gpuBenchmark = measurements.benchmark?.gpu ?? null;
+  const measuredGpuBenchmark = measurements.benchmark?.gpu ?? null;
+  const observedCorrection = measuredGpuBenchmark
+    ? readObservedCorrection(
+        measurements.observed,
+        measuredGpuBenchmark,
+        targets.referenceFrame,
+        observedSlowerThan
+      )
+    : null;
+  // A scaled copy: the measured throughputs stay as measured
+  const gpuBenchmark =
+    measuredGpuBenchmark && observedCorrection
+      ? {
+          ...measuredGpuBenchmark,
+          fillRateMPixOpsPerMs: measuredGpuBenchmark.fillRateMPixOpsPerMs / observedCorrection,
+          trianglesPerMs: measuredGpuBenchmark.trianglesPerMs / observedCorrection,
+        }
+      : measuredGpuBenchmark;
   const dpr = measurements.display.devicePixelRatio || 1;
   const effectiveFpsTarget = readEffectiveFpsTarget(measurements, targets);
   let estimatedFps: number | null = null;
@@ -479,6 +561,7 @@ export const scoreDeviceCapabilities = (
     meetsTargets: failedTargets.length === 0,
     failedTargets,
     levels,
+    observedCorrection,
     scores: {
       gpu: scoreReading(gpuHeadroom, thresholds.gpuHeadroom),
       cpu: minScore(
@@ -490,4 +573,29 @@ export const scoreDeviceCapabilities = (
     },
     recommendations: recommendDeviceSettings(levels, measurements, solvedPixelRatio),
   };
+};
+
+/**
+ * Whether `next` suggests less than `prev` (p240 D8): a known level lower, or a recommendation
+ * lower (the pixel ratio, the shadow quality) or turned off (antialias, PostFX).
+ * @internal
+ */
+export const isDeviceSuggestionLowered = (
+  prev: DeviceCapabilityVerdict,
+  next: DeviceCapabilityVerdict
+) => {
+  const levelKeys = ['overall', 'gpu', 'cpu', 'memory', 'gpuMemory'] as const;
+  for (const key of levelKeys) {
+    const before = prev.levels[key];
+    const after = next.levels[key];
+    if (before !== null && after !== null && compareQualityLevels(after, before) < 0) return true;
+  }
+  const a = prev.recommendations;
+  const b = next.recommendations;
+  return (
+    b.pixelRatio < a.pixelRatio ||
+    compareQualityLevels(b.shadowQuality, a.shadowQuality) < 0 ||
+    (a.antialias && !b.antialias) ||
+    (a.postFx && !b.postFx)
+  );
 };

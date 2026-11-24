@@ -1,13 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import type { DeviceCapabilityMeasurements } from './DeviceCapabilitiesTypes';
+import type {
+  DeviceCapabilityMeasurements,
+  DeviceGpuBenchmark,
+  DeviceObservation,
+} from './DeviceCapabilitiesTypes';
 import {
   applyForcedDeviceLevels,
   DEFAULT_DEVICE_LEVEL_THRESHOLDS,
   DEFAULT_DEVICE_TARGETS,
   estimateFps,
+  isDeviceSuggestionLowered,
   rateDeviceLevels,
   rateGpuHeuristic,
   rateLevel,
+  readObservedCorrection,
+  readObservedOverPredicted,
   resolveDeviceLevelThresholds,
   resolveDeviceTargets,
   resolveTargetPixelSize,
@@ -449,7 +456,7 @@ describe('scoreDeviceCapabilities with a benchmark', () => {
       resolveDeviceTargets({ referenceFrame: TEST_FRAME, minLevels: { gpu: 'HIGH' } }),
       resolveDeviceLevelThresholds(TEST_BANDS),
       CANVAS,
-      { gpu: 'LOW' }
+      { forced: { gpu: 'LOW' } }
     );
     expect(verdict.levels).toMatchObject({
       gpu: 'LOW',
@@ -475,5 +482,81 @@ describe('scoreDeviceCapabilities with a benchmark', () => {
     expect(verdict.estimatedFps).toBeNull();
     expect(verdict.levels.sources.gpu).toBe('HEURISTIC');
     expect(verdict.checks.fps.result).toBe('UNKNOWN');
+  });
+});
+
+describe('the observed correction (p240 Phase 4)', () => {
+  // The fixture's 2560 × 1440 at fill 10: (6 × 3.6864 MP) / 10 + 1e6 / 1e6 = 3.21184 ms predicted
+  const PREDICTED_MS = 3.21184;
+  const observedWindow = (ratio: number, limitedBy: DeviceObservation['limitedBy'] = 'GPU') => ({
+    sceneId: 'gym',
+    at: 0,
+    frames: 300,
+    p50FrameMs: Math.round(PREDICTED_MS * ratio * 1000) / 1000,
+    p95FrameMs: PREDICTED_MS * ratio * 1.5,
+    p50CpuMs: 1,
+    gpuBusyShare: 1,
+    comparedIntervalMs: 16.667,
+    pixelWidth: 2560,
+    pixelHeight: 1440,
+    limitedBy,
+  });
+  const observedScore = (observed: DeviceObservation[], forced: { gpu?: 'HIGH' } | null = null) =>
+    scoreDeviceCapabilities(
+      { ...createMeasurements(benchmarked(10)), observed },
+      resolveDeviceTargets({ referenceFrame: TEST_FRAME }),
+      resolveDeviceLevelThresholds(TEST_BANDS),
+      CANVAS,
+      { forced }
+    );
+  const benchmark = createMeasurements(benchmarked(10)).benchmark?.gpu as DeviceGpuBenchmark;
+
+  it("is a window's frame time over the prediction at its pixels", () => {
+    expect(readObservedOverPredicted(observedWindow(3), benchmark, TEST_FRAME)).toBe(3);
+    expect(
+      readObservedOverPredicted(observedWindow(3), { ...benchmark, trianglesPerMs: 0 }, TEST_FRAME)
+    ).toBeNull();
+  });
+
+  it("is the slowest GPU window's ratio over slowerThan, else none", () => {
+    const windows = [observedWindow(1.5), observedWindow(2), observedWindow(9, 'REFRESH')];
+    expect(readObservedCorrection(windows, benchmark, TEST_FRAME, 1.25)).toBe(2);
+    expect(readObservedCorrection(windows, benchmark, TEST_FRAME, 2)).toBeNull();
+    expect(readObservedCorrection(undefined, benchmark, TEST_FRAME, 1.25)).toBeNull();
+  });
+
+  it('corrects nothing without windows, or with one under 1.25', () => {
+    const none = observedScore([]);
+    const under = observedScore([observedWindow(1.2)]);
+    expect(none.observedCorrection).toBeNull();
+    expect(under.observedCorrection).toBeNull();
+    expect(under.estimatedFps).toBe(none.estimatedFps);
+    expect(isDeviceSuggestionLowered(none, under)).toBe(false);
+  });
+
+  it('lowers the frame rate, the GPU level and the pixel ratio by a slow scene', () => {
+    const measured = observedScore([]);
+    const slow = observedScore([observedWindow(6)]);
+    expect(measured).toMatchObject({ estimatedFps: 311.3, levels: { gpu: 'ULTRA' } });
+    expect(measured.recommendations.pixelRatio).toBe(2);
+    expect(slow.observedCorrection).toBe(6);
+    // 3.21184 × 6 ms: 51.9 fps, under the 60 the HIGH band asks for
+    expect(slow).toMatchObject({
+      estimatedFps: 51.9,
+      levels: { gpu: 'LOW', sources: { gpu: 'BENCHMARK' } },
+    });
+    expect(slow.recommendations.pixelRatio).toBe(1.75);
+    expect(isDeviceSuggestionLowered(measured, slow)).toBe(true);
+    // The measured throughputs stay as measured
+    expect(benchmark.fillRateMPixOpsPerMs).toBe(10);
+  });
+
+  it('leaves a forced level over the corrected one', () => {
+    const forced = observedScore([observedWindow(6)], { gpu: 'HIGH' });
+    expect(forced.observedCorrection).toBe(6);
+    expect(forced.estimatedFps).toBe(51.9);
+    expect(forced.levels).toMatchObject({ gpu: 'HIGH', forced: true });
+    expect(forced.recommendations.pixelRatio).toBe(2);
+    expect(isDeviceSuggestionLowered(observedScore([], { gpu: 'HIGH' }), forced)).toBe(false);
   });
 });

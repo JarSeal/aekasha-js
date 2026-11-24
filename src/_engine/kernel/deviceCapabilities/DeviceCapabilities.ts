@@ -7,7 +7,9 @@
 // this module. The debug tab (`debug/_dbg__DeviceCapabilities.ts`) is loaded by the boot's debug step, and its
 // forced levels reach the verdict only in the debug env. With `observe.enabled` the first report
 // with a GPU benchmark starts the observer (`DeviceObserver.ts`, `import()`ed then), which watches
-// the running scenes' frames against the benchmark's prediction (p240 Phase 4).
+// the running scenes' frames against the benchmark's prediction (p240 Phase 4): its slowest
+// GPU-held window per scene goes into the measurements (and the stored result), and a window that
+// changes them scores the report again, `isSuggestionLowered` when it suggests less.
 import { getConfig, IS_DEBUG_ENV } from '../config/Config';
 import { loadDebugModuleAsync, useDebug } from '../config/DebugModules';
 import { getReadOnlyLoopState, toggleMainPlay } from '../loop/MainLoop';
@@ -16,7 +18,7 @@ import { lsGetItem, lsRemoveItem, lsSetItem } from '../../utils/LocalAndSessionS
 import { hashStringFNV1a } from '../../utils/Hash';
 import { lerror, llog, lwarn } from '../../utils/Logger';
 import { _setDeviceCapabilityReport, getDeviceCapabilityReport } from './DeviceCapabilityReports';
-import { readObservedOverPredicted } from './DeviceObservation';
+import { mergeObservation } from './DeviceObservation';
 import type { DeviceObserver } from './DeviceObserver';
 import {
   type DeviceProbeEnv,
@@ -26,6 +28,8 @@ import {
   readDeviceFingerprintInputAsync,
 } from './DeviceProbe';
 import {
+  isDeviceSuggestionLowered,
+  readObservedOverPredicted,
   resolveDeviceLevelThresholds,
   resolveDeviceTargets,
   resolveTargetPixelSize,
@@ -39,6 +43,7 @@ import type {
   DeviceCapabilityTargets,
   DeviceCapabilityVerdict,
   DeviceObservation,
+  DeviceObservationLimit,
 } from './DeviceCapabilitiesTypes';
 
 /**
@@ -97,6 +102,11 @@ let inFlight: Promise<DeviceCapabilityReport> | null = null;
 /** The observer, once started (`observe.enabled`); its start, once asked for */
 let observer: DeviceObserver | null = null;
 let observerStart: Promise<void> | null = null;
+/** The stored entry the last report's measurements are (its key), which an observed window
+ * rewrites; null when they aren't stored (`saveToLS` off, a stalled benchmark) */
+let storedEntry: { fingerprint: string; measuredAt: number } | null = null;
+/** The last window of each kind, for the debug tab */
+const lastObservations: Partial<Record<DeviceObservationLimit, DeviceObservation>> = {};
 
 /** The config's section, or none. */
 const getSettings = () => getConfig().deviceCapabilities ?? {};
@@ -124,7 +134,10 @@ const scoreMeasurements = (
     getTargets(targets),
     resolveDeviceLevelThresholds(getSettings().levelThresholds),
     readCanvasSize(),
-    IS_DEBUG_ENV && !isUnforced ? forcedLevels : null
+    {
+      forced: IS_DEBUG_ENV && !isUnforced ? forcedLevels : null,
+      observedSlowerThan: getSettings().observe?.slowerThan,
+    }
   );
 
 /** The stored result when it's valid for this device (p240 §4): the same version and fingerprint,
@@ -236,9 +249,11 @@ const runCheckAsync = async (opts: DeviceCapabilityCheckOpts) => {
   const stored = saveToLS && !opts.force ? readStored(fingerprint, now, wantsBenchmark) : null;
   let measurements: DeviceCapabilityMeasurements;
   let measuredAt: number;
+  let nextStoredEntry: typeof storedEntry = null;
   if (stored) {
     measurements = stored.measurements;
     measuredAt = stored.measuredAt;
+    nextStoredEntry = { fingerprint, measuredAt };
   } else {
     measurements = await probeDeviceAsync(env, adapter);
     reportProgress('PROBE', PROGRESS_PROBE_END);
@@ -255,6 +270,7 @@ const runCheckAsync = async (opts: DeviceCapabilityCheckOpts) => {
         measurements,
       };
       lsSetItem(DEVICE_CAPABILITIES_LS_KEY, toStore);
+      nextStoredEntry = { fingerprint, measuredAt };
     }
   }
 
@@ -262,24 +278,55 @@ const runCheckAsync = async (opts: DeviceCapabilityCheckOpts) => {
     reportVersion: DEVICE_CAPABILITY_REPORT_VERSION,
     measuredAt,
     fromCache: Boolean(stored),
+    isSuggestionLowered: false,
     measurements,
     verdict: scoreMeasurements(measurements, opts.targets),
   };
   lastTargets = opts.targets;
+  storedEntry = nextStoredEntry;
   reportProgress('DONE', 1);
   _setDeviceCapabilityReport(report);
   startObserverIfAsked(report);
   return report;
 };
 
-/** An observed window (p240 Phase 4 section 1: logged in the debug env, not yet scored). */
+/** An observed window (p240 D6-D8): a `GPU` window slower than its scene's kept one goes into the
+ * measurements and the stored result, and the report is scored again with it. A window that comes
+ * while a check runs is dropped: the check's report replaces the one it would go into. */
 const handleObservedWindow = (observation: DeviceObservation) => {
-  if (!IS_DEBUG_ENV) return;
-  const gpuBenchmark = getDeviceCapabilityReport()?.measurements.benchmark?.gpu;
-  const ratio = gpuBenchmark
-    ? readObservedOverPredicted(observation, gpuBenchmark, getTargets(lastTargets).referenceFrame)
-    : null;
-  llog('Device capabilities: observed window', { ...observation, observedOverPredicted: ratio });
+  lastObservations[observation.limitedBy] = observation;
+  const report = getDeviceCapabilityReport();
+  const gpuBenchmark = report?.measurements.benchmark?.gpu;
+  if (!report || !gpuBenchmark || inFlight) return;
+  const frame = getTargets(lastTargets).referenceFrame;
+  const observed = mergeObservation(report.measurements.observed ?? [], observation, (o) =>
+    readObservedOverPredicted(o, gpuBenchmark, frame)
+  );
+  if (!observed) return;
+
+  const measurements = { ...report.measurements, observed };
+  if (storedEntry) {
+    const toStore: StoredDeviceCapabilities = {
+      reportVersion: DEVICE_CAPABILITY_REPORT_VERSION,
+      ...storedEntry,
+      measurements,
+    };
+    lsSetItem(DEVICE_CAPABILITIES_LS_KEY, toStore);
+  }
+  const verdict = scoreMeasurements(measurements, lastTargets);
+  if (IS_DEBUG_ENV) {
+    const ratio = readObservedOverPredicted(observation, gpuBenchmark, frame);
+    llog(
+      `Device capabilities: "${observation.sceneId}" took ${ratio}× the predicted frame time (kept; correction ${verdict.observedCorrection ?? 'none'}).`,
+      observation
+    );
+  }
+  _setDeviceCapabilityReport({
+    ...report,
+    measurements,
+    verdict,
+    isSuggestionLowered: isDeviceSuggestionLowered(report.verdict, verdict),
+  });
 };
 
 const startObserverAsync = async () => {
@@ -384,6 +431,7 @@ export const _setForcedDeviceLevels = (levels: ForcedDeviceLevels | null) => {
   if (!report) return;
   _setDeviceCapabilityReport({
     ...report,
+    isSuggestionLowered: false,
     verdict: scoreMeasurements(report.measurements, lastTargets),
   });
 };

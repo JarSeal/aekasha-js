@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AppConfig } from '../config/Config';
 import type { DeviceBenchmarkOpts, DeviceBenchmarkResult } from './DeviceBenchmark';
+import type { DeviceObservation } from './DeviceCapabilitiesTypes';
+import type { DeviceObserverOptions } from './DeviceObserver';
 import type { DeviceProbeEnv } from './DeviceProbe';
 
 // localStorage before anything reads it (the storage helpers check it once): items as own
@@ -83,6 +85,27 @@ vi.mock(import('../loop/MainLoop'), () => ({
   },
 }));
 
+// The observer: the options it was started with (its windows go to their `onWindow`), its holds
+const observing = vi.hoisted(() => ({
+  options: null as DeviceObserverOptions | null,
+  starts: 0,
+  holds: 0,
+}));
+vi.mock(import('./DeviceObserver'), () => ({
+  startDeviceObserver: (options: DeviceObserverOptions) => {
+    observing.options = options;
+    observing.starts++;
+    return {
+      hold: () => {
+        observing.holds++;
+        return () => observing.holds--;
+      },
+      getProgress: () => ({ state: 'WAITING' as const, frames: 0 }),
+      stop: () => undefined,
+    };
+  },
+}));
+
 // The canvas's size, CSS pixels
 const canvas = vi.hoisted(() => ({ width: 800, height: 600 }));
 vi.mock(import('../render/CanvasSize'), () => ({
@@ -138,6 +161,7 @@ beforeEach(() => {
   bench.during = null;
   Object.assign(loop, { masterPlay: true, isMasterPlaying: false, toggles: [] });
   Object.assign(canvas, { width: 800, height: 600 });
+  Object.assign(observing, { options: null, starts: 0, holds: 0 });
 });
 
 afterEach(() => {
@@ -430,5 +454,124 @@ describe('the benchmark', () => {
     });
     expect(report.fromCache).toBe(false);
     expect(error).toHaveBeenCalledTimes(6);
+  });
+});
+
+describe('the observed windows (p240 Phase 4)', () => {
+  // The benchmark's 800 × 600 at fill 20 and 1M triangles per ms: the default reference frame's
+  // (16 + 18 × 0.48) / 20 + 0.5 = 1.732 ms
+  const PREDICTED_MS = 1.732;
+  const createWindow = (ratio: number, overrides: Partial<DeviceObservation> = {}) => ({
+    sceneId: 'gym',
+    at: 0,
+    frames: 300,
+    p50FrameMs: PREDICTED_MS * ratio,
+    p95FrameMs: PREDICTED_MS * ratio * 1.5,
+    p50CpuMs: 1,
+    gpuBusyShare: 1,
+    comparedIntervalMs: 8.333,
+    pixelWidth: 800,
+    pixelHeight: 600,
+    limitedBy: 'GPU' as const,
+    ...overrides,
+  });
+  /** A check with the observer on, and the observer's options once it started */
+  const observeAsync = async () => {
+    const dc = await loadAsync({ observe: { enabled: true, warmUpMs: 1000 } });
+    const report = await dc.runDeviceCapabilityCheckAsync();
+    await vi.waitFor(() => expect(observing.options).not.toBeNull());
+    return { dc, report, options: observing.options as DeviceObserverOptions };
+  };
+
+  it('starts the observer once, with observe.enabled and a GPU benchmark', async () => {
+    const { dc, options } = await observeAsync();
+    expect(options.warmUpMs).toBe(1000);
+    expect(options.getRefreshHz()).toBe(120);
+    await dc.runDeviceCapabilityCheckAsync();
+    expect(observing.starts).toBe(1);
+
+    observing.options = null;
+    await (await loadAsync()).runDeviceCapabilityCheckAsync();
+    await (
+      await loadAsync({ observe: { enabled: true } })
+    ).runDeviceCapabilityCheckAsync({
+      benchmark: false,
+      force: true,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(observing.options).toBeNull();
+  });
+
+  it('holds the observer while the benchmark measures', async () => {
+    const { dc } = await observeAsync();
+    let holdsDuring = 0;
+    bench.during = () => (holdsDuring = observing.holds);
+    await dc.runDeviceCapabilityCheckAsync({ force: true });
+    expect(holdsDuring).toBe(1);
+    expect(observing.holds).toBe(0);
+  });
+
+  it("keeps a scene's slow GPU window, stores it and reports the lowered suggestion", async () => {
+    const { dc, report, options } = await observeAsync();
+    expect(report).toMatchObject({
+      isSuggestionLowered: false,
+      verdict: { observedCorrection: null },
+    });
+    expect(report.verdict.levels.gpu).toBe('ULTRA');
+    const listener = vi.fn();
+    dc.onDeviceCapabilityReport(listener);
+
+    // Held by the refresh rate, or under slowerThan: kept (the second), but nothing lowered
+    options.onWindow(createWindow(20, { limitedBy: 'REFRESH' }));
+    expect(listener).not.toHaveBeenCalled();
+    options.onWindow(createWindow(1.2));
+    expect(listener).toHaveBeenLastCalledWith(
+      expect.objectContaining({ isSuggestionLowered: false })
+    );
+
+    options.onWindow(createWindow(20));
+    const lowered = dc.getDeviceCapabilityReport();
+    expect(lowered).toMatchObject({
+      isSuggestionLowered: true,
+      verdict: {
+        observedCorrection: 20,
+        levels: { gpu: 'LOW' },
+        recommendations: { pixelRatio: 0.5 },
+      },
+    });
+    expect(lowered?.measurements.observed).toHaveLength(1);
+    expect(lowered?.measurements.benchmark?.gpu?.fillRateMPixOpsPerMs).toBe(20);
+    expect(readStored().measurements.observed).toEqual(lowered?.measurements.observed);
+
+    // A faster window of the same scene (the app lowered its settings) changes nothing
+    listener.mockClear();
+    options.onWindow(createWindow(3));
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('starts a later boot corrected, and a new measuring drops the windows', async () => {
+    const { options } = await observeAsync();
+    options.onWindow(createWindow(20));
+
+    const dc = await loadAsync({ observe: { enabled: true } });
+    const cached = await dc.runDeviceCapabilityCheckAsync();
+    expect(cached).toMatchObject({
+      fromCache: true,
+      isSuggestionLowered: false,
+      verdict: { observedCorrection: 20 },
+    });
+    const measured = await dc.runDeviceCapabilityCheckAsync({ force: true });
+    expect(measured.measurements.observed).toBeUndefined();
+    expect(measured.verdict.observedCorrection).toBeNull();
+    expect(readStored().measurements.observed).toBeUndefined();
+  });
+
+  it("keeps the windows in memory only when the measurements aren't stored", async () => {
+    const dc = await loadAsync({ saveToLS: false, observe: { enabled: true } });
+    await dc.runDeviceCapabilityCheckAsync();
+    await vi.waitFor(() => expect(observing.options).not.toBeNull());
+    observing.options?.onWindow(createWindow(20));
+    expect(dc.getDeviceCapabilityReport()?.verdict.observedCorrection).toBe(20);
+    expect(storage.getItem(LS_KEY)).toBeNull();
   });
 });

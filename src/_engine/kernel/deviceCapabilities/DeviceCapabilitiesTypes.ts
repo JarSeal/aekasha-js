@@ -152,6 +152,9 @@ export type DeviceObserveConfig = {
   /** The scenes observed, by id; the others' frames are left out (a test or stress scene heavier
    * than the app's real ones). Default every scene. */
   sceneIds?: string[];
+  /** How much slower than predicted a GPU-held window must be to correct the prediction: its
+   * frame time ÷ the reference frame's predicted time at its pixels. Default 1.25. */
+  slowerThan?: number;
 };
 
 /**
@@ -289,6 +292,10 @@ export type DeviceCapabilityMeasurements = {
   };
   /** The benchmark, null when it didn't run. */
   benchmark: DeviceBenchmarkMeasurements | null;
+  /** The observer's GPU-held windows (`observe`), the slowest of each scene against the
+   * prediction, 8 scenes at most: they correct the prediction when slower than it. None before
+   * a scene ran, or without `observe`. */
+  observed?: DeviceObservation[];
 };
 
 /** The GPU benchmark's throughputs: synthetic workloads on a device of its own, at the target
@@ -398,6 +405,11 @@ export type DeviceCapabilityVerdict = {
   failedTargets: (keyof DeviceCapabilityChecks)[];
   /** The device's levels. */
   levels: DeviceLevels;
+  /** How many times slower than predicted the app's scenes ran (the slowest of the observed
+   * windows, `measurements.observed`): the GPU benchmark's throughputs were divided by it before
+   * the frame rate, the GPU's level and the pixel ratio were worked out. Null when no window was
+   * over `observe.slowerThan`. */
+  observedCorrection: number | null;
   /** Each category's reading as 0-100 of its highest threshold (the GPU's headroom, the lower of
    * the CPU's cores and benchmark score), null when there's no reading (a GPU not benchmarked).
    */
@@ -414,6 +426,10 @@ export type DeviceCapabilityReport = {
   measuredAt: number;
   /** The measurements came from localStorage, not this check. */
   fromCache: boolean;
+  /** The observer found the app's scenes slower than predicted, and a level or a recommendation
+   * went down with it: the report to offer lower settings on (the engine applies nothing). False
+   * on every other report, a check's included. */
+  isSuggestionLowered: boolean;
   /** What was measured. */
   measurements: DeviceCapabilityMeasurements;
   /** The measurements scored against the targets. */

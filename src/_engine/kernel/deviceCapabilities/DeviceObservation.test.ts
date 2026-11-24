@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { DeviceGpuBenchmark } from './DeviceCapabilitiesTypes';
+import type { DeviceObservation } from './DeviceCapabilitiesTypes';
 import {
   classifyObservation,
+  MAX_OBSERVED_SCENES,
+  mergeObservation,
   readComparedIntervalMs,
-  readObservedOverPredicted,
   summarizeObservationFrames,
 } from './DeviceObservation';
 
@@ -83,27 +84,48 @@ describe('what held a window', () => {
   });
 });
 
-describe('the observed frame time over the prediction', () => {
-  const benchmark: DeviceGpuBenchmark = {
-    api: 'WEBGPU',
-    width: 1920,
-    height: 1080,
-    fillRateMPixOpsPerMs: 4,
-    trianglesPerMs: 500_000,
-    usedTimestampQuery: true,
-  };
-  const frame = { fixedMPixOps: 16, fullscreenPasses: 18, trianglesPerFrame: 500_000 };
+describe('the kept windows', () => {
+  const createWindow = (sceneId: string, p50FrameMs: number, at = 0): DeviceObservation => ({
+    sceneId,
+    at,
+    frames: 300,
+    p50FrameMs,
+    p95FrameMs: p50FrameMs * 1.5,
+    p50CpuMs: 2,
+    gpuBusyShare: 1,
+    comparedIntervalMs: 16.667,
+    pixelWidth: 1920,
+    pixelHeight: 1080,
+    limitedBy: 'GPU',
+  });
+  // The ratio: the frame time over a 10 ms prediction
+  const readRatio = (o: DeviceObservation) => o.p50FrameMs / 10;
 
-  it("divides the window's median interval by the reference frame's time at its pixels", () => {
-    // 1 MP: (16 + 18) / 4 + 500k / 500k = 9.5 ms
-    const observation = { p50FrameMs: 19, pixelWidth: 1000, pixelHeight: 1000 };
-    expect(readObservedOverPredicted(observation, benchmark, frame)).toBe(2);
+  it("keeps each scene's slowest GPU window, the newest last", () => {
+    const gym = createWindow('gym', 20, 1);
+    const world = createWindow('world', 30, 2);
+    let kept = mergeObservation([], gym, readRatio) ?? [];
+    kept = mergeObservation(kept, world, readRatio) ?? [];
+    expect(kept).toEqual([gym, world]);
+    // Faster than the kept one (the app lowered its settings): nothing changes
+    expect(mergeObservation(kept, createWindow('gym', 15, 3), readRatio)).toBeNull();
+    const slowerGym = createWindow('gym', 25, 4);
+    expect(mergeObservation(kept, slowerGym, readRatio)).toEqual([world, slowerGym]);
   });
 
-  it('is null without throughputs', () => {
-    const observation = { p50FrameMs: 19, pixelWidth: 1000, pixelHeight: 1000 };
+  it('keeps no window another limit held, nor one without a ratio', () => {
     expect(
-      readObservedOverPredicted(observation, { ...benchmark, trianglesPerMs: 0 }, frame)
+      mergeObservation([], { ...createWindow('gym', 20), limitedBy: 'REFRESH' }, readRatio)
     ).toBeNull();
+    expect(mergeObservation([], createWindow('gym', 20), () => null)).toBeNull();
+  });
+
+  it('drops the oldest scene past the most it keeps', () => {
+    let kept: DeviceObservation[] = [];
+    for (let i = 0; i <= MAX_OBSERVED_SCENES; i++) {
+      kept = mergeObservation(kept, createWindow(`scene${i}`, 20, i), readRatio) ?? kept;
+    }
+    expect(kept).toHaveLength(MAX_OBSERVED_SCENES);
+    expect(kept[0].sceneId).toBe('scene1');
   });
 });
