@@ -329,7 +329,30 @@ As built (sections 1-2):
 - **The target resolution**: `resolveTargetPixelSize` (`DeviceScoring.ts`): `'CANVAS'` is `getCanvasSize()` (1280×720 while it has no size) × the measured pixel ratio, for the benchmark's size and for the verdict, which is scored with the canvas at its scoring (`evaluateDeviceCapabilities` too).
 - **The verdict**: `estimateFps` = 1000 ÷ (`fullscreenPasses` × pixels ÷ fill + `trianglesPerFrame` ÷ triangle rate), rounded to 0.1; the `fps` check against `effectiveFpsTarget`; the GPU's level by the headroom (`gpuHeadroom` bands `{ MEDIUM: 1, HIGH: 2, ULTRA: 4 }`, source `BENCHMARK`, else the adapter's heuristic); the CPU's the lower of the cores' and the score's (`cpuBenchScore` `{ MEDIUM: 8000, HIGH: 15000, ULTRA: 25000 }`, uncalibrated), the score alone counting when the cores are unknown; `scores.gpu` the headroom of `ULTRA`'s, `scores.cpu` the lower of the two. `solvePixelRatio`: the device's ratio, then 2, 1.75 … 0.5 below it, the first holding the effective target (0.5 when none); without a benchmark the Phase 1 table (`recommendDeviceSettings`' optional `solvedPixelRatio`, so Phase 3's forced levels keep the table).
 - **Memory** (Chrome 157 reports `deviceMemory` 32, not 8 at most): only a reading of exactly 8 is "maybe capped" (it doesn't lower the overall, and checks a target over 8 as `UNKNOWN`); no target clamp and no warning; `deviceMemoryGB` bands `{ MEDIUM: 4, HIGH: 8, ULTRA: 16 }`. §1.1's table and risk 2 are out of date on this.
-- **Checked in the Windows Chrome 157 (RX 7900 XT, 144 Hz)**: WebGPU fill ~32 MPix-ops/ms, WebGL2 ~39, both ~7.2 M triangles/ms, CPU ~26k, the benchmark ~0.5 s, timer queries on both. From the running app: the loop paused during the GPU step and played after, the result stored (version 2), the next check from the cache. With the default reference frame it predicts ~3000 fps at 720p: the defaults are far lighter than a real frame until section 3 calibrates them.
+- **Checked in the Windows Chrome 157 (RX 7900 XT, 144 Hz)**: WebGPU fill ~32 MPix-ops/ms, WebGL2 ~39, both ~7.2 M triangles/ms, CPU ~26k, the benchmark ~0.5 s, timer queries on both. From the running app: the loop paused during the GPU step and played after, the result stored (version 2), the next check from the cache.
+
+As built (section 3, calibration):
+
+- **Compared on GPU time, not FPS**: an observed frame rate is capped at the refresh rate (144 here, so a strong GPU can't be compared at all); `onGpuFrameTime` gives the frame's GPU ms (WebGPU sums the passes' times, which overestimates a tile-based GPU's frame: note it with Apple silicon's figures).
+- **A third reference frame term, `fixedMPixOps`** (default 16): the work that doesn't grow with the resolution, in the fill rate's units so it takes longer on a slower GPU. `sceneTestECS` showed it: ~0.49 ms fixed and ~0.04 ms a megapixel, so no passes-and-triangles frame fits it within ±25 % at more than one size. The prediction is (`fixedMPixOps` + `fullscreenPasses` × megapixels) ÷ fill + triangles ÷ triangle rate.
+- **Calibrated against the game-like scenes, not `sceneTestECS`**: it's a test scene of 12 draws and 12.6k triangles, mostly fixed cost; fitted to it, the reference frame would be trivial and rate nearly every GPU `ULTRA`. The default `{ fixedMPixOps: 16, fullscreenPasses: 18, trianglesPerFrame: 500_000 }` fits the gym, the terrain showcase and the large world within 25 % from 540p to 1080p, and overpredicts the light scenes (~3× at 1080p: conservative).
+- **The calibration tool**: `kernel/deviceCapabilities/debug/_dbg__DeviceCalibration.ts` (debug env; Phase 3's tab can call it). From the browser's console in `yarn dev` with `?isDebug=true` and the scene running: `(await import('/_engine/kernel/deviceCapabilities/debug/_dbg__DeviceCalibration.ts')).measureDeviceCalibrationAsync()`. It benchmarks when the report has no GPU benchmark, samples the scene's GPU time (120 frames after 30) at the renderer's pixel ratio, 0.7 × and 0.5 × it (put back after), and fits the frame by least squares (`fitReferenceFrame`, tested): the GPU time less the triangles' over the megapixels, its slope × fill the passes, its intercept × fill the fixed work.
+- **The tests** score with a reference frame of their own (`TEST_FRAME` in `DeviceScoring.test.ts`), so a new calibration changes none of them.
+
+Calibration table (GPU ms per frame, the renderer's samples at 1920×1080, 1344×756 and 960×540; fitted: fixed MPix-ops / passes; "default" is the default frame's prediction ÷ observed):
+
+| Machine | Scene | Fill / tris per ms | 1080p | 756p | 540p | Fitted | Default ÷ observed (1080p / 540p) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Windows, Chrome 157 WebGPU, RX 7900 XT (discrete) | sceneTestECS (12.6k tris, 12 draws) | 32.5 / 7.0M | 0.589 | 0.531 | 0.515 | 15.7 / 1.6 | 2.9 / 1.7 |
+| 〃 | thirdPersonGymScene (36k, 72) | 〃 | 1.596 | 1.045 | 0.791 | 16.7 / 16.8 | 1.07 / 1.08 |
+| 〃 | terrainShowcase (103k, 31) | 〃 | 1.723 | 1.053 | 0.686 | 11.2 / 21.5 | 0.99 / 1.24 |
+| 〃 | largeWorld (464k, 136) | 〃 | 1.591 | 1.172 | 0.916 | 21.0 / 13.9 | 1.07 / 0.93 |
+| 〃 | skyShowcase (78k, 38) | 〃 | 0.357 | 0.225 | 0.207 | 4.2 / 3.3 | 4.8 / 4.1 |
+| 〃 | scene01 (19k, 21) | 〃 | 0.629 | 0.559 | 0.542 | 16.4 / 1.9 | 2.7 / 1.6 |
+| integrated laptop GPU | to measure | | | | | | |
+| Apple silicon | to measure | | | | | | |
+
+Still open in section 3: the integrated-laptop and Apple silicon rows (does the fixed work scale with the fill rate as assumed?), then the `gpuHeadroom` bands (each machine's GPU level against the shadow preset it holds 60 fps at) and the `cpuBenchScore` bands (8000 / 15000 / 25000 are guesses; this machine scores ~26k).
 
 ### Phase 3: Debug tab and level override
 

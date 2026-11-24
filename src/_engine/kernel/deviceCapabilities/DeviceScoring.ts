@@ -41,7 +41,9 @@ export const PIXEL_RATIO_STEPS = [2, 1.75, 1.5, 1.25, 1, 0.75, 0.5];
 export const DEFAULT_DEVICE_TARGETS: ResolvedDeviceCapabilityTargets = {
   fps: 60,
   resolution: 'CANVAS',
-  referenceFrame: { fullscreenPasses: 6, trianglesPerFrame: 1_000_000 },
+  // Fitted to the example app's game-like scenes (the gym, the terrain showcase, the large world:
+  // p240 Phase 2's calibration table), within 25 % of their GPU time from 540p to 1080p
+  referenceFrame: { fixedMPixOps: 16, fullscreenPasses: 18, trianglesPerFrame: 500_000 },
   minDeviceMemoryGB: 4,
   minGPUMemoryMB: 2048,
   minCpuCores: 4,
@@ -134,8 +136,8 @@ export const resolveTargetPixelSize = (
     : { width: resolution.width, height: resolution.height };
 
 /**
- * The frame rate predicted for the reference frame over `pixels`: its fill at the benchmark's
- * fill rate plus its triangles at the triangle rate (p240 §1.2).
+ * The frame rate predicted for the reference frame over `pixels`: its fixed work and its fill at
+ * the benchmark's fill rate plus its triangles at the triangle rate (p240 §1.2).
  * @internal
  * @returns the frame rate, null without throughputs to predict from
  */
@@ -145,7 +147,8 @@ export const estimateFps = (
   frame: ResolvedDeviceCapabilityTargets['referenceFrame']
 ) => {
   if (!(benchmark.fillRateMPixOpsPerMs > 0) || !(benchmark.trianglesPerMs > 0)) return null;
-  const fillMs = (frame.fullscreenPasses * pixels) / (benchmark.fillRateMPixOpsPerMs * 1e6);
+  const fillMs =
+    (frame.fixedMPixOps + (frame.fullscreenPasses * pixels) / 1e6) / benchmark.fillRateMPixOpsPerMs;
   const geometryMs = frame.trianglesPerFrame / benchmark.trianglesPerMs;
   const frameMs = fillMs + geometryMs;
   return frameMs > 0 ? Math.round((1000 / frameMs) * 10) / 10 : null;

@@ -30,7 +30,8 @@ export type DeviceCapabilityTargets = {
    * `'CANVAS'`. */
   resolution?: 'CANVAS' | { width: number; height: number };
   /** The frame the frame rate is predicted for, in the GPU benchmark's units: a stand-in for the
-   * app's scenes ({@link DeviceReferenceFrame}). */
+   * app's scenes ({@link DeviceReferenceFrame}). The default stands for the example app's
+   * game-like scenes; an app with lighter or heavier ones tunes it. */
   referenceFrame?: DeviceReferenceFrame;
   /** The least system memory, GB (`navigator.deviceMemory`, Chromium only, bucketed). Older
    * browsers report 8 at most: a reading of 8 checks a higher target as `UNKNOWN`. Default 4. */
@@ -54,16 +55,20 @@ export type DeviceCapabilityTargets = {
 };
 
 /**
- * The frame the frame rate is predicted for: its fill and its geometry in the GPU benchmark's
- * units, so its time is `fullscreenPasses` × the target's pixels ÷ the fill rate +
- * `trianglesPerFrame` ÷ the triangle rate. Tune it so the prediction matches the app's own scenes
- * (the debug stats panel's frame time).
+ * The frame the frame rate is predicted for: its work in the GPU benchmark's units, so its time is
+ * (`fixedMPixOps` + `fullscreenPasses` × the target's megapixels) ÷ the fill rate +
+ * `trianglesPerFrame` ÷ the triangle rate. Tune it so the prediction matches the app's own scenes'
+ * GPU time (`_dbg__DeviceCalibration.ts` measures a scene and fits it).
  */
 export type DeviceReferenceFrame = {
+  /** The work that doesn't grow with the resolution (the passes' setup, shadow maps, the small
+   * targets of a bloom), in millions of the fill shader's pixel ops: in the fill rate's units, so
+   * it takes longer on a slower GPU. Default 16. */
+  fixedMPixOps?: number;
   /** The fill: passes over every pixel of the benchmark's fragment shader (an ALU loop and two
-   * texture samples, blended), standing for the scene, its shadows and its PostFX. */
+   * texture samples, blended), standing for the scene, its shadows and its PostFX. Default 18. */
   fullscreenPasses?: number;
-  /** The geometry: small triangles drawn, shadow passes included. */
+  /** The geometry: small triangles drawn, shadow passes included. Default 500 000. */
   trianglesPerFrame?: number;
 };
 

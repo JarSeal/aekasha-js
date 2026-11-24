@@ -64,6 +64,9 @@ const createMeasurements = (
 // The canvas, CSS pixels: 2560 × 1440 pixels at the fixture's pixel ratio of 2
 const CANVAS = { width: 1280, height: 720 };
 
+// The tests' own reference frame, so a calibration of the defaults changes none of them
+const TEST_FRAME = { fixedMPixOps: 0, fullscreenPasses: 6, trianglesPerFrame: 1e6 };
+
 const score = (
   overrides: MeasurementOverrides = {},
   targets: Parameters<typeof resolveDeviceTargets>[0] = undefined,
@@ -71,7 +74,7 @@ const score = (
 ) =>
   scoreDeviceCapabilities(
     createMeasurements(overrides),
-    resolveDeviceTargets(targets),
+    resolveDeviceTargets({ referenceFrame: TEST_FRAME }, targets),
     resolveDeviceLevelThresholds(thresholds),
     CANVAS
   );
@@ -311,7 +314,7 @@ describe('scoreDeviceCapabilities', () => {
 });
 
 describe('the frame rate prediction', () => {
-  const frame = { fullscreenPasses: 6, trianglesPerFrame: 1e6 };
+  const frame = { fixedMPixOps: 0, fullscreenPasses: 6, trianglesPerFrame: 1e6 };
   const bench = benchmarked(6).benchmark?.gpu ?? null;
 
   it("adds the reference frame's fill and geometry times", () => {
@@ -319,6 +322,8 @@ describe('the frame rate prediction', () => {
     expect(estimateFps(bench!, 1e6, frame)).toBe(500);
     expect(estimateFps(bench!, 3e6, frame)).toBe(250);
     expect(estimateFps({ ...bench!, fillRateMPixOpsPerMs: 0 }, 1e6, frame)).toBeNull();
+    // 12 fixed MPix-ops: 2 ms more at any size
+    expect(estimateFps(bench!, 1e6, { ...frame, fixedMPixOps: 12 })).toBe(250);
   });
 
   it('resolves the target resolution from the canvas × the pixel ratio, or as given', () => {
@@ -378,7 +383,11 @@ describe('scoreDeviceCapabilities with a benchmark', () => {
     const heavy = score(benchmarked(10), { referenceFrame: { fullscreenPasses: 60 } });
     expect(heavy.estimatedFps).toBeCloseTo(1000 / (22.1184 + 1), 1);
     // The default triangles kept under a partial reference frame
-    expect(heavy.targets.referenceFrame).toEqual({ fullscreenPasses: 60, trianglesPerFrame: 1e6 });
+    expect(heavy.targets.referenceFrame).toEqual({
+      fixedMPixOps: 0,
+      fullscreenPasses: 60,
+      trianglesPerFrame: 1e6,
+    });
     expect(score(benchmarked(10), undefined, { gpuHeadroom: { ULTRA: 10 } }).levels.gpu).toBe(
       'HIGH'
     );
