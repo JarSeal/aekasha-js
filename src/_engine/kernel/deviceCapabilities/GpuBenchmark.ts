@@ -2,8 +2,8 @@
 // short-lived device of its own (raw WebGPU, else WebGL2; no three.js), timed with vsync out of
 // the picture. Fill: blended fullscreen triangles running a fixed-cost fragment shader (an ALU
 // loop and two texture samples), in pixel ops per ms. Geometry: tiny triangles in scanline order,
-// in triangles per ms. Each workload doubles (or more) until a batch takes `TARGET_BATCH_MS` or the
-// budget is used. The backends are `GpuBenchmarkWebGPU.ts` and `GpuBenchmarkWebGL2.ts`, the
+// in triangles per ms. Each workload doubles (or more) until a batch takes `TARGET_BATCH_MS`, then
+// repeats it for the rest of its budget, the fastest kept. The backends are `GpuBenchmarkWebGPU.ts` and `GpuBenchmarkWebGL2.ts`, the
 // workloads' shared parts `GpuBenchmarkWorkloads.ts`; loaded with the benchmark, never by a stored
 // result's boot.
 import type { DeviceGpuBenchmark } from './DeviceCapabilitiesTypes';
@@ -17,6 +17,8 @@ import type { GpuBatchTiming } from './GpuBenchmarkWorkloads';
 const TARGET_BATCH_MS = 8;
 /** The most a batch grows in one step. */
 const MAX_GROWTH = 16;
+/** The most times a grown batch repeats. */
+const MAX_REPEATS = 256;
 /** The fill workload's first batch and the most it draws (passes over the target). */
 const FILL_START = 1;
 const FILL_MAX = 4096;
@@ -46,10 +48,12 @@ export type ThroughputOpts = {
 };
 
 /**
- * Grows a workload until a batch takes `TARGET_BATCH_MS`, the next one would end past the
- * deadline, or it reaches `max`; at least one batch runs, whatever the deadline.
+ * Grows a workload until a batch takes `TARGET_BATCH_MS` or reaches `max`, then repeats that batch
+ * until the next one would end past the deadline (`MAX_REPEATS` at most), and keeps the fastest:
+ * a GPU that idles at a low clock (Apple silicon's, p240 Phase 2) ramps up under the repeats, as
+ * it does under a game's frames. At least one batch runs, whatever the deadline.
  * @internal
- * @returns the last batch: its count and timing
+ * @returns the fastest grown batch (the last one when none grew in time): its count and timing
  */
 export const measureThroughputAsync = async (
   run: (count: number) => Promise<GpuBatchTiming>,
@@ -57,11 +61,17 @@ export const measureThroughputAsync = async (
 ) => {
   const startedAt = now();
   let count = start;
-  for (;;) {
+  let fastest: (GpuBatchTiming & { count: number }) | null = null;
+  for (let repeats = 0; ; ) {
     const timing = await run(count);
     const t = now();
     onBatch?.(Math.min(1, (t - startedAt) / Math.max(1, deadline - startedAt)));
-    if (timing.ms >= TARGET_BATCH_MS || count >= max) return { count, ...timing };
+    if (timing.ms >= TARGET_BATCH_MS || count >= max) {
+      // The same count each repeat, so the fastest is the shortest
+      if (!fastest || timing.ms < fastest.ms) fastest = { count, ...timing };
+      if (++repeats >= MAX_REPEATS || t + timing.ms > deadline) return fastest;
+      continue;
+    }
     const growth = Math.min(
       MAX_GROWTH,
       Math.max(2, Math.ceil(TARGET_BATCH_MS / Math.max(timing.ms, 0.05)))

@@ -270,17 +270,23 @@ export type GpuBenchmarkTraceRun = {
 
 /**
  * Runs the GPU benchmark `runs` times back to back (each on a device of its own, the main loop
- * paused meanwhile when it plays) at the renderer's drawing buffer size, and logs every batch:
- * its workload, count, wall time, timer query reading and the time kept. What a reading that
- * repeats to the digit, or rates a GPU far below its scenes, is made of: a timer or a completion
- * snapping to a clock's steps, a GPU clocked down between batches, or the workload itself.
- * Nothing is stored.
+ * paused meanwhile when it plays) at the renderer's drawing buffer size, after `idleMs` with the
+ * GPU idle (as the check's refresh rate sampling leaves it), and logs every batch: its workload,
+ * count, wall time, timer query reading, the time kept and its rate. What a reading that repeats
+ * to the digit, or rates a GPU far below its scenes, is made of: a timer snapping to a clock's
+ * steps (Dawn's 2^16 ns), a GPU clocked down when idle, or the workload itself. Nothing is stored.
  * @param opts.runs benchmark runs (default 2)
  * @param opts.budgetMs each run's GPU budget, ms (default 1000, about the check's)
+ * @param opts.idleMs the idle time before the first run, ms (default 500)
  * @param opts.api the API to measure (default WebGPU when there's an adapter, else WebGL2)
  */
 export const traceGpuBenchmarkAsync = async (
-  opts: { runs?: number; budgetMs?: number; api?: DeviceGpuBenchmark['api'] } = {}
+  opts: {
+    runs?: number;
+    budgetMs?: number;
+    idleMs?: number;
+    api?: DeviceGpuBenchmark['api'];
+  } = {}
 ): Promise<GpuBenchmarkTraceRun[]> => {
   const probeEnv = readBrowserProbeEnv();
   const adapter = await requestProbeAdapterAsync(probeEnv);
@@ -295,6 +301,7 @@ export const traceGpuBenchmarkAsync = async (
   if (wasPlaying) toggleMainPlay(false);
   const runs: GpuBenchmarkTraceRun[] = [];
   try {
+    await new Promise((resolve) => setTimeout(resolve, opts.idleMs ?? 500));
     for (let i = 0; i < (opts.runs ?? 2); i++) {
       const batches: GpuBenchmarkBatch[] = [];
       const result = await runGpuBenchmarkAsync({
@@ -322,6 +329,8 @@ export const traceGpuBenchmarkAsync = async (
       `GPU benchmark trace, run ${i + 1} (${api}, ${width}×${height}):`,
       JSON.stringify(run.result)
     );
+    // The benchmark's own (clamped) target size
+    const pixels = run.result ? run.result.width * run.result.height : width * height;
     // eslint-disable-next-line no-console -- a debug tool's table, read in the console
     console.table(
       run.batches.map((b) => ({
@@ -331,6 +340,10 @@ export const traceGpuBenchmarkAsync = async (
         queryMs: round3(b.queryMs),
         keptMs: round3(b.ms),
         kept: b.usedTimestampQuery ? 'query' : 'wall',
+        // MPix-ops/ms, or thousands of triangles/ms
+        rate: round3(
+          b.workload === 'FILL' ? (b.count * pixels) / 1e6 / b.ms : b.count / 1000 / b.ms
+        ),
       }))
     );
   });

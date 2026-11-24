@@ -55,11 +55,39 @@ describe('measureThroughputAsync', () => {
     const result = await measureThroughputAsync(run, {
       start: 1,
       max: 1e6,
-      deadline: 1e6,
+      deadline: 40,
       now: clock.now,
     });
-    expect(run.mock.calls.map(([count]) => count)).toEqual([1, 16, 256, 1024]);
+    expect(run.mock.calls.slice(0, 4).map(([count]) => count)).toEqual([1, 16, 256, 1024]);
     expect(result).toMatchObject({ count: 1024, ms: 10.24, usedTimestampQuery: true });
+  });
+
+  it('repeats the grown batch until the deadline and keeps the fastest (a clock ramping up)', async () => {
+    const clock = createClock();
+    // 16 ms a batch, falling to 9 by the fourth, then slowing again
+    const times = [16, 12, 10, 9, 11, 11, 11];
+    let calls = 0;
+    const run = vi.fn<(count: number) => Promise<GpuBatchTiming>>(async () => {
+      const ms = times[calls++];
+      clock.time += ms;
+      return { ms, usedTimestampQuery: true, wallMs: ms, queryMs: ms };
+    });
+    const result = await measureThroughputAsync(run, {
+      start: 8,
+      max: 1e6,
+      deadline: 70,
+      now: clock.now,
+    });
+    // 69 ms done (six batches); the next (11 ms) would end at 80
+    expect(run.mock.calls.map(([count]) => count)).toEqual([8, 8, 8, 8, 8, 8]);
+    expect(result).toMatchObject({ count: 8, ms: 9 });
+  });
+
+  it('repeats a grown batch 256 times at most', async () => {
+    const clock = createClock();
+    const run = vi.fn(createRun(clock, 1));
+    await measureThroughputAsync(run, { start: 8, max: 1e6, deadline: 1e9, now: clock.now });
+    expect(run).toHaveBeenCalledTimes(256);
   });
 
   it('stops at max, and before a batch that would end past the deadline', async () => {
