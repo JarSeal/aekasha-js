@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-4 implemented
+Status: in progress | Phases 1-5 implemented
 Category: Debug, Dev tooling
 Related: `devTools/devFiles/CLAUDE.md` (the dev file server this builds on, p342: the routes,
 `writeDevFiles`, save entry writes, the "File server" folder; this plan is p342's §5 question 4),
@@ -589,7 +589,7 @@ As built:
   right. The environment's, not the dialog's; a scratch script on a heavy scene freezes the loops
   before it reads anything painted.
 
-### Phase 5 — Cameras and lights
+### Phase 5 — Cameras and lights — done
 
 Their sources: the UI keys and `debugCam` stripped, light colours to `#rrggbb`, values equal to
 the asset's dropped, the UI keys kept after a save.
@@ -619,6 +619,50 @@ Sections:
 
 **Exit:** a light's colour and a camera's fov saved from largeWorld land as entries with only
 those keys; helper toggles alone are no change; a light made in code is Not saveable.
+
+As built:
+
+- The shared parts (section 1, `debug/_dbg__SaveEntries.ts`): `findSceneAssetFile`'s kinds take
+  `cameras` and `lights`; `getSceneListItem(list, sceneId, assetId)` is the scene's resolved entry
+  (`findSceneAssetFile` checks the listing with it); `pruneFlatSaveEntry(entry, base)` drops a
+  top-level key the base has with the same value (JSON compared, so key order counts: a file's
+  `{ y, x, z }` reads as a change and is written again, harmless). An inline camera or light whose
+  app id is also a file's id would be taken for that file, as for sky boxes: the gather claims no
+  inline ids (Phase 8's).
+- i165 fixed and closed (`docs/issues/_DONE_i165_…`): a light's new record has `helperVisible` and
+  `symbolVisible` only (not `enabled`: those two stay, the visibility reader takes a missing
+  `helperVisible` as false while a record exists), and `LightEntityDebugState.enabled` is optional.
+  A record from before keeps its `enabled: true`, which the light source reads as no change for a
+  light that's on.
+- The sources (sections 2 and 3, `kernel/camera/debug/_dbg__CameraSave.ts`,
+  `kernel/light/debug/_dbg__LightSave.ts`): a record's values are its keys but
+  `CAM_DEBUGGER_ONLY_KEYS` / `LIGHT_DEBUGGER_ONLY_KEYS` (exported from the `_dbg__*DebugState.ts`
+  modules, which the "Local storage override" row reads too); the change's summary is the keys that
+  differ from the scene's entry (`pruneFlatSaveEntry` against it), none and the record isn't
+  listed; `build` puts every value over the file's latest entry and prunes flat against the file's
+  `camProps` / `lightProps`. The lights compare through `toComparable` (colours as `#rrggbb` through
+  `toThreeColor` and `THREE.Color`, `enabled` defaulting to true; only the entry's own keys count)
+  and write the record's colours as `#rrggbb`, a latest entry's colour as it was written. `onSaved`
+  deletes the collected value keys, a record left empty and a scene left empty
+  (`pruneEmptyCamScene` / `pruneEmptyLightScene`); the preferences and `debugCam` stay. Labels
+  `Camera "<appId>"` / `Light "<appId>"`; ids `camera` / `light`. Registered in
+  `registerCameraDebugGUI` / `registerLightDebugGUI` (`Camera.ts`, `Light.ts`; re-exported through
+  the GUI modules), which the boot runs before the features: before `setSaveSourcesReady`. A
+  colour string three can't parse is compared as white (three warns on every collect); such a
+  light renders white with the same warning.
+- Checked in the browser (`largeWorld`, WebGL fallback, a scratch Playwright script on a dev server
+  of its own, port 8095, run twice from a clean state): the edits through the debugger's own
+  writes, called in the page (`saveLightToLS` for the sun's colour, `saveCameraToLS` for the
+  overview's fov and its lens folder, `_toggleAllLightHelpers(true)` over every light, the
+  lanterns too, a symbol and a camera helper, a lantern's intensity): 12 light records, none with
+  `enabled`; the collect and the "Save specific data…" dialog list only the camera's `fov` and the
+  sun's `color` under This scene and `largeWorldLantern0` under Not saveable ("not in the scene
+  JSON"). Ctrl+S: one reload, `largeWorldOverview.camera.json` got `{ fov: 50 }` and
+  `largeWorldSun.light.json` `{ color: '#ff0000' }` for `largeWorld`, stamped (versions, author);
+  after it the sun is red and the fov 50, the records hold only their preferences (the lantern its
+  intensity too), and "Save scene" reads "Nothing to save in this scene". No console errors. The
+  app files were restored after. Not checked: the edit windows' fields themselves (their writes are
+  the unit tests'), and a real GPU.
 
 ### Phase 6 — Material editor (the current scene's materials)
 
