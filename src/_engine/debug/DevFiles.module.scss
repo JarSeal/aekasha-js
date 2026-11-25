@@ -1,0 +1,51 @@
+// The dev files' debug UI (p355): the confirm writes dialog (_dbg__DevFilesConfirm.ts) and the
+// gather toasts' lists (_dbg__DevFilesGather.ts). On the tokens, unlayered (p806 D9).
+
+.dialogContent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-size: var(--aek-font-size-md);
+}
+
+.panel {
+  flex: 1;
+  min-height: 0;
+  padding: var(--aek-space-4) var(--aek-space-5);
+  overflow: auto;
+  scrollbar-width: thin;
+
+  p {
+    margin: 0 0 var(--aek-space-3);
+  }
+}
+
+.fileList,
+.toastList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fileRow {
+  display: flex;
+  gap: var(--aek-space-3);
+  align-items: center;
+  padding: var(--aek-space-1) 0;
+}
+
+.path,
+.toastList li {
+  overflow-wrap: anywhere;
+  font-family: var(--aek-font-mono);
+  font-size: var(--aek-font-size-sm);
+}
+
+.footer {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  gap: var(--aek-space-3);
+  padding: var(--aek-space-4) var(--aek-space-5);
+  border-top: 1px solid var(--aek-border);
+}

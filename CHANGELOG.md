@@ -4,6 +4,52 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-25 — p355_save-menu-and-file-server-settings (Phases 1-9)
+
+Saving debug edits into the repo (p355): the debug tools kept every edit in localStorage, and nothing wrote one back to the asset JSONs. Now the Æ button on the debug toolbar opens a menu with "Save scene" (Ctrl+S / ⌘S), which writes the current scene's edits as `__saveData` entries into the files they came from in one commit of the dev file server, and "Save specific data…" (Ctrl+Shift+S / ⌘⇧S), a dialog to pick which changes, of any scene, to write. An entry holds only what differs from its file, a file changed since the page loaded fails the save with `CONFLICT` and keeps the edits, and the saved edits leave localStorage after the reload. Sky boxes, PostFX passes and switches, spatial domains' cell sizes, cameras, lights and the material editor's materials save this way, and a debug module adds its own with `registerSaveSource`. A camera, light or sky box written inline in a scene JSON moves into a file of its own on its first save. The dev file server stamps entries with git's `user.name`, keeps a set number of backups, and can show every write's files before they land.
+
+### Engine 6.28.0 (Sunset)
+
+**Added**
+
+- The Æ menu: the debug toolbar's Æ button is a menu button with "Save scene", "Save specific data…" and "About Ækasha" (About moved into it). While a save runs, until its reload, the button is a spinner and the menu is off. A save item that can't save is disabled with the reason as its tooltip: the dev files off, a save history size of 0, the debugger still starting, nothing to save.
+- `registerSaveSource({ id, label, collect, onSaved })` (`aekasha/debug`) with the types `SaveSource`, `SaveChange`, `SaveChangeWrite` and `SaveChangeExtract`: a source lists its changes (each a file, a scene, a summary, and `build`, which returns the entry from the scene's latest one, or why it can't be saved), and clears what it saved in `onSaved`. The pipeline reads each file fresh and sends its hash as `expectedHash`, builds one file's changes one after the other, and writes every file in one `writeDevFiles` batch.
+- "Save scene" (debug key `sc-save-scene`, Ctrl+S / ⌘S): the current scene's saveable changes and the global ones, in one commit. "Nothing to save" when every file is unchanged. A material edited in the material editor that the scene doesn't list is left out with a warning toast, keeping its editor changes. The key works in a text field too, which it blurs first.
+- "Save specific data…" (debug key `sc-save-specific`, Ctrl+Shift+S / ⌘⇧S): a dialog with the changes grouped as This scene, Other scenes (a group per scene) and Not saveable (with the reasons). It has group checkboxes, Check all / Uncheck all and Save (n), and a failed save is shown in the dialog.
+- The sources: sky boxes, PostFX passes, the scene's PostFX switch (`postFxEnabled`) and a spatial domain's cell size (both into the scene JSON's entry), cameras and lights (only their values, not the debugger's preferences; light colours as `#rrggbb`), and the material editor's overrides of the current scene's materials. An inline camera, light or sky box in a scene JSON moves on its first save to `<id>.camera.json`, `<id>.light.json` or `<id>.skybox.json` next to the scene JSON, with the entry, and the scene JSON lists its id in its place. The move isn't saveable when the id or the new path is taken.
+- `AppConfig.devFiles.gatherToasts` (default true: a toast after a write's reload, "Saved n files", with the asset errors when a source failed, and an alert when the gather fails) and `confirmWrites` (default false: a dialog lists every write's files and statuses before they land; Cancel rejects with the new `DevFilesClientErrorCode` `CANCELLED`). Both are also switches in the Debug tools tab's File server folder, which shows "Save entry author" and "Backups kept" too.
+- `DevFileWrite`: a `json` write may carry `saveData` (the entries put into the new value, stamped: how a moved inline asset's file is created), and `saveData` may be a list, one entry per scene.
+- `MetaSchema.author`: a save entry's `__meta` may name its author.
+- The UI kit: `MenuActionItem.disabledReason` (a tooltip on a disabled item), and `createForm`'s `setError(message | null, { focus? })` / `getError()` (the form's own error, first in the error summary, without a link). The debug toaster has a `success` icon.
+- The on-screen toolbar's tools take `menu`, `isLoading` and `getDisabledReason`.
+
+**Changed**
+
+- The material editor shows a material as the current scene has it (its latest save entry applied), not as its file, so after a save it shows the saved values and an entry's value can be set back to the file's.
+- A menu button whose trigger is `disabled` or `aria-disabled="true"` opens nothing by a click or its arrow keys (`open()` from code still does).
+
+**Fixed**
+
+- A light's helper or symbol toggled in the debugger no longer saves `enabled: true` with it, which switched a light created disabled back on after a reload (`docs/issues/_DONE_i165_light-debug-save-reenables-disabled-light.md`).
+
+### App 1.37.0 (Preschooler)
+
+**Changed**
+
+- `src/CONFIG.ts` sets the new `devFiles.gatherToasts` (true) and `devFiles.confirmWrites` (false), the defaults, with a comment on each.
+
+### Project
+
+**Added**
+
+- The dev file server stamps each entry's `__meta.author` with git's `user.name` (none when it isn't set), keeps the backups of the last 20 commits (`AEK_DEV_FILES_BACKUPS=<n>`: -1 all, 0 none), and takes `dryRun` on `POST commit` (the statuses and hashes without writing). Each commit result has `previousHash`. A write's `json` may carry `saveData`, and `saveData` may be a list (each scene once). The self-check covers them, running its own server with `AEK_DEV_FILES_BACKUPS=0` and a git user of its own (`withGitUser`), so it never touches the developer's git config or backups.
+- The gather: the development data's scene has `__sourcePath` (its JSON's path) and `__inlineAssets` (the ids of its inline cameras, lights and sky boxes), and a scene's save entry merges `spatialDomains` by id. The production data is unchanged byte for byte.
+
+**Changed**
+
+- The docs: the debug `CLAUDE.md` (the Æ menu and saving, save sources, the keys, the toolbar's menu tools), the dev files `CLAUDE.md` (the write kinds, the dry run, the author, the backups, the File server folder), the gather `CLAUDE.md` (`__inlineAssets`), the root `CLAUDE.md` (`AEK_DEV_FILES_BACKUPS`), the UI kit's `CLAUDE.md` and the Hub's overlays and forms pages (the item's reason, the form's own error), the Hub's Debug suite page (a "Saving your edits" section, its settings, a save source of your own, the save keys), the readme, and p355 marked done (`_DONE_p355_save-menu-and-file-server-settings.md`).
+- The bundle, API and docs baselines recorded, with `physicsTest.js`'s size from the previous merge, which it didn't record. The UI kit's library demos: the menu's "Revert" with its reason and the form's "Submit it, the server down".
+
 ## 2026-11-24 — p250_physics-api-support-for-multibody-joints (Phases 0-2)
 
 Multibody joints (p250): next to the impulse joints, the Physics API now makes Rapier's multibody joints, which solve a tree of bodies as one articulated body, so a chain never drifts apart at its joints (a robot arm, a crane, a ragdoll's limbs), at the cost of motors and limits. Rapier kills its world on a tree it can't hold, so the engine checks every multibody joint before Rapier sees it and rejects one it would panic on, and the simulation tiers, the world bounds and the snapshots each handle a multibody whole. To get there, Rapier went from 0.19.3 to 0.21.0: on 0.19.3, deleting any body of a multibody chain killed the world. The upgrade doubles Rapier's download, changes how every scene simulates, and changed when a character tumbles against a wall on a hard landing.

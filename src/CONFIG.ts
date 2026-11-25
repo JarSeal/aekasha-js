@@ -43,10 +43,14 @@ const config: AppConfig = {
     },
   },
   // Debug tools writing into the repo while `yarn dev` runs (debug env only). saveHistorySize:
-  // the `__saveData` entries a save keeps per scene in an asset JSON (-1 = all, 0 = saving off).
-  // The Debug tools tab's "File server" folder overrides it per browser.
+  // the `__saveData` entries a save keeps per scene in an asset JSON (-1 = all, 0 = saving off);
+  // gatherToasts: a toast with how a write's gather went; confirmWrites: a dialog lists every
+  // write's files before they land. The Debug tools tab's "File server" folder overrides them
+  // per browser.
   devFiles: {
     saveHistorySize: 20,
+    gatherToasts: true,
+    confirmWrites: false,
   },
   // #region device-capabilities (shown in the Hub: hub/pages/features/device-capabilities/)
   // The device capability check: measured at the boot (stored in this browser for 30 days, so a

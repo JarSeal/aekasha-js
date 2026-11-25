@@ -74,6 +74,8 @@ export {
   updateProfilerTab,
 } from './Profiler';
 export type { EntityWindowOpener, StatsSource } from './Profiler';
+export { registerSaveSource } from './SaveData';
+export type { SaveChange, SaveChangeExtract, SaveChangeWrite, SaveSource } from './SaveData';
 export {
   recordOrCoalesceUndoRedoAction,
   recordUndoRedoAction,

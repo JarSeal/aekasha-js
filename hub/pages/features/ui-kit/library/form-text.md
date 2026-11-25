@@ -10,7 +10,8 @@ null.
   summary at the top takes the focus and links each error to its field (the GOV.UK pattern): a
   link focuses the field, opening a shut folder around it. A field that is hidden or disabled
   isn't checked; a field's own error (an expression that doesn't parse) and the app's `setError`
-  count too.
+  count too. The form's own error, one tied to no field (a failed save: `form.setError(message)`),
+  is the summary's first item, a text without a link, until the next submit or a reset.
 - **Submit:** Enter in a single-line field, the submit button or `submit()`; `onSubmit` runs only
   when every field is valid. A promise from it keeps the form busy (`aria-busy`, the submit button
   loading) until it settles.
@@ -20,7 +21,8 @@ null.
   `aria-required` on the control where its role takes one.
 - **States:** drawn in the page, in a kit root of its own: a new player's form in two fieldsets.
   "Submit it empty" shows the summary and the errors; "Fill it in" fills every field, so Create
-  succeeds after a moment.
+  succeeds after a moment; "Submit it, the server down" fills it in and submits it to a server
+  that fails, so the summary takes the focus with the form's own error.
 
 The browser's own validation messages never show: the form's errors are text in the page, in the
 kit's colours, read with their fields.

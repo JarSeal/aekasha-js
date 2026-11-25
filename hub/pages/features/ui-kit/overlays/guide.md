@@ -315,7 +315,10 @@ const save = createSplitButton({
 An action's `onSelect` runs after the menu closed, so a dialog it opens gives the focus back to
 the menu's button when it closes. An item's `kbd` is a key hint you make with `createKbd`, which
 the menu removes: a getter's at each close (the getter makes new ones on the next open), an
-array's with the menu.
+array's with the menu. A disabled item stays in the menu and can take the focus, so a reader
+finds it; give an action a `disabledReason` and it says why, as its tooltip and its description
+(`{ label: 'Save', disabled: !canSave, disabledReason: 'Nothing changed' }`). A menu button that's
+disabled (`disabled`, or `aria-disabled` with `focusableWhenDisabled`) doesn't open its menu.
 
 A submenu (`type: 'submenu'`, its `items` any of a menu's, another submenu too) opens beside its
 item, flipped to the other side where it doesn't fit. ArrowRight, Enter or Space opens it on its
@@ -330,7 +333,7 @@ close it on the way.
 | Parts             | `.aekMenu` with `__item` (`__icon`, `__label`, `__kbd`, `__check`, `__submenuMark`), `__group`, `__separator`; an open submenu is an `.aekMenu[data-submenu]` of its own; a split button is `.aekButtonGroup.aekSplitButton`                                                                                      |
 | Keys              | On the trigger: Enter, Space, ArrowDown open on the first item, ArrowUp on the last. In it: the arrows (wrapping), Home, End, typed letters, Enter picks, Space flips a checkable item; on a submenu item ArrowRight, Enter or Space opens it, in a submenu ArrowLeft closes it; Escape closes one level, Tab all |
 | Custom properties | `--aek-submenu-delay` (150 ms), on the menu or any ancestor                                                                                                                                                                                                                                                       |
-| Assistive tech    | `role="menu"` of `menuitem`, `menuitemcheckbox` and `menuitemradio`; the trigger and a submenu item have `aria-haspopup="menu"` and `aria-expanded`; a submenu is named by its item                                                                                                                               |
+| Assistive tech    | `role="menu"` of `menuitem`, `menuitemcheckbox` and `menuitemradio`; the trigger and a submenu item have `aria-haspopup="menu"` and `aria-expanded`; a submenu is named by its item; a disabled action is `aria-disabled`, its `disabledReason` its `aria-describedby`                                            |
 
 ## Context menus
 

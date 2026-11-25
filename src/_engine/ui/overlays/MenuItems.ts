@@ -3,6 +3,7 @@
 // pointer path. Out of `Menu.ts` for its size.
 import type { Kbd } from '../components/Kbd';
 import { addShortcutHint } from '../components/ShortcutHint';
+import { createTooltip } from './Tooltip';
 import type { MenuActionItem, MenuCheckboxItem, MenuItem, MenuSubmenuItem } from './Menu';
 
 /**
@@ -23,7 +24,8 @@ export type MenuEntry = {
 };
 
 /**
- * A shortcut's hint's stop (`addShortcutHint`'s).
+ * A shortcut's hint's stop (`addShortcutHint`'s), or a disabled reason's tooltip's removal: what
+ * a level's close calls.
  * @internal
  */
 export type StopHint = (removeHint: boolean) => void;
@@ -97,7 +99,8 @@ const createSubmenuEntry = (item: MenuSubmenuItem): MenuEntry => {
 
 /**
  * Builds a menu level's items into `parent` and returns its focusable entries in order; each
- * shortcut hint's stop goes into `hints`. A level with check marks or icons gets
+ * shortcut hint's stop and disabled reason's tooltip removal go into `hints`. A level with check
+ * marks or icons gets
  * `data-has-leading`, so every label starts in one line.
  * @internal
  */
@@ -116,6 +119,11 @@ export const buildMenuItems = (parent: HTMLElement, items: MenuItem[], hints: St
     to.append(elem);
     if (item.kbd) {
       hints.push(addShortcutHint({ owner: elem, kbd: item.kbd, className: 'aekMenu__kbd' }));
+    }
+    // On the right, so it covers none of the items; removed with the level, as the hints
+    if (item.type !== 'checkbox' && item.disabled && item.disabledReason) {
+      const tooltip = createTooltip({ anchor: elem, text: item.disabledReason, side: 'right' });
+      hints.push(() => tooltip.cmp.remove());
     }
     entries.push({
       elem,

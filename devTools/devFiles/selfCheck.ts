@@ -18,11 +18,15 @@ import {
 } from '../../src/_engine/debug/DevFilesProtocol';
 
 /**
- * The dev file server's self-check (p342 Phases 1 and 3), no test framework:
+ * The dev file server's self-check (p342 Phases 1 and 3, p355 Phase 1), no test framework:
  *   source .claude/hooks/use-node.sh && yarn verify:devFiles
  * starts its own dev server (port 8091 or the next free one) with `AEK_DEV_FILES_FAULTS=true`,
- * so it can force a failure in a commit's renames. `--url http://localhost:8080` runs against a
- * running `yarn dev` instead and skips the forced failures. The token is read from `index.html`.
+ * so it can force a failure in a commit's renames, and `AEK_DEV_FILES_BACKUPS=0` (its commits
+ * keep no backups, and leave the developer's alone). Its server's git inherits this process's
+ * env, which the author cases switch between commits (`GIT_CONFIG_*`, `GIT_DIR`: the developer's
+ * git config is never touched). `--url http://localhost:8080` runs against a running `yarn dev`
+ * instead and skips the forced failures and the switched git names. The token is read from
+ * `index.html`.
  *
  * It writes into `src/app/__devFilesSelfCheck__/` and removes the folder at the end. The save
  * entry cases (Phase 3) write a material and two debug scenes there, with a scene file of their
@@ -117,13 +121,56 @@ const check = (name: string, isOk: boolean, detail = '') => {
   }
 };
 
-const commit = (writes: unknown[], headers: Record<string, string> = {}) =>
+const commit = (writes: unknown[], headers: Record<string, string> = {}, isDryRun = false) =>
   request({
     method: 'POST',
     route: 'commit',
     headers: { 'Content-Type': 'application/json', ...headers },
-    body: JSON.stringify({ writes }),
+    body: JSON.stringify({ writes, ...(isDryRun ? { dryRun: true } : {}) }),
   });
+
+const readStatus = async () =>
+  json<DevFilesStatusBody>(await request({ method: 'GET', route: 'status' }));
+
+const GIT_ENV_KEYS = [
+  'GIT_CONFIG_COUNT',
+  'GIT_CONFIG_KEY_0',
+  'GIT_CONFIG_VALUE_0',
+  'GIT_CONFIG_GLOBAL',
+  'GIT_CONFIG_SYSTEM',
+  'GIT_DIR',
+];
+
+/**
+ * Runs `fn` with git's `user.name` set to `name` for the own server's git (it inherits this
+ * process's env), or with none (`null`: no global, system or repo config), then restores the env.
+ */
+const withGitUser = async (name: string | null, fn: () => Promise<void>) => {
+  const saved = GIT_ENV_KEYS.map((key) => process.env[key]);
+  const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aek-devfiles-git-'));
+  try {
+    for (const key of GIT_ENV_KEYS) delete process.env[key];
+    if (name === null) {
+      const emptyConfig = path.join(emptyDir, 'empty.gitconfig');
+      fs.writeFileSync(emptyConfig, '');
+      fs.mkdirSync(path.join(emptyDir, 'gitdir'));
+      process.env.GIT_CONFIG_GLOBAL = emptyConfig;
+      process.env.GIT_CONFIG_SYSTEM = emptyConfig;
+      process.env.GIT_DIR = path.join(emptyDir, 'gitdir');
+    } else {
+      process.env.GIT_CONFIG_COUNT = '1';
+      process.env.GIT_CONFIG_KEY_0 = 'user.name';
+      process.env.GIT_CONFIG_VALUE_0 = name;
+    }
+    await fn();
+  } finally {
+    GIT_ENV_KEYS.forEach((key, i) => {
+      if (saved[i] === undefined) delete process.env[key];
+      else process.env[key] = saved[i];
+    });
+    fs.rmSync(emptyDir, { recursive: true, force: true });
+  }
+};
 
 const stage = async (data: Buffer) => {
   const res = await request({ method: 'PUT', route: 'stage', body: data });
@@ -182,6 +229,7 @@ const findLanAddress = () => {
 
 const startOwnServer = async () => {
   process.env.AEK_DEV_FILES_FAULTS = 'true';
+  process.env.AEK_DEV_FILES_BACKUPS = '0';
   process.env.VITE_APP_ENV ??= 'development';
   delete process.env.AEK_DEV_FILES;
   delete process.env.AEK_DEV_FILES_LAN;
@@ -198,7 +246,8 @@ const startOwnServer = async () => {
   return { server, url: `http://localhost:${address.port}` };
 };
 
-const run = async (hasFaults: boolean) => {
+/** `isOwnServer`: the forced rename failures and the switched git names (`withGitUser`) */
+const run = async (isOwnServer: boolean) => {
   const html = await request({ method: 'GET', route: '/', isRaw: true });
   const match = new RegExp(`<meta name="${DEV_FILES_TOKEN_META}" content="([0-9a-f]+)"`).exec(
     html.body.toString('utf-8')
@@ -207,8 +256,16 @@ const run = async (hasFaults: boolean) => {
   const realToken = match?.[1] ?? '';
 
   // status needs no token
-  const status = json<DevFilesStatusBody>(await request({ method: 'GET', route: 'status' }));
+  const status = await readStatus();
   check('status: enabled and writable from localhost', status.enabled && status.canWrite);
+  check(
+    'status: the backups kept and their folder, the author',
+    Number.isInteger(status.backupsKept) &&
+      status.backupDir === '.cache/dev-files/backup/' &&
+      (status.author === null || typeof status.author === 'string') &&
+      (!isOwnServer || status.backupsKept === 0),
+    JSON.stringify([status.backupsKept, status.backupDir, status.author])
+  );
   token = realToken;
 
   // A JSON and a PNG batch lands
@@ -380,11 +437,11 @@ const run = async (hasFaults: boolean) => {
       .filter((file) => file.endsWith('.aek-tmp'));
   check('… and every file is as it was', isAsBefore());
 
-  if (hasFaults) {
+  if (isOwnServer) {
     for (const failAt of [0, 2]) {
       const staged2 = await stage(PNG_2);
       await expectCode(
-        `a batch whose rename ${failAt} fails`,
+        `a batch whose rename ${failAt} fails (backups kept: ${status.backupsKept})`,
         commit(
           [
             { path: testPath('a.json'), json: { changed: true } },
@@ -404,15 +461,28 @@ const run = async (hasFaults: boolean) => {
     out('- skipped the forced rename failures: they need AEK_DEV_FILES_FAULTS=true');
   }
 
-  // An expectedHash that matches lands
+  // An expectedHash that matches lands, and keeps its backup per AEK_DEV_FILES_BACKUPS
+  const backupDir = path.join(ROOT, ...status.backupDir.split('/'));
+  const listBackups = () => (fs.existsSync(backupDir) ? fs.readdirSync(backupDir) : []);
+  const backupsBefore = new Set(listBackups());
   res = await commit([{ path: testPath('a.json'), json: { changed: true }, expectedHash: aHash }]);
   check(
     'a matching expectedHash updates',
     res.status === 200 && json<DevFilesCommitBody>(res).results[0].status === 'updated',
     errorCode(res)
   );
+  const newBackups = listBackups().filter((dir) => !backupsBefore.has(dir));
+  if (status.backupsKept === 0) {
+    check('… and with 0 backups kept leaves none', !newBackups.length, newBackups.join());
+  } else {
+    check(
+      `… and with ${status.backupsKept} backups kept, its backup holds the file`,
+      newBackups.some((dir) => fs.existsSync(path.join(backupDir, dir, TEST_DIR, 'a.json')))
+    );
+  }
 
-  await runSaveDataChecks();
+  await runDryRunChecks();
+  await runSaveDataChecks(isOwnServer);
 
   // /@fs/ outside the repo: a file that exists on Linux, WSL2 and macOS (macOS has no
   // /etc/hostname, and a missing file gets Vite's SPA fallback, a 200, not the 403)
@@ -422,8 +492,57 @@ const run = async (hasFaults: boolean) => {
   check('/@fs/ inside the repo is served', res.status === 200, `HTTP ${res.status}`);
 };
 
-/** Phase 3: save entries (`saveData` writes) */
-const runSaveDataChecks = async () => {
+/** p355 Phase 1: a dry run checks everything, writes nothing, and its hashes confirm the commit */
+const runDryRunChecks = async () => {
+  const aBefore = readTestFile('a.json') ?? Buffer.alloc(0);
+  const staged = await stage(PNG);
+  const writes = [
+    { path: testPath('a.json'), json: { changed: 'again' } },
+    { path: testPath('dry.json'), json: { isNew: true } },
+    { path: testPath('sub/b.png'), stageId: staged.stageId },
+  ];
+  let res = await commit(writes, {}, true);
+  const dry = res.status === 200 ? json<DevFilesCommitBody>(res) : null;
+  check(
+    'a dry run reports what the commit would do',
+    dry?.results.map((result) => result.status).join() === 'updated,created,unchanged',
+    errorCode(res)
+  );
+  const hashesAfter = [
+    sha256(await formatted(writes[0].json, 'a.json')),
+    sha256(await formatted(writes[1].json, 'dry.json')),
+    sha256(PNG),
+  ];
+  check(
+    "… with each file's hash before and after it",
+    dry?.results.map((result) => result.previousHash).join() ===
+      [sha256(aBefore), null, sha256(PNG)].join() &&
+      dry.results.map((result) => result.sha256).join() === hashesAfter.join()
+  );
+  check(
+    '… and writes nothing',
+    aBefore.equals(readTestFile('a.json') ?? Buffer.alloc(0)) && !readTestFile('dry.json')
+  );
+  res = await commit(
+    writes.map((write, i) => ({ ...write, expectedHash: dry?.results[i].previousHash }))
+  );
+  check(
+    'the commit it confirms lands with its hashes (the staged file kept)',
+    res.status === 200 &&
+      json<DevFilesCommitBody>(res)
+        .results.map((result) => result.sha256)
+        .join() === hashesAfter.join(),
+    errorCode(res)
+  );
+  await expectCode(
+    'a dry run with a stale expectedHash',
+    commit([{ ...writes[0], expectedHash: '0'.repeat(64) }], {}, true),
+    'CONFLICT'
+  );
+};
+
+/** Phase 3: save entries (`saveData` writes); p355: their author */
+const runSaveDataChecks = async (isOwnServer: boolean) => {
   const matPath = testPath('saveData.material.json');
   const readEntries = () =>
     (
@@ -476,6 +595,12 @@ const runSaveDataChecks = async () => {
   check(
     '… with one entry, stamped with the three versions and the date',
     entries.length === 1 && isStamped(entries[0].__meta)
+  );
+  const { author } = await readStatus();
+  check(
+    `… and git's user.name as its author (${author ?? 'none'})`,
+    entries[0].__meta?.author === (author ?? undefined),
+    String(entries[0].__meta?.author)
   );
   check(
     'the gatherer applies it in its scene',
@@ -556,6 +681,71 @@ const runSaveDataChecks = async () => {
     colors().join() === [BLACK, WHITE].join()
   );
 
+  // The author: the server's stamp wins over the entry's own, and none removes it
+  if (isOwnServer) {
+    const withAuthor = (color: string) =>
+      saveWrite({ __meta: { author: 'Someone Else' }, params: { color } });
+    await withGitUser('Self Check', async () => {
+      res = await commit([withAuthor(GREEN)]);
+      check(
+        "git's user.name replaces the entry's own author",
+        res.status === 200 && readEntries()[0].__meta?.author === 'Self Check',
+        `${errorCode(res)}, ${String(readEntries()[0].__meta?.author)}`
+      );
+      check('… and status names it', (await readStatus()).author === 'Self Check');
+    });
+    await withGitUser(null, async () => {
+      res = await commit([withAuthor(RED)]);
+      check(
+        "without a user.name the entry's own author is removed",
+        res.status === 200 && !('author' in (readEntries()[0].__meta ?? { author: 'no __meta' })),
+        errorCode(res)
+      );
+      check('… and status has none', (await readStatus()).author === null);
+    });
+  } else {
+    out("- skipped the switched git names: they need the self-check's own server");
+  }
+
+  // p355 Phase 4: one write with an entry for each scene
+  const PURPLE = '#800080';
+  const ORANGE = '#ffa500';
+  res = await commit([
+    {
+      path: matPath,
+      saveData: [
+        { sceneId: SAVE_SCENE_IDS[0], entry: { params: { color: PURPLE } }, historySize: 20 },
+        { sceneId: SAVE_SCENE_IDS[1], entry: { params: { color: ORANGE } }, historySize: 20 },
+      ],
+    },
+  ]);
+  check(
+    'a write with both scenes’ entries updates the file',
+    res.status === 200 && json<DevFilesCommitBody>(res).results[0].status === 'updated',
+    errorCode(res)
+  );
+  check(
+    '… and the gatherer applies each in its scene',
+    await waitUntil(
+      () =>
+        gatheredColor(SAVE_SCENE_IDS[0]) === PURPLE && gatheredColor(SAVE_SCENE_IDS[1]) === ORANGE
+    ),
+    `got ${String(gatheredColor(SAVE_SCENE_IDS[0]))}, ${String(gatheredColor(SAVE_SCENE_IDS[1]))}`
+  );
+  await expectCode(
+    'a write with two entries for one scene',
+    commit([
+      {
+        path: matPath,
+        saveData: [
+          { sceneId: SAVE_SCENE_IDS[0], entry: { params: { color: RED } }, historySize: 20 },
+          { sceneId: SAVE_SCENE_IDS[0], entry: { params: { color: GREEN } }, historySize: 20 },
+        ],
+      },
+    ]),
+    'BAD_REQUEST'
+  );
+
   const entry = { params: { color: GREEN } };
   const saveData = { sceneId: 'x', entry, historySize: 20 };
   await expectCode(
@@ -573,9 +763,39 @@ const runSaveDataChecks = async () => {
     commit([{ path: testPath('x.textureAtlas.json'), saveData }]),
     'BAD_REQUEST'
   );
+  // p355 §2.6: an inline asset moved into a file of its own, with its scene's entry
+  const movedPath = testPath('moved.material.json');
+  const movedWrite = {
+    path: movedPath,
+    expectedHash: null,
+    json: { id: 'aekSelfCheckMovedMat', type: 'PHONG', params: { color: RED } },
+    saveData: { sceneId: SAVE_SCENE_IDS[0], entry: { params: { color: BLUE } }, historySize: 20 },
+  };
+  res = await commit([movedWrite]);
+  const moved = JSON.parse(readTestFile('moved.material.json')?.toString() ?? '{}') as {
+    params?: { color?: string };
+    __saveData?: Record<string, { __meta?: Record<string, unknown>; params?: unknown }[]>;
+  };
+  const movedEntry = moved.__saveData?.[SAVE_SCENE_IDS[0]]?.[0];
+  check(
+    'json and a save entry in one write create the file',
+    res.status === 200 && json<DevFilesCommitBody>(res).results[0].status === 'created',
+    errorCode(res)
+  );
+  check(
+    '… with the json and the entry, stamped',
+    moved.params?.color === RED &&
+      (movedEntry?.params as { color?: string } | undefined)?.color === BLUE &&
+      isStamped(movedEntry?.__meta)
+  );
   await expectCode(
-    'a save entry with json too',
-    commit([{ path: matPath, json: {}, saveData }]),
+    '… and again with expectedHash null (the file exists now)',
+    commit([movedWrite]),
+    'CONFLICT'
+  );
+  await expectCode(
+    'a save entry with json and a stageId',
+    commit([{ ...movedWrite, stageId: 'x' }]),
     'BAD_REQUEST'
   );
   await expectCode(

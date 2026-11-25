@@ -5,9 +5,10 @@ const SemverSchema = z
   .regex(/^\d+\.\d+\.\d+$/, { error: 'Version must be a MAJOR.MINOR.PATCH semver string.' });
 
 /**
- * A save entry's `__meta`: when it was saved, and the versions of each part then. Whatever writes
- * a save entry stamps all three versions; the gatherer warns when an applied entry comes from
- * another major version than the current build's.
+ * A save entry's `__meta`: when it was saved, by whom, and the versions of each part then.
+ * Whatever writes a save entry stamps all three versions (the dev files server also the author);
+ * the gatherer warns when an applied entry comes from another major version than the current
+ * build's.
  */
 export const MetaSchema = z
   .object({
@@ -24,8 +25,13 @@ export const MetaSchema = z
     toolkitVersion: SemverSchema.optional().describe("The toolkit's version when it was saved."),
     /** The app's version when the entry was saved. */
     appVersion: SemverSchema.optional().describe("The app's version when it was saved."),
+    /** Who saved the entry: git's `user.name` on the dev server's machine. None when it isn't set. */
+    author: z
+      .string()
+      .optional()
+      .describe("Who saved the entry: git's user.name on the dev server's machine."),
   })
-  .describe('When the entry was saved, and the versions of each part then.');
+  .describe('When the entry was saved, by whom, and the versions of each part then.');
 
 /**
  * An asset's `__saveData`: per scene id, its save entries, newest first (the gatherer applies only

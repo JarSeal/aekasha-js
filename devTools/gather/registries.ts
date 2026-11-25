@@ -23,7 +23,7 @@ import {
 } from './context';
 import { EngineMeshAssetSchema, EngineSceneAssetSchema } from './engineSchemas';
 import { getIdFromFileName, withSkyBoxIdDefault } from './gatheredJson';
-import { getSaveEntry } from './saveEntries';
+import { applySceneSaveEntry } from './saveEntries';
 import {
   checkAssetSources,
   getSourceFileSize,
@@ -49,7 +49,7 @@ const readScenes = (ctx: GatherContext, reg: Registries, taken: TakenIds): Shipp
     const id = data.id || getIdFromFileName(file.file, 'scene');
     if (!claimIds(ctx, taken.scenes, 'scene', file.file, id)) return;
     reg.scenes.push({ id, data, file });
-    const scene = { ...data, ...getSaveEntry(data, id) };
+    const scene = applySceneSaveEntry(data, id);
     if (!scene.sceneFile || (ctx.isProduction && scene.isDebugScene)) return;
     for (const matId of scene.materials ?? []) {
       if (typeof matId === 'string') shipped.materials.add(matId);

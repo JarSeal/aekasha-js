@@ -499,10 +499,13 @@
                 },
                 "appVersion": {
                   "$ref": "#/definitions/__schema55"
+                },
+                "author": {
+                  "$ref": "#/definitions/__schema56"
                 }
               },
               "additionalProperties": false,
-              "description": "When the entry was saved, and the versions of each part then."
+              "description": "When the entry was saved, by whom, and the versions of each part then."
             },
             "active": {
               "allOf": [
@@ -631,6 +634,17 @@
           "$ref": "#/definitions/__schema53"
         }
       ]
+    },
+    "__schema56": {
+      "description": "Who saved the entry: git's user.name on the dev server's machine.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema57"
+        }
+      ]
+    },
+    "__schema57": {
+      "type": "string"
     }
   }
 }

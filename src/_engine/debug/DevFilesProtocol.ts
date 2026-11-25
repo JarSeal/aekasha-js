@@ -81,6 +81,14 @@ export type DevFilesStatusBody = {
   maxFileBytes: number;
   /** The largest batch a commit may send, its files together */
   maxBatchBytes: number;
+  /** How many commits' backups the server keeps (`AEK_DEV_FILES_BACKUPS`, default 20): -1 all,
+   * 0 none (a commit's backups are removed once it landed) */
+  backupsKept: number;
+  /** Where the backups are, repo-relative (`.cache/dev-files/backup/`) */
+  backupDir: string;
+  /** What the server stamps a save entry's `__meta.author` with: git's `user.name`, null without
+   * git, outside a repo, or with no `user.name` set (the entry then has no `author`) */
+  author: string | null;
 };
 
 /**
@@ -111,7 +119,9 @@ export type DevFilesSaveData = {
 export type DevFilesSaveDataWrite = DevFilesSaveData & { historySize: number };
 
 /**
- * One write of a `POST commit` batch. The client's and the server's.
+ * One write of a `POST commit` batch (`saveData` one entry, or a list of them with each scene once:
+ * p355; with `json`, the entries go into that value instead of the file's, p355 §2.6). The
+ * client's and the server's.
  * @internal
  */
 export type DevFilesWrite = {
@@ -119,21 +129,35 @@ export type DevFilesWrite = {
   path: string;
   /** The hash the tool read; null: the file must not exist yet; omitted: overwrite */
   expectedHash?: string | null;
-} & ({ json: unknown } | { stageId: string } | { saveData: DevFilesSaveDataWrite });
+} & (
+  | { json: unknown; saveData?: DevFilesSaveDataWrite | DevFilesSaveDataWrite[] }
+  | { stageId: string }
+  | { saveData: DevFilesSaveDataWrite | DevFilesSaveDataWrite[] }
+);
 
 /**
- * The `POST commit` body: the client's and the server's.
+ * The `POST commit` body: the client's and the server's. `dryRun`: every check, nothing written
+ * (the results tell what the commit would do, and each file's hash to confirm it with).
  * @internal
  */
-export type DevFilesCommitRequest = { writes: DevFilesWrite[] };
+export type DevFilesCommitRequest = { writes: DevFilesWrite[]; dryRun?: boolean };
 
 /** What a write did: an `unchanged` file isn't written (and sets off no gather). */
 export type DevFilesWriteStatus = 'created' | 'updated' | 'unchanged';
 
 /** A committed batch's result (`POST commit`): `writeDevFiles`' answer. */
 export type DevFilesCommitBody = {
-  /** Per write, in the batch's order: its path, the file's hash now and what the write did */
-  results: { path: string; sha256: string; status: DevFilesWriteStatus }[];
+  /**
+   * Per write, in the batch's order: its path, the file's hash after the write (a dry run's: what
+   * it would be), what the write did (would do) and the file's hash before it (null: there was no
+   * file), a dry run's `expectedHash` for the commit it confirms
+   */
+  results: {
+    path: string;
+    sha256: string;
+    status: DevFilesWriteStatus;
+    previousHash: string | null;
+  }[];
 };
 
 /** `INVALID_SCHEMA`'s details: the issues per file, as the gatherer lists them */

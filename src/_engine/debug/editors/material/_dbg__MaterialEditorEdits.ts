@@ -35,7 +35,7 @@ import {
   setNodeInputValue,
   type MaterialParamDef,
 } from './_dbg__MaterialEditorParams';
-import { getMaterialAssets } from './_dbg__MaterialEditorAssets';
+import { getMaterialAssets, getMaterialBase } from './_dbg__MaterialEditorAssets';
 import {
   DEFAULT_CAMERA_POSE,
   getStageSettings,
@@ -163,7 +163,7 @@ const setCopyParam = (def: MaterialParamDef, value: unknown, persist: boolean) =
  */
 const setCopyNodeInput = (socket: string, input: string, value: unknown, persist: boolean) => {
   const copy = getSelectedCopy();
-  const asset = current && getMaterialAssets()[current.materialId];
+  const asset = current && getMaterialBase(current.materialId);
   if (!copy || !current || !asset) return;
   const assetNodes = getAssetNodeInputs(asset);
   const next = setNodeInputValue(copy, assetNodes, socket, input, value);
@@ -234,7 +234,7 @@ export const editCopyNodeInput = (
   persist: boolean
 ) => {
   const copy = getSelectedCopy();
-  const asset = current && getMaterialAssets()[current.materialId];
+  const asset = current && getMaterialBase(current.materialId);
   if (!copy || !current || !asset) return;
   const assetNodes = getAssetNodeInputs(asset);
   const path = `${socket}.${input}`;
@@ -322,7 +322,7 @@ const writeRecordValue = ({ materialId, section, path }: SetValuePayload, value:
     }
     case 'nodes': {
       const node = splitNodePath(path);
-      const asset = getMaterialAssets()[materialId];
+      const asset = getMaterialBase(materialId);
       if (!node || !asset) return;
       const assetNodes = getAssetNodeInputs(asset);
       const next = normalizeAssetNodeInputValue(assetNodes, node.socket, node.input, value);

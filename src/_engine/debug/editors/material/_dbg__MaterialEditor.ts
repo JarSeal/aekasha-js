@@ -42,12 +42,14 @@ import { readMaterialParams } from './_dbg__MaterialEditorParams';
 import {
   getCopyProps,
   getMaterialAssets,
+  getMaterialBase,
   getMaterialTextureIds,
   getSelectorEntries,
   getUnavailableReason,
   loadMissingTextures,
   retagLoadedTextures,
 } from './_dbg__MaterialEditorAssets';
+import { registerMaterialSaveSource } from './_dbg__MaterialSave';
 import {
   applyMaterialStage,
   ensureEnvironment,
@@ -200,7 +202,7 @@ export const loadEditorMaterial = async (materialId: string | null) => {
     return false;
   }
 
-  const asset = getMaterialAssets()[materialId];
+  const asset = getMaterialBase(materialId);
   if (!asset) {
     lwarn(`Could not find material "${materialId}", in loadEditorMaterial.`);
     setSelectedMaterialId(null);
@@ -281,7 +283,7 @@ const getDrawerTabs = () =>
   createMaterialEditorTabs({
     getAsset: () => {
       const id = getSelectedMaterialId();
-      return (id && getMaterialAssets()[id]) || null;
+      return (id && getMaterialBase(id)) || null;
     },
     getTextureIds: getMaterialTextureIds,
     isTextureLoaded: (id) => Boolean(getTexture(id)),
@@ -397,6 +399,8 @@ export const _registerMaterialEditorView = () => {
   // The scene is created here (no GPU work); the environment, the camera and the UI need the
   // renderer, the canvas and the HUD, so they are created on the first enter
   const stage = ensureStage();
+  // Before the boot's `setSaveSourcesReady`: the records are saved without the editor opened
+  registerMaterialSaveSource();
   setMaterialEditorHooks({
     loadMaterial: (materialId) => void loadEditorMaterial(materialId),
     refreshDrawer: () => ui?.drawer.refresh(),

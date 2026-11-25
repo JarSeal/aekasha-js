@@ -5,7 +5,7 @@
       "$ref": "#/definitions/__schema0"
     },
     {
-      "$ref": "#/definitions/__schema68"
+      "$ref": "#/definitions/__schema70"
     }
   ],
   "description": "A material: its type and three parameters, and a node material's TSL file and inputs.",
@@ -44,21 +44,21 @@
         "staticDefines": {
           "allOf": [
             {
-              "$ref": "#/definitions/__schema34"
+              "$ref": "#/definitions/__schema36"
             }
           ]
         },
         "nodes": {
           "allOf": [
             {
-              "$ref": "#/definitions/__schema37"
+              "$ref": "#/definitions/__schema39"
             }
           ]
         },
         "inputs": {
           "allOf": [
             {
-              "$ref": "#/definitions/__schema65"
+              "$ref": "#/definitions/__schema67"
             }
           ]
         },
@@ -291,10 +291,13 @@
                 },
                 "appVersion": {
                   "$ref": "#/definitions/__schema33"
+                },
+                "author": {
+                  "$ref": "#/definitions/__schema34"
                 }
               },
               "additionalProperties": false,
-              "description": "When the entry was saved, and the versions of each part then."
+              "description": "When the entry was saved, by whom, and the versions of each part then."
             },
             "params": {
               "allOf": [
@@ -306,21 +309,21 @@
             "staticDefines": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema34"
+                  "$ref": "#/definitions/__schema36"
                 }
               ]
             },
             "nodes": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema37"
+                  "$ref": "#/definitions/__schema39"
                 }
               ]
             },
             "inputs": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema65"
+                  "$ref": "#/definitions/__schema67"
                 }
               ]
             },
@@ -386,32 +389,30 @@
       ]
     },
     "__schema34": {
-      "type": "object",
-      "propertyNames": {
-        "$ref": "#/definitions/__schema35"
-      },
-      "additionalProperties": {
-        "$ref": "#/definitions/__schema36"
-      },
-      "description": "Build-time flags the TSL file branches on: another set is another shader."
+      "description": "Who saved the entry: git's user.name on the dev server's machine.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema35"
+        }
+      ]
     },
     "__schema35": {
       "type": "string"
     },
-    "__schema36": {},
-    "__schema37": {
+    "__schema36": {
       "type": "object",
       "propertyNames": {
-        "$ref": "#/definitions/__schema38"
+        "$ref": "#/definitions/__schema37"
       },
       "additionalProperties": {
-        "$ref": "#/definitions/__schema39"
+        "$ref": "#/definitions/__schema38"
       },
-      "description": "Per socket (colorNode, …), its inputs: a texture id or { texture: id, channel }, { textureArray: id, layer }, { atlas: id, slot, cell }, { textureSet: id, packing? }, { textureSetArray: [ids] | id, packing }, a '#rrggbb' colour, a number, a boolean, a vector as an array or { x, y, z }, or a form a registered input resolver takes. Each becomes a node the TSL file's socket function gets."
+      "description": "Build-time flags the TSL file branches on: another set is another shader."
     },
-    "__schema38": {
+    "__schema37": {
       "type": "string"
     },
+    "__schema38": {},
     "__schema39": {
       "type": "object",
       "propertyNames": {
@@ -419,39 +420,52 @@
       },
       "additionalProperties": {
         "$ref": "#/definitions/__schema41"
-      }
+      },
+      "description": "Per socket (colorNode, …), its inputs: a texture id or { texture: id, channel }, { textureArray: id, layer }, { atlas: id, slot, cell }, { textureSet: id, packing? }, { textureSetArray: [ids] | id, packing }, a '#rrggbb' colour, a number, a boolean, a vector as an array or { x, y, z }, or a form a registered input resolver takes. Each becomes a node the TSL file's socket function gets."
     },
     "__schema40": {
       "type": "string"
     },
     "__schema41": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema42"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/__schema43"
+      }
+    },
+    "__schema42": {
+      "type": "string"
+    },
+    "__schema43": {
       "anyOf": [
         {
-          "$ref": "#/definitions/__schema42"
+          "$ref": "#/definitions/__schema44"
         },
         {
-          "$ref": "#/definitions/__schema46"
+          "$ref": "#/definitions/__schema48"
         },
         {
-          "$ref": "#/definitions/__schema51"
+          "$ref": "#/definitions/__schema53"
         },
         {
-          "$ref": "#/definitions/__schema57"
+          "$ref": "#/definitions/__schema59"
         },
         {
-          "$ref": "#/definitions/__schema61"
+          "$ref": "#/definitions/__schema63"
         },
         {}
       ]
     },
-    "__schema42": {
+    "__schema44": {
       "type": "object",
       "properties": {
         "texture": {
-          "$ref": "#/definitions/__schema43"
+          "$ref": "#/definitions/__schema45"
         },
         "channel": {
-          "$ref": "#/definitions/__schema44"
+          "$ref": "#/definitions/__schema46"
         }
       },
       "required": [
@@ -460,30 +474,30 @@
       "additionalProperties": false,
       "description": "A texture ref: the texture node, or with channel its sample's channels (eg. r, rgb)."
     },
-    "__schema43": {
+    "__schema45": {
       "type": "string",
       "description": "The texture's id."
     },
-    "__schema44": {
+    "__schema46": {
       "description": "One to four of r, g, b, a: the sample's channels, instead of the texture node.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema45"
+          "$ref": "#/definitions/__schema47"
         }
       ]
     },
-    "__schema45": {
+    "__schema47": {
       "type": "string",
       "pattern": "^[rgba]{1,4}$"
     },
-    "__schema46": {
+    "__schema48": {
       "type": "object",
       "properties": {
         "textureArray": {
-          "$ref": "#/definitions/__schema47"
+          "$ref": "#/definitions/__schema49"
         },
         "layer": {
-          "$ref": "#/definitions/__schema48"
+          "$ref": "#/definitions/__schema50"
         }
       },
       "required": [
@@ -493,43 +507,43 @@
       "additionalProperties": false,
       "description": "A texture array's layer, sampled at the mesh's UV."
     },
-    "__schema47": {
+    "__schema49": {
       "type": "string",
       "description": "The texture array's id (a *.textureArray.json)."
     },
-    "__schema48": {
+    "__schema50": {
       "anyOf": [
         {
-          "$ref": "#/definitions/__schema49"
+          "$ref": "#/definitions/__schema51"
         },
         {
-          "$ref": "#/definitions/__schema50"
+          "$ref": "#/definitions/__schema52"
         }
       ],
       "description": "The layer: its index, or its name (a texture layer's id, a file layer's name without its extension)."
     },
-    "__schema49": {
+    "__schema51": {
       "type": "integer",
       "minimum": 0,
       "maximum": 9007199254740991
     },
-    "__schema50": {
+    "__schema52": {
       "type": "string"
     },
-    "__schema51": {
+    "__schema53": {
       "type": "object",
       "properties": {
         "atlas": {
-          "$ref": "#/definitions/__schema52"
-        },
-        "slot": {
-          "$ref": "#/definitions/__schema53"
-        },
-        "cell": {
           "$ref": "#/definitions/__schema54"
         },
-        "clampToCell": {
+        "slot": {
           "$ref": "#/definitions/__schema55"
+        },
+        "cell": {
+          "$ref": "#/definitions/__schema56"
+        },
+        "clampToCell": {
+          "$ref": "#/definitions/__schema57"
         }
       },
       "required": [
@@ -540,37 +554,37 @@
       "additionalProperties": false,
       "description": "An atlas slot's cell, sampled at the mesh's UV mapped into the cell's rect."
     },
-    "__schema52": {
+    "__schema54": {
       "type": "string",
       "description": "The atlas's id (a *.textureAtlas.json)."
     },
-    "__schema53": {
+    "__schema55": {
       "type": "string",
       "description": "The slot sampled (a key of the atlas's slots)."
     },
-    "__schema54": {
+    "__schema56": {
       "type": "string",
       "description": "The cell's id."
     },
-    "__schema55": {
+    "__schema57": {
       "description": "Keeps the sample half a texel inside the cell's rect. Default true.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema56"
+          "$ref": "#/definitions/__schema58"
         }
       ]
     },
-    "__schema56": {
+    "__schema58": {
       "type": "boolean"
     },
-    "__schema57": {
+    "__schema59": {
       "type": "object",
       "properties": {
         "textureSet": {
-          "$ref": "#/definitions/__schema58"
+          "$ref": "#/definitions/__schema60"
         },
         "packing": {
-          "$ref": "#/definitions/__schema59"
+          "$ref": "#/definitions/__schema61"
         }
       },
       "required": [
@@ -579,19 +593,19 @@
       "additionalProperties": false,
       "description": "A texture set: each slot's texture of its packing and its surface uniforms, by name. Needs the textureSets() feature."
     },
-    "__schema58": {
+    "__schema60": {
       "type": "string",
       "description": "The texture set's id (a *.textureSet.json)."
     },
-    "__schema59": {
+    "__schema61": {
       "description": "The packing sampled (FULL, LITE, MINIMAL). Default: the set's defaultPacking.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema60"
+          "$ref": "#/definitions/__schema62"
         }
       ]
     },
-    "__schema60": {
+    "__schema62": {
       "type": "string",
       "enum": [
         "FULL",
@@ -599,25 +613,25 @@
         "MINIMAL"
       ]
     },
-    "__schema61": {
+    "__schema63": {
       "anyOf": [
         {
-          "$ref": "#/definitions/__schema62"
+          "$ref": "#/definitions/__schema64"
         },
         {
-          "$ref": "#/definitions/__schema64"
+          "$ref": "#/definitions/__schema66"
         }
       ],
       "description": "A texture set array: the packing's array textures and the layers' params, by name. Needs the textureSets() feature."
     },
-    "__schema62": {
+    "__schema64": {
       "type": "object",
       "properties": {
         "textureSetArray": {
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/definitions/__schema63"
+            "$ref": "#/definitions/__schema65"
           },
           "description": "The texture set ids (*.textureSet.json), layer i from the ith."
         },
@@ -637,11 +651,11 @@
       ],
       "additionalProperties": false
     },
-    "__schema63": {
+    "__schema65": {
       "type": "string",
       "minLength": 1
     },
-    "__schema64": {
+    "__schema66": {
       "type": "object",
       "properties": {
         "textureSetArray": {
@@ -655,40 +669,40 @@
       ],
       "additionalProperties": false
     },
-    "__schema65": {
+    "__schema67": {
       "type": "object",
       "propertyNames": {
-        "$ref": "#/definitions/__schema66"
+        "$ref": "#/definitions/__schema68"
       },
       "additionalProperties": {
-        "$ref": "#/definitions/__schema67"
+        "$ref": "#/definitions/__schema69"
       },
       "description": "The inputs of the TSL file's setup function, which sets any sockets from one graph: a texture id or { texture: id, channel } (a texture node, or its sample's channels, eg. r or rgb), { textureArray: id, layer } (an array layer) or { atlas: id, slot, cell } (an atlas cell), each sampled at the mesh's UV, { textureSet: id, packing? } (a texture set's textures and surface uniforms, by name) or { textureSetArray: [ids] | id, packing } (a texture set array's array textures and layer params; both the textureSets() feature), a uniform's '#rrggbb' colour, number, boolean, or vector as an array or { x, y, z }, or a form a registered input resolver takes."
     },
-    "__schema66": {
+    "__schema68": {
       "type": "string"
     },
-    "__schema67": {
+    "__schema69": {
       "anyOf": [
         {
-          "$ref": "#/definitions/__schema42"
+          "$ref": "#/definitions/__schema44"
         },
         {
-          "$ref": "#/definitions/__schema46"
+          "$ref": "#/definitions/__schema48"
         },
         {
-          "$ref": "#/definitions/__schema51"
+          "$ref": "#/definitions/__schema53"
         },
         {
-          "$ref": "#/definitions/__schema57"
+          "$ref": "#/definitions/__schema59"
         },
         {
-          "$ref": "#/definitions/__schema61"
+          "$ref": "#/definitions/__schema63"
         },
         {}
       ]
     },
-    "__schema68": {
+    "__schema70": {
       "type": "object",
       "properties": {
         "id": {

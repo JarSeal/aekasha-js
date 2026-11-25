@@ -4,7 +4,7 @@
 
 ::: note For a later plan
 p804 Phase 4 section 5: `forms/Form.ts`, and the shell's `required` / `validate` props and its
-form error (under the field's own and the app's). p355's save menu and p808's settings menu build
-on it; neither has a form-level error (a failed save) yet: a toast, or a field's `setError` and
-`validate()`.
+form error (under the field's own and the app's). p355 Phase 4 added the form's own error
+(`setError`, `getError`: the summary's first item, no link), for the save menu's "Save specific
+data…" dialog; p808's settings menu builds on the form too.
 :::

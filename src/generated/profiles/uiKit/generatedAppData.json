@@ -60,6 +60,7 @@
       ],
       "id": "uiKitEmbed",
       "sceneFile": "./profiles/uiKit/uiKitEmbed.ts",
+      "__sourcePath": "src/app/profiles/uiKit/uiKitEmbed.scene.json",
       "__features": []
     }
   }

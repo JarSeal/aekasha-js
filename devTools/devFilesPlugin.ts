@@ -1,7 +1,15 @@
 /* eslint-disable no-console -- the plugin's own log */
 import type { IncomingMessage, ServerResponse } from 'http';
 import type { Plugin } from 'vite';
-import { commitDevFiles, MAX_BATCH_BYTES, MAX_FILE_BYTES, readDevFile } from './devFiles/commit';
+import {
+  commitDevFiles,
+  DEFAULT_BACKUPS_KEPT,
+  DEV_FILES_BACKUP_DIR,
+  MAX_BATCH_BYTES,
+  MAX_FILE_BYTES,
+  parseBackupsKept,
+  readDevFile,
+} from './devFiles/commit';
 import { DevFilesError, readBody, sendError, sendJson } from './devFiles/http';
 import { DEV_FILES_DENIED_ROOTS, DEV_FILES_EXTENSIONS, DEV_FILES_ROOTS } from './devFiles/paths';
 import {
@@ -16,23 +24,27 @@ import {
   createDevFilesToken,
   isLocalRequest,
 } from './devFiles/security';
+import { readGitAuthor } from './devFiles/saveData';
 import { createStage } from './devFiles/stage';
 
 /**
  * The dev file server (p342): lets debug tooling in the browser write files into the repo while
  * `yarn dev` runs (an exported impostor, a baked texture). Dev server only, never in a build.
  * Routes under `/__aek/files/` (`src/_engine/debug/DevFilesProtocol.ts`):
- * - `GET status`: whether the routes are on and take this device's requests (no token needed);
+ * - `GET status`: whether the routes are on and take this device's requests, the backups kept
+ *   and the author save entries get (no token needed);
  * - `GET read?path=`: the file's bytes, its hash in the `x-aek-sha256` header;
  * - `PUT stage`: a raw body (a PNG) staged for a commit, `{ stageId, bytes, sha256 }`;
- * - `POST commit`: `{ writes: [{ path, json | stageId | saveData, expectedHash? }] }`, all or
- *   nothing (`saveData`: `{ sceneId, entry, historySize }`, a stamped save entry kept with the
- *   scene's last `historySize` ones, `devFiles/saveData.ts`).
+ * - `POST commit`: `{ writes: [{ path, json | stageId | saveData, expectedHash? }], dryRun? }`,
+ *   all or nothing (`saveData`: `{ sceneId, entry, historySize }`, a stamped save entry kept with
+ *   the scene's last `historySize` ones, `devFiles/saveData.ts`; `dryRun`: every check, nothing
+ *   written).
  * The checks are in `devFiles/security.ts`, the path policy in `devFiles/paths.ts`. A write is
  * an ordinary file event: the scene gatherer runs as it does for an editor save.
  *
  * `AEK_DEV_FILES=false` turns the routes off; `AEK_DEV_FILES_LAN=true` lets other devices on the
- * LAN use them (a phone under `yarn dev:https`). `AEK_DEV_FILES_FAULTS=true` makes a commit honour
+ * LAN use them (a phone under `yarn dev:https`). `AEK_DEV_FILES_BACKUPS=<n>` keeps the backups of
+ * the last n commits (default 20; -1 all, 0 none). `AEK_DEV_FILES_FAULTS=true` makes a commit honour
  * the self-check's `x-aek-dev-fault: rename:<n>` header (`devFiles/selfCheck.ts`).
  */
 
@@ -63,6 +75,12 @@ export const devFilesPlugin = (): Plugin => {
   const isEnabled = process.env.AEK_DEV_FILES !== 'false';
   const isLANAllowed = process.env.AEK_DEV_FILES_LAN === 'true';
   const areFaultsOn = process.env.AEK_DEV_FILES_FAULTS === 'true';
+  const backupsKept = parseBackupsKept(process.env.AEK_DEV_FILES_BACKUPS);
+  if (backupsKept === null) {
+    console.warn(
+      `\x1b[33m[Dev files]\x1b[0m AEK_DEV_FILES_BACKUPS="${process.env.AEK_DEV_FILES_BACKUPS}" isn't an integer from -1 up: keeping ${DEFAULT_BACKUPS_KEPT}`
+    );
+  }
   const token = createDevFilesToken();
 
   return {
@@ -85,6 +103,9 @@ export const devFilesPlugin = (): Plugin => {
         extensions: DEV_FILES_EXTENSIONS,
         maxFileBytes: MAX_FILE_BYTES,
         maxBatchBytes: MAX_BATCH_BYTES,
+        backupsKept: backupsKept ?? DEFAULT_BACKUPS_KEPT,
+        backupDir: DEV_FILES_BACKUP_DIR,
+        author: readGitAuthor() ?? null,
       });
 
       const handle = async (
@@ -118,12 +139,17 @@ export const devFilesPlugin = (): Plugin => {
           sendJson(res, 200, await stage.add(body));
         } else if (route.name === 'commit' && method === 'POST') {
           const body = await readBody(req, MAX_BATCH_BYTES + COMMIT_BODY_SLACK_BYTES);
-          const { body: result, filesInNewFolders } = await commitDevFiles(parseJsonBody(body), {
+          const {
+            body: result,
+            filesInNewFolders,
+            isDryRun,
+          } = await commitDevFiles(parseJsonBody(body), {
             stage,
             faults: areFaultsOn ? parseFaults(req) : undefined,
+            backupsKept: backupsKept ?? DEFAULT_BACKUPS_KEPT,
           });
           console.log(
-            `\x1b[36m[Dev files]\x1b[0m commit: ${result.results.map((write) => `${write.status} ${write.path}`).join(', ')}`
+            `\x1b[36m[Dev files]\x1b[0m ${isDryRun ? 'dry run' : 'commit'}: ${result.results.map((write) => `${write.status} ${write.path}`).join(', ')}`
           );
           // chokidar may have missed them (commitDevFiles); a duplicate 'add' is harmless: the
           // gatherer's debounce merges it

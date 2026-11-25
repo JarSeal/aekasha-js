@@ -2140,10 +2140,13 @@
                 },
                 "appVersion": {
                   "$ref": "#/definitions/__schema183"
+                },
+                "author": {
+                  "$ref": "#/definitions/__schema184"
                 }
               },
               "additionalProperties": false,
-              "description": "When the entry was saved, and the versions of each part then."
+              "description": "When the entry was saved, by whom, and the versions of each part then."
             }
           },
           "additionalProperties": false
@@ -2641,6 +2644,17 @@
           "$ref": "#/definitions/__schema181"
         }
       ]
+    },
+    "__schema184": {
+      "description": "Who saved the entry: git's user.name on the dev server's machine.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema185"
+        }
+      ]
+    },
+    "__schema185": {
+      "type": "string"
     }
   }
 }

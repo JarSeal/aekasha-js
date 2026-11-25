@@ -24,6 +24,7 @@ import {
   getDevFilesSaveHistorySize,
   getDevFilesStatus,
   type DevFilesStatus,
+  type DevFilesStatusBody,
   type DevFilesUnavailableReason,
 } from './DevFiles';
 import { getDebugKeyChordLabel } from './DefaultDebugKeyBindings';
@@ -288,10 +289,11 @@ export const getUndoRedoFolder = (): Item => {
   };
 };
 
-/** The "File server" folder's rows (p342): `status` is what getDevFilesStatus said at the tab's
- * last mount (it changes only with a dev server restart, which reloads the page), `saving` what
- * the save history size means. */
-const fileServerRows = { status: 'Checking…', saving: '' };
+/** The "File server" folder's rows (p342, p355): `status`, `author` and `backups` are what
+ * getDevFilesStatus said at the tab's last mount (the server's settings change only with a dev
+ * server restart, which reloads the page; the author with a git config change), `saving` what the
+ * save history size means. */
+const fileServerRows = { status: 'Checking…', saving: '', author: '…', backups: '…' };
 
 const describeSaveHistorySize = () => {
   const size = getDevFilesSaveHistorySize();
@@ -316,15 +318,31 @@ const describeDevFilesStatus = (status: DevFilesStatus) => {
   return DEV_FILES_UNAVAILABLE_TEXTS[status.reason];
 };
 
-/** Asks the dev server for the File server folder's status row, and refreshes the tab with it:
- * the tab's `onOpen`, on every mount. */
+const describeBackups = ({ backupsKept, backupDir }: DevFilesStatusBody) => {
+  if (backupsKept === 0) return 'None (AEK_DEV_FILES_BACKUPS=0)';
+  const commits = backupsKept === -1 ? 'Every commit' : `The last ${backupsKept} commits`;
+  return `${commits}, in ${backupDir}`;
+};
+
+/** Asks the dev server for the File server folder's status, author and backups rows, and
+ * refreshes the tab with them: the tab's `onOpen`, on every mount. */
 export const refreshDevFilesRow = () => {
   getDevFilesStatus()
-    .then(describeDevFilesStatus, () => 'Unavailable (failed to load)')
-    .then((text) => {
-      fileServerRows.status = text;
-      updateDebuggerTab(DEBUG_TOOLS_TAB_ID);
-    });
+    .then(
+      (status) => {
+        fileServerRows.status = describeDevFilesStatus(status);
+        // An old server's status has neither (a page from before a restart is reloaded anyway)
+        const server = status.server?.backupDir ? status.server : null;
+        fileServerRows.author = server
+          ? server.author ?? 'None (git user.name not set)'
+          : 'Unknown';
+        fileServerRows.backups = server ? describeBackups(server) : 'Unknown';
+      },
+      () => {
+        fileServerRows.status = 'Unavailable (failed to load)';
+      }
+    )
+    .then(() => updateDebuggerTab(DEBUG_TOOLS_TAB_ID));
 };
 
 /** "File server": the debug tools writing files into the repo (p342, debug/DevFiles.ts). */
@@ -358,6 +376,32 @@ export const getFileServerFolder = (): Item => {
         key: 'saving',
         target: fileServerRows,
         label: 'Saving into __saveData',
+        readonly: true,
+        interval: 0,
+      },
+      {
+        // git's user.name, stamped as every save entry's __meta.author
+        key: 'author',
+        target: fileServerRows,
+        label: 'Save entry author',
+        readonly: true,
+        interval: 0,
+      },
+      {
+        // A toast with how a write's gather went, after the reload it sets off
+        key: 'devFiles.gatherToasts',
+        label: 'Gather toasts',
+      },
+      {
+        // A dialog lists a write's files (a dry run) before they land
+        key: 'devFiles.confirmWrites',
+        label: 'Confirm writes',
+      },
+      {
+        // The server's AEK_DEV_FILES_BACKUPS
+        key: 'backups',
+        target: fileServerRows,
+        label: 'Backups kept',
         readonly: true,
         interval: 0,
       },

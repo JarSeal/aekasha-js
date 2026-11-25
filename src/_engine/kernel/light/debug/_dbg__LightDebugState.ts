@@ -146,7 +146,6 @@ export const setLightDebugPreference = (
   if (!data[sceneId]) data[sceneId] = { lights: {}, globalHelpersVisible };
   if (!data[sceneId].lights[appId]) {
     data[sceneId].lights[appId] = {
-      enabled: true,
       helperVisible: globalHelpersVisible,
       symbolVisible: true,
     };
@@ -206,7 +205,6 @@ export const _toggleAllLightHelpers = (show?: boolean) => {
     if (appIdComp?.isFixed && !world.hasComponent(entityId, ComponentType.MANAGED_BY)) {
       if (!currentData[sceneId].lights[appIdComp.id]) {
         currentData[sceneId].lights[appIdComp.id] = {
-          enabled: true, // Default is true
           helperVisible: targetState,
           symbolVisible: true, // Default is true
         };
@@ -315,8 +313,9 @@ export const refreshLightShadows = (light: THREE.Light, entityId: number, world:
   });
 };
 
-/** The saved keys that are the debugger's own preferences, not creation props */
-const LIGHT_DEBUGGER_ONLY_KEYS: ReadonlySet<string> = new Set([
+/** The saved keys that are the debugger's own preferences, not creation props (the save source
+ * leaves them out and keeps them) */
+export const LIGHT_DEBUGGER_ONLY_KEYS: ReadonlySet<string> = new Set([
   'helperVisible',
   'symbolVisible',
   '_shadowFolderOpen',
@@ -374,7 +373,6 @@ export const saveLightToLS = <K extends keyof LightEntityDebugState>(
   const appId = appIdComp.id;
   if (!currentData[sceneId].lights[appId]) {
     currentData[sceneId].lights[appId] = {
-      enabled: true,
       helperVisible: false,
       symbolVisible: true,
     };

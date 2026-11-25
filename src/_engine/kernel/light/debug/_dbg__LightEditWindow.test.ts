@@ -35,6 +35,7 @@ import { initEnvironment } from '../../config/Config';
 import { createLightEntity } from '../Light';
 import { _getUndoRedoHistory, _initUndoRedo, _undoLastAction } from '../../../debug/_dbg__UndoRedo';
 import { createEditLightContent } from './_dbg__LightEditWindow';
+import { loadLightDebugData, setLightHelperVisible } from './_dbg__LightDebugState';
 
 // p806 D10: the light edit window on the UI kit's property grid, its changes saved and recorded
 // for undo at a gesture's end, as Tweakpane's were
@@ -204,6 +205,11 @@ describe('the light edit window: where its values come from', () => {
     expect(getMonitorText(root, 'Origin')).toBe('Code');
     expect(getMonitorText(root, 'Persistable')).toBe('Yes');
     expect(getMonitorText(root, 'Local storage override')).toBe('None');
+
+    // A preference alone saves no `enabled` (i165): a light created disabled stays so
+    setLightHelperVisible(entityId, world, true);
+    expect(getMonitorText(root, 'Local storage override')).toBe('None');
+    expect(loadLightDebugData('sourceSun')).not.toHaveProperty('enabled');
 
     getField(root, 'Enabled').querySelector<HTMLInputElement>('input')!.click();
     expect(getMonitorText(root, 'Local storage override')).toBe('Active: enabled');

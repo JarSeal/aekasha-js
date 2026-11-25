@@ -74,8 +74,17 @@ export type Form = {
   reset: () => void;
   /** Checks every field and draws the errors and the summary (with `focus`, the summary takes the
    * focus when it shows): what a submit does before `onSubmit`, and what an app calls after it set
-   * a field's error itself (a server's answer). Whether every field is valid. */
+   * a field's error itself (a server's answer). Whether every field is valid (the form's own error
+   * aside: it stays in the summary). */
   validate: (options?: { focus?: boolean }) => boolean;
+  /**
+   * Sets the form's own error, one tied to no field (a failed save), or takes it away (null or
+   * ''): the summary's first item, a text without a link, shown with the summary (with `focus`,
+   * the summary takes the focus). It stays until the next submit or a reset.
+   */
+  setError: (message: string | null, options?: { focus?: boolean }) => void;
+  /** The form's own error, or null. */
+  getError: () => string | null;
   /** Reads every field of its scheduler (the scheduler's `refresh()`); never fires `onChange`. */
   refresh: () => void;
   /** Disables or enables every field and button in it. */
@@ -107,7 +116,8 @@ const isHiddenField = (elem: Element) => Boolean(elem.closest('[hidden]:not(.aek
  * error to its field (a link focuses it, opening a shut folder around it). A field that is hidden
  * or disabled isn't checked. A field's own error (an expression that doesn't parse) and the app's
  * `setError` count too, so `validate()` after an app set one (a server's answer) shows it in the
- * summary.
+ * summary. The form's own error, one tied to no field (a failed save: `form.setError(message)`),
+ * is the summary's first item, a text without a link, until the next submit or a reset.
  * - Submit: Enter in a single-line field (the browser's implicit submission: with a submit button,
  *   or a single field), the submit button, `submit()`; `onSubmit` only when every field is valid.
  * - Reset: the reset button or `reset()` writes every field's default (an undo records it: the
@@ -116,8 +126,9 @@ const isHiddenField = (elem: Element) => Boolean(elem.closest('[hidden]:not(.aek
  * - Scheduler: its own, or a host's shared one; a field or folder added without one joins it, a
  *   property grid in it keeps its own (`createPropertyGrid({ scheduler: form.scheduler })` shares).
  * - Parts: `form.aekForm` (`aria-busy` while `onSubmit`'s promise is pending) with
- *   `.aekForm__summary` (`hidden` without errors: `__summaryTitle`, `__summaryList` of `<li>`s with
- *   an `a.aekForm__summaryLink` each), `fieldset.aekForm__body` (`disabled`) holding
+ *   `.aekForm__summary` (`hidden` without errors: `__summaryTitle`, `__summaryList` of `<li>`s, the
+ *   form's own error first as `li.aekForm__summaryMessage`, then an `a.aekForm__summaryLink` each),
+ *   `fieldset.aekForm__body` (`disabled`) holding
  *   `.aekForm__content` and `.aekForm__actions` (the buttons).
  * - Custom properties: `--aek-form-gap` (between its parts and children, default `--aek-space-4`),
  *   `--aek-form-summary-border-color` (default `--aek-danger`).
@@ -162,6 +173,8 @@ export const createForm = (props: FormProps = {}): Form => {
   /** From the first submit (or `validate()`) to a reset: a blur checks its field */
   let isChecking = false;
   let busy: Promise<unknown> | null = null;
+  /** The form's own error (`setError`), tied to no field */
+  let formError: string | null = null;
   /** The summary's links, each to its field */
   const links = new Map<HTMLAnchorElement, { elem: Element; entry: FormFieldEntry }>();
 
@@ -190,6 +203,9 @@ export const createForm = (props: FormProps = {}): Form => {
   const summaryList = document.createElement('ul');
   summaryList.className = 'aekForm__summaryList';
   summary.append(summaryTitle, summaryList);
+  // The form's own error: the list's first item while it's set
+  const summaryMessage = document.createElement('li');
+  summaryMessage.className = 'aekForm__summaryMessage';
   for (const [name, value] of [
     ['role', 'group'],
     ['aria-labelledby', summaryTitle.id],
@@ -249,6 +265,19 @@ export const createForm = (props: FormProps = {}): Form => {
     else summary.setAttribute('hidden', '');
   };
 
+  /** Shows the summary while it has a link or the form's own error */
+  const syncSummaryShown = () => setSummaryShown(links.size > 0 || formError !== null);
+
+  /** Puts the form's own error first in the list, or takes it out */
+  const drawSummaryMessage = () => {
+    if (formError === null) {
+      summaryMessage.remove();
+      return;
+    }
+    summaryMessage.textContent = formError;
+    if (summaryList.firstChild !== summaryMessage) summaryList.prepend(summaryMessage);
+  };
+
   const addLink = (elem: Element, entry: FormFieldEntry, error: string) => {
     const item = document.createElement('li');
     const link = document.createElement('a');
@@ -264,12 +293,13 @@ export const createForm = (props: FormProps = {}): Form => {
     isChecking = true;
     links.clear();
     summaryList.replaceChildren();
+    drawSummaryMessage();
     for (const { elem, entry } of getFields()) {
       const error = checkField(elem, entry);
       if (error !== null) addLink(elem, entry, error);
     }
     const isValid = links.size === 0;
-    setSummaryShown(!isValid);
+    syncSummaryShown();
     if (!isValid && options?.focus) summary.focus();
     return isValid;
   };
@@ -289,11 +319,14 @@ export const createForm = (props: FormProps = {}): Form => {
         links.delete(link);
       }
     }
-    if (links.size === 0) setSummaryShown(false);
+    syncSummaryShown();
   };
 
   const submit = () => {
-    if (busy || !validate({ focus: true })) return false;
+    if (busy) return false;
+    // A new attempt: the last one's own error goes
+    formError = null;
+    if (!validate({ focus: true })) return false;
     const result = props.onSubmit?.(form);
     if (!(result instanceof Promise)) return true;
     busy = result;
@@ -312,6 +345,7 @@ export const createForm = (props: FormProps = {}): Form => {
 
   const reset = () => {
     isChecking = false;
+    formError = null;
     links.clear();
     summaryList.replaceChildren();
     setSummaryShown(false);
@@ -373,6 +407,13 @@ export const createForm = (props: FormProps = {}): Form => {
     readFieldsetDisabled(body.elem);
   };
 
+  const setError = (message: string | null, options?: { focus?: boolean }) => {
+    formError = message || null;
+    drawSummaryMessage();
+    syncSummaryShown();
+    if (formError !== null && options?.focus) summary.focus();
+  };
+
   const add = (children: readonly FormChild[]) => {
     addFormChildren(content, children, scheduler);
     if (isDisabled) readFieldsetDisabled(content.elem);
@@ -388,6 +429,8 @@ export const createForm = (props: FormProps = {}): Form => {
     submit,
     reset,
     validate,
+    setError,
+    getError: () => formError,
     refresh: () => scheduler.refresh(),
     setDisabled,
     isDisabled: () => isDisabled,

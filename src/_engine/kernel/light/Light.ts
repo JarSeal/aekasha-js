@@ -29,8 +29,8 @@ export const installLights = (ctx: FeatureContext) => {
 };
 
 /**
- * Debug env: loads the lights' debug GUI and helpers, keeps the GUI's list current, and syncs
- * the helpers from LS on every scene enter. The boot calls it before the features install.
+ * Debug env: loads the lights' debug GUI and helpers, registers their save source, keeps the
+ * GUI's list current, and syncs the helpers from LS on every scene enter. The boot calls it before the features install.
  * @internal
  */
 export const registerLightDebugGUI = async (world: ECSWorld) => {
@@ -39,6 +39,8 @@ export const registerLightDebugGUI = async (world: ECSWorld) => {
   lightDebugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__LightGUI'));
   await loadDebugModuleAsync(() => import('./debug/_dbg__LightHelpers'));
   if (!lightDebugGUI) return;
+  // The Æ menu's saves (p355), before the boot marks the sources ready
+  useDebug(lightDebugGUI)?.registerLightSaveSource();
 
   registerOnAllSceneEnters('lightHelpersSceneSync', () => {
     const sceneId = getCurrentSceneId();

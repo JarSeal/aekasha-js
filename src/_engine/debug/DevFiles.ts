@@ -65,8 +65,9 @@ const requireDevFiles = async () => {
 };
 
 /** The server's codes, plus the client's own: `UNAVAILABLE` (not the debug env, no dev server or
- * no token in the page) and `NETWORK` (the request failed, or the answer wasn't the server's). */
-export type DevFilesClientErrorCode = DevFilesErrorCode | 'UNAVAILABLE' | 'NETWORK';
+ * no token in the page), `NETWORK` (the request failed, or the answer wasn't the server's) and
+ * `CANCELLED` (the "Confirm writes" dialog was cancelled: nothing was written). */
+export type DevFilesClientErrorCode = DevFilesErrorCode | 'UNAVAILABLE' | 'NETWORK' | 'CANCELLED';
 
 /** A refused or failed dev files request. `details` is the server's: `CONFLICT` has
  * {@link DevFilesConflicts}, `INVALID_SCHEMA` {@link DevFilesSchemaIssues}. */
@@ -135,6 +136,12 @@ export type DevFileWrite = {
       /** A JSON value (not text): the server validates it against its gathered schema, if its
        * suffix has one, and formats it with Prettier. */
       json: unknown;
+      /**
+       * Save entries put into `json` as into the file's JSON in a `saveData`-only write (stamped,
+       * the history size kept), for a file this write creates or replaces: an asset moved into
+       * a file of its own with its scene's entry (p355 §2.6). The file needn't exist.
+       */
+      saveData?: DevFilesSaveData | DevFilesSaveData[];
     }
   | {
       /** The file's bytes (eg. a PNG from {@link encodePNG}), uploaded as is */
@@ -150,9 +157,11 @@ export type DevFileWrite = {
        * `json` write. The scene keeps {@link getDevFilesSaveHistorySize} entries, the new one
        * included (the older ones are dropped); with 0 the batch fails with `SAVE_DATA_DISABLED`
        * before anything is sent. An entry equal to the scene's latest (its `__meta` aside) is
-       * `unchanged`. A missing file fails with `NOT_FOUND`.
+       * `unchanged`. A missing file fails with `NOT_FOUND`. A list puts an entry for each of
+       * several scenes into the file in one write (each scene once; `unchanged` only when every
+       * entry is).
        */
-      saveData: DevFilesSaveData;
+      saveData: DevFilesSaveData | DevFilesSaveData[];
     }
 );
 
@@ -208,6 +217,47 @@ export const getDevFilesSaveHistorySize = (): number => {
   );
 };
 
+/** The "File server" folder's switches (p355 §2.4) that {@link isDevFilesOptionOn} reads. */
+export type DevFilesOption = 'gatherToasts' | 'confirmWrites';
+
+/**
+ * Whether a "File server" switch is on: the Debug tools tab's setting, else
+ * `AppConfig.devFiles`, else its default (gather toasts on, confirm writes off). False outside
+ * the debug env.
+ * @internal
+ */
+export const isDevFilesOptionOn = (option: DevFilesOption): boolean => {
+  if (!IS_DEBUG_ENV) return false;
+  const saved = getDebugToolsState().devFiles?.[option];
+  if (typeof saved === 'boolean') return saved;
+  const configured = getConfig().devFiles?.[option];
+  return typeof configured === 'boolean' ? configured : option === 'gatherToasts';
+};
+
+/**
+ * The sessionStorage key of the note a gather after this page's writes leaves for the reload.
+ * @internal
+ */
+export const DEV_FILES_GATHER_NOTE_KEY = 'AEK_devFilesGatherNote';
+
+/**
+ * Shows the toasts of the gather that reloaded the page, when this page's writes set it off
+ * (the "Gather toasts" setting). Loads the implementation only when there's a note.
+ * @internal
+ */
+export const showDevFilesGatherNote = () => {
+  if (!IS_DEBUG_ENV) return;
+  try {
+    if (sessionStorage.getItem(DEV_FILES_GATHER_NOTE_KEY) === null) return;
+  } catch {
+    return;
+  }
+  loadDevFiles().then(
+    (module) => module?._showGatherNoteAfterReload(),
+    () => undefined // loadDebugModuleAsync logged it
+  );
+};
+
 /** Whether this page can write dev files, and the server's settings. Never rejects: outside the
  * debug env it resolves `NOT_DEBUG_ENV` without loading anything. */
 export const getDevFilesStatus = async (): Promise<DevFilesStatus> => {
@@ -224,7 +274,11 @@ export const getDevFilesStatus = async (): Promise<DevFilesStatus> => {
 
 /**
  * Writes a batch of files into the repo: every write lands or none does. A blob is uploaded
- * (staged) first, then the batch is committed.
+ * (staged) first, then the batch is committed. With the "Confirm writes" setting on (Debug
+ * tools → File server) a dry run comes first and a dialog lists its files: the batch is
+ * committed only on Confirm, against the files as the dry run read them (a change in between is
+ * a `CONFLICT`), and Cancel rejects with `CANCELLED`. With "Gather toasts" on, a toast tells how
+ * the gather after the write went (after the reload it sets off).
  * @returns per file its `sha256` and whether it was `created`, `updated` or `unchanged` (an
  * unchanged file isn't written, so it sets off no gather: a batch of unchanged files gets no
  * {@link onDevDataGathered} event)
@@ -250,6 +304,15 @@ export const getDevFilesStatus = async (): Promise<DevFilesStatus> => {
  */
 export const writeDevFiles = async (writes: DevFileWrite[]): Promise<DevFilesCommitBody> =>
   (await requireDevFiles())._writeDevFiles(writes);
+
+/**
+ * {@link writeDevFiles} without the "Confirm writes" dialog: the save menu's "Save specific
+ * data…" dialog's, which is its own confirmation (p355 §2.3). Not public, so no other tool skips
+ * the setting.
+ * @internal
+ */
+export const writeConfirmedDevFiles = async (writes: DevFileWrite[]): Promise<DevFilesCommitBody> =>
+  (await requireDevFiles())._writeDevFiles(writes, { skipConfirm: true });
 
 /**
  * Reads a file the dev files may write, with the `sha256` to pass as a write's `expectedHash`.

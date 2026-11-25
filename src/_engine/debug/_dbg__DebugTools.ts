@@ -25,6 +25,7 @@ import {
   DEBUG_TOOLS_LS_KEY,
   DEBUG_TOOLS_TAB_ID,
   markDebugToolsTabRegistered,
+  _fillDevFilesDefaults,
   persistShortcutValue,
 } from './_dbg__DebugToolsState';
 import {
@@ -95,6 +96,7 @@ const createDebugToolsDebugGUI = () => {
   });
   // Hydrated at registration
   markDebugToolsTabRegistered();
+  _fillDevFilesDefaults();
 
   const state = _getDebugToolsState();
   toggleAxesHelperVisibility(state.helpers.showAxesHelper);

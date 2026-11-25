@@ -76,6 +76,10 @@ export type DebugToolsState = {
   devFiles: {
     /** See `AppConfig.devFiles.saveHistorySize` (-1 = all, 0 = saving off) */
     saveHistorySize: number;
+    /** See `AppConfig.devFiles.gatherToasts` */
+    gatherToasts: boolean;
+    /** See `AppConfig.devFiles.confirmWrites` */
+    confirmWrites: boolean;
   };
   /** The debugger's look (p806 D8). Top-level, as axesGizmo. Its default is
    * `AppConfig.debugDrawer.theme`, and it's saved only once changed in the tab. */
@@ -145,6 +149,8 @@ const defaultDebugToolsState: DebugToolsState = {
   // Outside the debug env saving into `__saveData` is off
   devFiles: {
     saveHistorySize: 0,
+    gatherToasts: false,
+    confirmWrites: false,
   },
   appearance: {
     theme: 'dark',

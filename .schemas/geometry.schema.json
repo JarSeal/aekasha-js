@@ -985,10 +985,13 @@
                 },
                 "appVersion": {
                   "$ref": "#/definitions/__schema92"
+                },
+                "author": {
+                  "$ref": "#/definitions/__schema93"
                 }
               },
               "additionalProperties": false,
-              "description": "When the entry was saved, and the versions of each part then."
+              "description": "When the entry was saved, by whom, and the versions of each part then."
             },
             "debugData": {
               "allOf": [
@@ -1094,6 +1097,17 @@
           "$ref": "#/definitions/__schema90"
         }
       ]
+    },
+    "__schema93": {
+      "description": "Who saved the entry: git's user.name on the dev server's machine.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema94"
+        }
+      ]
+    },
+    "__schema94": {
+      "type": "string"
     }
   }
 }

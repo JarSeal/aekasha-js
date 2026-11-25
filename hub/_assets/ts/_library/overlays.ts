@@ -456,12 +456,12 @@ const initMenuDemo: Demo = (box) => {
         },
       },
       { type: 'separator' },
-      { label: 'Revert', disabled: true },
+      { label: 'Revert', disabled: true, disabledReason: 'No changes since the last save' },
     ],
   });
   addGroup(
     root,
-    'A menu button: actions, an on / off item, a one-of choice, a disabled item'
+    'A menu button: actions, an on / off item, a one-of choice, a disabled item with its reason'
   ).append(file.cmp.elem);
 
   const split = createSplitButton({

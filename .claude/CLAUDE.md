@@ -24,7 +24,7 @@ Maintain the brand, feeling, and core principles in creating the best UX for bot
 
 - `yarn dev` — start the dev server (Vite, port 8080), development env.
 - `yarn dev:https` — `yarn dev` over HTTPS on port 8443 (`AEK_DEV_HTTPS=true` adds `@vitejs/plugin-basic-ssl`'s self-signed certificate): a phone on the LAN needs a secure context for WebGPU and `SharedArrayBuffer`, which a plain `http://` LAN address isn't.
-- Dev file server env vars (p342, every `dev*` script): `AEK_DEV_FILES=false` turns its routes off; `AEK_DEV_FILES_LAN=true` lets other devices on the LAN write too (a phone under `yarn dev:https`; by default only the server's machine can). Its self-check: `devTools/devFiles/CLAUDE.md`.
+- Dev file server env vars (p342, every `dev*` script): `AEK_DEV_FILES=false` turns its routes off; `AEK_DEV_FILES_LAN=true` lets other devices on the LAN write too (a phone under `yarn dev:https`; by default only the server's machine can); `AEK_DEV_FILES_BACKUPS=<n>` keeps the last n commits' backups (p355: 20 by default, -1 all, 0 none). Its self-check: `devTools/devFiles/CLAUDE.md`.
 - `yarn dev:test` — dev server with `VITE_APP_ENV=test`.
 - `yarn dev:production` — dev server against production env vars.
 - `yarn build` — type-check (`tsc`, then `tsc -p hub`) + production build to `dist/`, then `yarn sbp --profile all --no-app-build --brief` (the app it just built, and each embed profile built and checked; `AEK_SBP=false` skips it), then the Ækasha Hub into `dist-hub/` (`yarn hub:build`, below). Its asset checks (missing outputs, budgets): `devTools/assetPipeline/CLAUDE.md`.
@@ -66,7 +66,7 @@ In the browser, append query params to toggle modes: `?isDebug=true` (full debug
 
 Subsystem detail lives in nested `CLAUDE.md` files next to its code. A session loads one when it reads a file in that folder; when a task touches a subsystem from elsewhere, read its file first:
 
-- `src/_engine/debug/CLAUDE.md`: the debug tooling (About dialog, debug keys, test bridge, stats panels, GPU timing, profiler, GPU memory, drawer tabs).
+- `src/_engine/debug/CLAUDE.md`: the debug tooling (About dialog, the Æ menu and save sources, debug keys, test bridge, stats panels, GPU timing, profiler, GPU memory, drawer tabs).
 - `src/_engine/kernel/input/CLAUDE.md`: input (the device bindings, the held-key hook, the master switches, action maps: sampling, contexts, recording; the gamepad).
 - `src/_engine/kernel/ecs/CLAUDE.md`: the ECS core (plugin registration, component types, app ids, managed entities, the system stages, the main loop).
 - `src/_engine/kernel/init/CLAUDE.md`: the boot step by step (`InitEngine`, the embed boot) and the engine features' install contract (the `FeatureContext`, install order, the production-build traps, a missing feature, the assets worker's jobs).
@@ -150,7 +150,7 @@ Debug tooling (built on the UI kit since p806: a tab's pane is a property grid o
 - The debug drawer itself is toggled in-app with the `h` key (the engine's default debug key `sc-toggle-debug-drawer`, rebindable in `src/CONFIG.ts`' `debugKeys`) via `toggleDrawer()`.
 - Draggable windows are the UI kit's (`src/_engine/ui/CLAUDE.md`: kinds, registration, LS, scene loads). A debug module's edit window per entity is a window kind, registered at its `_dbg__` module's load.
 
-Detail: `src/_engine/debug/CLAUDE.md` (the About dialog, debug keys, the test bridge, the stats panels, GPU timing, the profiler, GPU memory, drawer tabs) and `devTools/devFiles/CLAUDE.md` (dev files).
+Detail: `src/_engine/debug/CLAUDE.md` (the About dialog, the Æ menu and save sources, debug keys, the test bridge, the stats panels, GPU timing, the profiler, GPU memory, drawer tabs) and `devTools/devFiles/CLAUDE.md` (dev files).
 
 ### Physics
 

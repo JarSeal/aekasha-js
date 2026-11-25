@@ -881,10 +881,13 @@
                 },
                 "appVersion": {
                   "$ref": "#/definitions/__schema83"
+                },
+                "author": {
+                  "$ref": "#/definitions/__schema84"
                 }
               },
               "additionalProperties": false,
-              "description": "When the entry was saved, and the versions of each part then."
+              "description": "When the entry was saved, by whom, and the versions of each part then."
             },
             "enabled": {
               "allOf": [
@@ -1107,6 +1110,17 @@
           "$ref": "#/definitions/__schema81"
         }
       ]
+    },
+    "__schema84": {
+      "description": "Who saved the entry: git's user.name on the dev server's machine.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema85"
+        }
+      ]
+    },
+    "__schema85": {
+      "type": "string"
     }
   }
 }

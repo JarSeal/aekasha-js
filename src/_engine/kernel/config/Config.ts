@@ -317,6 +317,13 @@ export type AppConfig = {
      * Debug tools tab's "File server" folder overrides it per browser. Always 0 outside the debug
      * env. Default 20. */
     saveHistorySize?: number;
+    /** After a write from the page, a debug toast tells how the gather it set off went (after
+     * the reload). The "File server" folder overrides it per browser. Default true. */
+    gatherToasts?: boolean;
+    /** Every dev files write is shown first (a dry run's files, created / updated / unchanged)
+     * and lands only on Confirm. The "File server" folder overrides it per browser. Default
+     * false. */
+    confirmWrites?: boolean;
   };
 };
 

@@ -8,8 +8,9 @@ import { lsGetItem } from '../../../utils/LocalAndSessionStorage';
 
 /** A light's saved debugger state: the edit window's values and its own preferences */
 export interface LightEntityDebugState {
-  /** Its edited enabled state (written into a new entry as `true`: i165) */
-  enabled: boolean;
+  /** Its edited enabled state: only once the Enabled toggle changed it (a record made for a
+   * helper or a folder has none, so it never overrides a light created disabled) */
+  enabled?: boolean;
   /** Whether its helper shows (a debugger preference, not a creation prop) */
   helperVisible: boolean;
   /** Whether its 3D symbol shows (a debugger preference) */

@@ -24,6 +24,33 @@ export const getSaveEntry = <E extends { __meta?: Meta }>(
   return overrides as Omit<E, '__meta'>;
 };
 
+/** A scene JSON as far as its own save entry goes */
+type SceneWithSaveData = {
+  spatialDomains?: { id: string }[];
+  __saveData?: Record<string, { spatialDomains?: { id: string }[]; __meta?: Meta }[] | undefined>;
+};
+
+/**
+ * A scene with its own latest save entry applied (p619 G5): the entry's fields replace the
+ * scene's, but `spatialDomains` merges by id (p355 §2.5): an entry's domain is laid over the
+ * scene's with its id, field by field, and one the scene doesn't list is appended, so an entry
+ * holds only the domains it changes.
+ */
+export const applySceneSaveEntry = <S extends SceneWithSaveData>(scene: S, sceneId: string): S => {
+  const entry = getSaveEntry(scene, sceneId);
+  const result = { ...scene, ...entry } as S;
+  if (entry?.spatialDomains && scene.spatialDomains) {
+    const domains = scene.spatialDomains.map((domain) => ({ ...domain }));
+    for (const saved of entry.spatialDomains) {
+      const index = domains.findIndex((domain) => domain.id === saved.id);
+      if (index === -1) domains.push(saved);
+      else domains[index] = { ...domains[index], ...saved };
+    }
+    result.spatialDomains = domains;
+  }
+  return result;
+};
+
 // Versions of the current build, compared against the ones stamped in save entries' __meta
 const CURRENT_VERSIONS = {
   engineVersion: pkg.engine_metadata.version,

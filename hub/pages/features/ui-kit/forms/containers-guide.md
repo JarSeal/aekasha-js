@@ -206,6 +206,10 @@ newPlayerDialog.add(form.cmp);
   a link focuses the field, opening a shut folder around it. A hidden or disabled field isn't
   checked; a field's own error (an expression that doesn't parse) and your `setError` count too,
   so `validate()` after a server's answer shows it in the summary.
+- **The form's own error:** one tied to no field (a save that failed) is
+  `form.setError(message, { focus: true })`: the summary's first item, a text without a link, with
+  the summary taking the focus. It stays until the next submit or a reset; `setError(null)` takes
+  it away.
 - **Submit:** Enter in a single-line field, the submit button or `submit()`; `onSubmit` runs only
   when every field is valid. A promise from it sets `aria-busy` and the submit button's loading
   until it settles.
@@ -214,11 +218,11 @@ newPlayerDialog.add(form.cmp);
 - A property grid in a form keeps its own scheduler; `createPropertyGrid({ scheduler: form.scheduler })`
   shares the form's.
 
-| Form              |                                                                                                                                                          |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Props             | [`FormProps`](api:FormProps), the handle [`Form`](api:Form)                                                                                              |
-| Parts             | `form.aekForm` with `__summary` (`__summaryTitle`, `__summaryList` of `__summaryLink`s) and `fieldset.aekForm__body` holding `__content` and `__actions` |
-| States            | `aria-busy` while `onSubmit`'s promise is pending; the summary `hidden` without errors; the body's `disabled`                                            |
-| Custom properties | `--aek-form-gap`, `--aek-form-summary-border-color`                                                                                                      |
-| Keys              | Enter in a single-line field submits; a summary link focuses its field                                                                                   |
-| Assistive tech    | The summary is a group named by its title that takes the focus, each link's text its field's error; a required control has `required` or `aria-required` |
+| Form              |                                                                                                                                                                                                           |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Props             | [`FormProps`](api:FormProps), the handle [`Form`](api:Form)                                                                                                                                               |
+| Parts             | `form.aekForm` with `__summary` (`__summaryTitle`, `__summaryList`: the form's own error, `__summaryMessage`, then the `__summaryLink`s) and `fieldset.aekForm__body` holding `__content` and `__actions` |
+| States            | `aria-busy` while `onSubmit`'s promise is pending; the summary `hidden` without errors; the body's `disabled`                                                                                             |
+| Custom properties | `--aek-form-gap`, `--aek-form-summary-border-color`                                                                                                                                                       |
+| Keys              | Enter in a single-line field submits; a summary link focuses its field                                                                                                                                    |
+| Assistive tech    | The summary is a group named by its title that takes the focus, each link's text its field's error; a required control has `required` or `aria-required`                                                  |

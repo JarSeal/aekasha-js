@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Gameplay, Save games
-Related: p420_npc-simulation-tiers.md (The gameplay contracts: C7's events, missions and the save service; `ABSTRACT` NPC state is game state), p510_headless-simulation-runtime.md (The multiplayer path, rule 7: serializable components, shared with network replication), p511_network-transport-and-replication.md (what is replicated), _DONE_p500_restore-physics-snapshot.md (the physics part of a save), `src/_engine/features/character/CLAUDE.md` (controllers and brains rebuilt from `{ kind, params }`, `createCharacterOfKind`), p355_save-menu-and-file-server-settings.md (not this: it saves debug edits into asset JSONs)
+Related: p420_npc-simulation-tiers.md (The gameplay contracts: C7's events, missions and the save service; `ABSTRACT` NPC state is game state), p510_headless-simulation-runtime.md (The multiplayer path, rule 7: serializable components, shared with network replication), p511_network-transport-and-replication.md (what is replicated), _DONE_p500_restore-physics-snapshot.md (the physics part of a save), `src/_engine/features/character/CLAUDE.md` (controllers and brains rebuilt from `{ kind, params }`, `createCharacterOfKind`), _DONE_p355_save-menu-and-file-server-settings.md (not this: it saves debug edits into asset JSONs)
 
 # Game Events, Missions and Save Games — Stub
 

@@ -32,6 +32,9 @@ export type MenuActionItem = {
   kbd?: Kbd;
   /** Shown and focusable, but not picked (default false). */
   disabled?: boolean;
+  /** Why it's disabled, while `disabled`: its tooltip (on its right) and its description
+   * (`aria-describedby`), as a button's `setDisabled` reason. */
+  disabledReason?: string;
 };
 
 /** A menu's on / off item (`menuitemcheckbox`). */
@@ -555,14 +558,17 @@ export const createMenuSurface = (props: MenuSurfaceProps): MenuSurface => {
  *   `.aekMenu[data-submenu]` of its own beside its item, named by the item's label.
  * - ARIA: the trigger gets `aria-haspopup="menu"`, `aria-expanded` and `aria-controls`; a submenu
  *   item `aria-haspopup="menu"`, `aria-expanded` and, while open, `aria-controls`.
- * - Keys, on the trigger: Enter, Space and ArrowDown open it on the first item, ArrowUp on the last.
+ * - Keys, on the trigger: Enter, Space and ArrowDown open it on the first item, ArrowUp on the last;
+ *   a trigger that's `disabled` or `aria-disabled="true"` opens nothing (a click neither).
  *   In the menu: the arrows move (wrapping), Home and End go to the ends, a typed letter (or a few,
  *   quickly) goes to the next item that starts with them; Enter picks the item and closes the menu,
  *   Space too, except on an on / off item or a choice, which it flips and keeps the menu open;
  *   ArrowRight, Enter or Space on a submenu item opens it on its first item, and ArrowLeft in a
  *   submenu closes it back to its item; Escape (the kit's overlay stack) closes one level, the last
  *   with the focus back on the trigger; Tab closes every level, with the focus back on the
- *   trigger. A disabled item is focusable and picks or opens nothing. The keys reach no key binding.
+ *   trigger. A disabled item is focusable and picks or opens nothing; an action's
+ *   `disabledReason` is its tooltip (a hover, a keyboard focus) and its `aria-describedby`. The
+ *   keys reach no key binding.
  * - Pointer: hovering an item focuses it, a click picks it (or opens its submenu), a press outside
  *   closes the menu. Hovering a submenu item opens it after `--aek-submenu-delay` (150 ms; a delay,
  *   not motion), and the submenu stays open while the pointer heads for it across the other items.
@@ -611,8 +617,18 @@ export const createMenu = (props: MenuProps): Menu => {
     surface.open({ anchor, focus, returnFocus: anchor });
   const toggle = () => (surface.isOpen() ? surface.close() : open());
 
+  /** A disabled trigger opens nothing (a kit button's `focusableWhenDisabled` lets its click
+   * through); `open()` from code still does */
+  const isTriggerDisabled = () =>
+    anchor.hasAttribute('disabled') || anchor.getAttribute('aria-disabled') === 'true';
+
+  const onAnchorClick = () => {
+    if (surface.isOpen() || !isTriggerDisabled()) toggle();
+  };
+
   const onAnchorKeyDown = (e: KeyboardEvent) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    if (!surface.isOpen() && isTriggerDisabled()) return;
     e.preventDefault();
     e.stopPropagation();
     swallowNextKeyUp(e.key);
@@ -621,7 +637,7 @@ export const createMenu = (props: MenuProps): Menu => {
     else open(which);
   };
 
-  const unwireTrigger = wireTrigger(anchor, surface.cmp.id, toggle, onAnchorKeyDown);
+  const unwireTrigger = wireTrigger(anchor, surface.cmp.id, onAnchorClick, onAnchorKeyDown);
 
   return {
     cmp: surface.cmp,
