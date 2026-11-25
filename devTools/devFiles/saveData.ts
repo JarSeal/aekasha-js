@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { readGit } from '../git';
 import { ROOT } from '../paths';
 import { hasGatheredSaveData } from '../gather/gatheredJson';
 import { DevFilesError } from './http';
@@ -14,7 +15,8 @@ import type {
  * A commit's save entry write (p342 §2.6): `{ path, saveData: { sceneId, entry, historySize } }`
  * reads the asset JSON, puts `entry` first in its `__saveData[sceneId]` (the older entries after
  * it; the gatherer applies only the first) and stamps the entry's `__meta` with the three part
- * versions from `package.json` and, unless the entry has one, the date. The scene's list then
+ * versions from `package.json`, the author (git's `user.name`; without one the entry's own
+ * `author` is removed: the server's stamp always wins) and, unless the entry has one, the date. The scene's list then
  * keeps its first `historySize` entries (-1: all; 0, saving off, is refused); the other scenes'
  * lists are left as they are. The commit validates and formats the result like any JSON write.
  * An entry equal to the scene's latest one (`__meta` aside) leaves the file `unchanged`, unless
@@ -60,8 +62,20 @@ export const checkSaveDataRequest = (writePath: string, saveData: unknown) => {
   return saveData as DevFilesSaveDataWrite;
 };
 
-/** Read on every write, so a version bump while `yarn dev` runs is stamped at once */
-const readPartVersions = async () => {
+/** Git's `user.name`, undefined without git, outside a repo or with no name set (p355 §2.4) */
+export const readGitAuthor = () => readGit(['config', 'user.name']) || undefined;
+
+/** What the server stamps every save entry's `__meta` with (the date aside) */
+export type SaveDataStamp = {
+  engineVersion: string;
+  toolkitVersion: string;
+  appVersion: string;
+  author: string | undefined;
+};
+
+/** Read once per commit, so a version bump or a changed git name while `yarn dev` runs is stamped
+ * at once */
+export const readSaveDataStamp = async (): Promise<SaveDataStamp> => {
   const pkg = JSON.parse(await fs.readFile(path.join(ROOT, 'package.json'), 'utf-8')) as {
     engine_metadata: { version: string };
     toolkit_metadata: { version: string };
@@ -71,6 +85,7 @@ const readPartVersions = async () => {
     engineVersion: pkg.engine_metadata.version,
     toolkitVersion: pkg.toolkit_metadata.version,
     appVersion: pkg.app_metadata.version,
+    author: readGitAuthor(),
   };
 };
 
@@ -103,9 +118,14 @@ export type SaveDataWriteResult =
   /** The entry is the scene's latest already: the file stays as it is */
   | { unchanged: Buffer; currentHash: string };
 
+/**
+ * Puts the save entry into the file's JSON (the file module's header).
+ * @param getStamp the commit's stamp, read once for all its writes
+ */
 export const applySaveDataWrite = async (
   target: DevFilePath,
-  saveData: DevFilesSaveDataWrite
+  saveData: DevFilesSaveDataWrite,
+  getStamp: () => Promise<SaveDataStamp>
 ): Promise<SaveDataWriteResult> => {
   const { repoPath } = target;
   if (!target.isJson || !hasGatheredSaveData(repoPath)) {
@@ -154,9 +174,16 @@ export const applySaveDataWrite = async (
   }
 
   const { __meta, ...overrides } = entry;
-  const meta = (__meta ?? {}) as JsonObject;
+  const meta = { ...(__meta as JsonObject | undefined) };
+  delete meta.author;
+  const { author, ...versions } = await getStamp();
   const stamped = {
-    __meta: { ...meta, date: meta.date ?? Date.now(), ...(await readPartVersions()) },
+    __meta: {
+      ...meta,
+      date: meta.date ?? Date.now(),
+      ...versions,
+      ...(author !== undefined ? { author } : {}),
+    },
     ...overrides,
   };
   // In place: an existing `__saveData` and scene keep their places in the file

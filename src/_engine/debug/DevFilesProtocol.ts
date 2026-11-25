@@ -81,6 +81,14 @@ export type DevFilesStatusBody = {
   maxFileBytes: number;
   /** The largest batch a commit may send, its files together */
   maxBatchBytes: number;
+  /** How many commits' backups the server keeps (`AEK_DEV_FILES_BACKUPS`, default 20): -1 all,
+   * 0 none (a commit's backups are removed once it landed) */
+  backupsKept: number;
+  /** Where the backups are, repo-relative (`.cache/dev-files/backup/`) */
+  backupDir: string;
+  /** What the server stamps a save entry's `__meta.author` with: git's `user.name`, null without
+   * git, outside a repo, or with no `user.name` set (the entry then has no `author`) */
+  author: string | null;
 };
 
 /**
@@ -122,18 +130,28 @@ export type DevFilesWrite = {
 } & ({ json: unknown } | { stageId: string } | { saveData: DevFilesSaveDataWrite });
 
 /**
- * The `POST commit` body: the client's and the server's.
+ * The `POST commit` body: the client's and the server's. `dryRun`: every check, nothing written
+ * (the results tell what the commit would do, and each file's hash to confirm it with).
  * @internal
  */
-export type DevFilesCommitRequest = { writes: DevFilesWrite[] };
+export type DevFilesCommitRequest = { writes: DevFilesWrite[]; dryRun?: boolean };
 
 /** What a write did: an `unchanged` file isn't written (and sets off no gather). */
 export type DevFilesWriteStatus = 'created' | 'updated' | 'unchanged';
 
 /** A committed batch's result (`POST commit`): `writeDevFiles`' answer. */
 export type DevFilesCommitBody = {
-  /** Per write, in the batch's order: its path, the file's hash now and what the write did */
-  results: { path: string; sha256: string; status: DevFilesWriteStatus }[];
+  /**
+   * Per write, in the batch's order: its path, the file's hash after the write (a dry run's: what
+   * it would be), what the write did (would do) and the file's hash before it (null: there was no
+   * file), a dry run's `expectedHash` for the commit it confirms
+   */
+  results: {
+    path: string;
+    sha256: string;
+    status: DevFilesWriteStatus;
+    previousHash: string | null;
+  }[];
 };
 
 /** `INVALID_SCHEMA`'s details: the issues per file, as the gatherer lists them */

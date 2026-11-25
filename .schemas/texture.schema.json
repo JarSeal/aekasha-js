@@ -48,31 +48,31 @@
       "$ref": "#/definitions/__schema122"
     },
     "__sourcePath": {
-      "$ref": "#/definitions/__schema130"
+      "$ref": "#/definitions/__schema132"
     },
     "__fileSize": {
-      "$ref": "#/definitions/__schema131"
-    },
-    "__url": {
       "$ref": "#/definitions/__schema133"
     },
-    "__sourceUrl": {
+    "__url": {
       "$ref": "#/definitions/__schema135"
     },
-    "__sourceUrls": {
+    "__sourceUrl": {
       "$ref": "#/definitions/__schema137"
     },
-    "__bytes": {
-      "$ref": "#/definitions/__schema140"
+    "__sourceUrls": {
+      "$ref": "#/definitions/__schema139"
     },
-    "__vramBytes": {
+    "__bytes": {
       "$ref": "#/definitions/__schema142"
     },
+    "__vramBytes": {
+      "$ref": "#/definitions/__schema144"
+    },
     "__codec": {
-      "$ref": "#/definitions/__schema143"
+      "$ref": "#/definitions/__schema145"
     },
     "__averageColor": {
-      "$ref": "#/definitions/__schema144"
+      "$ref": "#/definitions/__schema146"
     }
   },
   "additionalProperties": false,
@@ -1402,10 +1402,13 @@
                 },
                 "appVersion": {
                   "$ref": "#/definitions/__schema129"
+                },
+                "author": {
+                  "$ref": "#/definitions/__schema130"
                 }
               },
               "additionalProperties": false,
-              "description": "When the entry was saved, and the versions of each part then."
+              "description": "When the entry was saved, by whom, and the versions of each part then."
             },
             "id": {
               "$ref": "#/definitions/__schema1"
@@ -1479,22 +1482,22 @@
       ]
     },
     "__schema130": {
-      "type": "string",
-      "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
-    },
-    "__schema131": {
-      "description": "Set by the gatherer: bytes on disk (all six faces for a cube texture).",
+      "description": "Who saved the entry: git's user.name on the dev server's machine.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema132"
+          "$ref": "#/definitions/__schema131"
         }
       ]
     },
+    "__schema131": {
+      "type": "string"
+    },
     "__schema132": {
-      "type": "number"
+      "type": "string",
+      "description": "Set by the gatherer: the JSON file the asset came from. Not written by hand."
     },
     "__schema133": {
-      "description": "Set by the gatherer: the pipeline's output.",
+      "description": "Set by the gatherer: bytes on disk (all six faces for a cube texture).",
       "allOf": [
         {
           "$ref": "#/definitions/__schema134"
@@ -1502,10 +1505,10 @@
       ]
     },
     "__schema134": {
-      "type": "string"
+      "type": "number"
     },
     "__schema135": {
-      "description": "Set by the gatherer: the source as the dev server serves it.",
+      "description": "Set by the gatherer: the pipeline's output.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema136"
@@ -1516,7 +1519,7 @@
       "type": "string"
     },
     "__schema137": {
-      "description": "Set by the gatherer (development data): a cube texture's six faces as the dev server serves them.",
+      "description": "Set by the gatherer: the source as the dev server serves it.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema138"
@@ -1524,25 +1527,36 @@
       ]
     },
     "__schema138": {
+      "type": "string"
+    },
+    "__schema139": {
+      "description": "Set by the gatherer (development data): a cube texture's six faces as the dev server serves them.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema140"
+        }
+      ]
+    },
+    "__schema140": {
       "minItems": 6,
       "maxItems": 6,
       "type": "array",
       "items": {
-        "$ref": "#/definitions/__schema139"
+        "$ref": "#/definitions/__schema141"
       }
     },
-    "__schema139": {
+    "__schema141": {
       "type": "string"
     },
-    "__schema140": {
+    "__schema142": {
       "description": "Set by the gatherer: the download in bytes.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema141"
+          "$ref": "#/definitions/__schema143"
         }
       ]
     },
-    "__schema141": {
+    "__schema143": {
       "type": "object",
       "properties": {
         "in": {
@@ -1560,30 +1574,30 @@
       ],
       "additionalProperties": false
     },
-    "__schema142": {
+    "__schema144": {
       "description": "Set by the gatherer: the estimated GPU memory in bytes.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema141"
+          "$ref": "#/definitions/__schema143"
         }
       ]
     },
-    "__schema143": {
+    "__schema145": {
       "allOf": [
         {
           "$ref": "#/definitions/__schema71"
         }
       ]
     },
-    "__schema144": {
+    "__schema146": {
       "description": "Set by the gatherer (development data): the texture's average RGB, linear.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema145"
+          "$ref": "#/definitions/__schema147"
         }
       ]
     },
-    "__schema145": {
+    "__schema147": {
       "type": "array",
       "items": [
         {

@@ -326,16 +326,19 @@
                 },
                 "appVersion": {
                   "$ref": "#/definitions/__schema36"
+                },
+                "author": {
+                  "$ref": "#/definitions/__schema37"
                 }
               },
               "additionalProperties": false,
-              "description": "When the entry was saved, and the versions of each part then."
+              "description": "When the entry was saved, by whom, and the versions of each part then."
             },
             "enabled": {
               "description": "Whether the pass is part of the chain. Default true.",
               "allOf": [
                 {
-                  "$ref": "#/definitions/__schema37"
+                  "$ref": "#/definitions/__schema39"
                 }
               ]
             },
@@ -412,6 +415,17 @@
       ]
     },
     "__schema37": {
+      "description": "Who saved the entry: git's user.name on the dev server's machine.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema38"
+        }
+      ]
+    },
+    "__schema38": {
+      "type": "string"
+    },
+    "__schema39": {
       "type": "boolean"
     }
   }

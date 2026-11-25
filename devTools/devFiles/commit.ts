@@ -6,7 +6,12 @@ import { formatDevFileJson } from './format';
 import { DevFilesError } from './http';
 import { checkImageBytes } from './imageCheck';
 import { resolveDevFilePath, type DevFilePath } from './paths';
-import { applySaveDataWrite, checkSaveDataRequest } from './saveData';
+import {
+  applySaveDataWrite,
+  checkSaveDataRequest,
+  readSaveDataStamp,
+  type SaveDataStamp,
+} from './saveData';
 import type {
   DevFilesCommitBody,
   DevFilesConflicts,
@@ -15,6 +20,7 @@ import type {
   DevFilesWriteStatus,
 } from '../../src/_engine/debug/DevFilesProtocol';
 import { sha256 } from '../files';
+import { ROOT } from '../paths';
 import { DEV_FILES_CACHE_DIR, type DevFilesStage } from './stage';
 
 /**
@@ -29,14 +35,30 @@ import { DEV_FILES_CACHE_DIR, type DevFilesStage } from './stage';
  *    to `.cache/dev-files/backup/<commit>/`, then the temporaries are renamed into place. A
  *    failure before the renames removes the temporaries and the folders the batch created; one
  *    during them also restores the renamed targets from the backups (or removes the new ones).
- * The backups of the last BACKUPS_KEPT commits are kept, for undoing a write by hand.
+ * The backups of the last `backupsKept` commits are kept (`AEK_DEV_FILES_BACKUPS`), for undoing a
+ * write by hand. A dry run (`dryRun: true`, p355 §2.4) does step 1 only: the results tell what the
+ * commit would do, and each file's hash before it, which the commit it confirms sends as its
+ * `expectedHash`es.
  */
 
 export const MAX_FILE_BYTES = 32 * 1024 * 1024;
 export const MAX_BATCH_BYTES = 128 * 1024 * 1024;
 const BACKUP_DIR = path.join(DEV_FILES_CACHE_DIR, 'backup');
-const BACKUPS_KEPT = 20;
+/** The backup folder, repo-relative (`GET status`) */
+export const DEV_FILES_BACKUP_DIR = `${path.relative(ROOT, BACKUP_DIR).split(path.sep).join('/')}/`;
+export const DEFAULT_BACKUPS_KEPT = 20;
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
+
+/**
+ * `AEK_DEV_FILES_BACKUPS`: how many commits' backups are kept, -1 all, 0 none (a commit's backups
+ * are removed once it landed; a failed one still restores from them). Unset or empty: 20.
+ * @returns null when the value isn't an integer from -1 up
+ */
+export const parseBackupsKept = (value: string | undefined) => {
+  if (value === undefined || value.trim() === '') return DEFAULT_BACKUPS_KEPT;
+  const count = Number(value);
+  return Number.isInteger(count) && count >= -1 ? count : null;
+};
 
 /** Test faults (`AEK_DEV_FILES_FAULTS=true`, the self-check): the rename at this index throws */
 export type CommitFaults = { failRenameAt?: number };
@@ -65,14 +87,15 @@ function badRequest(message: string): never {
   throw new DevFilesError('BAD_REQUEST', message);
 }
 
-const parseRequest = (body: unknown): RequestedWrite[] => {
+const parseRequest = (body: unknown) => {
   if (!body || typeof body !== 'object' || !Array.isArray((body as { writes?: unknown }).writes)) {
-    badRequest('The body must be { writes: [...] }');
+    badRequest('The body must be { writes: [...], dryRun? }');
   }
-  const writes = (body as { writes: unknown[] }).writes;
+  const { writes, dryRun } = body as { writes: unknown[]; dryRun?: unknown };
+  if (dryRun !== undefined && typeof dryRun !== 'boolean') badRequest('dryRun must be a boolean');
   if (!writes.length) badRequest('The batch has no writes');
   const paths = new Set<string>();
-  return writes.map((write, index) => {
+  const requested = writes.map((write, index): RequestedWrite => {
     if (!write || typeof write !== 'object') badRequest(`Write ${index} isn't an object`);
     const w = write as Record<string, unknown>;
     if (typeof w.path !== 'string') badRequest(`Write ${index} has no path`);
@@ -103,6 +126,7 @@ const parseRequest = (body: unknown): RequestedWrite[] => {
       saveData: hasSaveData ? checkSaveDataRequest(writePath, w.saveData) : undefined,
     };
   });
+  return { requested, isDryRun: dryRun === true };
 };
 
 const readHash = async (file: string) => {
@@ -117,6 +141,8 @@ const readHash = async (file: string) => {
 const planWrites = async (requested: RequestedWrite[], stage: DevFilesStage) => {
   const targets = await Promise.all(requested.map((write) => resolveDevFilePath(write.path)));
 
+  let stamp: Promise<SaveDataStamp> | null = null;
+  const getStamp = () => (stamp ??= readSaveDataStamp());
   const schemaIssues: DevFilesSchemaIssues = [];
   /** `currentHash`: a save entry's file as it was read (else it's read for the conflict check) */
   const contents: { data: Buffer; stageId?: string; currentHash?: string }[] = [];
@@ -126,7 +152,7 @@ const planWrites = async (requested: RequestedWrite[], stage: DevFilesStage) => 
     let json = write.json;
     let currentHash: string | undefined;
     if (write.saveData) {
-      const result = await applySaveDataWrite(target, write.saveData);
+      const result = await applySaveDataWrite(target, write.saveData, getStamp);
       currentHash = result.currentHash;
       if ('unchanged' in result) {
         contents.push({ data: result.unchanged, currentHash });
@@ -217,9 +243,10 @@ const removeQuietly = async (file: string) => {
   await fs.rm(file, { recursive: true, force: true }).catch(() => undefined);
 };
 
-const pruneBackups = async () => {
+const pruneBackups = async (backupsKept: number) => {
+  if (backupsKept === -1) return;
   const dirs = (await fs.readdir(BACKUP_DIR).catch(() => [] as string[])).sort();
-  for (const dir of dirs.slice(0, Math.max(0, dirs.length - BACKUPS_KEPT))) {
+  for (const dir of dirs.slice(0, Math.max(0, dirs.length - backupsKept))) {
     await removeQuietly(path.join(BACKUP_DIR, dir));
   }
 };
@@ -232,7 +259,7 @@ function writeFailed(message: string, err: unknown, details?: unknown): never {
  * Writes the batch's changed files, all or none.
  * @returns the files written into a folder the batch created
  */
-const applyWrites = async (writes: PlannedWrite[], faults: CommitFaults) => {
+const applyWrites = async (writes: PlannedWrite[], faults: CommitFaults, backupsKept: number) => {
   const commitId = `${Date.now()}-${randomBytes(4).toString('hex')}`;
   const backupDir = path.join(BACKUP_DIR, commitId);
   /** The top folder each mkdir created, removed on a failure */
@@ -318,7 +345,8 @@ const applyWrites = async (writes: PlannedWrite[], faults: CommitFaults) => {
     await removeQuietly(backupDir);
     writeFailed('The batch failed, every file was restored', err);
   }
-  await pruneBackups();
+  // 0 kept: this commit's own backups go too, now that it landed
+  await pruneBackups(backupsKept);
   return writes
     .map((write) => write.target.absPath)
     .filter((file) => createdDirs.some((dir) => file.startsWith(dir + path.sep)));
@@ -335,18 +363,32 @@ export type DevFilesCommitOutcome = {
    * missed (it saw the temporary file). The plugin reports them itself.
    */
   filesInNewFolders: string[];
+  /** The batch was a dry run: nothing was written */
+  isDryRun: boolean;
 };
 
+/**
+ * Commits a batch (the module's header), one at a time.
+ * @param opts.backupsKept the commits whose backups are kept (`parseBackupsKept`), default 20
+ */
 export const commitDevFiles = (
   body: unknown,
-  opts: { stage: DevFilesStage; faults?: CommitFaults }
+  opts: { stage: DevFilesStage; faults?: CommitFaults; backupsKept?: number }
 ): Promise<DevFilesCommitOutcome> => {
   const run = async () => {
-    const planned = await planWrites(parseRequest(body), opts.stage);
+    const { requested, isDryRun } = parseRequest(body);
+    const planned = await planWrites(requested, opts.stage);
     const changed = planned.filter((write) => write.status !== 'unchanged');
-    const filesInNewFolders = changed.length ? await applyWrites(changed, opts.faults ?? {}) : [];
-    for (const write of planned) {
-      if (write.stageId) opts.stage.remove(write.stageId);
+    let filesInNewFolders: string[] = [];
+    // A dry run keeps its staged files: the commit it confirms names them again
+    if (!isDryRun) {
+      if (changed.length) {
+        const backupsKept = opts.backupsKept ?? DEFAULT_BACKUPS_KEPT;
+        filesInNewFolders = await applyWrites(changed, opts.faults ?? {}, backupsKept);
+      }
+      for (const write of planned) {
+        if (write.stageId) opts.stage.remove(write.stageId);
+      }
     }
     return {
       body: {
@@ -354,9 +396,11 @@ export const commitDevFiles = (
           path: write.target.repoPath,
           sha256: write.sha256,
           status: write.status,
+          previousHash: write.currentHash,
         })),
       },
       filesInNewFolders,
+      isDryRun,
     };
   };
   const result = queue.then(run, run);

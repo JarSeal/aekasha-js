@@ -4,7 +4,8 @@ import path from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // p619 §1.4 F5, F6: the commit's races and limits, the stage's folders, and the path and save
-// entry edge cases. Run in a temp repo root: `devTools/paths.ts`' ROOT (every path the dev files resolve
+// entry edge cases; p355 §2.4: the backups kept, the dry run and the author stamp. Run in a temp
+// repo root: `devTools/paths.ts`' ROOT (every path the dev files resolve
 // and write, the backups and the stage) is redirected there, so the repo is never written.
 
 const { TMP, REPO_ROOT, formatHook } = await vi.hoisted(async () => {
@@ -32,6 +33,13 @@ vi.mock('url', async (importOriginal) => {
   return { ...actual, default: { ...actual, fileURLToPath }, fileURLToPath };
 });
 
+/** git's `user.name` as the mocked `readGit` answers it ('': not set) */
+const gitUser = vi.hoisted(() => ({ name: '' }));
+
+vi.mock('../git', () => ({
+  readGit: (args: string[]) => (args.join(' ') === 'config user.name' ? gitUser.name : ''),
+}));
+
 vi.mock('./format', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./format')>();
   return {
@@ -43,7 +51,8 @@ vi.mock('./format', async (importOriginal) => {
   };
 });
 
-const { commitDevFiles, MAX_FILE_BYTES } = await import('./commit');
+const { commitDevFiles, MAX_FILE_BYTES, parseBackupsKept } = await import('./commit');
+const { sha256 } = await import('../files');
 const { createStage } = await import('./stage');
 const { resolveDevFilePath } = await import('./paths');
 
@@ -59,6 +68,7 @@ beforeEach(() => {
   fs.writeFileSync(abs(MATERIAL), JSON.stringify({ id: 'm', type: 'BASIC' }));
   formatHook.run = null;
   formatHook.calls = 0;
+  gitUser.name = '';
 });
 
 afterEach(() => {
@@ -152,5 +162,129 @@ describe('F6', () => {
     await expect(
       commitDevFiles({ writes: [saveEntry('__proto__')] }, { stage })
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+});
+
+describe('p355: the backups kept', () => {
+  const BACKUP_DIR = path.join(TMP, '.cache/dev-files/backup');
+  const countBackups = () => (fs.existsSync(BACKUP_DIR) ? fs.readdirSync(BACKUP_DIR).length : 0);
+  /** Three commits that each update the material */
+  const commitThrice = async (backupsKept: number) => {
+    for (const type of ['PHONG', 'LAMBERT', 'BASIC']) {
+      await commitDevFiles(
+        { writes: [{ path: MATERIAL, json: { id: 'm', type, params: {} } }] },
+        { stage, backupsKept }
+      );
+    }
+  };
+
+  beforeEach(() => fs.rmSync(BACKUP_DIR, { recursive: true, force: true }));
+
+  it('keeps the last n commits’ backups', async () => {
+    await commitThrice(2);
+    expect(countBackups()).toBe(2);
+  });
+
+  it('keeps none with 0, every one with -1', async () => {
+    await commitThrice(0);
+    expect(countBackups()).toBe(0);
+    await commitThrice(-1);
+    expect(countBackups()).toBe(3);
+  });
+
+  it('parses AEK_DEV_FILES_BACKUPS', () => {
+    expect(parseBackupsKept(undefined)).toBe(20);
+    expect(parseBackupsKept('')).toBe(20);
+    expect(parseBackupsKept('5')).toBe(5);
+    expect(parseBackupsKept('-1')).toBe(-1);
+    expect(parseBackupsKept('0')).toBe(0);
+    expect(parseBackupsKept('-2')).toBeNull();
+    expect(parseBackupsKept('1.5')).toBeNull();
+    expect(parseBackupsKept('all')).toBeNull();
+  });
+});
+
+describe('p355: a dry run', () => {
+  const NEW_FILE = `${DIR}/new.json`;
+  const writes = [
+    { path: MATERIAL, json: { id: 'm', type: 'PHONG' } },
+    { path: NEW_FILE, json: { a: 1 } },
+  ];
+
+  it('writes nothing, and reports what the commit would do and the hashes to confirm it with', async () => {
+    const before = fs.readFileSync(abs(MATERIAL));
+    const dry = await commitDevFiles({ writes, dryRun: true }, { stage });
+    expect(dry.isDryRun).toBe(true);
+    expect(dry.body.results.map((result) => result.status)).toEqual(['updated', 'created']);
+    expect(dry.body.results.map((result) => result.previousHash)).toEqual([sha256(before), null]);
+    expect(fs.readFileSync(abs(MATERIAL)).equals(before)).toBe(true);
+    expect(fs.existsSync(abs(NEW_FILE))).toBe(false);
+
+    const confirmed = await commitDevFiles(
+      {
+        writes: writes.map((write, i) => ({
+          ...write,
+          expectedHash: dry.body.results[i].previousHash,
+        })),
+      },
+      { stage }
+    );
+    expect(confirmed.body.results).toEqual(dry.body.results);
+    expect(sha256(fs.readFileSync(abs(NEW_FILE)))).toBe(dry.body.results[1].sha256);
+  });
+
+  it('runs every check: a stale expectedHash is a CONFLICT', async () => {
+    await expect(
+      commitDevFiles(
+        { writes: [{ ...writes[0], expectedHash: '0'.repeat(64) }], dryRun: true },
+        {
+          stage,
+        }
+      )
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+
+  it('keeps its staged files for the commit it confirms', async () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0]);
+    const { stageId } = await stage.add(png);
+    const write = { path: `${DIR}/i.png`, stageId };
+    await commitDevFiles({ writes: [write], dryRun: true }, { stage });
+    expect(fs.existsSync(stage.get(stageId).file)).toBe(true);
+    const { body } = await commitDevFiles({ writes: [write] }, { stage });
+    expect(body.results[0].status).toBe('created');
+  });
+
+  it('refuses a dryRun that isn’t a boolean', async () => {
+    await expect(commitDevFiles({ writes, dryRun: 'yes' }, { stage })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
+  });
+});
+
+describe('p355: the author stamp', () => {
+  const readMeta = () =>
+    (
+      JSON.parse(fs.readFileSync(abs(MATERIAL), 'utf8')) as {
+        __saveData: Record<string, { __meta: Record<string, unknown> }[]>;
+      }
+    ).__saveData.s[0].__meta;
+  const entryWithAuthor = (color: string) => ({
+    path: MATERIAL,
+    saveData: {
+      sceneId: 's',
+      entry: { __meta: { author: 'Someone Else' }, params: { color } },
+      historySize: 20,
+    },
+  });
+
+  it('stamps git’s user.name over the entry’s own', async () => {
+    gitUser.name = 'Self Check';
+    await commitDevFiles({ writes: [entryWithAuthor('#ff0000')] }, { stage });
+    expect(readMeta().author).toBe('Self Check');
+  });
+
+  it('removes the entry’s own without a user.name', async () => {
+    await commitDevFiles({ writes: [entryWithAuthor('#00ff00')] }, { stage });
+    expect(readMeta()).not.toHaveProperty('author');
   });
 });
