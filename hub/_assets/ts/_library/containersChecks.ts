@@ -165,6 +165,19 @@ export const CONTAINERS_CHECKS: Record<string, UiDemoChecks> = {
         ],
       },
       {
+        name: 'a failed submit: the form’s own error, no link, first in the summary, which takes the focus',
+        steps: [
+          { click: 'Submit it, the server down' },
+          { expectFocus: FORM_SUMMARY },
+          {
+            expectText: `${FORM_SUMMARY} .aekForm__summaryMessage`,
+            text: 'The server didn’t answer: nothing was created. Try again',
+          },
+          { expectCount: FORM_LINKS, count: 0 },
+          { expectText: FORM('Status'), text: 'Not created' },
+        ],
+      },
+      {
         name: 'filled in, Enter submits: the status says so after the submit’s promise',
         steps: [
           { click: 'Fill it in' },

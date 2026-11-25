@@ -85,6 +85,12 @@
     text-underline-offset: 0.15em;
   }
 
+  // The form's own error: tied to no field, so a text, not a link
+  :where(.aekForm__summaryMessage) {
+    color: var(--aek-danger);
+    line-height: var(--aek-line-height-base);
+  }
+
   :where(.aekForm__actions) {
     display: flex;
     flex-wrap: wrap;

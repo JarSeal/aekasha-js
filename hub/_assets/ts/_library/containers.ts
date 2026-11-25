@@ -271,7 +271,9 @@ const FORM_ID = (name: string) => `${ID_PREFIX}Form${name}`;
 
 /** In the page: a new player's form in two fieldsets (a required name with a length check, a
  * required region, an age of 13 or more, the rules to accept), its submit a promise (the button
- * loading for a moment); Hub buttons submit it empty (the summary and the errors) and fill it in */
+ * loading for a moment); Hub buttons submit it empty (the summary and the errors), fill it in, and
+ * submit it filled in to a server that's down (the form's own error, a microtask later: no timer
+ * for the state's screenshot to wait on) */
 const initFormDemo: Demo = (box) => {
   const controls = addGroup(box, 'States');
   const root = addKitRoot(box);
@@ -280,6 +282,7 @@ const initFormDemo: Demo = (box) => {
   status.className = 'hubDemoLine';
   status.setAttribute('role', 'status');
   const player = { name: '', region: '', age: 30, rules: false };
+  let isServerDown = false;
   const regions = [
     { text: 'Europe', value: 'eu' },
     { text: 'Americas', value: 'am' },
@@ -289,7 +292,16 @@ const initFormDemo: Demo = (box) => {
     id: FORM_ID('Form'),
     submitLabel: 'Create',
     resetLabel: 'Start again',
-    onSubmit: () => {
+    onSubmit: (submitted) => {
+      if (isServerDown) {
+        isServerDown = false;
+        return Promise.resolve().then(() => {
+          status.textContent = 'Not created';
+          submitted.setError('The server didn’t answer: nothing was created. Try again', {
+            focus: true,
+          });
+        });
+      }
       status.textContent = 'Creating…';
       return new Promise<void>((resolve) => {
         setTimeout(() => {
@@ -356,9 +368,15 @@ const initFormDemo: Demo = (box) => {
   group.append(form.cmp.elem);
   root.append(status);
   addButton(controls, 'Submit it empty', () => form.submit());
-  addButton(controls, 'Fill it in', () => {
+  const fillIn = () => {
     Object.assign(player, { name: 'Ada', region: 'eu', age: 36, rules: true });
     form.refresh();
+  };
+  addButton(controls, 'Fill it in', fillIn);
+  addButton(controls, 'Submit it, the server down', () => {
+    fillIn();
+    isServerDown = true;
+    form.submit();
   });
 };
 

@@ -249,6 +249,82 @@ describe('the form (p804 D9)', () => {
     expect(form.submitButton!.isLoading()).toBe(false);
   });
 
+  it('its own error: the summary’s first item without a link, until the next submit or a reset', async () => {
+    let fail = true;
+    const { form, profile, name, region, terms, summary } = makeProfileForm({
+      onSubmit: async (submitted) => {
+        await Promise.resolve();
+        if (fail) submitted.setError('The server is down: try again', { focus: true });
+      },
+    });
+    const getItems = () =>
+      [...summary.querySelectorAll('li')].map((item) => ({
+        text: item.textContent,
+        isLink: item.querySelector('a') !== null,
+      }));
+    // Alone: the summary shows it, and takes the focus only when asked
+    form.setError('Not saved');
+    expect(form.getError()).toBe('Not saved');
+    expect(summary.hasAttribute('hidden')).toBe(false);
+    expect(getItems()).toEqual([{ text: 'Not saved', isLink: false }]);
+    expect(document.activeElement).not.toBe(summary);
+    // `validate()` keeps it first, the fields' links after it
+    form.validate();
+    expect(getItems()).toEqual([
+      { text: 'Not saved', isLink: false },
+      { text: 'Enter your name', isLink: true },
+      { text: 'Region is required', isLink: true },
+      { text: 'Terms is required', isLink: true },
+    ]);
+    // A submit takes it away (an invalid one shows the fields' errors alone)
+    form.submit();
+    expect(form.getError()).toBeNull();
+    expect(getItems().map((item) => item.text)).not.toContain('Not saved');
+    // A valid submit whose promise fails sets it: the summary takes the focus
+    Object.assign(profile, { name: 'Ada', region: 'eu', terms: true });
+    for (const field of [name, region, terms]) field.refresh();
+    expect(form.submit()).toBe(true);
+    expect(summary.hasAttribute('hidden')).toBe(true);
+    await vi.waitFor(() => expect(form.getError()).not.toBeNull());
+    expect(getItems()).toEqual([{ text: 'The server is down: try again', isLink: false }]);
+    expect(summary.hasAttribute('hidden')).toBe(false);
+    expect(document.activeElement).toBe(summary);
+    // The next submit takes it away, and a reset does too
+    fail = false;
+    form.submit();
+    expect(form.getError()).toBeNull();
+    expect(summary.hasAttribute('hidden')).toBe(true);
+    await vi.waitFor(() => expect(form.isBusy()).toBe(false));
+    form.setError('Not saved');
+    form.reset();
+    expect(form.getError()).toBeNull();
+    expect(getItems()).toEqual([]);
+    expect(summary.hasAttribute('hidden')).toBe(true);
+    // null and '' take it away
+    form.setError('Not saved');
+    form.setError('');
+    expect(form.getError()).toBeNull();
+    expect(summary.hasAttribute('hidden')).toBe(true);
+  });
+
+  it('a field fixed on a blur keeps the summary while the form has its own error', () => {
+    const target = { name: '' };
+    const field = createTextField({ label: 'Name', target, key: 'name', required: true });
+    const other = createTextField({ label: 'Other', value: '' });
+    const form = createForm({ children: [field, other] });
+    getHUDRootCMP().add(form.cmp);
+    removers.push(() => form.cmp.remove());
+    const summary = form.cmp.elem.querySelector('.aekForm__summary')!;
+    form.submit();
+    form.setError('Not saved');
+    target.name = 'Ada';
+    field.refresh();
+    field.focus();
+    other.focus();
+    expect(summary.hasAttribute('hidden')).toBe(false);
+    expect(summary.querySelectorAll('li')).toHaveLength(1);
+  });
+
   it('a reset writes every default as the user’s, clears the errors and stops the blur checks', () => {
     const onReset = vi.fn();
     const changes: string[] = [];
