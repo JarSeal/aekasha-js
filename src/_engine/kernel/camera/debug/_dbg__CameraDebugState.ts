@@ -94,8 +94,12 @@ export const getDebugCamProps = (sceneId: string) => {
   return saved[sceneId].debugCam;
 };
 
-/** The saved keys that are the debugger's own preferences, not creation props */
-const CAM_DEBUGGER_ONLY_KEYS: ReadonlySet<string> = new Set(['helperVisible', '_lensSettingsOpen']);
+/** The saved keys that are the debugger's own preferences, not creation props (the save source
+ * leaves them out and keeps them) */
+export const CAM_DEBUGGER_ONLY_KEYS: ReadonlySet<string> = new Set([
+  'helperVisible',
+  '_lensSettingsOpen',
+]);
 
 /**
  * The saved values of a camera in the current scene that override its creation props (p150): its

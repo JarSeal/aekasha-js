@@ -73,8 +73,8 @@ export const installCameras = (ctx: FeatureContext) => {
 };
 
 /**
- * Debug env: loads the cameras' debug GUI, keeps its list current, and syncs the camera helpers
- * from LS on every scene enter. The boot calls it before the features install.
+ * Debug env: loads the cameras' debug GUI, registers their save source, keeps the list current,
+ * and syncs the camera helpers from LS on every scene enter. The boot calls it before the features install.
  * @internal
  */
 export const registerCameraDebugGUI = async () => {
@@ -82,6 +82,8 @@ export const registerCameraDebugGUI = async () => {
   // fixed place: before the light helpers' and the line time system (a load race before p607)
   cameraDebugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__CameraGUI'));
   if (!cameraDebugGUI) return;
+  // The Æ menu's saves (p355), before the boot marks the sources ready
+  useDebug(cameraDebugGUI)?.registerCameraSaveSource();
 
   registerOnAllSceneEnters('cameraDebugSync', () => {
     const sceneId = getCurrentSceneId();
