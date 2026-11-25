@@ -72,11 +72,14 @@ const profiles: SbpProfile[] = [
     // load's assets (`kernel/scene` +123 B) took the initial to 413.01 and `assets/index.js` to
     // 408.8 KiB: 413 → 415 and 409 → 410 KiB (at least 1 KiB over each). p500: physics
     // snapshots (`physics`' 0.9 KiB below) took the initial to 414.0 and `assets/index.js` to
-    // 409.8 KiB: 410 → 411 KiB (the initial stays within 415)
+    // 409.8 KiB: 410 → 411 KiB (the initial stays within 415). p250 Phases 1-2: multibody joints
+    // (`PhysicsMultibodyJoints.ts`, the registry's and the tiers' multibody handling; `physics`
+    // +880 B) took the initial to 415.4 and `assets/index.js` to 411.2 KiB: 415 → 417 and
+    // 411 → 413 KiB (at least 1 KiB over each)
     budgets: {
-      initial: 415 * KIB,
+      initial: 417 * KIB,
       chunks: {
-        'assets/index.js': 411 * KIB,
+        'assets/index.js': 413 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
@@ -131,7 +134,8 @@ const profiles: SbpProfile[] = [
         // step, so not lazy) took it 24.7 → 26.2 KiB (26,822 B): 25 → 27 KiB. p500: physics
         // snapshots (`takePhysicsSnapshot`, `restorePhysicsSnapshot` on the entry, the restore's
         // entity follow-up: reaped entities, static bodies' sync, tiers) took it to 27.1 KiB
-        // (27,784 B, +962 B): 27 → 29 KiB (at least 1 KiB over)
+        // (27,784 B, +962 B): 27 → 29 KiB (at least 1 KiB over). p250 Phases 1-2: multibody
+        // joints took it to 28.0 KiB (28,664 B, +880 B), within 29
         '_engine/features/physics': 29 * KIB,
         '_engine/features/postfx': 3 * KIB,
         '_engine/features/skybox': 19 * KIB,
