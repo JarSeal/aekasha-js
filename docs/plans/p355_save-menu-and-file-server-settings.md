@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-7 implemented
+Status: in progress | Phases 1-8 implemented
 Category: Debug, Dev tooling
 Related: `devTools/devFiles/CLAUDE.md` (the dev file server this builds on, p342: the routes,
 `writeDevFiles`, save entry writes, the "File server" folder; this plan is p342's §5 question 4),
@@ -826,7 +826,7 @@ As built:
   file was restored after. Not checked: a real GPU, a domain other than `DEFAULT` (no app scene
   lists one; the unit tests').
 
-### Phase 8 — Inline assets to JSON files
+### Phase 8 — Inline assets to JSON files — done
 
 Needs Phase 7 (the scene JSON's `__sourcePath` in the dev data). §2.6: the server's `json` +
 `saveData` write (with self-check cases: the stamped entry in a
@@ -841,18 +841,86 @@ folded into one write of both (the server's `json` + `saveData` write, above: th
 over the new JSON). `findSceneFile` (`_dbg__SaveEntries.ts`) gives the scene JSON's path, and the
 builds of one file run one after the other (each seeing the entries built before it).
 
-**Exit:** `topDownTest`'s inline sky box (`topDownTestSky`, the only inline asset in the app)
-edited and saved: one commit creates `src/app/scenes/topDownTestScene/topDownTestSky.skybox.json` with the
+**Exit:** `topDownTest`'s inline sky box (`topDownTestSky`; the app's other inline assets are the
+cameras and lights of `streamingGrid`, `streamingPhysics`, `batchedMeshSpike` and
+`instanceStress`) edited and saved: one commit creates `src/app/scenes/topDownTestScene/topDownTestSky.skybox.json` with the
 entry for `topDownTestScene`, and the scene JSON lists `"topDownTestSky"` at the same place;
 after the reload the sky looks the same and the debug overrides are gone. A file put at that
 path first makes it Not saveable ("taken"), and nothing is written.
 
+Sections:
+
+1. **The server's `json` + `saveData` write:** the protocol, the server, the client, their tests
+   and the self-check's cases.
+2. **Telling an inline asset from a listed one:** the gather's `__inlineAssets` in the dev data,
+   `findSceneAssetFile`'s move (or why it can't), `SaveChange.extract`, the sources. Tests.
+3. **The move in the save pipeline:** the new file, the id in the item's place, the scene JSON's
+   one write with its own entries. Tests.
+4. **The dialog's "moves to" line, the exit in the browser**, and this phase's As built.
+
+As built:
+
+- The server (section 1): a write may carry `json` and `saveData` together (`parseRequest`: json,
+  saveData or both, or a stageId); `applySaveDataToJson` (`devFiles/saveData.ts`, beside
+  `applySaveDataWrite`, the two sharing `applyEntries`) puts the entries into that value as into a
+  read file (stamped, the history size kept, after the value's own entries); the file needn't
+  exist, and whether it changes is the written bytes'. `saveData` alone still needs the file.
+  `DevFilesWrite`'s and the public `DevFileWrite`'s `json` variant take an optional `saveData`
+  (an API baseline change, Phase 9). Tests in `commit.test.ts`; the self-check's case refusing the
+  pair became the move's (created, stamped, `CONFLICT` again with `expectedHash: null`, a
+  `stageId` with them `BAD_REQUEST`); `yarn verify:devFiles` passed (79).
+- Not in §2.6 (section 2): the dev data couldn't tell an inline entry from a listed one (both
+  resolve to objects), so an inline asset whose id a file has would have been saved into that
+  file, where the gather never applies it. The gather now writes the development data's scene
+  `__inlineAssets: { cameras?, lights?, skyboxes? }` (`scenePass.ts`' `getInlineAssetIds`: an
+  inline camera's or light's props' app id, else its entity's, a sky box's `id`; none without an
+  id, none for a list the scene's save entry replaces; typed on `ResolvedScene`, not the scene
+  schema). The repo's dev data got it in the five scenes with inline assets, nothing else;
+  production has none. Also unlike §2.6: the gather applies an inline sky box's own `__saveData`
+  (`resolveSkyBoxes`); the moved file keeps those entries after the new one.
+- `findSceneAssetFile` (section 2): a marked inline camera, light or sky box moves to
+  `<scene JSON's folder>/<id>.<camera | light | skybox>.json`; Not saveable "id taken by
+  `<path>`" (the registry has the id), "new file taken: `<path>` is "`<id>`"'s" (a gathered file
+  is at the new path), or the scene's "the scene JSON has no file path". Any other inline asset
+  (a material, a PostFX pass, or one in a save entry's list) keeps "inline in the scene JSON: it
+  has no file of its own". `toChangeFileFields` gives every source but the spatial domains' its
+  `path`, `unsaveable` and `extract`.
+- `SaveChange.extract` (section 2) is `{ scenePath, list, id }`, not §2.1's `{ newPath,
+  scenePath }`: the change's `path` is the new file. `SaveChangeExtract` is public on
+  `aekasha/debug` (Phase 9: the API baseline).
+- The pipeline (section 3, `_dbg__SaveData.ts`' `buildFileWrites`): a move is grouped with its
+  scene JSON, read fresh once with that scene's own changes. The item is found by
+  `getListItemId` (exported from `_dbg__SaveEntries.ts`) and replaced by its id in place; the
+  change's `build` gets the item as the file's JSON. The new file is `{ $schema, ...item }`
+  (`getInlineFileSchemaRef`: relative to its folder) with the entry and `expectedHash: null` (a
+  file put there since the page loaded is a `CONFLICT`; no read first, whose 404 the browser logs
+  as a console error: seen in the exit); the scene JSON one `json` write with the ids in place and
+  its own entries as `saveData`; the new files go first in the batch. A move whose build is null
+  stays inline. Refused before anything is written: the item no longer inline ("reload the
+  page"), one id moved by two scenes in one save (both files would claim it), a move's build that
+  isn't an entry, and a scene JSON with a move and a whole-JSON change.
+- The dialog (section 4): an inline asset's row reads "`<scene JSON>` (moves to `<new file>`):
+  `<keys>`".
+- Checked in the browser (`topDownTestScene`, WebGL fallback, a scratch Playwright script on a
+  dev server of its own, port 8095): `env.environmentIntensity` 0.7 set through the sky box tab's
+  `setSkyBoxParam`; the collect and the dialog listed it under This scene with the scene JSON and
+  "moves to `src/app/scenes/topDownTestScene/topDownTestSky.skybox.json`". Ctrl+S: one commit,
+  the new file (its `$schema`, the item as it was, the `topDownTestScene` entry stamped with the
+  versions and the author), the scene JSON's `skyboxes` `["topDownTestSky"]`; after the reload
+  "Saved 2 files", the sky the same with intensity 0.7, `AEK_debugSkyBox` gone, "Save scene"
+  "Nothing to save in this scene", no console errors (after the 404 fix above). Taken: a sky box with another id put at that path first, the
+  change Not saveable ("new file taken"), Ctrl+S "Nothing to save", nothing written. The app
+  files were restored after. Not checked: a moved camera or light in the browser (the unit
+  tests'), a real GPU.
+
 ### Phase 9 — Docs and versioning
 
-`src/_engine/debug/CLAUDE.md` (the Æ menu, save sources and how a debug module adds one, the
-keys), `devTools/devFiles/CLAUDE.md` (the File server settings, the env var, the author, the dry
-run), `devTools/gather/CLAUDE.md` (the scene's `__sourcePath` and the `spatialDomains` merge:
-written in Phase 7, check it), the kit's `CLAUDE.md` (the menu
+`src/_engine/debug/CLAUDE.md` (the Æ menu, save sources and how a debug module adds one, an
+inline asset's move and `SaveChange.extract`, the keys), `devTools/devFiles/CLAUDE.md` (the File
+server settings, the env var, the author, the dry run, the `json` + `saveData` write: its API line
+still lists the three write kinds), `devTools/gather/CLAUDE.md` (the scene's `__sourcePath` and
+the `spatialDomains` merge: written in Phase 7, check it; the development data's
+`__inlineAssets`, Phase 8), the kit's `CLAUDE.md` (the menu
 item's reason, a form-level error if added), the Hub's Debug suite page
 (`hub/pages/features/debug-suite/`), `readme.md` if it lists the debug keys, the versions and
 `CHANGELOG.md` (§4).

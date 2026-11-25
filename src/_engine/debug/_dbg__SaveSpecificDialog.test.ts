@@ -165,6 +165,27 @@ describe('the "Save specific data…" dialog (p355 §2.3)', () => {
     expect(getButton(elem, 'Save').textContent).toBe('Save (2)');
   });
 
+  it('says where an inline asset moves to (p355 §2.6)', () => {
+    saves.changes = [
+      {
+        source: SKY,
+        change: change({
+          id: 'inlineSky',
+          path: 'src/app/scenes/sceneA/inlineSky.skybox.json',
+          extract: {
+            scenePath: 'src/app/scenes/sceneA/sceneA.scene.json',
+            list: 'skyboxes',
+            id: 'inlineSky',
+          },
+        }),
+      },
+    ];
+    const hints = [...open().querySelectorAll('.aekField__message')].map((m) => m.textContent);
+    expect(hints).toContain(
+      'src/app/scenes/sceneA/sceneA.scene.json (moves to src/app/scenes/sceneA/inlineSky.skybox.json): turbidity'
+    );
+  });
+
   it('a heading box is mixed while some of its rows are checked, and checks or unchecks them all', () => {
     const elem = open();
     getBox(elem, 'Change b1').click();

@@ -38,12 +38,16 @@ const getSceneName = (sceneId: string) => {
   return scene?.name || sceneId;
 };
 
-/** A row's description: its file and its changed keys, folded after five */
+/** A row's description: its file (an inline asset's scene JSON and the file it moves to, p355
+ * §2.6) and its changed keys, folded after five */
 const getRowHint = (change: SaveChange) => {
   const keys = change.summary.slice(0, SUMMARY_KEYS_SHOWN).join(', ');
   const more = change.summary.length - SUMMARY_KEYS_SHOWN;
   const summary = more > 0 ? `${keys} and ${more} more` : keys;
-  return [change.path, summary].filter(Boolean).join(': ');
+  const file = change.extract
+    ? `${change.extract.scenePath} (moves to ${change.path})`
+    : change.path;
+  return [file, summary].filter(Boolean).join(': ');
 };
 
 /** A group of rows (a scene's, the global ones) or of groups (the other scenes') */

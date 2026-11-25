@@ -272,18 +272,16 @@ const takeInlineItem = (scenePath: string, sceneJson: unknown, extract: SaveChan
 
 /** A moved asset's new file: the item as it was, its `$schema` first, and the change's entry for
  * its scene; null when the item has the change already (it stays inline) */
-const buildMoveWrite = async (move: MoveChange, item: Record<string, unknown>) => {
+const buildMoveWrite = (move: MoveChange, item: Record<string, unknown>) => {
   const write = move.build({ json: structuredClone(item) });
   if (!write) return null;
   if (!('saveData' in write)) {
     throw new SaveError(`${move.label}: an inline asset's move takes a save entry, not a JSON`);
   }
-  if (await readDevFile(move.path)) {
-    throw new SaveError(`${move.label}: ${move.path} exists already`);
-  }
   const $schema = getInlineFileSchemaRef(move.extract.list, move.path);
   const json = { ...($schema ? { $schema } : {}), ...item };
-  // Must not exist yet: a file put there since is a CONFLICT
+  // Must not exist yet: a file put there since the page loaded is a CONFLICT (a gathered one makes
+  // the change Not saveable already; a read first would log its 404 as a console error)
   return { path: move.path, expectedHash: null, json, saveData: write.saveData };
 };
 
@@ -304,7 +302,7 @@ const buildFileWrites = async (
   for (const move of moves) {
     // From a copy: an item that has the change already stays inline
     const item = takeInlineItem(path, structuredClone(json), move.extract);
-    const write = await buildMoveWrite(move, item);
+    const write = buildMoveWrite(move, item);
     if (!write) continue;
     takeInlineItem(path, json, move.extract);
     writes.push(write);

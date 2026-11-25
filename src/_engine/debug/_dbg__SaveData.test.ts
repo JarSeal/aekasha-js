@@ -649,13 +649,8 @@ describe('an inline asset’s move into a file of its own (p355 §2.6)', () => {
     expect(source.onSaved).toHaveBeenCalledTimes(1);
   });
 
-  it('fails before anything is written: a file at the new path, an item gone, an id moved twice', async () => {
-    files.disk.set(SKY_PATH, { sha256: 'hashSky', json: sky });
+  it('fails before anything is written: an item gone, an id moved twice', async () => {
     const source = addSource([createMove('skyboxes', 'inlineSky', SKY_PATH)]);
-    await _saveSceneAsync();
-    expect(toasts.at(-1)?.message).toBe(`A change: ${SKY_PATH} exists already`);
-
-    files.disk.delete(SKY_PATH);
     files.disk.set(SCENE_PATH, { sha256: 'hashScene', json: { id: 'sceneA', skyboxes: [] } });
     await _saveSceneAsync();
     expect(toasts.at(-1)?.message).toBe(
