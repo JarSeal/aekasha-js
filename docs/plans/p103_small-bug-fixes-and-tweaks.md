@@ -310,6 +310,12 @@ As built:
   `?isDebug=true` in Chromium (WebGL2 fallback), console of the page and its workers captured: no
   "using deprecated parameters" warning with `workerTarget` `WORKER_THREAD` or `MAIN_THREAD` (set
   through `AEK_debugPhysicsApiBoot`; the physics worker didn't start in the second).
+- Item 2: the mapping is in `setRendererOptions` (which `createRenderer` calls), after the saved
+  state's merge, so an app's own `PCFSoftShadowMap` is mapped too. The tab's key is `debugRenderer`
+  (no `AEK_` prefix), and the tab hydrates its state from it at registration, so writing the options
+  alone would put 2 back: a saved 2 is also rewritten as 1 in localStorage. Checked in Chromium (WebGL2
+  fallback) with `{ "enableShadows": true, "shadowMapType": 2 }` saved: before, one "PCFSoftShadowMap
+  has been removed" warning and the 2 kept; after, no warning and the saved value 1.
 
 ### Phase 2: Light helpers (item 11)
 

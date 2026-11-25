@@ -12,11 +12,11 @@ import {
 
 const TAB_ID = 'rendererControls';
 
-/** The shadow map types the tab offers. */
+/** The shadow map types the tab offers: WebGPU's (three r186+ has no PCFSoftShadowMap filter
+ * there; `createRenderer` maps a saved one to PCFShadowMap). */
 const RENDERER_SHADOW_OPTIONS = [
   { value: THREE.BasicShadowMap, text: 'Basic shadow map' },
   { value: THREE.PCFShadowMap, text: 'PCF shadow map' },
-  { value: THREE.PCFSoftShadowMap, text: 'PCF soft shadow map' },
   { value: THREE.VSMShadowMap, text: 'VSM shadow map' },
 ];
 
