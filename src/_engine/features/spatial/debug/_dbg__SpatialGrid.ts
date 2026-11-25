@@ -13,6 +13,7 @@ import {
   SPATIAL_GRID_TAB_ID,
   spatialGridTabState,
 } from './_dbg__SpatialGridSettings';
+import { registerSpatialGridSaveSource } from './_dbg__SpatialGridSave';
 import {
   registerSpatialGridVisualizer,
   syncCreatedSpatialGridOverlays,
@@ -106,6 +107,8 @@ export const _createSpatialGridDebugGUI = () => {
     return cellSize === undefined ? requested : { ...requested, cellSize };
   });
   for (const id of getSpatialDomainIds(world)) reapplySpatialDomainOptions(world, id);
+  // "Save scene" saves a scene's cell sizes into its scene JSON (p355 §2.5)
+  registerSpatialGridSaveSource();
 
   for (const id of Object.keys(spatialGridTabState.domains)) syncSpatialGridOverlays(id);
   registerSpatialGridVisualizer();
