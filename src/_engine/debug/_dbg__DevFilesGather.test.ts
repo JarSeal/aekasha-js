@@ -33,6 +33,7 @@ vi.mock(import('../ui/core/CMP'), () => {
 });
 
 import {
+  _addToGatherNote,
   _clearWrittenPaths,
   _handleOwnGather,
   _rememberWrittenPaths,
@@ -95,6 +96,29 @@ describe('the toasts', () => {
       ['warning', 'The gather used the sources of assets that failed to build'],
     ]);
     expect(storage).toEqual({});
+  });
+
+  it('carries a save’s warnings over the reload, with or without its files (p355 Phase 6)', () => {
+    const warning = { title: 'Not saved', message: '"rock" isn’t in this scene’s materials' };
+    _addToGatherNote({ files: [], assetErrors: [], warnings: [warning] });
+    expect(JSON.parse(storage[NOTE_KEY])).toEqual({
+      files: [],
+      assetErrors: [],
+      warnings: [warning],
+    });
+    _rememberWrittenPaths([MAT]);
+    _handleOwnGather(gather());
+    _showGatherNoteAfterReload();
+    expect(toasts.added).toEqual([
+      expect.objectContaining({ type: 'success', title: 'Saved 1 file' }),
+      { type: 'warning', ...warning },
+    ]);
+
+    // The gather toasts off: the warning alone
+    toasts.added.length = 0;
+    _addToGatherNote({ files: [], assetErrors: [], warnings: [warning] });
+    _showGatherNoteAfterReload();
+    expect(toasts.added).toEqual([{ type: 'warning', ...warning }]);
   });
 
   it('a gather without a reload toasts at once', () => {

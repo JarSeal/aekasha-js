@@ -55,6 +55,21 @@ vi.mock(import('./DebuggerGUI'), async (importOriginal) => ({
     return null;
   },
 }));
+// The material source's warning: the labels of this scene's changes it can't save
+vi.mock(import('./editors/material/_dbg__MaterialSave'), () => ({
+  getUnsavedMaterialsWarning: (changes: SaveChange[], sceneId: string | null) => {
+    const labels = changes
+      .filter((change) => change.sceneId === sceneId && change.unsaveable === 'not in this scene')
+      .map((change) => change.label);
+    return labels.length ? { title: 'Not saved', message: labels.join(', ') } : null;
+  },
+}));
+const notes = vi.hoisted(() => [] as unknown[]);
+vi.mock(import('./_dbg__DevFilesGather'), () => ({
+  _addToGatherNote: (note: unknown) => {
+    notes.push(note);
+  },
+}));
 const tools = vi.hoisted(() => ({ update: vi.fn() }));
 vi.mock(import('./OnScreenTools'), async (importOriginal) => ({
   ...(await importOriginal()),
@@ -133,6 +148,7 @@ beforeEach(async () => {
   files.writeError = null;
   files.unchanged = false;
   toasts.length = 0;
+  notes.length = 0;
   tools.update.mockClear();
   await _refreshSaveStatus();
 });
@@ -426,5 +442,66 @@ describe('the save of picked changes (p355 Phase 4, the "Save specific data…" 
     expect(_getSaveSceneDisabledReason()).toBe('Nothing to save in this scene');
     files.historySize = 0;
     expect(_getSaveSpecificDisabledReason()).toMatch(/^Saving is off/);
+  });
+});
+
+describe('"Save scene"’s warning about the materials it can’t save (p355 Phase 6)', () => {
+  const ROCK = createChange({
+    label: 'Material "rock"',
+    path: null,
+    unsaveable: 'not in this scene',
+  });
+  const WARNING = { type: 'warning', title: 'Not saved', message: 'Material "rock"' };
+
+  it('goes into the gather note when the reload follows', async () => {
+    addSource([createChange(), ROCK]);
+    await _saveSceneAsync();
+    expect(toasts).toEqual([]);
+    gather({ status: 'done', willReload: true });
+    expect(notes).toEqual([
+      {
+        files: [],
+        assetErrors: [],
+        warnings: [{ title: 'Not saved', message: 'Material "rock"' }],
+      },
+    ]);
+    // Once
+    gather({ status: 'done', willReload: true });
+    expect(notes).toHaveLength(1);
+  });
+
+  it('shows at once when no reload follows, or no gather comes', async () => {
+    addSource([createChange(), ROCK]);
+    await _saveSceneAsync();
+    gather({ status: 'done', willReload: false });
+    expect(toasts).toEqual([WARNING]);
+
+    vi.useFakeTimers();
+    toasts.length = 0;
+    await _saveSceneAsync();
+    vi.advanceTimersByTime(SAVING_TIMEOUT_MS);
+    expect(toasts.map((toast) => toast.title)).toEqual(['No gather after the save', 'Not saved']);
+    expect(notes).toEqual([]);
+  });
+
+  it('with nothing else to save, is the only toast', async () => {
+    addSource([ROCK]);
+    await _saveSceneAsync();
+    expect(toasts).toEqual([WARNING]);
+    expect(files.writes).toEqual([]);
+  });
+
+  it('none for another scene’s, nor for a failed save', async () => {
+    addSource([createChange(), { ...ROCK, sceneId: 'sceneB' }]);
+    await _saveSceneAsync();
+    gather({ status: 'done', willReload: false });
+    expect(toasts).toEqual([]);
+
+    removeSources.pop()?.();
+    addSource([createChange(), ROCK]);
+    files.writeError = new Error('Server down');
+    await _saveSceneAsync();
+    expect(toasts.map((toast) => toast.type)).toEqual(['alert']);
+    expect(notes).toEqual([]);
   });
 });

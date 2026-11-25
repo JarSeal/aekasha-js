@@ -19,7 +19,13 @@ export type GatherNote = {
   files: string[];
   /** The assets the pipeline failed to build */
   assetErrors: DevDataGatheredEvent['assetErrors'];
+  /** A save's own warnings, shown after the reload (p355 Phase 6: "Save scene"'s materials it
+   * couldn't save) */
+  warnings?: GatherNoteWarning[];
 };
+
+/** A warning toast a gather note carries over the reload */
+export type GatherNoteWarning = { title: string; message: string };
 
 /** Each written path's expiry (`performance.now()`) */
 const writtenPaths = new Map<string, number>();
@@ -46,7 +52,8 @@ const isGatherNote = (value: unknown): value is GatherNote =>
   !!value &&
   typeof value === 'object' &&
   Array.isArray((value as GatherNote).files) &&
-  Array.isArray((value as GatherNote).assetErrors);
+  Array.isArray((value as GatherNote).assetErrors) &&
+  ((value as GatherNote).warnings === undefined || Array.isArray((value as GatherNote).warnings));
 
 /** The note in sessionStorage, taken out of it; null when there's none (or it's unreadable) */
 export const _takeGatherNote = (): GatherNote | null => {
@@ -70,6 +77,8 @@ export const _addToGatherNote = (add: GatherNote) => {
       ...add.assetErrors,
     ],
   };
+  const warnings = [...(note.warnings ?? []), ...(add.warnings ?? [])];
+  if (warnings.length) merged.warnings = warnings;
   try {
     sessionStorage.setItem(DEV_FILES_GATHER_NOTE_KEY, JSON.stringify(merged));
   } catch {
@@ -86,7 +95,8 @@ const createLines = (lines: string[]) => {
   return list;
 };
 
-/** The toasts of a gather after this page's writes: the files saved, the asset errors */
+/** The toasts of a gather after this page's writes: the files saved, the asset errors, a save's
+ * warnings */
 export const _showGatherToasts = (note: GatherNote) => {
   if (note.files.length) {
     const count = note.files.length;
@@ -105,6 +115,7 @@ export const _showGatherToasts = (note: GatherNote) => {
       isClosable: true,
     });
   }
+  for (const warning of note.warnings ?? []) addDebugToast({ type: 'warning', ...warning });
 };
 
 /** The dev files' gather listener, before the tools' own: toasts, or a note for the reload */

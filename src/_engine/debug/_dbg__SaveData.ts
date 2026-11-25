@@ -4,7 +4,9 @@
 // `expectedHash`, so a file edited since fails with CONFLICT), builds one write per file (two
 // scenes' entries of one file a list) and commits them as one batch of the dev files. From the
 // save's start to the reload the Æ button is a spinner and its menu is off; it comes back when
-// the commit fails, nothing was written, the gather fails or doesn't come within 30 s.
+// the commit fails, nothing was written, the gather fails or doesn't come within 30 s. "Save
+// scene" names the scene's edited materials it couldn't save (p355 Phase 6) in a warning toast,
+// after the reload when one follows (the gather note).
 import { getCurrentSceneId } from '../kernel/scene/Scene';
 import { deepMerge } from '../utils/DeepMerge';
 import { lerror } from '../utils/Logger';
@@ -21,6 +23,8 @@ import {
   type DevFileWrite,
 } from './DevFiles';
 import type { DevFilesSaveData } from './DevFilesProtocol';
+import { _addToGatherNote, type GatherNoteWarning } from './_dbg__DevFilesGather';
+import { getUnsavedMaterialsWarning } from './editors/material/_dbg__MaterialSave';
 import { updateOnScreenTools } from './OnScreenTools';
 import {
   _areSaveSourcesReady,
@@ -103,14 +107,16 @@ type SavingState = {
   /** The wait for the gather, once files were written */
   timer: ReturnType<typeof setTimeout> | null;
   removeListener: (() => void) | null;
+  /** Shown once the files are written: after the reload, or at once without one */
+  warning: GatherNoteWarning | null;
 };
 let saving: SavingState | null = null;
 
 /** Whether a save runs (from its start to the reload, or its end) */
 export const _isSaving = () => saving !== null;
 
-const startSaving = () => {
-  saving = { timer: null, removeListener: null };
+const startSaving = (warning: GatherNoteWarning | null) => {
+  saving = { timer: null, removeListener: null, warning };
   updateOnScreenTools('UNDO');
 };
 
@@ -122,7 +128,19 @@ const endSaving = () => {
   updateOnScreenTools('UNDO');
 };
 
+const showWarning = (warning: GatherNoteWarning | null | undefined) => {
+  if (warning) addDebugToast({ type: 'warning', ...warning });
+};
+
+/** Ends the save at its gather, its warning shown at once (no reload follows) */
+const endSavingWithWarning = () => {
+  const warning = saving?.warning;
+  endSaving();
+  showWarning(warning);
+};
+
 function onSavingTimeout() {
+  const warning = saving?.warning;
   endSaving();
   addDebugToast({
     type: 'warning',
@@ -131,16 +149,22 @@ function onSavingTimeout() {
     showingTime: 0,
     isClosable: true,
   });
+  showWarning(warning);
 }
 
-/** Ends the save at the gather of these paths when it fails or no reload follows; listening
- * before the commit, so a quick gather isn't missed */
+/** Ends the save at the gather of these paths when it fails or no reload follows, else leaves its
+ * warning for after the reload; listening before the commit, so a quick gather isn't missed */
 const listenForGather = (paths: string[]) => {
   if (!saving) return;
   const written = new Set(paths);
   saving.removeListener = onDevDataGathered((event) => {
-    if (!event.files.some((file) => written.has(file))) return;
-    if (event.status === 'failed' || !event.willReload) endSaving();
+    if (!saving || !event.files.some((file) => written.has(file))) return;
+    if (event.status === 'failed' || !event.willReload) {
+      endSavingWithWarning();
+    } else if (saving.warning) {
+      _addToGatherNote({ files: [], assetErrors: [], warnings: [saving.warning] });
+      saving.warning = null;
+    }
   });
 };
 
@@ -245,13 +269,15 @@ export type SaveChangeFilter = (change: SaveChange, source: SaveSource) => boole
  * (p355 §2.1): a fresh read of each file, one write per file, every source's `onSaved` after the
  * commit. "Save scene"'s and the "Save specific data…" dialog's; neither toasts here.
  * @param opts.skipConfirm no "Confirm writes" dialog (the "Save specific data…" dialog is its own)
+ * @param opts.warning a warning toast for a save that writes files (`SAVED`), after the reload
+ * (or at once when none follows); any other result leaves it to the caller
  */
 export const _saveChangesAsync = async (
   filter: SaveChangeFilter,
-  opts: { skipConfirm?: boolean } = {}
+  opts: { skipConfirm?: boolean; warning?: GatherNoteWarning | null } = {}
 ): Promise<SaveResult> => {
   if (saving) return { status: 'OFF', reason: SAVING_TEXT };
-  startSaving();
+  startSaving(opts.warning ?? null);
   try {
     const offReason = getSavingOffReason(await _refreshSaveStatus());
     if (offReason) {
@@ -341,6 +367,19 @@ export const _openSaveSpecificAsync = async (): Promise<void> => {
   openSaveSpecificDialog();
 };
 
+/** The warning about the scene's edited materials "Save scene" can't save; null when there are
+ * none, or the collect fails (the save then fails with it) */
+const getUnsavedMaterials = (sceneId: string | null) => {
+  try {
+    return getUnsavedMaterialsWarning(
+      collectChanges().map(({ change }) => change),
+      sceneId
+    );
+  } catch {
+    return null;
+  }
+};
+
 /**
  * Saves the current scene's changes and the global ones (p355 §2.1, "Save scene") as one commit:
  * the Æ menu's item and its key, toasting how it went. A call while a save runs only toasts.
@@ -351,11 +390,16 @@ export const _saveSceneAsync = async (): Promise<void> => {
     return;
   }
   const sceneId = getCurrentSceneId();
-  const result = await _saveChangesAsync((change) => isSceneChange(change, sceneId));
+  const warning = getUnsavedMaterials(sceneId);
+  const result = await _saveChangesAsync((change) => isSceneChange(change, sceneId), { warning });
   if (result.status === 'OFF') {
     addDebugToast({ type: 'warning', title: 'Not saved', message: result.reason });
   } else if (result.status === 'NOTHING') {
-    addDebugToast({ title: 'Nothing to save', message: result.message });
+    // Only unsaveable materials: their warning says it
+    if (result.message || !warning) {
+      addDebugToast({ title: 'Nothing to save', message: result.message });
+    }
+    showWarning(warning);
   } else if (result.status === 'FAILED') {
     const { error } = result;
     if (error instanceof DevFilesError && error.code === 'CANCELLED') {

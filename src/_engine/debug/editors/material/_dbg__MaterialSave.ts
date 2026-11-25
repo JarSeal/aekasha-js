@@ -171,6 +171,26 @@ const onMaterialsSaved = (changes: SaveChange[]) => {
   }
 };
 
+/**
+ * "Save scene"'s warning about the edited materials of `changes` (this source's) that the scene
+ * doesn't list: they aren't saved, and keep their editor changes. Null when there are none.
+ */
+export const getUnsavedMaterialsWarning = (changes: SaveChange[], sceneId: string | null) => {
+  const ids = changes
+    .filter((change) => change.sceneId === sceneId && change.unsaveable === NOT_IN_THIS_SCENE)
+    .map((change) => changeKeys.get(change)?.materialId)
+    .filter((id): id is string => id !== undefined);
+  if (!ids.length) return null;
+  const names = ids.map((id) => `"${id}"`).join(', ');
+  return {
+    title: 'Not saved',
+    message:
+      ids.length === 1
+        ? `${names} isn't in this scene's materials (it keeps its editor changes)`
+        : `${names} aren't in this scene's materials (they keep their editor changes)`,
+  };
+};
+
 /** Registers the material editor's save source (its view's registration, at the boot). */
 export const registerMaterialSaveSource = () =>
   registerSaveSource({
