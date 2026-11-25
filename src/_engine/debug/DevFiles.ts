@@ -300,6 +300,15 @@ export const writeDevFiles = async (writes: DevFileWrite[]): Promise<DevFilesCom
   (await requireDevFiles())._writeDevFiles(writes);
 
 /**
+ * {@link writeDevFiles} without the "Confirm writes" dialog: the save menu's "Save specific
+ * data…" dialog's, which is its own confirmation (p355 §2.3). Not public, so no other tool skips
+ * the setting.
+ * @internal
+ */
+export const writeConfirmedDevFiles = async (writes: DevFileWrite[]): Promise<DevFilesCommitBody> =>
+  (await requireDevFiles())._writeDevFiles(writes, { skipConfirm: true });
+
+/**
  * Reads a file the dev files may write, with the `sha256` to pass as a write's `expectedHash`.
  * @param path repo-relative and `/`-separated, in a root the dev files may write
  * @returns the file, or null when it doesn't exist

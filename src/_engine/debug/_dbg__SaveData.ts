@@ -1,9 +1,10 @@
-// The Æ menu's saves (p355 §2.1-§2.2): "Save scene" collects the save sources' changes of the
-// current scene and the global ones, reads each file fresh (its hash the write's `expectedHash`,
-// so a file edited since fails with CONFLICT), builds one write per file and commits them as one
-// batch of the dev files. From the save's start to the reload the Æ button is a spinner and its
-// menu is off; it comes back when the commit fails, nothing was written, the gather fails or
-// doesn't come within 30 s.
+// The Æ menu's saves (p355 §2.1-§2.3): a save collects the save sources' changes, keeps the
+// saveable ones a filter picks ("Save scene": the current scene's and the global ones; the "Save
+// specific data…" dialog: the checked ones), reads each file fresh (its hash the write's
+// `expectedHash`, so a file edited since fails with CONFLICT), builds one write per file (two
+// scenes' entries of one file a list) and commits them as one batch of the dev files. From the
+// save's start to the reload the Æ button is a spinner and its menu is off; it comes back when
+// the commit fails, nothing was written, the gather fails or doesn't come within 30 s.
 import { getCurrentSceneId } from '../kernel/scene/Scene';
 import { deepMerge } from '../utils/DeepMerge';
 import { lerror } from '../utils/Logger';
@@ -14,6 +15,7 @@ import {
   getDevFilesStatus,
   onDevDataGathered,
   readDevFile,
+  writeConfirmedDevFiles,
   writeDevFiles,
   type DevFilesStatus,
   type DevFileWrite,
@@ -37,7 +39,7 @@ export const SAVING_TIMEOUT_MS = 30_000;
 class SaveError extends Error {}
 
 /** A collected change with its source */
-type SourcedChange = { source: SaveSource; change: SaveChange };
+export type SourcedChange = { source: SaveSource; change: SaveChange };
 
 // The dev files' status, read when the menu opens (the items' states are read synchronously)
 let devFilesStatus: DevFilesStatus | null = null;
@@ -83,11 +85,15 @@ const collectChanges = (): SourcedChange[] => {
 
 const isSaveable = (change: SaveChange) => change.path !== null && !change.unsaveable;
 
+/** Whether the current scene's changes (or a global one) are what "Save scene" saves */
+const isSceneChange = (change: SaveChange, sceneId: string | null) =>
+  change.scope === 'GLOBAL' || change.sceneId === sceneId;
+
 /** What "Save scene" saves: the current scene's saveable changes and every global one */
 const getSceneSaveChanges = () => {
   const sceneId = getCurrentSceneId();
   return collectChanges().filter(
-    ({ change }) => isSaveable(change) && (change.scope === 'GLOBAL' || change.sceneId === sceneId)
+    ({ change }) => isSaveable(change) && isSceneChange(change, sceneId)
   );
 };
 
@@ -210,23 +216,79 @@ const notifySaved = (changes: SourcedChange[]) => {
   }
 };
 
-const toastSaveError = (err: unknown) => {
-  if (err instanceof DevFilesError && err.code === 'CANCELLED') {
-    addDebugToast({ type: 'info', title: 'Not saved', message: 'The writes were cancelled' });
-    return;
-  }
+/** A failed save's text: the dev files' code, then the message */
+export const _getSaveErrorText = (err: unknown) => {
   if (!(err instanceof SaveError) && !(err instanceof DevFilesError)) {
     lerror('The save failed', err);
   }
   const code = err instanceof DevFilesError ? `${err.code}: ` : '';
-  addDebugToast({
-    type: 'alert',
-    title: 'Not saved',
-    message: `${code}${(err as Error).message}`,
-    showingTime: 0,
-    isClosable: true,
-  });
+  return `${code}${(err as Error).message}`;
 };
+
+/** What a save of the changes ended with */
+export type SaveResult =
+  /** Files were written: the save stays on until the reload (or the gather's failure) */
+  | { status: 'SAVED' }
+  /** Nothing to write (`message` when the files had the changes already): the save ended */
+  | { status: 'NOTHING'; message?: string }
+  /** Saving is off now (`reason`: the boot, the dev files, a history size of 0, a save running):
+   * nothing was tried */
+  | { status: 'OFF'; reason: string }
+  /** It failed before or at the commit: nothing was written, and the changes stay */
+  | { status: 'FAILED'; error: unknown };
+
+/** Picks the collected changes a save writes (only saveable ones reach it) */
+export type SaveChangeFilter = (change: SaveChange, source: SaveSource) => boolean;
+
+/**
+ * Saves the saveable changes `filter` picks, collected again when the save starts, as one commit
+ * (p355 §2.1): a fresh read of each file, one write per file, every source's `onSaved` after the
+ * commit. "Save scene"'s and the "Save specific data…" dialog's; neither toasts here.
+ * @param opts.skipConfirm no "Confirm writes" dialog (the "Save specific data…" dialog is its own)
+ */
+export const _saveChangesAsync = async (
+  filter: SaveChangeFilter,
+  opts: { skipConfirm?: boolean } = {}
+): Promise<SaveResult> => {
+  if (saving) return { status: 'OFF', reason: SAVING_TEXT };
+  startSaving();
+  try {
+    const offReason = getSavingOffReason(await _refreshSaveStatus());
+    if (offReason) {
+      endSaving();
+      return { status: 'OFF', reason: offReason };
+    }
+    const changes = collectChanges().filter(
+      ({ source, change }) => isSaveable(change) && filter(change, source)
+    );
+    if (!changes.length) {
+      endSaving();
+      return { status: 'NOTHING' };
+    }
+    const writes = await buildWrites(changes);
+    listenForGather(writes.map((write) => write.path));
+    const write = opts.skipConfirm ? writeConfirmedDevFiles : writeDevFiles;
+    const result = writes.length ? await write(writes) : { results: [] };
+    // The files have the changes now: the tools drop them before the reload
+    notifySaved(changes);
+    if (result.results.every((item) => item.status === 'unchanged')) {
+      endSaving();
+      return { status: 'NOTHING', message: 'The files have these changes already' };
+    }
+    waitForGather();
+    return { status: 'SAVED' };
+  } catch (err) {
+    endSaving();
+    return { status: 'FAILED', error: err };
+  }
+};
+
+/** Every source's changes with their sources, for a list (the "Save specific data…" dialog's
+ * rows); throws a source's failure to list them */
+export const _collectSaveChanges = (): SourcedChange[] => collectChanges();
+
+/** Whether a change can be saved: it has a file, and no reason it can't */
+export const _isSaveableChange = isSaveable;
 
 /**
  * Why "Save scene" is off now, or null when it can save: a save running, the dev files
@@ -245,41 +307,47 @@ export const _getSaveSceneDisabledReason = (): string | null => {
 };
 
 /**
+ * Why "Save specific data…" is off now, or null when it can open: as "Save scene", but nothing
+ * saveable in any scene (or global) turns it off. Read when the Æ menu opens and by its key.
+ */
+export const _getSaveSpecificDisabledReason = (): string | null => {
+  if (saving) return SAVING_TEXT;
+  const offReason = getSavingOffReason(devFilesStatus);
+  if (offReason) return offReason;
+  try {
+    return collectChanges().some(({ change }) => isSaveable(change)) ? null : 'Nothing to save';
+  } catch (err) {
+    return (err as Error).message;
+  }
+};
+
+/**
  * Saves the current scene's changes and the global ones (p355 §2.1, "Save scene") as one commit:
- * the Æ menu's item and its key. A call while a save runs only toasts.
+ * the Æ menu's item and its key, toasting how it went. A call while a save runs only toasts.
  */
 export const _saveSceneAsync = async (): Promise<void> => {
   if (saving) {
     addDebugToast({ title: SAVING_TEXT });
     return;
   }
-  startSaving();
-  try {
-    const offReason = getSavingOffReason(await _refreshSaveStatus());
-    if (offReason) {
-      endSaving();
-      addDebugToast({ type: 'warning', title: 'Not saved', message: offReason });
+  const sceneId = getCurrentSceneId();
+  const result = await _saveChangesAsync((change) => isSceneChange(change, sceneId));
+  if (result.status === 'OFF') {
+    addDebugToast({ type: 'warning', title: 'Not saved', message: result.reason });
+  } else if (result.status === 'NOTHING') {
+    addDebugToast({ title: 'Nothing to save', message: result.message });
+  } else if (result.status === 'FAILED') {
+    const { error } = result;
+    if (error instanceof DevFilesError && error.code === 'CANCELLED') {
+      addDebugToast({ type: 'info', title: 'Not saved', message: 'The writes were cancelled' });
       return;
     }
-    const changes = getSceneSaveChanges();
-    if (!changes.length) {
-      endSaving();
-      addDebugToast({ title: 'Nothing to save' });
-      return;
-    }
-    const writes = await buildWrites(changes);
-    listenForGather(writes.map((write) => write.path));
-    const result = writes.length ? await writeDevFiles(writes) : { results: [] };
-    // The files have the changes now: the tools drop them before the reload
-    notifySaved(changes);
-    if (result.results.every((write) => write.status === 'unchanged')) {
-      endSaving();
-      addDebugToast({ title: 'Nothing to save', message: 'The files have these changes already' });
-      return;
-    }
-    waitForGather();
-  } catch (err) {
-    endSaving();
-    toastSaveError(err);
+    addDebugToast({
+      type: 'alert',
+      title: 'Not saved',
+      message: _getSaveErrorText(error),
+      showingTime: 0,
+      isClosable: true,
+    });
   }
 };

@@ -515,12 +515,13 @@ Sections:
    message in the error summary not tied to a field (no link), shown with the summary and its
    focus, cleared by the next submit and a reset; its test, its demo and the kit's docs. The
    dialog shows a failed save there.
-3. **The save for given changes, the item and the key:** `_dbg__SaveData.ts`' pipeline shared by
-   "Save scene" and the dialog (`skipConfirm` for the dialog), the item's disabled reason (no
-   saveable change in any scene), "Save specific data…" in the Æ menu and `sc-save-specific`
-   (Ctrl+Shift+S, ⌘⇧S) opening the dialog.
-4. **The dialog** (`debug/_dbg__SaveSpecificDialog.ts`): §2.3's groups, rows, buttons and busy
-   state.
+3. **The save for given changes:** `_dbg__SaveData.ts`' pipeline shared by "Save scene" and the
+   dialog (a filter of the changes, a result instead of toasts, `skipConfirm` for the dialog),
+   the collected changes for the dialog's rows, and "Save specific data…"'s disabled reason (no
+   saveable change in any scene).
+4. **The dialog, the item and the key** (`debug/_dbg__SaveSpecificDialog.ts`): §2.3's groups,
+   rows, buttons and busy state; "Save specific data…" in the Æ menu and `sc-save-specific`
+   (Ctrl+Shift+S, ⌘⇧S) opening it (moved here from section 3: both open the dialog).
 5. **The exit in the browser**, and this phase's As built.
 
 **Exit:** with three changes, unchecking one saves the other two and leaves the third in

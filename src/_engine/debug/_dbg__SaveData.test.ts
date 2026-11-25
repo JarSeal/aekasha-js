@@ -7,10 +7,25 @@ const files = vi.hoisted(() => ({
   historySize: 20,
   disk: new Map<string, { sha256: string; json: unknown }>(),
   writes: [] as DevFileWrite[][],
+  /** Each batch's `writeConfirmedDevFiles` (no "Confirm writes" dialog) or not */
+  isConfirmed: [] as boolean[],
   writeError: null as Error | null,
   unchanged: false,
   gatherListeners: new Set<(event: DevDataGatheredEvent) => void>(),
 }));
+const commitMock = vi.hoisted(() => (writes: DevFileWrite[], isConfirmed: boolean) => {
+  files.writes.push(writes);
+  files.isConfirmed.push(isConfirmed);
+  if (files.writeError) throw files.writeError;
+  return {
+    results: writes.map((write) => ({
+      path: write.path,
+      sha256: 'new',
+      previousHash: write.expectedHash ?? null,
+      status: files.unchanged ? ('unchanged' as const) : ('updated' as const),
+    })),
+  };
+});
 vi.mock(import('./DevFiles'), async (importOriginal) => ({
   ...(await importOriginal()),
   getDevFilesStatus: async () => files.status,
@@ -21,18 +36,8 @@ vi.mock(import('./DevFiles'), async (importOriginal) => ({
       ? ({ path, bytes: new Uint8Array(), ...structuredClone(file) } as DevFileRead)
       : null;
   },
-  writeDevFiles: async (writes: DevFileWrite[]) => {
-    files.writes.push(writes);
-    if (files.writeError) throw files.writeError;
-    return {
-      results: writes.map((write) => ({
-        path: write.path,
-        sha256: 'new',
-        previousHash: write.expectedHash ?? null,
-        status: files.unchanged ? ('unchanged' as const) : ('updated' as const),
-      })),
-    };
-  },
+  writeDevFiles: async (writes: DevFileWrite[]) => commitMock(writes, false),
+  writeConfirmedDevFiles: async (writes: DevFileWrite[]) => commitMock(writes, true),
   onDevDataGathered: (fn: (event: DevDataGatheredEvent) => void) => {
     files.gatherListeners.add(fn);
     return () => files.gatherListeners.delete(fn);
@@ -64,9 +69,13 @@ import {
   type SaveSource,
 } from './SaveData';
 import {
+  _collectSaveChanges,
+  _getSaveErrorText,
   _getSaveSceneDisabledReason,
+  _getSaveSpecificDisabledReason,
   _isSaving,
   _refreshSaveStatus,
+  _saveChangesAsync,
   _saveSceneAsync,
   SAVING_TEXT,
   SAVING_TIMEOUT_MS,
@@ -120,6 +129,7 @@ beforeEach(async () => {
     [PATH_B, { sha256: 'hashB', json: { id: 'bloom' } }],
   ]);
   files.writes = [];
+  files.isConfirmed = [];
   files.writeError = null;
   files.unchanged = false;
   toasts.length = 0;
@@ -328,5 +338,93 @@ describe('"Save scene" (p355 §2.1)', () => {
     expect(source.onSaved).toHaveBeenCalledTimes(2);
     expect(_isSaving()).toBe(false);
     expect(toasts.at(-1)).toMatchObject({ message: 'The files have these changes already' });
+  });
+});
+
+describe('the save of picked changes (p355 Phase 4, the "Save specific data…" dialog’s)', () => {
+  it('saves only the saveable changes the filter picks, with no "Confirm writes" dialog', async () => {
+    const picked = createChange({ sceneId: 'sceneB' });
+    const source = addSource([
+      picked,
+      createChange({ path: PATH_B }),
+      createChange({ sceneId: 'sceneC', path: null, unsaveable: 'scene not found' }),
+    ]);
+    const result = await _saveChangesAsync(
+      (change, from) => from === source && change.sceneId !== 'sceneA',
+      { skipConfirm: true }
+    );
+    expect(result).toEqual({ status: 'SAVED' });
+    expect(files.isConfirmed).toEqual([true]);
+    expect(files.writes).toEqual([
+      [
+        {
+          path: PATH_A,
+          expectedHash: 'hashA',
+          saveData: { sceneId: 'sceneB', entry: { turbidity: 4 } },
+        },
+      ],
+    ]);
+    expect(source.onSaved).toHaveBeenCalledWith([picked]);
+    expect(_isSaving()).toBe(true);
+    // A second save while it waits for the reload tries nothing
+    expect(await _saveChangesAsync(() => true)).toEqual({ status: 'OFF', reason: SAVING_TEXT });
+  });
+
+  it('puts two scenes’ entries of one file into one write, a list', async () => {
+    addSource([
+      createChange({ entry: { atmosphere: { turbidity: 4 } } }),
+      createChange({ sceneId: 'sceneB', entry: { atmosphere: { rayleigh: 2 } } }),
+    ]);
+    addSource([createChange({ entry: { suns: { 0: { size: 1 } } } })]);
+    await _saveChangesAsync(() => true);
+    expect(files.isConfirmed).toEqual([false]);
+    expect(files.writes[0]).toEqual([
+      {
+        path: PATH_A,
+        expectedHash: 'hashA',
+        saveData: [
+          { sceneId: 'sceneA', entry: { atmosphere: { turbidity: 4 }, suns: { 0: { size: 1 } } } },
+          { sceneId: 'sceneB', entry: { atmosphere: { rayleigh: 2 } } },
+        ],
+      },
+    ]);
+  });
+
+  it('returns how it ended instead of toasting: off, nothing, failed', async () => {
+    const source = addSource([createChange()]);
+    files.historySize = 0;
+    expect(await _saveChangesAsync(() => true)).toMatchObject({ status: 'OFF' });
+    files.historySize = 20;
+    expect(await _saveChangesAsync(() => false)).toEqual({ status: 'NOTHING' });
+    files.writeError = new DevFilesError('CONFLICT', 'changed on disk');
+    const failed = await _saveChangesAsync(() => true);
+    expect(failed).toMatchObject({ status: 'FAILED' });
+    expect(_getSaveErrorText((failed as { error: unknown }).error)).toBe(
+      'CONFLICT: changed on disk'
+    );
+    expect(source.onSaved).not.toHaveBeenCalled();
+    expect(_isSaving()).toBe(false);
+    expect(toasts).toEqual([]);
+  });
+
+  it('lists every change with its source, saveable or not', () => {
+    const source = addSource([
+      createChange(),
+      createChange({ sceneId: 'sceneB', path: null, unsaveable: 'scene not found' }),
+    ]);
+    expect(_collectSaveChanges().map(({ source: from, change }) => [from, change.id])).toEqual([
+      [source, `sceneA:${PATH_A}`],
+      [source, `sceneB:${PATH_A}`],
+    ]);
+  });
+
+  it('"Save specific data…" is off with nothing saveable in any scene, on with another scene’s', () => {
+    addSource([createChange({ sceneId: 'sceneB', path: null, unsaveable: 'scene not found' })]);
+    expect(_getSaveSpecificDisabledReason()).toBe('Nothing to save');
+    addSource([createChange({ sceneId: 'sceneB' })]);
+    expect(_getSaveSpecificDisabledReason()).toBeNull();
+    expect(_getSaveSceneDisabledReason()).toBe('Nothing to save in this scene');
+    files.historySize = 0;
+    expect(_getSaveSpecificDisabledReason()).toMatch(/^Saving is off/);
   });
 });
