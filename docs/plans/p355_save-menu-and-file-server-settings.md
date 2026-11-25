@@ -670,6 +670,33 @@ Its source (§2.1): the edited materials the current scene lists, as that scene'
 entries; the others Not saveable with the warning toast. A save clears the saved records'
 `overrides` (settings and camera kept).
 
+Found while starting it (2026-11-25): the editor's copy was the raw JSON (the registry's, its
+`__saveData` dropped), so after a save the editor showed the file's old value while the scene
+showed the entry's, and an entry's value could never be set back to the file's (an override equal
+to the raw value is dropped). Decided: the editor's base becomes the current scene's material.
+`testTslMat` is a `setup` material: its edits are `inputs`, not `nodes`.
+
+Sections:
+
+1. **The editor's base:** a material the current scene lists is shown as the scene has it (the
+   dev data's resolved entry, its latest save entry in it), else as its file; the copy's props
+   and the dropping of an override equal to the base both read it. The selector's entries (path,
+   name, description) stay the registry's. Records stay global: an override equal to the current
+   scene's value is dropped while that scene is current. Tests.
+2. **The material source** (`debug/editors/material/_dbg__MaterialSave.ts`): one change per
+   record with `overrides`, for the current scene: its file when the scene lists the material,
+   else Not saveable ("not in this scene"; "material not found" when the registry hasn't it).
+   `findSceneAssetFile` takes `materials`. The entry is the latest one with the overrides over it
+   (`params` and `inputs` by key, `nodes` by socket then input), pruned value by value against the
+   file (a value compared whole: the gather replaces a vector whole, so `pruneSaveEntry`'s deep
+   walk would cut one). `onSaved` removes the records' `overrides` and loads the shown copy again.
+   Registered in `_registerMaterialEditorView` (the boot's, before `setSaveSourcesReady`). Tests.
+3. **"Save scene"'s warning:** the current scene's Not saveable material changes named in a
+   warning toast ('Not saved: "rock", "bark" aren't in this scene's materials (they keep their
+   editor changes)'), after the reload through the gather note when one follows, at once
+   otherwise. Tests.
+4. **The exit in the browser**, and this phase's As built.
+
 **Exit:** in `sceneTestECS`, `testTslMat` (its only material, a TSL one: its `nodes`) edited in
 the material editor and saved with Ctrl+S (also from the material editor view): its JSON gets a
 `sceneTestECS` entry with the edits merged into the existing one, the scene shows them, and the

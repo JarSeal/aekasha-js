@@ -42,6 +42,7 @@ import { readMaterialParams } from './_dbg__MaterialEditorParams';
 import {
   getCopyProps,
   getMaterialAssets,
+  getMaterialBase,
   getMaterialTextureIds,
   getSelectorEntries,
   getUnavailableReason,
@@ -200,7 +201,7 @@ export const loadEditorMaterial = async (materialId: string | null) => {
     return false;
   }
 
-  const asset = getMaterialAssets()[materialId];
+  const asset = getMaterialBase(materialId);
   if (!asset) {
     lwarn(`Could not find material "${materialId}", in loadEditorMaterial.`);
     setSelectedMaterialId(null);
@@ -281,7 +282,7 @@ const getDrawerTabs = () =>
   createMaterialEditorTabs({
     getAsset: () => {
       const id = getSelectedMaterialId();
-      return (id && getMaterialAssets()[id]) || null;
+      return (id && getMaterialBase(id)) || null;
     },
     getTextureIds: getMaterialTextureIds,
     isTextureLoaded: (id) => Boolean(getTexture(id)),

@@ -82,6 +82,7 @@ export const toSaveEntryWrite = (json: unknown, sceneId: string, entry: Obj) =>
 /** The dev data's lists a scene names an asset in, and its registries */
 type SceneAssetKind =
   | { list: 'skyboxes' | 'postFx'; registry: 'skyboxes' | 'postFx' }
+  | { list: 'materials'; registry: 'materials' }
   | { list: 'cameras'; registry: 'cameras' }
   | { list: 'lights'; registry: 'lights' };
 

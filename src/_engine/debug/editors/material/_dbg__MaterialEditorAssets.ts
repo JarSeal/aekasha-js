@@ -2,7 +2,8 @@
 // materials and textures as the generated data declares them, a copy's creation props, the
 // textures a material needs and their load, and the selector's entries.
 import * as THREE from 'three/webgpu';
-import { getGeneratedAppData } from '../../../kernel/scene/Scene';
+import { getCurrentSceneId, getGeneratedAppData } from '../../../kernel/scene/Scene';
+import { getSceneListItem } from '../../_dbg__SaveEntries';
 import type { MaterialVariantOverrides, MatProps } from '../../../kernel/assets/Material';
 import { getTexture } from '../../../kernel/assets/Texture';
 import { retagAssetOwner } from '../../../kernel/assets/AssetOwners';
@@ -52,6 +53,24 @@ export const getMaterialAssets = () => {
     }
   }
   return materialAssets;
+};
+
+/**
+ * A material as the editor shows it (p355 Phase 6): as the current scene has it when the scene
+ * lists it (the dev data's resolved entry, the scene's latest save entry in it), else as its file.
+ * The copy is made from it, and an override equal to its value is dropped, so a saved entry's
+ * value shows after the save and an edit back to the file's value is an override the save writes.
+ * The scene's keeps the file's `__sourcePath` (the gather drops it from a scene's entry).
+ * @returns (MaterialAsset | undefined) undefined when the project has no such material
+ */
+export const getMaterialBase = (materialId: string): MaterialAsset | undefined => {
+  const asset = getMaterialAssets()[materialId];
+  const sceneId = getCurrentSceneId();
+  if (!asset || !sceneId) return asset;
+  const item = getSceneListItem('materials', sceneId, materialId) as MaterialAsset | undefined;
+  // An inline material of another type with the same id isn't this one
+  if (!item || typeof item !== 'object' || item.type !== asset.type) return asset;
+  return { ...item, __sourcePath: asset.__sourcePath };
 };
 
 /** The asset's creation props, without the gatherer's tooling fields. */
