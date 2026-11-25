@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: in progress | Phases 1-4 implemented
 Category: Debug, Dev tooling
 Related: `devTools/devFiles/CLAUDE.md` (the dev file server this builds on, p342: the routes,
 `writeDevFiles`, save entry writes, the "File server" folder; this plan is p342's §5 question 4),
@@ -500,7 +500,7 @@ As built:
   exports), `yarn verify:ui --only menu` and the full `yarn verify:baselines` (the production
   build's debug code check).
 
-### Phase 4 — "Save specific data…"
+### Phase 4 — "Save specific data…" — done
 
 §2.3 and its key.
 
@@ -529,6 +529,65 @@ localStorage; Check all / Uncheck all and the group checkboxes; a sky box change
 `skyShowcase` and saved from `largeWorld` under Other scenes lands in `skyShowcase`'s entry; a
 PostFX pass shows under Not saveable when its scene is gone. With no change in the current
 scene but one in another, "Save scene" is disabled and "Save specific data…" isn't.
+
+As built:
+
+- The server (section 1): a write's `saveData` is one entry or a list, each scene once (an empty
+  list or a scene twice is `BAD_REQUEST`); the file is read once, the entries put in one after the
+  other, each stamped and trimmed as alone; `unchanged` only when every entry is. The client's
+  `DevFileWrite.saveData` takes the list (`_writeDevFiles` adds `historySize` to each). The save's
+  `foldWrite`: one scene's changes of a file deep-merged into one entry, other scenes' joining the
+  list; a file with one scene's entry still sends the entry alone. Tests: `commit.test.ts`, the
+  self-check (both scenes gathered, a scene twice refused), `_dbg__SaveData.test.ts`.
+- The form's own error (section 2, §2.3's decision: the kit, not the dialog's own line):
+  `createForm`'s `setError(message | null, { focus? })` and `getError()`: the summary's first item
+  (`li.aekForm__summaryMessage`, the danger colour, no link), the summary shown (and focused with
+  `focus`); `validate()` keeps it first, the next submit (a new attempt) and a reset take it away,
+  as do `null` and `''`, and a field fixed on a blur doesn't hide the summary while it's set. The
+  library demo's "Submit it, the server down" (its error a microtask later: no timer for the
+  screenshot) and a keyboard script; `verify:ui --only form` passed axe and the scripts, its new
+  and moved screenshots not recorded yet (Phase 9).
+- The save (section 3): `_saveChangesAsync(filter, { skipConfirm? })` is the one pipeline, the
+  changes collected again at its start and the saveable ones the filter picks saved; it returns
+  `SAVED` (the save stays on until the reload) / `NOTHING` / `OFF` (with the reason) / `FAILED`
+  (with the error) instead of toasting, and `_saveSceneAsync` is it with the current scene's filter
+  plus the toasts. `_getSaveErrorText` (the code, then the message) for both. `skipConfirm` goes
+  through `writeConfirmedDevFiles` (`debug/DevFiles.ts`, `@internal`): the public `writeDevFiles`
+  has no option, so no other tool skips "Confirm writes". `_collectSaveChanges`, `_isSaveableChange`
+  and `_getSaveSpecificDisabledReason` (as "Save scene"'s, but off only with nothing saveable in
+  any scene: "Nothing to save") for the dialog and the menu.
+- The dialog (section 4, `debug/_dbg__SaveSpecificDialog.ts`, `debug/SaveData.module.scss`; loaded
+  on first use by `_openSaveSpecificAsync`, which checks the status and the reason first and toasts
+  it instead): a `createForm` of fieldsets (`legendHidden`, the legend the group's name), each led
+  by a heading `createCheckbox` labelled with the group's title and count (`setIndeterminate` while
+  some of its rows are checked); "Other scenes" holds a fieldset per scene (its name, else its id)
+  set in under it. A row's hint is its file and changed keys (five, then "and n more"). Not
+  saveable: a list with each change's scene and reason. The rows' kit reset buttons are hidden
+  (`.aekField__reset`: one per toggled row crowded the list; Check all / Uncheck all cover it).
+  The footer is outside the scrolling form: Check all, Uncheck all, then Cancel and Save (n), the
+  submit through the `form` attribute (so it stays in view); the dialog drives its loading. A save
+  turns every box and button off; `SAVED` closes it (the reload follows), `NOTHING` closes it with
+  a toast, `OFF` and `FAILED` keep it open with "Not saved: …" as the form's own error (the
+  summary at the top takes the focus: not "under the buttons" as §2.3 had it). Moved here from
+  section 3: the item "Save specific data…" (its key hint, its reason as the tooltip) and the key
+  `sc-save-specific` (Ctrl+Shift+S, ⌘⇧S; as `sc-save-scene`: always prevented, a typed field
+  blurred first) through `SaveData.ts`' `saveSpecific()` (`@internal`).
+- Checked in the browser (`largeWorld`, WebGL fallback, a scratch Playwright script on a dev server
+  of its own, port 8095): only `skyShowcase`'s change: "Save scene" off with "Nothing to save in
+  this scene" (its tooltip shown, so the menu's first Escape hides it: the kit's rule), "Save
+  specific data…" on; Ctrl+Shift+S opens it with Other scenes unchecked (Save (0)) and a PostFX
+  pass of a scene that's gone under Not saveable. With `largeWorld`'s sky box and PostFX changes
+  too: Save (2), Check all (3), Uncheck all (0, off), the This scene box, a row unchecked (the box
+  mixed), the Other scenes box; Save wrote `dayNight.skybox.json` once with both scenes' entries,
+  stamped, left the unchecked PostFX pass unwritten and in localStorage, the sky box's overrides
+  gone, "Saved 1 file" after the reload. The app files were restored after. Not checked: Firefox,
+  whose screenshot tool is Ctrl+Shift+S (whether the page's `preventDefault` stops it), and a real
+  GPU.
+- Seen while checking: on the WebGL fallback `largeWorld`'s frames starve the compositor, so a CSS
+  transition never starts (`currentTime` 0 for seconds) and a checkbox changed by code paints its
+  old state while `:checked` matches; with the test bridge's `freeze()` first every box paints
+  right. The environment's, not the dialog's; a scratch script on a heavy scene freezes the loops
+  before it reads anything painted.
 
 ### Phase 5 — Cameras and lights
 
