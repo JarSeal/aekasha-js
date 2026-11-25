@@ -14,6 +14,7 @@ import {
 } from './DefaultDebugKeyBindings';
 import { toggleProfilerWindow } from './Profiler';
 import { redoLastAction, undoLastAction } from './UndoRedo';
+import { saveScene } from './SaveData';
 
 // The keyboard's DOM: window is an event target, nothing has focus
 const dom = vi.hoisted(() => {
@@ -68,6 +69,7 @@ vi.mock(import('./DebugTools'), () => ({
 }));
 vi.mock(import('./Profiler'), () => ({ toggleProfilerWindow: vi.fn() }));
 vi.mock(import('./UndoRedo'), () => ({ undoLastAction: vi.fn(), redoLastAction: vi.fn() }));
+vi.mock(import('./SaveData'), () => ({ saveScene: vi.fn() }));
 vi.mock(import('../ui/core/icons/SvgIcon'), () => ({ getSvgIcon: () => '' }));
 
 const held = new Set<string>();
@@ -148,6 +150,35 @@ describe('the debug keys', () => {
     down('Z', { ctrl: true });
     expect(redoLastAction).toHaveBeenCalledTimes(1);
     expect(undoLastAction).toHaveBeenCalledTimes(2);
+  });
+
+  it('save on Ctrl+S and ⌘S, once per press; never the browser’s save, in a text field neither', () => {
+    registerDefaultDebugKeyBindings();
+    down('Control');
+    expect(down('s', { ctrl: true }).defaultPrevented).toBe(true);
+    expect(down('s', { ctrl: true, repeat: true }).defaultPrevented).toBe(true);
+    up('s');
+    up('Control');
+    expect(saveScene).toHaveBeenCalledTimes(1);
+    down('Meta');
+    down('s', { meta: true });
+    up('s');
+    up('Meta');
+    expect(saveScene).toHaveBeenCalledTimes(2);
+    // In a text field: it loses the focus first (its typed value is written), then the save
+    const field = {
+      matches: () => true,
+      blur: vi.fn(() => expect(saveScene).toHaveBeenCalledTimes(2)),
+    };
+    vi.stubGlobal('document', { activeElement: field });
+    try {
+      down('Control');
+      expect(down('s', { ctrl: true }).defaultPrevented).toBe(true);
+      expect(field.blur).toHaveBeenCalledTimes(1);
+      expect(saveScene).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.stubGlobal('document', { activeElement: null });
+    }
   });
 
   it('prevent the default of their keys outside a text field, key-repeats included', () => {

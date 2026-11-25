@@ -238,7 +238,11 @@ export const _saveSceneAsync = async (): Promise<void> => {
   startSaving();
   try {
     const offReason = getSavingOffReason(await _refreshSaveStatus());
-    if (offReason) throw new SaveError(offReason);
+    if (offReason) {
+      endSaving();
+      addDebugToast({ type: 'warning', title: 'Not saved', message: offReason });
+      return;
+    }
     const changes = getSceneSaveChanges();
     if (!changes.length) {
       endSaving();

@@ -289,6 +289,7 @@ describe('"Save scene" (p355 §2.1)', () => {
     await _saveSceneAsync();
     expect(files.writes).toEqual([]);
     expect(String(toasts.at(-1)?.message)).toMatch(/^Saving is off/);
+    expect(toasts.at(-1)?.type).toBe('warning');
     expect(_isSaving()).toBe(false);
   });
 

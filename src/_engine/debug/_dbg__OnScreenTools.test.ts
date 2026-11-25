@@ -211,6 +211,8 @@ describe('the Æ menu (p355 §2.2)', () => {
       'About Ækasha',
     ]);
     expect(getMenu()?.querySelectorAll('[role="separator"]')).toHaveLength(1);
+    // The save key's hint: the platform's chord (not a Mac here), not both
+    expect(getItem('Save scene').getAttribute('aria-keyshortcuts')).toBe('Control+S');
     click(getItem('About Ækasha'));
     expect(getMenu()).toBeNull();
     expect(about.open).toHaveBeenCalledTimes(1);

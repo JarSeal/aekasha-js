@@ -1,3 +1,5 @@
+import { loadDebugModuleAsync } from '../kernel/config/DebugModules';
+import { lerror } from '../utils/Logger';
 import type { DevFilesSaveData } from './DevFilesProtocol';
 
 /**
@@ -103,3 +105,34 @@ export const registerSaveSource = (source: SaveSource): (() => void) => {
  * @internal
  */
 export const _getSaveSources = (): SaveSource[] => [...saveSources.values()];
+
+type SaveDataModule = typeof import('./_dbg__SaveData');
+let saveDataModule: Promise<SaveDataModule | null> | null = null;
+
+/** Loads the implementation once; null outside the debug env */
+const loadSaveData = () => {
+  saveDataModule ??= loadDebugModuleAsync(
+    () => import('./_dbg__SaveData'),
+    false,
+    'Save data'
+  ).then(
+    (ref) => ref?.current ?? null,
+    (err: unknown) => {
+      saveDataModule = null;
+      throw err;
+    }
+  );
+  return saveDataModule;
+};
+
+/**
+ * Saves the current scene's changes and the global ones, as the Æ menu's "Save scene" does (a
+ * save running meanwhile only toasts). The `sc-save-scene` debug key's.
+ * @internal
+ */
+export const saveScene = () => {
+  loadSaveData().then(
+    (module) => module?._saveSceneAsync(),
+    (err: unknown) => lerror('The save failed to load', err)
+  );
+};

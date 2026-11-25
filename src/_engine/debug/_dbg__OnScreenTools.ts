@@ -40,6 +40,7 @@ import {
   SAVING_TEXT,
 } from './_dbg__SaveData';
 import { createKbd } from '../ui/components/Kbd';
+import { getKeyPlatform } from '../ui/components/KeyNames';
 import type { MenuItem } from '../ui/overlays/Menu';
 import { getDebugKeyChordLabel } from './DefaultDebugKeyBindings';
 import { isProfilerAvailable, isProfilerWindowOpen, toggleProfilerWindow } from './Profiler';
@@ -350,10 +351,13 @@ const getSwitchTools = (): OnScreenToolItem[] | null => {
   return tools;
 };
 
-/** A debug key's hint for a menu item (none when CONFIG.ts' debugKeys left it no chord) */
+/** A debug key's hint for a menu item: of a key with a Ctrl and a ⌘ chord the platform's one
+ * (none when CONFIG.ts' debugKeys left it no chord) */
 const getKeyHint = (keyId: string) => {
-  const keys = getDebugKeyChordLabel(keyId);
-  return keys ? createKbd({ keys }) : undefined;
+  const chords = getDebugKeyChordLabel(keyId).split(' / ').filter(Boolean);
+  if (!chords.length) return undefined;
+  const isMac = getKeyPlatform() === 'mac';
+  return createKbd({ keys: chords.find((c) => c.includes('Meta') === isMac) ?? chords[0] });
 };
 
 /** The Æ menu's items (p355 §2.2), read on every open: the save items' states then. The status
