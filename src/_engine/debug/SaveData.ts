@@ -39,8 +39,10 @@ export type SaveChange = {
   summary: string[];
   /**
    * Builds the write from the file as it is now (read right before the commit, its `json` a copy
-   * the function may change). Returns null when the file has the change already: nothing is
-   * written for it, and its `onSaved` still runs.
+   * the function may change). When another change of the same file and scene was built before it,
+   * that change's entry is the scene's latest in `json`, so the write lays its own change over the
+   * latest entry and leaves the rest as it is. Returns null when the file has the change already:
+   * nothing is written for it, and its `onSaved` still runs.
    */
   build: (file: { json: unknown }) => SaveChangeWrite | null;
 };

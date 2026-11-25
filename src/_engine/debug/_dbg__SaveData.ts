@@ -8,7 +8,6 @@
 // scene" names the scene's edited materials it couldn't save (p355 Phase 6) in a warning toast,
 // after the reload when one follows (the gather note).
 import { getCurrentSceneId } from '../kernel/scene/Scene';
-import { deepMerge } from '../utils/DeepMerge';
 import { lerror } from '../utils/Logger';
 import { addDebugToast } from './DebuggerGUI';
 import {
@@ -24,6 +23,7 @@ import {
 } from './DevFiles';
 import type { DevFilesSaveData } from './DevFilesProtocol';
 import { _addToGatherNote, type GatherNoteWarning } from './_dbg__DevFilesGather';
+import { getLatestSaveEntry } from './_dbg__SaveEntries';
 import { getUnsavedMaterialsWarning } from './editors/material/_dbg__MaterialSave';
 import { updateOnScreenTools } from './OnScreenTools';
 import {
@@ -175,11 +175,15 @@ const waitForGather = () => {
 
 // The writes
 
+const isObj = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
 /** A file's write as the changes build it: its scenes' entries, or its new JSON */
 type FoldedWrite = { saveData: DevFilesSaveData[] } | { json: unknown };
 
 /** Adds a change's write to its file's: an entry for another scene joins the list, one for the
- * same scene is deep-merged into its entry; anything else can't be one write */
+ * same scene replaces its entry (built over it: `withBuiltEntries`); anything else can't be one
+ * write */
 const foldWrite = (
   path: string,
   folded: FoldedWrite | null,
@@ -188,14 +192,39 @@ const foldWrite = (
   if (!write) return folded;
   if (!folded) return 'saveData' in write ? { saveData: [write.saveData] } : write;
   if ('saveData' in folded && 'saveData' in write) {
-    const { sceneId, entry } = write.saveData;
     const saveData = [...folded.saveData];
-    const index = saveData.findIndex((item) => item.sceneId === sceneId);
+    const index = saveData.findIndex((item) => item.sceneId === write.saveData.sceneId);
     if (index === -1) saveData.push(write.saveData);
-    else saveData[index] = { sceneId, entry: deepMerge(saveData[index].entry, entry) };
+    else saveData[index] = write.saveData;
     return { saveData };
   }
   throw new SaveError(`${path}: two changes need writes that can't be merged into one`);
+};
+
+/**
+ * A copy of the file as the next change's build sees it: each scene's entry the changes before it
+ * built is that scene's latest, so the build lays its change over theirs. (A deep merge of two
+ * builds can't drop a key: one change pruning a value back to the file's would lose to the
+ * other's copy of the latest entry.)
+ */
+const withBuiltEntries = (json: unknown, folded: FoldedWrite | null) => {
+  if (!folded || !('saveData' in folded) || !isObj(json)) return structuredClone(json);
+  const saveData = isObj(json.__saveData) ? { ...json.__saveData } : {};
+  for (const { sceneId, entry } of folded.saveData) {
+    const entries: unknown = saveData[sceneId];
+    saveData[sceneId] = [entry, ...(Array.isArray(entries) ? entries : [])];
+  }
+  return structuredClone({ ...json, __saveData: saveData });
+};
+
+/** The folded entries without an empty one for a scene the file has none for (a later build left
+ * it empty: nothing to replace) */
+const dropEmptyNewEntries = (json: unknown, folded: FoldedWrite | null) => {
+  if (!folded || !('saveData' in folded)) return folded;
+  const saveData = folded.saveData.filter(
+    ({ sceneId, entry }) => Object.keys(entry).length || getLatestSaveEntry(json, sceneId)
+  );
+  return saveData.length ? { saveData } : null;
 };
 
 /** One write per file, built from the file as it is now */
@@ -210,10 +239,12 @@ const buildWrites = async (changes: SourcedChange[]) => {
       const file = await readDevFile(path);
       if (!file) throw new SaveError(`${path} doesn't exist`);
       if (file.json === undefined) throw new SaveError(`${path} isn't a JSON file`);
-      let write: FoldedWrite | null = null;
+      let folded: FoldedWrite | null = null;
       for (const change of pathChanges) {
-        write = foldWrite(path, write, change.build({ json: structuredClone(file.json) }));
+        const json = withBuiltEntries(file.json, folded);
+        folded = foldWrite(path, folded, change.build({ json }));
       }
+      const write = dropEmptyNewEntries(file.json, folded);
       if (!write) return null;
       // One scene's entry goes as the entry (the list is for several)
       if ('saveData' in write && write.saveData.length === 1) {

@@ -76,7 +76,9 @@ vi.mock(import('./OnScreenTools'), async (importOriginal) => ({
   updateOnScreenTools: tools.update,
 }));
 
+import { deepMerge } from '../utils/DeepMerge';
 import { DevFilesError } from './DevFiles';
+import { getLatestSaveEntry } from './_dbg__SaveEntries';
 import {
   registerSaveSource,
   setSaveSourcesReady,
@@ -99,7 +101,8 @@ import {
 const PATH_A = 'src/app/skyboxes/sky.skybox.json';
 const PATH_B = 'src/app/postFx/bloom.postFx.json';
 
-/** A change saving `entry` into `path` for `sceneId`, over the file's latest entry */
+/** A change saving `entry` into `path` for `sceneId`, deep-merged over the file's latest entry
+ * (as a source builds it) */
 const createChange = (
   props: Partial<SaveChange> & { entry?: Record<string, unknown> } = {}
 ): SaveChange => {
@@ -112,7 +115,9 @@ const createChange = (
     sceneId,
     path: PATH_A,
     summary: Object.keys(entry),
-    build: () => ({ saveData: { sceneId, entry } }),
+    build: ({ json }) => ({
+      saveData: { sceneId, entry: deepMerge(getLatestSaveEntry(json, sceneId) ?? {}, entry) },
+    }),
     ...rest,
   };
 };
@@ -253,7 +258,7 @@ describe('"Save scene" (p355 §2.1)', () => {
     expect(postFx.onSaved).toHaveBeenCalledTimes(1);
   });
 
-  it('merges two changes of one file for one scene into one entry', async () => {
+  it('builds two changes of one file for one scene into one entry, the second over the first', async () => {
     addSource([createChange({ entry: { atmosphere: { turbidity: 4 } } })]);
     addSource([createChange({ entry: { atmosphere: { rayleigh: 2 }, suns: { 0: { size: 1 } } } })]);
     await _saveSceneAsync();
@@ -267,6 +272,40 @@ describe('"Save scene" (p355 §2.1)', () => {
         },
       },
     ]);
+  });
+
+  it('a change dropping a key of the latest entry isn’t undone by the next one (p355 Phase 7)', async () => {
+    files.disk.set(PATH_A, {
+      sha256: 'hashA',
+      json: { id: 'sky', __saveData: { sceneA: [{ postFxEnabled: false, cellSize: 10 }] } },
+    });
+    // Switched back to the file's value: its build drops the key
+    addSource([
+      createChange({
+        build: ({ json }) => {
+          const { postFxEnabled: _dropped, ...entry } = getLatestSaveEntry(json, 'sceneA') ?? {};
+          return { saveData: { sceneId: 'sceneA', entry } };
+        },
+      }),
+    ]);
+    addSource([createChange({ entry: { cellSize: 12 } })]);
+    await _saveSceneAsync();
+    expect(files.writes[0]).toEqual([
+      {
+        path: PATH_A,
+        expectedHash: 'hashA',
+        saveData: { sceneId: 'sceneA', entry: { cellSize: 12 } },
+      },
+    ]);
+  });
+
+  it('writes no empty entry for a scene the file has none for', async () => {
+    addSource([createChange({ entry: { cellSize: 12 } })]);
+    // The second change takes the first's value back out
+    addSource([createChange({ build: () => ({ saveData: { sceneId: 'sceneA', entry: {} } }) })]);
+    await _saveSceneAsync();
+    expect(files.writes).toEqual([]);
+    expect(toasts.at(-1)).toMatchObject({ title: 'Nothing to save' });
   });
 
   it('stays on from its start to the reload; a failed gather ends it', async () => {

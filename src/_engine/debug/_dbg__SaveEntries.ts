@@ -126,6 +126,22 @@ export const getSceneListItem = (
     : undefined;
 };
 
+/** A scene as the dev data has it (its latest save entry applied); undefined when it's gone */
+export const getDevScene = (sceneId: string): Obj | undefined =>
+  (getGeneratedAppData() as unknown as DevData).scenes[sceneId];
+
+/**
+ * A scene's JSON file, which its own save entries go into (the dev data's `__sourcePath`, p355
+ * §2.5), or why there's none: the scene isn't in the generated data, or has no file there (data
+ * gathered before the scenes had one).
+ */
+export const findSceneFile = (sceneId: string): { path: string } | { unsaveable: string } => {
+  const scene = getDevScene(sceneId);
+  if (!scene) return { unsaveable: 'scene not found' };
+  const path = scene.__sourcePath;
+  return typeof path === 'string' ? { path } : { unsaveable: 'the scene JSON has no file path' };
+};
+
 /**
  * The file a scene's asset is saved into, or why there's none: the scene isn't in the generated
  * data, its JSON doesn't list the asset (made in code, or no longer listed), or lists it inline.

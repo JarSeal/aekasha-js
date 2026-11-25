@@ -8,7 +8,10 @@ const data = vi.hoisted(() => ({
       cameras: [{ camProps: { type: 'PERSPECTIVE', fov: 50, appId: 'cam' } }],
       // An inline light whose app id is only its entity's
       lights: [{ lightProps: { type: 'AMBIENT' }, entityOpts: { appId: 'inlineLight' } }],
+      __sourcePath: 'src/app/scenes/sceneA/sceneA.scene.json',
     },
+    // Gathered before the scenes had their file
+    sceneB: {},
   },
   skyboxes: { sky: { __sourcePath: 'src/app/skyboxes/sky.skybox.json' }, unused: {} },
   postFx: { ao: { __sourcePath: 'src/app/postFx/ao.postFx.json' } },
@@ -22,6 +25,7 @@ vi.mock(import('../kernel/scene/Scene'), async (importOriginal) => ({
 
 import {
   findSceneAssetFile,
+  findSceneFile,
   getChangedKeys,
   getLatestSaveEntry,
   getSceneListItem,
@@ -134,5 +138,11 @@ describe('save entries (p355 §2.1)', () => {
       camProps: { type: 'PERSPECTIVE', fov: 50, appId: 'cam' },
     });
     expect(getSceneListItem('cameras', 'gone', 'cam')).toBeUndefined();
+  });
+
+  it('finds a scene’s own file, or says why there’s none (p355 §2.5)', () => {
+    expect(findSceneFile('sceneA')).toEqual({ path: 'src/app/scenes/sceneA/sceneA.scene.json' });
+    expect(findSceneFile('sceneB')).toEqual({ unsaveable: 'the scene JSON has no file path' });
+    expect(findSceneFile('gone')).toEqual({ unsaveable: 'scene not found' });
   });
 });
