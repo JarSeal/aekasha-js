@@ -1,5 +1,5 @@
-// The PostFX passes' overrides in localStorage (`AEK_debugPostFx`): the PostFX tab's and its save
-// source's (p355).
+// The PostFX tab's localStorage: the passes' overrides (`AEK_debugPostFx`) and the settings
+// (`AEK_debugPostFxSettings`), the tab's and its save sources' (p355).
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
 
 /** One PostFX pass's deviations from its authored state. */
@@ -25,4 +25,26 @@ export const writePassesLSOrRemove = (data: PostFxPassesLSData) => {
   }
   if (Object.keys(data).length) lsSetItem(LS_KEY, data);
   else lsRemoveItem(LS_KEY);
+};
+
+/** The structure of 'AEK_debugPostFxSettings' in LocalStorage. Only deviations are stored:
+ * a scene missing from postFxEnabled means "as authored" (the scene's postFxEnabled, its latest
+ * save entry included), a missing measureEnabled means "as configured"
+ * (AppConfig.postFx.measureEnabled). */
+export type PostFxSettingsLSData = {
+  measureEnabled?: boolean;
+  postFxEnabled?: { [sceneId: string]: boolean };
+};
+
+/** The PostFX tab's settings' LocalStorage key */
+export const SETTINGS_LS_KEY = 'AEK_debugPostFxSettings';
+
+/** The PostFX tab's settings: the measuring and each scene's PostFX switch */
+export const readSettingsLS = () => lsGetItem(SETTINGS_LS_KEY, {}) as PostFxSettingsLSData;
+
+/** Writes the settings, dropping an empty `postFxEnabled` (the key itself when nothing is left) */
+export const writeSettingsLSOrRemove = (data: PostFxSettingsLSData) => {
+  if (data.postFxEnabled && !Object.keys(data.postFxEnabled).length) delete data.postFxEnabled;
+  if (Object.keys(data).length) lsSetItem(SETTINGS_LS_KEY, data);
+  else lsRemoveItem(SETTINGS_LS_KEY);
 };

@@ -35,14 +35,17 @@ import {
   updateDraggableWindow,
   updateDraggableWindowsOfKind,
 } from '../../../ui/overlays/windows/DraggableWindow';
-import { lsGetItem, lsRemoveItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
+import { lsRemoveItem } from '../../../utils/LocalAndSessionStorage';
 import {
   LS_KEY,
   readPassesLS,
+  readSettingsLS,
+  SETTINGS_LS_KEY,
   writePassesLSOrRemove,
+  writeSettingsLSOrRemove,
   type PostFxPassOverride,
 } from './_dbg__PostFXStore';
-import { registerPostFxSaveSource } from './_dbg__PostFXSave';
+import { registerPostFxEnabledSaveSource, registerPostFxSaveSource } from './_dbg__PostFXSave';
 import { CMP } from '../../../ui/core/CMP';
 import {
   confirmClearScope,
@@ -62,16 +65,6 @@ import {
   getInfoRowItem,
   getNoteItem,
 } from '../../../debug/_dbg__DebugWindowGrid';
-
-/** The structure of 'AEK_debugPostFxSettings' in LocalStorage. Only deviations are stored:
- * a scene missing from postFxEnabled means "as authored" (the scene's postFxEnabled), a
- * missing measureEnabled means "as configured" (AppConfig.postFx.measureEnabled). */
-type PostFxSettingsLSData = {
-  measureEnabled?: boolean;
-  postFxEnabled?: { [sceneId: string]: boolean };
-};
-
-const SETTINGS_LS_KEY = 'AEK_debugPostFxSettings';
 
 const TAB_ID = 'postFxControls';
 /** The edit windows' kind: one window per PostFX pass, keyed by its id */
@@ -99,14 +92,6 @@ const isMasterEnabled = () => getConfig().postFx?.enabled !== false;
 const getAuthoredPostFxEnabled = (sceneId: string) =>
   getSceneOpts(sceneId)?.postFxEnabled !== false;
 const getConfiguredMeasureEnabled = () => getConfig().postFx?.measureEnabled === true;
-
-const readSettingsLS = () => lsGetItem(SETTINGS_LS_KEY, {}) as PostFxSettingsLSData;
-
-const writeSettingsLSOrRemove = (data: PostFxSettingsLSData) => {
-  if (data.postFxEnabled && !Object.keys(data.postFxEnabled).length) delete data.postFxEnabled;
-  if (Object.keys(data).length) lsSetItem(SETTINGS_LS_KEY, data);
-  else lsRemoveItem(SETTINGS_LS_KEY);
-};
 
 /** Refreshes the tab (its settings and the PostFX pass list), when it's the open one. */
 const refreshGUI = () => updateDebuggerTab(TAB_ID);
@@ -561,8 +546,10 @@ export const _createPostFXDebugGUI = async () => {
 
   // The first scene is entered before the debug GUIs are created (inside appStartFn), so the
   // persisted state is applied here once, and from then on by the scene enter hook.
-  // "Save scene" saves the PostFX passes' overrides into their files (p355)
+  // "Save scene" saves the PostFX passes' overrides into their files, and the scene's PostFX
+  // switch into its scene JSON (p355)
   registerPostFxSaveSource();
+  registerPostFxEnabledSaveSource();
 
   const measureOverride = readSettingsLS().measureEnabled;
   if (measureOverride !== undefined) await setPostFxMeasureEnabled(measureOverride);
