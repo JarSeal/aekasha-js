@@ -303,6 +303,14 @@ Each phase is one commit; run `yarn test` and `yarn lint` after each.
    drag with the master loop off doesn't move the camera, from the on-screen tools and from the Loop
    controls tab.
 
+As built:
+
+- Item 1 (2026-11-25): gone, nothing to change. `@dimforge/rapier3d-compat` 0.21.0's `dist/rapier.mjs`
+  calls wasm-bindgen's init as `EI({ module_or_path: … })`. The dev server's start scene, with
+  `?isDebug=true` in Chromium (WebGL2 fallback), console of the page and its workers captured: no
+  "using deprecated parameters" warning with `workerTarget` `WORKER_THREAD` or `MAIN_THREAD` (set
+  through `AEK_debugPhysicsApiBoot`; the physics worker didn't start in the second).
+
 ### Phase 2: Light helpers (item 11)
 
 1. The runtime check (which of the two causes) and its result under the phase.
