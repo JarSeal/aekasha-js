@@ -8,7 +8,12 @@ import type {
 } from './PhysicsColliderTypes';
 import type { OmitSync, PhysRotation, PhysVector } from './PhysicsCommonTypes';
 import type { EventQueue } from './PhysicsEventTypes';
-import type { JointAPI, JointParams } from './PhysicsJointTypes';
+import type {
+  JointAPI,
+  JointParams,
+  MultibodyJointAPI,
+  MultibodyJointParams,
+} from './PhysicsJointTypes';
 import type {
   PhysRay,
   QueryFilterFlags,
@@ -37,7 +42,8 @@ export type PhysicsSnapshot = {
 export type RestoreSnapshotOpts = {
   /** What to do with the bodies, colliders and joints the snapshot has but the API no longer
    * knows (deleted since it was taken): `'DELETE'` (the default) takes them out of the restored
-   * world, `'KEEP'` leaves them in it, unreachable through the API. */
+   * world, `'KEEP'` leaves them in it, unreachable through the API. Multibody joints are taken out
+   * either way: one the API doesn't know would hide a link from its checks. */
   orphanPolicy?: 'DELETE' | 'KEEP';
 };
 
@@ -54,10 +60,14 @@ export type RestoreSnapshotDelta = {
   reapedColliderIds: number[];
   /** The joints the API knew that the snapshot doesn't have: deleted. */
   reapedJointIds: number[];
+  /** The multibody joints the API knew that the snapshot doesn't have: deleted. One deleted and
+   * made again on the same child since the snapshot is here when its parent changed (the
+   * snapshot's is an orphan); with the same parent it's kept, as the snapshot's joint. */
+  reapedMultibodyJointIds: number[];
   /** How many the snapshot had that the API no longer knew (deleted since): taken out of the
-   * restored world unless `orphanPolicy` is `'KEEP'`. A body detached by the `REMOVED` physics
-   * tier since the snapshot counts here: it stays detached. */
-  orphanCounts: { rigidBodies: number; colliders: number; joints: number };
+   * restored world unless `orphanPolicy` is `'KEEP'` (multibody joints always). A body detached by
+   * the `REMOVED` physics tier since the snapshot counts here: it stays detached. */
+  orphanCounts: { rigidBodies: number; colliders: number; joints: number; multibodyJoints: number };
   /** The gravity the snapshot carried (now the world's). */
   gravity: PhysVector;
   /** The timestep the snapshot carried, in seconds (now the world's). */
@@ -86,7 +96,8 @@ export type RestoreSnapshotResult = RestoreSnapshotDelta & {
  * @remarks Every query has an async form and a `*Sync` twin. On MAIN_THREAD both answer at
  * once. On WORKER_THREAD the async form asks the worker, and the `*Sync` twin answers only where
  * the proxy keeps a copy: the settings (gravity, timestep, length unit, iterations, CCD substeps)
- * and the lookups by id (`getRigidBodySync`, `getColliderSync`, `getJointSync`); the creates, the
+ * and the lookups by id (`getRigidBodySync`, `getColliderSync`, `getJointSync`,
+ * `getMultibodyJointSync`); the creates, the
  * snapshots and the queries throw. Prefer the facade's `createRigidBody` & co.: on MAIN_THREAD
  * the world's own creates bypass the facade's registries (the tiers' joint checks read them).
  */
@@ -542,18 +553,12 @@ export type WorldAPI = {
   /** `createJoint()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
   createJointSync(params: JointParams): JointAPI;
   /**
-   * Creates a new multibody joint from the given joint descriptor.
-   * @param params The description of the joint to create.
-   * @param parent1 The first rigid-body attached to this joint.
-   * @param parent2 The second rigid-body attached to this joint.
-   * @param wakeUp Should the attached rigid-bodies be awakened?
+   * Creates a new multibody joint, `body1Id` the parent and `body2Id` the child (p250); throws
+   * (rejects) on what a multibody can't be, as `createMultibodyJoint` does.
    */
-  // createMultibodyJoint(
-  //   params: JointData,
-  //   parent1: RigidBody,
-  //   parent2: RigidBody,
-  //   wakeUp: boolean
-  // ): MultibodyJoint;
+  createMultibodyJoint(params: MultibodyJointParams): Promise<MultibodyJointAPI>;
+  /** `createMultibodyJoint()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
+  createMultibodyJointSync(params: MultibodyJointParams): MultibodyJointAPI;
   /**
    * Retrieves a joint from its id.
    */
@@ -561,10 +566,11 @@ export type WorldAPI = {
   /** `getJoint()` without the wait, in both worker targets. */
   getJointSync(id: number): JointAPI | undefined;
   /**
-   * Retrieves an multibody joint from its handle.
-   * @param handle The integer handle of the multibody joint to retrieve.
+   * Retrieves a multibody joint from its id.
    */
-  // getMultibodyJoint(handle: MultibodyJointHandle): MultibodyJoint;
+  getMultibodyJoint(id: number): Promise<MultibodyJointAPI | undefined>;
+  /** `getMultibodyJoint()` without the wait, in both worker targets. */
+  getMultibodyJointSync(id: number): MultibodyJointAPI | undefined;
   /**
    * Removes the given impulse joint from this physics world.
    * @param jointOrId The joint or id to remove.
@@ -572,11 +578,12 @@ export type WorldAPI = {
    */
   removeJoint(jointOrId: JointAPI | number, wakeUp: boolean): void;
   /**
-   * Removes the given multibody joint from this physics world.
-   * @param joint The multibody joint to remove.
+   * Removes the given multibody joint from this physics world: its child becomes the root of its
+   * own multibody.
+   * @param jointOrId The multibody joint or id to remove.
    * @param wakeUp If set to `true`, the rigid-bodies attached by this joint will be awaken.
    */
-  // removeMultibodyJoint(joint: MultibodyJoint, wakeUp: boolean): void;
+  removeMultibodyJoint(jointOrId: MultibodyJointAPI | number, wakeUp: boolean): void;
   /**
    * Applies the given closure to each collider managed by this physics world.
    * @param f(collider) The function to apply to each collider managed by this physics world. Called as `f(collider)`.

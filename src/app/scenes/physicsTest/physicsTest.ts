@@ -14,16 +14,17 @@ import {
 import {
   createPhysicsEntity,
   createJoint,
+  createMultibodyJoint,
   getPhysicsSimClock,
   getPhysicsWorld,
   JointAxesMask,
 } from 'aekasha/physics';
-import type { PhysVector } from 'aekasha/physics';
+import type { MultibodyJointParams, PhysVector } from 'aekasha/physics';
 import { addToast } from 'aekasha/ui';
 
 const PHYSICS_TEST_SCENE_ID = 'physicsTest';
 
-/** The joint demos' row: x from -21 to 21, 7 m apart, at this z. */
+/** The joint demos' row: x from -21 to 21, evenly apart, at this z. */
 const JOINT_DEMO_Z = -15;
 
 /** A body's RigidBodyAPI id, read back from the entity createPhysicsEntity attached it to. */
@@ -422,10 +423,59 @@ const createGenericJointDemoAsync = async (x: number) => {
   joint.setContactsEnabled(false);
 };
 
+// #region multibody-chain (shown in the Hub: hub/pages/features/physics/)
+/** The chain demos' links: boxes this long along x, hinged end to end. */
+const CHAIN_LINK_HALF_LENGTH = 0.25;
+const CHAIN_LINK_COUNT = 4;
+
+/** A chain of four links hinged end to end on Z axes from a static anchor, started level to the
+ * right of it, so it folds and swings in the row's plane. Made on impulse joints and on multibody
+ * joints side by side, the same chain otherwise: the impulse solver's hinges can drift apart under
+ * the swing's load, the multibody one keeps the links joined (no motors or limits there). */
+const createChainDemoAsync = async (x: number, isMultibody: boolean) => {
+  const kind = isMultibody ? 'Multibody' : 'Impulse';
+  const anchorPos = { x, y: 8, z: JOINT_DEMO_Z };
+  let parentId = await createAnchorBodyAsync(`physicsJoint${kind}ChainAnchor`, anchorPos);
+  let parentAnchor: PhysVector = { x: 0, y: 0, z: 0 };
+  for (let i = 0; i < CHAIN_LINK_COUNT; i++) {
+    const linkId = await createDynamicBoxAsync({
+      id: `physicsJoint${kind}ChainLink`,
+      appId: `physicsJoint${kind}ChainLink${i}`,
+      position: { x: x + (2 * i + 1) * CHAIN_LINK_HALF_LENGTH, y: anchorPos.y, z: anchorPos.z },
+      color: isMultibody ? 0x3355ee : 0xffee44,
+      hx: CHAIN_LINK_HALF_LENGTH,
+      hy: 0.12,
+      hz: 0.12,
+    });
+    // body1 the parent, body2 the child: a multibody's tree grows from the anchor, its root
+    const params: MultibodyJointParams = {
+      type: 'REVOLUTE',
+      body1Id: parentId,
+      body2Id: linkId,
+      anchor1: parentAnchor,
+      anchor2: { x: -CHAIN_LINK_HALF_LENGTH, y: 0, z: 0 },
+      axis: { x: 0, y: 0, z: 1 },
+    };
+    const joint = isMultibody ? await createMultibodyJoint(params) : await createJoint(params);
+    joint.setContactsEnabled(false);
+    parentId = linkId;
+    parentAnchor = { x: CHAIN_LINK_HALF_LENGTH, y: 0, z: 0 };
+  }
+};
+// #endregion multibody-chain
+
+/** REVOLUTE chain on impulse joints (yellow, the REVOLUTE arm's colour). */
+const createImpulseChainDemoAsync = (x: number) => createChainDemoAsync(x, false);
+
+/** REVOLUTE chain on multibody joints (deep blue), beside its impulse twin. */
+const createMultibodyChainDemoAsync = (x: number) => createChainDemoAsync(x, true);
+
 /** The joint demos, left to right along the row. */
 const JOINT_DEMOS = [
   createFixedJointDemoAsync,
   createRevoluteJointDemoAsync,
+  createImpulseChainDemoAsync,
+  createMultibodyChainDemoAsync,
   createPrismaticJointDemoAsync,
   createSphericalJointDemoAsync,
   createRopeJointDemoAsync,
@@ -435,15 +485,16 @@ const JOINT_DEMOS = [
 
 /**
  * The Physics API's test scene: a static ground box, a falling ball and box over a sensor, one
- * worked example per impulse joint type in a row behind them, and two shape casts against the
- * ground. Built in that order (the order the bodies are created in, which the scene runner's hash
- * depends on).
+ * worked example per impulse joint type in a row behind them with a REVOLUTE chain on impulse and
+ * on multibody joints, and two shape casts against the ground. Built in that order (the order the
+ * bodies are created in, which the scene runner's hash depends on).
  */
 export const scene = async () => {
   await createGroundAsync();
   startShapeCasts();
   await createFallingBodiesAsync();
+  const spacing = 42 / (JOINT_DEMOS.length - 1);
   for (const [i, createJointDemoAsync] of JOINT_DEMOS.entries()) {
-    await createJointDemoAsync(-21 + 7 * i);
+    await createJointDemoAsync(-21 + spacing * i);
   }
 };

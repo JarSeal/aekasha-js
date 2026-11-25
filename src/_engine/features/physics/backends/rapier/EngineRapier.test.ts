@@ -12,11 +12,12 @@ import { ShapeType } from '../../types/PhysicsColliderTypes';
 import type { ColliderParams } from '../../types/PhysicsColliderTypes';
 import type { PhysicsState } from '../../types/PhysicsConfigTypes';
 import { JointAxesMask } from '../../types/PhysicsJointTypes';
+import type { MultibodyJointParams } from '../../types/PhysicsJointTypes';
 import { FeatureType, QueryFilterFlags } from '../../types/PhysicsQueryTypes';
 import type { WorldAPI } from '../../types/PhysicsWorldTypes';
 import { initPhysicsEngine } from '../../PhysicsUtils';
 import { physicsSwitchWorld } from '../../worker/PhysicsSwitchWorld';
-import { backend, colliders, rigidBodies } from './RapierState';
+import { backend, colliders, multibodyParents, rigidBodies } from './RapierState';
 
 // The Rapier backend in Node: the compat build carries its WASM inline, so no GPU or DOM is needed.
 
@@ -259,6 +260,47 @@ describe('EngineRapier world bounds (p102)', () => {
     expect(anchor.bodyTypeSync()).toBe(RigidBodyTypeAPI.Dynamic);
   });
 
+  it("takes a multibody link's multibody out with it, disabled, not FIXED (p250 D6)", () => {
+    engAPI.setWorldBounds({ min: { x: 48.5 } });
+    const root = engAPI.createRigidBody({ rigidType: 'FIXED', translation: { x: 50, y: 0, z: 0 } });
+    const ballAt = (x: number) =>
+      createBall(0, 0, { gravityScale: 0, translation: { x, y: 0, z: 0 } });
+    // Branch one: a link inside, its child outside; branch two: one link, inside
+    const [link, outside, other] = [ballAt(49), ballAt(48), ballAt(51)];
+    const spherical = (body1Id: number, body2Id: number, dx: number) =>
+      engAPI.createMultibodyJoint({
+        type: 'SPHERICAL',
+        body1Id,
+        body2Id,
+        anchor1: { x: dx, y: 0, z: 0 },
+        anchor2: { x: 0, y: 0, z: 0 },
+      });
+    spherical(root.id, link.id, -1);
+    spherical(link.id, outside.id, -1);
+    spherical(root.id, other.id, 1);
+    // An impulse joint between the branches: one disabled alone would panic, and its multibody's
+    // rule wins over the impulse joint's (FIXED would panic)
+    engAPI.createJoint({
+      type: 'ROPE',
+      body1Id: outside.id,
+      body2Id: other.id,
+      length: 100,
+      anchor1: { x: 0, y: 0, z: 0 },
+      anchor2: { x: 0, y: 0, z: 0 },
+    });
+    for (let i = 0; i < 10; i++) engAPI.step();
+    const records = engAPI.drainPendingOutOfBoundsRecords();
+    expect(records.map((r) => [r.bodyId, r.takenWith, r.frozen])).toEqual([
+      [outside.id, undefined, false],
+      [link.id, outside.id, false],
+      [other.id, outside.id, false],
+    ]);
+    for (const body of [link, outside, other]) {
+      expect(body.isEnabledSync()).toBe(false);
+      expect(body.bodyTypeSync()).toBe(RigidBodyTypeAPI.Dynamic);
+    }
+  });
+
   it('forgets the bounds and the undelivered exits with the world', () => {
     engAPI.setWorldBounds(killY);
     createBall(-10);
@@ -369,7 +411,7 @@ describe('EngineRapier snapshots (p500)', () => {
     joints: backend.world.impulseJoints.len(),
   });
 
-  const NO_ORPHANS = { rigidBodies: 0, colliders: 0, joints: 0 };
+  const NO_ORPHANS = { rigidBodies: 0, colliders: 0, joints: 0, multibodyJoints: 0 };
 
   it('takes nothing, and refuses a restore, without a world', () => {
     const snapshot = engAPI.takeSnapshot()!;
@@ -403,6 +445,7 @@ describe('EngineRapier snapshots (p500)', () => {
       reapedRigidBodyIds: [],
       reapedColliderIds: [],
       reapedJointIds: [],
+      reapedMultibodyJointIds: [],
       orphanCounts: NO_ORPHANS,
     });
     // The same proxies, now on the restored world's objects
@@ -481,7 +524,12 @@ describe('EngineRapier snapshots (p500)', () => {
     expect(engAPI.getJointAPIWithId(joint.id)).toBeUndefined();
     expect(countWorld()).toEqual(before);
     // A reaped id's delete is the quiet no-op of an unknown id
-    expect(engAPI.deleteRigidBody(late.id)).toEqual({ id: late.id, colliderIds: [], jointIds: [] });
+    expect(engAPI.deleteRigidBody(late.id)).toEqual({
+      id: late.id,
+      colliderIds: [],
+      jointIds: [],
+      multibodyJointIds: [],
+    });
   });
 
   it('takes out what was deleted since the snapshot, or keeps it with KEEP', () => {
@@ -491,7 +539,12 @@ describe('EngineRapier snapshots (p500)', () => {
     const deletedAt = { x: -60, y: 10, z: 0 };
     engAPI.deleteRigidBody(deleted.id);
     const result = engAPI.restoreSnapshot(snapshot);
-    expect(result.orphanCounts).toEqual({ rigidBodies: 1, colliders: 1, joints: 0 });
+    expect(result.orphanCounts).toEqual({
+      rigidBodies: 1,
+      colliders: 1,
+      joints: 0,
+      multibodyJoints: 0,
+    });
     expect(result.reapedRigidBodyIds).toEqual([]);
     expect(countWorld()).toEqual({ bodies: 1, colliders: 1, joints: 0 });
     expect(engAPI.getRigidBodyAPIWithId(kept.id)).toBe(kept);
@@ -506,7 +559,12 @@ describe('EngineRapier snapshots (p500)', () => {
     );
 
     const kept2 = engAPI.restoreSnapshot(snapshot, { orphanPolicy: 'KEEP' });
-    expect(kept2.orphanCounts).toEqual({ rigidBodies: 1, colliders: 1, joints: 0 });
+    expect(kept2.orphanCounts).toEqual({
+      rigidBodies: 1,
+      colliders: 1,
+      joints: 0,
+      multibodyJoints: 0,
+    });
     expect(countWorld()).toEqual({ bodies: 2, colliders: 2, joints: 0 });
     engAPI.step();
     expect(backend.world.castRay(rayDown(deletedAt.x), 100, true)).not.toBeNull();
@@ -554,7 +612,12 @@ describe('EngineRapier snapshots (p500)', () => {
     const snapshot = engAPI.takeSnapshot()!;
     engAPI.detachRigidBody(body.id);
     const result = engAPI.restoreSnapshot(snapshot);
-    expect(result.orphanCounts).toEqual({ rigidBodies: 1, colliders: 1, joints: 0 });
+    expect(result.orphanCounts).toEqual({
+      rigidBodies: 1,
+      colliders: 1,
+      joints: 0,
+      multibodyJoints: 0,
+    });
     expect(countWorld().bodies).toBe(0);
     engAPI.reattachRigidBody(body.id, { bodyType: RigidBodyTypeAPI.Dynamic, enabled: true });
     expect(countWorld().bodies).toBe(1);
@@ -591,5 +654,377 @@ describe('EngineRapier snapshots (p500)', () => {
     engAPI.restoreSnapshot(snapshot);
     stepTimes(120);
     expect(readPoses()).toEqual(first);
+  });
+});
+
+describe('EngineRapier multibody joints (p250)', () => {
+  beforeEach(() => {
+    engAPI.deleteWorld();
+    engAPI.createWorld({ x: 0, y: -9.81, z: 0 }, { timestep: 1 / 60 });
+  });
+
+  const rigidTypes = { fixed: 'FIXED', kinematic: 'POS_BASED', dynamic: 'DYNAMIC' } as const;
+
+  /** A body with a small box at (x, 5, 0), far from everything else. */
+  const createBody = (type: keyof typeof rigidTypes, x: number) => {
+    const body = engAPI.createRigidBody({
+      rigidType: rigidTypes[type],
+      translation: { x, y: 5, z: 0 },
+    });
+    engAPI.createCollider({ type: 'CUBOID', hx: 0.2, hy: 0.2, hz: 0.2 }, body.id);
+    return body;
+  };
+
+  /** A hinge holding the child 1 m to the parent's +x. */
+  const hinge = (body1Id: number, body2Id: number): MultibodyJointParams => ({
+    type: 'REVOLUTE',
+    body1Id,
+    body2Id,
+    anchor1: { x: 0.5, y: 0, z: 0 },
+    anchor2: { x: -0.5, y: 0, z: 0 },
+    axis: { x: 0, y: 0, z: 1 },
+  });
+
+  /** `count` dynamic links hanging from `root` along +x, each joined to the one before. */
+  const createChain = (root: { id: number }, count: number, x0 = 0) => {
+    const links = [];
+    const jointIds = [];
+    let parentId = root.id;
+    for (let i = 0; i < count; i++) {
+      const link = createBody('dynamic', x0 + i + 1);
+      jointIds.push(engAPI.createMultibodyJoint(hinge(parentId, link.id)).id);
+      links.push(link);
+      parentId = link.id;
+    }
+    return { links, jointIds };
+  };
+
+  /** Steps the world, which would throw (and die) on a Rapier panic. */
+  const stepTimes = (n: number) => {
+    for (let i = 0; i < n; i++) engAPI.step();
+  };
+
+  it('hangs a chain from a fixed root, and answers for each joint', () => {
+    const root = createBody('fixed', 0);
+    const { links, jointIds } = createChain(root, 3);
+    stepTimes(60);
+    expect(links[2].pos.y).toBeLessThan(4);
+
+    const joint = engAPI.getMultibodyJointAPIWithId(jointIds[1])!;
+    expect(joint.body1IdSync()).toBe(links[0].id);
+    expect(joint.body2IdSync()).toBe(links[1].id);
+    expect(joint.isValidSync()).toBe(true);
+    expect(joint.contactsEnabledSync()).toBe(true);
+    joint.setContactsEnabled(false);
+    expect(joint.contactsEnabledSync()).toBe(false);
+    // Its own ids: not an impulse joint's
+    expect(engAPI.getJointAPIWithId(jointIds[1])).toBeUndefined();
+  });
+
+  it('creates each of the four types, which step', () => {
+    const anchors = { anchor1: { x: 0.5, y: 0, z: 0 }, anchor2: { x: -0.5, y: 0, z: 0 } };
+    const axis = { x: 0, y: 0, z: 1 };
+    const identity = { x: 0, y: 0, z: 0, w: 1 };
+    const root = createBody('fixed', 0);
+    let parentId = root.id;
+    const params = [
+      { type: 'FIXED', ...anchors, frame1: identity, frame2: identity },
+      { type: 'REVOLUTE', ...anchors, axis },
+      { type: 'PRISMATIC', ...anchors, axis },
+      { type: 'SPHERICAL', ...anchors },
+    ] as const;
+    params.forEach((p, i) => {
+      const link = createBody('dynamic', i + 1);
+      engAPI.createMultibodyJoint({ ...p, body1Id: parentId, body2Id: link.id });
+      parentId = link.id;
+    });
+    stepTimes(30);
+    expect(Number.isFinite(engAPI.getRigidBodyAPIWithId(parentId)!.pos.y)).toBe(true);
+  });
+
+  it('refuses what would make Rapier panic, before calling it, and the world steps on', () => {
+    const create = (params: MultibodyJointParams) => () => engAPI.createMultibodyJoint(params);
+    const fixed = createBody('fixed', 0);
+    const kinematic = createBody('kinematic', 10);
+    const free = createBody('dynamic', 20);
+    const { links } = createChain(free, 2, 20);
+
+    expect(create(hinge(free.id, free.id))).toThrow('a body can not be joined to itself');
+    // A fixed or kinematic child: two fixed bodies, a dynamic parent of a fixed root
+    expect(create(hinge(free.id, fixed.id))).toThrow(
+      "body2 is Fixed: a multibody's child must be Dynamic"
+    );
+    expect(create(hinge(fixed.id, kinematic.id))).toThrow(
+      "body2 is KinematicPositionBased: a multibody's child must be Dynamic"
+    );
+    expect(create(hinge(fixed.id, links[1].id))).toThrow(
+      `body2 has a parent already (body ${links[0].id}`
+    );
+    expect(create(hinge(links[1].id, free.id))).toThrow('the joint would close a loop');
+    expect(
+      create({ ...hinge(fixed.id, free.id), type: 'ROPE' } as unknown as MultibodyJointParams)
+    ).toThrow("ROPE isn't a multibody joint type");
+    expect(create(hinge(fixed.id, 9999))).toThrow('Could not find body2 (id: 9999)');
+    // A link made fixed behind the engine's back (raw Rapier), put back before a step
+    const rawLink = backend.world.getRigidBody(rigidBodies.get(links[0].id)!);
+    rawLink.setBodyType(RAPIER.RigidBodyType.Fixed, false);
+    const loose = createBody('dynamic', 30);
+    expect(create(hinge(links[0].id, loose.id))).toThrow(
+      'body1 is Fixed and has a parent: only a multibody'
+    );
+    rawLink.setBodyType(RAPIER.RigidBodyType.Dynamic, false);
+
+    stepTimes(30);
+    expect(links[1].pos.y).toBeLessThan(5);
+  });
+
+  it("lets a body change type only while it's a root", () => {
+    const root = createBody('dynamic', 0);
+    const { links } = createChain(root, 2);
+    for (const type of [RigidBodyTypeAPI.Fixed, RigidBodyTypeAPI.KinematicPositionBased]) {
+      expect(() => links[1].setBodyType(type, true)).toThrow(
+        `Rigid body ${links[1].id} can't be made`
+      );
+    }
+    links[1].setBodyType(RigidBodyTypeAPI.Dynamic, true);
+    root.setBodyType(RigidBodyTypeAPI.Fixed, true);
+    stepTimes(30);
+    root.setBodyType(RigidBodyTypeAPI.KinematicPositionBased, true);
+    stepTimes(30);
+    root.setBodyType(RigidBodyTypeAPI.Dynamic, true);
+    stepTimes(30);
+    expect(links[1].bodyTypeSync()).toBe(RigidBodyTypeAPI.Dynamic);
+  });
+
+  it('deletes a body in the middle with its joints: its child is a root, joined again', () => {
+    const root = createBody('fixed', 0);
+    const { links, jointIds } = createChain(root, 3);
+    stepTimes(10);
+    const { multibodyJointIds, jointIds: impulseIds } = engAPI.deleteRigidBody(links[1].id);
+    expect([...multibodyJointIds].sort()).toEqual([jointIds[1], jointIds[2]].sort());
+    expect(impulseIds).toEqual([]);
+    expect(engAPI.getMultibodyJointAPIWithId(jointIds[1])).toBeUndefined();
+    expect(engAPI.getMultibodyJointAPIWithId(jointIds[2])).toBeUndefined();
+    expect(multibodyParents.has(links[2].id)).toBe(false);
+    stepTimes(30);
+    engAPI.createMultibodyJoint(hinge(links[0].id, links[2].id));
+    stepTimes(30);
+    expect(multibodyParents.get(links[2].id)?.parentId).toBe(links[0].id);
+  });
+
+  it('deletes a joint: its child is a root with its subtree, and the old joint stays deleted', () => {
+    const root = createBody('fixed', 0);
+    const { links, jointIds } = createChain(root, 3);
+    const old = engAPI.getMultibodyJointAPIWithId(jointIds[1])!;
+    expect(engAPI.deleteMultibodyJoint(jointIds[1])).toEqual({ id: jointIds[1] });
+    expect(multibodyParents.has(links[1].id)).toBe(false);
+    expect(multibodyParents.get(links[2].id)?.parentId).toBe(links[1].id);
+    stepTimes(30);
+    // A joint made again on the same child gets Rapier's same handle: the old one stays deleted
+    const again = engAPI.createMultibodyJoint(hinge(links[0].id, links[1].id));
+    expect(again.id).not.toBe(old.id);
+    expect(again.isValidSync()).toBe(true);
+    expect(old.isValidSync()).toBe(false);
+    expect(() => old.contactsEnabledSync()).toThrow(`Multibody joint ${old.id} has been deleted.`);
+    // Every joint removed, the last one first
+    for (const id of [jointIds[2], again.id, jointIds[0]]) engAPI.deleteMultibodyJoint(id);
+    expect(multibodyParents.size).toBe(0);
+    stepTimes(30);
+    // An unknown id is a quiet no-op (a debug-env warning)
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(engAPI.deleteMultibodyJoint(old.id)).toEqual({ id: old.id });
+    expect(warn).toHaveBeenCalledOnce();
+    warn.mockRestore();
+  });
+
+  it('puts the chain of a root joined as a child under its new parent', () => {
+    const root1 = createBody('fixed', 0);
+    const { links } = createChain(root1, 2);
+    const root2 = createBody('dynamic', 3);
+    const { links: links2 } = createChain(root2, 2, 3);
+    engAPI.createMultibodyJoint(hinge(links[1].id, root2.id));
+    stepTimes(30);
+    expect(links2[1].pos.y).toBeLessThan(5);
+    // One multibody now: joining its last link back to the first root is a loop
+    expect(() => engAPI.createMultibodyJoint(hinge(links2[1].id, links[0].id))).toThrow(
+      'has a parent already'
+    );
+    expect(() => engAPI.createMultibodyJoint(hinge(links2[1].id, root2.id))).toThrow(
+      'has a parent already'
+    );
+  });
+
+  it('joins disabled bodies, and a kinematic root', () => {
+    const fixed = createBody('fixed', 0);
+    const disabled = createBody('dynamic', 1);
+    disabled.setEnabled(false);
+    const kinematic = createBody('kinematic', 10);
+    stepTimes(3);
+    engAPI.createMultibodyJoint(hinge(fixed.id, disabled.id));
+    createChain(kinematic, 2, 10);
+    stepTimes(30);
+    // Held where it was (Rapier stores f32)
+    expect(disabled.pos.x).toBeCloseTo(1, 6);
+    expect(disabled.pos.y).toBe(5);
+  });
+
+  it("moves a chain with its root's setTranslation, and warns once of a link's", () => {
+    const root = createBody('fixed', 0);
+    const { links } = createChain(root, 2);
+    stepTimes(10);
+    const before = links[1].pos.x;
+    root.setTranslation({ x: 10, y: 5, z: 0 }, true);
+    stepTimes(1);
+    expect(links[1].pos.x - before).toBeCloseTo(10, 0);
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    links[1].setTranslation({ x: 0, y: 0, z: 0 }, true);
+    links[1].setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+    expect(warn).toHaveBeenCalledOnce();
+    expect(String(warn.mock.calls[0][0])).toContain('is ignored by Rapier on a multibody link');
+    warn.mockRestore();
+  });
+
+  it("warns once of a kinematic target on a multibody's root, which Rapier ignores", () => {
+    const root = createBody('kinematic', 0);
+    createChain(root, 1);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    root.setNextKinematicTranslation({ x: 1, y: 5, z: 0 });
+    root.setNextKinematicRotation({ x: 0, y: 0, z: 0, w: 1 });
+    stepTimes(1);
+    expect(warn).toHaveBeenCalledOnce();
+    expect(String(warn.mock.calls[0][0])).toContain("is ignored by Rapier on a multibody's root");
+    warn.mockRestore();
+  });
+
+  it('refuses to detach a body of a multibody', () => {
+    const root = createBody('dynamic', 0);
+    const { links } = createChain(root, 1);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(engAPI.detachRigidBody(root.id)).toBeUndefined();
+    expect(engAPI.detachRigidBody(links[0].id)).toBeUndefined();
+    warn.mockRestore();
+  });
+
+  /** The restored world's multibody joints. */
+  const countMultibodyJoints = () => backend.world.multibodyJoints.len();
+
+  it('rebinds a chain through a snapshot restore (D7), its tree and guards as before', () => {
+    const root = createBody('fixed', 0);
+    const { links, jointIds } = createChain(root, 2);
+    const joint = engAPI.getMultibodyJointAPIWithId(jointIds[1])!;
+    const snapshot = engAPI.takeSnapshot()!;
+    stepTimes(30);
+    const afterSteps = links[1].pos.y;
+    joint.setContactsEnabled(false);
+    const result = engAPI.restoreSnapshot(snapshot);
+    expect(result.reapedMultibodyJointIds).toEqual([]);
+    expect(result.orphanCounts.multibodyJoints).toBe(0);
+    expect(engAPI.getMultibodyJointAPIWithId(jointIds[1])).toBe(joint);
+    expect(joint.isValidSync()).toBe(true);
+    // The restored world's joint: the snapshot's contacts setting
+    expect(joint.contactsEnabledSync()).toBe(true);
+    expect(multibodyParents.get(links[1].id)).toEqual({
+      parentId: links[0].id,
+      jointId: jointIds[1],
+    });
+    expect(() => engAPI.createMultibodyJoint(hinge(links[1].id, root.id))).toThrow(
+      'body2 is Fixed'
+    );
+    expect(() => engAPI.createMultibodyJoint(hinge(links[1].id, links[0].id))).toThrow(
+      'body2 has a parent already'
+    );
+    stepTimes(30);
+    expect(links[1].pos.y).toBe(afterSteps);
+  });
+
+  it('reaps the multibody joints made after the snapshot, and drops them from the tree', () => {
+    const root = createBody('fixed', 0);
+    const { links, jointIds } = createChain(root, 1);
+    const otherRoot = createBody('fixed', 10);
+    const loose = createBody('dynamic', 11);
+    const snapshot = engAPI.takeSnapshot()!;
+    const late = createBody('dynamic', 2);
+    const lateJoint = engAPI.createMultibodyJoint(hinge(links[0].id, late.id));
+    const between = engAPI.createMultibodyJoint(hinge(otherRoot.id, loose.id));
+    const result = engAPI.restoreSnapshot(snapshot);
+    expect(result.reapedRigidBodyIds).toEqual([late.id]);
+    expect([...result.reapedMultibodyJointIds].sort()).toEqual([lateJoint.id, between.id].sort());
+    expect(result.orphanCounts.multibodyJoints).toBe(0);
+    expect(engAPI.getMultibodyJointAPIWithId(between.id)).toBeUndefined();
+    expect(lateJoint.isValidSync()).toBe(false);
+    expect(countMultibodyJoints()).toBe(1);
+    expect([...multibodyParents.keys()]).toEqual([links[0].id]);
+    expect(multibodyParents.get(links[0].id)?.jointId).toBe(jointIds[0]);
+    // The reaped joint's child is free again
+    engAPI.createMultibodyJoint(hinge(otherRoot.id, loose.id));
+    stepTimes(10);
+  });
+
+  it('always takes out the multibody joints deleted since, even with KEEP', () => {
+    const root = createBody('fixed', 0);
+    const { links } = createChain(root, 2);
+    const snapshot = engAPI.takeSnapshot()!;
+    // Its two joints go with it, and the last link is a root of its own
+    engAPI.deleteRigidBody(links[0].id);
+    const result = engAPI.restoreSnapshot(snapshot, { orphanPolicy: 'KEEP' });
+    expect(result.orphanCounts).toEqual({
+      rigidBodies: 1,
+      colliders: 1,
+      joints: 0,
+      multibodyJoints: 2,
+    });
+    expect(backend.world.bodies.len()).toBe(3);
+    expect(countMultibodyJoints()).toBe(0);
+    expect(multibodyParents.size).toBe(0);
+    // A kept joint would make this Rapier's second parent: a panic at the insert
+    engAPI.createMultibodyJoint(hinge(root.id, links[1].id));
+    stepTimes(10);
+
+    const deleted = engAPI.restoreSnapshot(snapshot);
+    expect(deleted.orphanCounts.multibodyJoints).toBe(2);
+    expect(backend.world.bodies.len()).toBe(2);
+    expect(countMultibodyJoints()).toBe(0);
+    stepTimes(10);
+  });
+
+  it("tells a joint made again on the same child by its parent (the handle is the child's)", () => {
+    const rootA = createBody('fixed', 0);
+    const rootC = createBody('fixed', 10);
+    const child = createBody('dynamic', 1);
+    const first = engAPI.createMultibodyJoint(hinge(rootA.id, child.id));
+    const snapshot = engAPI.takeSnapshot()!;
+
+    // Another parent: the snapshot's joint is an orphan, the new one reaped
+    engAPI.deleteMultibodyJoint(first.id);
+    const moved = engAPI.createMultibodyJoint(hinge(rootC.id, child.id));
+    const result = engAPI.restoreSnapshot(snapshot);
+    expect(result.reapedMultibodyJointIds).toEqual([moved.id]);
+    expect(result.orphanCounts.multibodyJoints).toBe(1);
+    expect(countMultibodyJoints()).toBe(0);
+    expect(multibodyParents.has(child.id)).toBe(false);
+    expect(moved.isValidSync()).toBe(false);
+    stepTimes(10);
+
+    // The same parent: the same link, kept as the snapshot's joint
+    engAPI.restoreSnapshot(snapshot);
+    const again = engAPI.createMultibodyJoint(hinge(rootA.id, child.id));
+    const sameParent = engAPI.restoreSnapshot(snapshot);
+    expect(sameParent.reapedMultibodyJointIds).toEqual([]);
+    expect(sameParent.orphanCounts.multibodyJoints).toBe(0);
+    expect(again.isValidSync()).toBe(true);
+    expect(multibodyParents.get(child.id)).toEqual({ parentId: rootA.id, jointId: again.id });
+    stepTimes(10);
+  });
+
+  it('forgets every multibody joint with the world, and its ids go on', () => {
+    const root = createBody('fixed', 0);
+    const { jointIds } = createChain(root, 2);
+    engAPI.deleteWorld();
+    engAPI.createWorld({ x: 0, y: -9.81, z: 0 }, { timestep: 1 / 60 });
+    expect(engAPI.getMultibodyJointAPIWithId(jointIds[0])).toBeUndefined();
+    expect(multibodyParents.size).toBe(0);
+    const { jointIds: newIds } = createChain(createBody('fixed', 0), 1);
+    expect(newIds[0]).toBeGreaterThan(jointIds[1]);
   });
 });

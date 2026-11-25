@@ -9,7 +9,14 @@ import type {
   OutOfBoundsSource,
   WorldBoundsBox,
 } from '../../types/PhysicsWorldBoundsTypes';
-import { backend, detachedBodies, handleToRigidBodyId, rigidBodies } from './RapierState';
+import { getMultibodyLinks, isInMultibody } from './RapierMultibodyJoints';
+import {
+  backend,
+  detachedBodies,
+  getRigidBody,
+  handleToRigidBodyId,
+  rigidBodies,
+} from './RapierState';
 
 /** [minX, minY, minZ, maxX, maxY, maxZ], open sides ±Infinity; null while there are no bounds. */
 let globalBounds: Float64Array | null = null;
@@ -62,7 +69,7 @@ const resolveBounds = (id: number) => {
   return effective.box !== null;
 };
 
-/** Whether the body has a joint: Rapier mis-solves the joints of a disabled body
+/** Whether the body has an impulse joint: Rapier mis-solves the joints of a disabled body
  * (docs/issues/i250_rapier-joint-on-disabled-bodies-panics.md), so such a body is made FIXED. */
 const isJointed = (rb: Rapier.RigidBody) => {
   let jointed = false;
@@ -72,8 +79,37 @@ const isJointed = (rb: Rapier.RigidBody) => {
   return jointed;
 };
 
-/** Takes the body out of the simulation and records the exit. */
+/** Takes a multibody link's multibody out with it (p250 D6): Rapier panics on a fixed link,
+ * ignores a link disabled alone, and panics with one branch disabled when an impulse joint joins
+ * it to another (getMultibodyLinks), so every dynamic link is disabled and recorded, the ones taken
+ * along with `takenWith`. */
+const exitMultibody = (id: number, source: OutOfBoundsSource) => {
+  const { stepCount: step } = backend;
+  const links = getMultibodyLinks(id);
+  for (let i = 0; i < links.length; i++) {
+    const rb = getRigidBody(links[i]);
+    if (!rb?.isEnabled()) continue;
+    const t = rb.translation();
+    rb.setEnabled(false);
+    const record: OutOfBoundsRecord = {
+      bodyId: links[i],
+      step,
+      x: t.x,
+      y: t.y,
+      z: t.z,
+      source,
+      frozen: false,
+    };
+    if (i > 0) record.takenWith = id;
+    pendingRecords.push(record);
+  }
+};
+
+/** Takes the body out of the simulation and records the exit. A body a multibody exit took out
+ * earlier in the same check is skipped. */
 const exitBody = (rb: Rapier.RigidBody, id: number, source: OutOfBoundsSource) => {
+  if (!rb.isEnabled()) return;
+  if (isInMultibody(id)) return exitMultibody(id, source);
   const t = rb.translation();
   const frozen = isJointed(rb);
   if (frozen) rb.setBodyType(backend.RAPIER.RigidBodyType.Fixed, false);
@@ -164,7 +200,8 @@ export const checkQueuedWorldBounds = () => {
 
 /**
  * After a step (step(), RapierWorld.ts): takes every awake, enabled dynamic body outside its box
- * out of the simulation (FIXED when it has a joint, else disabled) and records it. One check of a
+ * out of the simulation (FIXED when it has an impulse joint, else disabled; a multibody link with
+ * its multibody, exitMultibody) and records it. One check of a
  * flag and a size without bounds. A sleeping body can't have moved, and an exited one isn't
  * checked again.
  * @internal

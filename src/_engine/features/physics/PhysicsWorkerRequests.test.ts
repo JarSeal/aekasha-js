@@ -123,6 +123,10 @@ import type { FeatureContext } from '../../kernel/init/Features';
 import { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
 import type { RigidBodyAPI } from './types/PhysicsBodyTypes';
 import { createJoint } from './PhysicsJoints';
+import { createMultibodyJoint, deleteMultibodyJoint } from './PhysicsMultibodyJoints';
+import { getMultibodyJoint } from './PhysicsRegistry';
+import { MultibodyJointProxyAPI } from './proxies/MultibodyJointProxyAPI';
+import type { MultibodyJointParams } from './types/PhysicsJointTypes';
 import { facade, getPhysicsState, getPhysicsWorld } from './PhysicsState';
 import {
   createPhysicsWorld,
@@ -403,6 +407,72 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
     await deleteRigidBody(body1.id);
     expect([body1, collider, joint].map((api) => api.isBeingDeleted)).toEqual([true, true, true]);
     expect(body2.isBeingDeleted).toBe(false);
+  });
+
+  it('p250: a multibody joint is made, asked, refused and deleted through the worker', async () => {
+    const hinge = (body1Id: number, body2Id: number): MultibodyJointParams => ({
+      type: 'REVOLUTE',
+      body1Id,
+      body2Id,
+      anchor1: { x: 0.5, y: 0, z: 0 },
+      anchor2: { x: -0.5, y: 0, z: 0 },
+      axis: { x: 0, y: 0, z: 1 },
+    });
+    const root = await createRigidBody({ rigidType: 'FIXED', translation: { x: 300, y: 0, z: 0 } });
+    const [a, b, c] = await createRigidBodies(
+      [301, 302, 303].map((x) => ({ rigidType: 'DYNAMIC', translation: { x, y: 0, z: 0 } }))
+    );
+    // The child counts as linked from the request on: its type check doesn't wait for the reply
+    const creating = createMultibodyJoint(hinge(root.id, a.id));
+    expect(() => a.setBodyType(RigidBodyTypeAPI.Fixed, true)).toThrow(
+      "it's a multibody link with a parent"
+    );
+    expect(a.bodyTypeSync()).toBe(RigidBodyTypeAPI.Dynamic);
+    const ra = await creating;
+    expect(ra).toBeInstanceOf(MultibodyJointProxyAPI);
+    expect(getMultibodyJoint(ra.id)).toBe(ra);
+    expect(getPhysicsWorld().getMultibodyJointSync(ra.id)).toBe(ra);
+
+    // A FIXED one's frames cross as plain objects
+    const rotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 1);
+    const ab = await createMultibodyJoint({
+      type: 'FIXED',
+      body1Id: a.id,
+      body2Id: b.id,
+      anchor1: { x: 0.5, y: 0, z: 0 },
+      frame1: rotation,
+      anchor2: { x: -0.5, y: 0, z: 0 },
+      frame2: new THREE.Quaternion(),
+    });
+    const sent = lastSent(PhysicsProtocolType.CREATE_MULTIBODY_JOINT)?.params as { frame1: object };
+    expect(sent.frame1).toEqual(plain(rotation));
+
+    // Its queries and setters
+    expect(await ab.isValid()).toBe(true);
+    expect(() => ab.isValidSync()).toThrow('MultibodyJointAPI.isValidSync()');
+    expect(ab.body2IdSync()).toBe(b.id);
+    expect(await ab.contactsEnabled()).toBe(true);
+    ab.setContactsEnabled(false);
+    expect(await ab.contactsEnabled()).toBe(false);
+    ab.setUserData({ name: 'arm' });
+    expect(await ab.getUserData()).toEqual({ name: 'arm' });
+
+    // The worker's refusal rejects
+    expect(await settlesWithin(createMultibodyJoint(hinge(b.id, a.id)), 300)).toMatch(
+      /^rejected: .*body2 has a parent already/
+    );
+
+    // A body's delete takes its joints; a joint's delete resolves with its id
+    const bc = await createMultibodyJoint(hinge(b.id, c.id));
+    await deleteRigidBody(a.id);
+    expect([ra, ab].map((j) => j.isBeingDeleted)).toEqual([true, true]);
+    expect(getMultibodyJoint(ab.id)).toBeUndefined();
+    expect(bc.isBeingDeleted).toBe(false);
+    expect(await deleteMultibodyJoint(bc.id)).toBe(bc.id);
+    expect(bc.isBeingDeleted).toBe(true);
+    // b is a root now: it can change type
+    b.setBodyType(RigidBodyTypeAPI.Fixed, true);
+    expect(b.bodyTypeSync()).toBe(RigidBodyTypeAPI.Fixed);
   });
 
   it('A7: a sub-step capture is made on its first command only', () => {
@@ -713,6 +783,39 @@ describe('physics worker requests (WORKER_THREAD, in-process worker)', () => {
       self.crossOriginIsolated = false;
       await resetPhysicsWorld();
     }
+  });
+
+  it('p250 D7: a restore through the worker rebinds the multibody joints, forgets the ones made since and takes out the ones deleted since, with KEEP too', async () => {
+    await resetPhysicsWorld();
+    const hinge = (body1Id: number, body2Id: number): MultibodyJointParams => ({
+      type: 'REVOLUTE',
+      body1Id,
+      body2Id,
+      anchor1: { x: 0.5, y: 0, z: 0 },
+      anchor2: { x: -0.5, y: 0, z: 0 },
+      axis: { x: 0, y: 0, z: 1 },
+    });
+    const root = await createRigidBody({ rigidType: 'FIXED', translation: { x: 300, y: 0, z: 0 } });
+    const [a, b, c] = await createRigidBodies(
+      [301, 302, 303].map((x) => ({ rigidType: 'DYNAMIC', translation: { x, y: 0, z: 0 } }))
+    );
+    const ab = await createMultibodyJoint(hinge(root.id, a.id));
+    const bc = await createMultibodyJoint(hinge(a.id, b.id));
+    const snapshot = (await takePhysicsSnapshot())!;
+    await deleteMultibodyJoint(bc.id);
+    const late = await createMultibodyJoint(hinge(b.id, c.id));
+
+    const result = await restorePhysicsSnapshot(snapshot, { orphanPolicy: 'KEEP' });
+    expect(result.reapedMultibodyJointIds).toEqual([late.id]);
+    expect(result.orphanCounts.multibodyJoints).toBe(1);
+    expect(late.isBeingDeleted).toBe(true);
+    expect(getMultibodyJoint(late.id)).toBeUndefined();
+    expect(getMultibodyJoint(ab.id)).toBe(ab);
+    expect(await ab.isValid()).toBe(true);
+    // The deleted joint stayed out: the worker's tree has b free for a parent again
+    await createMultibodyJoint(hinge(a.id, b.id));
+    await stepWorker(1);
+    expect(getResolverStats().pendingRequests).toBe(0);
   });
 
   it('p500: overlapping restores apply in order, and stepping waits for the last', async () => {

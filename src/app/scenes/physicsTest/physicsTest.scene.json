@@ -3,7 +3,7 @@
   "id": "physicsTest",
   "sceneFile": "./scenes/physicsTest/physicsTest.ts",
   "name": "Physics API test",
-  "description": "The Physics API's test scene: a static ground box, a falling ball and box over a sensor that toasts them, one worked example per impulse joint type, and two shape casts against the ground.",
+  "description": "The Physics API's test scene: a static ground box, a falling ball and box over a sensor that toasts them, one worked example per impulse joint type, a REVOLUTE chain on impulse and on multibody joints side by side, and two shape casts against the ground.",
   "cameras": ["physicsTestCamera"],
   "lights": ["physicsTestAmbient", "physicsTestSun"]
 }

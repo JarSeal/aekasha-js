@@ -32,6 +32,7 @@ import {
 } from '../PhysicsStepStatsBuffer';
 import { physicsSwitchColl } from './PhysicsSwitchColl';
 import { physicsSwitchJoint } from './PhysicsSwitchJoint';
+import { physicsSwitchMultibodyJoint } from './PhysicsSwitchMultibodyJoint';
 import { physicsSwitchRigid, toPlainPose } from './PhysicsSwitchRigid';
 import { physicsSwitchWorld } from './PhysicsSwitchWorld';
 import { createWorkerScopeTransport } from '../transport/WorkerScopeTransport';
@@ -114,6 +115,9 @@ const handleMessage = async (data: PhysicsUpProtocol) => {
         case 'JOINT':
           // JOINT
           return await physicsSwitchJoint(data, physicsWorldAPI, engAPI, sendMessage);
+        case 'MULTIBODY_JOINT':
+          // MULTIBODY JOINT (p250)
+          return physicsSwitchMultibodyJoint(data, engAPI, sendMessage);
         default:
           sendMessage(
             {
@@ -514,6 +518,9 @@ const getSubType = (type: PhysicsProtocolType) => {
   }
   if (numberOfType >= 800 && numberOfType < 1000) {
     return 'JOINT';
+  }
+  if (numberOfType >= 1000 && numberOfType < 1200) {
+    return 'MULTIBODY_JOINT';
   }
   return null;
 };

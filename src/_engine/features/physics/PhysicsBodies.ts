@@ -16,6 +16,7 @@ import {
   checkDeletedIds,
   forgetCollider,
   forgetJoint,
+  forgetMultibodyJoint,
   forgetRigidBody,
   rigidBodies,
 } from './PhysicsRegistry';
@@ -106,18 +107,22 @@ const registerBodyProxy = (
   return rbAPI;
 };
 
-/** What a body delete took along: forgets its colliders and the joints attached to it. */
-const forgetBodyParts = (colliderIds: number[] = [], jointIds: number[] = []) => {
+/** The parts a body delete took along, in its reply (the backend's or the worker's). */
+type BodyParts = { colliderIds?: number[]; jointIds?: number[]; multibodyJointIds?: number[] };
+
+/** What a body delete took along: forgets its colliders and the joints (both kinds) attached to
+ * it. */
+const forgetBodyParts = (res: BodyParts | undefined) => {
+  const { colliderIds = [], jointIds = [], multibodyJointIds = [] } = res ?? {};
   for (let i = 0; i < colliderIds.length; i++) forgetCollider(colliderIds[i]);
   for (let i = 0; i < jointIds.length; i++) forgetJoint(jointIds[i]);
+  for (let i = 0; i < multibodyJointIds.length; i++) forgetMultibodyJoint(multibodyJointIds[i]);
 };
 
 /** A body delete's reply (the backend's or the worker's). */
-type BodyDeleteResult = { id?: number; colliderIds?: number[]; jointIds?: number[] } | undefined;
+type BodyDeleteResult = ({ id?: number } & BodyParts) | undefined;
 /** A delete-many's reply (the backend's or the worker's). */
-type BodiesDeleteResult =
-  | { ids?: number[]; colliderIds?: number[]; jointIds?: number[] }
-  | undefined;
+type BodiesDeleteResult = ({ ids?: number[] } & BodyParts) | undefined;
 
 /**
  * The transform buffer's capacity (`WORKER_THREAD` mode, p352): slots taken by live non-fixed
@@ -200,15 +205,16 @@ export const createRigidBodiesSync = (params: RigidBodyParams[]): RigidBodyAPI[]
   return rbAPIs;
 };
 
-/** A body delete's reply checked (its id), and its colliders and joints forgotten. */
+/** A body delete's reply checked (its id), and its colliders and joints (both kinds) forgotten. */
 const finishBodyDelete = (id: number, res: BodyDeleteResult) => {
   checkDeletedId('a rigid body', id, res?.id);
-  forgetBodyParts(res?.colliderIds, res?.jointIds);
+  forgetBodyParts(res);
   return id;
 };
 
 /**
- * Deletes a rigid body, with its colliders and the joints attached to it. Resolves with its id,
+ * Deletes a rigid body, with its colliders and the joints (impulse and multibody) attached to it.
+ * Resolves with its id,
  * or undefined (a quiet no-op) without a world or a body with that id, eg. a late delete of a
  * body whose world has already been replaced (a scene load).
  */
@@ -238,7 +244,7 @@ export const deleteRigidBodySync = (id: number) => {
 /** A delete-many's reply checked, and the bodies' colliders and joints forgotten. */
 const finishBodiesDelete = (ids: number[], res: BodiesDeleteResult) => {
   const deletedIds = checkDeletedIds('rigid bodies', ids, res?.ids);
-  forgetBodyParts(res?.colliderIds, res?.jointIds);
+  forgetBodyParts(res);
   return deletedIds;
 };
 

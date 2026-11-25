@@ -5,9 +5,10 @@ import { lerror } from '../../../utils/Logger';
 import { createRigidBody, deleteRigidBody } from '../PhysicsBodies';
 import { createCollider, deleteCollider } from '../PhysicsColliders';
 import { createJoint, deleteJoint } from '../PhysicsJoints';
+import { createMultibodyJoint, deleteMultibodyJoint } from '../PhysicsMultibodyJoints';
 import { messageWorker, messageWorkerAsync, toPlainRot } from '../PhysicsMessaging';
 import { getPhysicsQueryObserver } from '../PhysicsQueryStats';
-import { colliders, joints, rigidBodies } from '../PhysicsRegistry';
+import { colliders, joints, multibodyJoints, rigidBodies } from '../PhysicsRegistry';
 import { facade } from '../PhysicsState';
 import { getCollOrRigidId, isF32Changed } from '../PhysicsUtils';
 import { restorePhysicsSnapshot, takePhysicsSnapshot } from '../PhysicsWorld';
@@ -35,7 +36,12 @@ import type {
   ShapeParams,
 } from '../types/PhysicsColliderTypes';
 import type { PhysRotation, PhysVector } from '../types/PhysicsCommonTypes';
-import type { JointAPI, JointParams } from '../types/PhysicsJointTypes';
+import type {
+  JointAPI,
+  JointParams,
+  MultibodyJointAPI,
+  MultibodyJointParams,
+} from '../types/PhysicsJointTypes';
 import type {
   PhysRay,
   QueryFilterFlags,
@@ -270,6 +276,16 @@ export class WorldProxyAPI implements WorldAPI {
     );
   }
 
+  async createMultibodyJoint(params: MultibodyJointParams): Promise<MultibodyJointAPI> {
+    return await createMultibodyJoint(params);
+  }
+
+  createMultibodyJointSync(): MultibodyJointAPI {
+    throw new Error(
+      'Synchronous creation is not supported in Worker thread mode. Use createMultibodyJoint(params).'
+    );
+  }
+
   // --- Retrieval ---
   /** Returns the main thread rigid body registry rigidBodyAPI promise.
    * It is suggested to use getRigidBodySync(id) method instead of this
@@ -311,6 +327,16 @@ export class WorldProxyAPI implements WorldAPI {
     return joints.get(id);
   }
 
+  /** Returns the main thread multibody joint registry's API object as promise (see getJoint). */
+  async getMultibodyJoint(id: number): Promise<MultibodyJointAPI | undefined> {
+    return multibodyJoints.get(id);
+  }
+
+  /** Returns the main thread multibody joint registry's API object. */
+  getMultibodyJointSync(id: number): MultibodyJointAPI | undefined {
+    return multibodyJoints.get(id);
+  }
+
   // --- Removal ---
   // Fire and forget (the WorldAPI's removes return nothing), so a failed delete is logged here
   removeRigidBody(bodyOrId: RigidBodyAPI | number): void {
@@ -326,6 +352,11 @@ export class WorldProxyAPI implements WorldAPI {
   removeJoint(jointOrId: JointAPI | number, wakeUp: boolean): void {
     const id = typeof jointOrId === 'number' ? jointOrId : jointOrId.id;
     deleteJoint(id, wakeUp).catch(logFailedRemove);
+  }
+
+  removeMultibodyJoint(jointOrId: MultibodyJointAPI | number, wakeUp: boolean): void {
+    const id = typeof jointOrId === 'number' ? jointOrId : jointOrId.id;
+    deleteMultibodyJoint(id, wakeUp).catch(logFailedRemove);
   }
 
   // --- Queries (Raycasting) ---

@@ -47,6 +47,11 @@ export enum RigidBodyTypeAPI {
    * modified by the user and is independent from any contact or joint it is involved in.
    */
   KinematicVelocityBased = 3,
+  /**
+   * A `RigidBodyType::SoftFrame` body is the frame of one of Rapier's soft bodies. The Physics API
+   * makes no soft bodies, so no body of its has this type.
+   */
+  SoftFrame = 4,
 }
 
 /** A rigid body's translation + rotation as plain data (e.g. in a worker reply). */
@@ -316,7 +321,8 @@ export type RigidBodyAPI = {
   /** The body's type: on WORKER_THREAD from the proxy's copy (its creation type, and the
    * `setBodyType`s and REMOVED tier reattaches since). */
   bodyTypeSync(): RigidBodyTypeAPI;
-  /** Changes the body's type, waking it when `wakeUp`. */
+  /** Changes the body's type, waking it when `wakeUp`. Throws for a multibody link with a parent
+   * unless the type is `Dynamic`: only a multibody's root can be fixed or kinematic (p250). */
   setBodyType(type: RigidBodyTypeAPI, wakeUp: boolean): void;
   /** Whether the body is `Fixed`. */
   isFixed(): Promise<boolean>;

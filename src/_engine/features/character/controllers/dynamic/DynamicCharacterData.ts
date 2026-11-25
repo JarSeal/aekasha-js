@@ -87,7 +87,7 @@ export type DynamicCharacterConfig = {
   groundDetectorRadius: number;
   /** Relative speed (m/s) above which landing starts tumbling. */
   tumblingGroundSpeedThreshold: number;
-  /** Relative speed (m/s) above which touching a wall starts tumbling. */
+  /** Relative horizontal speed (m/s) above which touching a wall starts tumbling. */
   tumblingWallSpeedThreshold: number;
   /** Minimum tumbling time (ms) before getting up. */
   tumblingMinTime: number;

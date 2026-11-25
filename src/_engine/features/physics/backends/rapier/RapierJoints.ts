@@ -10,11 +10,11 @@ import { backend, getRigidBody, handleToJointId, jointAPIs, joints } from './Rap
 // The running id (see RapierState.ts' maps)
 let nextJointId = 0;
 
-/** Rapier 0.19.3 panics (`unreachable`, in the next step) on a joint inserted when neither body is
- * an enabled dynamic one and they've been stepped so (two disabled bodies, or a disabled one and
+/** Rapier 0.19.3 panicked (`unreachable`, in the next step) on a joint inserted when neither body
+ * is an enabled dynamic one and they've been stepped so (two disabled bodies, or a disabled one and
  * a fixed one: the DISABLED physics tier's, docs/issues/i250_rapier-joint-on-disabled-bodies-panics.md).
- * A disabled body is enabled for the insert and disabled again: it stays where it was, with its
- * velocities. */
+ * 0.21.0 doesn't; kept until the issue's second symptom is checked on it. A disabled body is
+ * enabled for the insert and disabled again: it stays where it was, with its velocities. */
 const createImpulseJointOnDisabled = (
   jointData: Rapier.JointData,
   body1: Rapier.RigidBody,
@@ -34,6 +34,45 @@ const createImpulseJointOnDisabled = (
 };
 
 /**
+ * The joint's Rapier JointData, for an impulse joint or a multibody one (RapierMultibodyJoints.ts).
+ * @internal
+ */
+export const toJointData = (params: JointParams): Rapier.JointData => {
+  switch (params.type) {
+    case 'FIXED':
+      return backend.RAPIER.JointData.fixed(
+        params.anchor1,
+        params.frame1,
+        params.anchor2,
+        params.frame2
+      );
+    case 'REVOLUTE':
+      return backend.RAPIER.JointData.revolute(params.anchor1, params.anchor2, params.axis);
+    case 'PRISMATIC':
+      return backend.RAPIER.JointData.prismatic(params.anchor1, params.anchor2, params.axis);
+    case 'SPHERICAL':
+      return backend.RAPIER.JointData.spherical(params.anchor1, params.anchor2);
+    case 'ROPE':
+      return backend.RAPIER.JointData.rope(params.length, params.anchor1, params.anchor2);
+    case 'SPRING':
+      return backend.RAPIER.JointData.spring(
+        params.restLength,
+        params.stiffness,
+        params.damping,
+        params.anchor1,
+        params.anchor2
+      );
+    case 'GENERIC':
+      return backend.RAPIER.JointData.generic(
+        params.anchor1,
+        params.anchor2,
+        params.axis,
+        params.axesMask as Rapier.JointAxesMask
+      );
+  }
+};
+
+/**
  * Creates an impulse joint between two live bodies (throws naming a missing one) and returns its
  * API object.
  * @internal
@@ -48,47 +87,7 @@ export const createJoint = (params: JointParams) => {
     `Could not find body2 (id: ${params.body2Id}) when creating a joint.`
   );
 
-  let jointData: Rapier.JointData;
-  switch (params.type) {
-    case 'FIXED':
-      jointData = backend.RAPIER.JointData.fixed(
-        params.anchor1,
-        params.frame1,
-        params.anchor2,
-        params.frame2
-      );
-      break;
-    case 'REVOLUTE':
-      jointData = backend.RAPIER.JointData.revolute(params.anchor1, params.anchor2, params.axis);
-      break;
-    case 'PRISMATIC':
-      jointData = backend.RAPIER.JointData.prismatic(params.anchor1, params.anchor2, params.axis);
-      break;
-    case 'SPHERICAL':
-      jointData = backend.RAPIER.JointData.spherical(params.anchor1, params.anchor2);
-      break;
-    case 'ROPE':
-      jointData = backend.RAPIER.JointData.rope(params.length, params.anchor1, params.anchor2);
-      break;
-    case 'SPRING':
-      jointData = backend.RAPIER.JointData.spring(
-        params.restLength,
-        params.stiffness,
-        params.damping,
-        params.anchor1,
-        params.anchor2
-      );
-      break;
-    case 'GENERIC':
-      jointData = backend.RAPIER.JointData.generic(
-        params.anchor1,
-        params.anchor2,
-        params.axis,
-        params.axesMask as Rapier.JointAxesMask
-      );
-      break;
-  }
-
+  const jointData = toJointData(params);
   const wakeUp = params.wakeUp !== false;
   const joint = createImpulseJointOnDisabled(jointData, body1, body2, wakeUp);
   const id = nextJointId;

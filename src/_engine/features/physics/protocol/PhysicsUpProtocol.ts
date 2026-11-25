@@ -11,7 +11,11 @@ import type {
 } from '../types/PhysicsColliderTypes';
 import type { PhysRotation, PhysVector } from '../types/PhysicsCommonTypes';
 import type { PhysicsState } from '../types/PhysicsConfigTypes';
-import type { JointMotorModel, JointParams } from '../types/PhysicsJointTypes';
+import type {
+  JointMotorModel,
+  JointParams,
+  MultibodyJointParams,
+} from '../types/PhysicsJointTypes';
 import type { PhysRay, QueryFilterFlags } from '../types/PhysicsQueryTypes';
 import type { BodyWorldBounds, WorldBoundsBox } from '../types/PhysicsWorldBoundsTypes';
 import type { PhysicsSnapshot, RestoreSnapshotOpts } from '../types/PhysicsWorldTypes';
@@ -499,6 +503,23 @@ export type PhysicsUpProtocol =
     | {
         type: PhysicsProtocolType.JOINT_SET_USERDATA;
         jointId: number;
+        userData: Record<string, unknown>;
+        addToExisting?: boolean;
+      }
+    // Multibody joint (p250) -----------------------
+    | { type: PhysicsProtocolType.CREATE_MULTIBODY_JOINT; params: MultibodyJointParams }
+    | { type: PhysicsProtocolType.DELETE_MULTIBODY_JOINT; id: number; wakeUp?: boolean }
+    | { type: PhysicsProtocolType.MULTIBODY_JOINT_IS_VALID; multibodyJointId: number }
+    | { type: PhysicsProtocolType.MULTIBODY_JOINT_CONTACTS_ENABLED; multibodyJointId: number }
+    | {
+        type: PhysicsProtocolType.MULTIBODY_JOINT_SET_CONTACTS_ENABLED;
+        multibodyJointId: number;
+        enabled: boolean;
+      }
+    | { type: PhysicsProtocolType.MULTIBODY_JOINT_GET_USERDATA; multibodyJointId: number }
+    | {
+        type: PhysicsProtocolType.MULTIBODY_JOINT_SET_USERDATA;
+        multibodyJointId: number;
         userData: Record<string, unknown>;
         addToExisting?: boolean;
       }

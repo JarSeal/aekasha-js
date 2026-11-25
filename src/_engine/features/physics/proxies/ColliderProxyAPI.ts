@@ -1,6 +1,5 @@
 // The WORKER_THREAD collider: each call a message to the worker.
 
-import type { ShapeType } from '@dimforge/rapier3d-compat';
 import {
   commandWorker,
   messageWorkerAsync,
@@ -15,6 +14,7 @@ import type {
   ColliderAPI,
   HeightFieldData,
   InteractionGroupsAPI,
+  ShapeType,
 } from '../types/PhysicsColliderTypes';
 import type { PhysRotation, PhysVector } from '../types/PhysicsCommonTypes';
 

@@ -14,6 +14,7 @@ import { EngineColliderProxyAPI } from './proxies/EngineColliderProxyAPI';
 import { EngineRigidBodyProxyAPI } from './proxies/EngineRigidBodyProxyAPI';
 import { toRapierBodyType } from './RapierEnums';
 import { cleanupColliderEventRegistrations } from './RapierEvents';
+import { isInMultibody, reapBodyMultibodyJoints } from './RapierMultibodyJoints';
 import { forgetBodyWorldBounds, queueBodyCheck } from './RapierWorldBounds';
 import {
   backend,
@@ -175,13 +176,14 @@ export const createRigidBodies = (paramsArray: RigidBodyParams[]) =>
   paramsArray.map((params) => createRigidBody(params));
 
 /**
- * Deletes a body, live or detached, and with it its colliders and joints, whose ids it returns. An
- * unknown id is a no-op (a debug-env warning).
+ * Deletes a body, live or detached, and with it its colliders and joints (impulse and multibody),
+ * whose ids it returns. An unknown id is a no-op (a debug-env warning).
  * @internal
  */
 export const deleteRigidBody = (id: number) => {
   const colliderIds: number[] = [];
   const jointIds: number[] = [];
+  let multibodyJointIds: number[] = [];
   forgetBodyWorldBounds(id);
   // A detached body (p352 REMOVED tier) is only its kept state: nothing is in the world
   const detached = detachedBodies.get(id);
@@ -191,14 +193,14 @@ export const deleteRigidBody = (id: number) => {
       cleanupColliderEventRegistrations(coll.api.id);
       colliderIds.push(coll.api.id);
     }
-    return { id, colliderIds, jointIds };
+    return { id, colliderIds, jointIds, multibodyJointIds };
   }
   const rbHandle = rigidBodies.get(id);
   if (rbHandle === undefined) {
     if (backend.isDebugEnvironment) {
       lwarn(`Trying to remove a non existing rigid body (no handle found), handle: ${rbHandle}`);
     }
-    return { id, colliderIds, jointIds };
+    return { id, colliderIds, jointIds, multibodyJointIds };
   }
   const rb = backend.world.getRigidBody(rbHandle);
   if (!rb) {
@@ -209,7 +211,7 @@ export const deleteRigidBody = (id: number) => {
     }
     rigidBodies.delete(id);
     handleToRigidBodyId.delete(rbHandle);
-    return { id, colliderIds, jointIds };
+    return { id, colliderIds, jointIds, multibodyJointIds };
   }
   const colliderCount = rb.numColliders();
   for (let i = 0; i < colliderCount; i++) {
@@ -235,11 +237,13 @@ export const deleteRigidBody = (id: number) => {
       jointIds.push(jointId);
     }
   });
+  // The same for its multibody joints, which Rapier removes too, splitting the multibody (p250)
+  multibodyJointIds = reapBodyMultibodyJoints(rbHandle);
   backend.world.removeRigidBody(rb);
   rigidBodyAPIs.delete(id);
   rigidBodies.delete(id);
   handleToRigidBodyId.delete(rbHandle);
-  return { id, colliderIds, jointIds };
+  return { id, colliderIds, jointIds, multibodyJointIds };
 };
 
 /**
@@ -250,13 +254,20 @@ export const deleteRigidBodies = (ids: number[]) => {
   const deletedIds: number[] = [];
   const deletedColliderIds: number[] = [];
   const deletedJointIds: number[] = [];
+  const deletedMultibodyJointIds: number[] = [];
   for (let i = 0; i < ids.length; i++) {
-    const { id, colliderIds, jointIds } = deleteRigidBody(ids[i]);
+    const { id, colliderIds, jointIds, multibodyJointIds } = deleteRigidBody(ids[i]);
     deletedIds.push(id);
     deletedColliderIds.push(...colliderIds);
     deletedJointIds.push(...jointIds);
+    deletedMultibodyJointIds.push(...multibodyJointIds);
   }
-  return { ids: deletedIds, colliderIds: deletedColliderIds, jointIds: deletedJointIds };
+  return {
+    ids: deletedIds,
+    colliderIds: deletedColliderIds,
+    jointIds: deletedJointIds,
+    multibodyJointIds: deletedMultibodyJointIds,
+  };
 };
 
 /**
@@ -264,8 +275,8 @@ export const deleteRigidBodies = (ids: number[]) => {
  * is read first, so reattachRigidBody can put them back exactly; their ids, proxies and event
  * callbacks are kept for that, outside the live maps (so nothing iterates or finds them). Rapier
  * has no getter for some of it (locked axes, additional mass, how a collider's mass was given): the
- * proxies mirror those writes. Refused (undefined) for a body with joints, which the removal would
- * delete.
+ * proxies mirror those writes. Refused (undefined) for a body with joints of either kind, which
+ * the removal would delete.
  * @internal
  */
 export const detachRigidBody = (id: number): RigidBodyPose | undefined => {
@@ -273,7 +284,7 @@ export const detachRigidBody = (id: number): RigidBodyPose | undefined => {
   const api = rigidBodyAPIs.get(id);
   const rb = handle !== undefined ? backend.world.getRigidBody(handle) : undefined;
   if (!rb || !(api instanceof EngineRigidBodyProxyAPI)) return undefined;
-  let hasJoints = false;
+  let hasJoints = isInMultibody(id);
   backend.world.impulseJoints.forEachJointHandleAttachedToRigidBody(rb.handle, () => {
     hasJoints = true;
   });

@@ -24,6 +24,7 @@ import {
   clearPhysicsRegistry,
   forgetCollider,
   forgetJoint,
+  forgetMultibodyJoint,
   forgetRigidBody,
   getBodyMovedListener,
   rigidBodies,
@@ -371,7 +372,8 @@ export const onPhysicsRestore = (fn: PhysicsRestoreFn) => {
 
 /**
  * Brings the facade in line with a restore's delta, the same in both worker targets: forgets the
- * reaped bodies, colliders and joints (marked `isBeingDeleted`, their worker callbacks dropped),
+ * reaped bodies, colliders and both kinds of joint (marked `isBeingDeleted`, their worker callbacks
+ * dropped),
  * drops the events not delivered yet, takes the world's settings the snapshot carried into the
  * physics state, restarts the step clock at the snapshot's step (dropping the gates and the time
  * banked toward the next step), and calls the restore hooks.
@@ -380,6 +382,7 @@ const applyRestoreDelta = (delta: RestoreSnapshotDelta) => {
   for (const id of delta.reapedRigidBodyIds) forgetRigidBody(id);
   for (const id of delta.reapedColliderIds) forgetCollider(id);
   for (const id of delta.reapedJointIds) forgetJoint(id);
+  for (const id of delta.reapedMultibodyJointIds) forgetMultibodyJoint(id);
   dropEventPushesAfterRestore(delta.step);
 
   const { state } = facade;

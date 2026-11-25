@@ -105,6 +105,7 @@ const BODY_TYPE_LABELS: Record<RigidBodyTypeAPI, string> = {
   [RigidBodyTypeAPI.Fixed]: 'Fixed body',
   [RigidBodyTypeAPI.KinematicPositionBased]: 'Kinematic body (position based)',
   [RigidBodyTypeAPI.KinematicVelocityBased]: 'Kinematic body (velocity based)',
+  [RigidBodyTypeAPI.SoftFrame]: 'Soft body frame',
 };
 
 /** The pose rows, each Set recorded to the scene's history (an entity with a stable app id only) */

@@ -14,6 +14,7 @@ import type { LoopState } from '../../../../kernel/loop/MainLoop';
 import { existsOrThrow } from '../../../../utils/Assert';
 import { EngineWorldProxyAPI } from './proxies/EngineWorldProxyAPI';
 import { clearEventRegistrations, drainAndDispatchEvents } from './RapierEvents';
+import { clearMultibodyJoints } from './RapierMultibodyJoints';
 import { rebindRestoredWorld } from './RapierRestore';
 import { checkQueuedWorldBounds, checkWorldBounds, clearWorldBounds } from './RapierWorldBounds';
 import {
@@ -114,7 +115,7 @@ export const createWorld = (
 };
 
 /**
- * Frees the world and forgets its bodies, colliders, joints and event callbacks. The running ids go
+ * Frees the world and forgets its bodies, colliders, joints (both kinds) and event callbacks. The running ids go
  * on.
  * @internal
  */
@@ -129,6 +130,7 @@ export const deleteWorld = () => {
   handleToColliderId.clear();
   handleToJointId.clear();
   handleToRigidBodyId.clear();
+  clearMultibodyJoints();
   detachedBodies.clear();
   clearEventRegistrations();
   // Configuration of this world: a new one starts without, until physics' scene hooks set them

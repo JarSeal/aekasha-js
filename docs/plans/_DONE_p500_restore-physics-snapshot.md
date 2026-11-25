@@ -2,7 +2,7 @@ Status: implemented (Phases 0-4)
 Category: Physics
 Epic: https://trello.com/c/8ROzNdXe/161-make-a-possibility-to-run-the-physics-engine-in-a-thread-threading-architecture-for-all-upcoming-thread-implemantations-not-just
 Blocks: p512_client-prediction-and-reconciliation.md
-Related: p510_headless-simulation-runtime.md (The multiplayer path: this plan is the prerequisite for client prediction and rollback), p250_physics-api-support-for-multibody-joints.md (a fourth rebind pass), _DONE_p102_physics-world-bounds.md (bounds are re-sent after a restore), `src/_engine/features/physics/CLAUDE.md` (the layout below)
+Related: p510_headless-simulation-runtime.md (The multiplayer path: this plan is the prerequisite for client prediction and rollback), _DONE_p250_physics-api-support-for-multibody-joints.md (a fourth rebind pass), _DONE_p102_physics-world-bounds.md (bounds are re-sent after a restore), `src/_engine/features/physics/CLAUDE.md` (the layout below)
 
 # Restore Physics Snapshot — Plan
 
@@ -718,7 +718,7 @@ As built (Phase 4):
 - **Snapshots that outlive their world.** The `worldEpoch` guard rejects them. No serialization to
   disk or localStorage, no cross-reload restore, no cross-session replay.
 - **Multibody joints.** Serialized by Rapier but not exposed by the new API; tracked in
-  `p250_physics-api-support-for-multibody-joints.md`. When they land they will need a fourth rebind
+  `_DONE_p250_physics-api-support-for-multibody-joints.md`. When they land they will need a fourth rebind
   pass — note it there.
 - **Character-controller / PID-controller / vehicle-controller state.** Not restored by
   `World.fromRaw` and not exposed by the new API (`PhysicsAPITypes.ts:1563-1605`).

@@ -21,6 +21,8 @@ export enum ShapeType {
   TriMesh = 6,
   /** A height field (`'HEIGHTFIELD'`). */
   HeightField = 7,
+  /** Several shapes as one (no params type makes one). */
+  Compound = 8,
   /** A convex hull (`'CONVEXHULL'`). */
   ConvexPolyhedron = 9,
   /** A cylinder (`'CYLINDER'`). */

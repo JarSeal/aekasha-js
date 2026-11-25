@@ -64,7 +64,7 @@ const CONFIG_KEY_HINTS: Record<string, ConfigKeyHint> = {
     step: 0.5,
     min: 0,
     unit: 'm/s',
-    note: 'Relative speed above which touching a wall starts tumbling.',
+    note: 'Relative horizontal speed above which touching a wall starts tumbling.',
   },
   tumblingMinTime: {
     step: 100,

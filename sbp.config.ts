@@ -83,7 +83,11 @@ const profiles: SbpProfile[] = [
         // first shipping caller of `createViewport` (the debug gizmo and ball were the only ones),
         // so the viewports' slot styles (`Viewports.module.scss`) ship with the feature
         'assets/index.css': 6 * KIB,
-        'assets/rapier.js': 843 * KIB,
+        // p250 Phase 0: Rapier 0.19.3 → 0.21.0 (multibody joints that don't panic on a delete,
+        // i250's panic fixed) took it from 810.2 to 1605.2 KiB, its WASM's new soft bodies, convex
+        // decomposition and compound shapes included (0.20.0 was ~1085 KiB): 843 → 1670 KiB
+        // (`suggestBudget`)
+        'assets/rapier.js': 1670 * KIB,
         // The physics worker's own file (`assets/PhysicsWorker.js` is its 0.1 kB `?worker` wrapper)
         'assets/PhysicsWorker.js@PhysicsWorker': 11 * KIB,
         'assets/AssetsSwitchGLTF.js': 53 * KIB,

@@ -172,6 +172,9 @@ when either happens). The restore's result lists them.
 - Stepping on from a restore reproduces the original run only when you replay your own inputs
   (forces, impulses, creates and deletes) on the same steps. On one machine it does: 90 steps
   after a restore came out bit for bit the same, on either thread.
+- A [multibody joint](#multibody-joints) deleted since the snapshot stays deleted whatever the
+  restore's `orphanPolicy`: one put back without the engine knowing its bodies could break a
+  chain's tree.
 
 In debug mode the Physics API tab's "Snapshot" folder takes, restores and clears one snapshot, and
 shows its size and step, the time each took and what the last restore deleted.
@@ -241,6 +244,9 @@ setEntityWorldBounds(playerId, {
 
 Move a body inside before you enable it again, or the next step takes it out again. A body with
 joints is made `FIXED` instead of disabled (the event's `frozen`): put it back with `setBodyType`.
+A link of a [multibody](#multibody-joints) takes its whole multibody out with it: every dynamic
+body of the tree is disabled and gets the action, each exit's `takenWith` naming the body that
+left (`null` for that body itself), so put the chain back whole.
 Bounds on a fixed or kinematic body are never read, and the debug env says so.
 
 [`getWorldBoundsStats`](api:getWorldBoundsStats) reads the current scene's bounds (where they come
@@ -251,15 +257,56 @@ open side isn't drawn), and lists the latest exits: a row opens the entity's edi
 still exists. That window's "World bounds" folder shows the entity's own bounds and draws their
 box.
 
-## Queries, events and joints
+## Queries and events
 
 - Ray and shape casts go through the world: [`getPhysicsWorld`](api:getPhysicsWorld)`().castRay(…)`,
   `castShape`, `intersectionsWithRay`. The debug env can draw them, and the Physics API tab
   counts them per frame.
 - A collider's `collisionEventFn` and `contactForceEventFn` (in its params) are called when it
   starts or stops touching another collider, and with the contact forces.
-- [`createJoint`](api:PhysicsJoints.createJoint) joins two bodies: fixed, revolute, prismatic, spherical, rope,
-  spring or generic.
+
+## Joints
+
+A joint ties two bodies together. Rapier has two solvers for them, and each has its own API:
+
+|           | Impulse joints                                                                         | Multibody joints                                                          |
+| --------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Create    | [`createJoint`](api:PhysicsJoints.createJoint)                                         | [`createMultibodyJoint`](api:PhysicsMultibodyJoints.createMultibodyJoint) |
+| Types     | fixed, revolute, prismatic, spherical, rope, spring, generic                           | fixed, revolute, prismatic, spherical                                     |
+| Bodies    | any two, loops included                                                                | a tree: each body has at most one parent                                  |
+| Solved as | constraints between the bodies: under load, a long chain can drift apart at its joints | one articulated body, in reduced coordinates: a chain never comes apart   |
+| Controls  | motors and limits                                                                      | none: the bodies, contacts and user data only                             |
+| For       | doors, wheels, ropes, springs, anything driven by a motor                              | chains that must hold their shape: robot arms, cranes, ragdolls' limbs    |
+
+Both take the same params (`body1Id`, `body2Id`, the anchors in each body's own space, the axis),
+and `deleteJoint` / `deleteMultibodyJoint` remove one. Deleting a body deletes its joints of both
+kinds. The `physicsTest` scene's joint row shows each impulse type, and a chain made both ways
+side by side (`?isDebug=true&startScene=physicsTest`):
+
+<<< src/app/scenes/physicsTest/physicsTest.ts#multibody-chain
+
+### Multibody joints
+
+A multibody joint's `body1Id` is the parent and `body2Id` the child; the body without a parent is
+the multibody's root, fixed (a base), kinematic or dynamic (a free chain). Rapier kills the
+physics world on a tree it can't hold, so the engine refuses these before Rapier sees them, and
+the create rejects with the bodies and the rule:
+
+- a body joined to itself;
+- a child that isn't `DYNAMIC`, or that has a parent already;
+- two bodies of one multibody (a loop): close a loop with an impulse joint instead;
+- a fixed or kinematic parent that has a parent itself (it can only be a root).
+
+A child that is the root of a multibody of its own joins with its whole tree. Living with a tree:
+
+- `setBodyType` on a body with a parent throws for any type but `DYNAMIC`; the root can change
+  type.
+- Deleting a body deletes its multibody joints and splits the tree there: its children become
+  roots of their own, free to join again.
+- Rapier ignores `setTranslation` and `setRotation` on a body with a parent, and a kinematic root
+  with children ignores its kinematic targets and velocity: move the chain by `setTranslation` on
+  its root (each step, for a moving base), or hang the chain from a kinematic body by an impulse
+  joint. The debug env warns once per body.
 
 ## Simulation tiers
 
@@ -280,10 +327,26 @@ With it, a `DYNAMIC` body made by `createPhysicsEntity` can change its tier with
 | `DISABLED` | Disabled: nothing collides with it.                                                 |
 | `REMOVED`  | Taken out of the physics world, its state kept, and its transform buffer slot free. |
 
-A request applies at the next physics step, and a body comes back where it left off. Bodies
-joined by joints change tier together, can't be `REMOVED`, and are `STATIC` where `DISABLED` is
-asked for (Rapier mishandles joints on disabled bodies; a joint created on a `DISABLED` body makes
-its group `STATIC` too).
+A request applies at the next physics step, and a body comes back where it left off.
+
+### Joints and tiers
+
+Bodies joined by joints change tier together, a group ending at a fixed or kinematic body (so a
+multibody's branches under a fixed base are groups of their own), and can't be `REMOVED`. Their
+joints decide what else they can be, since Rapier mishandles impulse joints on disabled bodies and
+panics on a multibody link made `FIXED`:
+
+| The group has    | `STATIC` asked | `DISABLED` asked | `REMOVED` asked |
+| ---------------- | -------------- | ---------------- | --------------- |
+| impulse joints   | `STATIC`       | `STATIC`         | refused         |
+| multibody joints | `DISABLED`     | `DISABLED`       | refused         |
+| both             | `FULL`         | `FULL`           | refused         |
+
+A group with both kinds (an impulse joint closing a multibody loop) stays simulated, and the debug
+env warns. A refused `REMOVED` leaves the group in its tier (the distance policy's `REMOVED` ring
+too); a [streaming](hub:features/streaming#physics) cell asks again for `STATIC`, which the table
+then maps. A joint created on a tiered body moves its group to the tier its joints allow before
+the next step.
 
 A body can also start in a tier: `createPhysicsEntity`'s `initialTier` (`STATIC` or `DISABLED`)
 switches it in its own create, before the first step, so it never simulates one `FULL`:
@@ -331,7 +394,9 @@ every body.
   row-major grid; [`deriveColliderFromGeometry`](api:deriveColliderFromGeometry): a collider from
   a geometry, as the import makes it.
 - [`getPhysicsWorld`](api:getPhysicsWorld): the world, for queries.
-- [`createJoint`](api:PhysicsJoints.createJoint) and [`deleteJoint`](api:PhysicsJoints.deleteJoint).
+- [`createJoint`](api:PhysicsJoints.createJoint) and [`deleteJoint`](api:PhysicsJoints.deleteJoint):
+  impulse joints; [`createMultibodyJoint`](api:PhysicsMultibodyJoints.createMultibodyJoint) and
+  [`deleteMultibodyJoint`](api:PhysicsMultibodyJoints.deleteMultibodyJoint): multibody joints.
 - [`physicsTiers`](api:physicsTiers) (the feature), [`requestPhysicsTier`](api:requestPhysicsTier),
   [`getPhysicsTier`](api:getPhysicsTier) and [`setPhysicsTierPolicy`](api:setPhysicsTierPolicy).
 - [`getPhysicsSubStepIndex`](api:getPhysicsSubStepIndex): the step clock for `APP_PHYSICS_STEP`
