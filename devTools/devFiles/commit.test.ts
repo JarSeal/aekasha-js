@@ -338,3 +338,66 @@ describe('p355: the author stamp', () => {
     expect(readMeta()).not.toHaveProperty('author');
   });
 });
+
+describe('p355: json and saveData in one write', () => {
+  const NEW_SKY = `${DIR}/sky.skybox.json`;
+  const sky = { id: 'sky', base: { type: 'COLOR', color: '#000000' } };
+  const write = (expectedHash?: string | null) => ({
+    path: NEW_SKY,
+    json: sky,
+    saveData: { sceneId: 's', entry: { env: { environmentIntensity: 0.5 } }, historySize: 20 },
+    ...(expectedHash !== undefined ? { expectedHash } : {}),
+  });
+  type SkyFile = typeof sky & {
+    __saveData: Record<string, { __meta: Record<string, unknown>; env: unknown }[]>;
+  };
+  const readSky = () => JSON.parse(fs.readFileSync(abs(NEW_SKY), 'utf8')) as SkyFile;
+
+  it('creates the file with the json and its entry, stamped', async () => {
+    gitUser.name = 'Self Check';
+    const { body } = await commitDevFiles({ writes: [write(null)] }, { stage });
+    expect(body.results[0]).toMatchObject({ status: 'created', previousHash: null });
+    const file = readSky();
+    expect(file.base).toEqual(sky.base);
+    expect(file.__saveData.s[0].env).toEqual({ environmentIntensity: 0.5 });
+    expect(file.__saveData.s[0].__meta).toMatchObject({ author: 'Self Check' });
+    expect(file.__saveData.s[0].__meta).toHaveProperty('engineVersion');
+  });
+
+  it('keeps the json’s own entries after the new one', async () => {
+    const own = { ...sky, __saveData: { s: [{ env: { environmentIntensity: 0.2 } }] } };
+    await commitDevFiles({ writes: [{ ...write(null), json: own }] }, { stage });
+    expect(readSky().__saveData.s.map((entry) => entry.env)).toEqual([
+      { environmentIntensity: 0.5 },
+      { environmentIntensity: 0.2 },
+    ]);
+  });
+
+  it('with expectedHash null, refuses a file that exists', async () => {
+    fs.writeFileSync(abs(NEW_SKY), JSON.stringify(sky));
+    await expect(commitDevFiles({ writes: [write(null)] }, { stage })).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
+    expect(fs.readFileSync(abs(NEW_SKY), 'utf8')).toBe(JSON.stringify(sky));
+  });
+
+  it('is unchanged when the file has those bytes already', async () => {
+    await commitDevFiles({ writes: [write(null)] }, { stage });
+    const written = readSky();
+    const again = await commitDevFiles(
+      { writes: [{ path: NEW_SKY, json: written, saveData: write().saveData }] },
+      { stage }
+    );
+    // The entry equals the latest: the json is written as it came, which the file is
+    expect(again.body.results[0].status).toBe('unchanged');
+  });
+
+  it('refuses a stageId with them, and a target without __saveData', async () => {
+    await expect(
+      commitDevFiles({ writes: [{ ...write(), stageId: 'x' }] }, { stage })
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      commitDevFiles({ writes: [{ ...write(), path: `${DIR}/a.json` }] }, { stage })
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+});

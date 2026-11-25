@@ -120,7 +120,8 @@ export type DevFilesSaveDataWrite = DevFilesSaveData & { historySize: number };
 
 /**
  * One write of a `POST commit` batch (`saveData` one entry, or a list of them with each scene once:
- * p355). The client's and the server's.
+ * p355; with `json`, the entries go into that value instead of the file's, p355 §2.6). The
+ * client's and the server's.
  * @internal
  */
 export type DevFilesWrite = {
@@ -129,7 +130,7 @@ export type DevFilesWrite = {
   /** The hash the tool read; null: the file must not exist yet; omitted: overwrite */
   expectedHash?: string | null;
 } & (
-  | { json: unknown }
+  | { json: unknown; saveData?: DevFilesSaveDataWrite | DevFilesSaveDataWrite[] }
   | { stageId: string }
   | { saveData: DevFilesSaveDataWrite | DevFilesSaveDataWrite[] }
 );

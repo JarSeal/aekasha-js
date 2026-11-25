@@ -136,6 +136,12 @@ export type DevFileWrite = {
       /** A JSON value (not text): the server validates it against its gathered schema, if its
        * suffix has one, and formats it with Prettier. */
       json: unknown;
+      /**
+       * Save entries put into `json` as into the file's JSON in a `saveData`-only write (stamped,
+       * the history size kept), for a file this write creates or replaces: an asset moved into
+       * a file of its own with its scene's entry (p355 §2.6). The file needn't exist.
+       */
+      saveData?: DevFilesSaveData | DevFilesSaveData[];
     }
   | {
       /** The file's bytes (eg. a PNG from {@link encodePNG}), uploaded as is */

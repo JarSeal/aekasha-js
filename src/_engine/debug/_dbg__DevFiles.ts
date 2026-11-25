@@ -18,6 +18,7 @@ import {
   type DevDataGatheredEvent,
   type DevFilesCommitRequest,
   type DevFilesErrorBody,
+  type DevFilesSaveData,
   type DevFilesStageBody,
   type DevFilesStatusBody,
 } from './DevFilesProtocol';
@@ -160,7 +161,7 @@ export const _writeDevFiles = async (
     throw new DevFilesError('BAD_REQUEST', 'writeDevFiles needs at least one write');
   }
   const historySize = getDevFilesSaveHistorySize();
-  if (!historySize && writes.some((write) => 'saveData' in write)) {
+  if (!historySize && writes.some((write) => 'saveData' in write && write.saveData)) {
     throw new DevFilesError(
       'SAVE_DATA_DISABLED',
       'Saving into __saveData is off (save history size 0, Debug tools → File server)'
@@ -174,13 +175,16 @@ export const _writeDevFiles = async (
         if ('blob' in write) {
           return { path: write.path, ...expectedHash, stageId: await stageBlob(write.blob) };
         }
-        if ('saveData' in write) {
-          const saveData = Array.isArray(write.saveData)
-            ? write.saveData.map((item) => ({ ...item, historySize }))
-            : { ...write.saveData, historySize };
-          return { path: write.path, ...expectedHash, saveData };
+        const withHistorySize = (saveData: DevFilesSaveData | DevFilesSaveData[]) =>
+          Array.isArray(saveData)
+            ? saveData.map((item) => ({ ...item, historySize }))
+            : { ...saveData, historySize };
+        if ('json' in write) {
+          // With `saveData`: the entries go into that value (p355 §2.6)
+          const saveData = write.saveData ? { saveData: withHistorySize(write.saveData) } : {};
+          return { path: write.path, ...expectedHash, json: write.json, ...saveData };
         }
-        return { path: write.path, ...expectedHash, json: write.json };
+        return { path: write.path, ...expectedHash, saveData: withHistorySize(write.saveData) };
       })
     ),
   };

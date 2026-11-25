@@ -763,9 +763,39 @@ const runSaveDataChecks = async (isOwnServer: boolean) => {
     commit([{ path: testPath('x.textureAtlas.json'), saveData }]),
     'BAD_REQUEST'
   );
+  // p355 §2.6: an inline asset moved into a file of its own, with its scene's entry
+  const movedPath = testPath('moved.material.json');
+  const movedWrite = {
+    path: movedPath,
+    expectedHash: null,
+    json: { id: 'aekSelfCheckMovedMat', type: 'PHONG', params: { color: RED } },
+    saveData: { sceneId: SAVE_SCENE_IDS[0], entry: { params: { color: BLUE } }, historySize: 20 },
+  };
+  res = await commit([movedWrite]);
+  const moved = JSON.parse(readTestFile('moved.material.json')?.toString() ?? '{}') as {
+    params?: { color?: string };
+    __saveData?: Record<string, { __meta?: Record<string, unknown>; params?: unknown }[]>;
+  };
+  const movedEntry = moved.__saveData?.[SAVE_SCENE_IDS[0]]?.[0];
+  check(
+    'json and a save entry in one write create the file',
+    res.status === 200 && json<DevFilesCommitBody>(res).results[0].status === 'created',
+    errorCode(res)
+  );
+  check(
+    '… with the json and the entry, stamped',
+    moved.params?.color === RED &&
+      (movedEntry?.params as { color?: string } | undefined)?.color === BLUE &&
+      isStamped(movedEntry?.__meta)
+  );
   await expectCode(
-    'a save entry with json too',
-    commit([{ path: matPath, json: {}, saveData }]),
+    '… and again with expectedHash null (the file exists now)',
+    commit([movedWrite]),
+    'CONFLICT'
+  );
+  await expectCode(
+    'a save entry with json and a stageId',
+    commit([{ ...movedWrite, stageId: 'x' }]),
     'BAD_REQUEST'
   );
   await expectCode(

@@ -7,6 +7,7 @@ import { DevFilesError } from './http';
 import { checkImageBytes } from './imageCheck';
 import { resolveDevFilePath, type DevFilePath } from './paths';
 import {
+  applySaveDataToJson,
   applySaveDataWrite,
   checkSaveDataRequest,
   readSaveDataStamp,
@@ -29,8 +30,9 @@ import { DEV_FILES_CACHE_DIR, type DevFilesStage } from './stage';
  *    validated against its gathered schema and formatted with Prettier and the repo root's
  *    config, `devFiles/format.ts`; a staged file must not have expired and must start like its
  *    image format, `devFiles/imageCheck.ts`; a save entry is put into the file's JSON,
- *    `devFiles/saveData.ts`, which is then a JSON value), the sizes and the `expectedHash`es. A write whose bytes equal the
- *    file's is `unchanged` and isn't written (no file event, no gather).
+ *    `devFiles/saveData.ts`, which is then a JSON value; with `json` too, into that value), the
+ *    sizes and the `expectedHash`es. A write whose bytes equal the file's is `unchanged` and
+ *    isn't written (no file event, no gather).
  * 2. Each write goes to a temporary file next to its target, then each existing target is copied
  *    to `.cache/dev-files/backup/<commit>/`, then the temporaries are renamed into place. A
  *    failure before the renames removes the temporaries and the folders the batch created; one
@@ -106,8 +108,9 @@ const parseRequest = (body: unknown) => {
     const hasJson = 'json' in w;
     const hasStage = 'stageId' in w;
     const hasSaveData = 'saveData' in w;
-    if (Number(hasJson) + Number(hasStage) + Number(hasSaveData) !== 1) {
-      badRequest(`${writePath}: give one of json, stageId or saveData`);
+    // `json` and `saveData` together: the entries go into that value (p355 §2.6)
+    if (Number(hasJson || hasSaveData) + Number(hasStage) !== 1) {
+      badRequest(`${writePath}: give json, saveData (or both), or stageId`);
     }
     if (hasStage && typeof w.stageId !== 'string') badRequest(`${writePath}: bad stageId`);
     const expectedHash = w.expectedHash;
@@ -152,7 +155,9 @@ const planWrites = async (requested: RequestedWrite[], stage: DevFilesStage) => 
     const target = targets[i];
     let json = write.json;
     let currentHash: string | undefined;
-    if (write.saveData) {
+    if (write.saveData && write.hasJson) {
+      json = await applySaveDataToJson(target, json, write.saveData, getStamp);
+    } else if (write.saveData) {
       const result = await applySaveDataWrite(target, write.saveData, getStamp);
       currentHash = result.currentHash;
       if ('unchanged' in result) {

@@ -22,7 +22,9 @@ import type {
  * An entry equal to the scene's latest one (`__meta` aside) leaves the file `unchanged`, unless
  * the list is longer than `historySize`: then it's only trimmed. `saveData` may be a list of
  * entries, each for another scene (p355 Phase 4: one save of a file for several scenes), put in
- * one after the other; the file is `unchanged` only when every entry leaves it so.
+ * one after the other; the file is `unchanged` only when every entry leaves it so. With `json`
+ * too (p355 §2.6: an inline asset moved into a file of its own) the entries go into that value,
+ * not the file's: the file may not exist yet, and whether it changes is the written bytes'.
  */
 
 type JsonObject = Record<string, unknown>;
@@ -187,6 +189,37 @@ const applyEntry = async (
   return true;
 };
 
+/** Puts the entries into a file's JSON value (in place); whether any changed it */
+const applyEntries = async (
+  repoPath: string,
+  file: unknown,
+  saveDataList: DevFilesSaveDataWrite[],
+  getStamp: () => Promise<SaveDataStamp>
+): Promise<{ file: JsonObject; isChanged: boolean }> => {
+  if (!isPlainObject(file)) invalidFile(repoPath, '', 'The file must be an object');
+  if (file.__saveData !== undefined && !isPlainObject(file.__saveData)) {
+    invalidFile(repoPath, '__saveData', 'Must be an object');
+  }
+  const allSaveData = (file.__saveData ?? {}) as JsonObject;
+  let isChanged = false;
+  for (const saveData of saveDataList) {
+    if (await applyEntry(repoPath, allSaveData, saveData, getStamp)) isChanged = true;
+  }
+  // In place: an existing `__saveData` keeps its place in the file
+  if (isChanged) file.__saveData = allSaveData;
+  return { file, isChanged };
+};
+
+/** Throws BAD_REQUEST unless the target is a gathered asset JSON with `__saveData` */
+const checkSaveDataTarget = (target: DevFilePath) => {
+  if (!target.isJson || !hasGatheredSaveData(target.repoPath)) {
+    throw new DevFilesError(
+      'BAD_REQUEST',
+      `${target.repoPath}: only a gathered asset JSON with __saveData takes a save entry`
+    );
+  }
+};
+
 /**
  * Puts the save entries into the file's JSON (the file module's header).
  * @param saveDataList the write's entries, each scene once (`checkSaveDataRequest`'s)
@@ -198,12 +231,7 @@ export const applySaveDataWrite = async (
   getStamp: () => Promise<SaveDataStamp>
 ): Promise<SaveDataWriteResult> => {
   const { repoPath } = target;
-  if (!target.isJson || !hasGatheredSaveData(repoPath)) {
-    throw new DevFilesError(
-      'BAD_REQUEST',
-      `${repoPath}: only a gathered asset JSON with __saveData takes a save entry`
-    );
-  }
+  checkSaveDataTarget(target);
   let current: Buffer;
   try {
     current = await fs.readFile(target.absPath);
@@ -220,17 +248,23 @@ export const applySaveDataWrite = async (
   } catch (err) {
     throw new DevFilesError('INVALID_JSON', `${repoPath} isn't JSON: ${(err as Error).message}`);
   }
-  if (!isPlainObject(file)) invalidFile(repoPath, '', 'The file must be an object');
-  if (file.__saveData !== undefined && !isPlainObject(file.__saveData)) {
-    invalidFile(repoPath, '__saveData', 'Must be an object');
-  }
-  const allSaveData = (file.__saveData ?? {}) as JsonObject;
-  let isChanged = false;
-  for (const saveData of saveDataList) {
-    if (await applyEntry(repoPath, allSaveData, saveData, getStamp)) isChanged = true;
-  }
-  if (!isChanged) return { unchanged: current, currentHash };
-  // In place: an existing `__saveData` keeps its place in the file
-  file.__saveData = allSaveData;
-  return { json: file, currentHash };
+  const result = await applyEntries(repoPath, file, saveDataList, getStamp);
+  if (!result.isChanged) return { unchanged: current, currentHash };
+  return { json: result.file, currentHash };
+};
+
+/**
+ * Puts the save entries into a write's own JSON value (`json` and `saveData` together, p355 §2.6),
+ * as into a read file: the file needn't exist, and the commit compares the written bytes with it.
+ * @param json the write's `json`, changed in place
+ * @returns the JSON value to write
+ */
+export const applySaveDataToJson = async (
+  target: DevFilePath,
+  json: unknown,
+  saveDataList: DevFilesSaveDataWrite[],
+  getStamp: () => Promise<SaveDataStamp>
+): Promise<JsonObject> => {
+  checkSaveDataTarget(target);
+  return (await applyEntries(target.repoPath, json, saveDataList, getStamp)).file;
 };
