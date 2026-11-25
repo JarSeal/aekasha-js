@@ -79,7 +79,8 @@ type RequestedWrite = {
   json?: unknown;
   hasJson: boolean;
   stageId?: string;
-  saveData?: DevFilesSaveDataWrite;
+  /** Its save entries, one per scene (`checkSaveDataRequest`'s list) */
+  saveData?: DevFilesSaveDataWrite[];
 };
 
 // A declaration, not an arrow: a call of a `never` function narrows only then (p619 K2)

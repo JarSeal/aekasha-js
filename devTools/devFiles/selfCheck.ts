@@ -707,6 +707,45 @@ const runSaveDataChecks = async (isOwnServer: boolean) => {
     out("- skipped the switched git names: they need the self-check's own server");
   }
 
+  // p355 Phase 4: one write with an entry for each scene
+  const PURPLE = '#800080';
+  const ORANGE = '#ffa500';
+  res = await commit([
+    {
+      path: matPath,
+      saveData: [
+        { sceneId: SAVE_SCENE_IDS[0], entry: { params: { color: PURPLE } }, historySize: 20 },
+        { sceneId: SAVE_SCENE_IDS[1], entry: { params: { color: ORANGE } }, historySize: 20 },
+      ],
+    },
+  ]);
+  check(
+    'a write with both scenes’ entries updates the file',
+    res.status === 200 && json<DevFilesCommitBody>(res).results[0].status === 'updated',
+    errorCode(res)
+  );
+  check(
+    '… and the gatherer applies each in its scene',
+    await waitUntil(
+      () =>
+        gatheredColor(SAVE_SCENE_IDS[0]) === PURPLE && gatheredColor(SAVE_SCENE_IDS[1]) === ORANGE
+    ),
+    `got ${String(gatheredColor(SAVE_SCENE_IDS[0]))}, ${String(gatheredColor(SAVE_SCENE_IDS[1]))}`
+  );
+  await expectCode(
+    'a write with two entries for one scene',
+    commit([
+      {
+        path: matPath,
+        saveData: [
+          { sceneId: SAVE_SCENE_IDS[0], entry: { params: { color: RED } }, historySize: 20 },
+          { sceneId: SAVE_SCENE_IDS[0], entry: { params: { color: GREEN } }, historySize: 20 },
+        ],
+      },
+    ]),
+    'BAD_REQUEST'
+  );
+
   const entry = { params: { color: GREEN } };
   const saveData = { sceneId: 'x', entry, historySize: 20 };
   await expectCode(

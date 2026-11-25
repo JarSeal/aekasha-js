@@ -504,6 +504,25 @@ As built:
 
 §2.3 and its key.
 
+Sections:
+
+1. **Entries of several scenes in one write:** a write's `saveData` may be a list, one entry per
+   scene (Phase 3's As built): the protocol's types, the server's check and apply (each scene
+   once; `unchanged` only when every entry is), its tests and self-check cases, the client's
+   `DevFileWrite` and `_writeDevFiles`, and the save's `foldWrites` (two scenes' entries of one
+   file a list, one scene's still deep-merged).
+2. **The form's own error** (§2.3's decision): `createForm`'s `setError(message | null)`, a
+   message in the error summary not tied to a field (no link), shown with the summary and its
+   focus, cleared by the next submit and a reset; its test, its demo and the kit's docs. The
+   dialog shows a failed save there.
+3. **The save for given changes, the item and the key:** `_dbg__SaveData.ts`' pipeline shared by
+   "Save scene" and the dialog (`skipConfirm` for the dialog), the item's disabled reason (no
+   saveable change in any scene), "Save specific data…" in the Æ menu and `sc-save-specific`
+   (Ctrl+Shift+S, ⌘⇧S) opening the dialog.
+4. **The dialog** (`debug/_dbg__SaveSpecificDialog.ts`): §2.3's groups, rows, buttons and busy
+   state.
+5. **The exit in the browser**, and this phase's As built.
+
 **Exit:** with three changes, unchecking one saves the other two and leaves the third in
 localStorage; Check all / Uncheck all and the group checkboxes; a sky box changed in
 `skyShowcase` and saved from `largeWorld` under Other scenes lands in `skyShowcase`'s entry; a

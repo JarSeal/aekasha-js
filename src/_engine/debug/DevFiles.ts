@@ -151,9 +151,11 @@ export type DevFileWrite = {
        * `json` write. The scene keeps {@link getDevFilesSaveHistorySize} entries, the new one
        * included (the older ones are dropped); with 0 the batch fails with `SAVE_DATA_DISABLED`
        * before anything is sent. An entry equal to the scene's latest (its `__meta` aside) is
-       * `unchanged`. A missing file fails with `NOT_FOUND`.
+       * `unchanged`. A missing file fails with `NOT_FOUND`. A list puts an entry for each of
+       * several scenes into the file in one write (each scene once; `unchanged` only when every
+       * entry is).
        */
-      saveData: DevFilesSaveData;
+      saveData: DevFilesSaveData | DevFilesSaveData[];
     }
 );
 

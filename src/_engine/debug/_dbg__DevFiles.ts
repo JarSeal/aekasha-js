@@ -175,11 +175,10 @@ export const _writeDevFiles = async (
           return { path: write.path, ...expectedHash, stageId: await stageBlob(write.blob) };
         }
         if ('saveData' in write) {
-          return {
-            path: write.path,
-            ...expectedHash,
-            saveData: { ...write.saveData, historySize },
-          };
+          const saveData = Array.isArray(write.saveData)
+            ? write.saveData.map((item) => ({ ...item, historySize }))
+            : { ...write.saveData, historySize };
+          return { path: write.path, ...expectedHash, saveData };
         }
         return { path: write.path, ...expectedHash, json: write.json };
       })

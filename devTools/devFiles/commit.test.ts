@@ -261,6 +261,56 @@ describe('p355: a dry run', () => {
   });
 });
 
+describe('p355: entries of several scenes in one write', () => {
+  type SaveDataFile = {
+    __saveData: Record<string, { __meta: Record<string, unknown>; params: unknown }[]>;
+  };
+  const readSaveData = () =>
+    (JSON.parse(fs.readFileSync(abs(MATERIAL), 'utf8')) as SaveDataFile).__saveData;
+  const entry = (sceneId: string, color: string) => ({
+    sceneId,
+    entry: { params: { color } },
+    historySize: 20,
+  });
+
+  it('puts each scene’s entry first in its list, stamped, in one write', async () => {
+    const { body } = await commitDevFiles(
+      { writes: [{ path: MATERIAL, saveData: [entry('a', '#ff0000'), entry('b', '#00ff00')] }] },
+      { stage }
+    );
+    expect(body.results[0].status).toBe('updated');
+    const saveData = readSaveData();
+    expect(Object.keys(saveData)).toEqual(['a', 'b']);
+    expect(saveData.a[0].params).toEqual({ color: '#ff0000' });
+    expect(saveData.b[0].params).toEqual({ color: '#00ff00' });
+    expect(saveData.b[0].__meta).toHaveProperty('engineVersion');
+  });
+
+  it('is unchanged only when every entry is its scene’s latest', async () => {
+    const writes = [{ path: MATERIAL, saveData: [entry('a', '#ff0000'), entry('b', '#00ff00')] }];
+    await commitDevFiles({ writes }, { stage });
+    const again = await commitDevFiles({ writes }, { stage });
+    expect(again.body.results[0].status).toBe('unchanged');
+    const oneNew = await commitDevFiles(
+      { writes: [{ path: MATERIAL, saveData: [entry('a', '#ff0000'), entry('b', '#0000ff')] }] },
+      { stage }
+    );
+    expect(oneNew.body.results[0].status).toBe('updated');
+    const saveData = readSaveData();
+    expect(saveData.a).toHaveLength(1);
+    expect(saveData.b).toHaveLength(2);
+  });
+
+  it('refuses an empty list and a scene twice', async () => {
+    for (const saveData of [[], [entry('a', '#ff0000'), entry('a', '#00ff00')]]) {
+      await expect(
+        commitDevFiles({ writes: [{ path: MATERIAL, saveData }] }, { stage })
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    }
+    expect(fs.readFileSync(abs(MATERIAL), 'utf8')).toBe(JSON.stringify({ id: 'm', type: 'BASIC' }));
+  });
+});
+
 describe('p355: the author stamp', () => {
   const readMeta = () =>
     (

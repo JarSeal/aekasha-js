@@ -18,6 +18,7 @@ import {
   type DevFilesStatus,
   type DevFileWrite,
 } from './DevFiles';
+import type { DevFilesSaveData } from './DevFilesProtocol';
 import { updateOnScreenTools } from './OnScreenTools';
 import {
   _areSaveSourcesReady,
@@ -144,16 +145,25 @@ const waitForGather = () => {
 
 // The writes
 
-/** Two changes of one file: their entries merged when they're for the same scene */
-const foldWrites = (path: string, a: SaveChangeWrite | null, b: SaveChangeWrite | null) => {
-  if (!a || !b) return a ?? b;
-  if ('saveData' in a && 'saveData' in b && a.saveData.sceneId === b.saveData.sceneId) {
-    return {
-      saveData: {
-        sceneId: a.saveData.sceneId,
-        entry: deepMerge(a.saveData.entry, b.saveData.entry),
-      },
-    };
+/** A file's write as the changes build it: its scenes' entries, or its new JSON */
+type FoldedWrite = { saveData: DevFilesSaveData[] } | { json: unknown };
+
+/** Adds a change's write to its file's: an entry for another scene joins the list, one for the
+ * same scene is deep-merged into its entry; anything else can't be one write */
+const foldWrite = (
+  path: string,
+  folded: FoldedWrite | null,
+  write: SaveChangeWrite | null
+): FoldedWrite | null => {
+  if (!write) return folded;
+  if (!folded) return 'saveData' in write ? { saveData: [write.saveData] } : write;
+  if ('saveData' in folded && 'saveData' in write) {
+    const { sceneId, entry } = write.saveData;
+    const saveData = [...folded.saveData];
+    const index = saveData.findIndex((item) => item.sceneId === sceneId);
+    if (index === -1) saveData.push(write.saveData);
+    else saveData[index] = { sceneId, entry: deepMerge(saveData[index].entry, entry) };
+    return { saveData };
   }
   throw new SaveError(`${path}: two changes need writes that can't be merged into one`);
 };
@@ -170,11 +180,16 @@ const buildWrites = async (changes: SourcedChange[]) => {
       const file = await readDevFile(path);
       if (!file) throw new SaveError(`${path} doesn't exist`);
       if (file.json === undefined) throw new SaveError(`${path} isn't a JSON file`);
-      let write: SaveChangeWrite | null = null;
+      let write: FoldedWrite | null = null;
       for (const change of pathChanges) {
-        write = foldWrites(path, write, change.build({ json: structuredClone(file.json) }));
+        write = foldWrite(path, write, change.build({ json: structuredClone(file.json) }));
       }
-      return write && { path, expectedHash: file.sha256, ...write };
+      if (!write) return null;
+      // One scene's entry goes as the entry (the list is for several)
+      if ('saveData' in write && write.saveData.length === 1) {
+        return { path, expectedHash: file.sha256, saveData: write.saveData[0] };
+      }
+      return { path, expectedHash: file.sha256, ...write };
     })
   );
   return writes.filter((write): write is DevFileWrite => write !== null);
