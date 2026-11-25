@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 implemented
 Category: Bug fix, Refactoring
 Related: p104_plan-references-out-of-jsdoc.md (the JSDoc item of the same list, split out: about 840 blocks), p105_themed-scrollbars.md (the scrollbar item of the same list, split out: tokens, a kit-wide rule, the Hub and the design doc)
 
@@ -291,7 +291,7 @@ Fix, in `_dbg__LightHelpers.ts`:
 
 Each phase is one commit; run `yarn test` and `yarn lint` after each.
 
-### Phase 1: Runtime warnings and the paused debug camera (items 1-4)
+### Phase 1: Runtime warnings and the paused debug camera (items 1-4) — done
 
 1. Check the Rapier warning (item 1) and record the result.
 2. PCFSoftShadowMap (item 2).
@@ -328,6 +328,28 @@ As built:
   members). After: none over the whole run; in `largeWorld` the cells line visible with 3420
   segments and the empty oversized line hidden, after the change both hidden and empty. With the
   overlays off there's no warning, before or after.
+- Item 4: no `isMasterLoopOn` flag. The Loop tab hydrates `loopState.masterPlay` from its saved
+  state without `toggleMainPlay`, so a flag seeded once could miss a page that starts paused.
+  `MainLoop.ts` has `isMasterPlayOn()` (`@internal`, a cheap live read) beside
+  `onMasterPlayChange`, and the cameras read it wherever they set `controls.enabled`
+  (`_dbg__DebugCamera.ts`' `isCanvasInputAllowed()`: the editor view gate and the master loop;
+  `_dbg__ViewCamera.ts`' `syncControlsEnabled`). The listener only applies it at once:
+  `_dbg__DebugCamera.ts` registers one at module load (a `_dbg__` module, like its plugin), on
+  `getECSWorld()` as `Camera.ts` does; each view camera adds its own and `dispose` removes it
+  (no forwarding through `Views.ts`). The Loop tab's field is a `{ get, set }` binding whose `set`
+  calls `toggleMainPlay` (a state-key binding writes the state before its `onChange`, so the call
+  would see no change and notify nobody), and its `onChange` persists `masterPlay` at the gesture's
+  end; `persistKeys` still hydrates it. OrbitControls (r187) ignores `pointermove` and the wheel
+  while disabled but its `pointerup` doesn't check `enabled`, so a drag in progress stops moving the
+  camera and still ends. `stopMainLoop` (an embed's unmount) still writes the state without a
+  notification. The note went into `src/_engine/debug/editors/CLAUDE.md` (the view camera; the
+  debug `CLAUDE.md` has no camera section), `src/_engine/kernel/render/CLAUDE.md` (Views, Input)
+  and `src/_engine/kernel/ecs/CLAUDE.md` (the loop). Checked on WebGPU (the scene runner's Windows
+  Chrome) in `scene01` with the debug camera on (F1): a horizontal drag moves it with the loop on,
+  not with the loop off through the on-screen "Play the main loop" button or the Loop tab's field
+  (a focused checkbox, Space; `AEK_debugLoop` saved `{"masterPlay":false}`, then `true`), and the
+  camera doesn't jump when the loop comes back on; the material editor's view camera the same.
+  The old code moved the debug camera in both paused cases.
 
 ### Phase 2: Light helpers (item 11)
 

@@ -358,8 +358,8 @@ export type ElapsedClock = { elapsed: number; discardNext: boolean };
  * one spans the whole paused duration: it is discarded (as the fixed-step driver does for
  * physics), so the elapsed time stands still instead of jumping forward. `discardNext` starts out
  * true, which also covers a loop that starts paused (saved loop state). Detected here, every
- * frame, rather than in toggleMainPlay, because the debug GUI's master loop toggle flips
- * loopState.masterPlay directly.
+ * frame, rather than in toggleMainPlay, because the Loop tab's hydration of the saved state
+ * sets loopState.masterPlay directly.
  * @internal
  */
 export const advanceElapsedClock = (
@@ -636,6 +636,7 @@ export const deleteResizer = (id: string) => {
  * @param value (boolean) optional value whether the loop state in playing (true) or paused (false). If not provided then value is the opposite to the current value.
  */
 export const toggleMainPlay = (value?: boolean) => {
+  const wasOn = loopState.masterPlay;
   if (value !== undefined) {
     loopState.masterPlay = value;
   } else {
@@ -645,8 +646,38 @@ export const toggleMainPlay = (value?: boolean) => {
     loopState.isMasterPlaying = true;
     requestMainLoopFrame();
   }
+  if (loopState.masterPlay !== wasOn) {
+    for (const listener of masterPlayChangeListeners) listener(loopState.masterPlay);
+  }
   updateDebuggerTab(LOOP_DEBUGGER_TAB_ID);
 };
+
+const masterPlayChangeListeners = new Set<(isOn: boolean) => void>();
+
+/**
+ * Calls `listener` with the new value whenever {@link toggleMainPlay} turns the master loop on or
+ * off (not for a call that leaves it as it was). For what reacts outside the frame, which doesn't
+ * run while the loop is off: the debug and view cameras' OrbitControls, which move the camera in
+ * their own pointer handlers. The Loop tab's hydration of the saved state isn't a change: read
+ * {@link isMasterPlayOn} for the value at a start.
+ * @internal
+ * @param listener called with the master loop's new value
+ * @returns removes the listener
+ */
+export const onMasterPlayChange = (listener: (isOn: boolean) => void) => {
+  masterPlayChangeListeners.add(listener);
+  return () => {
+    masterPlayChangeListeners.delete(listener);
+  };
+};
+
+/**
+ * Whether the master loop is set to play (loopState.masterPlay): a cheap read, unlike
+ * getReadOnlyLoopState.
+ * @internal
+ * @returns loopState.masterPlay
+ */
+export const isMasterPlayOn = () => loopState.masterPlay;
 
 /**
  * Toggles the app loop player state (play / pause)

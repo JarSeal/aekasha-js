@@ -1,5 +1,5 @@
-import { createDebuggerTab } from '../../../debug/DebuggerGUI';
-import { LOOP_DEBUGGER_TAB_ID, requestMainLoopFrame, type LoopState } from '../MainLoop';
+import { createDebuggerTab, persistDebuggerTabValue } from '../../../debug/DebuggerGUI';
+import { LOOP_DEBUGGER_TAB_ID, toggleMainPlay, type LoopState } from '../MainLoop';
 import { InitOnScreenTools, updateOnScreenTools } from '../../../debug/OnScreenTools';
 
 const LS_KEY = 'AEK_debugLoop';
@@ -23,10 +23,13 @@ export const createLoopDebugControls = (loopState: LoopState) => {
         pane: true,
         content: [
           {
-            key: 'masterPlay',
+            // Through toggleMainPlay, which requests the frame and tells its listeners (the
+            // cameras' controls), so it's not a state key and is persisted here
+            get: () => loopState.masterPlay,
+            set: (value) => toggleMainPlay(Boolean(value)),
             label: 'Master loop',
-            onChange: (value) => {
-              if (value) requestMainLoopFrame();
+            onChange: (_value, e) => {
+              if (e.last) persistDebuggerTabValue(LOOP_DEBUGGER_TAB_ID, 'masterPlay');
               updateOnScreenTools('PLAY');
             },
           },

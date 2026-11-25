@@ -1,9 +1,10 @@
 import type * as THREE from 'three/webgpu';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-import { ECSWorld } from '../../ecs/ECS';
+import { ECSWorld, getECSWorld } from '../../ecs/ECS';
 import { getCanvasElem } from '../../render/Renderer';
 import { ECSSystemStage } from '../../loop/SystemStages';
+import { isMasterPlayOn, onMasterPlayChange } from '../../loop/MainLoop';
 import { ComponentType } from '../../ecs/ECSCoreComponents';
 import type { DebugCamLSProps } from './_dbg__CameraDebugState';
 import {
@@ -39,6 +40,22 @@ let isControlsSuspended = false;
  * meanwhile. */
 let isSceneInputEnabled = true;
 
+/** Whether the canvas may move the debug camera: not in an editor view, and not while the master
+ * loop is off (no frame runs to show a move, so a drag would only show as a jump once it runs). */
+const isCanvasInputAllowed = () => isSceneInputEnabled && isMasterPlayOn();
+
+/** Applies the input gates to every debug camera's controls at once, for a change made between
+ * frames (debugCameraSystem doesn't run while a view suspends the scene or the loop is off).
+ * A drag in progress stops moving the camera; its pointerup still ends it. */
+const syncControlsEnabled = (world: ECSWorld) => {
+  for (const [entityId, data] of world.getStorage(ComponentType.ORBIT_CONTROLS)) {
+    data.controls.enabled =
+      isCanvasInputAllowed() && !world.isDisabled(entityId) && !isControlsSuspended;
+  }
+};
+
+onMasterPlayChange(() => syncControlsEnabled(getECSWorld()));
+
 /**
  * Enables or disables the scene debug camera's canvas input (its OrbitControls), right away:
  * debugCameraSystem doesn't run while an editor view suspends the scene. Views.ts only
@@ -48,9 +65,7 @@ let isSceneInputEnabled = true;
  */
 export const setSceneDebugCameraInputEnabled = (enabled: boolean, world: ECSWorld) => {
   isSceneInputEnabled = enabled;
-  for (const [entityId, data] of world.getStorage(ComponentType.ORBIT_CONTROLS)) {
-    data.controls.enabled = enabled && !world.isDisabled(entityId) && !isControlsSuspended;
-  }
+  syncControlsEnabled(world);
 };
 
 /**
@@ -85,7 +100,7 @@ export const attachOrbitControls = (entityId: number, world: ECSWorld, sceneId: 
   const { position, target, enabled } = props;
   obj.position.set(position.x, position.y, position.z);
   controls.target.set(target.x, target.y, target.z);
-  controls.enabled = enabled && isSceneInputEnabled;
+  controls.enabled = enabled && isCanvasInputAllowed();
   controls.update();
 
   controls.addEventListener('end', () => {
@@ -115,7 +130,7 @@ export function debugCameraSystem(world: ECSWorld) {
 
   for (const [entityId, data] of storage) {
     const isDisabled = world.isDisabled(entityId);
-    data.controls.enabled = !isDisabled && !isControlsSuspended && isSceneInputEnabled;
+    data.controls.enabled = !isDisabled && !isControlsSuspended && isCanvasInputAllowed();
 
     if (isDisabled) continue;
 
@@ -184,7 +199,7 @@ export const debugCamSceneChange = (newSceneId: string, world: ECSWorld) => {
 
   // Update OrbitControls
   controls.target.set(target.x, target.y, target.z);
-  controls.enabled = enabled && isSceneInputEnabled;
+  controls.enabled = enabled && isCanvasInputAllowed();
   controls.update();
 
   // Sync ECS Transform
