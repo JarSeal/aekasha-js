@@ -49,6 +49,7 @@ import {
   loadMissingTextures,
   retagLoadedTextures,
 } from './_dbg__MaterialEditorAssets';
+import { registerMaterialSaveSource } from './_dbg__MaterialSave';
 import {
   applyMaterialStage,
   ensureEnvironment,
@@ -398,6 +399,8 @@ export const _registerMaterialEditorView = () => {
   // The scene is created here (no GPU work); the environment, the camera and the UI need the
   // renderer, the canvas and the HUD, so they are created on the first enter
   const stage = ensureStage();
+  // Before the boot's `setSaveSourcesReady`: the records are saved without the editor opened
+  registerMaterialSaveSource();
   setMaterialEditorHooks({
     loadMaterial: (materialId) => void loadEditorMaterial(materialId),
     refreshDrawer: () => ui?.drawer.refresh(),
