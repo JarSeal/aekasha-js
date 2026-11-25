@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-5 implemented
+Status: in progress | Phases 1-6 implemented
 Category: Debug, Dev tooling
 Related: `devTools/devFiles/CLAUDE.md` (the dev file server this builds on, p342: the routes,
 `writeDevFiles`, save entry writes, the "File server" folder; this plan is p342's §5 question 4),
@@ -664,7 +664,7 @@ As built:
   app files were restored after. Not checked: the edit windows' fields themselves (their writes are
   the unit tests'), and a real GPU.
 
-### Phase 6 — Material editor (the current scene's materials)
+### Phase 6 — Material editor (the current scene's materials) — done
 
 Its source (§2.1): the edited materials the current scene lists, as that scene's `__saveData`
 entries; the others Not saveable with the warning toast. A save clears the saved records'
@@ -703,6 +703,49 @@ the material editor and saved with Ctrl+S (also from the material editor view): 
 editor shows no override. `asteroid` (listed by `space` and the Hub hero example, not by
 `sceneTestECS`) edited too: the same Ctrl+S leaves it out with the warning toast and
 keeps its editor changes; it's Not saveable in the dialog.
+
+As built:
+
+- The editor's base (section 1): `getMaterialBase(id)` (`_dbg__MaterialEditorAssets.ts`) is the current
+  scene's resolved entry when the scene lists the material with the same type (`getSceneListItem`,
+  whose kinds take `materials`), with the file's `__sourcePath` kept (the Params tab's Source row),
+  else the registry's file. The copy's load, the Params tab and the TSL inputs' base for an edit
+  and for an undo written into the record read it; the params' base is the copy's, so it follows.
+  The name, the title, the existence checks and the selector stay the registry's. Test:
+  `_dbg__MaterialEditorAssets.test.ts`.
+- The source (section 2, `debug/editors/material/_dbg__MaterialSave.ts`, id `material`): every
+  record with `overrides` is a change of the current scene (a record with only settings or a pose
+  isn't listed), its summary the overrides (`params.<key>`, `inputs.<key>`,
+  `nodes.<socket>.<input>`); Not saveable "material not found" (not in the registry) or "not in
+  this scene". `mergeMaterialEntry` (the latest entry, `params` and `inputs` by key, `nodes` by
+  socket then input, values replaced whole) and `pruneMaterialEntry` (each value compared whole
+  with the file's, JSON compared: a file's `"#FFAA00"` against the editor's `"#ffaa00"` is written
+  again, harmless; other keys flat; an emptied group or socket dropped). `onSaved` removes the
+  collected overrides one by one (as the lights' keys); the copy isn't made again (it shows the
+  saved values, and made now it would show the dev data from before the save until the reload),
+  the Params tab's reset button follows its LS key. Registered in `_registerMaterialEditorView`.
+- "Save scene"'s warning (section 3): `getUnsavedMaterialsWarning(changes, sceneId)` (the material
+  source's, by its `changeKeys`) gives the text; `_saveSceneAsync` reads it before the save and
+  passes it as `_saveChangesAsync`'s `warning`, which a save that wrote files keeps: the gather
+  with the reload adds it to the gather note (`GatherNote.warnings`, shown after the reload with
+  "Saved n files", also with the gather toasts off), a gather without a reload or a failed one
+  and the 30 s timeout show it at once. With nothing to write it's the only toast ("Nothing to
+  save" would say less); failed, cancelled and off saves don't show it. `_dbg__SaveData.ts`
+  imports the material source's function (not a new public `SaveSource` field). The dialog
+  doesn't use it: it lists those materials under Not saveable.
+- Checked in the browser (`sceneTestECS`, WebGL fallback, a scratch Playwright script on a dev
+  server of its own, port 8095): `testTslMat` seeded with a `sceneTestECS` entry
+  (`{ glow: 0.9, baseColor: '#203040' }`); the editor showed glow 0.9 and that baseColor (the
+  scene's); the edits through the editor's bindings (`editCopyNodeInput`: panelColor `#00ff00`,
+  gridScale 2, glow back to the file's 0.6) and asteroid's `colorNode.noiseScale` 2.5; the dialog
+  listed `testTslMat` under This scene and asteroid under Not saveable ("not in this scene").
+  Ctrl+S in the material editor view: one reload, the new entry `{ inputs: { baseColor:
+  '#203040', panelColor: '#00ff00', gridScale: 2 } }` (glow dropped: the file's) stamped, the
+  seeded one kept second, asteroid's file untouched; after the reload "Saved 1 file" and the
+  warning naming asteroid, the scene's and the editor's uniforms the saved values,
+  `testTslMat`'s record only its camera pose, asteroid's override kept; a second Ctrl+S only the
+  warning, nothing written. No console errors. The app files were restored after. Not checked: a
+  real GPU, the Params tab's fields themselves (their writes are the bindings the script called).
 
 ### Phase 7 — Scene JSON entries
 
