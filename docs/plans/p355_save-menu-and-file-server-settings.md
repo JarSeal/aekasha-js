@@ -925,6 +925,18 @@ item's reason, a form-level error if added), the Hub's Debug suite page
 (`hub/pages/features/debug-suite/`), `readme.md` if it lists the debug keys, the versions and
 `CHANGELOG.md` (§4).
 
+Sections:
+
+1. **`src/_engine/debug/CLAUDE.md`:** the Æ menu, save sources (and how a debug module adds one),
+   the pipeline, the dialog, an inline asset's move, the keys; the root's map line.
+2. **`devTools/devFiles/CLAUDE.md` and `devTools/gather/CLAUDE.md`**, and the kit's `CLAUDE.md`
+   checked (Phases 3 and 4 wrote the menu item's reason and the form's own error).
+3. **The Hub's Debug suite page and `readme.md`**, then `yarn hub:build`.
+4. **The baselines:** `yarn verify:baselines --update` (the new exports), `yarn verify:ui --only
+   menu,form --update` (the screenshots), the full `yarn verify:baselines` (the production
+   build's debug code check).
+5. **Versions, `CHANGELOG.md`, the plan marked done**, `yarn checkVersions --against main`.
+
 ## 4. Versioning
 
 Engine minor (the save menu, `debug/SaveData.ts`, the menu item's disabled reason,
