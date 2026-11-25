@@ -20,6 +20,7 @@ import {
 } from './DevFiles';
 import { updateOnScreenTools } from './OnScreenTools';
 import {
+  _areSaveSourcesReady,
   _getSaveSources,
   type SaveChange,
   type SaveChangeWrite,
@@ -51,8 +52,10 @@ export const _refreshSaveStatus = () => {
   return statusRequest;
 };
 
-/** Why nothing can be saved now (the dev files, the save history size), or null */
+/** Why nothing can be saved now (the debugger's boot, the dev files, the save history size), or
+ * null */
 const getSavingOffReason = (status: DevFilesStatus | null) => {
+  if (!_areSaveSourcesReady()) return 'The debugger is still starting';
   if (!status) return 'Checking the dev file server…';
   if (!status.available) return status.message;
   if (getDevFilesSaveHistorySize() === 0) {

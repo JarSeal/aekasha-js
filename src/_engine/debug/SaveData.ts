@@ -106,6 +106,25 @@ export const registerSaveSource = (source: SaveSource): (() => void) => {
  */
 export const _getSaveSources = (): SaveSource[] => [...saveSources.values()];
 
+// The features register their sources in their debug hooks: a save before the last one ran would
+// leave the later sources' changes out
+let areSourcesReady = false;
+
+/**
+ * Marks every feature's save sources registered: the boot's, after the features'
+ * `onDebugAfterStart` hooks. Saving waits for it.
+ * @internal
+ */
+export const setSaveSourcesReady = () => {
+  areSourcesReady = true;
+};
+
+/**
+ * Whether the boot has registered every feature's save sources. The save implementation's.
+ * @internal
+ */
+export const _areSaveSourcesReady = () => areSourcesReady;
+
 type SaveDataModule = typeof import('./_dbg__SaveData');
 let saveDataModule: Promise<SaveDataModule | null> | null = null;
 

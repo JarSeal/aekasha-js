@@ -30,6 +30,7 @@ import {
 } from '../../../debug/_dbg__UndoRedo';
 import { SKYBOX_PRESET_NAMES, type SkyBoxPresetName } from '../Presets';
 import { applySkyBoxPreset } from './_dbg__SkyBoxEdits';
+import { registerSkyBoxSaveSource } from './_dbg__SkyBoxSave';
 import {
   clearSkyBoxOverrides,
   getSceneIdsWithOverrides,
@@ -204,6 +205,8 @@ const buildSkyBoxDebugGUI = () => {
   // Set before createDebuggerTab: it can build the tab right away, and the tab's own build
   // must not come back here.
   debuggerCreated = true;
+  // "Save scene" saves the overrides into the sky box files (p355)
+  registerSkyBoxSaveSource();
   createDebuggerTab({
     id: SKYBOX_TAB_ID,
     title: 'Sky box controls',

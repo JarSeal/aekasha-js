@@ -52,6 +52,7 @@ import { registerLightDebugGUI } from '../light/Light';
 import { load3DSymbols } from '../../debug/symbols/3DSymbols';
 import { registerDebugToolsModule } from '../../debug/DebugTools';
 import { showDevFilesGatherNote } from '../../debug/DevFiles';
+import { setSaveSourcesReady } from '../../debug/SaveData';
 import { registerRaycastDebugGUI } from '../render/Raycast';
 import { registerOnScreenTools } from '../../debug/OnScreenTools';
 import {
@@ -266,6 +267,8 @@ const bootDebugAfterStartAsync = async (debugAfterStartHooks: FeatureDebugHook[]
   await createAssetsDebugGUI();
   // The features' own, in install order
   await runFeatureDebugHooksAsync(debugAfterStartHooks);
+  // Their save sources are registered: the Æ menu's saves can start (p355)
+  setSaveSourcesReady();
 
   getHUDRootCMP().add(
     createToaster({

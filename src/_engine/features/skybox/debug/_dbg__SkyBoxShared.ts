@@ -533,6 +533,9 @@ export const syncSkyBoxProxy = () => {
   skyBoxProxy.base.color = base?.type === 'COLOR' ? base.color : '#000000';
 };
 
+/** Every scene's stored overrides, by scene and sky box id (a copy: the save source's). */
+export const getAllSkyBoxOverrides = () => readAllOverrides();
+
 /** Scene ids that have overrides stored. */
 export const getSceneIdsWithOverrides = () => Object.keys(readAllOverrides());
 

@@ -36,6 +36,13 @@ import {
   updateDraggableWindowsOfKind,
 } from '../../../ui/overlays/windows/DraggableWindow';
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../../utils/LocalAndSessionStorage';
+import {
+  LS_KEY,
+  readPassesLS,
+  writePassesLSOrRemove,
+  type PostFxPassOverride,
+} from './_dbg__PostFXStore';
+import { registerPostFxSaveSource } from './_dbg__PostFXSave';
 import { CMP } from '../../../ui/core/CMP';
 import {
   confirmClearScope,
@@ -64,17 +71,7 @@ type PostFxSettingsLSData = {
   postFxEnabled?: { [sceneId: string]: boolean };
 };
 
-/** One PostFX pass's deviations from its authored state. */
-type PostFxPassOverride = { enabled?: boolean; params?: Record<string, unknown> };
-
-/** The structure of 'AEK_debugPostFx' in LocalStorage. Only deviations from the authored
- * PostFX passes are stored, and empty pass / scene entries are pruned. */
-type PostFxPassesLSData = {
-  [sceneId: string]: { [postFxPassId: string]: PostFxPassOverride };
-};
-
 const SETTINGS_LS_KEY = 'AEK_debugPostFxSettings';
-const LS_KEY = 'AEK_debugPostFx';
 
 const TAB_ID = 'postFxControls';
 /** The edit windows' kind: one window per PostFX pass, keyed by its id */
@@ -178,16 +175,6 @@ const syncPostFxEnabledFromLS = () => {
 };
 
 // Per-PostFX pass overrides
-
-const readPassesLS = () => lsGetItem(LS_KEY, {}) as PostFxPassesLSData;
-
-const writePassesLSOrRemove = (data: PostFxPassesLSData) => {
-  for (const sceneId of Object.keys(data)) {
-    if (!Object.keys(data[sceneId] || {}).length) delete data[sceneId];
-  }
-  if (Object.keys(data).length) lsSetItem(LS_KEY, data);
-  else lsRemoveItem(LS_KEY);
-};
 
 const isSameValue = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -574,6 +561,9 @@ export const _createPostFXDebugGUI = async () => {
 
   // The first scene is entered before the debug GUIs are created (inside appStartFn), so the
   // persisted state is applied here once, and from then on by the scene enter hook.
+  // "Save scene" saves the PostFX passes' overrides into their files (p355)
+  registerPostFxSaveSource();
+
   const measureOverride = readSettingsLS().measureEnabled;
   if (measureOverride !== undefined) await setPostFxMeasureEnabled(measureOverride);
   snapshotAuthoredPostFxPasses();

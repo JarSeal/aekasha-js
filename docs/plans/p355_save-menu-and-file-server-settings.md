@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Debug, Dev tooling
 Related: `devTools/devFiles/CLAUDE.md` (the dev file server this builds on, p342: the routes,
 `writeDevFiles`, save entry writes, the "File server" folder; this plan is p342's §5 question 4),
@@ -411,13 +411,14 @@ As built:
   folder's rows. A failed gather's alert only in the unit tests (`_dbg__DevFilesGather.test.ts`):
   the server's validation keeps a dev files write from failing the gather.
 
-### Phase 3 — The Æ menu and "Save scene"
+### Phase 3 — The Æ menu and "Save scene" — done
 
 §2.1 and §2.2: the menu item's disabled reason (the kit), the Æ menu on `createMenu` (About
 moves into it), the save source registry, "Save scene" and its key. The first sources: sky boxes and PostFX passes (no
 conversion).
 
-**Exit:** a sky box layer and a PostFX param edited in `skyShowcase`, Ctrl+S: one commit with
+**Exit:** a sky box layer and a PostFX param edited in `largeWorld` (`skyShowcase` lists no PostFX
+pass), Ctrl+S: one commit with
 both files, their entries merged over the latest ones, stamped; after the reload the scene
 looks the same with localStorage cleared for them; a second Ctrl+S toasts "Nothing to save".
 The Æ icon is a spinner and the menu disabled from the key press to the reload, and a second
@@ -425,6 +426,79 @@ Ctrl+S meanwhile only toasts. A file edited by hand in between fails with `CONFL
 localStorage, and brings the icon and menu back. The save items are
 disabled with the reason when the dev files are off and when the save history size is 0. The
 menu works by keyboard; Escape closes it.
+
+As built:
+
+- The kit (`ui/overlays/Menu.ts`, `MenuItems.ts`): `MenuActionItem.disabledReason`, a
+  `createTooltip` on the item's right while it's disabled (its `aria-describedby`; Escape hides
+  it before it closes the menu), removed with its level through the level's `hints` stops. Not
+  in the plan: a trigger that's `disabled` or `aria-disabled="true"` opens nothing by a click or
+  its arrows (a `focusableWhenDisabled` button's click got through to the menu's listener);
+  `open()` from code still opens. Both in the kit's `CLAUDE.md`, the overlays guide and the
+  library demo ("Revert" has a reason).
+- The toolbar (`debug/_dbg__OnScreenToolbar.ts`): a tool with `menu: { label, items }` is a menu
+  button (`createMenu`, removed with the group: the toolbar's new `remove()`, which `syncGroup`
+  uses), plus `isLoading` and `getDisabledReason` read on every refresh (a disabled tool closes
+  its menu). The Æ tool is key `aekasha`, label "Ækasha menu": "Save scene" (its hint the
+  platform's chord only, ⌘S on a Mac, Ctrl+S elsewhere), a separator, "About Ækasha".
+  "Save specific data…" is added in Phase 4, not disabled before it.
+- `debug/SaveData.ts` (public on `aekasha/debug`: `registerSaveSource`, `SaveChange`,
+  `SaveChangeWrite`, `SaveSource`): the registry, kept here so a source registered before the
+  implementation loads counts. `build` may return null (the file has the change: nothing
+  written, `onSaved` still runs); `extract` waits for Phase 8. `saveScene()` (`@internal`, the
+  key's) loads `_dbg__SaveData.ts` on first use. `setSaveSourcesReady()` (`@internal`), called
+  by `Boot.ts` after the features' `onDebugAfterStart` hooks: the sky box and PostFX tabs register
+  their sources there, after the debug keys and the Æ button exist, so until then saving is off
+  ("The debugger is still starting"; found in the browser: a Ctrl+S right after the first load
+  saved the sky box and not the PostFX pass).
+- `debug/_dbg__SaveData.ts`: the dev files' status cached for the menu's synchronous items
+  (read when the tools are built and on every open); `_getSaveSceneDisabledReason` (saving, the
+  debugger's boot, the status, a history size of 0, "Nothing to save in this scene");
+  `_saveSceneAsync`: collect (a throwing source fails the save), the current scene's saveable
+  changes and the global ones, a fresh `readDevFile` per path (its hash the `expectedHash`), one
+  write per path (two `saveData` writes for one scene deep-merged, anything else refused), the
+  gather listener added before the commit, `writeDevFiles` (so Confirm writes applies), every
+  source's `onSaved` right after the commit, then the save stays on until the reload. It ends at
+  a failed commit (an alert toast with the code; Cancel an info toast), every file unchanged
+  ("Nothing to save"), a failed gather or one without a reload, and 30 s after the commit
+  (started only once files were written: a Confirm writes dialog left open isn't cut short). An
+  off reason toasts as a warning, not a sticky alert.
+- The key (`DefaultDebugKeyBindings.ts`): `sc-save-scene`, Ctrl+S / ⌘S, `KEY_DOWN`, category
+  `DEBUGGER`. §2.2 assumed the debug maps leave a text field's keys alone: they run the key's fn
+  there and only skip the map's `preventDefault`, so the key needs no capture listener: its fn
+  prevents the default always (repeats too; a repeat saves nothing), blurs a text field first,
+  then `saveScene()`. Not covered: during a scene load the `DEBUG` maps are off, so Ctrl+S then
+  opens the browser's dialog (left as is; a capture listener for the save chords would close it).
+- The sources (`debug/_dbg__SaveEntries.ts`, what they share: the latest entry without `__meta`,
+  `pruneSaveEntry`, `getChangedKeys`, `toSaveEntryWrite`, `findSceneAssetFile`): sky boxes
+  (`features/skybox/debug/_dbg__SkyBoxSave.ts`, registered at the tab's first build; `deepMerge`,
+  a whole list replacing) and PostFX passes (`features/postfx/debug/_dbg__PostFXSave.ts`,
+  registered in `_createPostFXDebugGUI`; `enabled` replaced, `params` by key; the store moved to
+  `_dbg__PostFXStore.ts`). Pruning is narrower than §2.1's wording: an entry value is dropped
+  only when the file itself has the same value there (a sky box's preset merged in, a PostFX
+  pass's `enabled` defaulting to true), never one equal to a renderer default the file doesn't
+  set, and an object the file doesn't have stays even empty (dropping `clouds: { coverage: 0.5 }`
+  from a file without clouds would turn the layer off). An empty entry is written only over an
+  existing one. Not saveable: "scene not found", "not in the scene JSON" (made in code, or no
+  longer listed), "inline in the scene JSON: it has no file of its own" (Phase 8 moves those).
+- Checked in the browser (`largeWorld`, WebGL fallback, a scratch Playwright script on the dev
+  server): Ctrl+S wrote both files in one commit and one gather ("Saved 2 files" after the
+  reload), the entries stamped with the versions and the author; the Æ button busy 65 ms after
+  the key and until the unload (~350 ms), a second Ctrl+S meanwhile "Saving…"; after the reload
+  localStorage cleared and a second save "Nothing to save"; a stale hash (the read's header
+  rewritten) → `CONFLICT`, localStorage and the file kept, the Æ button back; saving off and no
+  dev files token give their reasons as the item's tooltip; the menu by keyboard, Escape back to
+  the Æ button. The app files were restored after.
+- For Phase 4: the server takes one `saveData` per write and a batch each path once, so "Save
+  specific data…" with one sky box changed in two scenes needs two scenes' entries in one file in
+  one commit. Proposed: a write's `saveData` may be an array (one entry per scene; the server and
+  its self-check), keeping the batch all or nothing; a commit per scene would lose that. Also
+  seen: the server's Prettier pass reformats a file's compact objects on every write
+  (`ambientOcclusion.postFx.json`'s `paramsMeta` one-liners became multi-line): p342's, not
+  changed here.
+- Left for Phase 9: `yarn verify:baselines --update` (the API and docs baselines: the new
+  exports), `yarn verify:ui --only menu` and the full `yarn verify:baselines` (the production
+  build's debug code check).
 
 ### Phase 4 — "Save specific data…"
 

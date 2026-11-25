@@ -57,7 +57,12 @@ vi.mock(import('./OnScreenTools'), async (importOriginal) => ({
 }));
 
 import { DevFilesError } from './DevFiles';
-import { registerSaveSource, type SaveChange, type SaveSource } from './SaveData';
+import {
+  registerSaveSource,
+  setSaveSourcesReady,
+  type SaveChange,
+  type SaveSource,
+} from './SaveData';
 import {
   _getSaveSceneDisabledReason,
   _isSaving,
@@ -131,6 +136,19 @@ afterEach(() => {
 });
 
 describe('"Save scene"’s state (p355 §2.2)', () => {
+  it('is off until the boot has run the features’ debug hooks (their sources)', async () => {
+    addSource([createChange()]);
+    expect(_getSaveSceneDisabledReason()).toBe('The debugger is still starting');
+    await _saveSceneAsync();
+    expect(files.writes).toEqual([]);
+    expect(toasts.at(-1)).toMatchObject({
+      type: 'warning',
+      message: 'The debugger is still starting',
+    });
+    setSaveSourcesReady();
+    expect(_getSaveSceneDisabledReason()).toBeNull();
+  });
+
   it('is off without the dev files, with saving off, and with nothing to save in this scene', async () => {
     files.status = {
       available: false,
