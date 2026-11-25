@@ -24,7 +24,7 @@ Maintain the brand, feeling, and core principles in creating the best UX for bot
 
 - `yarn dev` — start the dev server (Vite, port 8080), development env.
 - `yarn dev:https` — `yarn dev` over HTTPS on port 8443 (`AEK_DEV_HTTPS=true` adds `@vitejs/plugin-basic-ssl`'s self-signed certificate): a phone on the LAN needs a secure context for WebGPU and `SharedArrayBuffer`, which a plain `http://` LAN address isn't.
-- Dev file server env vars (p342, every `dev*` script): `AEK_DEV_FILES=false` turns its routes off; `AEK_DEV_FILES_LAN=true` lets other devices on the LAN write too (a phone under `yarn dev:https`; by default only the server's machine can). Its self-check: `devTools/devFiles/CLAUDE.md`.
+- Dev file server env vars (p342, every `dev*` script): `AEK_DEV_FILES=false` turns its routes off; `AEK_DEV_FILES_LAN=true` lets other devices on the LAN write too (a phone under `yarn dev:https`; by default only the server's machine can); `AEK_DEV_FILES_BACKUPS=<n>` keeps the last n commits' backups (p355: 20 by default, -1 all, 0 none). Its self-check: `devTools/devFiles/CLAUDE.md`.
 - `yarn dev:test` — dev server with `VITE_APP_ENV=test`.
 - `yarn dev:production` — dev server against production env vars.
 - `yarn build` — type-check (`tsc`, then `tsc -p hub`) + production build to `dist/`, then `yarn sbp --profile all --no-app-build --brief` (the app it just built, and each embed profile built and checked; `AEK_SBP=false` skips it), then the Ækasha Hub into `dist-hub/` (`yarn hub:build`, below). Its asset checks (missing outputs, budgets): `devTools/assetPipeline/CLAUDE.md`.
