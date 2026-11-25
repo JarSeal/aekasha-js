@@ -43,6 +43,8 @@ let debugToolsState: DebugToolsState = {
   // Saved only once changed here, so until then a CONFIG change applies
   devFiles: {
     saveHistorySize: getConfig().devFiles?.saveHistorySize ?? DEFAULT_SAVE_HISTORY_SIZE,
+    gatherToasts: getConfig().devFiles?.gatherToasts ?? true,
+    confirmWrites: getConfig().devFiles?.confirmWrites ?? false,
   },
   // Saved only once changed here, as devFiles
   appearance: {
@@ -89,6 +91,21 @@ const loadDebugToolsStateFromLS = () => {
     lsSetItem(DEBUG_TOOLS_LS_KEY, saved);
   }
   debugToolsState = { ...debugToolsState, ...saved };
+  _fillDevFilesDefaults();
+};
+
+/**
+ * Fills the `devFiles` keys a saved object lacks (saved before p355 added `gatherToasts` and
+ * `confirmWrites`): LS replaces the whole object. After every hydration from LS.
+ */
+export const _fillDevFilesDefaults = () => {
+  const devFiles = debugToolsState.devFiles as Partial<DebugToolsState['devFiles']> | undefined;
+  debugToolsState.devFiles = {
+    saveHistorySize: getConfig().devFiles?.saveHistorySize ?? DEFAULT_SAVE_HISTORY_SIZE,
+    gatherToasts: getConfig().devFiles?.gatherToasts ?? true,
+    confirmWrites: getConfig().devFiles?.confirmWrites ?? false,
+    ...devFiles,
+  };
 };
 
 /**

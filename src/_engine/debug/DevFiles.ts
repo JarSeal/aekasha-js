@@ -65,8 +65,9 @@ const requireDevFiles = async () => {
 };
 
 /** The server's codes, plus the client's own: `UNAVAILABLE` (not the debug env, no dev server or
- * no token in the page) and `NETWORK` (the request failed, or the answer wasn't the server's). */
-export type DevFilesClientErrorCode = DevFilesErrorCode | 'UNAVAILABLE' | 'NETWORK';
+ * no token in the page), `NETWORK` (the request failed, or the answer wasn't the server's) and
+ * `CANCELLED` (the "Confirm writes" dialog was cancelled: nothing was written). */
+export type DevFilesClientErrorCode = DevFilesErrorCode | 'UNAVAILABLE' | 'NETWORK' | 'CANCELLED';
 
 /** A refused or failed dev files request. `details` is the server's: `CONFLICT` has
  * {@link DevFilesConflicts}, `INVALID_SCHEMA` {@link DevFilesSchemaIssues}. */
@@ -208,6 +209,47 @@ export const getDevFilesSaveHistorySize = (): number => {
   );
 };
 
+/** The "File server" folder's switches (p355 §2.4) that {@link isDevFilesOptionOn} reads. */
+export type DevFilesOption = 'gatherToasts' | 'confirmWrites';
+
+/**
+ * Whether a "File server" switch is on: the Debug tools tab's setting, else
+ * `AppConfig.devFiles`, else its default (gather toasts on, confirm writes off). False outside
+ * the debug env.
+ * @internal
+ */
+export const isDevFilesOptionOn = (option: DevFilesOption): boolean => {
+  if (!IS_DEBUG_ENV) return false;
+  const saved = getDebugToolsState().devFiles?.[option];
+  if (typeof saved === 'boolean') return saved;
+  const configured = getConfig().devFiles?.[option];
+  return typeof configured === 'boolean' ? configured : option === 'gatherToasts';
+};
+
+/**
+ * The sessionStorage key of the note a gather after this page's writes leaves for the reload.
+ * @internal
+ */
+export const DEV_FILES_GATHER_NOTE_KEY = 'AEK_devFilesGatherNote';
+
+/**
+ * Shows the toasts of the gather that reloaded the page, when this page's writes set it off
+ * (the "Gather toasts" setting). Loads the implementation only when there's a note.
+ * @internal
+ */
+export const showDevFilesGatherNote = () => {
+  if (!IS_DEBUG_ENV) return;
+  try {
+    if (sessionStorage.getItem(DEV_FILES_GATHER_NOTE_KEY) === null) return;
+  } catch {
+    return;
+  }
+  loadDevFiles().then(
+    (module) => module?._showGatherNoteAfterReload(),
+    () => undefined // loadDebugModuleAsync logged it
+  );
+};
+
 /** Whether this page can write dev files, and the server's settings. Never rejects: outside the
  * debug env it resolves `NOT_DEBUG_ENV` without loading anything. */
 export const getDevFilesStatus = async (): Promise<DevFilesStatus> => {
@@ -224,7 +266,11 @@ export const getDevFilesStatus = async (): Promise<DevFilesStatus> => {
 
 /**
  * Writes a batch of files into the repo: every write lands or none does. A blob is uploaded
- * (staged) first, then the batch is committed.
+ * (staged) first, then the batch is committed. With the "Confirm writes" setting on (Debug
+ * tools → File server) a dry run comes first and a dialog lists its files: the batch is
+ * committed only on Confirm, against the files as the dry run read them (a change in between is
+ * a `CONFLICT`), and Cancel rejects with `CANCELLED`. With "Gather toasts" on, a toast tells how
+ * the gather after the write went (after the reload it sets off).
  * @returns per file its `sha256` and whether it was `created`, `updated` or `unchanged` (an
  * unchanged file isn't written, so it sets off no gather: a batch of unchanged files gets no
  * {@link onDevDataGathered} event)

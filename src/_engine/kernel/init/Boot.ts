@@ -51,6 +51,7 @@ import { initDebugCamera, registerCameraDebugGUI } from '../camera/Camera';
 import { registerLightDebugGUI } from '../light/Light';
 import { load3DSymbols } from '../../debug/symbols/3DSymbols';
 import { registerDebugToolsModule } from '../../debug/DebugTools';
+import { showDevFilesGatherNote } from '../../debug/DevFiles';
 import { registerRaycastDebugGUI } from '../render/Raycast';
 import { registerOnScreenTools } from '../../debug/OnScreenTools';
 import {
@@ -282,6 +283,7 @@ const bootDebugAfterStartAsync = async (debugAfterStartHooks: FeatureDebugHook[]
         closeBtnIcon: getSvgIcon('x'),
         icons: {
           info: getSvgIcon('info'),
+          success: getSvgIcon('circleCheckCutout'),
           warning: getSvgIcon('warning'),
           alert: getSvgIcon('alert'),
         },
@@ -290,6 +292,8 @@ const bootDebugAfterStartAsync = async (debugAfterStartHooks: FeatureDebugHook[]
   );
   // Toasts from the boot, eg. an unknown ?startScene
   flushQueuedDebugToasts();
+  // The gather toasts of this page's last writes, which reloaded it (p355 §2.4)
+  showDevFilesGatherNote();
 };
 
 const consoleBootText = () => {

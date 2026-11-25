@@ -1,6 +1,7 @@
 import {
   DevFilesError,
   getDevFilesSaveHistorySize,
+  isDevFilesOptionOn,
   type DevFileRead,
   type DevFilesStatus,
   type DevFileWrite,
@@ -22,8 +23,12 @@ import {
 } from './DevFilesProtocol';
 import { lerror } from '../utils/Logger';
 import { encodeRGBA8PNG } from './_dbg__PNGEncoder';
+import { confirmDevFilesWrites } from './_dbg__DevFilesConfirm';
+import { _handleOwnGather, _rememberWrittenPaths } from './_dbg__DevFilesGather';
 
-/** The dev files' browser side (p342 §2.4); the public API is `debug/DevFiles.ts`. */
+export { _showGatherNoteAfterReload } from './_dbg__DevFilesGather';
+
+/** The dev files' browser side (p342 §2.4, p355 §2.4); the public API is `debug/DevFiles.ts`. */
 
 const getToken = () =>
   document.querySelector<HTMLMetaElement>(`meta[name="${DEV_FILES_TOKEN_META}"]`)?.content || null;
@@ -132,7 +137,25 @@ const stageBlob = async (blob: Blob) => {
   return (await readJson<DevFilesStageBody>(response, 'stage')).stageId;
 };
 
-export const _writeDevFiles = async (writes: DevFileWrite[]): Promise<DevFilesCommitBody> => {
+const commit = async (body: DevFilesCommitRequest) => {
+  const response = await request('commit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return readJson<DevFilesCommitBody>(response, 'commit');
+};
+
+/**
+ * `writeDevFiles` (its JSDoc): with "Confirm writes" on, a dry run, its dialog, then the commit
+ * against the dry run's hashes.
+ * @param opts.skipConfirm no dry run and dialog: the caller showed its own (the save menu's
+ * "Save specific data…" dialog, p355 §2.3)
+ */
+export const _writeDevFiles = async (
+  writes: DevFileWrite[],
+  opts: { skipConfirm?: boolean } = {}
+): Promise<DevFilesCommitBody> => {
   if (!Array.isArray(writes) || !writes.length) {
     throw new DevFilesError('BAD_REQUEST', 'writeDevFiles needs at least one write');
   }
@@ -162,12 +185,25 @@ export const _writeDevFiles = async (writes: DevFileWrite[]): Promise<DevFilesCo
       })
     ),
   };
-  const response = await request('commit', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return readJson<DevFilesCommitBody>(response, 'commit');
+  if (!opts.skipConfirm && isDevFilesOptionOn('confirmWrites')) {
+    const dryRun = await commit({ ...body, dryRun: true });
+    // Nothing would change: no question to ask (the commit writes nothing either)
+    if (dryRun.results.some((result) => result.status !== 'unchanged')) {
+      if (!(await confirmDevFilesWrites(dryRun.results))) {
+        throw new DevFilesError('CANCELLED', 'The writes were cancelled: nothing was written');
+      }
+    }
+    // What was confirmed is what's overwritten: a change since is a CONFLICT
+    body.writes = body.writes.map((write, i) => ({
+      ...write,
+      expectedHash: dryRun.results[i].previousHash,
+    }));
+  }
+  const result = await commit(body);
+  _rememberWrittenPaths(
+    result.results.filter((write) => write.status !== 'unchanged').map((write) => write.path)
+  );
+  return result;
 };
 
 export const _readDevFile = async (path: string): Promise<DevFileRead | null> => {
@@ -241,6 +277,11 @@ const gatherListeners = new Set<(event: DevDataGatheredEvent) => unknown>();
 
 /** Vite's client handles the next message (the `full-reload`) once this settles */
 const dispatchGatherEvent = async (event: DevDataGatheredEvent) => {
+  try {
+    _handleOwnGather(event);
+  } catch (err) {
+    lerror('The dev files gather toast failed', err);
+  }
   const settled = Promise.all(
     [...gatherListeners].map(async (fn) => {
       try {

@@ -16,20 +16,53 @@ const devFiles = vi.hoisted(() => {
 vi.mock(import('./_dbg__DevFiles'), () => devFiles as never);
 
 // The Debug tools tab's "File server" setting
-const tools = vi.hoisted(() => ({ saveHistorySize: undefined as unknown }));
+const tools = vi.hoisted(() => ({
+  saveHistorySize: undefined as unknown,
+  gatherToasts: undefined as unknown,
+  confirmWrites: undefined as unknown,
+}));
 vi.mock(import('./DebugTools'), async (importOriginal) => ({
   ...(await importOriginal()),
-  getDebugToolsState: () => ({ devFiles: { saveHistorySize: tools.saveHistorySize } }) as never,
+  getDebugToolsState: () => ({ devFiles: { ...tools } }) as never,
 }));
 
 import { initEnvironment, loadConfig } from '../kernel/config/Config';
 import {
   DEFAULT_SAVE_HISTORY_SIZE,
   getDevFilesSaveHistorySize,
+  isDevFilesOptionOn,
   onDevDataGathered,
 } from './DevFiles';
 
 const DEBUG = { search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } };
+
+describe('dev files: the gather toasts and confirm writes switches (p355 §2.4)', () => {
+  it('read the Debug tools setting, then the app config, then the default', () => {
+    initEnvironment(DEBUG);
+    loadConfig({});
+    expect(isDevFilesOptionOn('gatherToasts')).toBe(true);
+    expect(isDevFilesOptionOn('confirmWrites')).toBe(false);
+
+    loadConfig({ devFiles: { gatherToasts: false, confirmWrites: true } });
+    expect(isDevFilesOptionOn('gatherToasts')).toBe(false);
+    expect(isDevFilesOptionOn('confirmWrites')).toBe(true);
+
+    tools.gatherToasts = true;
+    tools.confirmWrites = false;
+    expect(isDevFilesOptionOn('gatherToasts')).toBe(true);
+    expect(isDevFilesOptionOn('confirmWrites')).toBe(false);
+  });
+
+  it('are off outside the debug env', () => {
+    initEnvironment({ search: '', env: { VITE_APP_ENV: 'development' } });
+    tools.gatherToasts = true;
+    tools.confirmWrites = true;
+    expect(isDevFilesOptionOn('gatherToasts')).toBe(false);
+    expect(isDevFilesOptionOn('confirmWrites')).toBe(false);
+    tools.gatherToasts = undefined;
+    tools.confirmWrites = undefined;
+  });
+});
 
 describe('dev files: the save history size (p618 D11)', () => {
   it('reads the Debug tools setting, then the app config, then the default', () => {

@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phases 1-2 implemented
 Category: Debug, Dev tooling
 Related: `devTools/devFiles/CLAUDE.md` (the dev file server this builds on, p342: the routes,
 `writeDevFiles`, save entry writes, the "File server" folder; this plan is p342's §5 question 4),
@@ -336,7 +336,7 @@ an inline asset's own `__saveData`. Saving its changes moves it out:
 
 ## 3. Phases
 
-### Phase 1 — Server: author, backups, dry run
+### Phase 1 — Server: author, backups, dry run — done
 
 §2.4 items 2 (the server side), 3 and 4: `__meta.author`, `AEK_DEV_FILES_BACKUPS`, `dryRun`,
 the new status fields, `MetaSchema.author`.
@@ -349,7 +349,23 @@ config: its own server's `git` inherits the process env, which it switches betwe
 `GIT_CONFIG_VALUE_0=Self Check`. Unset: `GIT_CONFIG_GLOBAL` and `GIT_CONFIG_SYSTEM` pointed at an
 empty file and `GIT_DIR` at an empty folder (no repo config either).
 
-### Phase 2 — Client: gather toasts and confirm writes
+As built:
+
+- Every commit result has `previousHash` (the file's hash before the write, null: none), not a
+  dry-run-only field: a dry run's `previousHash` is the `expectedHash` of the commit it confirms
+  (`currentHash` stays the conflict details' "on disk now"). `sha256` is the hash after the write,
+  a dry run's what it would be. A dry run keeps its staged files. `commitDevFiles` returns
+  `isDryRun`; the server logs `dry run:` instead of `commit:`.
+- `AEK_DEV_FILES_BACKUPS` is read once at the plugin's start (as the other `AEK_DEV_FILES_*`),
+  passed to `commitDevFiles` as `backupsKept`; an invalid value warns and keeps 20
+  (`parseBackupsKept`). `GET status`'s `backupDir` is `.cache/dev-files/backup/`.
+- The stamp (versions and author) is read once per commit (`readSaveDataStamp`,
+  `devFiles/saveData.ts`); `readGitAuthor` is shared with `GET status`.
+- The self-check's own server runs with `AEK_DEV_FILES_BACKUPS=0` (its commits leave none, and no
+  longer prune the developer's backups); n > 0 is tested in `commit.test.ts` (a temp repo root).
+  With `--url` it checks the commit's backup holds the file. `withGitUser` switches the git env.
+
+### Phase 2 — Client: gather toasts and confirm writes — done
 
 §2.4 items 1 and 2 (the client side) and the folder's rows (gather toasts, confirm writes,
 author, backups).
@@ -358,6 +374,42 @@ author, backups).
 source fails); a failed gather shows the alert; an editor save shows none. With confirm writes
 on, the dialog lists the files, Cancel writes nothing and rejects with `CANCELLED`, and a file
 changed between the dry run and Confirm fails with `CONFLICT`.
+
+As built:
+
+- The settings: `AppConfig.devFiles.gatherToasts` (default true) and `confirmWrites` (default
+  false), in `src/CONFIG.ts` too (so an app minor bump in Phase 9), `debugToolsState.devFiles`'s
+  two keys (`_fillDevFilesDefaults` in `_dbg__DebugToolsState.ts` fills them into a `devFiles`
+  object saved before them: LS replaces the whole object), read by `isDevFilesOptionOn(option)`
+  (`debug/DevFiles.ts`, `@internal`: the tab's setting, else the config, else the default; false
+  outside the debug env).
+- `_writeDevFiles(writes, { skipConfirm? })` (`_dbg__DevFiles.ts`): the public `writeDevFiles`
+  passes none; Phase 4's "Save specific data…" dialog calls it with `skipConfirm: true`. With
+  confirm writes on: a dry run; when every file is `unchanged` no dialog (the commit writes
+  nothing anyway); else `confirmDevFilesWrites(results)` (`_dbg__DevFilesConfirm.ts`: an
+  `openDialog` per call, its own id, a `createBadge` per file's status, Cancel first and focused,
+  Confirm `primary`; it resolves on its content's removal, so Escape and the close button are
+  Cancel). The commit then sends every write's `previousHash` as its `expectedHash`.
+  `DevFilesClientErrorCode` has `CANCELLED`.
+- Gather toasts (`_dbg__DevFilesGather.ts`, run first in the `aek:gather` dispatch): a commit's
+  changed paths are remembered 60 s; an event naming one takes it (a write toasts once). `failed`:
+  an alert toast at once (until closed); `done` with `willReload`: the note in sessionStorage
+  (`DEV_FILES_GATHER_NOTE_KEY`; two writes before one reload merge into one note); `done` without
+  a reload: the toasts at once. After the reload `showDevFilesGatherNote()` (the thin module, so
+  the implementation loads only when there's a note) runs in `Boot.ts`' debug step right after
+  `flushQueuedDebugToasts()`: a `success` toast "Saved n files" with the paths (eight at most,
+  then "and n more"), and with asset errors a `warning` toast listing them (until closed). The
+  debug toaster got a `success` icon (`circleCheckCutout`): it had none.
+- The File server folder: "Save entry author" (the status' `author`, else "None (git user.name
+  not set)"), the two switches, and "Backups kept" ("The last 20 commits, in
+  .cache/dev-files/backup/", "Every commit", "None (AEK_DEV_FILES_BACKUPS=0)"), read with the
+  status row on every mount. Styles: `debug/DevFiles.module.scss` (the dialog and the toasts'
+  lists).
+- Checked in the browser (WebGL fallback, a scratch Playwright script): the dialog's list, Cancel →
+  `CANCELLED` and nothing written, a file changed before Confirm → `CONFLICT` with the change kept,
+  Confirm lands, the toast after a material write's reload, none after an editor save's, and the
+  folder's rows. A failed gather's alert only in the unit tests (`_dbg__DevFilesGather.test.ts`):
+  the server's validation keeps a dev files write from failing the gather.
 
 ### Phase 3 — The Æ menu and "Save scene"
 
