@@ -11,6 +11,7 @@ import {
   getLatestSaveEntry,
   getSceneListItem,
   pruneFlatSaveEntry,
+  toChangeFileFields,
   toSaveEntryWrite,
 } from '../../../debug/_dbg__SaveEntries';
 import { lsGetItem } from '../../../utils/LocalAndSessionStorage';
@@ -90,8 +91,7 @@ const collectLightChanges = (): SaveChange[] => {
         label: `Light "${appId}"`,
         scope: 'SCENE',
         sceneId,
-        path: 'path' in file ? file.path : null,
-        ...('unsaveable' in file ? { unsaveable: file.unsaveable } : {}),
+        ...toChangeFileFields(file),
         summary,
         build: ({ json }) => {
           const merged = { ...getLatestSaveEntry(json, sceneId), ...values };

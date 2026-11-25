@@ -14,7 +14,13 @@ vi.mock(import('../../../kernel/scene/Scene'), async (importOriginal) => ({
   ...(await importOriginal()),
   getGeneratedAppData: () =>
     ({
-      scenes: { sceneA: { skyboxes: [{ id: 'dayNight' }, { id: 'inline' }] } },
+      scenes: {
+        sceneA: {
+          skyboxes: [{ id: 'dayNight' }, { id: 'inline' }],
+          __sourcePath: 'src/app/scenes/sceneA/sceneA.scene.json',
+          __inlineAssets: { skyboxes: ['inline'] },
+        },
+      },
       skyboxes: { dayNight: { __sourcePath: 'src/app/skyboxes/dayNight.skybox.json' } },
     }) as never,
 }));
@@ -52,24 +58,38 @@ describe('the sky boxes’ save source (p355 §2.1)', () => {
     };
     const changes = getSource().collect();
     expect(
-      changes.map(({ id, path, unsaveable, summary }) => ({ id, path, unsaveable, summary }))
+      changes.map(({ id, path, unsaveable, extract, summary }) => ({
+        id,
+        path,
+        unsaveable,
+        extract,
+        summary,
+      }))
     ).toEqual([
       {
         id: 'sceneA:dayNight',
         path: 'src/app/skyboxes/dayNight.skybox.json',
         unsaveable: undefined,
+        extract: undefined,
         summary: ['atmosphere.turbidity'],
       },
       {
+        // Inline: its save moves it into a file of its own (p355 §2.6)
         id: 'sceneA:inline',
-        path: null,
-        unsaveable: 'inline in the scene JSON: it has no file of its own',
+        path: 'src/app/scenes/sceneA/inline.skybox.json',
+        unsaveable: undefined,
+        extract: {
+          scenePath: 'src/app/scenes/sceneA/sceneA.scene.json',
+          list: 'skyboxes',
+          id: 'inline',
+        },
         summary: ['env.size'],
       },
       {
         id: 'sceneB:dayNight',
         path: null,
         unsaveable: 'scene not found',
+        extract: undefined,
         summary: ['stars.density'],
       },
     ]);
@@ -115,6 +135,17 @@ describe('the sky boxes’ save source (p355 §2.1)', () => {
         .build({ json: structuredClone(FILE) })
     ).toEqual({
       saveData: { sceneId: 'sceneA', entry: {} },
+    });
+  });
+
+  it('builds an inline sky box’s entry over the item as the scene JSON has it (p355 §2.6)', () => {
+    store.overrides = { sceneA: { inline: { env: { environmentIntensity: 0.3, size: 512 } } } };
+    const change = getSource()
+      .collect()
+      .find(({ id }) => id === 'sceneA:inline')!;
+    const item = { id: 'inline', base: { type: 'COLOR', color: '#000000' }, env: { size: 512 } };
+    expect(change.build({ json: item })).toEqual({
+      saveData: { sceneId: 'sceneA', entry: { env: { environmentIntensity: 0.3 } } },
     });
   });
 

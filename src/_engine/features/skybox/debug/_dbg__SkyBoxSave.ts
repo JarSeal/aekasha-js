@@ -9,6 +9,7 @@ import {
   getChangedKeys,
   getLatestSaveEntry,
   pruneSaveEntry,
+  toChangeFileFields,
   toSaveEntryWrite,
 } from '../../../debug/_dbg__SaveEntries';
 import { mergeSkyBoxPreset } from '../Presets';
@@ -40,8 +41,7 @@ const collectSkyBoxChanges = (): SaveChange[] => {
         label: `Sky box "${skyBoxId}"`,
         scope: 'SCENE',
         sceneId,
-        path: 'path' in file ? file.path : null,
-        ...('unsaveable' in file ? { unsaveable: file.unsaveable } : {}),
+        ...toChangeFileFields(file),
         summary: getChangedKeys(overrides),
         build: ({ json }) => {
           const latest = getLatestSaveEntry(json, sceneId) ?? {};

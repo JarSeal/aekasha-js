@@ -2282,6 +2282,15 @@
       "id": "batchedMeshSpike",
       "sceneFile": "./scenes/batchedMeshSpike/batchedMeshSpike.ts",
       "__sourcePath": "src/app/scenes/batchedMeshSpike/batchedMeshSpike.scene.json",
+      "__inlineAssets": {
+        "cameras": [
+          "bmsCamera"
+        ],
+        "lights": [
+          "bmsAmbient",
+          "bmsSun"
+        ]
+      },
       "__features": []
     },
     "instanceStress": {
@@ -2363,6 +2372,15 @@
       "id": "instanceStress",
       "sceneFile": "./scenes/instanceStress/instanceStress.ts",
       "__sourcePath": "src/app/scenes/instanceStress/instanceStress.scene.json",
+      "__inlineAssets": {
+        "cameras": [
+          "instanceStressCamera"
+        ],
+        "lights": [
+          "instanceStressAmbient",
+          "instanceStressSun"
+        ]
+      },
       "__features": [
         "skybox"
       ]
@@ -16394,6 +16412,15 @@
       "id": "streamingGrid",
       "sceneFile": "./scenes/streamingGrid/streamingGrid.ts",
       "__sourcePath": "src/app/scenes/streamingGrid/streamingGrid.scene.json",
+      "__inlineAssets": {
+        "cameras": [
+          "streamingGridCamera"
+        ],
+        "lights": [
+          "streamingGridAmbient",
+          "streamingGridSun"
+        ]
+      },
       "__features": [
         "skybox",
         "lod",
@@ -21580,6 +21607,15 @@
       "id": "streamingPhysics",
       "sceneFile": "./scenes/streamingPhysics/streamingPhysics.ts",
       "__sourcePath": "src/app/scenes/streamingPhysics/streamingPhysics.scene.json",
+      "__inlineAssets": {
+        "cameras": [
+          "streamingPhysicsCamera"
+        ],
+        "lights": [
+          "streamingPhysicsAmbient",
+          "streamingPhysicsSun"
+        ]
+      },
       "__features": [
         "skybox",
         "streaming"
@@ -34951,6 +34987,11 @@
       "id": "topDownTestScene",
       "sceneFile": "./scenes/topDownTestScene/topDownTestScene.ts",
       "__sourcePath": "src/app/scenes/topDownTestScene/topDownTestScene.scene.json",
+      "__inlineAssets": {
+        "skyboxes": [
+          "topDownTestSky"
+        ]
+      },
       "__features": [
         "skybox",
         "postfx"

@@ -10,6 +10,7 @@ import {
   getChangedKeys,
   getLatestSaveEntry,
   pruneSaveEntry,
+  toChangeFileFields,
   toSaveEntryWrite,
 } from '../../../debug/_dbg__SaveEntries';
 import {
@@ -61,8 +62,7 @@ const collectPostFxChanges = (): SaveChange[] => {
         label: `PostFX pass "${postFxPassId}"`,
         scope: 'SCENE',
         sceneId,
-        path: 'path' in file ? file.path : null,
-        ...('unsaveable' in file ? { unsaveable: file.unsaveable } : {}),
+        ...toChangeFileFields(file),
         summary: getChangedKeys(override),
         build: ({ json }) => {
           const latest = getLatestSaveEntry(json, sceneId) ?? {};
@@ -116,8 +116,7 @@ const collectPostFxEnabledChanges = (): SaveChange[] =>
       label: `PostFX switched ${enabled ? 'on' : 'off'}`,
       scope: 'SCENE',
       sceneId,
-      path: 'path' in file ? file.path : null,
-      ...('unsaveable' in file ? { unsaveable: file.unsaveable } : {}),
+      ...toChangeFileFields(file),
       summary: ['postFxEnabled'],
       build: ({ json }) => buildEnabledEntry(json, sceneId, enabled),
     };

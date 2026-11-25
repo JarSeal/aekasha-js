@@ -190,6 +190,44 @@ describe('G5: save entries', () => {
     expect(gather(files, { isProduction: true }).scene('saved')).not.toHaveProperty('__sourcePath');
   });
 
+  it('the development data names a scene’s inline cameras, lights and sky boxes (p355 §2.6)', () => {
+    const inline = {
+      ...scene('inline', {
+        cameras: [
+          'cam',
+          { camProps: { type: 'PERSPECTIVE', appId: 'inlineCam' } },
+          { camProps: { type: 'PERSPECTIVE' }, entityOpts: { appId: 'entityCam' } },
+          { camProps: { type: 'PERSPECTIVE' } },
+        ],
+        lights: [{ lightProps: { type: 'AMBIENT', appId: 'inlineAmbient' } }],
+        skyboxes: [{ id: 'inlineSky', base: { type: 'COLOR', color: '#000000' } }],
+      }),
+      'app/cam.camera.json': camera('cam'),
+      ...scene('listed', { cameras: ['cam'] }),
+    };
+    expect(gather(inline).scene('inline')?.__inlineAssets).toEqual({
+      cameras: ['inlineCam', 'entityCam'],
+      lights: ['inlineAmbient'],
+      skyboxes: ['inlineSky'],
+    });
+    // None listed inline, and none in production
+    expect(gather(inline).scene('listed')).not.toHaveProperty('__inlineAssets');
+    expect(gather(inline, { isProduction: true }).scene('inline')).not.toHaveProperty(
+      '__inlineAssets'
+    );
+  });
+
+  it('an inline asset of a list the scene’s save entry replaces isn’t named (p355 §2.6)', () => {
+    const files = scene('replaced', {
+      lights: [{ lightProps: { type: 'AMBIENT', appId: 'fileAmbient' } }],
+      skyboxes: [{ id: 'fileSky', base: { type: 'COLOR', color: '#000000' } }],
+      __saveData: {
+        replaced: [{ lights: [{ lightProps: { type: 'AMBIENT', appId: 'entryAmbient' } }] }],
+      },
+    });
+    expect(gather(files).scene('replaced')?.__inlineAssets).toEqual({ skyboxes: ['fileSky'] });
+  });
+
   it('a scene entry’s spatialDomains merge by id (p355 §2.5)', () => {
     const domains = gather(
       scene('saved', {

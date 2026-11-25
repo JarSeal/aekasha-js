@@ -31,7 +31,11 @@ vi.mock(import('../../scene/Scene'), async (importOriginal) => ({
               },
             },
             { lightProps: { type: 'AMBIENT', enabled: false, appId: 'fill' } },
+            // Written inline in the scene JSON, its app id its entity's
+            { lightProps: { type: 'AMBIENT', intensity: 1 }, entityOpts: { appId: 'inlineFill' } },
           ],
+          __sourcePath: 'src/app/scenes/largeWorld/largeWorld.scene.json',
+          __inlineAssets: { lights: ['inlineFill'] },
         },
       },
       lights: {
@@ -126,6 +130,28 @@ describe('the lights’ save source (p355 §2.1)', () => {
     expect(getSource().collect()).toMatchObject([
       { id: 'largeWorld:lantern0', path: null, unsaveable: 'not in the scene JSON' },
     ]);
+  });
+
+  it('moves an inline light into a file of its own, its entry built over the item (p355 §2.6)', () => {
+    setLights({ inlineFill: { ...PREFS, intensity: 0.5 } });
+    const [change] = getSource().collect();
+    expect(change).toMatchObject({
+      id: 'largeWorld:inlineFill',
+      path: 'src/app/scenes/largeWorld/inlineFill.light.json',
+      extract: {
+        scenePath: 'src/app/scenes/largeWorld/largeWorld.scene.json',
+        list: 'lights',
+        id: 'inlineFill',
+      },
+      summary: ['intensity'],
+    });
+    const item = {
+      lightProps: { type: 'AMBIENT', intensity: 1 },
+      entityOpts: { appId: 'inlineFill' },
+    };
+    expect(change.build({ json: item })).toEqual({
+      saveData: { sceneId: 'largeWorld', entry: { intensity: 0.5 } },
+    });
   });
 
   it('drops the saved values, the preferences and the other changes kept', () => {

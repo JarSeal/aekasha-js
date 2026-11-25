@@ -9,6 +9,7 @@ import {
   getLatestSaveEntry,
   getSceneListItem,
   pruneFlatSaveEntry,
+  toChangeFileFields,
   toSaveEntryWrite,
 } from '../../../debug/_dbg__SaveEntries';
 import { lsGetItem } from '../../../utils/LocalAndSessionStorage';
@@ -52,8 +53,7 @@ const collectCameraChanges = (): SaveChange[] => {
         label: `Camera "${appId}"`,
         scope: 'SCENE',
         sceneId,
-        path: 'path' in file ? file.path : null,
-        ...('unsaveable' in file ? { unsaveable: file.unsaveable } : {}),
+        ...toChangeFileFields(file),
         summary: Object.keys(changed),
         build: ({ json }) => {
           const latest = getLatestSaveEntry(json, sceneId) ?? {};

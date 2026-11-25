@@ -1,7 +1,10 @@
 // What the save sources share (p355 §2.1): the scene's latest save entry of a file, an entry's
 // values that the file itself has dropped (so an entry holds only real overrides), the changed
-// keys for a list, and where an asset a scene lists comes from (and its props as the scene has them).
+// keys for a list, and where an asset a scene lists comes from (and its props as the scene has
+// them): its file, or for one written inline in the scene JSON the file its save moves it into
+// (§2.6).
 import { getGeneratedAppData } from '../kernel/scene/Scene';
+import type { SaveChange, SaveChangeExtract } from './SaveData';
 
 type Obj = Record<string, unknown>;
 
@@ -142,20 +145,75 @@ export const findSceneFile = (sceneId: string): { path: string } | { unsaveable:
   return typeof path === 'string' ? { path } : { unsaveable: 'the scene JSON has no file path' };
 };
 
+/** The file suffix of an inline asset's list, which its save moves it into a file of (§2.6) */
+const INLINE_FILE_TYPES: { [list: string]: string | undefined } = {
+  cameras: 'camera',
+  lights: 'light',
+  skyboxes: 'skybox',
+};
+
+/** Where a change is saved: its file, or for an inline asset its new file and the move */
+export type SceneAssetFile = { path: string; extract?: SaveChangeExtract } | { unsaveable: string };
+
+/**
+ * Where an inline asset's save moves it (§2.6): `<id>.<type>.json` in the scene JSON's folder,
+ * since only that scene uses it, or why it can't: the scene JSON has no file path, another file
+ * has the id, or a file of that type is at the new path.
+ */
+const findInlineAssetFile = (
+  kind: SceneAssetKind,
+  sceneId: string,
+  assetId: string
+): SceneAssetFile => {
+  const scene = findSceneFile(sceneId);
+  if ('unsaveable' in scene) return scene;
+  const registry = (getGeneratedAppData() as unknown as DevData)[kind.registry] ?? {};
+  const taken = registry[assetId]?.__sourcePath;
+  if (taken) return { unsaveable: `id taken by ${taken}` };
+  const folder = scene.path.slice(0, scene.path.lastIndexOf('/') + 1);
+  const path = `${folder}${assetId}.${INLINE_FILE_TYPES[kind.list]}.json`;
+  const other = Object.entries(registry).find(([, asset]) => asset?.__sourcePath === path);
+  if (other) {
+    return { unsaveable: `new file taken: ${path} is "${other[0]}"'s` };
+  }
+  return { path, extract: { scenePath: scene.path, list: kind.list, id: assetId } };
+};
+
+/** Whether the scene JSON writes the asset inline (the development data's `__inlineAssets`) */
+const isInlineAsset = (scene: Obj, list: string, assetId: string) => {
+  const inline = scene.__inlineAssets;
+  const ids = isObj(inline) ? inline[list] : undefined;
+  return Array.isArray(ids) && ids.includes(assetId);
+};
+
 /**
  * The file a scene's asset is saved into, or why there's none: the scene isn't in the generated
- * data, its JSON doesn't list the asset (made in code, or no longer listed), or lists it inline.
+ * data, or its JSON doesn't list the asset (made in code, or no longer listed). A camera, light or
+ * sky box written inline in the scene JSON is saved by moving it into a file of its own (§2.6:
+ * `extract`, unless its id or new file is taken); any other inline asset has no file.
  */
 export const findSceneAssetFile = (
   kind: SceneAssetKind,
   sceneId: string,
   assetId: string
-): { path: string } | { unsaveable: string } => {
+): SceneAssetFile => {
   const data = getGeneratedAppData() as unknown as DevData;
-  if (!data.scenes[sceneId]) return { unsaveable: 'scene not found' };
+  const scene = data.scenes[sceneId];
+  if (!scene) return { unsaveable: 'scene not found' };
   if (getSceneListItem(kind.list, sceneId, assetId) === undefined) {
     return { unsaveable: 'not in the scene JSON' };
+  }
+  if (INLINE_FILE_TYPES[kind.list] && isInlineAsset(scene, kind.list, assetId)) {
+    return findInlineAssetFile(kind, sceneId, assetId);
   }
   const path = data[kind.registry]?.[assetId]?.__sourcePath;
   return path ? { path } : { unsaveable: 'inline in the scene JSON: it has no file of its own' };
 };
+
+/** A change's `path`, `unsaveable` and `extract` from where it's saved */
+export const toChangeFileFields = (
+  file: SceneAssetFile
+): Pick<SaveChange, 'path' | 'unsaveable' | 'extract'> =>
+  'unsaveable' in file
+    ? { path: null, unsaveable: file.unsaveable }
+    : { path: file.path, ...(file.extract ? { extract: file.extract } : {}) };

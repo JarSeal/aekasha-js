@@ -12,6 +12,7 @@ import {
   getLatestSaveEntry,
   getSceneListItem,
   pruneFlatSaveEntry,
+  toChangeFileFields,
   toSaveEntryWrite,
 } from '../../_dbg__SaveEntries';
 import { getMaterialAssets } from './_dbg__MaterialEditorAssets';
@@ -140,8 +141,7 @@ const collectMaterialChanges = (): SaveChange[] => {
       label: `Material "${materialId}"`,
       scope: 'SCENE',
       ...(sceneId ? { sceneId } : {}),
-      path: 'path' in file ? file.path : null,
-      ...('unsaveable' in file ? { unsaveable: file.unsaveable } : {}),
+      ...toChangeFileFields(file),
       summary: paths.map((item) => item.summary),
       build: ({ json }) => {
         // A saveable change has its scene

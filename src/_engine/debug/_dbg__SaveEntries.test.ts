@@ -3,17 +3,24 @@ import { describe, expect, it, vi } from 'vitest';
 const data = vi.hoisted(() => ({
   scenes: {
     sceneA: {
-      skyboxes: [{ id: 'sky' }, { id: 'inlineSky' }],
-      postFx: [{ id: 'ao' }],
+      skyboxes: [{ id: 'sky' }, { id: 'inlineSky' }, { id: 'takenSky' }, { id: 'clashSky' }],
+      postFx: [{ id: 'ao' }, { id: 'inlinePass' }],
       cameras: [{ camProps: { type: 'PERSPECTIVE', fov: 50, appId: 'cam' } }],
       // An inline light whose app id is only its entity's
       lights: [{ lightProps: { type: 'AMBIENT' }, entityOpts: { appId: 'inlineLight' } }],
       __sourcePath: 'src/app/scenes/sceneA/sceneA.scene.json',
+      __inlineAssets: { skyboxes: ['inlineSky', 'takenSky', 'clashSky'], lights: ['inlineLight'] },
     },
     // Gathered before the scenes had their file
-    sceneB: {},
+    sceneB: { skyboxes: [{ id: 'bSky' }], __inlineAssets: { skyboxes: ['bSky'] } },
   },
-  skyboxes: { sky: { __sourcePath: 'src/app/skyboxes/sky.skybox.json' }, unused: {} },
+  skyboxes: {
+    sky: { __sourcePath: 'src/app/skyboxes/sky.skybox.json' },
+    unused: {},
+    // Another file has an inline sky box's id, and another one is at a move's new path
+    takenSky: { __sourcePath: 'src/app/skyboxes/takenSky.skybox.json' },
+    other: { __sourcePath: 'src/app/scenes/sceneA/clashSky.skybox.json' },
+  },
   postFx: { ao: { __sourcePath: 'src/app/postFx/ao.postFx.json' } },
   cameras: { cam: { __sourcePath: 'src/app/cameras/cam.camera.json' } },
   lights: {},
@@ -31,6 +38,7 @@ import {
   getSceneListItem,
   pruneFlatSaveEntry,
   pruneSaveEntry,
+  toChangeFileFields,
   toSaveEntryWrite,
 } from './_dbg__SaveEntries';
 
@@ -112,15 +120,49 @@ describe('save entries (p355 §2.1)', () => {
     expect(findSceneAssetFile(SKY, 'sceneA', 'sky')).toEqual({
       path: 'src/app/skyboxes/sky.skybox.json',
     });
-    expect(findSceneAssetFile(SKY, 'sceneA', 'inlineSky')).toEqual({
-      unsaveable: 'inline in the scene JSON: it has no file of its own',
-    });
     expect(findSceneAssetFile(SKY, 'sceneA', 'unused')).toEqual({
       unsaveable: 'not in the scene JSON',
     });
     expect(findSceneAssetFile(SKY, 'gone', 'sky')).toEqual({ unsaveable: 'scene not found' });
     expect(findSceneAssetFile({ list: 'postFx', registry: 'postFx' }, 'sceneA', 'ao')).toEqual({
       path: 'src/app/postFx/ao.postFx.json',
+    });
+    // Only cameras, lights and sky boxes move into files of their own
+    expect(
+      findSceneAssetFile({ list: 'postFx', registry: 'postFx' }, 'sceneA', 'inlinePass')
+    ).toEqual({ unsaveable: 'inline in the scene JSON: it has no file of its own' });
+  });
+
+  it('moves an inline asset into a file in the scene’s folder, unless taken (p355 §2.6)', () => {
+    expect(findSceneAssetFile(SKY, 'sceneA', 'inlineSky')).toEqual({
+      path: 'src/app/scenes/sceneA/inlineSky.skybox.json',
+      extract: {
+        scenePath: 'src/app/scenes/sceneA/sceneA.scene.json',
+        list: 'skyboxes',
+        id: 'inlineSky',
+      },
+    });
+    expect(findSceneAssetFile(SKY, 'sceneA', 'takenSky')).toEqual({
+      unsaveable: 'id taken by src/app/skyboxes/takenSky.skybox.json',
+    });
+    expect(findSceneAssetFile(SKY, 'sceneA', 'clashSky')).toEqual({
+      unsaveable: 'new file taken: src/app/scenes/sceneA/clashSky.skybox.json is "other"\'s',
+    });
+    expect(findSceneAssetFile(SKY, 'sceneB', 'bSky')).toEqual({
+      unsaveable: 'the scene JSON has no file path',
+    });
+  });
+
+  it('gives a change its file fields', () => {
+    expect(toChangeFileFields({ unsaveable: 'made in code' })).toEqual({
+      path: null,
+      unsaveable: 'made in code',
+    });
+    expect(toChangeFileFields({ path: 'a.json' })).toEqual({ path: 'a.json' });
+    const extract = { scenePath: 's.scene.json', list: 'lights', id: 'l' };
+    expect(toChangeFileFields({ path: 'l.light.json', extract })).toEqual({
+      path: 'l.light.json',
+      extract,
     });
   });
 
@@ -130,7 +172,10 @@ describe('save entries (p355 §2.1)', () => {
     });
     expect(
       findSceneAssetFile({ list: 'lights', registry: 'lights' }, 'sceneA', 'inlineLight')
-    ).toEqual({ unsaveable: 'inline in the scene JSON: it has no file of its own' });
+    ).toMatchObject({
+      path: 'src/app/scenes/sceneA/inlineLight.light.json',
+      extract: { list: 'lights', id: 'inlineLight' },
+    });
     expect(findSceneAssetFile({ list: 'lights', registry: 'lights' }, 'sceneA', 'code')).toEqual({
       unsaveable: 'not in the scene JSON',
     });

@@ -21,6 +21,20 @@ export type SaveChangeWrite =
       json: unknown;
     };
 
+/**
+ * An asset written inline in a scene JSON, which its save moves into a file of its own (p355
+ * §2.6): the save creates the change's `path` with the item as it is and the change's entry, and
+ * replaces the item in the scene JSON's list with its id, in one commit.
+ */
+export type SaveChangeExtract = {
+  /** The scene JSON the asset is written in, repo-relative */
+  scenePath: string;
+  /** The scene JSON's list holding it: `'cameras'`, `'lights'`, `'skyboxes'` */
+  list: string;
+  /** Its id in the list: its `id`, a camera's or light's app id (its props', else its entity's) */
+  id: string;
+};
+
 /** One unsaved change of a {@link SaveSource}: an asset's edits, in one scene or global. */
 export type SaveChange = {
   /** Unique in its source, eg. `${sceneId}:${skyBoxId}` */
@@ -31,10 +45,13 @@ export type SaveChange = {
   scope: 'SCENE' | 'GLOBAL';
   /** The scene a `SCENE` change is saved for */
   sceneId?: string;
-  /** The file it's saved into, repo-relative; null when there's none (`unsaveable` says why) */
+  /** The file it's saved into, repo-relative (with `extract`, the new file); null when there's
+   * none (`unsaveable` says why) */
   path: string | null;
   /** Why it can't be saved ('made in code', 'not in this scene'): the change stays where it is */
   unsaveable?: string;
+  /** An inline asset's move into `path`: `build` then gets the item as the file's JSON */
+  extract?: SaveChangeExtract;
   /** The changed keys, for a list: `['atmosphere.turbidity', 'suns.0.elevation']` */
   summary: string[];
   /**

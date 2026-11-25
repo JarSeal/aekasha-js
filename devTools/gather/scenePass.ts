@@ -7,7 +7,7 @@ import path from 'path';
 import type { StreamingManifest } from '../../src/_engine/schemas';
 import type { GatherContext, GatheredScene, Registries } from './context';
 import { getSceneFeatureIds } from './engineSchemas';
-import { applySceneSaveEntry } from './saveEntries';
+import { applySceneSaveEntry, getSaveEntry } from './saveEntries';
 import { resolveSceneAssets, type SceneJSON } from './sceneAssets';
 import type { ShipChecks } from './shipChecks';
 import { getTopFolder, resolveCodeFile } from './sources';
@@ -16,8 +16,12 @@ import { getScatterFeatureIds } from './scatters';
 import { getTerrainBlockFeatureIds } from './terrainBlocks';
 import { getListedTextureSetTextureIds } from './textureSets';
 
+/** A scene's inline cameras', lights' and sky boxes' ids, by list (development data only) */
+export type InlineAssetIds = { cameras?: string[]; lights?: string[]; skyboxes?: string[] };
+
 /** A resolved scene, with the features its data needs (p607 D10) */
 export type ResolvedScene = SceneJSON & {
+  __inlineAssets?: InlineAssetIds;
   __features: string[];
   __streaming?: StreamingManifest;
 };
@@ -30,6 +34,47 @@ export type SceneOutput = {
   debugSceneIds: Set<string>;
 };
 
+/** An inline camera's or light's id: its props' app id, else its entity's */
+const getInlineAppId = (
+  props: { appId?: string } | undefined,
+  entityOpts: { appId?: string } | undefined
+) => props?.appId || entityOpts?.appId;
+
+/**
+ * The ids of the cameras, lights and sky boxes written inline in a scene JSON (objects, not ids),
+ * which the debugger's save moves into files of their own (p355 §2.6): the development data's
+ * `__inlineAssets`, so it can tell them from assets listed by id (both resolve to objects). A list
+ * the scene's save entry replaces has none (its items aren't in the file's own list), and an
+ * inline one without an id isn't named.
+ */
+const getInlineAssetIds = ({ id: sceneId, data }: GatheredScene): InlineAssetIds | undefined => {
+  const entry = getSaveEntry(data, sceneId);
+  const ownList = <T>(list: keyof InlineAssetIds, items: T[] | undefined) =>
+    entry && list in entry ? [] : items ?? [];
+  const ids: InlineAssetIds = {};
+  const add = (list: keyof InlineAssetIds, listIds: (string | undefined)[]) => {
+    const named = listIds.filter((id): id is string => !!id);
+    if (named.length) ids[list] = named;
+  };
+  add(
+    'cameras',
+    ownList('cameras', data.cameras).map((cam) =>
+      typeof cam === 'string' ? undefined : getInlineAppId(cam.camProps, cam.entityOpts)
+    )
+  );
+  add(
+    'lights',
+    ownList('lights', data.lights).map((light) =>
+      typeof light === 'string' ? undefined : getInlineAppId(light.lightProps, light.entityOpts)
+    )
+  );
+  add(
+    'skyboxes',
+    ownList('skyboxes', data.skyboxes).map((sky) => (typeof sky === 'string' ? undefined : sky.id))
+  );
+  return Object.keys(ids).length ? ids : undefined;
+};
+
 /**
  * One scene resolved.
  * @returns null when it isn't shipped: a scene file problem (logged), or a production build's
@@ -39,9 +84,10 @@ const resolveScene = (
   ctx: GatherContext,
   reg: Registries,
   ship: ShipChecks,
-  { id: sceneId, data, file }: GatheredScene,
+  gathered: GatheredScene,
   debugSceneIds: Set<string>
 ): ResolvedScene | null => {
+  const { id: sceneId, data, file } = gathered;
   // The scene's own latest save entry (G5); the output has no __saveData
   const { $schema, __saveData, ...scene } = applySceneSaveEntry(data, sceneId);
   scene.id = sceneId;
@@ -83,6 +129,9 @@ const resolveScene = (
     },
   });
 
+  // The debugger's save tells an inline asset from a listed one by it (p355 §2.6); production has
+  // no debugger
+  const inlineAssets = ctx.isProduction ? undefined : getInlineAssetIds(gathered);
   if (ctx.isProduction) {
     scene.sceneFile = '';
     delete scene.name;
@@ -99,6 +148,7 @@ const resolveScene = (
     sceneId,
     {
       ...scene,
+      ...(inlineAssets ? { __inlineAssets: inlineAssets } : {}),
       // A terrain block's or a scatter item's collider needs physics(), whose one scene field is
       // the world bounds (p306 D2, p308 D2, p102 Phase 4), named once
       __features: [
