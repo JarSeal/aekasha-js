@@ -81,7 +81,8 @@ export const reconcileDebugVisuals = (
     helperComp.value.visible = isEnabled && helperPref;
 
     if (helperComp.camHelper) {
-      // Shadow lines only show if: (Light is ON) AND (User wants helpers) AND (Casts Shadows)
+      // Shadow lines only show if: (Light is ON) AND (User wants helpers) AND (Casts Shadows);
+      // the helpers' sync also hides them each frame while the shadow is faded out
       helperComp.camHelper.visible = light.castShadow && isEnabled && helperPref;
     }
   }

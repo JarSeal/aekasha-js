@@ -66,8 +66,8 @@ InitEngine({
       outputColorSpace: THREE.SRGBColorSpace,
       alpha: true,
       enableShadows: true,
-      // Soft, blurred shadow edges. three's others: PCFSoftShadowMap, PCFShadowMap (its default)
-      // and BasicShadowMap, the cheapest
+      // Soft, blurred shadow edges. three's others: PCFShadowMap (its default) and
+      // BasicShadowMap, the cheapest
       shadowMapType: THREE.VSMShadowMap,
     });
     // #endregion create-renderer

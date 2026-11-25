@@ -6,7 +6,7 @@
  *
  * Wire it into a ViewDef: `getCamera: () => viewCam.camera`, `getCameraRig: () => viewCam.rig`,
  * and call `onEnter`, `onExit` and `mainUpdate` from the view's own. The controls take canvas
- * input only between `onEnter` and `onExit`.
+ * input only between `onEnter` and `onExit`, and while the master loop is on.
  *
  * Pose memory, per view and per pose key: the key is the editor's subject (a material id, a
  * particle system id), `null` (the default) the view's own pose. A pose is saved when an
@@ -17,6 +17,7 @@
  */
 import * as THREE from 'three/webgpu';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { isMasterPlayOn, onMasterPlayChange } from '../../kernel/loop/MainLoop';
 import { getCanvasElem, getRenderer } from '../../kernel/render/Renderer';
 import type { ViewCameraRig } from '../../kernel/render/Views';
 import { lsGetItem, lsRemoveItem, lsSetItem } from '../../utils/LocalAndSessionStorage';
@@ -175,9 +176,12 @@ export const createViewCamera = (opts: ViewCameraOpts): ViewCamera => {
   let isEntered = false;
   let isControlsSuspended = false;
 
+  // Off while the master loop is off too: no frame runs to show a move, so a drag would only
+  // show as a jump once it runs. A drag in progress stops; its pointerup still ends it.
   const syncControlsEnabled = () => {
-    controls.enabled = isEntered && !isControlsSuspended;
+    controls.enabled = isEntered && !isControlsSuspended && isMasterPlayOn();
   };
+  const removeMasterPlayListener = onMasterPlayChange(syncControlsEnabled);
 
   const getPose = (): ViewCameraPose => ({
     position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
@@ -230,6 +234,7 @@ export const createViewCamera = (opts: ViewCameraOpts): ViewCamera => {
   };
 
   const dispose = () => {
+    removeMasterPlayListener();
     controls.removeEventListener('end', savePose);
     controls.dispose();
     if (instances.get(viewId)?.store === store) instances.delete(viewId);

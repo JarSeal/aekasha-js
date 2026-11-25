@@ -456,6 +456,7 @@ const createGymCharactersAsync = async () => {
             { device: 'GAMEPAD', button: 'EAST' },
           ],
         },
+        sceneId: SCENE_THIRD_PERSON_GYM_META.id,
       },
     },
   });
@@ -497,6 +498,7 @@ const createGymCharactersAsync = async () => {
           ],
           jump: [{ device: 'KEYBOARD', keys: ['Enter'] }],
         },
+        sceneId: SCENE_THIRD_PERSON_GYM_META.id,
       },
     },
   });

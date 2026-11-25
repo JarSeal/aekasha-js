@@ -101,8 +101,8 @@ number. The roadmap lists each area's issues by priority.
   change on that side since the last merge. The lower parts reset to 0 (`1.4.2` → `1.5.0`), and
   a part with no changes keeps its version.
 - **A `CHANGELOG.md` entry per PR**, with a section per part it bumped (Engine, Toolkit, App)
-  and Project for the repo's tooling, which has no version. The [Version](hub:version) page
-  shows it.
+  and Project for the repo's tooling, which has no version. The
+  [Changelog](hub:version/changelog) page shows it.
 - **`yarn checkVersions --against main`** before opening the PR. After the merge,
   `yarn tagRelease` on `main` tags each part's version (`engine-v…`, `toolkit-v…`, `app-v…`) and
   prints the push command.

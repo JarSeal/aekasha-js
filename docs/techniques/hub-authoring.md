@@ -364,7 +364,7 @@ The search box (⌘K, Ctrl+K or `/`) searches every page except the homepage. `y
 - **The title, headings and tags weigh the most.** Put the words a reader would search for in `aek:tags`, especially those the page doesn't spell out (`rapier` on the physics page).
 - **Code blocks add their identifiers, not their keywords.** Identifiers are split at camelCase too, so `mesh` finds `createMeshEntity`.
 - **The API is searched by name.** Every entry, public name and class or interface member is a result of its own, weighted like a title and split at camelCase, with its kind and its summary's first sentence (clipped to 120 characters). Only the name is searched: the summary is shown, not indexed, which keeps the index small.
-- **Content with the class `hubSearchSkip` is left out**, headings included: the cards, the API lists (indexed their own way) and the Version page's changelog, which the browser's own find searches on that page.
+- **Content with the class `hubSearchSkip` is left out**, headings included: the cards, the API lists (indexed their own way) and the changelog, which the browser's own find searches on its page.
 - **`yarn hub:build` prints the index's size.** Over 1 MB it warns. The index is loaded whole on first use, so keep it lean.
 
 No Hub file needs to change for a new page to be found: it's indexed on the next build.

@@ -98,6 +98,7 @@ export const createShowcasePlayerAsync = async (sceneId: string, blocks: Terrain
             { device: 'GAMEPAD', button: 'EAST' },
           ],
         },
+        sceneId,
       },
     },
   });

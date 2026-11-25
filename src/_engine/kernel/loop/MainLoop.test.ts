@@ -5,8 +5,14 @@ import type { ElapsedClock } from './MainLoop';
 const { requestAnimationFrame } = vi.hoisted(() => ({ requestAnimationFrame: vi.fn() }));
 vi.stubGlobal('requestAnimationFrame', requestAnimationFrame);
 
-const { advanceElapsedClock, nextMaxFPSReference, requestMainLoopFrame, toggleMainPlay } =
-  await import('./MainLoop');
+const {
+  advanceElapsedClock,
+  isMasterPlayOn,
+  nextMaxFPSReference,
+  onMasterPlayChange,
+  requestMainLoopFrame,
+  toggleMainPlay,
+} = await import('./MainLoop');
 
 describe('the max FPS limiter', () => {
   /** Runs the limiter over `frames` display frames `displayMs` apart; returns the rendered count */
@@ -63,5 +69,23 @@ describe('frame requests', () => {
     requestMainLoopFrame();
     toggleMainPlay(true);
     expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('master loop changes', () => {
+  test('a listener hears each change, with the new value, and not a call without one', () => {
+    toggleMainPlay(true);
+    const heard: boolean[] = [];
+    const remove = onMasterPlayChange((isOn) => heard.push(isOn));
+    toggleMainPlay(false);
+    toggleMainPlay(false);
+    toggleMainPlay(true);
+    toggleMainPlay(true);
+    toggleMainPlay();
+    expect(heard).toEqual([false, true, false]);
+    expect(isMasterPlayOn()).toBe(false);
+    remove();
+    toggleMainPlay(true);
+    expect(heard).toEqual([false, true, false]);
   });
 });

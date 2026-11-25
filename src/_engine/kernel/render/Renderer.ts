@@ -3,7 +3,7 @@ import WebGL from 'three/addons/capabilities/WebGL.js';
 import { getCanvasSize } from './CanvasSize';
 import { lerror, lwarn } from '../../utils/Logger';
 import { IS_DEBUG_ENV } from '../config/Config';
-import { lsGetItem } from '../../utils/LocalAndSessionStorage';
+import { lsGetItem, lsSetItem } from '../../utils/LocalAndSessionStorage';
 import { existsOrThrow } from '../../utils/Assert';
 import type { DebugModuleRef } from '../config/DebugModules';
 import { loadDebugModuleAsync, useDebug } from '../config/DebugModules';
@@ -61,7 +61,8 @@ export type RendererOptions = {
   alpha?: boolean;
   /** Shadow maps on (default false). */
   enableShadows?: boolean;
-  /** The shadow map filter (default `PCFShadowMap`, three's). */
+  /** The shadow map filter (default `PCFShadowMap`, three's). `PCFSoftShadowMap` is mapped to
+   * `PCFShadowMap`: three removed its filter for WebGPU (r186). */
   shadowMapType?: THREE.ShadowMapType;
 };
 
@@ -215,9 +216,16 @@ const setRendererOptions = (opts?: Partial<RendererOptions>) => {
   options.devicePixelRatio = opts?.devicePixelRatio || window?.devicePixelRatio || 1;
 
   if (IS_DEBUG_ENV) {
-    const savedOptions = lsGetItem(LS_KEY, options);
+    const savedOptions = lsGetItem(LS_KEY, options) as Partial<RendererOptions>;
+    // Saved before the Renderer tab dropped PCFSoftShadowMap (`options` back: nothing saved).
+    // Corrected in the saved state too, or the tab's hydration would read it back.
+    if (savedOptions !== options && savedOptions.shadowMapType === THREE.PCFSoftShadowMap) {
+      lsSetItem(LS_KEY, { ...savedOptions, shadowMapType: THREE.PCFShadowMap });
+    }
     options = { ...options, ...opts, ...savedOptions };
   }
+  // three r186+ has no PCFSoftShadowMap filter on WebGPU: it warns on every render and uses PCF
+  if (options.shadowMapType === THREE.PCFSoftShadowMap) options.shadowMapType = THREE.PCFShadowMap;
 
   // The guess until init() resolves (createRenderer then reads the backend)
   setCurrentApi(!options.forceWebGL && 'gpu' in navigator);

@@ -61,6 +61,8 @@ export type OnScreenToolbarProps = {
   items: OnScreenToolItem[];
   /** The view switch: one tool pressed at a time (each one's `isPressed`) */
   exclusive?: boolean;
+  /** In the top left row's box: no box of its own, and not dimmed itself (the box is) */
+  isInBox?: boolean;
   class: string[];
 };
 
@@ -139,7 +141,12 @@ export const createOnScreenToolbar = (props: OnScreenToolbarProps): OnScreenTool
     label: props.label,
     buttons: controls,
     ...(props.exclusive ? { exclusive: true } : { toolbar: true }),
-    class: [styles.onScreenToolGroup, 'onScreenToolGroup', ...props.class],
+    class: [
+      ...(props.isInBox
+        ? [styles.onScreenToolGroupInBox]
+        : [styles.onScreenToolGroup, 'onScreenToolGroup']),
+      ...props.class,
+    ],
   });
   const { cmp } = group;
 

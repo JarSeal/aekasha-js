@@ -39,6 +39,9 @@ the body's default size (1.6 m tall, 0.5 m radius) with a nose. At a yaw of 0 a 
 - `turnToLastMoveDirection` keeps the character turning in place after the keys are let go, until
   it faces the direction it last moved in: a tap of a key turns it all the way, and a diagonal
   let go a step or two apart (W first, then D) still ends on the diagonal.
+- `sceneId` makes the brain's action map active only while this scene is current, as the
+  character goes with the scene (a scene exit deletes it). Leave it out for a character that
+  lives across scenes.
 - The character starts where its body is put, with `setTranslation`.
 
 The brain reads the keys once per physics step and writes the character's intent, which the

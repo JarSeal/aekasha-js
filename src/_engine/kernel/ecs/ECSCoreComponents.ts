@@ -257,6 +257,8 @@ export interface CoreComponentData {
   [ComponentType.DEBUG_LIGHT_HELPER]: {
     value: THREE.PointLightHelper | THREE.DirectionalLightHelper | THREE.SpotLightHelper;
     camHelper?: THREE.CameraHelper;
+    /** The shadow camera's projection `camHelper` last drew (its sync redraws it on a change). */
+    camProjection?: THREE.Matrix4;
   };
   /** A camera's debug helper. Debug env only. */
   [ComponentType.DEBUG_CAMERA_HELPER]: { value: THREE.CameraHelper };

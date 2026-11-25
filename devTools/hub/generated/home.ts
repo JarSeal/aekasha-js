@@ -5,7 +5,12 @@ import { resolveHubLink, slugify, type HubMarkdownEnv } from '../markdown';
 import { CHANGELOG_FILE, HUB_PAGES_DIR, PACKAGE_JSON_FILE } from '../paths';
 import { toRepoWebUrl } from '../repoFiles';
 import type { HubGeneratedSection } from './section';
-import { VERSION_SECTION_PATH, type HubChangePart, type HubLatestChange } from './version';
+import {
+  CHANGELOG_PAGE_PATH,
+  VERSION_SECTION_PATH,
+  type HubChangePart,
+  type HubLatestChange,
+} from './version';
 
 /**
  * The homepage's generated slots:
@@ -14,7 +19,7 @@ import { VERSION_SECTION_PATH, type HubChangePart, type HubLatestChange } from '
  * - under it, in `dev` only, the Project section's quick links (p802 D6: a generated slot, so the
  *   homepage's markup links no dev page; empty in `public`);
  * - "What's new": `CHANGELOG.md`'s latest entry (its date, branch and the parts it bumped), linked
- *   to its anchor on the Version page. The anchor is the heading's slug, built here (the homepage
+ *   to its anchor on the Changelog page. The anchor is the heading's slug, built here (the homepage
  *   renders before the changelog), and checked like any `hub:` link after the render;
  * - the quick links, GitHub's from `package.json`'s repository.
  */
@@ -98,9 +103,9 @@ const renderWhatsNew = (latest: HubLatestChange | null, env: HubMarkdownEnv) => 
     const href = resolveHubLink(`hub:${VERSION_SECTION_PATH}`, env, CHANGELOG_FILE, 1);
     return `${title}<p>No changelog entry yet.</p>\n<a class="hubMoreLink" href="${href}">See the versions${arrow}</a>\n`;
   }
-  // The changelog's heading, as the Version page renders it: `## 2026-10-08 — aekasha-hub`
+  // The changelog's heading, as the Changelog page renders it: `## 2026-10-08 — aekasha-hub`
   const anchor = slugify(`${latest.date} — ${latest.branch}`);
-  const href = resolveHubLink(`hub:${VERSION_SECTION_PATH}#${anchor}`, env, CHANGELOG_FILE, 1);
+  const href = resolveHubLink(`hub:${CHANGELOG_PAGE_PATH}#${anchor}`, env, CHANGELOG_FILE, 1);
   return `${title}<p class="hubWhatsNewMeta"><time datetime="${latest.date}">${formatDate(latest.date)}</time><code>${escapeHtml(latest.branch)}</code></p>
 <ul class="hubChangeParts">${latest.parts.map(renderPart).join('')}</ul>
 <a class="hubMoreLink" href="${href}">Read the changelog entry${arrow}</a>

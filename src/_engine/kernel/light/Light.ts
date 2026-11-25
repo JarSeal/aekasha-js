@@ -34,8 +34,8 @@ export const installLights = (ctx: FeatureContext) => {
  * @internal
  */
 export const registerLightDebugGUI = async (world: ECSWorld) => {
-  // Awaited, so the helpers' LATE_MAIN system registers before the debug camera's helpers' (a
-  // load race before p607: the system order differed between page loads)
+  // Awaited, so the helpers' hooks and plugin are registered before the boot goes on (their system
+  // has an order of its own in MAIN; p607 fixed a load race when it shared LATE_MAIN's order)
   lightDebugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__LightGUI'));
   await loadDebugModuleAsync(() => import('./debug/_dbg__LightHelpers'));
   if (!lightDebugGUI) return;

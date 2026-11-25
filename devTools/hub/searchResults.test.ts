@@ -36,6 +36,17 @@ const physics = createPage('guides/physics/', guides, {
 });
 const examples = createPage('examples/', home, { title: 'Examples', menu: 'Examples' });
 const boxes = createPage('examples/boxes/', examples, { title: 'Falling boxes' });
+// p103: Issues hangs under Versions & Issues in the nav (`aek:navParent`), its URLs stay issues/…
+const versions = createPage('version/', home, {
+  title: 'Versions & Issues',
+  menu: 'Versions & Issues',
+});
+const issues = createPage('issues/', versions, { title: 'Issues', menu: 'Issues' });
+const leak = createPage('issues/light-leak/', issues, {
+  title: 'A light leak',
+  menu: 'A light leak',
+  isInMenu: false,
+});
 const api = createPage('documentation/aekasha/physics/', home, {
   menu: 'physics',
   isSearchable: false,
@@ -55,6 +66,13 @@ const PAGES: HubSearchPage[] = [
   { page: examples, body: '<p>Every example.</p>', headings: [] },
   { page: boxes, body: '<p>Boxes fall on colliders.</p>', headings: [] },
   { page: api, body: '<h3 id="createPhysicsEntity">createPhysicsEntity</h3>', headings: [] },
+  { page: versions, body: '<p>The versions.</p>', headings: [] },
+  { page: issues, body: '<p>Known problems.</p>', headings: [] },
+  {
+    page: leak,
+    body: '<p>Shadows go dark.</p><h2 id="workaround">Workaround</h2><p>Rebind the cache.</p>',
+    headings: [heading(2, 'workaround', 'Workaround')],
+  },
 ];
 
 const API_DOCS = [
@@ -124,6 +142,27 @@ describe("the Hub's search as the palette's source", () => {
     });
     const entry = results.search('aekasha physics').commands.find((c) => c.kind === 'entry');
     expect(entry).toMatchObject({ label: 'aekasha/physics', crumbs: ['aekasha'] });
+  });
+
+  it("a nav parent's section is the group, and the page's own folder stays in the crumbs", async () => {
+    const results = await loadResultsAsync();
+    expect(results.search('known problems').commands[0]).toMatchObject({
+      id: 'issues/#',
+      label: 'Issues',
+      group: 'Versions & Issues',
+      crumbs: [],
+    });
+    expect(results.search('shadows dark').commands[0]).toMatchObject({
+      id: 'issues/light-leak/#',
+      group: 'Versions & Issues',
+      crumbs: ['Issues'],
+    });
+    expect(results.search('rebind').commands[0]).toMatchObject({
+      id: 'issues/light-leak/#workaround',
+      label: 'Workaround',
+      group: 'Versions & Issues',
+      crumbs: ['Issues', 'A light leak'],
+    });
   });
 
   it('cuts a long text to a window around the first match', async () => {

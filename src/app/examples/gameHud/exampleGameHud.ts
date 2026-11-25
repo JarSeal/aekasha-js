@@ -211,6 +211,7 @@ export const scene = async () => {
           ],
         },
         runMode: 'HOLD',
+        sceneId: SCENE_ID,
       },
     },
   });

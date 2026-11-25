@@ -137,22 +137,25 @@ export const createHubSearchResults = ({
     );
   };
 
+  /** The page's top-level section: its folder's, or its nav parent's (`aek:navParent`) */
+  const sectionOf = (pagePath: string) =>
+    pageInfos.get(pagePath)?.page.section ?? pagePathTrail(pagePath)[0] ?? '';
+
   /** The top-level section's label: the group a result goes in ('Home' for none) */
-  const groupOf = (pagePath: string) => {
-    const section = pageInfos.get(pagePath)?.page.section ?? pagePathTrail(pagePath)[0] ?? '';
-    return pageInfos.get(section)?.label ?? 'Home';
-  };
+  const groupOf = (pagePath: string) => pageInfos.get(sectionOf(pagePath))?.label ?? 'Home';
 
   const toHref = (path: string, anchor = '') =>
     new URL(`${path}${anchor ? `#${anchor}` : ''}`, rootUrl).href;
 
   const toCommand = (result: HubSearchStored, terms: string[]): HubSearchCommand => {
     const info = pageInfos.get(result.path);
+    const trail = pagePathTrail(result.path);
     const crumbs = [
-      // The section is the group's label; an API name's page is in the breadcrumb, an entry's is
+      // The section is the group's label, so its folder is left out (a nav parent's page keeps its
+      // own: Versions & Issues › Issues); an API name's page is in the breadcrumb, an entry's is
       // itself
-      ...pagePathTrail(result.path)
-        .slice(1, result.anchor ? undefined : -1)
+      ...trail
+        .slice(trail[0] === sectionOf(result.path) ? 1 : 0, result.anchor ? undefined : -1)
         .map(pathLabel),
       ...(info && result.anchor && !result.kind ? parentHeadings(info.page, result.anchor) : []),
     ];
