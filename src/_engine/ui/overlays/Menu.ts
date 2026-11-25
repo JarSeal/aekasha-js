@@ -32,6 +32,9 @@ export type MenuActionItem = {
   kbd?: Kbd;
   /** Shown and focusable, but not picked (default false). */
   disabled?: boolean;
+  /** Why it's disabled, while `disabled`: its tooltip (on its right) and its description
+   * (`aria-describedby`), as a button's `setDisabled` reason. */
+  disabledReason?: string;
 };
 
 /** A menu's on / off item (`menuitemcheckbox`). */
@@ -562,7 +565,9 @@ export const createMenuSurface = (props: MenuSurfaceProps): MenuSurface => {
  *   ArrowRight, Enter or Space on a submenu item opens it on its first item, and ArrowLeft in a
  *   submenu closes it back to its item; Escape (the kit's overlay stack) closes one level, the last
  *   with the focus back on the trigger; Tab closes every level, with the focus back on the
- *   trigger. A disabled item is focusable and picks or opens nothing. The keys reach no key binding.
+ *   trigger. A disabled item is focusable and picks or opens nothing; an action's
+ *   `disabledReason` is its tooltip (a hover, a keyboard focus) and its `aria-describedby`. The
+ *   keys reach no key binding.
  * - Pointer: hovering an item focuses it, a click picks it (or opens its submenu), a press outside
  *   closes the menu. Hovering a submenu item opens it after `--aek-submenu-delay` (150 ms; a delay,
  *   not motion), and the submenu stays open while the pointer heads for it across the other items.

@@ -166,6 +166,45 @@ describe('menu (p803 D10)', () => {
     menu.cmp.remove();
   });
 
+  it('a disabled action’s reason describes it and is its tooltip, removed at each close', () => {
+    const reason = 'Nothing to paste';
+    const menu = addMenu(() => [
+      { label: 'Copy' },
+      { label: 'Paste', disabled: true, disabledReason: reason },
+      { label: 'Cut', disabledReason: 'Not while enabled' },
+    ]);
+    const getTooltips = () => [...document.querySelectorAll<HTMLElement>('[role="tooltip"]')];
+    for (let open = 0; open < 2; open++) {
+      trigger.focus();
+      menu.open();
+      const [copy, paste, cut] = getItems();
+      expect(copy.hasAttribute('aria-describedby')).toBe(false);
+      expect(cut.hasAttribute('aria-describedby')).toBe(false);
+      const tooltipId = paste.getAttribute('aria-describedby');
+      expect(tooltipId).toBeTruthy();
+      // A keyboard focus shows it at once
+      key('ArrowDown');
+      expect(getFocusedLabel()).toBe('Paste');
+      const shown = getTooltips();
+      expect(shown.map((tip) => tip.textContent)).toEqual([reason]);
+      expect(shown[0].id).toBe(tooltipId);
+      // Escape hides the tooltip first (the overlay stack), then closes the menu
+      key('Escape');
+      expect(getTooltips()).toEqual([]);
+      expect(menu.isOpen()).toBe(true);
+      key('Escape');
+      expect(menu.isOpen()).toBe(false);
+    }
+    // Removed with the menu while it shows
+    trigger.focus();
+    menu.open();
+    key('ArrowDown');
+    expect(getTooltips()).toHaveLength(1);
+    menu.cmp.remove();
+    expect(getTooltips()).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('typeahead: a letter goes to the next item starting with it, letters typed quickly to one', () => {
     const menu = addMenu(['Save', 'Save as', 'Settings', 'Open'].map((label) => ({ label })));
     trigger.focus();
