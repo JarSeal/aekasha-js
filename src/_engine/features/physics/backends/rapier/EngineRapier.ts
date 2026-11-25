@@ -19,10 +19,12 @@ export {
 } from './RapierColliders';
 export { dispatchPendingEventRecords, drainPendingEventRecords } from './RapierEvents';
 export { createJoint, createJoints, deleteJoint, deleteJoints } from './RapierJoints';
+export { createMultibodyJoint, deleteMultibodyJoint } from './RapierMultibodyJoints';
 export {
   getAllRigidBodyIds,
   getColliderAPIWithId,
   getJointAPIWithId,
+  getMultibodyJointAPIWithId,
   getRigidBodyAPIWithId,
   setBodyMovedObserver,
   setQueryObserver,

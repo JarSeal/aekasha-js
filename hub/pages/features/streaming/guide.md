@@ -244,17 +244,20 @@ towards cells never seen costs nothing.
 A cell's dynamic bodies (made with `createPhysicsEntity`) follow the cell, with
 [`physicsTiers()`](hub:features/physics#simulation-tiers) installed:
 
-| Cell       | Its dynamic bodies                                                                           |
-| ---------- | -------------------------------------------------------------------------------------------- |
-| `RESIDENT` | `FULL`, or their tier policy's if they're in it.                                             |
-| `NEARBY`   | `nearbyPhysicsTier`: `STATIC` (the default: still collides) or `DISABLED`.                   |
-|            | A body with joints is `STATIC` for `DISABLED`.                                               |
-| `FAR`      | Kept content's: `REMOVED` (out of the physics world, its state kept). With joints: `STATIC`. |
-| unloaded   | Deleted with the cell (not saved: a crate moved and left is back next time).                 |
+| Cell       | Its dynamic bodies                                                           |
+| ---------- | ---------------------------------------------------------------------------- |
+| `RESIDENT` | `FULL`, or their tier policy's if they're in it.                             |
+| `NEARBY`   | `nearbyPhysicsTier`: `STATIC` (the default: still collides) or `DISABLED`.   |
+| `FAR`      | Kept content's: `REMOVED` (out of the physics world, its state kept).        |
+| unloaded   | Deleted with the cell (not saved: a crate moved and left is back next time). |
 
 ```json
 { "streaming": { "cellSize": 64, "nearbyPhysicsTier": "DISABLED" } }
 ```
+
+A jointed body takes the tier its joints allow ([Joints and tiers](hub:features/physics#joints-and-tiers)):
+with impulse joints `STATIC` for `DISABLED` and `REMOVED`, with multibody joints `DISABLED` for
+`STATIC` and `REMOVED`, and with both kinds it stays `FULL`.
 
 - **A body starts in its cell's tier.** The bodies a `load` creates before its first `await` (or in
   `ctx.runOwned`) are made in the cell's tier, so a crate created into a `NEARBY` cell never

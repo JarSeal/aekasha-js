@@ -100,7 +100,7 @@ Enter or Space. The scene's use:
 
 - The aim is the camera's ray through the screen's centre, where the crosshair is: the camera's
   position and its forward, a `THREE.Ray` of plain maths that tests nothing.
-- A shot is a [physics ray](hub:features/physics#queries-events-and-joints) along the aim, so a
+- A shot is a [physics ray](hub:features/physics#queries-and-events) along the aim, so a
   wall or an NPC in the way stops it. It starts at the aim's point nearest the player, so nothing
   behind the player stops it, and leaves out the player's own body. A hit's collider names its
   body (`parentId`), which the scene maps back to its crate.

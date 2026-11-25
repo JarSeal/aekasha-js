@@ -118,6 +118,7 @@ const toExitRow = (exit: WorldBoundsExitInfo): DebuggerListItem => {
   const details = [`step ${exit.step} at (${pos})`];
   if (exit.source === 'ENTITY') details.push('its own bounds');
   if (exit.frozen) details.push('frozen (jointed)');
+  if (exit.takenWith !== null) details.push(`with its multibody (body ${exit.takenWith} left)`);
   const openable = getOpenableEntityId(exit) !== undefined;
   return {
     itemId: String(exit.bodyId),

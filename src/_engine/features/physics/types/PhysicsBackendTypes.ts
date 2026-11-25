@@ -10,7 +10,12 @@ import type { ColliderAPI, ColliderParams } from './PhysicsColliderTypes';
 import type { PhysVector } from './PhysicsCommonTypes';
 import type { PhysicsState } from './PhysicsConfigTypes';
 import type { CollisionEventRecord, ContactForceEventRecord } from './PhysicsEventTypes';
-import type { JointAPI, JointParams } from './PhysicsJointTypes';
+import type {
+  JointAPI,
+  JointParams,
+  MultibodyJointAPI,
+  MultibodyJointParams,
+} from './PhysicsJointTypes';
 import type { PhysicsQueryObserver } from './PhysicsQueryTypes';
 import type {
   PhysicsSnapshot,
@@ -57,12 +62,25 @@ export type EngineAPIType = {
   createJoint: (params: JointParams) => JointAPI;
   /** Creates impulse joints, in order. */
   createJoints: (params: JointParams[]) => JointAPI[];
+  /** Creates a multibody joint, `body1Id` the parent (p250); throws on what Rapier would panic on
+   * (a loop, a second parent, a child that isn't dynamic). */
+  createMultibodyJoint: (params: MultibodyJointParams) => MultibodyJointAPI;
   /** Frees the world and forgets its bodies, colliders and joints. */
   deleteWorld: () => { worldDeleted: boolean };
-  /** Deletes a body, and with it its colliders and joints, whose ids it returns. */
-  deleteRigidBody: (id: number) => { id: number; colliderIds: number[]; jointIds: number[] };
-  /** Deletes bodies, and with them their colliders and joints, whose ids it returns. */
-  deleteRigidBodies: (id: number[]) => { ids: number[]; colliderIds: number[]; jointIds: number[] };
+  /** Deletes a body, and with it its colliders and joints (both kinds), whose ids it returns. */
+  deleteRigidBody: (id: number) => {
+    id: number;
+    colliderIds: number[];
+    jointIds: number[];
+    multibodyJointIds: number[];
+  };
+  /** Deletes bodies, and with them their colliders and joints (both kinds), whose ids it returns. */
+  deleteRigidBodies: (id: number[]) => {
+    ids: number[];
+    colliderIds: number[];
+    jointIds: number[];
+    multibodyJointIds: number[];
+  };
   /** Deletes a collider, waking its body when `wakeUp`. */
   deleteCollider: (id: number, wakeUp?: boolean) => { id: number };
   /** Deletes colliders, each waking its body when its `wakeUps` entry is true. */
@@ -71,6 +89,8 @@ export type EngineAPIType = {
   deleteJoint: (id: number, wakeUp?: boolean) => { id: number };
   /** Deletes joints, each waking its bodies when its `wakeUps` entry is true. */
   deleteJoints: (ids: number[], wakeUps?: boolean[]) => { ids: number[] };
+  /** Deletes a multibody joint, waking its bodies when `wakeUp`; its child becomes a root. */
+  deleteMultibodyJoint: (id: number, wakeUp?: boolean) => { id: number };
   /** The world's snapshot (undefined without a world); see p500. */
   takeSnapshot: () => PhysicsSnapshot | undefined;
   /** Puts the world back to a snapshot taken in it, rebinding the API objects both know and
@@ -82,6 +102,8 @@ export type EngineAPIType = {
   getColliderAPIWithId: (id: number) => ColliderAPI | undefined;
   /** The joint with this id, or undefined. */
   getJointAPIWithId: (id: number) => JointAPI | undefined;
+  /** The multibody joint with this id, or undefined. */
+  getMultibodyJointAPIWithId: (id: number) => MultibodyJointAPI | undefined;
   /** Enumerates the ids of all currently-live rigid bodies. */
   getAllRigidBodyIds: () => IterableIterator<number>;
   /** Runs one fixed step, collecting its events for `dispatchPendingEventRecords` /
@@ -127,7 +149,7 @@ export type EngineAPIType = {
   readBodyPositions: (ids: ArrayLike<number>, out: Float32Array) => Float32Array;
   /** The REMOVED physics tier (p352): takes a body and its colliders out of the world, keeping
    * their state and their ids. Returns the body's pose, or undefined when it has no body to
-   * detach (unknown, already detached, or held by a joint). */
+   * detach (unknown, already detached, or held by a joint of either kind). */
   detachRigidBody: (id: number) => RigidBodyPose | undefined;
   /** Puts a detached body back as it was detached, with `state`'s type and enabled state.
    * Returns its pose, or undefined when it isn't detached. */

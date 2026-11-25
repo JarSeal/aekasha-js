@@ -1062,6 +1062,7 @@
       "createColliders": "Reference",
       "createJoint": "Reference",
       "createJoints": "Reference",
+      "createMultibodyJoint": "Reference",
       "createRigidBodies": "Reference",
       "createRigidBody": "Reference",
       "createWorld": "Reference",
@@ -1070,6 +1071,7 @@
       "deleteColliders": "Reference",
       "deleteJoint": "Reference",
       "deleteJoints": "Reference",
+      "deleteMultibodyJoint": "Reference",
       "deleteRigidBodies": "Reference",
       "deleteRigidBody": "Reference",
       "deleteWorld": "Reference",
@@ -1080,6 +1082,7 @@
       "getAllRigidBodyIds": "Reference",
       "getColliderAPIWithId": "Reference",
       "getJointAPIWithId": "Reference",
+      "getMultibodyJointAPIWithId": "Reference",
       "getRigidBodyAPIWithId": "Reference",
       "init": "Reference",
       "readBodyPositions": "Reference",
@@ -1098,6 +1101,9 @@
     },
     "src/_engine/features/physics/backends/rapier/proxies/EngineJointProxyAPI.ts": {
       "EngineJointProxyAPI": "Class"
+    },
+    "src/_engine/features/physics/backends/rapier/proxies/EngineMultibodyJointProxyAPI.ts": {
+      "EngineMultibodyJointProxyAPI": "Class"
     },
     "src/_engine/features/physics/backends/rapier/proxies/EngineRigidBodyProxyAPI.ts": {
       "AdditionalMass": "TypeAlias",
@@ -1140,7 +1146,17 @@
       "createJoint": "Function",
       "createJoints": "Function",
       "deleteJoint": "Function",
-      "deleteJoints": "Function"
+      "deleteJoints": "Function",
+      "toJointData": "Function"
+    },
+    "src/_engine/features/physics/backends/rapier/RapierMultibodyJoints.ts": {
+      "clearMultibodyJoints": "Function",
+      "createMultibodyJoint": "Function",
+      "deleteMultibodyJoint": "Function",
+      "getMultibodyLinks": "Function",
+      "isInMultibody": "Function",
+      "reapBodyMultibodyJoints": "Function",
+      "rebuildMultibodyTree": "Function"
     },
     "src/_engine/features/physics/backends/rapier/RapierRestore.ts": {
       "rebindRestoredWorld": "Function",
@@ -1163,13 +1179,21 @@
       "getJoint": "Function",
       "getJointAPI": "Function",
       "getJointAPIWithId": "Function",
+      "getMultibodyJoint": "Function",
+      "getMultibodyJointAPIWithId": "Function",
       "getRigidBody": "Function",
       "getRigidBodyAPIWithId": "Function",
       "handleToColliderId": "Variable",
       "handleToJointId": "Variable",
+      "handleToMultibodyJointId": "Variable",
       "handleToRigidBodyId": "Variable",
       "jointAPIs": "Variable",
       "joints": "Variable",
+      "multibodyChildCounts": "Variable",
+      "multibodyJointAPIs": "Variable",
+      "multibodyJoints": "Variable",
+      "MultibodyLink": "TypeAlias",
+      "multibodyParents": "Variable",
       "rigidBodies": "Variable",
       "rigidBodyAPIs": "Variable",
       "setBodyMovedObserver": "Function",
@@ -1333,6 +1357,17 @@
       "toWireRigidBodyParams": "Function",
       "toWireWorldBounds": "Function"
     },
+    "src/_engine/features/physics/PhysicsMultibodyJoints.ts": {
+      "createMultibodyJoint": "Function",
+      "createMultibodyJointSync": "Function",
+      "deleteMultibodyJoint": "Function",
+      "deleteMultibodyJointSync": "Function",
+      "forEachMultibodyJointBodyPair": "Function",
+      "hasMultibodyJoints": "Function",
+      "hasMultibodyParent": "Function",
+      "isBodyInMultibody": "Function",
+      "setMultibodyJointCreatedListener": "Function"
+    },
     "src/_engine/features/physics/PhysicsProbeTypes.ts": {
       "PhysicsProbeReport": "TypeAlias"
     },
@@ -1356,6 +1391,7 @@
       "ContactForceEventFn": "TypeAlias",
       "forgetCollider": "Function",
       "forgetJoint": "Function",
+      "forgetMultibodyJoint": "Function",
       "forgetRigidBody": "Function",
       "getAllColliderEntries": "Function",
       "getAllJointEntries": "Function",
@@ -1363,9 +1399,11 @@
       "getBodyMovedListener": "Function",
       "getCollider": "Function",
       "getJoint": "Function",
+      "getMultibodyJoint": "Function",
       "getPhysicsObjectCounts": "Function",
       "getRigidBody": "Function",
       "joints": "Variable",
+      "multibodyJoints": "Variable",
       "registerWorkerColliderEventFns": "Function",
       "rigidBodies": "Variable",
       "setBodyMovedListener": "Function",
@@ -1442,7 +1480,9 @@
       "setPhysicsTierPolicyMember": "Function"
     },
     "src/_engine/features/physics/PhysicsTiers.ts": {
+      "forEachJointedBodyPair": "Function",
       "getPhysicsTier": "Function",
+      "hasAnyJoints": "Function",
       "installPhysicsTiers": "Function",
       "isPhysicsEntityJointed": "Function",
       "onPhysicsJointCreated": "Function",
@@ -1542,6 +1582,7 @@
       "CreateCollidersResponse": "TypeAlias",
       "CreateJointResponse": "TypeAlias",
       "CreateJointsResponse": "TypeAlias",
+      "CreateMultibodyJointResponse": "TypeAlias",
       "CreatePhysicsEntityResponse": "TypeAlias",
       "CreateRigidBodiesResponse": "TypeAlias",
       "CreateRigidBodyResponse": "TypeAlias",
@@ -1551,6 +1592,7 @@
       "DeleteCollidersResponse": "TypeAlias",
       "DeleteJointResponse": "TypeAlias",
       "DeleteJointsResponse": "TypeAlias",
+      "DeleteMultibodyJointResponse": "TypeAlias",
       "DeleteRigidBodiesResponse": "TypeAlias",
       "DeleteRigidBodyResponse": "TypeAlias",
       "DeleteWorldResponse": "TypeAlias",
@@ -1566,6 +1608,9 @@
       "JointGetUserDataResponse": "TypeAlias",
       "JointIsValidResponse": "TypeAlias",
       "JointLimitsEnabledResponse": "TypeAlias",
+      "MultibodyJointContactsEnabledResponse": "TypeAlias",
+      "MultibodyJointGetUserDataResponse": "TypeAlias",
+      "MultibodyJointIsValidResponse": "TypeAlias",
       "RestoreSnapshotResponse": "TypeAlias",
       "RigidAdditionalSolverIterationsResponse": "TypeAlias",
       "RigidAngularDampingResponse": "TypeAlias",
@@ -1626,6 +1671,9 @@
     },
     "src/_engine/features/physics/proxies/JointProxyAPI.ts": {
       "JointProxyAPI": "Class"
+    },
+    "src/_engine/features/physics/proxies/MultibodyJointProxyAPI.ts": {
+      "MultibodyJointProxyAPI": "Class"
     },
     "src/_engine/features/physics/proxies/RigidBodyProxyAPI.ts": {
       "RigidBodyProxyAPI": "Class"
@@ -1689,7 +1737,9 @@
       "JointAPI": "TypeAlias",
       "JointAxesMask": "Enum",
       "JointMotorModel": "TypeAlias",
-      "JointParams": "TypeAlias"
+      "JointParams": "TypeAlias",
+      "MultibodyJointAPI": "TypeAlias",
+      "MultibodyJointParams": "TypeAlias"
     },
     "src/_engine/features/physics/types/PhysicsQueryTypes.ts": {
       "FeatureType": "Enum",
@@ -1730,6 +1780,9 @@
     },
     "src/_engine/features/physics/worker/PhysicsSwitchJoint.ts": {
       "physicsSwitchJoint": "Function"
+    },
+    "src/_engine/features/physics/worker/PhysicsSwitchMultibodyJoint.ts": {
+      "physicsSwitchMultibodyJoint": "Function"
     },
     "src/_engine/features/physics/worker/PhysicsSwitchRigid.ts": {
       "physicsSwitchRigid": "Function",
@@ -6689,6 +6742,8 @@
       "JointAxesMask",
       "JointMotorModel",
       "JointParams",
+      "MultibodyJointAPI",
+      "MultibodyJointParams",
       "PhysRay",
       "PhysRotation",
       "PhysVector",
@@ -6735,17 +6790,20 @@
       "createCollider",
       "createColliders",
       "createJoint",
+      "createMultibodyJoint",
       "createPhysicsEntity",
       "createRigidBodies",
       "createRigidBody",
       "deleteCollider",
       "deleteColliders",
       "deleteJoint",
+      "deleteMultibodyJoint",
       "deleteRigidBodies",
       "deleteRigidBody",
       "deriveColliderFromGeometry",
       "getCollider",
       "getJoint",
+      "getMultibodyJoint",
       "getPhysicsEntityByAppId",
       "getPhysicsSimClock",
       "getPhysicsState",

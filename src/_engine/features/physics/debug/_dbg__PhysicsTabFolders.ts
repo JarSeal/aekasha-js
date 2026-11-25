@@ -230,8 +230,9 @@ const restoreHeldSnapshot = () =>
     });
     snapshotReadout.restoreMs = formatDuration(performance.now() - start);
     const { reapedRigidBodyIds, reapedColliderIds, reapedJointIds, orphanCounts } = delta;
-    snapshotReadout.reaped = `${reapedRigidBodyIds.length} bodies, ${reapedColliderIds.length} colliders, ${reapedJointIds.length} joints`;
-    snapshotReadout.orphans = `${orphanCounts.rigidBodies} bodies, ${orphanCounts.colliders} colliders, ${orphanCounts.joints} joints`;
+    const reapedMultibody = delta.reapedMultibodyJointIds.length;
+    snapshotReadout.reaped = `${reapedRigidBodyIds.length} bodies, ${reapedColliderIds.length} colliders, ${reapedJointIds.length} joints, ${reapedMultibody} multibody joints`;
+    snapshotReadout.orphans = `${orphanCounts.rigidBodies} bodies, ${orphanCounts.colliders} colliders, ${orphanCounts.joints} joints, ${orphanCounts.multibodyJoints} multibody joints`;
     llog(`[PhysicsSnapshot] restored step ${delta.step}:`, delta);
   });
 

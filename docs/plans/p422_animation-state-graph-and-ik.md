@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Characters, Animation
-Related: `src/_engine/features/character/CLAUDE.md` (the actor and controller contracts in code: the locomotion state, the controller's `state`), p420_npc-simulation-tiers.md (The gameplay contracts: C6, which this plan decides), p421_kinematic-character-controller.md (both controllers report the same locomotion states), p250_physics-api-support-for-multibody-joints.md (ragdoll joints), p420_npc-simulation-tiers.md (cheaper animation per tier, `CROWD` vertex animation), p510_headless-simulation-runtime.md (The multiplayer path: root motion and determinism; a server runs no three)
+Related: `src/_engine/features/character/CLAUDE.md` (the actor and controller contracts in code: the locomotion state, the controller's `state`), p420_npc-simulation-tiers.md (The gameplay contracts: C6, which this plan decides), p421_kinematic-character-controller.md (both controllers report the same locomotion states), _DONE_p250_physics-api-support-for-multibody-joints.md (ragdoll joints), p420_npc-simulation-tiers.md (cheaper animation per tier, `CROWD` vertex animation), p510_headless-simulation-runtime.md (The multiplayer path: root motion and determinism; a server runs no three)
 
 # Animation State Graph and IK — Stub
 

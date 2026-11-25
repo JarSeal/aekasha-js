@@ -10,7 +10,12 @@ import type {
   ShapeParams,
 } from '../../../types/PhysicsColliderTypes';
 import type { PhysRotation, PhysVector } from '../../../types/PhysicsCommonTypes';
-import type { JointAPI, JointParams } from '../../../types/PhysicsJointTypes';
+import type {
+  JointAPI,
+  JointParams,
+  MultibodyJointAPI,
+  MultibodyJointParams,
+} from '../../../types/PhysicsJointTypes';
 import type {
   PhysRay,
   QueryFilterFlags,
@@ -29,6 +34,7 @@ import { createRigidBody, deleteRigidBody } from '../RapierBodies';
 import { createCollider, deleteCollider } from '../RapierColliders';
 import { drainAndDispatchEvents } from '../RapierEvents';
 import { createJoint, deleteJoint } from '../RapierJoints';
+import { createMultibodyJoint, deleteMultibodyJoint } from '../RapierMultibodyJoints';
 import { paramsToShape } from '../RapierShapes';
 // A cycle (RapierWorld.ts makes this class): calls inside methods only
 import { restoreSnapshot, takeSnapshot } from '../RapierWorld';
@@ -38,6 +44,7 @@ import {
   getColliderAPI,
   getColliderAPIWithId,
   getJointAPIWithId,
+  getMultibodyJointAPIWithId,
   getRigidBody,
   getRigidBodyAPIWithId,
 } from '../RapierState';
@@ -181,7 +188,8 @@ export class EngineWorldProxyAPI implements WorldAPI {
     backend.world.maxCcdSubsteps = substeps;
   }
 
-  // --- Factories (the create functions of RapierBodies, RapierColliders and RapierJoints) ---
+  // --- Factories (the create functions of RapierBodies, RapierColliders, RapierJoints and
+  // RapierMultibodyJoints) ---
   createRigidBodySync(params: RigidBodyParams): RigidBodyAPI {
     return createRigidBody(params);
   }
@@ -201,6 +209,13 @@ export class EngineWorldProxyAPI implements WorldAPI {
   }
   async createJoint(params: JointParams): Promise<JointAPI> {
     return this.createJointSync(params);
+  }
+
+  createMultibodyJointSync(params: MultibodyJointParams): MultibodyJointAPI {
+    return createMultibodyJoint(params);
+  }
+  async createMultibodyJoint(params: MultibodyJointParams): Promise<MultibodyJointAPI> {
+    return this.createMultibodyJointSync(params);
   }
 
   // --- Retrieval ---
@@ -225,6 +240,13 @@ export class EngineWorldProxyAPI implements WorldAPI {
     return this.getJointSync(id);
   }
 
+  getMultibodyJointSync(id: number): MultibodyJointAPI | undefined {
+    return getMultibodyJointAPIWithId(id);
+  }
+  async getMultibodyJoint(id: number): Promise<MultibodyJointAPI | undefined> {
+    return this.getMultibodyJointSync(id);
+  }
+
   // --- Removal ---
   removeRigidBody(bodyOrId: RigidBodyAPI | number): void {
     const id = typeof bodyOrId === 'number' ? bodyOrId : bodyOrId.id;
@@ -239,6 +261,11 @@ export class EngineWorldProxyAPI implements WorldAPI {
   removeJoint(jointOrId: JointAPI | number, wakeUp: boolean): void {
     const id = typeof jointOrId === 'number' ? jointOrId : jointOrId.id;
     deleteJoint(id, wakeUp);
+  }
+
+  removeMultibodyJoint(jointOrId: MultibodyJointAPI | number, wakeUp: boolean): void {
+    const id = typeof jointOrId === 'number' ? jointOrId : jointOrId.id;
+    deleteMultibodyJoint(id, wakeUp);
   }
 
   // --- Queries ---

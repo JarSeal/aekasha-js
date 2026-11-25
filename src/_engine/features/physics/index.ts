@@ -13,7 +13,13 @@ export type {
 export { ShapeType } from './types/PhysicsColliderTypes';
 export type { PhysRotation, PhysVector } from './types/PhysicsCommonTypes';
 export { JointAxesMask } from './types/PhysicsJointTypes';
-export type { JointAPI, JointMotorModel, JointParams } from './types/PhysicsJointTypes';
+export type {
+  JointAPI,
+  JointMotorModel,
+  JointParams,
+  MultibodyJointAPI,
+  MultibodyJointParams,
+} from './types/PhysicsJointTypes';
 export type { EventQueue, TempContactForceEvent } from './types/PhysicsEventTypes';
 export type {
   PhysRay,
@@ -71,7 +77,8 @@ export {
   deleteColliders,
 } from './PhysicsColliders';
 export { createJoint, deleteJoint } from './PhysicsJoints';
-export { getCollider, getJoint, getRigidBody } from './PhysicsRegistry';
+export { createMultibodyJoint, deleteMultibodyJoint } from './PhysicsMultibodyJoints';
+export { getCollider, getJoint, getMultibodyJoint, getRigidBody } from './PhysicsRegistry';
 export { getPhysicsState, getPhysicsWorld } from './PhysicsState';
 export { addPhysicsStepGate, getPhysicsSimClock, getPhysicsSubStepIndex } from './PhysicsStepping';
 export { createPhysicsEntity, getPhysicsEntityByAppId } from './PhysicsEntity';

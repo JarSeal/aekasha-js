@@ -10,7 +10,15 @@ import type { PhysRotation, PhysVector } from '../../../types/PhysicsCommonTypes
 import { existsOrThrow } from '../../../../../utils/Assert';
 import { lwarn } from '../../../../../utils/Logger';
 import { fromRapierBodyType, toRapierBodyType } from '../RapierEnums';
-import { backend, getColliderAPI, getRigidBody, toPlainRotation, toPlainVec } from '../RapierState';
+import {
+  backend,
+  getColliderAPI,
+  getRigidBody,
+  multibodyChildCounts,
+  multibodyParents,
+  toPlainRotation,
+  toPlainVec,
+} from '../RapierState';
 /**
  * A body's additional mass, as last set: the mass alone, or full mass properties.
  * @internal
@@ -49,6 +57,10 @@ export class EngineRigidBodyProxyAPI implements RigidBodyAPI {
   uData: Record<string, unknown> = {};
 
   isBeingDeleted: boolean = false;
+
+  /** Whether the debug env has warned about a move Rapier ignores on this body's multibody (once
+   * per body: a move can come every frame). */
+  private hasWarnedMultibodyMove = false;
 
   // Lazy getters (main-thread mode has no SharedArrayBuffer to write these back into,
   // so there is no hot path to optimize yet; revisit for worker-thread mode).
@@ -212,7 +224,29 @@ export class EngineRigidBodyProxyAPI implements RigidBodyAPI {
     return this.nextRotationSync();
   }
 
+  /** Debug env: warns once that Rapier ignores a move of a multibody link with a parent (p250). */
+  private warnLinkMove(what: string) {
+    if (!backend.isDebugEnvironment || this.hasWarnedMultibodyMove) return;
+    const parent = multibodyParents.get(this.id);
+    if (!parent) return;
+    this.hasWarnedMultibodyMove = true;
+    lwarn(
+      `Rigid body ${this.id}: ${what} is ignored by Rapier on a multibody link with a parent (body ${parent.parentId}). Move its multibody's root: the chain goes with it.`
+    );
+  }
+
+  /** Debug env: warns once that Rapier ignores a kinematic target on a multibody's root (p250). */
+  private warnRootKinematicMove(what: string) {
+    if (!backend.isDebugEnvironment || this.hasWarnedMultibodyMove) return;
+    if (multibodyParents.has(this.id) || !multibodyChildCounts.has(this.id)) return;
+    this.hasWarnedMultibodyMove = true;
+    lwarn(
+      `Rigid body ${this.id}: ${what} is ignored by Rapier on a multibody's root. Move it with setTranslation / setRotation (the chain goes with it), or join the chain to it with an impulse joint.`
+    );
+  }
+
   setTranslation(tra: PhysVector, wakeUp: boolean) {
+    this.warnLinkMove('setTranslation');
     this.rb.setTranslation(tra, wakeUp);
     backend.bodyMovedObserver?.(this.id);
   }
@@ -233,6 +267,7 @@ export class EngineRigidBodyProxyAPI implements RigidBodyAPI {
   }
 
   setRotation(rot: PhysRotation, wakeUp: boolean) {
+    this.warnLinkMove('setRotation');
     this.rb.setRotation(rot, wakeUp);
     backend.bodyMovedObserver?.(this.id);
   }
@@ -242,10 +277,12 @@ export class EngineRigidBodyProxyAPI implements RigidBodyAPI {
   }
 
   setNextKinematicTranslation(t: PhysVector) {
+    this.warnRootKinematicMove('setNextKinematicTranslation');
     this.rb.setNextKinematicTranslation(t);
   }
 
   setNextKinematicRotation(rot: PhysRotation) {
+    this.warnRootKinematicMove('setNextKinematicRotation');
     this.rb.setNextKinematicRotation(rot);
   }
 
@@ -381,6 +418,14 @@ export class EngineRigidBodyProxyAPI implements RigidBodyAPI {
       // sits in BODY_STATIC, which isn't synced per frame, so its new motion never reaches it.
       lwarn(
         `Rigid body ${this.id} changed from FIXED to another type with setBodyType: a body created FIXED isn't synced to its entity while it moves. Create it with the type it moves as.`
+      );
+    }
+    // p250: Rapier panics on the next step with a multibody link that isn't dynamic (only its root
+    // can be fixed or kinematic)
+    const parent = multibodyParents.get(this.id);
+    if (parent && type !== RigidBodyTypeAPI.Dynamic) {
+      throw new Error(
+        `Rigid body ${this.id} can't be made ${RigidBodyTypeAPI[type]}: it's a multibody link with a parent (body ${parent.parentId}, multibody joint ${parent.jointId}), and only a multibody's root can be fixed or kinematic.`
       );
     }
     this.rb.setBodyType(toRapierBodyType(type), wakeUp);

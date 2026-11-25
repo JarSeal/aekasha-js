@@ -155,6 +155,7 @@ export type PhysicsDownProtocol =
         id: number;
         colliderIds: number[];
         jointIds: number[];
+        multibodyJointIds: number[];
       }
     | {
         type: PhysicsProtocolType.RIGID_DETACH;
@@ -180,6 +181,7 @@ export type PhysicsDownProtocol =
         ids: number[];
         colliderIds: number[];
         jointIds: number[];
+        multibodyJointIds: number[];
       }
     | { type: PhysicsProtocolType.RIGID_GET_USERDATA; userData: Record<string, unknown> }
     | { type: PhysicsProtocolType.RIGID_IS_VALID; isValid: boolean }
@@ -257,6 +259,15 @@ export type PhysicsDownProtocol =
     | { type: PhysicsProtocolType.JOINT_CONTACTS_ENABLED; contactsEnabled: boolean }
     | { type: PhysicsProtocolType.JOINT_LIMITS_ENABLED; limitsEnabled: boolean }
     | { type: PhysicsProtocolType.JOINT_GET_USERDATA; userData: Record<string, unknown> }
+    // Multibody joint (p250) -----------------------
+    | { type: PhysicsProtocolType.CREATE_MULTIBODY_JOINT; id: number }
+    | { type: PhysicsProtocolType.DELETE_MULTIBODY_JOINT; id: number }
+    | { type: PhysicsProtocolType.MULTIBODY_JOINT_IS_VALID; isValid: boolean }
+    | { type: PhysicsProtocolType.MULTIBODY_JOINT_CONTACTS_ENABLED; contactsEnabled: boolean }
+    | {
+        type: PhysicsProtocolType.MULTIBODY_JOINT_GET_USERDATA;
+        userData: Record<string, unknown>;
+      }
     // Debug state tracking (see SET_DEBUG_STATE_TRACKING) ----
     | {
         type: PhysicsProtocolType.SET_DEBUG_STATE_TRACKING;

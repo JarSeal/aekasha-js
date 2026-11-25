@@ -190,9 +190,11 @@ export const createWallSensorHandler =
         internal.touchingWallColliders.push(otherCollider.id);
         state.isNearWall = true;
       }
+      // The horizontal speed only: a landing is vertical, and Rapier (0.21.0) reports the sensor
+      // touching the floor on a hard one, a few cm before it does
       if (
         c.appliedControlMode === 'CONTROLLED' &&
-        state.relVelocity.length > config.tumblingWallSpeedThreshold
+        Math.hypot(state.relVelocity.x, state.relVelocity.z) > config.tumblingWallSpeedThreshold
       ) {
         internal.pendingTumble = true;
       }

@@ -41,6 +41,13 @@ import {
 } from './PhysicsEntity';
 import { createJointSync, deleteJoint, deleteJointSync } from './PhysicsJoints';
 import {
+  createMultibodyJoint,
+  createMultibodyJointSync,
+  deleteMultibodyJoint,
+  setMultibodyJointCreatedListener,
+} from './PhysicsMultibodyJoints';
+import type { MultibodyJointParams } from './types/PhysicsJointTypes';
+import {
   getPhysicsTier,
   installPhysicsTiers,
   onPhysicsJointCreated,
@@ -49,7 +56,12 @@ import {
 } from './PhysicsTiers';
 import type { PhysicsTier } from './PhysicsTierTypes';
 import { RigidBodyTypeAPI } from './types/PhysicsBodyTypes';
-import { getAllColliderEntries, getAllRigidBodyEntries } from './PhysicsRegistry';
+import {
+  getAllColliderEntries,
+  getAllRigidBodyEntries,
+  getMultibodyJoint,
+  getPhysicsObjectCounts,
+} from './PhysicsRegistry';
 import { facade, getPhysicsState, getPhysicsWorld, isPhysicsWorldEnabled } from './PhysicsState';
 import {
   getPhysicsSnapshotStepIndex,
@@ -366,6 +378,8 @@ describe('the facade (MAIN_THREAD)', () => {
   });
 
   it('a joint created between disabled bodies after a step steps (Rapier 0.19.3 panicked)', async () => {
+    // Rapier 0.21.0 no longer panics here (p250 Phase 0), so this checks the workaround's state
+    // handling (the bodies disabled again after the insert) more than the panic
     // docs/issues/i250_rapier-joint-on-disabled-bodies-panics.md: both disabled, and disabled to fixed
     const world = new ECSWorld({ id: 'p353-joint-on-disabled' });
     facade.tiersInstalled = true;
@@ -409,6 +423,57 @@ describe('the facade (MAIN_THREAD)', () => {
     } finally {
       facade.tiersInstalled = false;
     }
+  });
+
+  it('p250: multibody joints are registered, refused, and forgotten with a body or the world', async () => {
+    const hinge = (body1Id: number, body2Id: number): MultibodyJointParams => ({
+      type: 'REVOLUTE',
+      body1Id,
+      body2Id,
+      anchor1: { x: 0.5, y: 0, z: 0 },
+      anchor2: { x: -0.5, y: 0, z: 0 },
+      axis: { x: 0, y: 0, z: 1 },
+    });
+    const at = (x: number) => ({ x, y: 5, z: 0 });
+    const root = createRigidBodySync({ rigidType: 'FIXED', translation: at(200) });
+    const [a, b, c] = [201, 202, 203].map((x) =>
+      createRigidBodySync({ rigidType: 'DYNAMIC', translation: at(x) })
+    );
+    const counted = getPhysicsObjectCounts().multibodyJoints;
+    const ab = createMultibodyJointSync(hinge(root.id, a.id));
+    const bc = await createMultibodyJoint(hinge(a.id, b.id));
+    expect(getMultibodyJoint(bc.id)).toBe(bc);
+    expect(getPhysicsObjectCounts().multibodyJoints).toBe(counted + 2);
+    // The backend's refusal reaches the caller (a fixed body as a child), and the link rule
+    await expect(createMultibodyJoint(hinge(b.id, root.id))).rejects.toThrow(
+      "a multibody's child must be Dynamic"
+    );
+    expect(() => b.setBodyType(RigidBodyTypeAPI.Fixed, true)).toThrow(
+      "it's a multibody link with a parent"
+    );
+    getPhysicsWorld().step();
+
+    // A body's delete takes its joints from the registry, marked deleted
+    deleteRigidBodySync(a.id);
+    expect([ab, bc].map((j) => j.isBeingDeleted)).toEqual([true, true]);
+    expect(getMultibodyJoint(ab.id)).toBeUndefined();
+    const bc2 = createMultibodyJointSync(hinge(b.id, c.id));
+    expect(await deleteMultibodyJoint(bc2.id)).toBe(bc2.id);
+    expect(bc2.isBeingDeleted).toBe(true);
+    expect(getPhysicsObjectCounts().multibodyJoints).toBe(counted);
+
+    // The world's own create bypasses the registry, its lookup finds it
+    const raw = getPhysicsWorld().createMultibodyJointSync(hinge(b.id, c.id));
+    expect(getPhysicsWorld().getMultibodyJointSync(raw.id)).toBe(raw);
+    expect(getMultibodyJoint(raw.id)).toBeUndefined();
+    getPhysicsWorld().removeMultibodyJoint(raw, true);
+    expect(getPhysicsWorld().getMultibodyJointSync(raw.id)).toBeUndefined();
+
+    // A new world forgets them
+    const last = createMultibodyJointSync(hinge(b.id, c.id));
+    await resetPhysicsWorld();
+    expect(last.isBeingDeleted).toBe(true);
+    expect(getPhysicsObjectCounts().multibodyJoints).toBe(0);
   });
 
   it("D7: every new world gets the config's maxCcdSubsteps, 0 included; the setter sets it", async () => {
@@ -717,6 +782,7 @@ describe('the facade (MAIN_THREAD)', () => {
           position: { x: 60, y: -10, z: 0 },
           source: 'GLOBAL',
           frozen: false,
+          takenWith: null,
         },
       ]);
       for (const id of [anchor, hanging]) {
@@ -901,6 +967,40 @@ describe('the facade (MAIN_THREAD)', () => {
     expect(seen).toHaveLength(1);
   });
 
+  it('p250 D7: a restore rebinds the multibody joints, forgets the ones made since and takes out the ones deleted since, with KEEP too', async () => {
+    await resetPhysicsWorld();
+    const hinge = (body1Id: number, body2Id: number): MultibodyJointParams => ({
+      type: 'REVOLUTE',
+      body1Id,
+      body2Id,
+      anchor1: { x: 0.5, y: 0, z: 0 },
+      anchor2: { x: -0.5, y: 0, z: 0 },
+      axis: { x: 0, y: 0, z: 1 },
+    });
+    const at = (x: number) => ({ x, y: 5, z: 0 });
+    const root = createRigidBodySync({ rigidType: 'FIXED', translation: at(200) });
+    const [a, b, c] = [201, 202, 203].map((x) =>
+      createRigidBodySync({ rigidType: 'DYNAMIC', translation: at(x) })
+    );
+    const ab = createMultibodyJointSync(hinge(root.id, a.id));
+    const bc = createMultibodyJointSync(hinge(a.id, b.id));
+    const snapshot = (await takePhysicsSnapshot())!;
+    await deleteMultibodyJoint(bc.id);
+    const late = createMultibodyJointSync(hinge(b.id, c.id));
+
+    const result = await restorePhysicsSnapshot(snapshot, { orphanPolicy: 'KEEP' });
+    expect(result.reapedMultibodyJointIds).toEqual([late.id]);
+    expect(result.orphanCounts.multibodyJoints).toBe(1);
+    expect(late.isBeingDeleted).toBe(true);
+    expect(getMultibodyJoint(late.id)).toBeUndefined();
+    expect(getMultibodyJoint(ab.id)).toBe(ab);
+    expect(ab.isValidSync()).toBe(true);
+    expect(getPhysicsObjectCounts().multibodyJoints).toBe(1);
+    // The deleted joint stayed out: b is free for a parent again
+    createMultibodyJointSync(hinge(a.id, b.id));
+    getPhysicsWorld().step();
+  });
+
   it("p500: the world's settings come back with a snapshot, the state's doubles kept where unchanged", async () => {
     const state = getPhysicsState();
     const { gravity, timestepRatio } = state;
@@ -1040,6 +1140,160 @@ describe('the facade (MAIN_THREAD)', () => {
       expect(world.getRigidBody(removed)).toBeUndefined();
     } finally {
       facade.tiersInstalled = false;
+    }
+  });
+
+  it('p250 D5: a multibody group is DISABLED for STATIC, with impulse joints too it stays FULL, a branch is its own group', async () => {
+    const world = new ECSWorld({ id: 'p250-tiers' });
+    installTiers(world);
+    facade.tiersInstalled = true;
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const body = (id: number) => world.getRigidBody(id)!;
+      const rootId = await createPhysicsEntity(
+        { colliders: BALL, body: { rigidType: 'FIXED', translation: { x: 400, y: 5, z: 0 } } },
+        { world }
+      );
+      const [a, c, b, d, e, f, g] = await Promise.all(
+        [401, 402, 399, 410, 411, 420, 421].map((x) => createBall(world, x))
+      );
+      const hinge = (parent: number, child: number) =>
+        createMultibodyJointSync({
+          type: 'REVOLUTE',
+          body1Id: body(parent).id,
+          body2Id: body(child).id,
+          anchor1: { x: 0.5, y: 0, z: 0 },
+          anchor2: { x: -0.5, y: 0, z: 0 },
+          axis: { x: 0, y: 0, z: 1 },
+        });
+      // Two branches under the fixed root: a-c and b
+      const joints = [hinge(rootId, a), hinge(a, c), hinge(rootId, b)];
+
+      expect(requestPhysicsTier(a, 'STATIC', world)).toBe(true);
+      expect([a, c, b].map((id) => targetOf(world, id))).toEqual(['DISABLED', 'DISABLED', 'FULL']);
+      world.updatePhysicsStep(0);
+      expect(getPhysicsTier(c, world).tier).toBe('DISABLED');
+      expect(body(a).bodyTypeSync()).toBe(RigidBodyTypeAPI.Dynamic);
+      expect(body(a).isEnabledSync()).toBe(false);
+      expect(requestPhysicsTier(a, 'REMOVED', world)).toBe(false);
+      requestPhysicsTier(a, 'FULL', world);
+      // The batch's REMOVED is STATIC, and a multibody's STATIC is DISABLED
+      requestPhysicsTierWants(world, [a], () => 'REMOVED');
+      expect([a, c].map((id) => targetOf(world, id))).toEqual(['DISABLED', 'DISABLED']);
+      requestPhysicsTier(a, 'FULL', world);
+      world.updatePhysicsStep(1);
+
+      // An impulse joint closing the loop c-b: both kinds in one group, which stays FULL
+      const loop = createJointSync({
+        type: 'SPHERICAL',
+        body1Id: body(c).id,
+        body2Id: body(b).id,
+        anchor1: { x: 0, y: 0, z: 0 },
+        anchor2: { x: 0, y: 0, z: 0 },
+      });
+      warn.mockClear();
+      expect(requestPhysicsTier(b, 'DISABLED', world)).toBe(true);
+      expect([a, c, b].map((id) => targetOf(world, id))).toEqual(['FULL', 'FULL', 'FULL']);
+      expect(String(warn.mock.calls[0]?.[0])).toContain('impulse and multibody joints');
+      requestPhysicsTierWants(world, [b], () => 'REMOVED');
+      expect([a, c, b].map((id) => targetOf(world, id))).toEqual(['FULL', 'FULL', 'FULL']);
+      deleteJointSync(loop.id);
+
+      // A multibody joint made on a body asking for STATIC: its group, joined now, is DISABLED
+      requestPhysicsTier(d, 'STATIC', world);
+      joints.push(hinge(d, e));
+      expect([d, e].map((id) => targetOf(world, id))).toEqual(['DISABLED', 'DISABLED']);
+
+      // One made without the listener, between a request and its apply: the body's own joints
+      requestPhysicsTier(f, 'STATIC', world);
+      setMultibodyJointCreatedListener(null);
+      try {
+        joints.push(hinge(f, g));
+      } finally {
+        setMultibodyJointCreatedListener(onPhysicsJointCreated);
+      }
+      expect(targetOf(world, f)).toBe('STATIC');
+      world.updatePhysicsStep(2);
+      expect(getPhysicsTier(f, world).tier).toBe('DISABLED');
+      expect(body(f).bodyTypeSync()).toBe(RigidBodyTypeAPI.Dynamic);
+      for (const j of joints) deleteMultibodyJoint(j.id);
+    } finally {
+      warn.mockRestore();
+      facade.tiersInstalled = false;
+    }
+  });
+
+  it("p250 D6: a multibody link's exit takes its multibody, each entity handled by its action", async () => {
+    await resetPhysicsWorld();
+    setOutOfBoundsHandler(handleOutOfBounds);
+    const world = new ECSWorld({ id: 'p250-bounds' });
+    const subStep = () => {
+      flushPhysicsEvents();
+      facade.engAPI!.step();
+      flushPhysicsEvents();
+    };
+    setLoadingSceneId('p250Bounds');
+    try {
+      setSceneWorldBounds({ min: { y: -5 }, action: 'DELETE' });
+      const at = (x: number, y: number) => ({ x, y, z: 0 });
+      const rootId = await createPhysicsEntity(
+        { colliders: BALL, body: { rigidType: 'FIXED', translation: at(500, 0) } },
+        { world }
+      );
+      // The chain's last link starts outside; the other, inside, goes with it
+      const inside = await createPhysicsEntity(
+        { colliders: BALL, body: { rigidType: 'DYNAMIC', translation: at(500, -3) } },
+        { world }
+      );
+      const outside = await createPhysicsEntity(
+        { colliders: BALL, body: { rigidType: 'DYNAMIC', translation: at(500, -6) } },
+        { world }
+      );
+      // Another branch of the same root: taken too
+      const other = await createPhysicsEntity(
+        { colliders: BALL, body: { rigidType: 'DYNAMIC', translation: at(503, 0) } },
+        { world }
+      );
+      const body = (id: number) => world.getRigidBody(id)!;
+      const spherical = (parent: number, child: number, dy: number) =>
+        createMultibodyJointSync({
+          type: 'SPHERICAL',
+          body1Id: body(parent).id,
+          body2Id: body(child).id,
+          anchor1: { x: 0, y: dy / 2, z: 0 },
+          anchor2: { x: 0, y: -dy / 2, z: 0 },
+        });
+      spherical(rootId, inside, -3);
+      spherical(inside, outside, -3);
+      createMultibodyJointSync({
+        type: 'SPHERICAL',
+        body1Id: body(rootId).id,
+        body2Id: body(other).id,
+        anchor1: { x: 1.5, y: 0, z: 0 },
+        anchor2: { x: -1.5, y: 0, z: 0 },
+      });
+      const rootBody = body(rootId);
+      subStep();
+      subStep();
+      const { recentExits } = getWorldBoundsStats();
+      const leftId = recentExits[0].bodyId;
+      expect(recentExits.map((e) => [e.entityId, e.takenWith])).toEqual([
+        [outside, null],
+        [inside, leftId],
+        [other, leftId],
+      ]);
+      expect([inside, outside, other].map((id) => world.isAlive(id))).toEqual([
+        false,
+        false,
+        false,
+      ]);
+      // The fixed root isn't a link the exit takes
+      expect(world.isAlive(rootId)).toBe(true);
+      expect(rootBody.isEnabledSync()).toBe(true);
+    } finally {
+      setOutOfBoundsHandler(null);
+      setLoadingSceneId(null);
+      setPhysicsWorldBounds(null);
     }
   });
 

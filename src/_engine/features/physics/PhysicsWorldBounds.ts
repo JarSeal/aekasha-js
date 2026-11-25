@@ -178,7 +178,7 @@ const recordExit = (
 ) => {
   exitCount++;
   if (recentExits.length === RECENT_EXITS_MAX) recentExits.shift();
-  const { bodyId, step, x, y, z, source, frozen } = record;
+  const { bodyId, step, x, y, z, source, frozen, takenWith = null } = record;
   recentExits.push({
     entityId: owner?.entityId ?? null,
     world: owner?.world ?? null,
@@ -189,11 +189,18 @@ const recordExit = (
     source,
     action,
     frozen,
+    takenWith,
   });
 };
 
 const logExit = (name: string, record: OutOfBoundsRecord, action: WorldBoundsAction) => {
   const pos = `${record.x.toFixed(2)}, ${record.y.toFixed(2)}, ${record.z.toFixed(2)}`;
+  if (record.takenWith !== undefined) {
+    lwarn(
+      `Physics world bounds: "${name}" at (${pos}) was taken out with its multibody on step ${record.step} (body ${record.takenWith} left), ${ACTION_LOG[action]}.`
+    );
+    return;
+  }
   const own = record.source === 'ENTITY' ? 'its own world bounds' : 'the world bounds';
   lwarn(
     `Physics world bounds: "${name}" left ${own} at (${pos}) on step ${record.step}, ${ACTION_LOG[action]}. Often a collider smaller than its mesh, or a body spawned inside another.`
@@ -243,9 +250,9 @@ const callOnExit = (
   record: OutOfBoundsRecord
 ) => {
   const { world, entityId } = owner;
-  const { bodyId, step, x, y, z, source, frozen } = record;
+  const { bodyId, step, x, y, z, source, frozen, takenWith = null } = record;
   try {
-    onExit({ entityId, world, bodyId, step, position: { x, y, z }, source, frozen });
+    onExit({ entityId, world, bodyId, step, position: { x, y, z }, source, frozen, takenWith });
   } catch (err) {
     lerror(`Physics world bounds: the onExit of entity ${entityId} threw.`, err);
   }

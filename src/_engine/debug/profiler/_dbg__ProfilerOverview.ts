@@ -314,10 +314,15 @@ const OVERVIEW_METRICS: OverviewMetric[] = [
     label: 'Physics bodies',
     defaultVisible: false,
     sources: [PROFILER_SOURCE.PHYSICS_OBJECTS],
-    read: fromSource<PhysicsObjectStats>(PROFILER_SOURCE.PHYSICS_OBJECTS, (o) => ({
-      value: formatNumber(o.bodies),
-      sub: `bodies · ${formatNumber(o.colliders)} colliders · ${formatNumber(o.joints)} joints`,
-    })),
+    read: fromSource<PhysicsObjectStats>(PROFILER_SOURCE.PHYSICS_OBJECTS, (o) => {
+      const multibody = o.multibodyJoints
+        ? ` · ${formatNumber(o.multibodyJoints)} multibody joints`
+        : '';
+      return {
+        value: formatNumber(o.bodies),
+        sub: `bodies · ${formatNumber(o.colliders)} colliders · ${formatNumber(o.joints)} joints${multibody}`,
+      };
+    }),
   },
   {
     id: 'rays',

@@ -512,11 +512,12 @@ export const toWireBodyWorldBounds = (bounds: EntityWorldBounds): BodyWorldBound
   return hasSide(bounds.min) || hasSide(bounds.max) ? toWireWorldBounds(bounds) : null;
 };
 
-/** A JointParams for the postMessage boundary: a FIXED joint's frames as plain objects
- * (toPlainRot). Returns the original object for every other type.
+/** A JointParams (or MultibodyJointParams) for the postMessage boundary: a FIXED joint's frames
+ * as plain objects (toPlainRot). Returns the original object for every other type.
+ * @template T the joint params' type
  * @internal
  */
-export const toWireJointParams = (params: JointParams): JointParams =>
+export const toWireJointParams = <T extends JointParams>(params: T): T =>
   params.type === 'FIXED'
     ? { ...params, frame1: toPlainRot(params.frame1), frame2: toPlainRot(params.frame2) }
     : params;

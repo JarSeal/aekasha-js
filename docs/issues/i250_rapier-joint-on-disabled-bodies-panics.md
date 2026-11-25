@@ -1,6 +1,6 @@
 **Title:** Rapier panics on a joint created between disabled bodies, and mis-solves joints with disabled bodies
 
-Status: not filed yet
+Status: not filed yet (the panic is gone in 0.21.0; the second symptom unchecked on it)
 Category: Physics
 Found: 2026-11-06, p353 Phase 4 section 4 (the `streamingPhysics` scene's chains in a `NEARBY` cell)
 Our workaround: a jointed body is never `DISABLED` (the tiers give it `STATIC`: `toJointSafeTier` and `onPhysicsJointCreated`, `features/physics/PhysicsTiers.ts`), and the backend enables a disabled body for a joint's insert and disables it again (`createImpulseJointOnDisabled`, `features/physics/backends/rapier/RapierJoints.ts`)
@@ -49,3 +49,21 @@ File it upstream (dimforge/rapier) with the repro above (the second symptom has 
 yet: `streamingPhysics` with `nearbyPhysicsTier: 'DISABLED'` and the `STATIC` rule taken out shows
 it within 30 s), and drop the workarounds once a release fixes both (`PhysicsFacade.test.ts`
 keeps the cases covered).
+
+## On Rapier 0.21.0 (p250 Phase 0, 2026-11-24)
+
+The repro above steps fine on `@dimforge/rapier3d-compat` 0.21.0 (and 0.20.0), both cases: two
+disabled bodies, and a disabled one with a fixed one. The second symptom has no small repro, so
+it's unchecked: the workarounds stay. To drop them, take the `STATIC` rule out (`toJointSafeTier`,
+`onPhysicsJointCreated`) and run `streamingPhysics` with `nearbyPhysicsTier: 'DISABLED'` in
+`WORKER_THREAD` for a few minutes, watching the resting chains.
+
+Multibody joints (p250) don't follow this issue: on 0.21.0 a disabled link is ignored unless the
+whole chain is disabled, and a `FIXED` link panics, so the `STATIC` rule above is wrong for them.
+Their rule is p250 D5's (`toSafeTier`, `features/physics/PhysicsTiers.ts`; the table in
+`src/_engine/features/physics/CLAUDE.md`'s Simulation tiers): a group with multibody joints only is
+`DISABLED` for `STATIC` and `DISABLED`, and one with both kinds (an impulse joint closing a
+multibody loop) stays `FULL`, since `STATIC` panics its links and `DISABLED` is this issue's
+second symptom. Checking that symptom on 0.21.0 would let such a group be `DISABLED` too. The
+world bounds follow the same split: an exited link takes its whole multibody out disabled (p250
+D6), never `FIXED`.

@@ -1,12 +1,12 @@
-// The facade's registry: the world's rigid bodies, colliders and joints by id (both worker
-// targets), the WORKER_THREAD collider callbacks, and the body-moved listener.
+// The facade's registry: the world's rigid bodies, colliders, joints and multibody joints by id
+// (both worker targets), the WORKER_THREAD collider callbacks, and the body-moved listener.
 
 import { lwarn } from '../../utils/Logger';
 import { facade } from './PhysicsState';
 import type { RigidBodyAPI } from './types/PhysicsBodyTypes';
 import type { ColliderAPI, ColliderParams } from './types/PhysicsColliderTypes';
 import type { TempContactForceEvent } from './types/PhysicsEventTypes';
-import type { JointAPI } from './types/PhysicsJointTypes';
+import type { JointAPI, MultibodyJointAPI } from './types/PhysicsJointTypes';
 
 /** Told the id of every rigid body moved by setTranslation/setRotation (p352). */
 let bodyMovedListener: ((rigidBodyId: number) => void) | null = null;
@@ -45,6 +45,11 @@ export const colliders = new Map<number, ColliderAPI>();
  * @internal
  */
 export const joints = new Map<number, JointAPI>();
+/**
+ * The world's multibody joints by their running id, their own ids (both worker targets, p250).
+ * @internal
+ */
+export const multibodyJoints = new Map<number, MultibodyJointAPI>();
 
 /**
  * A collider's collision callback: called with the collider, the other one, and whether they
@@ -118,6 +123,7 @@ export const clearPhysicsRegistry = () => {
   forgetAll(rigidBodies);
   forgetAll(colliders);
   forgetAll(joints);
+  forgetAll(multibodyJoints);
   workerCollisionEventFns.clear();
   workerContactForceEventFns.clear();
 };
@@ -160,6 +166,17 @@ export const forgetJoint = (id: number) => {
 };
 
 /**
+ * Forgets a multibody joint being deleted (see {@link forgetRigidBody}).
+ * @internal
+ */
+export const forgetMultibodyJoint = (id: number) => {
+  const joint = multibodyJoints.get(id);
+  if (!joint) return;
+  joint.isBeingDeleted = true;
+  multibodyJoints.delete(id);
+};
+
+/**
  * Checks a delete's reply: the id it deleted must be the one asked for (`what`, eg. "a
  * collider", names it in the error). Returns the id.
  * @internal
@@ -195,14 +212,15 @@ export const checkDeletedIds = (what: string, ids: number[], deletedIds: number[
 };
 
 /**
- * How many rigid bodies, colliders and joints the current world has (counted on the main thread,
- * both worker targets).
+ * How many rigid bodies, colliders, joints and multibody joints the current world has (counted on
+ * the main thread, both worker targets).
  * @internal
  */
 export const getPhysicsObjectCounts = () => ({
   bodies: rigidBodies.size,
   colliders: colliders.size,
   joints: joints.size,
+  multibodyJoints: multibodyJoints.size,
 });
 
 /**
@@ -214,6 +232,9 @@ export const getRigidBody = (id: number): RigidBodyAPI | undefined => rigidBodie
 export const getCollider = (id: number): ColliderAPI | undefined => colliders.get(id);
 /** The current world's impulse joint with this id, or undefined (see {@link getRigidBody}). */
 export const getJoint = (id: number): JointAPI | undefined => joints.get(id);
+/** The current world's multibody joint with this id, or undefined (see {@link getRigidBody}). */
+export const getMultibodyJoint = (id: number): MultibodyJointAPI | undefined =>
+  multibodyJoints.get(id);
 /**
  * All currently tracked rigid bodies, keyed by their physics id (both thread modes).
  * @internal

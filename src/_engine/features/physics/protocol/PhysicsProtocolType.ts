@@ -1,7 +1,7 @@
 /**
  * The physics worker messages' types, in ranges by switch: 0-199 the engine (the worker itself),
- * 200-399 the world and its queries, 400-599 rigid bodies, 600-799 colliders, 800-999 joints. A
- * number never changes meaning: a new message takes a new one.
+ * 200-399 the world and its queries, 400-599 rigid bodies, 600-799 colliders, 800-999 joints,
+ * 1000-1199 multibody joints. A number never changes meaning: a new message takes a new one.
  * @internal
  */
 export enum PhysicsProtocolType {
@@ -210,4 +210,13 @@ export enum PhysicsProtocolType {
   JOINT_CONFIGURE_MOTOR = 816,
   JOINT_GET_USERDATA = 817,
   JOINT_SET_USERDATA = 818,
+
+  // MULTIBODY_JOINT >= 1000 && MULTIBODY_JOINT < 1200 (p250)
+  CREATE_MULTIBODY_JOINT = 1000,
+  DELETE_MULTIBODY_JOINT = 1001,
+  MULTIBODY_JOINT_IS_VALID = 1002,
+  MULTIBODY_JOINT_CONTACTS_ENABLED = 1003,
+  MULTIBODY_JOINT_SET_CONTACTS_ENABLED = 1004,
+  MULTIBODY_JOINT_GET_USERDATA = 1005,
+  MULTIBODY_JOINT_SET_USERDATA = 1006,
 }

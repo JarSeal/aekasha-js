@@ -552,3 +552,35 @@ export type JointLimitsEnabledResponse = PhysicsResponse<PhysicsProtocolType.JOI
  * @internal
  */
 export type JointGetUserDataResponse = PhysicsResponse<PhysicsProtocolType.JOINT_GET_USERDATA>;
+
+// Multibody joint (p250)
+/**
+ * The worker's reply to `CREATE_MULTIBODY_JOINT`.
+ * @internal
+ */
+export type CreateMultibodyJointResponse =
+  PhysicsResponse<PhysicsProtocolType.CREATE_MULTIBODY_JOINT>;
+/**
+ * The worker's reply to `DELETE_MULTIBODY_JOINT`.
+ * @internal
+ */
+export type DeleteMultibodyJointResponse =
+  PhysicsResponse<PhysicsProtocolType.DELETE_MULTIBODY_JOINT>;
+/**
+ * The worker's reply to `MULTIBODY_JOINT_IS_VALID`.
+ * @internal
+ */
+export type MultibodyJointIsValidResponse =
+  PhysicsResponse<PhysicsProtocolType.MULTIBODY_JOINT_IS_VALID>;
+/**
+ * The worker's reply to `MULTIBODY_JOINT_CONTACTS_ENABLED`.
+ * @internal
+ */
+export type MultibodyJointContactsEnabledResponse =
+  PhysicsResponse<PhysicsProtocolType.MULTIBODY_JOINT_CONTACTS_ENABLED>;
+/**
+ * The worker's reply to `MULTIBODY_JOINT_GET_USERDATA`.
+ * @internal
+ */
+export type MultibodyJointGetUserDataResponse =
+  PhysicsResponse<PhysicsProtocolType.MULTIBODY_JOINT_GET_USERDATA>;

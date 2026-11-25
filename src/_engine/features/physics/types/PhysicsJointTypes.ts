@@ -119,6 +119,70 @@ export type JointParams =
     };
 
 /**
+ * Params for creating a multibody joint (p250): {@link JointParams}' `FIXED`, `REVOLUTE`,
+ * `PRISMATIC` and `SPHERICAL` shapes, with `body1Id` the parent and `body2Id` the child. Joined
+ * this way, bodies form a tree (a multibody) solved in reduced coordinates: no drift between them.
+ * @remarks Rapier panics on what a multibody can't be, so the engine refuses it first, throwing
+ * (rejecting on `WORKER_THREAD`): a child that isn't `DYNAMIC` or already has a parent, a parent
+ * that isn't `DYNAMIC` unless it's its multibody's root, and a joint closing a loop (an impulse
+ * joint closes one). A link with a parent can't be made fixed or kinematic later either
+ * (`setBodyType` throws), and ignores `setTranslation` / `setRotation`: move its root, which takes
+ * the chain along. A kinematic root ignores kinematic targets and velocities: move it with
+ * `setTranslation`.
+ */
+export type MultibodyJointParams = Extract<
+  JointParams,
+  { type: 'FIXED' | 'REVOLUTE' | 'PRISMATIC' | 'SPHERICAL' }
+>;
+
+/**
+ * A multibody joint connecting a parent and a child rigid body (by id, p250). Rapier's multibody
+ * joints have no anchor getters, limits or motors, so it has fewer methods than {@link JointAPI}.
+ * @remarks On MAIN_THREAD every query answers at once. On WORKER_THREAD the async forms ask the
+ * worker and the `*Sync` twins throw, except `getUserDataSync`, `body1IdSync` and `body2IdSync`,
+ * which answer from the proxy's own copy. Setters are one-way: on WORKER_THREAD they apply at the
+ * worker's next step.
+ */
+export type MultibodyJointAPI = {
+  /** Multibody joint id (a running integer id, its own: not an impulse joint's). */
+  readonly id: number;
+
+  /** Set when the facade deletes the joint, with a body it joins or its world too: true for a
+   * reference kept past the delete. */
+  isBeingDeleted: boolean;
+
+  /** The user data as this side last saw it (set here, or fetched by `getUserData`). */
+  uData: Record<string, unknown>;
+  /** The user data, fetched from the worker on WORKER_THREAD (and kept in `uData`). */
+  getUserData(): Promise<Record<string, unknown>>;
+  /** The user data as `uData` holds it, in both worker targets. */
+  getUserDataSync(): Record<string, unknown>;
+  /** Replaces the user data, or merges `userData` into it with `addToExisting`. */
+  setUserData(userData?: Record<string, unknown>, addToExisting?: boolean): void;
+
+  /** Whether the joint still exists in the world. */
+  isValid(): Promise<boolean>;
+  /** `isValid()` without the wait: MAIN_THREAD only. */
+  isValidSync(): boolean;
+
+  /** The parent body's id. */
+  body1Id(): Promise<number>;
+  /** The parent body's id, in both worker targets. */
+  body1IdSync(): number;
+  /** The child body's id. */
+  body2Id(): Promise<number>;
+  /** The child body's id, in both worker targets. */
+  body2IdSync(): number;
+
+  /** Whether the two bodies collide with each other (true by default). */
+  contactsEnabled(): Promise<boolean>;
+  /** `contactsEnabled()` without the wait: MAIN_THREAD only. */
+  contactsEnabledSync(): boolean;
+  /** Lets the two bodies collide with each other or not. */
+  setContactsEnabled(enabled: boolean): void;
+};
+
+/**
  * An impulse joint connecting two rigid bodies (by id). Covers creation, anchors, contacts,
  * and (for Revolute/Prismatic only) limits and motor config — not every method Rapier
  * exposes (e.g. frameX1()/frameX2() orientation getters/setters are skipped as low-value

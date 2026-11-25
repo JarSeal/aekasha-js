@@ -4,6 +4,34 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-24 — p250_physics-api-support-for-multibody-joints (Phases 0-2)
+
+Multibody joints (p250): next to the impulse joints, the Physics API now makes Rapier's multibody joints, which solve a tree of bodies as one articulated body, so a chain never drifts apart at its joints (a robot arm, a crane, a ragdoll's limbs), at the cost of motors and limits. Rapier kills its world on a tree it can't hold, so the engine checks every multibody joint before Rapier sees it and rejects one it would panic on, and the simulation tiers, the world bounds and the snapshots each handle a multibody whole. To get there, Rapier went from 0.19.3 to 0.21.0: on 0.19.3, deleting any body of a multibody chain killed the world. The upgrade doubles Rapier's download, changes how every scene simulates, and changed when a character tumbles against a wall on a hard landing.
+
+### Engine 6.27.0 (Sunset)
+
+**Added**
+
+- `createMultibodyJoint(params)`, `deleteMultibodyJoint(id, wakeUp?)` and `getMultibodyJoint(id)` (`aekasha/physics`), with the types `MultibodyJointParams` (the `FIXED`, `REVOLUTE`, `PRISMATIC` and `SPHERICAL` members of `JointParams`; `body1Id` is the parent, `body2Id` the child) and `MultibodyJointAPI` (what Rapier's joint has: `isValid`, `body1Id` / `body2Id` from the params, `contactsEnabled` / `setContactsEnabled` and the user data; no anchors, limits or motors). The same in both worker targets; `getPhysicsObjectCounts().multibodyJoints` counts them. `WorldAPI` gains `createMultibodyJoint` / `createMultibodyJointSync`, `getMultibodyJoint` / `getMultibodyJointSync` and `removeMultibodyJoint`, which bypass the facade's registry as its `createJoint` does.
+- The multibody's tree, kept by the engine (Rapier's joints have no body getters) and checked in both targets before Rapier's insert: a create rejects, naming the bodies and the rule, for a body joined to itself, a child that isn't `DYNAMIC` or has a parent already, two bodies of one multibody (a loop: an impulse joint closes one), and a fixed or kinematic parent that has a parent itself. A child that is a multibody's root joins with its subtree. `setBodyType` throws on a body with a parent for any type but `Dynamic` (a root can change type), a body's delete takes its multibody joints and splits the tree there (its children become roots), and `detachRigidBody` refuses a body in a multibody. The debug env warns once per body where Rapier ignores a move: `setTranslation` / `setRotation` on a link with a parent, kinematic targets on a root with children.
+- `WorldBoundsExitInfo.takenWith` and `WorldBoundsExitEvent.takenWith`: a multibody link that leaves its box takes every dynamic link of its multibody out with it (disabled, each given the action), each record naming the body that left (`null` on that body's own). The exits list says "with its multibody".
+- `RestoreSnapshotDelta.reapedMultibodyJointIds` and `orphanCounts.multibodyJoints`: a restore rebinds the multibody joints both know, deletes those made since, and always takes out those deleted since, whatever `orphanPolicy` (a kept one would hide a parent from the checks). The Snapshot folder lists them.
+- The enums mirroring Rapier's gain its new members: `RigidBodyTypeAPI.SoftFrame` (4; the API makes no soft bodies) and `ShapeType.Compound` (8). No other number moved.
+- The profiler's overview line adds "· N multibody joints" when there are some.
+
+**Changed**
+
+- Rapier (`@dimforge/rapier3d-compat`) 0.19.3 → 0.21.0. Every scene simulates differently from before (the scene runner's hashes were recorded again), and still the same on every visit and in every worker target. The joint panic of `docs/issues/i250_rapier-joint-on-disabled-bodies-panics.md` no longer happens; its other symptom is unchecked, so the workarounds stay.
+- Rapier's download, `assets/rapier.js`, went from 810.2 to 1605.2 KiB gzip (its WASM's soft bodies, convex decomposition and compound shapes), loaded with the first physics world as before; the SBP budget is 1670 KiB. The physics code grew 2.8 KiB gzip for the multibody joints (the backend 11.2 → 12.9, the worker 9.7 → 10.0, the main chunk's physics 27.1 → 28.0).
+- The simulation tiers by a group's joints: a group with multibody joints is `DISABLED` where `STATIC` or `DISABLED` is asked for (a multibody link made `FIXED` kills the world), one with impulse joints `STATIC` as before, one with both stays `FULL` (the debug env warns); none can be `REMOVED`. A group ends at a fixed or kinematic body, so a multibody's branches under a fixed base change tier on their own.
+- A character's wall tumble reads its horizontal speed only (`tumblingWallSpeedThreshold`'s docs and debug hint say so): Rapier 0.21.0's sensors report touching a few cm sooner, and a hard landing counted as hitting a wall at the fall's speed.
+
+### App 1.36.0 (Preschooler)
+
+**Added**
+
+- `physicsTest`'s joint row has a chain of four links on `REVOLUTE` joints made twice side by side, on impulse joints (yellow) and on multibody joints (blue), to compare the two solvers. The row's demos are 5.25 m apart now (7 m before), from -21 to 21 as before.
+
 ## 2026-11-24 — p240_client-device-capability-sniffer (Phases 1-4)
 
 The device capability check (p240): the engine reads what the device can do (the GPU, memory, CPU cores, display and page) and tells the app, so it can pick its settings before and during play. It rates the device on the shadow presets' scale, `LOW` to `ULTRA`, per category and overall, checks it against targets with engine defaults the app overrides, and suggests settings (pixel ratio, antialias, shadow quality, PostFX, backend, physics thread). It's advice: the engine applies none of it. It runs only when asked, at boot (`AppConfig.deviceCapabilities.runAtInit`) or from app code, and keeps its measurements in localStorage, so a later boot measures again only on another device, browser or display. Besides what the browser tells, a benchmark of about 1.5 s measures the GPU and a CPU core and samples the refresh rate, and the GPU's level comes from the frame rate it predicts for a reference frame calibrated on the example app's game-like scenes. The debug drawer has a tab for it that also forces the levels, so an app's low end can be tried on a strong machine, and the profiler shows the device's level and takes its GPU memory budget from it. With `observe` on, the check then watches the app's own scenes: when the GPU holds them clearly slower than predicted, it corrects the prediction, keeps the correction with the measurements, and reports lower suggestions for the app to offer lower settings. The example app runs the check at boot, renders at the pixel ratio it suggests, and observes its game-like scenes.

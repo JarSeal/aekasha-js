@@ -44,10 +44,14 @@ export type WorldBoundsExitEvent = {
   position: { x: number; y: number; z: number };
   /** Which bounds it left: the scene's (or the app's default), or the entity's own. */
   source: 'GLOBAL' | 'ENTITY';
-  /** True when the body was made `FIXED` (it has joints: Rapier mishandles the joints of a disabled
-   * body), false when it was disabled. Put it back with `setBodyType` to `Dynamic` or
+  /** True when the body was made `FIXED` (it has impulse joints: Rapier mishandles the joints of a
+   * disabled body), false when it was disabled. Put it back with `setBodyType` to `Dynamic` or
    * `setEnabled(true)` respectively, after moving it inside. */
   frozen: boolean;
+  /** A multibody link's exit takes its multibody's dynamic links out with it (Rapier can't take
+   * part of one out): for a link taken along, the body that left; null for a body that left
+   * itself. Put a multibody back whole, by moving its root and enabling every link. */
+  takenWith: number | null;
 };
 
 /**
@@ -112,8 +116,11 @@ export type WorldBoundsExitInfo = {
   /** What was done to the entity (a `'CALLBACK'` without `onExit` is `'DISABLE'`), or null without
    * an entity. */
   action: WorldBoundsAction | null;
-  /** True when the body was made `FIXED` (it has joints), false when it was disabled. */
+  /** True when the body was made `FIXED` (it has impulse joints), false when it was disabled. */
   frozen: boolean;
+  /** For a multibody link taken out with its multibody, the body that left; null for a body that
+   * left itself. */
+  takenWith: number | null;
 };
 
 /**
@@ -167,6 +174,9 @@ export type OutOfBoundsRecord = {
   z: number;
   /** Which bounds it left. */
   source: OutOfBoundsSource;
-  /** True when the body was made FIXED (it has joints), false when it was disabled. */
+  /** True when the body was made FIXED (it has impulse joints), false when it was disabled. */
   frozen: boolean;
+  /** Set on a multibody link that didn't leave its box itself: another link of its multibody did,
+   * this body's id (p250). The multibody's records follow that one's. */
+  takenWith?: number;
 };

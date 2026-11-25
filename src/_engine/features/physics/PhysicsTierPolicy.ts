@@ -23,7 +23,6 @@ import {
 import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type { IComponentStorage } from '../../kernel/ecs/ECSComponentStorage';
 import { readBodyPositionsAtStep, readBodyPositionsSync } from './PhysicsBodies';
-import { forEachJointBodyPair, hasJoints } from './PhysicsJoints';
 import { assertPhysicsTiersInstalled, getPhysicsState } from './PhysicsState';
 import {
   addPhysicsStepGate,
@@ -37,7 +36,7 @@ import type {
   PhysicsTierPolicyCadence,
 } from './PhysicsTierTypes';
 import { getPhysicsBodyOwner, getPhysicsEntityBody } from './PhysicsEntity';
-import { requestPhysicsTier } from './PhysicsTiers';
+import { forEachJointedBodyPair, hasAnyJoints, requestPhysicsTier } from './PhysicsTiers';
 import type { FeatureContext } from '../../kernel/init/Features';
 
 // The defaults PhysicsTierPolicy's fields name
@@ -453,7 +452,7 @@ const unifyJointGroups = (world: ECSWorld, tierStorage: IComponentStorage<Physic
     const owner = getPhysicsBodyOwner(bodyId);
     return owner?.world === world && owner.rigidType === 'DYNAMIC';
   };
-  forEachJointBodyPair((body1Id, body2Id) => {
+  forEachJointedBodyPair((body1Id, body2Id) => {
     if (!isTierable(body1Id) || !isTierable(body2Id)) return;
     if (!parent.has(body1Id)) parent.set(body1Id, body1Id);
     if (!parent.has(body2Id)) parent.set(body2Id, body2Id);
@@ -516,7 +515,7 @@ const decide = (
     passCount++;
     member.placed = true;
   }
-  if (hasJoints()) unifyJointGroups(world, tierStorage);
+  if (hasAnyJoints()) unifyJointGroups(world, tierStorage);
 
   for (let i = 0; i < passCount; i++) {
     const entityId = passEntityIds[i];

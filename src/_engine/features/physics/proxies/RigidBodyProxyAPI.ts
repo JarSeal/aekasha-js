@@ -10,6 +10,7 @@ import {
   toPlainRot,
 } from '../PhysicsMessaging';
 import type { PhysicsCommandFor, PhysicsQueryType } from '../PhysicsMessaging';
+import { hasMultibodyParent } from '../PhysicsMultibodyJoints';
 import { colliders, getBodyMovedListener } from '../PhysicsRegistry';
 import { facade } from '../PhysicsState';
 import { getWriteVisibleStep, isWritePending } from '../PhysicsStepping';
@@ -616,6 +617,12 @@ export class RigidBodyProxyAPI implements RigidBodyAPI {
   }
 
   setBodyType(bodyType: RigidBodyTypeAPI, wakeUp: boolean): void {
+    // The backend's rule (p250), checked here too: the type is cached before the worker sees it
+    if (bodyType !== RigidBodyTypeAPI.Dynamic && hasMultibodyParent(this.id)) {
+      throw new Error(
+        `Rigid body ${this.id} can't be made ${RigidBodyTypeAPI[bodyType]}: it's a multibody link with a parent, and only a multibody's root can be fixed or kinematic.`
+      );
+    }
     this.cachedBodyType = bodyType;
     this.command({ type: PhysicsProtocolType.RIGID_SET_BODY_TYPE, bodyType, wakeUp });
   }

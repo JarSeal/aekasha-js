@@ -1,15 +1,15 @@
 // The Rapier backend (p614 D7): the Physics API's backend contract (EngineAPIType) on Rapier, the
 // one backend. EngineRapier.ts is the module the facade and the worker load (backends/Engines.ts),
 // and re-exports the contract from these modules: this one (the state they share, a leaf),
-// RapierEvents, RapierShapes, RapierBodies, RapierColliders, RapierJoints, RapierRestore,
-// RapierWorld and proxies/ (the API objects).
+// RapierEvents, RapierShapes, RapierBodies, RapierColliders, RapierJoints, RapierMultibodyJoints,
+// RapierRestore, RapierWorld and proxies/ (the API objects).
 
 import type Rapier from '@dimforge/rapier3d-compat';
 import type { Collider, RigidBody } from '@dimforge/rapier3d-compat';
 import type { RigidBodyAPI } from '../../types/PhysicsBodyTypes';
 import type { ColliderAPI } from '../../types/PhysicsColliderTypes';
 import type { PhysRotation, PhysVector } from '../../types/PhysicsCommonTypes';
-import type { JointAPI } from '../../types/PhysicsJointTypes';
+import type { JointAPI, MultibodyJointAPI } from '../../types/PhysicsJointTypes';
 import type { PhysicsQueryObserver } from '../../types/PhysicsQueryTypes';
 import type { EngineColliderProxyAPI } from './proxies/EngineColliderProxyAPI';
 import type { EngineRigidBodyProxyAPI } from './proxies/EngineRigidBodyProxyAPI';
@@ -48,7 +48,8 @@ export const backend: {
   stepCount: 0,
 };
 
-// The maps by running id (next*Id in RapierBodies.ts, RapierColliders.ts and RapierJoints.ts).
+// The maps by running id (next*Id in RapierBodies.ts, RapierColliders.ts, RapierJoints.ts and
+// RapierMultibodyJoints.ts).
 // Running ids are never reset, not even by deleteWorld(): physics' scene hooks recreate the world
 // on every scene load (resetPhysicsWorld), and a stale id from the previous world (e.g. a late
 // delete) must never match a body/collider/joint of the new one.
@@ -104,6 +105,43 @@ export const handleToRigidBodyId = new Map<number, number>();
  * @internal
  */
 export const handleToJointId = new Map<number, number>();
+
+/**
+ * Each live multibody joint's Rapier handle, by running id (its own ids, p250). Rapier's handle
+ * is the child body's handle, so a joint made again on the same child gets the deleted one's.
+ * @internal
+ */
+export const multibodyJoints = new Map<number, number>();
+/**
+ * Each live multibody joint's API object, by running id.
+ * @internal
+ */
+export const multibodyJointAPIs = new Map<number, MultibodyJointAPI>();
+/**
+ * Each live multibody joint's running id, by Rapier handle: the reverse of `multibodyJoints`, for
+ * deleteRigidBody's reap through Rapier's forEachJointHandleAttachedToRigidBody.
+ * @internal
+ */
+export const handleToMultibodyJointId = new Map<number, number>();
+
+/**
+ * A body's place in its multibody: its parent's id and the joint's (p250).
+ * @internal
+ */
+export type MultibodyLink = { parentId: number; jointId: number };
+/**
+ * Each multibody link's parent, by the child body's id: the multibodies' trees, which Rapier
+ * doesn't expose (its joints have no body getters). A body without an entry is a root, or in no
+ * multibody. Written only by RapierMultibodyJoints.ts' link and unlink.
+ * @internal
+ */
+export const multibodyParents = new Map<number, MultibodyLink>();
+/**
+ * How many children each multibody parent has, by body id (none: no entry). Written with
+ * `multibodyParents`.
+ * @internal
+ */
+export const multibodyChildCounts = new Map<number, number>();
 
 /**
  * A collider of a detached body, as it was when detached (see detachRigidBody).
@@ -217,6 +255,16 @@ export const getJointAPI = (jointOrHandle?: Rapier.ImpulseJoint | number): Joint
 };
 
 /**
+ * Get Rapier.MultibodyJoint with a running id. Rapier keeps a joint's handle for a joint made again
+ * on its child, so a deleted id finds nothing here even then.
+ * @internal
+ */
+export const getMultibodyJoint = (id: number): Rapier.MultibodyJoint | undefined => {
+  const handle = multibodyJoints.get(id);
+  return handle !== undefined ? backend.world.multibodyJoints.get(handle) ?? undefined : undefined;
+};
+
+/**
  * Get rigidBodyAPI with an id (running id).
  * @internal
  */
@@ -234,6 +282,13 @@ export const getColliderAPIWithId = (id: number): ColliderAPI | undefined => col
  * @internal
  */
 export const getJointAPIWithId = (id: number): JointAPI | undefined => jointAPIs.get(id);
+
+/**
+ * Get multibodyJointAPI with an id (running id).
+ * @internal
+ */
+export const getMultibodyJointAPIWithId = (id: number): MultibodyJointAPI | undefined =>
+  multibodyJointAPIs.get(id);
 
 /**
  * Enumerates the ids of all currently-live rigid bodies.
