@@ -19,7 +19,7 @@ import {
 } from './DebugTools';
 import { toggleProfilerWindow } from './Profiler';
 import { redoLastAction, undoLastAction } from './UndoRedo';
-import { saveScene } from './SaveData';
+import { saveScene, saveSpecific } from './SaveData';
 import { lwarn } from '../utils/Logger';
 import { getConfig } from '../kernel/config/Config';
 import { getReadOnlyLoopState, toggleAppPlay, toggleMainPlay } from '../kernel/loop/MainLoop';
@@ -329,6 +329,23 @@ const DEFAULT_DEBUG_KEY_BINDINGS: DefaultDebugKeyBinding[] = [
       if (e.repeat) return;
       if (isTypingInField()) (document.activeElement as HTMLElement).blur();
       saveScene();
+    },
+  },
+  // As Save scene: the dialog lists the changes as they are once a typed value is written
+  {
+    id: 'sc-save-specific',
+    category: 'DEBUGGER',
+    type: 'KEY_DOWN',
+    chord: [
+      { key: 's', ctrl: true, shift: true },
+      { key: 's', meta: true, shift: true },
+    ],
+    name: 'Save specific data… (the Æ menu)',
+    fn: (e) => {
+      e.preventDefault();
+      if (e.repeat) return;
+      if (isTypingInField()) (document.activeElement as HTMLElement).blur();
+      saveSpecific();
     },
   },
 ];

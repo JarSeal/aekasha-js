@@ -155,3 +155,15 @@ export const saveScene = () => {
     (err: unknown) => lerror('The save failed to load', err)
   );
 };
+
+/**
+ * Opens the Æ menu's "Save specific data…" dialog (a toast instead when nothing can be saved).
+ * The `sc-save-specific` debug key's.
+ * @internal
+ */
+export const saveSpecific = () => {
+  loadSaveData().then(
+    (module) => module?._openSaveSpecificAsync(),
+    (err: unknown) => lerror('The save failed to load', err)
+  );
+};

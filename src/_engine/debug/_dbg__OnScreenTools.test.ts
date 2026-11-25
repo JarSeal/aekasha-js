@@ -46,7 +46,9 @@ vi.mock(import('./_dbg__About'), () => ({ openAboutDialog: about.open }));
 const save = vi.hoisted(() => ({
   isSaving: false,
   reason: 'Nothing to save in this scene' as string | null,
+  specificReason: 'Nothing to save' as string | null,
   save: vi.fn(),
+  openSpecific: vi.fn(),
 }));
 vi.mock(import('./_dbg__SaveData'), async (importOriginal) => ({
   ...(await importOriginal()),
@@ -54,6 +56,8 @@ vi.mock(import('./_dbg__SaveData'), async (importOriginal) => ({
   _getSaveSceneDisabledReason: () => (save.isSaving ? 'Saving…' : save.reason),
   _refreshSaveStatus: vi.fn(),
   _saveSceneAsync: save.save,
+  _getSaveSpecificDisabledReason: () => (save.isSaving ? 'Saving…' : save.specificReason),
+  _openSaveSpecificAsync: save.openSpecific,
 }));
 
 import type { CMPHandle } from '../ui/core/CMPTypes';
@@ -200,7 +204,7 @@ describe('the Æ menu (p355 §2.2)', () => {
   const getItem = (label: string) =>
     getItems().find((item) => item.textContent?.startsWith(label)) as HTMLElement;
 
-  it('is the Æ button’s menu: Save scene, a separator, About Ækasha', () => {
+  it('is the Æ button’s menu: Save scene, Save specific data…, a separator, About Ækasha', () => {
     const aekasha = getTool('Ækasha menu');
     expect(aekasha.getAttribute('aria-haspopup')).toBe('menu');
     aekasha.focus();
@@ -208,11 +212,15 @@ describe('the Æ menu (p355 §2.2)', () => {
     expect(getMenu()?.getAttribute('aria-label')).toBe('Ækasha menu');
     expect(getItems().map((item) => item.querySelector('.aekMenu__label')?.textContent)).toEqual([
       'Save scene',
+      'Save specific data…',
       'About Ækasha',
     ]);
     expect(getMenu()?.querySelectorAll('[role="separator"]')).toHaveLength(1);
     // The save key's hint: the platform's chord (not a Mac here), not both
     expect(getItem('Save scene').getAttribute('aria-keyshortcuts')).toBe('Control+S');
+    expect(getItem('Save specific data…').getAttribute('aria-keyshortcuts')).toBe(
+      'Control+Shift+S'
+    );
     click(getItem('About Ækasha'));
     expect(getMenu()).toBeNull();
     expect(about.open).toHaveBeenCalledTimes(1);
@@ -233,6 +241,21 @@ describe('the Æ menu (p355 §2.2)', () => {
     click(getItem('Save scene'));
     expect(getMenu()).toBeNull();
     expect(save.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps Save specific data… on while another scene has a change, Save scene off', () => {
+    click(getTool('Ækasha menu'));
+    expect(getItem('Save specific data…').getAttribute('aria-disabled')).toBe('true');
+    click(getTool('Ækasha menu'));
+
+    save.reason = 'Nothing to save in this scene';
+    save.specificReason = null;
+    click(getTool('Ækasha menu'));
+    expect(getItem('Save scene').getAttribute('aria-disabled')).toBe('true');
+    expect(getItem('Save specific data…').hasAttribute('aria-disabled')).toBe(false);
+    click(getItem('Save specific data…'));
+    expect(getMenu()).toBeNull();
+    expect(save.openSpecific).toHaveBeenCalledTimes(1);
   });
 
   it('while a save runs: the Æ button is busy and disabled, its menu closed and off', () => {

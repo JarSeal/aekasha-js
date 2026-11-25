@@ -1,7 +1,8 @@
 // The on-screen tools (p806 D7): four kit toolbars in three debugger roots. The top left row holds
-// the Æ menu (p355: Save scene, About Ækasha) and undo / redo tools, then the view switch; the
-// centred top row the play tools; the bottom row the scene's switch tools (Runtime view only). Each group is refreshed in place
-// (`_dbg__OnScreenToolbar.ts`), and during a scene load every control is `aria-disabled`.
+// the Æ menu (p355: Save scene, Save specific data…, About Ækasha) and undo / redo tools, then the
+// view switch; the centred top row the play tools; the bottom row the scene's switch tools (Runtime
+// view only). Each group is refreshed in place (`_dbg__OnScreenToolbar.ts`), and during a scene
+// load every control is `aria-disabled`.
 import {
   getAllCamerasAsArray,
   getMainAppCameraId,
@@ -34,7 +35,9 @@ import { canRedo, canUndo, redoLastAction, undoLastAction } from './UndoRedo';
 import { openAboutDialog } from './_dbg__About';
 import {
   _getSaveSceneDisabledReason,
+  _getSaveSpecificDisabledReason,
   _isSaving,
+  _openSaveSpecificAsync,
   _refreshSaveStatus,
   _saveSceneAsync,
   SAVING_TEXT,
@@ -365,6 +368,7 @@ const getKeyHint = (keyId: string) => {
 const getAekashaMenuItems = (): MenuItem[] => {
   void _refreshSaveStatus();
   const saveSceneReason = _getSaveSceneDisabledReason();
+  const saveSpecificReason = _getSaveSpecificDisabledReason();
   return [
     {
       label: 'Save scene',
@@ -372,6 +376,13 @@ const getAekashaMenuItems = (): MenuItem[] => {
       disabled: saveSceneReason !== null,
       disabledReason: saveSceneReason ?? undefined,
       onSelect: () => void _saveSceneAsync(),
+    },
+    {
+      label: 'Save specific data…',
+      kbd: getKeyHint('sc-save-specific'),
+      disabled: saveSpecificReason !== null,
+      disabledReason: saveSpecificReason ?? undefined,
+      onSelect: () => void _openSaveSpecificAsync(),
     },
     { type: 'separator' },
     { label: 'About Ækasha', onSelect: openAboutDialog },

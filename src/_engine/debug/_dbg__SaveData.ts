@@ -322,6 +322,26 @@ export const _getSaveSpecificDisabledReason = (): string | null => {
 };
 
 /**
+ * Opens the "Save specific data…" dialog (p355 §2.3): the Æ menu's item and its key. With
+ * nothing to save, saving off or a save running, a toast says why instead.
+ */
+export const _openSaveSpecificAsync = async (): Promise<void> => {
+  if (saving) {
+    addDebugToast({ title: SAVING_TEXT });
+    return;
+  }
+  await _refreshSaveStatus();
+  const reason = _getSaveSpecificDisabledReason();
+  if (reason) {
+    addDebugToast({ type: 'warning', title: 'Not saved', message: reason });
+    return;
+  }
+  // Loaded on first use: its form and checkboxes aren't the Æ menu's
+  const { openSaveSpecificDialog } = await import('./_dbg__SaveSpecificDialog');
+  openSaveSpecificDialog();
+};
+
+/**
  * Saves the current scene's changes and the global ones (p355 §2.1, "Save scene") as one commit:
  * the Æ menu's item and its key, toasting how it went. A call while a save runs only toasts.
  */

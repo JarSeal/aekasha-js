@@ -1,0 +1,80 @@
+// The save menu's debug UI (p355): the "Save specific data…" dialog (_dbg__SaveSpecificDialog.ts).
+// On the tokens, unlayered (p806 D9).
+
+.dialogContent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-size: var(--aek-font-size-md);
+}
+
+.panel {
+  flex: 1;
+  min-height: 0;
+  padding: var(--aek-space-4) var(--aek-space-5);
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.form {
+  --aek-form-gap: var(--aek-space-4);
+
+  // A row's reset button would put its box back to how the dialog opened: Check all and Uncheck
+  // all do that for every row, and one per toggled row only crowds the list
+  :global(.aekField__reset) {
+    display: none;
+  }
+}
+
+.group {
+  // A subgroup (another scene) is set in under its heading
+  .group {
+    margin-left: var(--aek-space-5);
+  }
+}
+
+.groupHeading {
+  font-weight: var(--aek-font-weight-bold);
+}
+
+.unsaveable {
+  color: var(--aek-text-muted);
+}
+
+.unsaveableTitle {
+  margin: 0 0 var(--aek-space-2);
+  font-size: var(--aek-font-size-md);
+  font-weight: var(--aek-font-weight-bold);
+}
+
+.unsaveableList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aek-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.unsaveableReason {
+  font-size: var(--aek-font-size-sm);
+}
+
+.footer {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: var(--aek-space-3);
+  padding: var(--aek-space-4) var(--aek-space-5);
+  border-top: 1px solid var(--aek-border);
+}
+
+// Check all and Uncheck all on the left, Cancel and Save on the right
+.footerGap {
+  flex: 1;
+}
