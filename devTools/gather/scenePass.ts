@@ -7,7 +7,7 @@ import path from 'path';
 import type { StreamingManifest } from '../../src/_engine/schemas';
 import type { GatherContext, GatheredScene, Registries } from './context';
 import { getSceneFeatureIds } from './engineSchemas';
-import { getSaveEntry } from './saveEntries';
+import { applySceneSaveEntry } from './saveEntries';
 import { resolveSceneAssets, type SceneJSON } from './sceneAssets';
 import type { ShipChecks } from './shipChecks';
 import { getTopFolder, resolveCodeFile } from './sources';
@@ -42,10 +42,11 @@ const resolveScene = (
   { id: sceneId, data, file }: GatheredScene,
   debugSceneIds: Set<string>
 ): ResolvedScene | null => {
-  const { $schema, __saveData, ...sceneJSON } = data;
   // The scene's own latest save entry (G5); the output has no __saveData
-  const scene: SceneJSON = { ...sceneJSON, ...getSaveEntry(data, sceneId) };
+  const { $schema, __saveData, ...scene } = applySceneSaveEntry(data, sceneId);
   scene.id = sceneId;
+  // The debugger's saves write the scene's entries into its file (p355 §2.5); production drops it
+  scene.__sourcePath = file.sourcePath;
 
   if (!scene.sceneFile) {
     ctx.log.error(
