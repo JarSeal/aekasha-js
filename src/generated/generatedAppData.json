@@ -86,6 +86,7 @@
       ],
       "id": "exampleCharacter",
       "sceneFile": "./examples/character/exampleCharacter.ts",
+      "__sourcePath": "src/app/examples/character/exampleCharacter.scene.json",
       "__features": []
     },
     "exampleDebugTab": {
@@ -173,6 +174,7 @@
       ],
       "id": "exampleDebugTab",
       "sceneFile": "./examples/debugTab/exampleDebugTab.ts",
+      "__sourcePath": "src/app/examples/debugTab/exampleDebugTab.scene.json",
       "__features": []
     },
     "exampleEcs": {
@@ -260,6 +262,7 @@
       ],
       "id": "exampleEcs",
       "sceneFile": "./examples/ecs/exampleEcs.ts",
+      "__sourcePath": "src/app/examples/ecs/exampleEcs.scene.json",
       "__features": []
     },
     "exampleGameHud": {
@@ -348,6 +351,7 @@
       ],
       "id": "exampleGameHud",
       "sceneFile": "./examples/gameHud/exampleGameHud.ts",
+      "__sourcePath": "src/app/examples/gameHud/exampleGameHud.scene.json",
       "__features": []
     },
     "exampleHubHero": {
@@ -543,6 +547,7 @@
       "postFxEnabled": true,
       "id": "exampleHubHero",
       "sceneFile": "./examples/hubHero/exampleHubHero.ts",
+      "__sourcePath": "src/app/examples/hubHero/exampleHubHero.scene.json",
       "__features": [
         "skybox",
         "postfx"
@@ -607,6 +612,7 @@
       ],
       "id": "exampleLod",
       "sceneFile": "./examples/lod/exampleLod.ts",
+      "__sourcePath": "src/app/examples/lod/exampleLod.scene.json",
       "__features": [
         "skybox"
       ]
@@ -755,6 +761,7 @@
       ],
       "id": "exampleMerging",
       "sceneFile": "./examples/merging/exampleMerging.ts",
+      "__sourcePath": "src/app/examples/merging/exampleMerging.scene.json",
       "__features": [
         "skybox",
         "merging"
@@ -845,6 +852,7 @@
       ],
       "id": "examplePhysics",
       "sceneFile": "./examples/physics/examplePhysics.ts",
+      "__sourcePath": "src/app/examples/physics/examplePhysics.scene.json",
       "__features": []
     },
     "exampleQuickStart": {
@@ -961,6 +969,7 @@
       ],
       "id": "exampleQuickStart",
       "sceneFile": "./examples/quickStart/exampleQuickStart.ts",
+      "__sourcePath": "src/app/examples/quickStart/exampleQuickStart.scene.json",
       "__features": []
     },
     "exampleSkyBox": {
@@ -1038,6 +1047,7 @@
       ],
       "id": "exampleSkyBox",
       "sceneFile": "./examples/skyBox/exampleSkyBox.ts",
+      "__sourcePath": "src/app/examples/skyBox/exampleSkyBox.scene.json",
       "__features": [
         "skybox"
       ]
@@ -1210,6 +1220,7 @@
       ],
       "id": "exampleTerrain",
       "sceneFile": "./examples/terrain/exampleTerrain.ts",
+      "__sourcePath": "src/app/examples/terrain/exampleTerrain.scene.json",
       "materials": [
         {
           "id": "exampleTerrainGround",
@@ -1905,6 +1916,7 @@
       ],
       "id": "exampleToolkit",
       "sceneFile": "./examples/toolkit/exampleToolkit.ts",
+      "__sourcePath": "src/app/examples/toolkit/exampleToolkit.scene.json",
       "__features": []
     },
     "exampleUiKit": {
@@ -1992,6 +2004,7 @@
       ],
       "id": "exampleUiKit",
       "sceneFile": "./examples/uiKit/exampleUiKit.ts",
+      "__sourcePath": "src/app/examples/uiKit/exampleUiKit.scene.json",
       "__features": []
     },
     "banner": {
@@ -2082,6 +2095,7 @@
       ],
       "id": "banner",
       "sceneFile": "./profiles/banner/banner.ts",
+      "__sourcePath": "src/app/profiles/banner/banner.scene.json",
       "__features": []
     },
     "uiKitEmbed": {
@@ -2144,6 +2158,7 @@
       ],
       "id": "uiKitEmbed",
       "sceneFile": "./profiles/uiKit/uiKitEmbed.ts",
+      "__sourcePath": "src/app/profiles/uiKit/uiKitEmbed.scene.json",
       "__features": []
     },
     "assetCompare": {
@@ -2179,6 +2194,7 @@
       ],
       "id": "assetCompare",
       "sceneFile": "./scenes/assetCompare/assetCompare.ts",
+      "__sourcePath": "src/app/scenes/assetCompare/assetCompare.scene.json",
       "cameras": [
         {
           "camProps": {
@@ -2265,6 +2281,7 @@
       ],
       "id": "batchedMeshSpike",
       "sceneFile": "./scenes/batchedMeshSpike/batchedMeshSpike.ts",
+      "__sourcePath": "src/app/scenes/batchedMeshSpike/batchedMeshSpike.scene.json",
       "__features": []
     },
     "instanceStress": {
@@ -2345,6 +2362,7 @@
       ],
       "id": "instanceStress",
       "sceneFile": "./scenes/instanceStress/instanceStress.ts",
+      "__sourcePath": "src/app/scenes/instanceStress/instanceStress.scene.json",
       "__features": [
         "skybox"
       ]
@@ -2645,6 +2663,7 @@
       ],
       "id": "largeWorld",
       "sceneFile": "./scenes/largeWorld/largeWorld.ts",
+      "__sourcePath": "src/app/scenes/largeWorld/largeWorld.scene.json",
       "textures": [
         {
           "id": "largeWorldRockImpostor.albedo",
@@ -6589,6 +6608,7 @@
       ],
       "id": "lodShowcase",
       "sceneFile": "./scenes/lodShowcase/lodShowcase.ts",
+      "__sourcePath": "src/app/scenes/lodShowcase/lodShowcase.scene.json",
       "textures": [
         {
           "id": "lodShowcaseTreeCross.albedo",
@@ -14261,6 +14281,7 @@
       ],
       "id": "mergeMaterials",
       "sceneFile": "./scenes/mergeMaterials/mergeMaterials.ts",
+      "__sourcePath": "src/app/scenes/mergeMaterials/mergeMaterials.scene.json",
       "cameras": [
         {
           "camProps": {
@@ -14336,6 +14357,7 @@
       ],
       "id": "noiseLibrary",
       "sceneFile": "./scenes/noiseLibrary/noiseLibrary.ts",
+      "__sourcePath": "src/app/scenes/noiseLibrary/noiseLibrary.scene.json",
       "cameras": [
         {
           "camProps": {
@@ -14442,6 +14464,7 @@
       ],
       "id": "physicsTest",
       "sceneFile": "./scenes/physicsTest/physicsTest.ts",
+      "__sourcePath": "src/app/scenes/physicsTest/physicsTest.scene.json",
       "__features": []
     },
     "physicsTiers": {
@@ -14545,6 +14568,7 @@
       ],
       "id": "physicsTiers",
       "sceneFile": "./scenes/physicsTiers/physicsTiers.ts",
+      "__sourcePath": "src/app/scenes/physicsTiers/physicsTiers.scene.json",
       "__features": [
         "skybox"
       ]
@@ -14744,6 +14768,7 @@
       ],
       "id": "proceduralSurfaces",
       "sceneFile": "./scenes/proceduralSurfaces/proceduralSurfaces.ts",
+      "__sourcePath": "src/app/scenes/proceduralSurfaces/proceduralSurfaces.scene.json",
       "cameras": [
         {
           "camProps": {
@@ -15240,6 +15265,7 @@
       ],
       "id": "scatterTest",
       "sceneFile": "./scenes/scatterTest/scatterTest.ts",
+      "__sourcePath": "src/app/scenes/scatterTest/scatterTest.scene.json",
       "cameras": [
         {
           "camProps": {
@@ -15697,6 +15723,7 @@
       ],
       "id": "scene01",
       "sceneFile": "./scenes/scene01/scene01.ts",
+      "__sourcePath": "src/app/scenes/scene01/scene01.scene.json",
       "textures": [
         {
           "id": "desertDunes",
@@ -15939,6 +15966,7 @@
       ],
       "id": "sceneTestECS",
       "sceneFile": "./scenes/sceneTestECS/sceneTestECS.ts",
+      "__sourcePath": "src/app/scenes/sceneTestECS/sceneTestECS.scene.json",
       "__features": [
         "skybox"
       ]
@@ -16106,6 +16134,7 @@
       ],
       "id": "skyShowcase",
       "sceneFile": "./scenes/skyShowcase/skyShowcase.ts",
+      "__sourcePath": "src/app/scenes/skyShowcase/skyShowcase.scene.json",
       "__features": [
         "skybox"
       ]
@@ -16267,6 +16296,7 @@
       ],
       "id": "space",
       "sceneFile": "./scenes/space/space.ts",
+      "__sourcePath": "src/app/scenes/space/space.scene.json",
       "__features": [
         "skybox"
       ]
@@ -16363,6 +16393,7 @@
       ],
       "id": "streamingGrid",
       "sceneFile": "./scenes/streamingGrid/streamingGrid.ts",
+      "__sourcePath": "src/app/scenes/streamingGrid/streamingGrid.scene.json",
       "__features": [
         "skybox",
         "lod",
@@ -21548,6 +21579,7 @@
       },
       "id": "streamingPhysics",
       "sceneFile": "./scenes/streamingPhysics/streamingPhysics.ts",
+      "__sourcePath": "src/app/scenes/streamingPhysics/streamingPhysics.scene.json",
       "__features": [
         "skybox",
         "streaming"
@@ -21957,6 +21989,7 @@
       ],
       "id": "terrainBlockTest",
       "sceneFile": "./scenes/terrainBlockTest/terrainBlockTest.ts",
+      "__sourcePath": "src/app/scenes/terrainBlockTest/terrainBlockTest.scene.json",
       "cameras": [
         {
           "camProps": {
@@ -28164,6 +28197,7 @@
       ],
       "id": "terrainGallery",
       "sceneFile": "./scenes/terrainGallery/terrainGallery.ts",
+      "__sourcePath": "src/app/scenes/terrainGallery/terrainGallery.scene.json",
       "__features": [
         "skybox",
         "texturesets",
@@ -29768,6 +29802,7 @@
       },
       "id": "terrainShowcase",
       "sceneFile": "./scenes/terrainShowcase/terrainShowcase.ts",
+      "__sourcePath": "src/app/scenes/terrainShowcase/terrainShowcase.scene.json",
       "scatters": [
         {
           "id": "showcaseCoast_pebbles",
@@ -32934,6 +32969,7 @@
       ],
       "id": "testDebugScene",
       "sceneFile": "scenes/testDebugScene/testDebugScene.ts",
+      "__sourcePath": "src/app/scenes/testDebugScene/testDebugScene.scene.json",
       "textures": [
         {
           "id": "testTexture",
@@ -33041,6 +33077,7 @@
       ],
       "id": "textureArrays",
       "sceneFile": "./scenes/textureArrays/textureArrays.ts",
+      "__sourcePath": "src/app/scenes/textureArrays/textureArrays.scene.json",
       "cameras": [
         {
           "camProps": {
@@ -33576,6 +33613,7 @@
       ],
       "id": "textureAtlases",
       "sceneFile": "./scenes/textureAtlases/textureAtlases.ts",
+      "__sourcePath": "src/app/scenes/textureAtlases/textureAtlases.scene.json",
       "cameras": [
         {
           "camProps": {
@@ -34188,6 +34226,7 @@
       ],
       "id": "textureSets",
       "sceneFile": "./scenes/textureSets/textureSets.ts",
+      "__sourcePath": "src/app/scenes/textureSets/textureSets.scene.json",
       "cameras": [
         {
           "camProps": {
@@ -34669,6 +34708,7 @@
       },
       "id": "thirdPersonGymScene",
       "sceneFile": "./scenes/thirdPersonGymScene/thirdPersonGymScene.ts",
+      "__sourcePath": "src/app/scenes/thirdPersonGymScene/thirdPersonGymScene.scene.json",
       "__features": [
         "postfx",
         "physics"
@@ -34910,6 +34950,7 @@
       "postFxEnabled": true,
       "id": "topDownTestScene",
       "sceneFile": "./scenes/topDownTestScene/topDownTestScene.ts",
+      "__sourcePath": "src/app/scenes/topDownTestScene/topDownTestScene.scene.json",
       "__features": [
         "skybox",
         "postfx"

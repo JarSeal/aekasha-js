@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-6 implemented
+Status: in progress | Phases 1-7 implemented
 Category: Debug, Dev tooling
 Related: `devTools/devFiles/CLAUDE.md` (the dev file server this builds on, p342: the routes,
 `writeDevFiles`, save entry writes, the "File server" folder; this plan is p342's §5 question 4),
@@ -747,15 +747,84 @@ As built:
   warning, nothing written. No console errors. The app files were restored after. Not checked: a
   real GPU, the Params tab's fields themselves (their writes are the bindings the script called).
 
-### Phase 7 — Scene JSON entries
+### Phase 7 — Scene JSON entries — done
 
 §2.5: the scene's `__sourcePath` in the dev data, the `spatialDomains` merge by id, and the
 `postFxEnabled` and spatial cell size sources.
+
+Sections:
+
+1. **The gather:** the scene's `__sourcePath` in the dev data and the `spatialDomains` merge by
+   id. Tests.
+2. **The save pipeline:** one scene's changes of one file built one over the other (found in
+   section 1: two sources now write one scene's entry), and the scene file's helpers. Tests.
+3. **The `postFxEnabled` source.** Tests.
+4. **The spatial cell size source.** Tests.
+5. **The exit in the browser**, and this phase's As built.
 
 **Exit:** a scene's PostFX switched off and a cell size changed, saved (`largeWorld`, whose JSON
 has `spatialDomains`): the scene JSON gets one entry with both, the gather applies it
 (`generatedAppData.json`), and a scene without `__saveData` gathers as before (the production
 data byte for byte; the dev data with only its `__sourcePath` added).
+
+As built:
+
+- The gather (section 1): `applySceneSaveEntry(scene, sceneId)` (`devTools/gather/saveEntries.ts`),
+  which both scene readers use (`resolveScene`, `registries.ts`' `readScenes`): the entry's fields
+  replace the scene's, but `spatialDomains` merges by id (an entry's domain field by field over the
+  scene's with its id, one the scene doesn't list appended). `resolveScene` sets the scene's
+  `__sourcePath` (the file's, repo-relative), which production already deleted. The repo's data
+  gathered before and after: production byte for byte the same, the dev data 41 scenes (and the
+  two profiles' scenes) with only their `__sourcePath` added. The committed `src/generated/` gets
+  those lines at its next gather (section 1's commit had none). `devTools/gather/CLAUDE.md` has the
+  merge and the scene's `__sourcePath` already (Phase 9 needn't add them). Tests in
+  `gather.test.ts`' G5 block.
+- Not in §2.5: a save entry's `spatialDomains` is validated by the scene's own list schema
+  (`SceneOverridesSchema`), so an item of another domain than `DEFAULT` needs `cellSize` and
+  `maxMembers`: a bare `{ id, cellSize }` is valid only for `DEFAULT`. The source writes what
+  differs from the file's item plus, but for `DEFAULT`, the two required fields.
+- The save pipeline (section 2, `_dbg__SaveData.ts`): Phase 4's `foldWrite` deep-merged two
+  changes' entries of one scene, which can't drop a key: with the latest entry's `postFxEnabled:
+  false` switched back to the file's true, the PostFX build dropped it and the cell size build's
+  copy of the latest entry put it back. Now one file's changes are built one after the other, each
+  seeing the entries built before it as its scene's latest (`withBuiltEntries`), and a scene's
+  entry is replaced in its place; an entry a later build left empty for a scene the file has none
+  for isn't written (`dropEmptyNewEntries`). `SaveChange.build`'s JSDoc says so. No earlier source
+  has two changes of one file and scene, so nothing they write changed. `_dbg__SaveEntries.ts`:
+  `getDevScene(sceneId)` (the dev data's scene) and `findSceneFile(sceneId)` (its `__sourcePath`,
+  else "scene not found" or "the scene JSON has no file path").
+- The `postFxEnabled` source (section 3, `features/postfx/debug/_dbg__PostFXSave.ts`'
+  `registerPostFxEnabledSaveSource`, id `postFxEnabled`, label "PostFX switches"; registered next
+  to the passes' source in `_createPostFXDebugGUI`): a change per scene in
+  `AEK_debugPostFxSettings`' `postFxEnabled` ("PostFX switched on / off", summary
+  `postFxEnabled`); the entry is the latest one with `postFxEnabled` only when it differs from the
+  file's (true by default); `onSaved` drops the saved scenes' keys, `measureEnabled` kept. The
+  settings store moved to `_dbg__PostFXStore.ts` (`SETTINGS_LS_KEY`, `readSettingsLS`,
+  `writeSettingsLSOrRemove`), as the passes' had.
+- The cell size source (section 4, `features/spatial/debug/_dbg__SpatialGridSave.ts`, id
+  `spatialDomains`, label "Spatial domains"; registered in `_createSpatialGridDebugGUI`, the
+  feature's `onDebug` hook, before `setSaveSourcesReady`): a change per domain and scene in
+  `cellSizeByScene` (`Spatial domain "<id>" cell size`, summary `spatialDomains.<id>.cellSize`),
+  none when the scene (the dev data's list) has that cell size already; Not saveable "scene not
+  found" and "not in the scene JSON's spatialDomains (registered in code)". The world scope's cell
+  size isn't saved (§1). The entry's item is the file's item with the latest entry's over it and the
+  cell size, pruned as above (an item equal to the file's dropped, an emptied list too), in its
+  place in the latest entry's list. `onSaved` clears the saved scopes (`clearSavedCellSize`) and
+  persists the tab's `domains` once; the live grid isn't re-applied (the reload follows). Not
+  handled: a scene whose code registers a domain with its scene id over the JSON's (the code's
+  registration wins at load, so a saved cell size applies only when the code passes none); no app
+  scene does.
+- Checked in the browser (`largeWorld`, WebGL fallback, a scratch Playwright script on a dev server
+  of its own, port 8095): PostFX switched off with the PostFX tab's switch and `DEFAULT`'s cell size
+  set to 30 in the Spatial index tab's field (by keyboard, through the test bridge's
+  `openDebuggerTab` / `focusDebuggerControl`), both listed under `largeWorld` with the scene JSON's
+  path. Ctrl+S with the field still focused: one reload, `largeWorld.scene.json` got the entry
+  `{ spatialDomains: [{ id: 'DEFAULT', cellSize: 30 }], postFxEnabled: false }` stamped (versions,
+  author), the generated data the same values; after the reload PostFX off and the domain at 30,
+  `AEK_debugPostFxSettings` gone and the tab's `cellSizeByScene` cleared (its colours kept),
+  "Saved 1 file", "Save scene" reads "Nothing to save in this scene". No console errors. The app
+  file was restored after. Not checked: a real GPU, a domain other than `DEFAULT` (no app scene
+  lists one; the unit tests').
 
 ### Phase 8 — Inline assets to JSON files
 
@@ -763,6 +832,14 @@ Needs Phase 7 (the scene JSON's `__sourcePath` in the dev data). §2.6: the serv
 `saveData` write (with self-check cases: the stamped entry in a
 created file, `expectedHash: null` refusing an existing one), the extraction in the camera,
 light and sky box sources, the dialog's "moves to" line.
+
+From Phase 7: the scene JSON now also takes `saveData` writes (the `postFxEnabled` and cell size
+sources), and `foldWrite` refuses a `json` write and a `saveData` write of one file ("two changes
+need writes that can't be merged into one"). The move's scene JSON write is a `json` one, so a
+scene with an inline asset and a PostFX switch or cell size change saved together needs them
+folded into one write of both (the server's `json` + `saveData` write, above: the entries applied
+over the new JSON). `findSceneFile` (`_dbg__SaveEntries.ts`) gives the scene JSON's path, and the
+builds of one file run one after the other (each seeing the entries built before it).
 
 **Exit:** `topDownTest`'s inline sky box (`topDownTestSky`, the only inline asset in the app)
 edited and saved: one commit creates `src/app/scenes/topDownTestScene/topDownTestSky.skybox.json` with the
@@ -774,7 +851,8 @@ path first makes it Not saveable ("taken"), and nothing is written.
 
 `src/_engine/debug/CLAUDE.md` (the Æ menu, save sources and how a debug module adds one, the
 keys), `devTools/devFiles/CLAUDE.md` (the File server settings, the env var, the author, the dry
-run), `devTools/gather/CLAUDE.md` (the scene's `__sourcePath`), the kit's `CLAUDE.md` (the menu
+run), `devTools/gather/CLAUDE.md` (the scene's `__sourcePath` and the `spatialDomains` merge:
+written in Phase 7, check it), the kit's `CLAUDE.md` (the menu
 item's reason, a form-level error if added), the Hub's Debug suite page
 (`hub/pages/features/debug-suite/`), `readme.md` if it lists the debug keys, the versions and
 `CHANGELOG.md` (§4).

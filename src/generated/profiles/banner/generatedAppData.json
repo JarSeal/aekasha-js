@@ -88,6 +88,7 @@
       ],
       "id": "banner",
       "sceneFile": "./profiles/banner/banner.ts",
+      "__sourcePath": "src/app/profiles/banner/banner.scene.json",
       "__features": []
     }
   }
