@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-8 implemented
+Status: implemented (Phases 1-9)
 Category: Debug, Dev tooling
 Related: `devTools/devFiles/CLAUDE.md` (the dev file server this builds on, p342: the routes,
 `writeDevFiles`, save entry writes, the "File server" folder; this plan is p342's §5 question 4),
@@ -913,7 +913,7 @@ As built:
   files were restored after. Not checked: a moved camera or light in the browser (the unit
   tests'), a real GPU.
 
-### Phase 9 — Docs and versioning
+### Phase 9 — Docs and versioning — done
 
 `src/_engine/debug/CLAUDE.md` (the Æ menu, save sources and how a debug module adds one, an
 inline asset's move and `SaveChange.extract`, the keys), `devTools/devFiles/CLAUDE.md` (the File
@@ -936,6 +936,15 @@ Sections:
    menu,form --update` (the screenshots), the full `yarn verify:baselines` (the production
    build's debug code check).
 5. **Versions, `CHANGELOG.md`, the plan marked done**, `yarn checkVersions --against main`.
+
+As built:
+
+- The Hub's build warned on i165: Phase 5's `Status: fixed (p355 Phase 5)` didn't read as closed;
+  now `Status: fixed | p355 Phase 5`.
+- `bundle.json` also took `physicsTest.js`'s size from the previous merge (p250's
+  `physicsTest.ts` changes, not recorded there); the embed bundles' few bytes of gzip drift weren't
+  recorded. The menu's and the form's screenshots (`yarn verify:ui`) are local, not committed.
+- Engine 6.28.0, app 1.37.0 (`src/CONFIG.ts`' two `devFiles` keys), toolkit unchanged.
 
 ## 4. Versioning
 

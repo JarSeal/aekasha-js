@@ -71,6 +71,7 @@
     },
     "src/_engine/debug/DevFiles.ts": {
       "DEFAULT_SAVE_HISTORY_SIZE": "Variable",
+      "DEV_FILES_GATHER_NOTE_KEY": "Variable",
       "DevDataGatheredEvent": "Reference",
       "DevFileRead": "TypeAlias",
       "DevFilesClientErrorCode": "TypeAlias",
@@ -78,6 +79,7 @@
       "DevFilesConflicts": "Reference",
       "DevFilesError": "Class",
       "DevFilesErrorCode": "Reference",
+      "DevFilesOption": "TypeAlias",
       "DevFilesSaveData": "Reference",
       "DevFilesSchemaIssues": "Reference",
       "DevFilesStatus": "TypeAlias",
@@ -89,9 +91,12 @@
       "EncodePNGOpts": "TypeAlias",
       "getDevFilesSaveHistorySize": "Function",
       "getDevFilesStatus": "Function",
+      "isDevFilesOptionOn": "Function",
       "onDevDataGathered": "Function",
       "PNGSource": "TypeAlias",
       "readDevFile": "Function",
+      "showDevFilesGatherNote": "Function",
+      "writeConfirmedDevFiles": "Function",
       "writeDevFiles": "Function"
     },
     "src/_engine/debug/DevFilesProtocol.ts": {
@@ -179,6 +184,18 @@
       "toggleProfilerWindow": "Function",
       "updateProfilerScene": "Function",
       "updateProfilerTab": "Function"
+    },
+    "src/_engine/debug/SaveData.ts": {
+      "_areSaveSourcesReady": "Function",
+      "_getSaveSources": "Function",
+      "registerSaveSource": "Function",
+      "SaveChange": "TypeAlias",
+      "SaveChangeExtract": "TypeAlias",
+      "SaveChangeWrite": "TypeAlias",
+      "saveScene": "Function",
+      "SaveSource": "TypeAlias",
+      "saveSpecific": "Function",
+      "setSaveSourcesReady": "Function"
     },
     "src/_engine/debug/Stats.ts": {
       "defaultStatsOptions": "Variable",
@@ -6529,6 +6546,10 @@
       "GPUMemorySource",
       "GPU_MEMORY_TAB_ID",
       "PNGSource",
+      "SaveChange",
+      "SaveChangeExtract",
+      "SaveChangeWrite",
+      "SaveSource",
       "StatsSource",
       "UndoRedoActionHandler",
       "UndoRedoScope",
@@ -6557,6 +6578,7 @@
       "recordUndoRedoAction",
       "registerEntityWindowOpener",
       "registerGPUMemorySource",
+      "registerSaveSource",
       "registerStatsSource",
       "registerUndoRedoActionHandler",
       "removeDebuggerTab",

@@ -1,6 +1,6 @@
 **Title:** Saving a light's helper or symbol in the debugger saves `enabled: true` too: a light created disabled comes back enabled after a reload
 
-Status: fixed (p355 Phase 5)
+Status: fixed | p355 Phase 5
 Category: Debugger, Lights
 Found: 2026-11-24, p150 Phase 2 (the edit window's "Local storage override" row read "Active: enabled" after a helper toggle)
 Our workaround: after toggling a disabled light's helper or symbol, or the Lights tab's global helpers, use its edit window's "Clear local storage"

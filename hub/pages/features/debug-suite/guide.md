@@ -244,6 +244,7 @@ registerIcon('gear', gearIcon); // A built-in your production UI shows
 | `F8`              | Opens the profiler.                                      |
 | `F9` / `F10`      | Shows the environment ball / the axes gizmo.             |
 | `Ctrl/⌘ + Z`      | Undo (with `Shift`: redo).                               |
+| `Ctrl/⌘ + S`      | Save scene (with `Shift`: Save specific data…).          |
 
 `AppConfig.debugKeys` in `src/CONFIG.ts` rebinds them and adds your own. They're
 [action maps](hub:features/input#debug-keys) in the `DEBUG` context, so they work while the app
@@ -449,7 +450,81 @@ exactly where it was when you switch back, so a visit to an editor keeps it dete
 
 The first editor is the **material editor**: every `*.material.json` material on a preview
 ball, picked from a list, with its params and TSL inputs edited live. Each material's edits,
-the stage and the camera are kept over reloads.
+the stage and the camera are kept over reloads. A material the current scene lists is shown as
+that scene has it (its save entry included), and "Save scene" writes its edits there.
+
+## Saving your edits
+
+The debugger keeps your edits in localStorage: a sky box's layers, a PostFX pass's params, a
+camera's or light's values, the material editor's materials, a scene's PostFX switch and a
+spatial domain's cell size. The Æ menu, the Æ button at the top left, writes them into the asset
+JSONs as [per-scene overrides](hub:features/scenes-and-assets#per-scene-overrides), through the
+[dev file server](#dev-file-server):
+
+- **Save scene** (`Ctrl+S`, `⌘S` on a Mac) saves the current scene's changes in one write. The
+  page reloads with them and the debugger's own copies are cleared, so what you see is the
+  files'. Other scenes' changes stay where they are.
+- **Save specific data…** (`Ctrl+Shift+S`) lists every change with a checkbox: this scene's
+  (checked), the other scenes' you edited before (unchecked), and the ones that can't be saved,
+  with why.
+- An entry holds only what differs from the file, built over the scene's latest entry. A file
+  you changed in your editor since the page loaded fails the save with `CONFLICT`, and your edits
+  stay.
+- A camera, light or sky box written inline in the scene JSON moves into a file of its own in the
+  scene's folder (`topDownTestSky.skybox.json`), and the scene JSON lists its id in its place.
+  When the id or that file is taken, it isn't saved, and the dialog says by which file.
+- The material editor's edits save into the current scene's entry, for the materials its JSON
+  lists. "Save scene" names the others in a warning, and they keep their edits.
+- While a save runs the Æ button is a spinner, and a second `Ctrl+S` does nothing. The menu's
+  items are disabled with the reason when saving is off: no dev file server, or a save history
+  size of 0.
+- Characters' configurations aren't saved yet: their state window's "Copy changes" copies them.
+
+### File server settings
+
+The Debug tools tab's "File server" folder; `AppConfig.devFiles` in `src/CONFIG.ts` sets the
+defaults, and the folder changes them for your browser:
+
+- **Save history size**: how many entries a scene keeps in a file (20; -1 all, 0 turns saving
+  off).
+- **Gather toasts** (on): after a write, a toast with how its gather went: "Saved 2 files" after
+  the reload, with any asset errors, or the error at once when the gather failed.
+- **Confirm writes** (off): every tool's write first lists its files, each created, updated or
+  unchanged, and writes only on Confirm. "Save specific data…" is its own confirmation.
+- **Save entry author**: git's `user.name`, which the server stamps into each entry's
+  `__meta.author` next to the versions.
+- **Backups kept**: the server keeps each write's previous files for the last 20 writes, in
+  `.cache/dev-files/backup/`. `AEK_DEV_FILES_BACKUPS=<n>` sets how many (-1 all, 0 none).
+
+### A save source of your own
+
+A tool of yours that keeps edits of asset JSONs can join the menu with
+[`registerSaveSource`](api:registerSaveSource): `collect` lists its unsaved changes, each with the
+file and a `build` that makes the write from the file as it is right before the save, and
+`onSaved` drops what was saved. Register it from your debug module.
+
+```ts
+registerSaveSource({
+  id: 'myGame.platforms',
+  label: 'Platforms',
+  collect: () =>
+    Object.entries(edits).map(([sceneId, entry]) => ({
+      id: sceneId,
+      label: 'Platform speed',
+      scope: 'SCENE' as const,
+      sceneId,
+      path: 'src/app/meshes/platform.mesh.json',
+      summary: Object.keys(entry),
+      build: () => ({ saveData: { sceneId, entry } }),
+    })),
+  onSaved: (changes) => {
+    for (const change of changes) delete edits[change.id];
+  },
+});
+```
+
+`build` returns a save entry that replaces the scene's latest, so start it from that entry (the
+file's `__saveData[sceneId][0]`) when you keep only a delta.
 
 ## Dev file server
 
@@ -458,14 +533,15 @@ impostors, and each example scene's Hub tab saves its Hub image. A write is like
 in your editor: the scene data is gathered again and the page reloads.
 
 - [`writeDevFiles`](api:writeDevFiles) writes a batch, all or nothing: JSON values, blobs (a PNG
-  from [`encodePNG`](api:encodePNG)) and save entries. It rejects with a
+  from [`encodePNG`](api:encodePNG)) and save entries (a JSON value can carry entries too, for a
+  file it creates). It rejects with a
   [`DevFilesError`](api:DevFilesError), whose `code` says why (`CONFLICT`, `INVALID_SCHEMA`, …).
 - [`readDevFile`](api:readDevFile) reads one with its hash. Pass the hash as a write's
   `expectedHash`, and the write fails with `CONFLICT` when the file has changed since.
 - [`getDevFilesStatus`](api:getDevFilesStatus) tells whether this page can write, and why not:
   disable your tool's button on it.
 - A `saveData` write adds a scene's overrides to an asset JSON's `__saveData`, stamped with the
-  engine, toolkit and app versions. [`getDevFilesSaveHistorySize`](api:getDevFilesSaveHistorySize)
+  engine, toolkit and app versions and git's `user.name`. [`getDevFilesSaveHistorySize`](api:getDevFilesSaveHistorySize)
   is how many entries a scene keeps; at 0 saving is off.
 - [`onDevDataGathered`](api:onDevDataGathered) calls you after each gather, before the reload:
   whether it went through, the files it read (find your write by its path) and whether the page
@@ -508,7 +584,7 @@ the [Quick start](hub:examples/quick-start#check-your-changes) for the commands.
 
 ## About and bug reports
 
-The Æ button at the top left opens the About dialog: the engine, toolkit and app versions, the
+The Æ menu's "About Ækasha" opens the About dialog: the engine, toolkit and app versions, the
 build, the renderer and GPU, and the physics backend and thread. Its "Copy info" button copies
 it all for a bug report.
 
@@ -536,6 +612,8 @@ it all for a bug report.
 - Dev files: [`writeDevFiles`](api:writeDevFiles), [`readDevFile`](api:readDevFile),
   [`getDevFilesStatus`](api:getDevFilesStatus) and
   [`onDevDataGathered`](api:onDevDataGathered).
+- Saving: [`registerSaveSource`](api:registerSaveSource), its changes
+  [`SaveChange`](api:SaveChange).
 
 ## Read more
 

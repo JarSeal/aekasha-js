@@ -1,6 +1,6 @@
 Status: implemented (Phases 1-3)
 Category: Debugger
-Related: p355_save-menu-and-file-server-settings.md (saves the same camera and light edits into the asset JSONs)
+Related: _DONE_p355_save-menu-and-file-server-settings.md (saves the same camera and light edits into the asset JSONs)
 
 # Current Entity Data Source Information on Edit Windows — Plan
 
