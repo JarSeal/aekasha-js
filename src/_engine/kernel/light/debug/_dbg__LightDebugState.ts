@@ -313,8 +313,9 @@ export const refreshLightShadows = (light: THREE.Light, entityId: number, world:
   });
 };
 
-/** The saved keys that are the debugger's own preferences, not creation props */
-const LIGHT_DEBUGGER_ONLY_KEYS: ReadonlySet<string> = new Set([
+/** The saved keys that are the debugger's own preferences, not creation props (the save source
+ * leaves them out and keeps them) */
+export const LIGHT_DEBUGGER_ONLY_KEYS: ReadonlySet<string> = new Set([
   'helperVisible',
   'symbolVisible',
   '_shadowFolderOpen',

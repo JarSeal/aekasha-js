@@ -52,6 +52,7 @@ export {
   syncDebugVisualsFromLS,
   updateLightsDebuggerGUI,
 } from './_dbg__LightDebugState';
+export { registerLightSaveSource } from './_dbg__LightSave';
 
 const getLightTypeShorthand = (world: ECSWorld, entityId: number) => {
   if (world.hasComponent(entityId, ComponentType.TAG_IS_POINT_LIGHT)) return 'PL';
