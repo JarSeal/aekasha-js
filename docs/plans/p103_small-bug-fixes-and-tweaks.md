@@ -378,8 +378,33 @@ running, a scratch probe on the page's modules):
   per frame: 0.008°, 0.25° at 30×); measured in APP_RENDER_SYNC (after `lookAtSystem`) it's exact
   (< 1e-6°), with a static and with a moving camera, at 1× and 30×: `lookAtSystem` turns the light
   toward its target, and the helper's `matrix` is the light's `matrixWorld`, so the line's local
-  rotation from last frame's `update()` turns with it. The plan's third defect doesn't reproduce;
-  the shake wasn't seen in these runs.
+  rotation from last frame's `update()` turns with it. The plan's third defect doesn't reproduce.
+- **The shake is the line ending in the eye.** The sun follows the active camera: its target is the
+  camera's position, snapped to texels across the light and unsnapped along it, so the target line
+  ends within a few centimetres of the eye (the target projects to NDC z 6.4, −14: behind the
+  camera). The near plane clips it, and each texel snap of its end swings what's left across the
+  screen: in a crop sequence with only the target line shown, it pointed a different way in every
+  capture, while the light's square and 3D symbol moved smoothly. The matrices are right.
+
+As built (step 2):
+
+- One sync in MAIN at order −1 (after `object3DSyncSystem` and `debugCameraSystem`, order 0), not
+  LATE_MAIN, and no APP_RENDER_SYNC pass or `DEBUG_HELPERS` order: a pose written later in the
+  frame (`lookAtSystem`, `SunShadowFit`) shows a frame late, about 0.01° for the sky's sun, and a
+  `SunShadowFit` frustum (a zoom or a resize) a frame late.
+- No `light.shadow.updateMatrices` (the plan called it harmless; it isn't): it also writes
+  `shadow.matrix`, which the shadow map is sampled with, so for a light whose map isn't re-rendered
+  that frame (`autoUpdate` false, an app's static shadow) the shadows would shift. The box stays
+  three's pose, where the map was rendered, and is hidden while `shadow.intensity` is 0 (the sky's
+  sun at night: as asked in review), so it no longer stands still at night.
+- The frustum: the component keeps `camProjection` (a clone at attach) and the sync calls
+  `camHelper.update()` only when the shadow camera's `projectionMatrix` differs from it.
+- The line: when the light's target is within 10 m of the active camera (`TARGET_LINE_EYE_GAP`),
+  the drawn target line stops 10 m short, so it doesn't end in the eye.
+- No re-creation of the helpers for a replaced light or camera: the check found none, and
+  `refreshLightShadowsAsync` re-attaches its own.
+- The registration-order comments in `Light.ts` and `Camera.ts` no longer name the light helpers'
+  LATE_MAIN place.
 
 ### Phase 3: Scene-scoped player keys and the on-screen tools box (items 5, 6)
 

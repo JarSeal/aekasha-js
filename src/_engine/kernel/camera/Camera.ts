@@ -79,7 +79,8 @@ export const installCameras = (ctx: FeatureContext) => {
  */
 export const registerCameraDebugGUI = async () => {
   // Awaited, so the debug camera's MAIN system (its module comes with the GUI's) registers in a
-  // fixed place: before the light helpers' and the line time system (a load race before p607)
+  // fixed place: before the line time system (a load race before p607; the light helpers' sync
+  // runs after it by its order)
   cameraDebugGUI = await loadDebugModuleAsync(() => import('./debug/_dbg__CameraGUI'));
   if (!cameraDebugGUI) return;
   // The Æ menu's saves (p355), before the boot marks the sources ready
@@ -511,7 +512,7 @@ export const initDebugCamera = async (world: ECSWorld) => {
   if (debugHelpers) return;
 
   const camImporter = () => import('./debug/_dbg__DebugCamera');
-  // Awaited: its LATE_MAIN system registers in a fixed place (after the light helpers')
+  // Awaited: its LATE_MAIN system registers in a fixed place
   debugHelpers = await loadDebugModuleAsync(() => import('./debug/_dbg__CameraHelpers'));
   debugCamera = loadDebugModule(camImporter);
 
