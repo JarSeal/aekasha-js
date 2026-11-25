@@ -36,16 +36,20 @@ const scratchBox = new THREE.Box3();
 
 const setOverlayEnabled = (overlay: BoxOverlay, enabled: boolean) => {
   overlay.enabled = enabled;
-  overlay.line.setVisible(enabled);
+  // An empty line stays hidden (see refillOverlay): a new one is shown by its first refill
+  overlay.line.setVisible(enabled && overlay.line.segmentCount > 0);
 };
 
-/** `grid` undefined: the domain isn't registered (any more), so the line is emptied. */
+/** `grid` undefined: the domain isn't registered (any more), so the line is emptied. An empty
+ * line is hidden: three (r187) still issues a THIN line's 0-vertex draw, which WebGPU warns on.
+ * A disabled overlay isn't refilled, so its toggle's hiding stays. */
 const refillOverlay = (overlay: BoxOverlay, grid: SpatialGrid | undefined) => {
   if (!overlay.enabled) return;
   const line = overlay.line;
   if (!grid) {
     line.beginWrite();
     line.endWrite();
+    line.setVisible(false);
     return;
   }
 
@@ -66,6 +70,7 @@ const refillOverlay = (overlay: BoxOverlay, grid: SpatialGrid | undefined) => {
     writeBox3Edges(writer, scratchBox);
   }
   line.endWrite();
+  line.setVisible(count > 0);
 };
 
 /** Refills the shown overlays from their domain's last rebuild. LATE_MAIN, so after the

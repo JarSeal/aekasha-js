@@ -316,6 +316,18 @@ As built:
   alone would put 2 back: a saved 2 is also rewritten as 1 in localStorage. Checked in Chromium (WebGL2
   fallback) with `{ "enableShadows": true, "shadowMapType": 2 }` saved: before, one "PCFSoftShadowMap
   has been removed" warning and the 2 kept; after, no warning and the saved value 1.
+- Item 3: the two call-site hides weren't enough. `setOverlayEnabled` showed a line the moment its
+  overlay was turned on (the tab's creation applies the saved settings), so a frame drew the new,
+  empty line before its first refill: one 0-vertex warning while `largeWorld` loaded with the
+  FOLIAGE overlay saved as on, with the two hides in place too. It now shows the line only when it
+  holds segments (`enabled && line.segmentCount > 0`), and the refill shows it from then on. Chrome
+  reports the warning once per page, so a check after a scene change sees nothing once the load
+  warned. Checked on WebGPU (the scene runner's Windows Chrome, `launchVerifyChromiumAsync`):
+  `largeWorld` with both FOLIAGE overlays saved as on, then `loadScene({ sceneId: 'scene01' })` in the
+  page. Before: the warning during the load (the empty oversized line, FOLIAGE has no oversized
+  members). After: none over the whole run; in `largeWorld` the cells line visible with 3420
+  segments and the empty oversized line hidden, after the change both hidden and empty. With the
+  overlays off there's no warning, before or after.
 
 ### Phase 2: Light helpers (item 11)
 
