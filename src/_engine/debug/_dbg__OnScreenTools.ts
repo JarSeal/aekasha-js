@@ -1,6 +1,6 @@
 // The on-screen tools (p806 D7): four kit toolbars in three debugger roots. The top left row holds
-// the About and undo / redo tools, then the view switch; the centred top row the play tools; the
-// bottom row the scene's switch tools (Runtime view only). Each group is refreshed in place
+// the Æ menu (p355: Save scene, About Ækasha) and undo / redo tools, then the view switch; the
+// centred top row the play tools; the bottom row the scene's switch tools (Runtime view only). Each group is refreshed in place
 // (`_dbg__OnScreenToolbar.ts`), and during a scene load every control is `aria-disabled`.
 import {
   getAllCamerasAsArray,
@@ -32,6 +32,16 @@ import { loadDebugModule, useDebug } from '../kernel/config/DebugModules';
 import { getDebugToolsState } from './DebugTools';
 import { canRedo, canUndo, redoLastAction, undoLastAction } from './UndoRedo';
 import { openAboutDialog } from './_dbg__About';
+import {
+  _getSaveSceneDisabledReason,
+  _isSaving,
+  _refreshSaveStatus,
+  _saveSceneAsync,
+  SAVING_TEXT,
+} from './_dbg__SaveData';
+import { createKbd } from '../ui/components/Kbd';
+import type { MenuItem } from '../ui/overlays/Menu';
+import { getDebugKeyChordLabel } from './DefaultDebugKeyBindings';
 import { isProfilerAvailable, isProfilerWindowOpen, toggleProfilerWindow } from './Profiler';
 import {
   createOnScreenToolbar,
@@ -340,18 +350,44 @@ const getSwitchTools = (): OnScreenToolItem[] | null => {
   return tools;
 };
 
-/** The About Ækasha button, then undo and redo (`aria-disabled` while there's nothing to undo or
- * redo). Debug environment only: prod test mode has no debugger to make edits with. The undo /
- * redo module refreshes this group itself (`updateOnScreenTools('UNDO')`) when the history
- * changes. */
+/** A debug key's hint for a menu item (none when CONFIG.ts' debugKeys left it no chord) */
+const getKeyHint = (keyId: string) => {
+  const keys = getDebugKeyChordLabel(keyId);
+  return keys ? createKbd({ keys }) : undefined;
+};
+
+/** The Æ menu's items (p355 §2.2), read on every open: the save items' states then. The status
+ * of the dev files is read again for the next open. */
+const getAekashaMenuItems = (): MenuItem[] => {
+  void _refreshSaveStatus();
+  const saveSceneReason = _getSaveSceneDisabledReason();
+  return [
+    {
+      label: 'Save scene',
+      kbd: getKeyHint('sc-save-scene'),
+      disabled: saveSceneReason !== null,
+      disabledReason: saveSceneReason ?? undefined,
+      onSelect: () => void _saveSceneAsync(),
+    },
+    { type: 'separator' },
+    { label: 'About Ækasha', onSelect: openAboutDialog },
+  ];
+};
+
+/** The Æ menu, then undo and redo (`aria-disabled` while there's nothing to undo or redo). Debug
+ * environment only: prod test mode has no debugger to make edits with. The undo / redo module and
+ * the saves refresh this group themselves (`updateOnScreenTools('UNDO')`): the history changed, a
+ * save started or ended (the Æ button a spinner, its menu off). */
 const getUndoTools = (): OnScreenToolItem[] => [
   {
-    key: 'about',
-    label: 'About Ækasha',
+    key: 'aekasha',
+    label: 'Ækasha menu',
     icon: 'aekasha',
     // A gap sets it apart from the undo / redo buttons after it
     class: styles.aboutTool,
-    onClick: openAboutDialog,
+    menu: { label: 'Ækasha menu', items: getAekashaMenuItems },
+    isLoading: _isSaving,
+    getDisabledReason: () => (_isSaving() ? SAVING_TEXT : null),
   },
   {
     key: 'undo',
@@ -422,7 +458,7 @@ const syncGroup = (type: ToolTypes) => {
   const tools = def.getTools();
   const current = toolbars.get(type) ?? null;
   if (!tools?.length) {
-    current?.cmp.remove();
+    current?.remove();
     toolbars.delete(type);
     return;
   }
@@ -441,7 +477,7 @@ const syncGroup = (type: ToolTypes) => {
   row.add(toolbar.cmp);
   if (current) current.cmp.elem.before(toolbar.cmp.elem);
   else if (def.isFirst) row.elem.prepend(toolbar.cmp.elem);
-  current?.cmp.remove();
+  current?.remove();
   toolbars.set(type, toolbar);
   toolbar.refresh(isLoading);
   if (focusedKey) toolbar.focusKey(focusedKey);
@@ -467,6 +503,8 @@ export const _InitOnScreenTools = () => {
   syncGroup('VIEW');
   syncGroup('PLAY');
   syncGroup('SWITCH');
+  // The Æ menu's first open reads it (each open reads it again for the next)
+  void _refreshSaveStatus();
 };
 
 /** Refreshes the given groups (all of them by default) after a state they show changed. */

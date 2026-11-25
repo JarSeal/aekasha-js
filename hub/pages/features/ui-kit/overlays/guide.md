@@ -317,7 +317,8 @@ the menu's button when it closes. An item's `kbd` is a key hint you make with `c
 the menu removes: a getter's at each close (the getter makes new ones on the next open), an
 array's with the menu. A disabled item stays in the menu and can take the focus, so a reader
 finds it; give an action a `disabledReason` and it says why, as its tooltip and its description
-(`{ label: 'Save', disabled: !canSave, disabledReason: 'Nothing changed' }`).
+(`{ label: 'Save', disabled: !canSave, disabledReason: 'Nothing changed' }`). A menu button that's
+disabled (`disabled`, or `aria-disabled` with `focusableWhenDisabled`) doesn't open its menu.
 
 A submenu (`type: 'submenu'`, its `items` any of a menu's, another submenu too) opens beside its
 item, flipped to the other side where it doesn't fit. ArrowRight, Enter or Space opens it on its

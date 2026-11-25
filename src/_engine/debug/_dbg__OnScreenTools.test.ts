@@ -42,6 +42,19 @@ vi.mock(import('../kernel/camera/Camera'), async (importOriginal) => ({
 }));
 const about = vi.hoisted(() => ({ open: vi.fn() }));
 vi.mock(import('./_dbg__About'), () => ({ openAboutDialog: about.open }));
+// The saves' states are this test's (`_dbg__SaveData.test.ts` has the saves)
+const save = vi.hoisted(() => ({
+  isSaving: false,
+  reason: 'Nothing to save in this scene' as string | null,
+  save: vi.fn(),
+}));
+vi.mock(import('./_dbg__SaveData'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  _isSaving: () => save.isSaving,
+  _getSaveSceneDisabledReason: () => (save.isSaving ? 'Saving…' : save.reason),
+  _refreshSaveStatus: vi.fn(),
+  _saveSceneAsync: save.save,
+}));
 
 import type { CMPHandle } from '../ui/core/CMPTypes';
 import { CMP } from '../ui/core/CMP';
@@ -74,6 +87,7 @@ const getControls = () =>
   getToolbars().flatMap((toolbar) => [
     ...toolbar.querySelectorAll<HTMLElement>('.aekButton, .aekDropDownTrigger'),
   ]);
+const getMenu = () => document.querySelector<HTMLElement>('.aekMenu');
 const click = (elem: HTMLElement) =>
   elem.dispatchEvent(new window.Event('click', { bubbles: true }));
 
@@ -105,7 +119,7 @@ describe('the on-screen tools (p806 D7)', () => {
     expect(getTool('Scene A')).toBeTruthy();
     // Nothing to undo
     expect(getTool('Undo').getAttribute('aria-disabled')).toBe('true');
-    expect(getTool('About Ækasha').hasAttribute('aria-disabled')).toBe(false);
+    expect(getTool('Ækasha menu').hasAttribute('aria-disabled')).toBe(false);
   });
 
   it('refresh in place: a pressed toggle keeps its element and the focus', () => {
@@ -131,9 +145,9 @@ describe('the on-screen tools (p806 D7)', () => {
   });
 
   it('move the focus with the arrows inside a group', () => {
-    const about = getTool('About Ækasha');
-    about.focus();
-    dispatchKey(about, 'keydown', 'ArrowRight');
+    const aekasha = getTool('Ækasha menu');
+    aekasha.focus();
+    dispatchKey(aekasha, 'keydown', 'ArrowRight');
     // Undo is aria-disabled, still a stop
     expect(document.activeElement).toBe(getTool('Undo'));
   });
@@ -160,21 +174,85 @@ describe('the on-screen tools (p806 D7)', () => {
     // Their described-by tooltip is the reason
     expect(pause.getAttribute('aria-describedby')).toMatch(/\S/);
     click(pause);
-    click(getTool('About Ækasha'));
+    click(getTool('Ækasha menu'));
     expect(pause.getAttribute('aria-pressed')).toBe(pressed);
-    expect(about.open).not.toHaveBeenCalled();
+    expect(getMenu()).toBeNull();
     _toggleOnScreenDropDown('SCENE');
     expect(document.querySelector('[role="listbox"]')).toBeNull();
     // A refresh meanwhile keeps them disabled
     _updateOnScreenTools();
-    expect(getTool('About Ækasha').getAttribute('aria-disabled')).toBe('true');
+    expect(getTool('Ækasha menu').getAttribute('aria-disabled')).toBe('true');
 
     _setOnScreenToolsDisabled(false);
-    expect(getTool('About Ækasha').hasAttribute('aria-disabled')).toBe(false);
+    expect(getTool('Ækasha menu').hasAttribute('aria-disabled')).toBe(false);
     expect(getTool('Scene A').getAttribute('title')).toBe('Change scene (P)');
     // Nothing to undo still
     expect(getTool('Undo').getAttribute('aria-disabled')).toBe('true');
-    click(getTool('About Ækasha'));
+    click(getTool('Ækasha menu'));
+    expect(getMenu()).not.toBeNull();
+    click(getTool('Ækasha menu'));
+    expect(getMenu()).toBeNull();
+  });
+});
+
+describe('the Æ menu (p355 §2.2)', () => {
+  const getItems = () => [...(getMenu()?.querySelectorAll<HTMLElement>('.aekMenu__item') ?? [])];
+  const getItem = (label: string) =>
+    getItems().find((item) => item.textContent?.startsWith(label)) as HTMLElement;
+
+  it('is the Æ button’s menu: Save scene, a separator, About Ækasha', () => {
+    const aekasha = getTool('Ækasha menu');
+    expect(aekasha.getAttribute('aria-haspopup')).toBe('menu');
+    aekasha.focus();
+    click(aekasha);
+    expect(getMenu()?.getAttribute('aria-label')).toBe('Ækasha menu');
+    expect(getItems().map((item) => item.querySelector('.aekMenu__label')?.textContent)).toEqual([
+      'Save scene',
+      'About Ækasha',
+    ]);
+    expect(getMenu()?.querySelectorAll('[role="separator"]')).toHaveLength(1);
+    click(getItem('About Ækasha'));
+    expect(getMenu()).toBeNull();
     expect(about.open).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables Save scene with its reason, read on every open', () => {
+    click(getTool('Ækasha menu'));
+    const saveItem = getItem('Save scene');
+    expect(saveItem.getAttribute('aria-disabled')).toBe('true');
+    expect(saveItem.getAttribute('aria-describedby')).toMatch(/\S/);
+    click(saveItem);
+    expect(save.save).not.toHaveBeenCalled();
+    click(getTool('Ækasha menu'));
+
+    save.reason = null;
+    click(getTool('Ækasha menu'));
+    expect(getItem('Save scene').hasAttribute('aria-disabled')).toBe(false);
+    click(getItem('Save scene'));
+    expect(getMenu()).toBeNull();
+    expect(save.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('while a save runs: the Æ button is busy and disabled, its menu closed and off', () => {
+    const aekasha = getTool('Ækasha menu');
+    click(aekasha);
+    expect(getMenu()).not.toBeNull();
+    save.isSaving = true;
+    _updateOnScreenTools('UNDO');
+    expect(getTool('Ækasha menu')).toBe(aekasha);
+    expect(aekasha.getAttribute('aria-busy')).toBe('true');
+    expect(aekasha.getAttribute('aria-disabled')).toBe('true');
+    expect(getMenu()).toBeNull();
+    click(aekasha);
+    dispatchKey(aekasha, 'keydown', 'ArrowDown');
+    expect(getMenu()).toBeNull();
+
+    save.isSaving = false;
+    _updateOnScreenTools('UNDO');
+    expect(aekasha.hasAttribute('aria-busy')).toBe(false);
+    expect(aekasha.hasAttribute('aria-disabled')).toBe(false);
+    click(aekasha);
+    expect(getMenu()).not.toBeNull();
+    click(aekasha);
   });
 });

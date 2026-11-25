@@ -558,7 +558,8 @@ export const createMenuSurface = (props: MenuSurfaceProps): MenuSurface => {
  *   `.aekMenu[data-submenu]` of its own beside its item, named by the item's label.
  * - ARIA: the trigger gets `aria-haspopup="menu"`, `aria-expanded` and `aria-controls`; a submenu
  *   item `aria-haspopup="menu"`, `aria-expanded` and, while open, `aria-controls`.
- * - Keys, on the trigger: Enter, Space and ArrowDown open it on the first item, ArrowUp on the last.
+ * - Keys, on the trigger: Enter, Space and ArrowDown open it on the first item, ArrowUp on the last;
+ *   a trigger that's `disabled` or `aria-disabled="true"` opens nothing (a click neither).
  *   In the menu: the arrows move (wrapping), Home and End go to the ends, a typed letter (or a few,
  *   quickly) goes to the next item that starts with them; Enter picks the item and closes the menu,
  *   Space too, except on an on / off item or a choice, which it flips and keeps the menu open;
@@ -616,8 +617,18 @@ export const createMenu = (props: MenuProps): Menu => {
     surface.open({ anchor, focus, returnFocus: anchor });
   const toggle = () => (surface.isOpen() ? surface.close() : open());
 
+  /** A disabled trigger opens nothing (a kit button's `focusableWhenDisabled` lets its click
+   * through); `open()` from code still does */
+  const isTriggerDisabled = () =>
+    anchor.hasAttribute('disabled') || anchor.getAttribute('aria-disabled') === 'true';
+
+  const onAnchorClick = () => {
+    if (surface.isOpen() || !isTriggerDisabled()) toggle();
+  };
+
   const onAnchorKeyDown = (e: KeyboardEvent) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    if (!surface.isOpen() && isTriggerDisabled()) return;
     e.preventDefault();
     e.stopPropagation();
     swallowNextKeyUp(e.key);
@@ -626,7 +637,7 @@ export const createMenu = (props: MenuProps): Menu => {
     else open(which);
   };
 
-  const unwireTrigger = wireTrigger(anchor, surface.cmp.id, toggle, onAnchorKeyDown);
+  const unwireTrigger = wireTrigger(anchor, surface.cmp.id, onAnchorClick, onAnchorKeyDown);
 
   return {
     cmp: surface.cmp,

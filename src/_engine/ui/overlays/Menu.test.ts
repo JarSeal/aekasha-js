@@ -205,6 +205,31 @@ describe('menu (p803 D10)', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('a disabled trigger opens nothing by a click or its arrows; code still opens it', () => {
+    const menu = addMenu([{ label: 'A' }]);
+    trigger.focus();
+    for (const disable of [
+      () => trigger.setAttribute('aria-disabled', 'true'),
+      () => trigger.setAttribute('disabled', ''),
+    ]) {
+      disable();
+      click(trigger);
+      dispatchKey(trigger, 'keydown', 'ArrowDown');
+      dispatchKey(trigger, 'keydown', 'ArrowUp');
+      expect(menu.isOpen()).toBe(false);
+      trigger.removeAttribute('aria-disabled');
+      trigger.removeAttribute('disabled');
+    }
+    menu.open();
+    trigger.setAttribute('aria-disabled', 'true');
+    // An open menu still closes from its trigger
+    click(trigger);
+    expect(menu.isOpen()).toBe(false);
+    menu.open();
+    expect(menu.isOpen()).toBe(true);
+    menu.cmp.remove();
+  });
+
   it('typeahead: a letter goes to the next item starting with it, letters typed quickly to one', () => {
     const menu = addMenu(['Save', 'Save as', 'Settings', 'Open'].map((label) => ({ label })));
     trigger.focus();

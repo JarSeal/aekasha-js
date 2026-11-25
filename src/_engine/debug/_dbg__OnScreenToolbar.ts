@@ -1,12 +1,13 @@
 // An on-screen tools group (p806 D7): a kit toolbar (`createButtonGroup`, roving focus) of icon
 // buttons, toggles and drop-downs, refreshed in place so a press doesn't drop the focus. A group
 // is rebuilt only when its tools change (a view switch adds or removes one), and the focus then
-// goes to the same tool in the new one.
-import { createButton } from '../ui/components/Button';
+// goes to the same tool in the new one. A tool with a `menu` is a menu button (the Æ menu, p355).
+import { createButton, type Button } from '../ui/components/Button';
 import { createButtonGroup } from '../ui/components/ButtonGroup';
 import type { CMPHandle } from '../ui/core/CMPTypes';
 import { getSvgIcon, type SvgIconKey } from '../ui/core/icons/SvgIcon';
 import { getDropDownTrigger, type DropDown } from '../ui/forms/DropDown';
+import { createMenu, type Menu, type MenuItem } from '../ui/overlays/Menu';
 import { getDebugKeyChordLabel } from './DefaultDebugKeyBindings';
 import styles from './OnScreenTools.module.scss';
 
@@ -28,9 +29,18 @@ export type OnScreenTool = {
   isPressed?: () => boolean;
   /** `aria-disabled` while false (undo with nothing to undo), read on every refresh */
   isEnabled?: () => boolean;
+  /** `aria-disabled` while it returns a reason, its tooltip then (an open menu closes), read on
+   * every refresh */
+  getDisabledReason?: () => string | null;
+  /** The button's loading state (its icon a spinner), read on every refresh */
+  isLoading?: () => boolean;
   /** Extra classes for the button */
   class?: string;
-  onClick: () => void;
+  /** A click, unless it has a `menu` */
+  onClick?: () => void;
+  /** Makes it a menu button: the click opens the menu (`createMenu`, its items read on every
+   * open), removed with the group */
+  menu?: { label: string; items: () => MenuItem[] };
 };
 
 /** A drop-down in a group, made with the group (`focusableWhenDisabled`, so the arrows stop on it
@@ -61,6 +71,8 @@ export type OnScreenToolbar = {
   signature: string;
   /** Re-reads every tool's state; `isLoading` disables them all (p806 D7) */
   refresh: (isLoading: boolean) => void;
+  /** Removes the group and its tools' menus */
+  remove: () => void;
   /** A drop-down tool by its key */
   getDropDown: (key: string) => DropDown | null;
   /** The focused tool's key, when the focus is in the group */
@@ -104,8 +116,14 @@ const createToolButton = (tool: OnScreenTool) =>
       ...(tool.class ? [tool.class] : []),
     ],
     // Not stopped: an exclusive group releases the other buttons after the click
-    onClick: () => tool.onClick(),
+    onClick: () => tool.onClick?.(),
   });
+
+/** A tool's menu, on its button */
+const createToolMenu = (tool: OnScreenTool, button: Button) =>
+  tool.menu
+    ? createMenu({ anchor: button.cmp.elem, label: tool.menu.label, items: tool.menu.items })
+    : null;
 
 /** Creates an on-screen tools group: a toolbar of its items, refreshed with `refresh`. */
 export const createOnScreenToolbar = (props: OnScreenToolbarProps): OnScreenToolbar => {
@@ -113,6 +131,10 @@ export const createOnScreenToolbar = (props: OnScreenToolbarProps): OnScreenTool
   const controls = items.map((item) =>
     isDropDownTool(item) ? item.create() : createToolButton(item)
   );
+  const menus: (Menu | null)[] = items.map((item, i) => {
+    const control = controls[i];
+    return isDropDownTool(item) || 'toggle' in control ? null : createToolMenu(item, control);
+  });
   const group = createButtonGroup({
     label: props.label,
     buttons: controls,
@@ -138,7 +160,11 @@ export const createOnScreenToolbar = (props: OnScreenToolbarProps): OnScreenTool
         if (isDropDownTool(item)) item.onRefresh?.(control);
       } else if (!isDropDownTool(item)) {
         if (item.isPressed) control.setPressed(item.isPressed());
-        control.setDisabled(isLoading || item.isEnabled?.() === false, reason);
+        if (item.isLoading) control.setLoading(item.isLoading());
+        const ownReason = item.getDisabledReason?.() ?? null;
+        const isDisabled = isLoading || ownReason !== null || item.isEnabled?.() === false;
+        control.setDisabled(isDisabled, reason ?? ownReason ?? undefined);
+        if (isDisabled) menus[i]?.close();
       }
     }
     cmp.elem.toggleAttribute('aria-busy', isLoading);
@@ -150,6 +176,10 @@ export const createOnScreenToolbar = (props: OnScreenToolbarProps): OnScreenTool
     cmp,
     signature: getOnScreenToolsSignature(items),
     refresh,
+    remove: () => {
+      for (const menu of menus) menu?.cmp.remove();
+      cmp.remove();
+    },
     getDropDown: (key) => {
       const control = controls[indexOfKey(key)];
       return control && 'toggle' in control ? control : null;
