@@ -594,6 +594,29 @@ As built:
 Their sources: the UI keys and `debugCam` stripped, light colours to `#rrggbb`, values equal to
 the asset's dropped, the UI keys kept after a save.
 
+The gather merges a camera's and a light's entry flat over `camProps` / `lightProps` (a key
+replaces the whole value), so their entries are pruned flat: a top-level key kept whole or dropped
+whole, never a partial `position`. A record holds the edited keys as full values (not a delta), so
+the change is what differs from the props the scene has (the dev data's resolved list, the latest
+entry in it); a record with no such key is no change and isn't listed.
+
+Sections:
+
+1. **The shared parts and i165:** `findSceneAssetFile` for `cameras` and `lights` (a resolved
+   entry's id its props' `appId`, else `entityOpts.appId`), `getSceneListItem` (the scene's
+   resolved entry, to diff against) and `pruneFlatSaveEntry` in `debug/_dbg__SaveEntries.ts`;
+   i165 fixed (a light's new record has no `enabled`: otherwise a helper toggle on a light created
+   disabled reads as switching it on, and the save would write it). Tests.
+2. **The camera source** (`kernel/camera/debug/_dbg__CameraSave.ts`): `helperVisible`,
+   `_lensSettingsOpen` and `debugCam` left out, the values diffed against the scene's camera, the
+   entry the latest one with them over it, pruned flat against the file's `camProps`; `onSaved`
+   drops the value keys and keeps the UI keys. Registered in `registerCameraDebugGUI`. Tests.
+3. **The light source** (`kernel/light/debug/_dbg__LightSave.ts`): the same with `helperVisible`,
+   `symbolVisible` and the folders' open states, colours (hex numbers) as `#rrggbb` and compared
+   with the file's as colours (`"orange"`, `{ r, g, b }`), `enabled` against its default true; a
+   managed light never has a record. Registered in `registerLightDebugGUI`. Tests.
+4. **The exit in the browser**, and this phase's As built.
+
 **Exit:** a light's colour and a camera's fov saved from largeWorld land as entries with only
 those keys; helper toggles alone are no change; a light made in code is Not saveable.
 

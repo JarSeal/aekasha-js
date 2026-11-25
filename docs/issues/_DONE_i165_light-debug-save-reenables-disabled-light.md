@@ -1,6 +1,6 @@
 **Title:** Saving a light's helper or symbol in the debugger saves `enabled: true` too: a light created disabled comes back enabled after a reload
 
-Status: open
+Status: fixed (p355 Phase 5)
 Category: Debugger, Lights
 Found: 2026-11-24, p150 Phase 2 (the edit window's "Local storage override" row read "Active: enabled" after a helper toggle)
 Our workaround: after toggling a disabled light's helper or symbol, or the Lights tab's global helpers, use its edit window's "Clear local storage"
@@ -33,3 +33,13 @@ No app light is created with `enabled: false` today, so no scene shows it yet.
   defaults, so they can go from the defaults too.
 - Check the other readers of `LightEntityDebugState.enabled` first (it's typed required), and an
   entry saved before the fix: it keeps its `enabled: true` until it's cleared.
+
+## Fixed
+
+p355 Phase 5 (the lights' save source needs it: a record's `enabled` is saved into the light's
+JSON): `saveLightToLS`, `setLightDebugPreference` and `_toggleAllLightHelpers` start a new record
+with `helperVisible` and `symbolVisible` only, and `LightEntityDebugState.enabled` is optional, set
+only by the Enabled toggle. `helperVisible` and `symbolVisible` stay in the defaults: with a record
+there, `getLightDebugVisibilityPref` reads `helperVisible` as false when it's missing. A record
+saved before the fix keeps its `enabled: true` until it's cleared (no app light is created
+disabled). Test: `_dbg__LightEditWindow.test.ts`' "where its values come from".
