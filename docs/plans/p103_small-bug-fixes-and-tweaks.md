@@ -360,6 +360,27 @@ As built:
    scenes) shows its box on the fitted light.
 4. `yarn verify:scenes --only skyShowcase` (helpers are off in the runner, so no change expected).
 
+Step 1's result (2026-11-25, WebGPU in the scene runner's Windows Chrome, skyShowcase with the cycle
+running, a scratch probe on the page's modules):
+
+- **Not a stale reference.** Through on and two off → on cycles the sun stays the same entity, the
+  helper's `light` is the entity's `OBJECT3D`, `camHelper.camera` is its `shadow.camera` and
+  `camHelper.matrix` is that camera's `matrixWorld` (the same `Matrix4`).
+- **Stuck = the night.** By day (`autoUpdate` true) the shadow camera's position equals the light's
+  after every render (180 frames with a moving camera: 0 stale), so the box follows, after any number
+  of off → on. Once the fade reaches 0 (`autoUpdate` false) the shadow camera keeps the last lit
+  frame's pose while the light moves on below the horizon, and an off → on changes nothing; at day
+  again it follows. So "the first on works, off → on doesn't" is day, then night.
+- **The box's frustum is three's default** (±5, 0.5..500), never the sky's (±30, 0.5..200): the
+  helpers are attached in the `TAG_IS_LIGHT` hook inside `createLightEntity`, before
+  `applyDiscLight` sizes the shadow camera.
+- **The target line doesn't lag at render.** Measured in MAIN it's one frame behind (the sun's turn
+  per frame: 0.008°, 0.25° at 30×); measured in APP_RENDER_SYNC (after `lookAtSystem`) it's exact
+  (< 1e-6°), with a static and with a moving camera, at 1× and 30×: `lookAtSystem` turns the light
+  toward its target, and the helper's `matrix` is the light's `matrixWorld`, so the line's local
+  rotation from last frame's `update()` turns with it. The plan's third defect doesn't reproduce;
+  the shake wasn't seen in these runs.
+
 ### Phase 3: Scene-scoped player keys and the on-screen tools box (items 5, 6)
 
 1. `sceneId` on the player brains, its test and docs; the app scenes' `sceneId`s.
