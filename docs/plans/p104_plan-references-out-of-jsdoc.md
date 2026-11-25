@@ -1,6 +1,6 @@
 Status: draft | not-implemented
 Category: Documentation, Refactoring
-Related: p103_small-bug-fixes-and-tweaks.md (the list this item came from)
+Related: _DONE_p103_small-bug-fixes-and-tweaks.md (the list this item came from)
 
 # Plan References out of JSDoc — Plan
 

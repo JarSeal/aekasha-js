@@ -11,7 +11,9 @@ import type { HubPage, HubSlot } from './types';
  * path of its folder. Reads each one's head metadata and body slots, and builds the
  * page tree (children by `aek:order`, then title). A generated section's pages join the tree
  * here, and the slots its generator fills are marked. A page with `aek:dev` and every page under
- * it are dev only (p802 D1): `removeDevPages` takes them out of a `public` build's tree.
+ * it are dev only (p802 D1): `removeDevPages` takes them out of a `public` build's tree. A page
+ * with `aek:navParent` (p103) hangs under that page in the tree instead of its folder's: the nav,
+ * the breadcrumbs, the section and `::: cards` follow the tree, the URLs keep the folders.
  */
 
 const PAGE_FILE = 'index.html';
@@ -28,6 +30,7 @@ const META_NAMES = [
   'aek:group',
   'aek:covers',
   'aek:dev',
+  'aek:navParent',
 ];
 
 /** An empty element with an `id`: `<div id="setup"></div>` (whitespace inside is fine) */
@@ -75,7 +78,16 @@ const findSlots = (html: string, body: string, bodyOffset: number, dir: string) 
   return slots;
 };
 
-const parsePage = (dir: string, diag: HubDiagnostics): HubPage | null => {
+/** `version` or `version/` → `version/`; '' for none */
+const toNavParentPath = (value: string | undefined) => {
+  const trimmed = (value ?? '').trim().replace(/^\/+|\/+$/g, '');
+  return trimmed ? `${trimmed}/` : '';
+};
+
+/** A page and the path of its `aek:navParent` ('' without one) */
+type ParsedPage = { page: HubPage; navParent: string };
+
+const parsePage = (dir: string, diag: HubDiagnostics): ParsedPage | null => {
   const file = path.join(dir, PAGE_FILE);
   const html = fs.readFileSync(file, 'utf-8');
 
@@ -117,7 +129,7 @@ const parsePage = (dir: string, diag: HubDiagnostics): HubPage | null => {
   const body = bodyMatch[1];
   const slots = findSlots(html, body, bodyOffset, dir);
 
-  return {
+  const page: HubPage = {
     path: toUrlPath(dir),
     dir,
     file,
@@ -148,6 +160,37 @@ const parsePage = (dir: string, diag: HubDiagnostics): HubPage | null => {
     parent: null,
     children: [],
   };
+  return { page, navParent: toNavParentPath(meta['aek:navParent']) };
+};
+
+/**
+ * The page's parent in the tree: its `aek:navParent`, else its folder's page. A nav parent that's
+ * missing, the page itself or under it is an error, and the folder's page stands in.
+ */
+const findParent = (
+  page: HubPage,
+  navParent: string,
+  byPath: Map<string, HubPage>,
+  diag: HubDiagnostics
+) => {
+  const folderPath = page.path.replace(/[^/]+\/$/, '');
+  if (navParent) {
+    const parent = byPath.get(navParent);
+    if (!parent) {
+      diag.error(page.file, undefined, `aek:navParent: no page at hub/pages/${navParent}`);
+    } else if (navParent.startsWith(page.path)) {
+      diag.error(page.file, undefined, `aek:navParent: /${navParent} is this page or under it`);
+    } else return parent;
+  }
+  const parent = byPath.get(folderPath);
+  if (!parent) {
+    diag.error(
+      page.file,
+      undefined,
+      `No parent page: hub/pages/${folderPath}${PAGE_FILE} is missing, so the menu can't reach it`
+    );
+  }
+  return parent ?? null;
 };
 
 /**
@@ -242,7 +285,7 @@ const attachSection = (
       order: generated.order ?? 0,
       tags: generated.tags,
       description: generated.description,
-      icon: '',
+      icon: generated.icon ?? '',
       isFeatured: false,
       image: '',
       imageFile: null,
@@ -259,6 +302,16 @@ const attachSection = (
       children: [],
     });
   }
+};
+
+/** Whether the page's parents lead back to it */
+const isInCycle = (page: HubPage) => {
+  const seen = new Set<HubPage>();
+  for (let p = page.parent; p && !seen.has(p); p = p.parent) {
+    if (p === page) return true;
+    seen.add(p);
+  }
+  return false;
 };
 
 const sortPages = (pages: HubPage[]) =>
@@ -278,6 +331,7 @@ export const discoverPages = (
   }
 
   const byPath = new Map<string, HubPage>();
+  const navParents = new Map<HubPage, string>();
   const files: string[] = [];
   for (const dir of listDirs(HUB_PAGES_DIR)) {
     const names = fs.readdirSync(dir);
@@ -287,9 +341,11 @@ export const discoverPages = (
       }
       continue;
     }
-    const page = parsePage(dir, diag);
-    if (!page) continue;
+    const parsed = parsePage(dir, diag);
+    if (!parsed) continue;
+    const { page, navParent } = parsed;
     byPath.set(page.path, page);
+    if (navParent) navParents.set(page, navParent);
     files.push(page.file, ...names.filter((n) => n.endsWith('.md')).map((n) => path.join(dir, n)));
   }
 
@@ -298,16 +354,8 @@ export const discoverPages = (
   for (const section of sections) attachSection(section, byPath, diag);
   for (const page of byPath.values()) {
     if (page === root) continue;
-    const parentPath = page.path.replace(/[^/]+\/$/, '');
-    const parent = byPath.get(parentPath);
-    if (!parent) {
-      diag.error(
-        page.file,
-        undefined,
-        `No parent page: hub/pages/${parentPath}${PAGE_FILE} is missing, so the menu can't reach it`
-      );
-      continue;
-    }
+    const parent = findParent(page, navParents.get(page) ?? '', byPath, diag);
+    if (!parent) continue;
     page.parent = parent;
     parent.children.push(page);
   }
@@ -330,6 +378,14 @@ export const discoverPages = (
   if (root.isDev) diag.error(root.file, undefined, 'The homepage can’t be dev only (aek:dev)');
   root.isDev = false;
   walk(root);
+  // Nav parents in a cycle never reach the homepage, so the walk missed them; their parents are
+  // cut, or `getPageTrail` would never end
+  const walked = new Set(pages);
+  const cycle = [...byPath.values()].filter((page) => !walked.has(page) && isInCycle(page));
+  for (const page of cycle) {
+    diag.error(page.file, undefined, 'aek:navParent: the page is in a cycle of nav parents');
+    page.parent = null;
+  }
 
   return { root, pages, byPath, files, removedDevPaths: new Set() };
 };
@@ -349,7 +405,7 @@ export const removeDevPages = (tree: HubPageTree) => {
   for (const page of tree.pages) page.children = page.children.filter((child) => !child.isDev);
 };
 
-/** The page and its ancestors, from the homepage down */
+/** The page and its ancestors in the tree (through a nav parent), from the homepage down */
 export const getPageTrail = (page: HubPage) => {
   const trail: HubPage[] = [];
   for (let p: HubPage | null = page; p; p = p.parent) trail.unshift(p);

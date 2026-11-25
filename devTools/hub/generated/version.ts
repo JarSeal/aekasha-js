@@ -8,18 +8,24 @@ import { CHANGELOG_FILE, PACKAGE_JSON_FILE } from '../paths';
 import type { HubGeneratedSection } from './section';
 
 /**
- * The Version section: the engine's, toolkit's, app's and project's versions with
- * their codenames and the build's commit and time, then `CHANGELOG.md`. The changelog's headings
- * move one level down (`# Changelog` is the page's h2, an entry an h3), so the TOC lists the
- * entries and each one has its anchor: `#2026-10-07-dev-server-implementation`. The latest
- * entry is `latestChange`, for the homepage's "What's new". The changelog
- * is out of the search (`hubSearchSkip`): it was a large share of the index, and the
- * browser's own find searches it on this page.
+ * The Versions & Issues section (`version/`): the engine's, toolkit's, app's and project's versions
+ * with their codenames and the build's commit and time, and a page of its own for `CHANGELOG.md`
+ * (`version/changelog/`, p103). The changelog's `# Changelog` gives way to the page's h1, an entry
+ * is an h2 with its anchor (`#2026-10-07-dev-server-implementation`) and a part an h3; the TOC
+ * lists the entries only. The latest entry is `latestChange`, for the homepage's "What's new". The
+ * changelog is out of the search (`hubSearchSkip`): it was a large share of the index, and the
+ * browser's own find searches it on its page. The Issues section hangs under this one in the nav
+ * (its `aek:navParent`).
  */
 
 export const VERSION_SECTION_PATH = 'version/';
+export const CHANGELOG_PAGE_PATH = `${VERSION_SECTION_PATH}changelog/`;
 const VERSIONS_SLOT = 'generated-versions';
 const CHANGELOG_SLOT = 'generated-changelog';
+/** After the Issues section (10) in the section's cards and menu */
+const CHANGELOG_ORDER = 20;
+/** `# Changelog`, the file's first line: the page's own h1 stands in */
+const TITLE_REGEX = /^#\s[^\n]*/;
 
 /** `## 2026-10-07 — dev-server-implementation` */
 const ENTRY_REGEX = /^##\s+(\d{4}-\d{2}-\d{2})\s+[—–-]\s+(.+?)\s*$/;
@@ -42,7 +48,7 @@ export type HubChangePart = {
 export type HubLatestChange = {
   date: string;
   branch: string;
-  /** The entry's anchor on the Version page */
+  /** The changelog's page; `hash` is the entry's anchor on it */
   path: string;
   hash: string;
   parts: HubChangePart[];
@@ -61,7 +67,7 @@ const parseLatestChange = (source: string): HubLatestChange | null => {
       latest = {
         date: entry[1],
         branch: entry[2],
-        path: VERSION_SECTION_PATH,
+        path: CHANGELOG_PAGE_PATH,
         hash: '',
         parts: [],
       };
@@ -120,7 +126,8 @@ const renderChangelog = (
 ) => {
   if (source === null) return '<p>No changelog yet.</p>\n';
   const headingCount = env.headings.length;
-  const html = renderMarkdownText(md, source, CHANGELOG_FILE, env, 1).replace(
+  // The title's line stays, empty, so the diagnostics' lines are the file's
+  const html = renderMarkdownText(md, source.replace(TITLE_REGEX, ''), CHANGELOG_FILE, env).replace(
     CHANGE_LABEL_REGEX,
     (_match, label: string) =>
       `<p class="hubChangeLabel hubChangeLabel_${label.toLowerCase()}">${label}</p>`
@@ -129,18 +136,24 @@ const renderChangelog = (
     const text = `${latest.date} — ${latest.branch}`;
     const heading = env.headings
       .slice(headingCount)
-      .find((h) => h.level === 3 && h.text.replace(/\s+[—–-]\s+/, ' — ') === text);
+      .find((h) => h.level === 2 && h.text.replace(/\s+[—–-]\s+/, ' — ') === text);
     latest.hash = heading?.id ?? '';
   }
+  // The TOC lists the entries: with their parts it was four times as long (their anchors stay)
+  const entries = env.headings.slice(headingCount).filter((h) => h.level === 2);
+  env.headings.splice(headingCount, Infinity, ...entries);
   return `<div class="hubChangelog hubSearchSkip">\n${html}</div>\n`;
 };
 
-/** The Version section and the changelog's newest entry; a missing `CHANGELOG.md` warns */
+/**
+ * The Versions & Issues section with the changelog's page, and the changelog's newest entry; a
+ * missing `CHANGELOG.md` warns
+ */
 export const createVersionSection = (meta: ProjectMetadata, diag: HubDiagnostics) => {
   const source = fs.existsSync(CHANGELOG_FILE) ? fs.readFileSync(CHANGELOG_FILE, 'utf-8') : null;
   const latestChange = source === null ? null : parseLatestChange(source);
   if (source === null) {
-    diag.warn(CHANGELOG_FILE, undefined, 'No CHANGELOG.md: the Version page has no changelog');
+    diag.warn(CHANGELOG_FILE, undefined, 'No CHANGELOG.md: the Changelog page has none to show');
   } else if (!latestChange) {
     diag.warn(
       CHANGELOG_FILE,
@@ -152,9 +165,26 @@ export const createVersionSection = (meta: ProjectMetadata, diag: HubDiagnostics
     path: VERSION_SECTION_PATH,
     slots: {
       [VERSIONS_SLOT]: (md, env) => renderVersions(meta, md, env),
-      [CHANGELOG_SLOT]: (md, env) => renderChangelog(source, latestChange, md, env),
     },
-    pages: [],
+    pages: [
+      {
+        path: CHANGELOG_PAGE_PATH,
+        file: CHANGELOG_FILE,
+        title: 'Changelog',
+        menu: 'Changelog',
+        order: CHANGELOG_ORDER,
+        icon: 'history',
+        description:
+          'Every merge to main, newest first: what changed in each part and its version.',
+        tags: ['changelog', 'changes', 'release', 'release notes', 'version', 'history'],
+        isInMenu: true,
+        body: `<h1>Changelog</h1>
+<p>The changelog isn't in the Hub's search: use your browser's find on this page.</p>
+<div id="${CHANGELOG_SLOT}"></div>
+`,
+        slots: { [CHANGELOG_SLOT]: (md, env) => renderChangelog(source, latestChange, md, env) },
+      },
+    ],
     files: [CHANGELOG_FILE, PACKAGE_JSON_FILE],
     dirs: [],
   };

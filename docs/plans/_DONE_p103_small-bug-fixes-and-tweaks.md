@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: implemented (Phases 1-5)
 Category: Bug fix, Refactoring
 Related: p104_plan-references-out-of-jsdoc.md (the JSDoc item of the same list, split out: about 840 blocks), p105_themed-scrollbars.md (the scrollbar item of the same list, split out: tokens, a kit-wide rule, the Hub and the design doc)
 
@@ -11,20 +11,20 @@ phases by subsystem so each phase is a reviewable commit.
 
 ## The list, and where each item stands
 
-| #   | Item                                                                                       | State                                         | Where      |
-| --- | ------------------------------------------------------------------------------------------ | --------------------------------------------- | ---------- |
-| 1   | Rapier's "using deprecated parameters for the initialization function" warning             | Probably fixed by Rapier 0.21.0: check, close | Phase 1    |
-| 2   | three's "PCFSoftShadowMap has been removed" warning                                        | Cause found                                   | Phase 1    |
-| 3   | A spatial domain's wireframe draws `Draw` with 0 vertices after a scene change             | Cause found                                   | Phase 1    |
-| 4   | The debug camera records drags while the master loop is off, then jumps                    | Cause found                                   | Phase 1    |
-| 5   | The top-down and gym scenes' player keys are listed under "All scenes"                     | Cause found (engine)                          | Phase 3    |
-| 5b  | The gym's physics stress test key and the ECS test scene's ECS stress test keys            | Already scoped / gone (see 5)                 | —          |
-| 6   | The on-screen tools' top-left buttons are two boxes with unequal spacing                   | Cause found                                   | Phase 3    |
-| 7   | No plan references in JSDoc (they render on the Hub)                                       | Split out                                     | p104       |
-| 8   | Hub: the A-Z index as its own page, "Versions & Issues", the changelog as its own page     | Designed                                      | Phase 4    |
-| 9   | The app's favicon is invisible on a dark browser tab                                       | Cause found                                   | Phase 4    |
-| 10  | Themed scrollbars for the UI kit and the Hub, in the design document                       | Split out                                     | p105       |
-| 11  | skyShowcase: after light helpers off → on, the shadow camera helper is stuck, the line shakes | Causes found, one runtime check left        | Phase 2    |
+| #   | Item                                                                                          | State                                         | Where   |
+| --- | --------------------------------------------------------------------------------------------- | --------------------------------------------- | ------- |
+| 1   | Rapier's "using deprecated parameters for the initialization function" warning                | Probably fixed by Rapier 0.21.0: check, close | Phase 1 |
+| 2   | three's "PCFSoftShadowMap has been removed" warning                                           | Cause found                                   | Phase 1 |
+| 3   | A spatial domain's wireframe draws `Draw` with 0 vertices after a scene change                | Cause found                                   | Phase 1 |
+| 4   | The debug camera records drags while the master loop is off, then jumps                       | Cause found                                   | Phase 1 |
+| 5   | The top-down and gym scenes' player keys are listed under "All scenes"                        | Cause found (engine)                          | Phase 3 |
+| 5b  | The gym's physics stress test key and the ECS test scene's ECS stress test keys               | Already scoped / gone (see 5)                 | —       |
+| 6   | The on-screen tools' top-left buttons are two boxes with unequal spacing                      | Cause found                                   | Phase 3 |
+| 7   | No plan references in JSDoc (they render on the Hub)                                          | Split out                                     | p104    |
+| 8   | Hub: the A-Z index as its own page, "Versions & Issues", the changelog as its own page        | Designed                                      | Phase 4 |
+| 9   | The app's favicon is invisible on a dark browser tab                                          | Cause found                                   | Phase 4 |
+| 10  | Themed scrollbars for the UI kit and the Hub, in the design document                          | Split out                                     | p105    |
+| 11  | skyShowcase: after light helpers off → on, the shadow camera helper is stuck, the line shakes | Causes found, one runtime check left          | Phase 2 |
 
 ## Fixes
 
@@ -351,7 +351,7 @@ As built:
   camera doesn't jump when the loop comes back on; the material editor's view camera the same.
   The old code moved the debug camera in both paused cases.
 
-### Phase 2: Light helpers (item 11)
+### Phase 2: Light helpers (item 11) — done
 
 1. The runtime check (which of the two causes) and its result under the phase.
 2. The helper sync as above.
@@ -406,15 +406,66 @@ As built (step 2):
 - The registration-order comments in `Light.ts` and `Camera.ts` no longer name the light helpers'
   LATE_MAIN place.
 
-### Phase 3: Scene-scoped player keys and the on-screen tools box (items 5, 6)
+Step 3's check (2026-11-25, WebGPU, the scene runner's Windows Chrome, a scratch probe):
+skyShowcase by day: the box has the sky's frustum (±30, 0.5..200, was ±5, 0.5..500), shown and
+within 7 cm of the light after every render (one frame of the sun's motion, 120 frames); at 23h
+hidden for 120 frames, also after an off → on; at 9h shown and following again, also after an
+off → on. The target line is 90 m (stops 10 m short of the camera at the target); a crop sequence
+with only the line shown has nothing in it (from the camera it follows, what's left of the line
+lies in the sun's direction, so it projects off-screen), where the old line pointed a different way
+in each capture. topDownTestScene's `SunShadowFit` sun: the box has the fitted frustum (±39.71,
+1..105.42) and its pose after every render (0 gap, 120 frames); its line keeps its full 65.71 m
+(the target isn't at the camera). No new console warning in either scene.
+
+Step 4: `yarn verify:scenes --only skyShowcase` failed only on the system order, in the three debug
+configurations: `lightHelperSyncSystem` moved from LATE_MAIN@0 to MAIN@-1 (the probe hash, the
+snapshot and `prodTest` passed). The scene baselines are local, so skyShowcase was recorded again
+(`--update`: 4 recorded, hash `811c9dc5` unchanged). Every other scene's baseline records the old
+place, so its next run shows the same two lines: record it again when that's all it shows.
+
+### Phase 3: Scene-scoped player keys and the on-screen tools box (items 5, 6) — done
 
 1. `sceneId` on the player brains, its test and docs; the app scenes' `sceneId`s.
 2. Check the App key shortcuts dialog in the top-down scene and the gym: the player keys under "This
    scene", and they don't fire after switching to another scene.
 3. The top-left wrapper box; screenshots in both themes, with and without an editor view.
-4. `yarn verify:scenes --only thirdPersonGymScene,topDownTestScene`.
+4. `yarn verify:scenes --only thirdPersonGymScene,topDownTestScene`. Their baselines still have
+   `lightHelperSyncSystem` in LATE_MAIN (Phase 2 moved it to MAIN@-1): those two system order lines
+   are expected; record the scenes again (`--update`) when nothing else differs.
 
-### Phase 4: The favicon and the Hub navigation (items 8, 9)
+As built:
+
+- Item 5 as planned. `sceneId` on `PlayerBrainCommonParams` goes to `createActionMap`; a replay
+  ignores a map's scene (`isMapActive` gates the devices only), so the input scripts and the brain
+  tests are unaffected. The five app sites; `exampleCharacter.ts`' is inside the Hub region, so the
+  example's walkthrough has a bullet for it, and the characters guide a sentence.
+- Step 2 (2026-11-25, WebGPU, the scene runner's Windows Chrome, a scratch probe): in both scenes the
+  brain maps have the scene's `sceneId` and are active, the App dialog lists every player action
+  under "This scene" and "All scenes" is empty, and a held key still walks the player. After a
+  switch to `scene01` the maps are gone and nothing of them is listed. The keys didn't fire after a
+  switch before either (a scene exit deletes the characters and their maps): item 5's defect was
+  the listing, and the scope now also covers a map that outlives its scene. The console's two
+  "Debug key Ctrl+S / Ctrl+Shift+S is also bound by the action move / forward" warnings per scene
+  were there before (`warnIfKeyChordReserved`: an `ignoreModifiers` map collides on the S key
+  alone): not this plan's.
+- Item 6: the Æ menu (p355) is the first tool since the plan was written, not an About button; it
+  keeps `aboutTool`'s `space-3` margin. The box is `.onScreenToolBox` (global class
+  `onScreenToolBox`, `getTopLeftBox()`, `display: none` while empty); the two toolbars in it take
+  `isInBox` (`.onScreenToolGroupInBox`: no box). Its gap is `$clusterGap`, the group's `space-1`
+  plus the Æ margin's `space-3`, so Æ → undo and redo → Runtime are the same in both densities
+  (8 px compact; before, redo → Runtime was 16 px across two boxes). Unlike the plan, the inner
+  toolbars drop the global `onScreenToolGroup` class and the box is in both lists of the
+  click-through rule: it dims as one box (0.5, measured), where only the `pointer-events` list
+  would have dimmed the buttons inside an opaque box. No divider between the clusters: the even
+  gaps read as three clusters on screen. The material editor view is always registered in the
+  debug env (`Boot.ts`), so the box always holds both toolbars there; "without an editor view" is
+  the Runtime view. Checked on WebGPU at 2× in the dark and light debugger themes, in the Runtime
+  view and in the material editor: the gaps 8 / 2 / 8 / 2 px in all four, no console error.
+- Step 4: only the two expected system order lines, in the four debug configurations of both scenes
+  (hashes `afd9f4c2`, `170fa4c7` and the gym's character paths `b32821e1` unchanged); both scenes
+  recorded again (`--update`: 9 recorded).
+
+### Phase 4: The favicon and the Hub navigation (items 8, 9) — done
 
 1. The favicon's SVG, ICO and PNG; check both tab colours; `npx tsx devTools/toolkit/buildAekashaSymbol.ts`
    still builds the same GLB (compare it with the committed one; it shouldn't change, since only the
@@ -423,7 +474,82 @@ As built (step 2):
 3. `yarn hub:build` and `yarn hub:preview`: the menu, an issue page's active item, breadcrumbs and
    search label, the homepage's links, the header's breakpoints.
 
-### Phase 5: Docs, versions and the changelog
+As built (step 1):
+
+- `favicon.svg`: the `<style>` gone, `fill="#7d899b"` on the one `<path>`, its `d` unchanged.
+- `favicon.ico` keeps its three sizes, 16, 32 and 48 px (`index.html`'s `<link>` names all three),
+  PNG-in-ICO, rendered from the SVG with `sharp`, transparent, no halo (the old one's
+  CHANGELOG entry mentions a white halo for dark tabs; a mid slate needs none).
+  `apple-touch-icon.png`: 180 px, opaque white as before, the glyph about the same size and
+  centred (119 px for the 32-unit viewBox, so the glyph is about 116 px wide).
+- The colour checked at 16 and 32 px on Chrome's four tab colours (light active `#ffffff`,
+  inactive `#dee1e6`, dark active `#35363a`, inactive `#202124`): readable on all four, contrast
+  3.55:1 on white and 3.40:1 on `#35363a`, balanced, so not nudged.
+- `buildAekashaSymbol.ts` writes a byte-identical GLB (git sees no change).
+
+As built (step 2):
+
+- `aek:navParent` re-parents the page in `discoverPages`' tree (`findParent`) instead of each
+  reader following it: `renderNav`, `getPageTrail`, `getPageSection` (in `pages.ts`, not
+  `searchResults.ts`), the body class and `::: cards` all walk the tree, so they follow it with
+  no change of their own. Issues is in Versions & Issues' dropdown with the Changelog, and
+  `::: cards version` lists both (no hand-written card, no cards option). A missing nav parent,
+  the page itself or one under it is an error (the folder's page stands in), and a cycle is an
+  error whose pages' parents are cut (`getPageTrail` would never end). Issues' `aek:order` is now
+  10, the Changelog's 20 (their order under Versions & Issues).
+- The search's crumbs came from the URL's folders, dropping the first as the group's: a page whose
+  section isn't its first folder keeps it now (`issues/light-leak/` → Versions & Issues ›
+  Issues). The group was already `getPageSection`'s.
+- The changelog page (`version/changelog/`, its `file` `CHANGELOG.md`): the source's
+  `# Changelog` line is blanked (the page's h1 stands in, the lines keep their numbers), entries
+  are h2 and parts h3 (were h3 and h4), and the slot keeps only the entries in `env.headings`, so
+  the TOC lists the 76 entries, not 291 headings; `.hubChangelog`'s rules moved with them
+  (`_sections.scss`: the entry's rule on h2, the part's on h3), so the entries now take the h2
+  size (step 3 looks at it). Its card's icon is a new `history.svg` (Lucide),
+  through a new optional `HubGeneratedPage.icon`. The "not in the search" sentence moved to it.
+- The A-Z page (`documentation/a-z/`, `API_AZ_PATH` in `api/model.ts`, order 50: the
+  Documentation menu's direct children are `aekasha` (1), Architecture (60), Migration (70),
+  Coding standards (80)): its own memo key, out of the search but for its title and description.
+  `isApiPagePath` includes it (an unchecked link in `--no-api`, the dev plugin's rebuild page).
+  Its `file` is a path with no file on disk: `errorPages.ts` sends a generated page's file's
+  errors to it, so `tsconfig.json` or an entry file would have moved theirs. The landing keeps
+  the "A–Z index" heading (`#a-z-index`) with a link to the page.
+- The hero's Issues and Version buttons are one "Versions & Issues" button (the hero mirrors the
+  nav); the homepage's Issues quick link stays.
+- The docs went in with the change: `hub/CLAUDE.md` (the meta; What's new's link),
+  `devTools/hub/CLAUDE.md` (the section, the changelog page, the A-Z page, the search's crumbs),
+  `docs/techniques/hub-authoring.md`, and the two pages that named the Version page
+  (`project/aekasha/workflow.md` → the Changelog, `features/toolkit/guide.md`).
+- Tests: `navParent.test.ts` (the real `discoverPages` on a fixture folder: the tree, the top nav
+  and the active item, the trail and breadcrumbs, the section, the three errors) and the nav-parent
+  cases in `searchResults.test.ts`. `shell.test.ts`, `search.test.ts` and `devPages.test.ts` build
+  their trees by hand, so a nav parent there would test nothing of it.
+
+Step 3 (2026-11-25, `yarn hub:build`, then the preview, `yarn dev`'s Hub for the dev header, and
+HEAD's Hub built in a scratch worktree for the comparison; Chromium through `launchChromium`):
+
+- `yarn hub:build`: 136 pages, no error. Its search index warning (718 KiB gzipped, over 450) and
+  the TypeDoc `{@link}` warnings were there before: HEAD's build gives 719 KiB and the same ones.
+- The header, the nav's spare width at every 5 px from 960 to 1800: HEAD's public header had at
+  least 40 px (at 960); "Versions & Issues" with its dropdown chevron took 34 px more than Issues
+  and Version up to 1249 (no nav icons), leaving 6 px at 960 in the public header and 2 in the dev
+  one. Up to 1099 px the nav items' side padding is now 0.375rem (0.5 from 1100 to 1249):
+  at least 26 px public (46 at 1100, the tightest past 1099) and 22 dev. The version pill's
+  `title` is "Versions & Issues" (was "Versions and changelog").
+- The menu: Hub, Examples, Features, Documentation, Versions & Issues (its dropdown Issues and
+  Changelog; Documentation's: `aekasha`, A–Z index, Architecture, Migration, Coding standards).
+  On `issues/` and an issue page Versions & Issues is the active item, the breadcrumbs read
+  Hub › Versions & Issues › Issues (› the issue), the body class `hubPage_version`; the search
+  groups an issue's results under "Versions & Issues" with "Issues" (› the issue) as their crumbs,
+  and finds the Changelog and A–Z index pages by title.
+- The homepage: one "Versions & Issues" hero button, the Issues quick link, and "What's new"
+  links `version/changelog/#<entry>`, an h2 on that page. The changelog page: one h1, 76 entry
+  h2s, 215 part h3s, 76 TOC items; the entries at the h2 size read as the page's sections, kept.
+  The Versions & Issues page shows the table and the two cards with their icons. The A–Z page:
+  24 letters, 1809 names, every link to a built page and anchor. The mobile menu (390 px) has no
+  horizontal scroll. No console error on any page.
+
+### Phase 5: Docs, versions and the changelog — done
 
 1. The nested `CLAUDE.md` files each phase named, and `readme.md` if a listed item changed (none
    expected).
@@ -431,6 +557,19 @@ As built (step 2):
    app patch (the scenes' `sceneId`s, the favicon); toolkit unchanged. A `CHANGELOG.md` entry with
    Engine, App and Project (the Hub's navigation) sections.
 3. `yarn checkVersions --against main`, `yarn verify:baselines`, then mark the plan done.
+
+As built:
+
+- Step 1: every doc the phases named was already updated with its phase; `readme.md` and the root
+  `CLAUDE.md` name nothing that changed. Only `_dbg__OnScreenTools.ts`' header comment, which
+  Phase 3 left past 100 columns, was wrapped again.
+- Step 2: engine 6.29.0, app 1.37.1, toolkit 3.8.1 kept. `src/index.ts`' shadow comment is in the
+  App section, as earlier entries file that file; the Rapier warning is only in the entry's summary
+  (nothing changed for it).
+- Step 3: `yarn checkVersions --against main` passes. `yarn verify:baselines` showed only the two
+  `@internal` functions Phase 1 added to `MainLoop.ts` (`isMasterPlayOn`, `onMasterPlayChange`),
+  documented; the bundles unchanged within the check's threshold, no debug code in the production
+  or embed builds. Recorded with `--update --no-build`.
 
 ## Non-goals
 

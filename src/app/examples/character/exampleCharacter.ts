@@ -201,6 +201,8 @@ export const scene = async () => {
         runMode: 'HOLD',
         // A tap turns the character all the way to the key's direction
         turnToLastMoveDirection: true,
+        // The keys work only in this scene, as the character goes with it
+        sceneId: SCENE_ID,
       },
     },
   });

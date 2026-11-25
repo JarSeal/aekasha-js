@@ -417,7 +417,7 @@ in place of `../TriplanarProjection`.
   the toolkit's own files to its entries, and change what you need. Your copy is yours; the
   toolkit's keeps getting fixes.
 - The toolkit has its own version, next to the engine's and the app's, on the
-  [Version](hub:version) page.
+  [Versions & Issues](hub:version) page.
 
 ## See it
 

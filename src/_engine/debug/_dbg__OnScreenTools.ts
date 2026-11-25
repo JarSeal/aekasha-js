@@ -1,8 +1,8 @@
 // The on-screen tools (p806 D7): four kit toolbars in three debugger roots. The top left row holds
-// the Æ menu (p355: Save scene, Save specific data…, About Ækasha) and undo / redo tools, then the
-// view switch; the centred top row the play tools; the bottom row the scene's switch tools (Runtime
-// view only). Each group is refreshed in place (`_dbg__OnScreenToolbar.ts`), and during a scene
-// load every control is `aria-disabled`.
+// one box (p103) of two toolbars: the Æ menu (p355: Save scene, Save specific data…, About Ækasha)
+// and undo / redo tools, then the view switch; the centred top row the play tools; the bottom row
+// the scene's switch tools (Runtime view only). Each group is refreshed in place
+// (`_dbg__OnScreenToolbar.ts`), and during a scene load every control is `aria-disabled`.
 import {
   getAllCamerasAsArray,
   getMainAppCameraId,
@@ -133,8 +133,10 @@ const loadSceneFromTools = (sceneId: string) => {
 
 /** The fixed, centred top row: the play tools */
 let topRowCMP: CMPHandle | null = null;
-/** The fixed row in the top left corner: the About and undo / redo tools, then the view tools */
+/** The fixed row in the top left corner: its box, `topLeftBoxCMP` */
 let topLeftRowCMP: CMPHandle | null = null;
+/** The top left row's one box (p103): the Æ menu and undo / redo tools, then the view tools */
+let topLeftBoxCMP: CMPHandle | null = null;
 /** The fixed, centred bottom row: the switch tools */
 let bottomRowCMP: CMPHandle | null = null;
 
@@ -149,6 +151,10 @@ const getTopRow = () => (topRowCMP ??= createRow(styles.onScreenTopRow, 'onScree
 
 const getTopLeftRow = () =>
   (topLeftRowCMP ??= createRow(styles.onScreenTopLeftRow, 'onScreenTopLeftRow'));
+
+/** The box the undo and view groups share, so their tools sit in one box with even gaps */
+const getTopLeftBox = () =>
+  (topLeftBoxCMP ??= getTopLeftRow().add({ class: [styles.onScreenToolBox, 'onScreenToolBox'] }));
 
 const getBottomRow = () =>
   (bottomRowCMP ??= createRow(styles.onScreenBottomRow, 'onScreenBottomRow'));
@@ -431,8 +437,11 @@ type GroupDef = {
   label: string;
   /** Its global class (the old group classes) */
   globalClass: string;
+  /** Where it goes: its row, or the top left row's box */
   getRow: () => CMPHandle;
-  /** First in its row (the undo tools, before the view tools) */
+  /** In the top left row's box (no box of its own) */
+  isInBox?: boolean;
+  /** First in its row or box (the undo tools, before the view tools) */
   isFirst?: boolean;
   exclusive?: boolean;
   getTools: () => OnScreenToolItem[] | null;
@@ -442,14 +451,16 @@ const GROUPS: Record<ToolTypes, GroupDef> = {
   UNDO: {
     label: 'Debugger',
     globalClass: 'undoRedoTools',
-    getRow: getTopLeftRow,
+    getRow: getTopLeftBox,
+    isInBox: true,
     isFirst: true,
     getTools: getUndoTools,
   },
   VIEW: {
     label: 'Views',
     globalClass: 'viewTools',
-    getRow: getTopLeftRow,
+    getRow: getTopLeftBox,
+    isInBox: true,
     exclusive: true,
     getTools: getViewTools,
   },
@@ -486,6 +497,7 @@ const syncGroup = (type: ToolTypes) => {
     label: def.label,
     items: tools,
     exclusive: def.exclusive,
+    isInBox: def.isInBox,
     class: [def.globalClass],
   });
   const row = def.getRow();

@@ -54,6 +54,9 @@ export type PlayerBrainCommonParams = {
   /** Turn toward the move direction while moving: sets the controller's `turnToMoveDirection`
    * unless the character's `config` gives it. Default: off for `TANK`, on for the others. */
   turnToMoveDirection?: boolean;
+  /** The brain's action map is active only while this scene is the current one (and listed under
+   * it in the debugger's key shortcuts). Leave it out for a character that lives across scenes. */
+  sceneId?: string;
 };
 
 /**
@@ -149,6 +152,7 @@ const createPlayerBrain = <TActions extends ActionDefs & typeof COMMON_ACTIONS>(
     id: getPlayerBrainActionMapId(characterId),
     actions,
     bindings: params.bindings,
+    sceneId: params.sceneId,
   });
   // The actions every player brain has (a generic map can't name them)
   const common = map as unknown as ActionMap<typeof COMMON_ACTIONS>;

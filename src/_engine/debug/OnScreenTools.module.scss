@@ -4,17 +4,44 @@
 // the tokens. Unlayered: these classes beat the kit's layered button group and drop-down rules (a
 // group's buttons apart, not joined) and an app's element rules.
 
-// A group: a translucent `surface`, 80 % opaque, so its icons (`text`) keep at least 3:1 against
-// it over a white or a black scene, in either theme (p806 D7)
-.onScreenToolGroup {
+// The gap that sets a cluster of tools apart in a group (the Æ menu from undo / redo, after the
+// group's own gap) and in the top left box (the undo group from the view tools)
+$clusterGap: calc(var(--aek-space-1) + var(--aek-space-3));
+
+// A box of tools: a translucent `surface`, 80 % opaque, so its icons (`text`) keep at least 3:1
+// against it over a white or a black scene, in either theme (p806 D7)
+%onScreenToolBox {
   display: flex;
-  gap: var(--aek-space-1);
   padding: var(--aek-space-2);
   border: 1px solid var(--aek-border);
   border-radius: var(--aek-radius-md);
   background-color: color-mix(in srgb, var(--aek-surface) 80%, transparent);
   pointer-events: auto;
   transition: opacity var(--aek-motion-base) ease-in-out;
+}
+
+// A group: a toolbar in a box of its own
+.onScreenToolGroup {
+  @extend %onScreenToolBox;
+  gap: var(--aek-space-1);
+}
+
+// The top left row's one box (p103): the Æ menu and undo / redo group, then the view tools, so
+// every cluster of its tools is the same gap apart. It isn't an `onScreenToolGroup`: the
+// click-through rule dims it, not the groups inside (their opacity would compound).
+.onScreenToolBox {
+  @extend %onScreenToolBox;
+  gap: $clusterGap;
+
+  &:empty {
+    display: none;
+  }
+}
+
+// A group inside the top left box: a toolbar without a box of its own
+.onScreenToolGroupInBox {
+  display: flex;
+  gap: var(--aek-space-1);
 }
 
 // A tool: a kit ghost icon button (`size: 'lg'`, 30 px in the compact density), its icon at the
@@ -34,7 +61,8 @@
   }
 }
 
-// The About Ækasha button: a gap sets it apart from the undo / redo buttons after it
+// The Æ menu button: a gap sets it apart from the undo / redo buttons after it ($clusterGap with
+// the group's own gap)
 .aboutTool {
   margin-inline-end: var(--aek-space-3);
 }
@@ -100,9 +128,9 @@
   }
 }
 
-// The top left row: the About and undo / redo tools, then the view tools (debug env, with an
-// editor view registered). The debug drawer opens from the right and the stats panel sits
-// bottom-left, so this corner stays free.
+// The top left row: one box (`onScreenToolBox`) of the Æ menu and undo / redo tools, then the
+// view tools (debug env, with an editor view registered). The debug drawer opens from the right
+// and the stats panel sits bottom-left, so this corner stays free.
 .onScreenTopLeftRow {
   @extend %onScreenRow;
   top: var(--aek-space-6);
@@ -151,12 +179,14 @@
 // New on-screen elements add their selector here.
 :global(body.aekOnScreenToolsDisabled) {
   :global(.onScreenToolGroup),
+  :global(.onScreenToolBox),
   :global(.debugDrawerToggler),
   :global(.statsContainer) {
     opacity: var(--aek-disabled-on-screen-tools-opacity, 0.5);
   }
 
   :global(.onScreenToolGroup),
+  :global(.onScreenToolBox),
   :global(.debugDrawerToggler),
   :global(.statsContainer),
   :global(.aekAxesGizmoSlot) {

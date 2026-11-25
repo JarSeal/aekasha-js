@@ -542,6 +542,7 @@ const createPlayer = async () => {
           run: [{ device: 'KEYBOARD', keys: ['Shift'] }],
           crouch: [{ device: 'KEYBOARD', keys: ['Control'] }],
         },
+        sceneId: SCENE_TOP_DOWN_TEST_META.id,
       },
     },
   });

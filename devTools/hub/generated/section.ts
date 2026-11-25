@@ -23,6 +23,8 @@ export type HubGeneratedPage = {
   menu: string;
   /** Its menu position among its siblings (`aek:order`), 0 by default; then by `menu` */
   order?: number;
+  /** `aek:icon` (its card's, `::: cards`), none by default */
+  icon?: string;
   description: string;
   tags: string[];
   isInMenu: boolean;

@@ -6,7 +6,7 @@ import type { HubGeneratedPage, HubGeneratedSection, HubSlotGenerator } from '..
 import { hashContent } from '../hash';
 import { escapeHtml } from '../html';
 import { uniqueId, type HubApiLinkResolver, type HubImageJob, type HubLinkRef } from '../markdown';
-import { ROOT, TSCONFIG_FILE } from '../paths';
+import { HUB_PAGES_DIR, ROOT, TSCONFIG_FILE } from '../paths';
 import { toRepoWebUrl } from '../repoFiles';
 import type { HubBuildMode, HubHeading } from '../types';
 import { getSearchDocs } from './apiSearch';
@@ -22,6 +22,7 @@ import {
 import { getLastApiModel, loadApiModel, type ApiEntry, type ApiExtractMessage } from './extract';
 import { getApiLinks, type ApiLinks } from './links';
 import {
+  API_AZ_PATH,
   API_SECTION_PATH,
   API_SUBTREES,
   indexApiModel,
@@ -47,7 +48,8 @@ import {
 /**
  * The Documentation section: the engine's and the toolkit's public API as Hub pages, from the API
  * model (`extract.ts`). A generated section on `documentation/`: its landing slot lists each
- * subtree's entries with their folders and coverage, then an A-Z index; each entry gets a page
+ * subtree's entries with their folders and coverage and links the A-Z index, a page of its own
+ * (`documentation/a-z/`: every public name with its entry); each entry gets a page
  * (`publicApi.ts`; `aekasha` one per source folder too) with a section per source module, and each
  * name its anchor (`#loadScene`), its signature, its comment, its parameters, and a link to its
  * source (GitHub at the build's commit, or the editor in dev).
@@ -61,6 +63,9 @@ import {
 
 const LANDING_SLOT = 'generated-api';
 const PAGE_SLOT = 'generated-api-page';
+const AZ_SLOT = 'generated-api-az';
+/** The A-Z page's menu place: after the entry pages (from 1), before Architecture (60) */
+const AZ_PAGE_ORDER = 50;
 const DESCRIPTION_LENGTH = 200;
 
 const shorten = (text: string, max: number) =>
@@ -248,7 +253,7 @@ const renderApiPage = (ctx: Ctx, page: ApiPage) => {
   return `<div class="hubApi">\n${html}</div>\n`;
 };
 
-/** Every public name, A-Z by first letter, with its entry */
+/** The A-Z page's slot: every public name, A-Z by first letter, with its entry */
 const renderAzIndex = (ctx: Ctx) => {
   const entries = ctx.api.symbols
     .filter((symbol) => !symbol.isReexport)
@@ -284,10 +289,11 @@ const renderAzIndex = (ctx: Ctx) => {
       );
     return `<p class="hubApiAzLetter" id="${ids.get(letter)}">${escapeHtml(letter)}</p><ul class="hubApiAzList">${items.join('')}</ul>`;
   });
-  return `${sectionHeading(ctx, 'A–Z index', 'a-z-index')}<p class="hubApiLetters">${bar}</p>\n${lists.join('\n')}\n`;
+  // The names get their own search entries: the lists aren't indexed
+  return `<div class="hubApi hubSearchSkip">\n<p class="hubApiLetters">${bar}</p>\n${lists.join('\n')}\n</div>\n`;
 };
 
-/** `documentation/`'s slot: each subtree's entries, then the A-Z index */
+/** `documentation/`'s slot: each subtree's entries, then a link to the A-Z index's page */
 const renderLanding = (ctx: Ctx) => {
   let html = '';
   for (const { id, title } of API_SUBTREES) {
@@ -301,7 +307,8 @@ const renderLanding = (ctx: Ctx) => {
     html += `<p class="hubApiPath">${plural(pages.length, 'entry').replace('entrys', 'entries')}${renderCoverage(coverage)}</p>\n`;
     html += renderPageList(ctx, pages);
   }
-  html += renderAzIndex(ctx);
+  html += sectionHeading(ctx, 'A–Z index', 'a-z-index');
+  html += `<p>Every public name, A to Z, with its entry: the <a href="${href(ctx, API_AZ_PATH)}">A–Z index</a>.</p>\n`;
   // The section's names get their own search entries: the lists aren't indexed
   return `<div class="hubApi hubSearchSkip">\n${html}</div>\n`;
 };
@@ -544,6 +551,19 @@ export const createApiSection = async ({
     body: pageBody(page.title),
     slots: { [PAGE_SLOT]: generator(page.pagePath, (ctx) => renderApiPage(ctx, page)) },
   }));
+  pages.push({
+    path: API_AZ_PATH,
+    // No source of its own: a real file's errors would show on this page instead of their own
+    file: path.join(HUB_PAGES_DIR, API_AZ_PATH, 'index.html'),
+    title: 'A–Z index',
+    menu: 'A–Z index',
+    order: AZ_PAGE_ORDER,
+    description: 'Every public name of the engine and the toolkit, A to Z, with its entry.',
+    tags: ['api', 'index', 'a-z', 'names'],
+    isInMenu: true,
+    body: `<h1>A–Z index</h1>\n<div id="${AZ_SLOT}"></div>\n`,
+    slots: { [AZ_SLOT]: generator(API_AZ_PATH, renderAzIndex) },
+  });
 
   return {
     section: {

@@ -4,6 +4,53 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-25 — p103_small-bug-fixes-and-tweaks (Phases 1-5)
+
+Small fixes and tweaks collected from using the app, the debugger and the Hub (p103). Three runtime warnings are gone: three's "PCFSoftShadowMap has been removed" (the Renderer tab offered it), a spatial overlay's 0-vertex draw, and Rapier's "using deprecated parameters" warning, which Rapier 0.21.0 (engine 6.27.0) had already fixed. The debug camera no longer moves while the master loop is off and then jumps once the loop runs again. The light helpers follow the sky's sun with its real shadow box, and the target line no longer shakes. A player character's keys can belong to a scene. The on-screen tools' top-left buttons sit in one box. The app's favicon shows on dark browser tabs. On the Hub, "Versions & Issues" replaces the Issues and Version menu items, and the changelog and the A–Z index each have a page of their own.
+
+### Engine 6.29.0 (Sunset)
+
+**Added**
+
+- `sceneId` on the player brains' params (`PlayerBrainCommonParams`): the brain's action map is active only while that scene is current, and the debugger's App key shortcuts list its keys under "This scene", not "All scenes". Leave it out for a character that lives across scenes. There's no default from the loading scene, which would scope such a character wrongly.
+
+**Changed**
+
+- The on-screen tools' top-left row is one box: the Æ menu and undo / redo, then the view switch, every gap the same (8 px in the compact density). Before, they were two boxes with redo → Runtime twice as far apart. They stay two toolbars (two tab stops), and the box dims as one while the on-screen tools are click-through (the Debug tools tab's "On-screen tools" folder, or §).
+- While the master loop is off, the scene debug camera's and the editor views' orbit controls take no input, so a drag no longer moves a camera that nothing renders. This includes physics single-stepping and the device calibration, which pause the master loop. A drag in progress stops moving and still ends. The Loop controls tab's "Master loop" switch goes through `toggleMainPlay` now, as the on-screen button does.
+- The Renderer tab no longer offers "PCF soft shadow map". `RendererOptions.shadowMapType`'s `PCFSoftShadowMap`, an app's or one saved by the tab, is mapped to `PCFShadowMap` (three removed its filter for WebGPU in r186), and a saved one is rewritten in the tab's saved state.
+- The light helpers update in `MAIN` before the render (`lightHelperSyncSystem` at order −1, was `LATE_MAIN`). A shadow camera's box takes the camera's frustum whenever its projection changes, and is hidden while the light's `shadow.intensity` is 0 (the sky's sun at night). A target line that would end within 10 m of the active camera stops 10 m short. A `yarn verify:scenes` baseline recorded before this shows the system order change: record it again when that's all it shows.
+
+**Fixed**
+
+- three's "PCFSoftShadowMap has been removed" warning on every render, once "PCF soft shadow map" had been picked in the Renderer tab.
+- A spatial domain overlay's empty line was drawn as a `Draw` with 0 vertices (a WebGPU warning) after a scene change, or when the overlay was turned on before its first refill. An empty overlay line is hidden now.
+- Dragging the debug camera or an editor view's camera while the master loop was off moved it without a frame showing it, and the camera jumped when the loop came back on.
+- The light helpers' shadow camera box was drawn with three's default frustum (±5 m, 0.5-500 m) instead of the light's (the sky's sun: ±30 m, 0.5-200 m), and stood still through the night. The sky's sun's target line, which ends at the camera it follows, swung across the screen at every shadow texel snap.
+
+### App 1.37.1 (Preschooler)
+
+**Changed**
+
+- The player characters' brains name their scene (`sceneId`), so their keys are listed under "This scene": `topDownTestScene`, both players of `thirdPersonGymScene`, `terrainShowcase` and the character and game HUD examples.
+- The favicon has one mid slate fill (`#7d899b`) on light and dark tabs. Before, it was black, or white under a dark OS colour scheme, so it disappeared on a dark Chrome theme over a light OS. `favicon.ico` (16, 32 and 48 px) and `apple-touch-icon.png` are rendered from it. The glyph is unchanged, so the Æ symbol's GLB builds byte for byte the same.
+- `src/index.ts`' comment on three's shadow types no longer lists `PCFSoftShadowMap`.
+
+### Project
+
+**Added**
+
+- The Hub's "Versions & Issues" menu item replaces Issues and Version. Its page shows the versions table and cards for the Issues and the Changelog, and the hero's two buttons are one. The issue pages keep their URLs (`issues/<name>/`) through a new page meta, `aek:navParent="version/"`, which moves a page under another in the Hub's tree. The nav, its active item, the breadcrumbs, the body class, the search's section and `::: cards` all follow it. A nav parent that's missing, the page itself or one of its children is an error, and so is a cycle. The search's crumbs keep a page's first folder when its section isn't that folder (an issue reads Versions & Issues › Issues › …).
+- The changelog has its own page, `version/changelog/`, with an entry per h2 and a part per h3, and the table of contents lists the entries. The homepage's "What's new" links to it, and its card's icon is a new `history` icon (`HubGeneratedPage.icon`).
+- The A–Z index has its own page, `documentation/a-z/`, in the Documentation menu after `aekasha`. The Documentation landing page links to it.
+- Tests: `navParent.test.ts` (the tree, the nav, the trail, the section and the errors, on a fixture folder) and the nav parent cases in `searchResults.test.ts`.
+
+**Changed**
+
+- The Hub's header: the nav items' side padding is 0.375rem up to 1099 px wide, so the longer "Versions & Issues" item still fits at 960 px. The version pill's title reads "Versions & Issues".
+- The docs: the lines, editors, render, ECS, debug and character `CLAUDE.md` files, `hub/CLAUDE.md`, `devTools/hub/CLAUDE.md` and `hub-authoring.md` (`aek:navParent`, the changelog and A–Z pages). On the Hub: the characters guide and the character example's walkthrough (`sceneId`), and the workflow and toolkit pages, which now link the Changelog. p103 marked done (`_DONE_p103_small-bug-fixes-and-tweaks.md`) with its As built lists.
+- The bundle, API and docs baselines recorded: `MainLoop.ts`' two `@internal` functions `isMasterPlayOn` and `onMasterPlayChange`, and byte-level size changes (the main chunk +134 B minified).
+
 ## 2026-11-25 — p355_save-menu-and-file-server-settings (Phases 1-9)
 
 Saving debug edits into the repo (p355): the debug tools kept every edit in localStorage, and nothing wrote one back to the asset JSONs. Now the Æ button on the debug toolbar opens a menu with "Save scene" (Ctrl+S / ⌘S), which writes the current scene's edits as `__saveData` entries into the files they came from in one commit of the dev file server, and "Save specific data…" (Ctrl+Shift+S / ⌘⇧S), a dialog to pick which changes, of any scene, to write. An entry holds only what differs from its file, a file changed since the page loaded fails the save with `CONFLICT` and keeps the edits, and the saved edits leave localStorage after the reload. Sky boxes, PostFX passes and switches, spatial domains' cell sizes, cameras, lights and the material editor's materials save this way, and a debug module adds its own with `registerSaveSource`. A camera, light or sky box written inline in a scene JSON moves into a file of its own on its first save. The dev file server stamps entries with git's `user.name`, keeps a set number of backups, and can show every write's files before they land.

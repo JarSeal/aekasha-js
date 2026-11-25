@@ -38,7 +38,10 @@ Every player brain also has `jump`, `run` and `crouch`. `runMode` and `crouchMod
 their bindings toggle or must be held. Bindings can be keys, a gamepad's sticks and buttons, or
 both: the app's gym gives its `TANK` player both. The map is in the `GAMEPLAY` context, so the
 character stands still while the debug camera is on or an editor view is open, and a settings
-screen rebinds it through [`getActionMap`](api:getActionMap)`('player:input')`. With
+screen rebinds it through [`getActionMap`](api:getActionMap)`('player:input')`. A character that
+goes with its scene gives its brain that scene's `sceneId`: the map is then active only while the
+scene is current, and the debugger lists its keys under that scene. Leave it out for a character
+that lives across scenes. With
 `turnToLastMoveDirection`, the two directional brains keep turning the character in place, after
 the move stops, until it faces the last direction it moved in.
 

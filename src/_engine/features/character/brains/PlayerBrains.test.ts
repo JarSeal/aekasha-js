@@ -66,6 +66,16 @@ const hold = (move: ActionFrameState, from: number, to: number) => {
   return moves;
 };
 
+describe('sceneId', () => {
+  it("scopes the brain's action map to the scene, or to none without it", () => {
+    brain = createWorldFixedBrain({ bindings: {}, sceneId: 'brainScene' }, 'brainTest');
+    expect(getActionMap(getPlayerBrainActionMapId('brainTest'))?.sceneId).toBe('brainScene');
+    brain.dispose?.();
+    brain = createWorldFixedBrain({ bindings: {} }, 'brainTest');
+    expect(getActionMap(getPlayerBrainActionMapId('brainTest'))?.sceneId).toBeUndefined();
+  });
+});
+
 describe('turnToLastMoveDirection', () => {
   it('is off by default: no faceYaw', () => {
     expect(runBrain({}, hold(UP, 2, 2), 6)).toEqual([null, null, null, null, null, null, null]);

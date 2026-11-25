@@ -135,14 +135,14 @@
 
 .hubChangelog {
   // An entry: `2026-10-07 — dev-server-implementation`
-  :where(h3) {
+  :where(h2) {
     margin-top: 3rem;
     padding-top: 1.5rem;
     border-top: 1px solid var(--hub-border);
   }
 
   // A part: `Engine 4.12.0 (Afternoon)`
-  :where(h4) {
+  :where(h3) {
     margin-top: 1.5rem;
     color: var(--hub-accent);
   }

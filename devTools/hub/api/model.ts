@@ -63,12 +63,18 @@ export const API_SUBTREES: { id: ApiSubtree; sourceDir: string; title: string }[
 /** The entries' pages are under this one: `documentation/aekasha/physics/` (`publicApi.ts`) */
 const API_ENTRIES_PATH = `${API_SECTION_PATH}aekasha/`;
 
+/** The A-Z index's page: every public name with its entry (`render.ts`) */
+export const API_AZ_PATH = `${API_SECTION_PATH}a-z/`;
+
 /**
  * Whether a site path (`documentation/aekasha/physics/`) is one of the pages the API model
- * renders: the landing page and the entries' pages, not the section's hand-written children
+ * renders: the landing page, the A-Z index and the entries' pages, not the section's
+ * hand-written children
  */
 export const isApiPagePath = (sitePath: string) =>
-  sitePath === API_SECTION_PATH || sitePath.startsWith(API_ENTRIES_PATH);
+  sitePath === API_SECTION_PATH ||
+  sitePath === API_AZ_PATH ||
+  sitePath.startsWith(API_ENTRIES_PATH);
 
 /** Documented or not: a comment on it, or on one of its signatures */
 export type Coverage = { documented: number; total: number };

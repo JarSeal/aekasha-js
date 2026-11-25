@@ -329,9 +329,9 @@ html:not(.hubJs) {
 }
 
 // The desktop header's breakpoints are where its contents fit (measured at every 5 px from 960 to
-// 1800, p802 Phase 1: at least 16 px left for the nav, the dev server's header included). Up to
-// 1099 px the version pill goes (the nav has Version); up to 1249 the nav has no icons; up to 1499
-// the search box is its icon.
+// 1800, p802 Phase 1, again in p103 Phase 4: at least 16 px left for the nav, the dev server's
+// header included). Up to 1099 px the version pill goes (the nav has Versions & Issues) and the nav
+// items narrow; up to 1249 the nav has no icons; up to 1499 the search box is its icon.
 @media (max-width: 1099px) and (min-width: $nav-collapse) {
   .hubVersionPill {
     display: none;
@@ -410,6 +410,14 @@ html:not(.hubJs) {
     .hubIcon {
       display: none;
     }
+  }
+}
+
+// After the rule above, which it narrows: "Versions & Issues" and its chevron left 2 px at 960 in
+// the dev header
+@media (max-width: 1099px) and (min-width: $nav-collapse) {
+  .hubNavList > .hubNavItem > .hubNavLink {
+    padding: 0 0.375rem;
   }
 }
 
