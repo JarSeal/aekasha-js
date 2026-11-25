@@ -544,3 +544,136 @@ describe('"Save scene"’s warning about the materials it can’t save (p355 Pha
     expect(notes).toEqual([]);
   });
 });
+
+describe('an inline asset’s move into a file of its own (p355 §2.6)', () => {
+  const SCENE_PATH = 'src/app/scenes/sceneA/sceneA.scene.json';
+  const SKY_PATH = 'src/app/scenes/sceneA/inlineSky.skybox.json';
+  const LIGHT_PATH = 'src/app/scenes/sceneA/inlineSun.light.json';
+  const sky = { id: 'inlineSky', base: { type: 'COLOR', color: '#000000' } };
+  const sun = { lightProps: { type: 'DIRECTIONAL', appId: 'inlineSun' } };
+
+  /** A move of the inline asset `id` of `list` into `path` */
+  const createMove = (
+    list: string,
+    id: string,
+    path: string,
+    props: Partial<SaveChange> = {}
+  ): SaveChange =>
+    createChange({
+      id: `sceneA:${id}`,
+      path,
+      extract: { scenePath: SCENE_PATH, list, id },
+      entry: { intensity: 2 },
+      ...props,
+    });
+
+  beforeEach(() => {
+    files.disk.set(SCENE_PATH, {
+      sha256: 'hashScene',
+      json: { id: 'sceneA', lights: ['fill', sun], skyboxes: [sky], postFxEnabled: true },
+    });
+  });
+
+  afterEach(() => {
+    // A save left waiting for its gather (of these files) ends
+    if (_isSaving()) gather({ status: 'failed', files: [SKY_PATH, LIGHT_PATH, SCENE_PATH] });
+  });
+
+  it('creates the new file with the item and its entry, and puts the id in the item’s place', async () => {
+    const seen: unknown[] = [];
+    const source = addSource([
+      createMove('skyboxes', 'inlineSky', SKY_PATH, {
+        build: ({ json }) => {
+          seen.push(json);
+          return { saveData: { sceneId: 'sceneA', entry: { env: { environmentIntensity: 1 } } } };
+        },
+      }),
+    ]);
+    await _saveSceneAsync();
+    // The build got the item as the file's JSON
+    expect(seen).toEqual([sky]);
+    expect(files.writes).toEqual([
+      [
+        {
+          path: SKY_PATH,
+          expectedHash: null,
+          json: { $schema: '../../../../.schemas/skyBox.schema.json', ...sky },
+          saveData: { sceneId: 'sceneA', entry: { env: { environmentIntensity: 1 } } },
+        },
+        {
+          path: SCENE_PATH,
+          expectedHash: 'hashScene',
+          json: {
+            id: 'sceneA',
+            lights: ['fill', sun],
+            skyboxes: ['inlineSky'],
+            postFxEnabled: true,
+          },
+        },
+      ],
+    ]);
+    expect(source.onSaved).toHaveBeenCalledTimes(1);
+  });
+
+  it('writes the scene JSON once: two moves and the scene’s own entry folded in', async () => {
+    addSource([
+      createMove('skyboxes', 'inlineSky', SKY_PATH),
+      createMove('lights', 'inlineSun', LIGHT_PATH),
+    ]);
+    addSource([createChange({ path: SCENE_PATH, entry: { postFxEnabled: false } })]);
+    await _saveSceneAsync();
+    const [batch] = files.writes;
+    expect(batch.map((write) => write.path)).toEqual([SKY_PATH, LIGHT_PATH, SCENE_PATH]);
+    expect(batch[1]).toMatchObject({
+      json: { $schema: '../../../../.schemas/light.schema.json', ...sun },
+    });
+    expect(batch[2]).toEqual({
+      path: SCENE_PATH,
+      expectedHash: 'hashScene',
+      json: {
+        id: 'sceneA',
+        lights: ['fill', 'inlineSun'],
+        skyboxes: ['inlineSky'],
+        postFxEnabled: true,
+      },
+      saveData: { sceneId: 'sceneA', entry: { postFxEnabled: false } },
+    });
+  });
+
+  it('leaves an item that has the change already inline', async () => {
+    const source = addSource([
+      createMove('skyboxes', 'inlineSky', SKY_PATH, { build: () => null }),
+    ]);
+    await _saveSceneAsync();
+    expect(files.writes).toEqual([]);
+    expect(source.onSaved).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails before anything is written: a file at the new path, an item gone, an id moved twice', async () => {
+    files.disk.set(SKY_PATH, { sha256: 'hashSky', json: sky });
+    const source = addSource([createMove('skyboxes', 'inlineSky', SKY_PATH)]);
+    await _saveSceneAsync();
+    expect(toasts.at(-1)?.message).toBe(`A change: ${SKY_PATH} exists already`);
+
+    files.disk.delete(SKY_PATH);
+    files.disk.set(SCENE_PATH, { sha256: 'hashScene', json: { id: 'sceneA', skyboxes: [] } });
+    await _saveSceneAsync();
+    expect(toasts.at(-1)?.message).toBe(
+      `${SCENE_PATH} has no inline "inlineSky" in its skyboxes any more: reload the page`
+    );
+
+    // Two scenes writing the same id inline: both new files would claim it
+    const otherPath = 'src/app/scenes/sceneB/inlineSky.skybox.json';
+    source.collect = () => [
+      createMove('skyboxes', 'inlineSky', SKY_PATH),
+      createMove('skyboxes', 'inlineSky', otherPath, { id: 'sceneB:inlineSky' }),
+    ];
+    const result = await _saveChangesAsync(() => true);
+    expect(result).toMatchObject({ status: 'FAILED' });
+    expect(files.writes).toEqual([]);
+    expect(source.onSaved).not.toHaveBeenCalled();
+    expect(_getSaveErrorText((result as { error: unknown }).error)).toBe(
+      `A change would move into ${SKY_PATH} and ${otherPath}: save one scene's at a time`
+    );
+  });
+});

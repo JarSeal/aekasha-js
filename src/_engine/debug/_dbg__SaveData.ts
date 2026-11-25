@@ -2,11 +2,12 @@
 // saveable ones a filter picks ("Save scene": the current scene's and the global ones; the "Save
 // specific data…" dialog: the checked ones), reads each file fresh (its hash the write's
 // `expectedHash`, so a file edited since fails with CONFLICT), builds one write per file (two
-// scenes' entries of one file a list) and commits them as one batch of the dev files. From the
-// save's start to the reload the Æ button is a spinner and its menu is off; it comes back when
-// the commit fails, nothing was written, the gather fails or doesn't come within 30 s. "Save
-// scene" names the scene's edited materials it couldn't save (p355 Phase 6) in a warning toast,
-// after the reload when one follows (the gather note).
+// scenes' entries of one file a list; a camera, light or sky box written inline in a scene JSON
+// moved into a new file with its entry, its id in its place, §2.6) and commits them as one batch
+// of the dev files. From the save's start to the reload the Æ button is a spinner and its menu is
+// off; it comes back when the commit fails, nothing was written, the gather fails or doesn't come
+// within 30 s. "Save scene" names the scene's edited materials it couldn't save (p355 Phase 6) in
+// a warning toast, after the reload when one follows (the gather note).
 import { getCurrentSceneId } from '../kernel/scene/Scene';
 import { lerror } from '../utils/Logger';
 import { addDebugToast } from './DebuggerGUI';
@@ -23,13 +24,14 @@ import {
 } from './DevFiles';
 import type { DevFilesSaveData } from './DevFilesProtocol';
 import { _addToGatherNote, type GatherNoteWarning } from './_dbg__DevFilesGather';
-import { getLatestSaveEntry } from './_dbg__SaveEntries';
+import { getInlineFileSchemaRef, getLatestSaveEntry, getListItemId } from './_dbg__SaveEntries';
 import { getUnsavedMaterialsWarning } from './editors/material/_dbg__MaterialSave';
 import { updateOnScreenTools } from './OnScreenTools';
 import {
   _areSaveSourcesReady,
   _getSaveSources,
   type SaveChange,
+  type SaveChangeExtract,
   type SaveChangeWrite,
   type SaveSource,
 } from './SaveData';
@@ -227,33 +229,132 @@ const dropEmptyNewEntries = (json: unknown, folded: FoldedWrite | null) => {
   return saveData.length ? { saveData } : null;
 };
 
-/** One write per file, built from the file as it is now */
-const buildWrites = async (changes: SourcedChange[]) => {
-  const byPath = new Map<string, SaveChange[]>();
-  for (const { change } of changes) {
-    const path = change.path as string;
-    byPath.set(path, [...(byPath.get(path) ?? []), change]);
+/** An inline asset's move (§2.6) */
+type MoveChange = SaveChange & { path: string; extract: SaveChangeExtract };
+
+const isMove = (change: SaveChange): change is MoveChange => !!change.extract;
+
+/** Refuses two moves of one asset (two scenes writing the same id inline): both files would
+ * claim it, and the gather fails on an id two files have */
+const checkMoves = (moves: MoveChange[]) => {
+  const seen = new Map<string, MoveChange>();
+  for (const move of moves) {
+    const key = `${move.extract.list}:${move.extract.id}`;
+    const other = seen.get(key);
+    if (other) {
+      throw new SaveError(
+        `${move.label} would move into ${other.path} and ${move.path}: save one scene's at a time`
+      );
+    }
+    seen.set(key, move);
   }
+};
+
+/**
+ * Takes an inline asset out of the scene JSON (in place): its item, replaced in its list by its
+ * id; throws when the list hasn't it inline (the file changed since the page loaded)
+ */
+const takeInlineItem = (scenePath: string, sceneJson: unknown, extract: SaveChangeExtract) => {
+  const items = isObj(sceneJson) ? sceneJson[extract.list] : undefined;
+  const index = Array.isArray(items)
+    ? items.findIndex((item) => isObj(item) && getListItemId(extract.list, item) === extract.id)
+    : -1;
+  if (index === -1) {
+    throw new SaveError(
+      `${scenePath} has no inline "${extract.id}" in its ${extract.list} any more: reload the page`
+    );
+  }
+  const list = items as unknown[];
+  const item = list[index] as Record<string, unknown>;
+  list[index] = extract.id;
+  return item;
+};
+
+/** A moved asset's new file: the item as it was, its `$schema` first, and the change's entry for
+ * its scene; null when the item has the change already (it stays inline) */
+const buildMoveWrite = async (move: MoveChange, item: Record<string, unknown>) => {
+  const write = move.build({ json: structuredClone(item) });
+  if (!write) return null;
+  if (!('saveData' in write)) {
+    throw new SaveError(`${move.label}: an inline asset's move takes a save entry, not a JSON`);
+  }
+  if (await readDevFile(move.path)) {
+    throw new SaveError(`${move.label}: ${move.path} exists already`);
+  }
+  const $schema = getInlineFileSchemaRef(move.extract.list, move.path);
+  const json = { ...($schema ? { $schema } : {}), ...item };
+  // Must not exist yet: a file put there since is a CONFLICT
+  return { path: move.path, expectedHash: null, json, saveData: write.saveData };
+};
+
+/**
+ * A file's writes: the moved assets' new files (§2.6) and the file's own write (its changes'
+ * entries, the moved items replaced by their ids), built from the file as it is now
+ */
+const buildFileWrites = async (
+  path: string,
+  pathChanges: SaveChange[],
+  moves: MoveChange[]
+): Promise<DevFileWrite[]> => {
+  const file = await readDevFile(path);
+  if (!file) throw new SaveError(`${path} doesn't exist`);
+  if (file.json === undefined) throw new SaveError(`${path} isn't a JSON file`);
+  const json = structuredClone(file.json);
+  const writes: DevFileWrite[] = [];
+  for (const move of moves) {
+    // From a copy: an item that has the change already stays inline
+    const item = takeInlineItem(path, structuredClone(json), move.extract);
+    const write = await buildMoveWrite(move, item);
+    if (!write) continue;
+    takeInlineItem(path, json, move.extract);
+    writes.push(write);
+  }
+  const isMoved = writes.length > 0;
+  let folded: FoldedWrite | null = null;
+  for (const change of pathChanges) {
+    folded = foldWrite(path, folded, change.build({ json: withBuiltEntries(json, folded) }));
+  }
+  const write = dropEmptyNewEntries(json, folded);
+  if (write && 'json' in write && isMoved) {
+    throw new SaveError(`${path}: two changes need writes that can't be merged into one`);
+  }
+  const saveData = write && 'saveData' in write ? write.saveData : [];
+  // One scene's entry goes as the entry (the list is for several)
+  const entries = saveData.length === 1 ? { saveData: saveData[0] } : { saveData };
+  if (isMoved) {
+    // The moved items' ids in their place, the file's entries applied over it by the server
+    writes.push({ path, expectedHash: file.sha256, json, ...(saveData.length ? entries : {}) });
+  } else if (write && 'json' in write) {
+    writes.push({ path, expectedHash: file.sha256, json: write.json });
+  } else if (saveData.length) {
+    writes.push({ path, expectedHash: file.sha256, ...entries });
+  }
+  return writes;
+};
+
+/** One write per file, built from the file as it is now; an inline asset's move adds its new
+ * file, before the scene JSON's write (§2.6) */
+const buildWrites = async (changes: SourcedChange[]) => {
+  const byPath = new Map<string, { changes: SaveChange[]; moves: MoveChange[] }>();
+  const getPath = (path: string) => {
+    const entry = byPath.get(path) ?? { changes: [], moves: [] };
+    byPath.set(path, entry);
+    return entry;
+  };
+  const moves: MoveChange[] = [];
+  for (const { change } of changes) {
+    if (isMove(change)) {
+      moves.push(change);
+      getPath(change.extract.scenePath).moves.push(change);
+    } else {
+      getPath(change.path as string).changes.push(change);
+    }
+  }
+  checkMoves(moves);
   const writes = await Promise.all(
-    [...byPath].map(async ([path, pathChanges]): Promise<DevFileWrite | null> => {
-      const file = await readDevFile(path);
-      if (!file) throw new SaveError(`${path} doesn't exist`);
-      if (file.json === undefined) throw new SaveError(`${path} isn't a JSON file`);
-      let folded: FoldedWrite | null = null;
-      for (const change of pathChanges) {
-        const json = withBuiltEntries(file.json, folded);
-        folded = foldWrite(path, folded, change.build({ json }));
-      }
-      const write = dropEmptyNewEntries(file.json, folded);
-      if (!write) return null;
-      // One scene's entry goes as the entry (the list is for several)
-      if ('saveData' in write && write.saveData.length === 1) {
-        return { path, expectedHash: file.sha256, saveData: write.saveData[0] };
-      }
-      return { path, expectedHash: file.sha256, ...write };
-    })
+    [...byPath].map(([path, entry]) => buildFileWrites(path, entry.changes, entry.moves))
   );
-  return writes.filter((write): write is DevFileWrite => write !== null);
+  return writes.flat();
 };
 
 /** Each source's `onSaved` with its changes */

@@ -99,9 +99,9 @@ const PROPS_KEYS: { [list: string]: string | undefined } = {
   lights: 'lightProps',
 };
 
-/** The id of an entry of a scene's resolved list: an id, an inline object's `id`, a camera's or
- * light's app id */
-const getListItemId = (list: string, item: unknown) => {
+/** The id of an entry of a scene's list (resolved or in its JSON): an id, an inline object's `id`,
+ * a camera's or light's app id (its props', else its entity's) */
+export const getListItemId = (list: string, item: unknown) => {
   if (!isObj(item)) return item;
   const propsKey = PROPS_KEYS[list];
   if (!propsKey) return item.id;
@@ -150,6 +150,25 @@ const INLINE_FILE_TYPES: { [list: string]: string | undefined } = {
   cameras: 'camera',
   lights: 'light',
   skyboxes: 'skybox',
+};
+
+/** The JSON Schema (`.schemas/<name>.schema.json`) of an inline asset's list */
+const INLINE_FILE_SCHEMAS: { [list: string]: string | undefined } = {
+  cameras: 'camera',
+  lights: 'light',
+  skyboxes: 'skyBox',
+};
+
+/**
+ * The `$schema` of the file an inline asset moves into (§2.6), relative to it as the other asset
+ * JSONs' are (`../../../../.schemas/light.schema.json`); undefined for a list without one.
+ * @param path the new file, repo-relative
+ */
+export const getInlineFileSchemaRef = (list: string, path: string) => {
+  const schema = INLINE_FILE_SCHEMAS[list];
+  if (!schema) return undefined;
+  const depth = path.split('/').length - 1;
+  return `${'../'.repeat(depth)}.schemas/${schema}.schema.json`;
 };
 
 /** Where a change is saved: its file, or for an inline asset its new file and the move */
