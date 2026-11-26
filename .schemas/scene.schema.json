@@ -86,11 +86,14 @@
     "surfaceConditions": {
       "$ref": "#/definitions/__schema639"
     },
-    "scatters": {
+    "fogs": {
       "$ref": "#/definitions/__schema658"
     },
+    "scatters": {
+      "$ref": "#/definitions/__schema705"
+    },
     "worldBounds": {
-      "$ref": "#/definitions/__schema660"
+      "$ref": "#/definitions/__schema707"
     },
     "id": {
       "type": "string",
@@ -111,7 +114,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema669"
+          "$ref": "#/definitions/__schema716"
         }
       ]
     }
@@ -8198,7 +8201,7 @@
       ]
     },
     "__schema658": {
-      "description": "Scatter ids (*.scatter.json) the scene's code spawns (spawnScatter): each one's geometry and material JSONs load with the scene. A terrain block's scatters are added for it.",
+      "description": "The scene's fogs (the fog() feature): *.fog.json ids or inline fogs; it starts with the one with isDefault, else the first.",
       "allOf": [
         {
           "$ref": "#/definitions/__schema659"
@@ -8208,23 +8211,458 @@
     "__schema659": {
       "type": "array",
       "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/definitions/__schema660"
+              },
+              "isDefault": {
+                "$ref": "#/definitions/__schema661"
+              },
+              "mode": {
+                "$ref": "#/definitions/__schema663"
+              },
+              "enabled": {
+                "$ref": "#/definitions/__schema664"
+              },
+              "colorSource": {
+                "$ref": "#/definitions/__schema666"
+              },
+              "color": {
+                "$ref": "#/definitions/__schema668"
+              },
+              "linear": {
+                "$ref": "#/definitions/__schema669"
+              },
+              "exp2": {
+                "$ref": "#/definitions/__schema674"
+              },
+              "height": {
+                "$ref": "#/definitions/__schema677"
+              },
+              "sunScattering": {
+                "$ref": "#/definitions/__schema688"
+              },
+              "background": {
+                "$ref": "#/definitions/__schema695"
+              },
+              "debugData": {
+                "$ref": "#/definitions/__schema697"
+              },
+              "$schema": {
+                "$ref": "#/definitions/__schema698"
+              },
+              "__sourcePath": {
+                "$ref": "#/definitions/__schema699"
+              },
+              "__saveData": {
+                "$ref": "#/definitions/__schema700"
+              }
+            },
+            "required": [
+              "id",
+              "mode"
+            ],
+            "additionalProperties": false,
+            "description": "A fog (the fog() feature): one of LINEAR, EXP2 and HEIGHT, its colour and sun glow."
+          }
+        ]
+      }
+    },
+    "__schema660": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What setFog and the save data name it by. A file's defaults to its name."
+    },
+    "__schema661": {
+      "description": "Whether the scene starts with it. Without one, the scene's first fog.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema662"
+        }
+      ]
+    },
+    "__schema662": {
+      "type": "boolean"
+    },
+    "__schema663": {
+      "type": "string",
+      "enum": [
+        "LINEAR",
+        "EXP2",
+        "HEIGHT"
+      ],
+      "description": "LINEAR (between near and far), EXP2 (by density) or HEIGHT (thick low down)."
+    },
+    "__schema664": {
+      "description": "Whether it renders (with setFogEnabled's switch). Default true.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema665"
+        }
+      ]
+    },
+    "__schema665": {
+      "type": "boolean"
+    },
+    "__schema666": {
+      "description": "SKY (the wired sky colour, color without one) or MANUAL (color). Default SKY.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema667"
+        }
+      ]
+    },
+    "__schema667": {
+      "type": "string",
+      "enum": [
+        "SKY",
+        "MANUAL"
+      ]
+    },
+    "__schema668": {
+      "description": "MANUAL's colour, and SKY's without a sky colour (sRGB). Default #b4c0cc.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema13"
+        }
+      ]
+    },
+    "__schema669": {
+      "type": "object",
+      "properties": {
+        "near": {
+          "$ref": "#/definitions/__schema670"
+        },
+        "far": {
+          "$ref": "#/definitions/__schema672"
+        }
+      },
+      "additionalProperties": false,
+      "description": "LINEAR's parameters (three's Fog: a smoothstep between near and far)."
+    },
+    "__schema670": {
+      "description": "Metres from the camera where the fog starts. Default 10.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema671"
+        }
+      ]
+    },
+    "__schema671": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema672": {
+      "description": "Metres from the camera where the fog is full (more than near). Default 500.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema673"
+        }
+      ]
+    },
+    "__schema673": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema674": {
+      "type": "object",
+      "properties": {
+        "density": {
+          "$ref": "#/definitions/__schema675"
+        }
+      },
+      "additionalProperties": false,
+      "description": "EXP2's parameters (three's FogExp2)."
+    },
+    "__schema675": {
+      "description": "The factor is 1 − exp(−(density · distance)²). Default 0.005.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema676"
+        }
+      ]
+    },
+    "__schema676": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema677": {
+      "type": "object",
+      "properties": {
+        "density": {
+          "$ref": "#/definitions/__schema678"
+        },
+        "baseHeight": {
+          "$ref": "#/definitions/__schema680"
+        },
+        "falloff": {
+          "$ref": "#/definitions/__schema682"
+        },
+        "startDistance": {
+          "$ref": "#/definitions/__schema684"
+        },
+        "maxOpacity": {
+          "$ref": "#/definitions/__schema686"
+        }
+      },
+      "additionalProperties": false,
+      "description": "HEIGHT's parameters: an exponential height fog, thick low down."
+    },
+    "__schema678": {
+      "description": "The density per metre at baseHeight. Default 0.02.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema679"
+        }
+      ]
+    },
+    "__schema679": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema680": {
+      "description": "The world Y where the density is density. Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema681"
+        }
+      ]
+    },
+    "__schema681": {
+      "type": "number"
+    },
+    "__schema682": {
+      "description": "How fast the density falls with height, per metre. Default 0.1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema683"
+        }
+      ]
+    },
+    "__schema683": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema684": {
+      "description": "Metres from the camera before which there's no fog. Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema685"
+        }
+      ]
+    },
+    "__schema685": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema686": {
+      "description": "The fog factor's maximum, 0 to 1. Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema687"
+        }
+      ]
+    },
+    "__schema687": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "__schema688": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "$ref": "#/definitions/__schema689"
+        },
+        "strength": {
+          "$ref": "#/definitions/__schema691"
+        },
+        "exponent": {
+          "$ref": "#/definitions/__schema693"
+        }
+      },
+      "additionalProperties": false,
+      "description": "The sun glow: the fog's colour moves toward the sun's around it."
+    },
+    "__schema689": {
+      "description": "Whether the fog glows toward the sun. Default: on for HEIGHT, off otherwise.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema690"
+        }
+      ]
+    },
+    "__schema690": {
+      "type": "boolean"
+    },
+    "__schema691": {
+      "description": "How far the colour moves toward the sun's, looking at it, 0 to 1. Default 0.5.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema692"
+        }
+      ]
+    },
+    "__schema692": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "__schema693": {
+      "description": "How tight the glow is around the sun: higher is tighter. Default 8.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema694"
+        }
+      ]
+    },
+    "__schema694": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema695": {
+      "description": "NONE, or FOG_COLOR: the clear colour is the fog's while no sky box shows a background. Default NONE.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema696"
+        }
+      ]
+    },
+    "__schema696": {
+      "type": "string",
+      "enum": [
+        "NONE",
+        "FOG_COLOR"
+      ]
+    },
+    "__schema697": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema57"
+        }
+      ]
+    },
+    "__schema698": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema1"
+        }
+      ]
+    },
+    "__schema699": {
+      "type": "string"
+    },
+    "__schema700": {
+      "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema701"
+        }
+      ]
+    },
+    "__schema701": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "$ref": "#/definitions/__schema664"
+            },
+            "colorSource": {
+              "$ref": "#/definitions/__schema666"
+            },
+            "color": {
+              "$ref": "#/definitions/__schema668"
+            },
+            "linear": {
+              "$ref": "#/definitions/__schema669"
+            },
+            "exp2": {
+              "$ref": "#/definitions/__schema674"
+            },
+            "height": {
+              "$ref": "#/definitions/__schema677"
+            },
+            "sunScattering": {
+              "$ref": "#/definitions/__schema688"
+            },
+            "background": {
+              "$ref": "#/definitions/__schema695"
+            },
+            "mode": {
+              "$ref": "#/definitions/__schema702"
+            },
+            "__meta": {
+              "$ref": "#/definitions/__schema704"
+            }
+          },
+          "additionalProperties": false,
+          "description": "The values a fog changes in one scene, deep merged over its definition."
+        }
+      }
+    },
+    "__schema702": {
+      "description": "Which parameters render.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema703"
+        }
+      ]
+    },
+    "__schema703": {
+      "type": "string",
+      "enum": [
+        "LINEAR",
+        "EXP2",
+        "HEIGHT"
+      ]
+    },
+    "__schema704": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema70"
+        }
+      ]
+    },
+    "__schema705": {
+      "description": "Scatter ids (*.scatter.json) the scene's code spawns (spawnScatter): each one's geometry and material JSONs load with the scene. A terrain block's scatters are added for it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema706"
+        }
+      ]
+    },
+    "__schema706": {
+      "type": "array",
+      "items": {
         "type": "string",
         "minLength": 1
       }
     },
-    "__schema660": {
+    "__schema707": {
       "anyOf": [
         {
           "type": "object",
           "properties": {
             "min": {
-              "$ref": "#/definitions/__schema661"
+              "$ref": "#/definitions/__schema708"
             },
             "max": {
-              "$ref": "#/definitions/__schema666"
+              "$ref": "#/definitions/__schema713"
             },
             "action": {
-              "$ref": "#/definitions/__schema667"
+              "$ref": "#/definitions/__schema714"
             }
           },
           "additionalProperties": false,
@@ -8235,22 +8673,22 @@
         }
       ]
     },
-    "__schema661": {
+    "__schema708": {
       "description": "The lower corner: a dynamic body whose translation is below it on an axis is outside.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema662"
+          "$ref": "#/definitions/__schema709"
         }
       ]
     },
-    "__schema662": {
+    "__schema709": {
       "type": "object",
       "properties": {
         "x": {
           "description": "The world x, in metres. Missing: open on this axis.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema663"
+              "$ref": "#/definitions/__schema710"
             }
           ]
         },
@@ -8258,7 +8696,7 @@
           "description": "The world y, in metres. Missing: open on this axis.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema664"
+              "$ref": "#/definitions/__schema711"
             }
           ]
         },
@@ -8266,46 +8704,46 @@
           "description": "The world z, in metres. Missing: open on this axis.",
           "allOf": [
             {
-              "$ref": "#/definitions/__schema665"
+              "$ref": "#/definitions/__schema712"
             }
           ]
         }
       },
       "additionalProperties": false
     },
-    "__schema663": {
+    "__schema710": {
       "type": "number"
     },
-    "__schema664": {
+    "__schema711": {
       "type": "number"
     },
-    "__schema665": {
+    "__schema712": {
       "type": "number"
     },
-    "__schema666": {
+    "__schema713": {
       "description": "The upper corner: a dynamic body whose translation is above it on an axis is outside.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema662"
+          "$ref": "#/definitions/__schema709"
         }
       ]
     },
-    "__schema667": {
+    "__schema714": {
       "description": "What happens to an exited body's entity, unless the entity has its own action: DELETE (the default) or DISABLE. A CALLBACK needs code: setSceneWorldBounds in the scene's code.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema668"
+          "$ref": "#/definitions/__schema715"
         }
       ]
     },
-    "__schema668": {
+    "__schema715": {
       "type": "string",
       "enum": [
         "DELETE",
         "DISABLE"
       ]
     },
-    "__schema669": {
+    "__schema716": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -8406,11 +8844,14 @@
             "surfaceConditions": {
               "$ref": "#/definitions/__schema639"
             },
-            "scatters": {
+            "fogs": {
               "$ref": "#/definitions/__schema658"
             },
+            "scatters": {
+              "$ref": "#/definitions/__schema705"
+            },
             "worldBounds": {
-              "$ref": "#/definitions/__schema660"
+              "$ref": "#/definitions/__schema707"
             }
           },
           "additionalProperties": false

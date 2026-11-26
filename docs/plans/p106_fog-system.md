@@ -105,12 +105,13 @@ the boot's feature check (`checkSceneFeatures`).
 
 ### D2. The data
 
-- A fog is a `<id>.fog.json` (id defaults to the file name), or an inline definition. A scene
-  names one in its JSON's `fog` field (`fogSchemaPart`, the feature `'fog'`). A fog only one scene
-  uses sits in that scene's folder (`src/app/scenes/<sceneId>/<sceneId>.fog.json`), a shared one
-  in `src/app/fogs/`.
+- A fog is a `<id>.fog.json` (id defaults to the file name), or an inline definition (its `id`
+  required). A scene lists its fogs in its JSON's `fogs` field, like `skyboxes` (ids or inline
+  definitions; `fogSchemaPart`, the feature `'fog'`; Decided 3): the one with `isDefault: true`
+  is the one it starts with, else the first. A fog only one scene uses sits in that scene's
+  folder (`src/app/scenes/<sceneId>/<id>.fog.json`), a shared one in `src/app/fogs/`.
 - The definition (Zod, each key `.describe()`d):
-  - `enabled` (default `true`), `mode` (`LINEAR` | `EXP2` | `HEIGHT`);
+  - `id`, `isDefault`, `enabled` (default `true`), `mode` (`LINEAR` | `EXP2` | `HEIGHT`);
   - `colorSource` (`SKY` | `MANUAL`, **default `SKY`**: the sky box's horizon colour through the
     wired source, D5) and `color` (a hex or colour string: the colour of our own under `MANUAL`,
     and `SKY`'s fallback when no source is wired or the sky box gives no horizon colour);
@@ -127,8 +128,9 @@ the boot's feature check (`checkSceneFeatures`).
 - The gather pipeline: `fog: '.fog.json'` in `GATHERED_SUFFIXES` and its schema in
   `GATHERED_SCHEMAS` (`devTools/gather/gatheredJson.ts`), `readFog` (`registries.ts`, like
   `readSkyBoxes`: `claimIds`, `__sourcePath`, `$schema` dropped), its registry and id space in
-  `context.ts`, `resolveFog` (`sceneAssets.ts`: an id → its definition with the scene's
-  `__saveData` entry merged, `debugData` dropped in production), the part in `ENGINE_SCHEMA_PARTS`
+  `context.ts` (and `TYPE_LABELS`), `resolveFogs` (`sceneAssets.ts`: each id → its definition, and
+  each inline one, with the scene's `__saveData` entry deep-merged over it, `debugData` dropped in
+  production), `fog.schema.json` in `jsonSchemas.ts`, the part in `ENGINE_SCHEMA_PARTS`
   (`devTools/gather/engineSchemas.ts`), the field typed on `SceneData` (`kernel/scene/Scene.ts`,
   `import type` from the feature), the feature in `ENGINE_FEATURE_FACTORIES`
   (`kernel/init/Features.ts`), the entry in `devTools/aliases.ts` and `tsconfig.json`.
@@ -188,7 +190,8 @@ the boot's feature check (`checkSceneFeatures`).
 ### D6. The public API (`aekasha/fog`)
 
 `fog()`, `setFogEnabled(on)` / `isFogEnabled()` (the whole system, kept across scenes),
-`setFog(idOrDefinition | null)` (another of the current scene's fogs, or none),
+`setFog(idOrDefinition | null)` (another of the current scene's `fogs` by id, a definition made
+in code, or none),
 `updateFog(partial, { transitionSec? })` (the numbers and the colour tweened on frame time, the
 latest call winning; what p427's weather drives), `getFog()` (the current definition, read-only),
 `onFogChange(listener)` (returns its remover), `getFogNodes()`, `setFogColorSource`,
@@ -258,7 +261,7 @@ latest call winning; what p427's weather drives), `getFog()` (the current defini
    `ENGINE_FEATURE_FACTORIES`; `devTools/gather/CLAUDE.md`'s suffix lists.
 3. `getFogNodes()` and `FogNode.ts` with `LINEAR` and `EXP2` (D3); the system; the scene hooks;
    `setFogEnabled`, `setFog`, `getFog`, `onFogChange`; `background`.
-4. The template's feature list (`src/index.ts`).
+4. The template's feature list (`src/index.ts`), and the SBP budgets it needs (Decided 4).
 5. Tests: the schema (defaults, refusals), the gather (an id, inline, `__saveData` merged), the
    node is the same object across a mode switch and a toggle, the scene reset, the CPU twins of
    the factors.
@@ -355,3 +358,9 @@ latest call winning; what p427's weather drives), `getFog()` (the current defini
 2. **The sun glow in every mode:** `LINEAR` and `EXP2` take `sunScattering` too, off by default so
    they keep three's look; on by default for `HEIGHT` (D2, D4). It's a uniform weight in D3's one
    graph, so it costs nothing extra and switching it doesn't recompile.
+3. **A scene lists its fogs** (`fogs`, like `skyboxes`), not one `fog` field: `setFog(id)` can
+   only switch to fogs the scene's data holds, and Phase 5 switches three files in one scene
+   (D2, D6).
+4. **Phase 1 sets the SBP budgets** (`_engine/features/fog` and the raised `initial`), since the
+   template lists `fog()` from then on and `yarn build` runs `yarn sbp`; Phase 7 only revisits
+   them.
