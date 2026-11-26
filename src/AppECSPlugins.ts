@@ -1,3 +1,4 @@
+import * as THREE from 'three/webgpu';
 import type { EngineFeature } from 'aekasha';
 import {
   registerHoverToolEffect,
@@ -7,7 +8,8 @@ import {
   registerMovingPlatformSystem,
   registerFollowObjectCameraRigSystem,
 } from 'aekasha/toolkit/ecs';
-import { getSunElevation } from 'aekasha/skybox';
+import { setFogColorSource, setFogSunSource } from 'aekasha/fog';
+import { getSkyHorizonColor, getSunDirection, getSunElevation } from 'aekasha/skybox';
 import { setSurfaceSunSource } from 'aekasha/surface';
 import { registerTerrainGenerators, registerTerrainScatter } from 'aekasha/toolkit/terrain';
 import { registerSpinSystem } from './app/examples/ecs/SpinSystem';
@@ -41,6 +43,15 @@ export const appECSPlugins: EngineFeature = {
     registerTerrainScatter();
     // Wet surfaces dry with the sky box's sun: fastest under a high sun, slowest at night
     setSurfaceSunSource(() => getSunElevation());
+    // The fog takes the sky's horizon colour away from the sun, and glows toward the sky's
+    // horizon on the sun's side, so the far fog meets the sky all round the day-night cycle
+    setFogColorSource((out) => getSkyHorizonColor(out) !== null);
+    const sunHorizon = { direction: new THREE.Vector3() }; // read every frame: no allocation
+    setFogSunSource((direction, color) => {
+      if (!getSunDirection(direction)) return false;
+      sunHorizon.direction.copy(direction);
+      return getSkyHorizonColor(color, sunHorizon) !== null;
+    });
   },
 };
 // #endregion ecs-register-plugin
