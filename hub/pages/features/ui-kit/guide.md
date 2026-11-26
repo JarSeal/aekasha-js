@@ -108,7 +108,9 @@ returns it, and each panel added under it places itself. The windows, dialogs, t
 overlays open in it too.
 
 In debug mode, the editor views (the material editor) hide the HUD root's children, except one
-with [`KEEP_IN_VIEWS_CLASS`](api:KEEP_IN_VIEWS_CLASS).
+with [`KEEP_IN_VIEWS_CLASS`](api:KEEP_IN_VIEWS_CLASS). An overlay (a popover, a menu, a tooltip)
+takes the class when what it belongs to is inside such an element, so it shows where its owner
+does.
 
 ### Without the engine
 

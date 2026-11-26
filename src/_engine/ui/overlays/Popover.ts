@@ -1,6 +1,6 @@
 import type { CMPAttr, CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
-import { getHUDRootCMP, hasHudRoot, KIT_ROOT_CLASS } from '../core/HUD';
+import { getHUDRootCMP, hasHudRoot, keepOverlayWithOwner, KIT_ROOT_CLASS } from '../core/HUD';
 import { showAnchored } from './Anchor';
 import { getFirstFocusable } from './FocusTrap';
 import { pushOverlay } from './OverlayStack';
@@ -107,6 +107,7 @@ export const createPopover = (props: PopoverProps): Popover => {
     const parent = hasHudRoot()
       ? getHUDRootCMP().elem
       : anchor.closest(`.${KIT_ROOT_CLASS}`) ?? document.body;
+    keepOverlayWithOwner(cmp.elem, anchor);
     parent.appendChild(cmp.elem);
     anchor.setAttribute('aria-expanded', 'true');
     hideAnchored = showAnchored({

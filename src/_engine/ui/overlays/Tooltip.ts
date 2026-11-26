@@ -1,6 +1,6 @@
 import type { CMPAttr, CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
-import { getHUDRootCMP, hasHudRoot, KIT_ROOT_CLASS } from '../core/HUD';
+import { getHUDRootCMP, hasHudRoot, keepOverlayWithOwner, KIT_ROOT_CLASS } from '../core/HUD';
 import { showAnchored } from './Anchor';
 import { pushOverlay } from './OverlayStack';
 import './Tooltip.scss';
@@ -126,6 +126,7 @@ export const createTooltip = (props: TooltipProps): Tooltip => {
       built = content();
       cmp.add(built);
     }
+    keepOverlayWithOwner(cmp.elem, anchor);
     parent.appendChild(cmp.elem);
     hideAnchored = showAnchored({ elem: cmp.elem, anchor, side, onAnchorRemoved: hide });
     removeOverlay = pushOverlay({ elem: cmp.elem, close: hide, returnFocus: null });

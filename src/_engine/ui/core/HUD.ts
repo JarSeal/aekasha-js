@@ -17,6 +17,18 @@ export const HUD_ROOT_ID = 'hudRoot';
  * env's material editor and the like); every other one is hidden there (`display: none`, so it
  * stays mounted). */
 export const KEEP_IN_VIEWS_CLASS = 'aekKeepInViews';
+
+/**
+ * Gives an overlay that goes into the HUD root (a popover, a menu, a tooltip, an anchored list)
+ * `KEEP_IN_VIEWS_CLASS` when its owner is inside an element with it, else takes it off, so the
+ * overlay shows where its owner shows: a colour field's panel over the material editor.
+ * @internal
+ * @param elem the overlay's element
+ * @param owner the element it belongs to (its anchor, trigger or theme source)
+ */
+export const keepOverlayWithOwner = (elem: HTMLElement, owner: Element | null | undefined) => {
+  elem.classList.toggle(KEEP_IN_VIEWS_CLASS, Boolean(owner?.closest(`.${KEEP_IN_VIEWS_CLASS}`)));
+};
 /**
  * The kit root's class: the design tokens, the focus ring and the controls' reset apply under an
  * element with it. The HUD root has it; put it on a container of your own UI outside the HUD (a

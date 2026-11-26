@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { countListeners, dispatchKey, dispatchPointer, stubKitDomAsync } from '../testing/KitDom';
-import { createHudRoot, getHUDRootCMP } from '../core/HUD';
+import { createHudRoot, getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../core/HUD';
 import { createKbd } from '../components/Kbd';
 import { createMenu, type MenuItem, type MenuProps } from './Menu';
 
@@ -394,6 +394,30 @@ describe('submenus (p805 D11)', () => {
     { type: 'submenu', label: 'Locked', disabled: true, items: [{ label: 'Never' }] },
     { label: 'Full screen' },
   ];
+
+  it('is kept in editor views, its submenus too, where its trigger is', () => {
+    const kept = document.createElement('div');
+    kept.className = KEEP_IN_VIEWS_CLASS;
+    getHUDRootCMP().elem.append(kept);
+    kept.append(trigger);
+    const menu = addMenu(viewItems());
+    trigger.focus();
+    click(trigger);
+    key('ArrowRight');
+    const menus = getMenus();
+    expect(menus).toHaveLength(2);
+    for (const elem of menus) {
+      expect(elem.parentElement).toBe(getHUDRootCMP().elem);
+      expect(elem.classList.contains(KEEP_IN_VIEWS_CLASS)).toBe(true);
+    }
+    menu.close();
+
+    getHUDRootCMP().elem.append(trigger);
+    click(trigger);
+    expect(getMenuElem()?.classList.contains(KEEP_IN_VIEWS_CLASS)).toBe(false);
+    menu.cmp.remove();
+    kept.remove();
+  });
 
   it('ArrowRight opens a submenu on its first item; ArrowLeft closes it back to its item', () => {
     const menu = addMenu(viewItems());

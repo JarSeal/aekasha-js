@@ -2,6 +2,7 @@ Create "Small bug fixes and tweaks" plan in docs/plans/p102_small-bug-fixes-and-
 
 Category: Bug, Refactor
 
+UNDER_CONSTRUCTION
 Fix or tweak these list items:
 - 
 
@@ -153,17 +154,6 @@ If for some reason this plan or some of its features can't or shouldn't be creat
 
 ************************************
 
-DRAFT_BEER*******************
-Add dynamic tier size changing during run time for physics simulation tier sizes.
-- Two small engine changes would make runtime changes safe. Each is a fairly small addition:
--- An in-place updatePhysicsTierPolicyRings. It would recompute withinSq / leaveSq on the running policy and keep the pending measurements. Decisions already read the radii when they're made, not when the positions are measured, so the measurements stay valid.
--- An optional per-step transition budget in physicsTierSystem. Applying requests in entity id order would keep it deterministic.
-- Longer term, add count caps to the rings (maxMembers per tier, like Mass LOD). That gives you per-area behaviour without authoring zones. Per-area overrides proper belong with p352's Phase 5, cell driving with p353.
-
-If for some reason this plan or some of its features can't or shouldn't be created with this specification or has some high risks of failing the implementation, notify immediately. You are allowed to change the naming of the plan or the header information if they are not well described, but please notify about this.
-
-************************************
-
 Create "Toolkit and asset housekeeping" plan in docs/plans/p450_toolkit-and-asset-housekeeping.md
 
 Category: Toolkit, Assets
@@ -181,6 +171,7 @@ What this plan does for the structure:
 
 We should also get 5-10 high quality PBR textures (with normal maps, AO maps, etc.). These can be all kinds of (semi-random) textures.
 
+NOT_SURE_ABOUT_THIS
 I was wondering that we should probably create another test scene for the LOD. But before we do that I would like to have better assets for the scene. I would like to have some objects in the scene like a high poly tree, Standford bunny, the dragon that Three.js uses a lot in their examples, the famous 3d teapot, Suzanne (I already have that but it is not Draco encoded). I would like to have all of those as Draco encoded GLTF objects in my project. The test scene could be a plane with all of the different objects having their own "lane". Make the plane use the triplanar grid with 1x1m base grid and one smaller line in between the grids. Make the models use the new PBR materials (each should have a different material). Add a nice sunny skybox. Each lane would have the different LOD levels showing at the same time so that model has them in a row going from level 0 to the last level. We can have a quite many levels to show how the meshoptimizer works. Then after that there would be a small gap and it would show the fully working LOD model so that if viewed closely it would show the full mesh and if viewed from far away, it would show the approriate LOD level mesh.
 
 If you cannot retrieve the assets (models and textures) from somewhere, give me clear instructions on how and where to get them (and where to put them). Also suggest other models to add to the toolkit for better testing of Aekasha's existing and upcoming systems.
@@ -205,7 +196,7 @@ Category: Versioning
 UNDER_CONSTRUCTION
 We should add a syntax for describing and recognizing custom engines (and why not for the toolkits and apps as well) from the version number. Suggest a way to mark custom engines: maybe one way would be to add an underscore at the end of the version, something like "v4.13.0_my-game-1.0"? You know better, but something to tell that this is a custom engine and we could see that from which version it was made out of.
 
-We should also add versioning for the Hub.
+We should also add versioning for the Hub. It should also show it in the Hub footer.
 
 ************************************
 
@@ -221,15 +212,15 @@ We should add a snapshot window that has different options and a button to take 
 - Take snapshot button
 - What else?
 
-The window can be opened from the AE menu dropdown or with shortcut Ctrl+Enter. If the window is open then using the shortcut again (Ctrl+Enter) would take the snapshot as well.
+The window can be opened from the AE menu dropdown or with shortcut Ctrl+Enter. If the window is open then using the shortcut again (Ctrl+Enter) would take the snapshot as well. Some of the scenes have a custom scene debugger tab just for taking snapshot images of the scenes. These tabs should be removed.
 
 ************************************
 
-Create "Stop loop when nothing happens system" plan in docs/plans/p115_stop-loop-when-nothing-happens-system.md
+Create "Stop the looping when nothing happens system" plan in docs/plans/p115_stop-loop-when-nothing-happens-system.md
 
 Category: Loop
 
-We need a system to detect when the scene is stable and nothing happens (nothing moves). This should only be opt-in and the default should be off. This means that if nothing happens then the main loop is paused. This is mainly for banners, site backgrounds, decorative features that would make for example mobile sites save battery so that the scene wouldn't be rendered constantly. I am not sure if this would really work on scene's that use physics but at least scene's without them should have these feature as an option. Study the possibility for physics (maybe if all of the physics bodies are sleeping or something like that?). We then naturally some logic to wake the scene up when something happens or is about to happen (like a mouse click/move).
+We need a system to detect when the scene is stable and nothing happens (nothing moves). This should only be opt-in and the default should be off so that the loop is running all the time. This means that if nothing happens then the main loop is paused. This is mainly for banners, site backgrounds, decorative features that would make for example mobile sites save battery so that the scene wouldn't be rendered constantly. I am not sure if this would really work on scene's that use physics but at least scene's without them should have these feature as an option. Study the possibility for physics (maybe if all of the physics bodies are sleeping or something like that?). We then naturally some logic to wake the scene up when something happens or is about to happen (like a mouse click/move).
 
 If for some reason this plan or some of its features can't or shouldn't be created with this specification or has some high risks of failing the implementation, notify immediately. You are allowed to change the naming of the plan or the header information if they are not well described, but please notify about this.
 
@@ -250,5 +241,29 @@ Add dynamic tier size changing during run time for physics simulation tier sizes
 -- An in-place updatePhysicsTierPolicyRings. It would recompute withinSq / leaveSq on the running policy and keep the pending measurements. Decisions already read the radii when they're made, not when the positions are measured, so the measurements stay valid.
 -- An optional per-step transition budget in physicsTierSystem. Applying requests in entity id order would keep it deterministic.
 - Longer term, add count caps to the rings (maxMembers per tier, like Mass LOD). That gives you per-area behaviour without authoring zones. Per-area overrides proper belong with p352's Phase 5, cell driving with p353.
+
+If for some reason this plan or some of its features can't or shouldn't be created with this specification or has some high risks of failing the implementation, notify immediately. You are allowed to change the naming of the plan or the header information if they are not well described, but please notify about this.
+
+************************************
+
+Create "Create and save an item/entity" plan in docs/plans/p301_create-and-save-item-or-entity.md
+
+Category: File system
+
+We should have "Create" button for some of the debugger tabs. This would mean that at least these tabs would get the "Create" CTA button:
+- Skybox controls
+- Physics API controls
+- Assets
+- PostFX controls
+- Light controls
+- Camera controls
+- Character controls
+- What else (basically all the different JSON's should be created from the debugger UI)?
+
+On top of that, we should add a button with a "Plus" icon to the top left on-screen button group that when clicked would open a menu (same as the AE button) that would have all the different items/entities we can create. When clicked on the "Create" button or the "Plus" button, a dialog should open. These dialogs should be different for each item type being created, so we probably need different plans for each (smaller plans can be grouped together if possible, or if you think this needs only one plan then that is fine as well). The dialogs would then be a way to create a JSON file for that particular item/entity. The dialog should have all the required fields marked and validated, the location/folder where to create it, and then the dialog buttons should be "Create" and "Cancel". If possible, I would also like to have another button after the "Create" button that would be the "Create and open" button. This means that when clicked the file would open in the editor (in my case VSCode) if possible. Some other developers might want to use some other editor, so if possible, this should be something that the developer could configure in the Debug tools controls tab (and then that information should live in the config or settings JSON). I would also like to have all the different edit windows display that JSON file as a link with an edit icon and when clicked it would open in the editor. I have seen some of these links in the Hub pages and they work on my Macbook but not on the Windows WSL2 machine (I would really love if they worked on both).
+
+What you probably need to do is to check all the fields of JSON's that can be created and check what data is needed for each field. For example if it is referencing to an id we should probably have an id selector. That id selector component should have the proper ids searchable (also should be searched by their name) and if there is something to show like if it is a texture, a preview of it should be rendered if it isn't too much work (study this).
+
+If for some reason this plan or some of its features can't or shouldn't be created with this specification or has some high risks of failing the implementation, notify immediately. You are allowed to change the naming of the plan or the header information if they are not well described, but please notify about this.
 
 ************************************

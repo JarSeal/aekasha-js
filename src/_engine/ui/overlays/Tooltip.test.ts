@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { countListeners, dispatchKey, stubKitDomAsync } from '../testing/KitDom';
 import { CMP } from '../core/CMP';
-import { createHudRoot, getHUDRootCMP } from '../core/HUD';
+import { createHudRoot, getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../core/HUD';
 import { createTooltip } from './Tooltip';
 
 /** linkedom has no getComputedStyle: the delay's fallback, the token's default */
@@ -60,6 +60,24 @@ describe('tooltip (p803 D10)', () => {
     expect(tooltip.isShown()).toBe(false);
     expect(getTooltipElems()).toHaveLength(0);
     tooltip.cmp.remove();
+  });
+
+  it('is kept in editor views where its anchor is', () => {
+    const kept = document.createElement('div');
+    kept.className = KEEP_IN_VIEWS_CLASS;
+    getHUDRootCMP().elem.append(kept);
+    kept.append(anchor);
+    const tooltip = createTooltip({ anchor, text: 'Pick a colour' });
+    tooltip.show();
+    expect(tooltip.cmp.elem.parentElement).toBe(getHUDRootCMP().elem);
+    expect(tooltip.cmp.elem.classList.contains(KEEP_IN_VIEWS_CLASS)).toBe(true);
+    tooltip.hide();
+
+    getHUDRootCMP().elem.append(anchor);
+    tooltip.show();
+    expect(tooltip.cmp.elem.classList.contains(KEEP_IN_VIEWS_CLASS)).toBe(false);
+    tooltip.cmp.remove();
+    kept.remove();
   });
 
   it('a leave before the delay shows nothing', () => {

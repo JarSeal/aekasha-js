@@ -1,6 +1,6 @@
 import type { CMPAttr, CMPHandle } from '../core/CMPTypes';
 import { CMP, classes } from '../core/CMP';
-import { getHUDRootCMP, hasHudRoot, KIT_ROOT_CLASS } from '../core/HUD';
+import { getHUDRootCMP, hasHudRoot, keepOverlayWithOwner, KIT_ROOT_CLASS } from '../core/HUD';
 import type { Kbd } from '../components/Kbd';
 import { createTypeahead, getMoveTarget, isTypeaheadKey } from '../components/RovingFocus';
 import { showAnchored, type AnchorPoint } from './Anchor';
@@ -369,6 +369,8 @@ export const createMenuSurface = (props: MenuSurfaceProps): MenuSurface => {
     elem.setAttribute('role', 'menu');
     elem.setAttribute('data-submenu', '');
     elem.setAttribute('aria-label', entry.elem.querySelector('.aekMenu__label')?.textContent ?? '');
+    // Its item is in the root level, which has the class when the menu's owner does
+    keepOverlayWithOwner(elem, entry.elem);
     (cmp.elem.parentElement ?? document.body).appendChild(elem);
     const level = makeLevel(elem, entry.submenu, entry);
     levels.push(level);
@@ -499,6 +501,7 @@ export const createMenuSurface = (props: MenuSurfaceProps): MenuSurface => {
     const parent = hasHudRoot()
       ? getHUDRootCMP().elem
       : owner?.closest(`.${KIT_ROOT_CLASS}`) ?? document.body;
+    keepOverlayWithOwner(cmp.elem, owner);
     parent.appendChild(cmp.elem);
     root.hideAnchored = showAnchored({
       elem: cmp.elem,
