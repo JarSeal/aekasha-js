@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 implemented
 Category: Fog, Rendering
 Related: p427_weather-and-mood.md (the world state that drives the fog through `updateFog`; its open question 3 is this plan), `src/_engine/features/skybox/CLAUDE.md` (the horizon colour and the sun the fog follows), `src/_engine/features/surface/CLAUDE.md` (the stable uniforms pattern this feature copies), `src/_engine/features/postfx/` (the light shafts pass, Phase 6), p990_follow-ups-from-done-plans.md (the deferred sky ideas: auto-exposure, volumetric clouds)
 
@@ -254,7 +254,7 @@ latest call winning; what p427's weather drives), `getFog()` (the current defini
 
 ## Phases
 
-### Phase 1: The feature, its data, `LINEAR` and `EXP2`
+### Phase 1: The feature, its data, `LINEAR` and `EXP2` — done
 
 1. `features/fog/` with D1's files, the schema (D2) and `aekasha/fog`'s entry and alias.
 2. The gather pipeline (D2): the suffix, `readFog`, `resolveFog`, the schema part, `SceneData`,
@@ -265,6 +265,40 @@ latest call winning; what p427's weather drives), `getFog()` (the current defini
 5. Tests: the schema (defaults, refusals), the gather (an id, inline, `__saveData` merged), the
    node is the same object across a mode switch and a toggle, the scene reset, the CPU twins of
    the factors.
+
+As built:
+
+- **A scene's `fogs` list** (Decided 3), each fog with `id` and `isDefault`; the gather fails on an
+  id twice in a scene's list. `withIdDefault` (`gatheredJson.ts`) gives a sky box's and a fog's
+  file its name as its id (`TYPES_WITH_ID_DEFAULT`). The development data's
+  `__inlineAssets.fogs` names a scene's inline fogs, for Phase 4's save.
+- **`resolveFogDef`** (`FogSchema.ts`, on `aekasha/schemas`) fills the defaults in at the gather's
+  read, so `sunScattering.enabled` is the file's mode's; the scene pass deep merges the scene's
+  entry over it (`applyFogSaveEntry`). `FOG_DEFAULTS`: `colorSource: 'SKY'`, `color: '#b4c0cc'`,
+  `linear: { near: 10, far: 500 }`, `exp2: { density: 0.005 }`, `height: { density: 0.02,
+  baseHeight: 0, falloff: 0.1, startDistance: 0, maxOpacity: 1 }`, `sunScattering: { strength:
+  0.5, exponent: 8 }`, `background: 'NONE'`. The schema is strict (an unknown key fails) and
+  refuses `linear.far` ≤ `near`. The whole schema is there; `HEIGHT` renders no fog until Phase 2
+  (the debug env warns once).
+- **The graph stays on the root scene until the scene's exit** (D3 said null without a fog):
+  `setFog(null)` and switching fogs write `enabled` and the weights only, so they never recompile.
+  A scene that starts without fogs and calls `setFog(definition)` recompiles once.
+- **`getFogNodes()`** returns `FogNodes`: `node` (the graph) and its uniforms `color`, `enabled`,
+  `modeWeights` (a vec3: x `LINEAR`, y `EXP2`, z `HEIGHT`), `near`, `far`, `exp2Density`
+  (`FogNode.ts`, `createFogNodes`). The uniforms are written on a change (`setFog`,
+  `setFogEnabled`, a scene's fogs), not every frame; Phase 2's tweens and Phase 3's sources write
+  them from `fogSystem`. Kept drawable: no negative distance or density, `far` at least `near` +
+  1 mm.
+- **`fogSystem`** (MAIN, order 1, default world) does only `FOG_COLOR` so far: while the fog
+  renders and the root scene has no `backgroundNode` and no texture background, the background is
+  a `Color` of the fog's (over the scene's own `backgroundColor` too), and what was there comes
+  back when it lets go (and at the scene's exit).
+- **`onFogChange`'s reasons** are `'set' | 'update' | 'enabled' | 'clear'` (lowercase, as the sky
+  box's `onSkyBoxChange`'s).
+- **SBP** (Decided 4): the fog's group is 990 B gzip, budget 2 KiB; it took the initial to 416.4
+  and `assets/index.js` to 412.2 KiB: 417 → 418 and 413 → 414 KiB. The baselines are recorded
+  (`api.json` also took main's `keepOverlayWithOwner`, which `db5c995e` didn't record).
+- **Not checked in a browser yet:** no scene lists a fog before Phase 5's `fogShowcase`.
 
 ### Phase 2: `HEIGHT` mode and transitions
 
