@@ -3,7 +3,6 @@
 // background) and the API. The `fog()` feature creates it at its install: without the feature,
 // the getters return null and the setters throw naming it.
 import * as THREE from 'three/webgpu';
-import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { type ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
 import type { FeatureContext } from '../../kernel/init/Features';
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';
@@ -36,8 +35,6 @@ type FogRuntime = {
   backgroundColor: THREE.Color;
   /** What the root scene's background was when `FOG_COLOR` took it, put back when it lets go */
   prevBackground: THREE.Scene['background'];
-  /** The debug env has warned that `HEIGHT` doesn't render yet */
-  hasWarnedHeight: boolean;
 };
 
 let runtime: FogRuntime | null = null;
@@ -63,12 +60,15 @@ const getSceneDefaultFog = (fogs: readonly FogDef[]) => {
 const MODE_WEIGHTS: Record<FogMode, readonly [number, number, number]> = {
   LINEAR: [1, 0, 0],
   EXP2: [0, 1, 0],
-  // p106 Phase 2 builds HEIGHT's factor: until then it renders no fog
-  HEIGHT: [0, 0, 0],
+  HEIGHT: [0, 0, 1],
 };
 
 /** The least `far − near` the graph gets: its smoothstep divides by it. */
 const MIN_LINEAR_RANGE = 1e-3;
+/** The least sun glow exponent the graph gets: `pow(0, 0)` is undefined in WGSL. */
+const MIN_SUN_EXPONENT = 1e-3;
+
+const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);
 
 /** Writes the current fog into the uniforms (when they exist). Runs on a change, not per frame. */
 const writeNodes = (rt: FogRuntime) => {
@@ -85,10 +85,17 @@ const writeNodes = (rt: FogRuntime) => {
   nodes.near.value = near;
   nodes.far.value = Math.max(def.linear.far, near + MIN_LINEAR_RANGE);
   nodes.exp2Density.value = Math.max(def.exp2.density, 0);
-  if (IS_DEBUG_ENV && def.mode === 'HEIGHT' && !rt.hasWarnedHeight) {
-    rt.hasWarnedHeight = true;
-    lwarn(`The fog '${def.id}' is HEIGHT, which renders no fog yet (p106 Phase 2).`);
-  }
+  const height = def.height;
+  nodes.heightDensity.value = Math.max(height.density, 0);
+  nodes.baseHeight.value = height.baseHeight;
+  nodes.falloff.value = Math.max(height.falloff, 0);
+  nodes.startDistance.value = Math.max(height.startDistance, 0);
+  nodes.maxOpacity.value = clamp01(height.maxOpacity);
+  // The sun's direction and colour come from p106 Phase 3's sun source; until then they're set
+  // on the nodes by hand, and the zero direction they start with glows nowhere
+  const sun = def.sunScattering;
+  nodes.sunStrength.value = sun.enabled ? clamp01(sun.strength) : 0;
+  nodes.sunExponent.value = Math.max(sun.exponent, MIN_SUN_EXPONENT);
 };
 
 const ensureNodes = (rt: FogRuntime) => {
@@ -318,7 +325,6 @@ export const installFog = (ctx: FeatureContext) => {
     nodes: null,
     backgroundColor: new THREE.Color(),
     prevBackground: null,
-    hasWarnedHeight: false,
   };
   ctx.registerPlugin((world) => {
     // MAIN, order 1 like skyBoxSystem, after it by install order: p106 Phase 3's sources read

@@ -1,10 +1,23 @@
 // The fog's one graph (p106 D3): every mode's factor, each weighted by a one-hot mode uniform, ×
-// the master switch, into three's `fog(color, factor)`. Switching the mode or the switch writes
-// uniforms only: the graph, and with it every material's fog, never changes, so nothing
-// recompiles (a different `scene.fogNode`, or a graph of another shape, recompiles every
-// material in the scene: three r187 keys every draw on its cache key).
+// the master switch, into three's `fog(color, factor)`, its colour moved toward the sun by the sun
+// glow (D4). Switching the mode, the glow or the switch writes uniforms only: the graph, and with
+// it every material's fog, never changes, so nothing recompiles (a different `scene.fogNode`, or a
+// graph of another shape, recompiles every material in the scene: three r187 keys every draw on
+// its cache key).
 import * as THREE from 'three/webgpu';
-import { densityFogFactor, fog, rangeFogFactor, uniform } from 'three/tsl';
+import {
+  cameraPosition,
+  cameraWorldMatrix,
+  densityFogFactor,
+  Fn,
+  fog,
+  mix,
+  positionView,
+  rangeFogFactor,
+  select,
+  uniform,
+  vec4,
+} from 'three/tsl';
 
 /**
  * The fog's uniforms and its graph, made once a page load (`getFogNodes`): the `fog()` feature
@@ -26,10 +39,46 @@ export type FogNodes = {
   readonly far: THREE.UniformNode<'float', number>;
   /** `EXP2`'s density */
   readonly exp2Density: THREE.UniformNode<'float', number>;
+  /** `HEIGHT`'s density per metre at `baseHeight` */
+  readonly heightDensity: THREE.UniformNode<'float', number>;
+  /** `HEIGHT`'s world Y where the density is `heightDensity` */
+  readonly baseHeight: THREE.UniformNode<'float', number>;
+  /** `HEIGHT`'s falloff per metre of height */
+  readonly falloff: THREE.UniformNode<'float', number>;
+  /** `HEIGHT`'s metres from the camera before which there's no fog */
+  readonly startDistance: THREE.UniformNode<'float', number>;
+  /** `HEIGHT`'s factor's maximum, 0 to 1 */
+  readonly maxOpacity: THREE.UniformNode<'float', number>;
+  /** The world direction toward the sun, unit length, or zero for no sun (no glow) */
+  readonly sunDirection: THREE.UniformNode<'vec3', THREE.Vector3>;
+  /** The colour the fog glows toward around the sun (linear) */
+  readonly sunColor: THREE.UniformNode<'color', THREE.Color>;
+  /** The glow's strength, 0 to 1: 0 with the fog's `sunScattering` off */
+  readonly sunStrength: THREE.UniformNode<'float', number>;
+  /** The glow's exponent: higher is tighter around the sun (more than 0) */
+  readonly sunExponent: THREE.UniformNode<'float', number>;
 };
 
 /**
- * Makes the fog's uniforms (no fog: `enabled` 0) and its graph over them.
+ * The shortest camera-to-fragment distance `HEIGHT` divides by, metres.
+ * @internal
+ */
+export const FOG_MIN_RAY_LENGTH = 1e-6;
+/**
+ * The largest exponent `HEIGHT`'s density takes (`exp(60)` ≈ 1e26, far from float32's overflow
+ * even × a long ray): a camera deep below `baseHeight` gets full fog, not an infinity.
+ * @internal
+ */
+export const FOG_MAX_DENSITY_EXPONENT = 60;
+/**
+ * Below this `falloff · Δy`, `HEIGHT` takes the mean density as the midpoint of the ray's ends
+ * (the closed form's limit, to second order) instead of dividing by it.
+ * @internal
+ */
+export const FOG_FLAT_RAY_EPSILON = 1e-3;
+
+/**
+ * Makes the fog's uniforms (no fog: `enabled` 0, no sun) and its graph over them.
  * @internal
  */
 export const createFogNodes = (): FogNodes => {
@@ -39,20 +88,76 @@ export const createFogNodes = (): FogNodes => {
   const near = uniform(0);
   const far = uniform(1);
   const exp2Density = uniform(0);
-  // Every mode's factor, each × its weight (a few ALU a pixel): a select would branch on a
-  // uniform for the same price
-  const factor = rangeFogFactor(near, far)
-    .mul(modeWeights.x)
-    .add(densityFogFactor(exp2Density).mul(modeWeights.y))
-    .mul(enabled);
+  const heightDensity = uniform(0);
+  const baseHeight = uniform(0);
+  const falloff = uniform(0);
+  const startDistance = uniform(0);
+  const maxOpacity = uniform(1);
+  const sunDirection = uniform(new THREE.Vector3());
+  const sunColor = uniform(new THREE.Color(1, 1, 1));
+  const sunStrength = uniform(0);
+  const sunExponent = uniform(1);
+
+  const graph = Fn(() => {
+    // The camera-to-fragment ray in world space, from the view position (right for sprites, fat
+    // lines and vertex nodes too, as three's fog's view depth is)
+    const ray = cameraWorldMatrix.mul(vec4(positionView, 0)).xyz.toVar();
+    const rayLength = ray.length().max(FOG_MIN_RAY_LENGTH).toVar();
+
+    // `HEIGHT` (D4): the density `heightDensity · exp(−falloff · (y − baseHeight))` integrated
+    // along the ray from `startDistance` on, in closed form; `getHeightFogFactor` is its twin
+    const fogLength = rayLength.sub(startDistance).max(0);
+    const startY = cameraPosition.y.add(ray.y.mul(startDistance.div(rayLength).min(1)));
+    const endY = cameraPosition.y.add(ray.y);
+    const startExp = falloff.mul(startY.sub(baseHeight)).negate().min(FOG_MAX_DENSITY_EXPONENT);
+    const endExp = falloff.mul(endY.sub(baseHeight)).negate().min(FOG_MAX_DENSITY_EXPONENT);
+    const expDelta = startExp.sub(endExp).toVar();
+    const startDensity = startExp.exp().toVar();
+    const endDensity = endExp.exp().toVar();
+    const meanDensity = select(
+      expDelta.abs().lessThan(FOG_FLAT_RAY_EPSILON),
+      startDensity.add(endDensity).mul(0.5),
+      startDensity.sub(endDensity).div(expDelta)
+    );
+    const heightFactor = heightDensity
+      .mul(fogLength)
+      .mul(meanDensity)
+      .negate()
+      .exp()
+      .oneMinus()
+      .min(maxOpacity);
+
+    // Every mode's factor, each × its weight (a few ALU a pixel): a select would branch on a
+    // uniform for the same price
+    const factor = rangeFogFactor(near, far)
+      .mul(modeWeights.x)
+      .add(densityFogFactor(exp2Density).mul(modeWeights.y))
+      .add(heightFactor.mul(modeWeights.z))
+      .mul(enabled);
+
+    // The sun glow (D4): the colour toward the sun's around it; a zero sun direction gives none
+    const sunCos = ray.div(rayLength).dot(sunDirection).max(0);
+    const glow = sunStrength.mul(sunCos.pow(sunExponent));
+    return fog(mix(color, sunColor, glow), factor);
+  })();
+
   return {
-    node: fog(color, factor),
+    node: graph,
     color,
     enabled,
     modeWeights,
     near,
     far,
     exp2Density,
+    heightDensity,
+    baseHeight,
+    falloff,
+    startDistance,
+    maxOpacity,
+    sunDirection,
+    sunColor,
+    sunStrength,
+    sunExponent,
   };
 };
 
@@ -75,3 +180,53 @@ export const getExp2FogFactor = (density: number, viewDepth: number) => {
   const d = density * viewDepth;
   return 1 - Math.exp(-d * d);
 };
+
+/** {@link getHeightFogFactor}'s parameters: the uniforms' values. */
+type HeightFogFactorParams = {
+  density: number;
+  baseHeight: number;
+  falloff: number;
+  startDistance: number;
+  maxOpacity: number;
+};
+
+/**
+ * `HEIGHT`'s factor on the CPU, the graph's twin step for step (for the tests and the debug
+ * tab's readouts): `1 − exp(−∫ density)` along the ray from `startDistance` on, at most
+ * `maxOpacity`.
+ * @internal
+ * @param cameraY the camera's world Y
+ * @param rayLength metres from the camera to the point
+ * @param rayY the point's world Y less the camera's
+ */
+export const getHeightFogFactor = (
+  params: HeightFogFactorParams,
+  cameraY: number,
+  rayLength: number,
+  rayY: number
+) => {
+  const { density, baseHeight, falloff, startDistance, maxOpacity } = params;
+  const length = Math.max(rayLength, FOG_MIN_RAY_LENGTH);
+  const fogLength = Math.max(length - startDistance, 0);
+  const startY = cameraY + rayY * Math.min(startDistance / length, 1);
+  const endY = cameraY + rayY;
+  const startExp = Math.min(-(falloff * (startY - baseHeight)), FOG_MAX_DENSITY_EXPONENT);
+  const endExp = Math.min(-(falloff * (endY - baseHeight)), FOG_MAX_DENSITY_EXPONENT);
+  const expDelta = startExp - endExp;
+  const startDensity = Math.exp(startExp);
+  const endDensity = Math.exp(endExp);
+  const meanDensity =
+    Math.abs(expDelta) < FOG_FLAT_RAY_EPSILON
+      ? (startDensity + endDensity) * 0.5
+      : (startDensity - endDensity) / expDelta;
+  return Math.min(1 - Math.exp(-density * fogLength * meanDensity), maxOpacity);
+};
+
+/**
+ * The sun glow on the CPU, the graph's twin: how far the fog's colour moves toward the sun's,
+ * `strength · max(cos, 0)^exponent`.
+ * @internal
+ * @param sunCos the cosine of the angle between the view ray and the sun's direction
+ */
+export const getFogSunGlow = (strength: number, exponent: number, sunCos: number) =>
+  strength * Math.max(sunCos, 0) ** exponent;

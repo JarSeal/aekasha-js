@@ -139,6 +139,30 @@ describe('the fog with the feature', () => {
     expect(rootScene.fogNode).toBe(getFogNodes()!.node);
   });
 
+  it('writes HEIGHT’s parameters and the sun glow’s', () => {
+    const nodes = getFogNodes()!;
+    setFog({
+      id: 'valley',
+      mode: 'HEIGHT',
+      height: { density: 0.05, baseHeight: -3, falloff: 0.2, startDistance: 15, maxOpacity: 0.8 },
+      sunScattering: { strength: 0.7, exponent: 16 },
+    });
+    expect(nodes.modeWeights.value.toArray()).toEqual([0, 0, 1]);
+    expect(nodes.heightDensity.value).toBe(0.05);
+    expect(nodes.baseHeight.value).toBe(-3);
+    expect(nodes.falloff.value).toBe(0.2);
+    expect(nodes.startDistance.value).toBe(15);
+    expect(nodes.maxOpacity.value).toBe(0.8);
+    expect(nodes.sunStrength.value).toBe(0.7);
+    expect(nodes.sunExponent.value).toBe(16);
+
+    // LINEAR's glow is off by default: its strength is kept, the uniform's 0
+    setFog({ id: 'plain', mode: 'LINEAR', sunScattering: { strength: 0.7 } });
+    expect(nodes.sunStrength.value).toBe(0);
+    setFog({ id: 'glowing', mode: 'LINEAR', sunScattering: { enabled: true, strength: 0.7 } });
+    expect(nodes.sunStrength.value).toBe(0.7);
+  });
+
   it('warns and keeps the fog for an id the scene doesn’t list', () => {
     switchScene([exp2Fog]);
     expect(setFog('noSuchFog')?.id).toBe('exp2');
@@ -147,11 +171,24 @@ describe('the fog with the feature', () => {
   });
 
   it('keeps the uniforms drawable whatever the values', () => {
-    setFog({ id: 'bad', mode: 'LINEAR', linear: { near: -10, far: -20 }, exp2: { density: -1 } });
+    setFog({
+      id: 'bad',
+      mode: 'LINEAR',
+      linear: { near: -10, far: -20 },
+      exp2: { density: -1 },
+      height: { density: -1, falloff: -1, startDistance: -5, maxOpacity: 2 },
+      sunScattering: { enabled: true, strength: 3, exponent: 0 },
+    });
     const nodes = getFogNodes()!;
     expect(nodes.near.value).toBe(0);
     expect(nodes.far.value).toBeGreaterThan(0);
     expect(nodes.exp2Density.value).toBe(0);
+    expect(nodes.heightDensity.value).toBe(0);
+    expect(nodes.falloff.value).toBe(0);
+    expect(nodes.startDistance.value).toBe(0);
+    expect(nodes.maxOpacity.value).toBe(1);
+    expect(nodes.sunStrength.value).toBe(1);
+    expect(nodes.sunExponent.value).toBeGreaterThan(0);
   });
 
   it('takes the graph off the root scene at a scene’s exit', () => {
