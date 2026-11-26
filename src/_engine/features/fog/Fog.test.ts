@@ -22,7 +22,9 @@ import {
   isFogEnabled,
   onFogChange,
   setFog,
+  setFogColorSource,
   setFogEnabled,
+  setFogSunSource,
   updateFog,
   type FogChangeReason,
 } from './Fog';
@@ -69,6 +71,8 @@ describe('the fog without the feature', () => {
     expect(() => setFogEnabled(false)).toThrow(/fog\(\)/);
     expect(() => onFogChange(() => {})).toThrow(/fog\(\)/);
     expect(() => updateFog({ enabled: false })).toThrow(/fog\(\)/);
+    expect(() => setFogColorSource(null)).toThrow(/fog\(\)/);
+    expect(() => setFogSunSource(null)).toThrow(/fog\(\)/);
   });
 });
 
@@ -339,6 +343,90 @@ describe('the fog with the feature', () => {
       expect(updateFog({ enabled: false })).toBeNull();
       expect(warn).toHaveBeenCalledWith(expect.stringContaining('updateFog'));
       expect(reasons).toEqual([]);
+    });
+  });
+
+  describe('the sky sources', () => {
+    const sky = new THREE.Color(0.2, 0.4, 0.8);
+    let colorReads = 0;
+    const skyColor = (out: THREE.Color) => {
+      colorReads++;
+      out.copy(sky);
+      return true;
+    };
+
+    beforeEach(() => {
+      colorReads = 0;
+      setFogColorSource(null);
+      setFogSunSource(null);
+    });
+
+    it("gives a SKY fog the source's colour, read every frame, and its own without one", () => {
+      const nodes = getFogNodes()!;
+      switchScene([exp2Fog]);
+      const own = new THREE.Color(resolveFogDef(exp2Fog).color as string);
+      expect(nodes.color.value.equals(own)).toBe(true);
+
+      setFogColorSource(skyColor);
+      expect(nodes.color.value.equals(sky)).toBe(true);
+      sky.setRGB(1.5, 0.5, 0.25);
+      frame();
+      expect(nodes.color.value.equals(sky)).toBe(true);
+
+      // No sky colour this frame: the fog's own, the scratch the source wrote not taken
+      setFogColorSource((out) => {
+        out.setRGB(NaN, NaN, NaN);
+        return false;
+      });
+      frame();
+      expect(nodes.color.value.equals(own)).toBe(true);
+    });
+
+    it('never reads it for a MANUAL fog, and switches the colour source at once', () => {
+      const nodes = getFogNodes()!;
+      setFogColorSource(skyColor);
+      switchScene([linearFog]);
+      frame();
+      expect(colorReads).toBe(0);
+      expect(nodes.color.value.equals(new THREE.Color('#336699'))).toBe(true);
+
+      updateFog({ colorSource: 'SKY' }, { transitionSec: 10 });
+      expect(nodes.color.value.equals(sky)).toBe(true);
+      updateFog({ colorSource: 'MANUAL' });
+      expect(nodes.color.value.equals(new THREE.Color('#336699'))).toBe(true);
+    });
+
+    it("writes the sun source's direction (normalized) and colour, and no sun without one", () => {
+      const nodes = getFogNodes()!;
+      switchScene([exp2Fog]);
+      expect(nodes.sunDirection.value.toArray()).toEqual([0, 0, 0]);
+
+      let hasSun = true;
+      setFogSunSource((direction, color) => {
+        direction.set(0, 3, 4);
+        color.setRGB(2, 1.5, 1);
+        return hasSun;
+      });
+      expect(nodes.sunDirection.value.distanceTo(new THREE.Vector3(0, 0.6, 0.8))).toBeLessThan(
+        1e-9
+      );
+      expect(nodes.sunColor.value.toArray()).toEqual([2, 1.5, 1]);
+
+      hasSun = false;
+      frame();
+      expect(nodes.sunDirection.value.toArray()).toEqual([0, 0, 0]);
+      hasSun = true;
+      frame();
+      setFogSunSource(null);
+      expect(nodes.sunDirection.value.toArray()).toEqual([0, 0, 0]);
+    });
+
+    it('keeps the sources across scenes', () => {
+      const nodes = getFogNodes()!;
+      setFogColorSource(skyColor);
+      switchScene([linearFog]);
+      switchScene([exp2Fog]);
+      expect(nodes.color.value.equals(sky)).toBe(true);
     });
   });
 

@@ -4,10 +4,19 @@ export {
   isFogEnabled,
   onFogChange,
   setFog,
+  setFogColorSource,
   setFogEnabled,
+  setFogSunSource,
   updateFog,
 } from './Fog';
-export type { FogChangeListener, FogChangeReason, FogUpdate, UpdateFogOpts } from './Fog';
+export type {
+  FogChangeListener,
+  FogChangeReason,
+  FogSkyColorSource,
+  FogSunSource,
+  FogUpdate,
+  UpdateFogOpts,
+} from './Fog';
 export { fog } from './FogFeature';
 export type { FogNodes } from './FogNode';
 export type { FogInput } from './FogSchema';

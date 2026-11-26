@@ -1,6 +1,7 @@
 // The fog's runtime (p106 D1, D3, D6): the current scene's fogs, the one showing, the master
 // switch, the stable uniforms and the graph the root scene's `fogNode` holds, fogSystem (the
-// transitions, the background) and the API. The `fog()` feature creates it at its install: without the feature,
+// transitions, the sky's colour and sun from the sources the app wires, the background) and the
+// API. The `fog()` feature creates it at its install: without the feature,
 // the getters return null and the setters throw naming it.
 import * as THREE from 'three/webgpu';
 import { type ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
@@ -32,6 +33,20 @@ export type FogChangeReason = 'set' | 'update' | 'enabled' | 'clear';
 /** A listener for {@link onFogChange}: the current fog (null without one) and why it changed. */
 export type FogChangeListener = (fog: Readonly<FogDef> | null, reason: FogChangeReason) => void;
 
+/**
+ * What {@link setFogColorSource} reads once a frame: writes the sky's colour (linear, as three's
+ * colours are) into `out` and returns true, or returns false without one (the fog then takes its
+ * definition's `color`).
+ */
+export type FogSkyColorSource = (out: THREE.Color) => boolean;
+
+/**
+ * What {@link setFogSunSource} reads once a frame: writes the world direction toward the sun
+ * (normalized by the fog) and the colour the fog glows toward around it (linear) and returns
+ * true, or returns false without a sun (no glow).
+ */
+export type FogSunSource = (direction: THREE.Vector3, color: THREE.Color) => boolean;
+
 /** The running state, created by the feature's install. */
 type FogRuntime = {
   /** The master switch (`setFogEnabled`): kept across scenes */
@@ -55,6 +70,14 @@ type FogRuntime = {
   targetColor: THREE.Color;
   /** Last frame's `getElapsedTime()`: the transitions advance by the difference */
   lastElapsedTime: number;
+  /** `setFogColorSource`'s, read under `colorSource: 'SKY'`: kept across scenes */
+  skyColorSource: FogSkyColorSource | null;
+  /** `setFogSunSource`'s, read in every mode: kept across scenes */
+  sunSource: FogSunSource | null;
+  /** Scratch: what the sources write, copied into the uniforms only when they return true */
+  sourceColor: THREE.Color;
+  sourceSunDirection: THREE.Vector3;
+  sourceSunColor: THREE.Color;
 };
 
 let runtime: FogRuntime | null = null;
@@ -116,9 +139,9 @@ const computeTargets = (rt: FogRuntime, def: FogDef) => {
   targets[CH.SUN_EXPONENT] = Math.max(sun.exponent, MIN_SUN_EXPONENT);
 };
 
-/** Writes the channels' values into the uniforms. Allocates nothing. */
+/** Writes the channels' numbers into the uniforms (the colour's are `writeSources`'). Allocates
+ * nothing. */
 const writeChannels = (nodes: FogNodes, values: Float64Array) => {
-  nodes.color.value.setRGB(values[CH.COLOR_R], values[CH.COLOR_G], values[CH.COLOR_B]);
   const near = values[CH.NEAR];
   nodes.near.value = near;
   // near and far move on their own clocks: keep the far past the near on the way
@@ -129,15 +152,37 @@ const writeChannels = (nodes: FogNodes, values: Float64Array) => {
   nodes.falloff.value = values[CH.FALLOFF];
   nodes.startDistance.value = values[CH.START_DISTANCE];
   nodes.maxOpacity.value = values[CH.MAX_OPACITY];
-  // The sun's direction and colour come from p106 Phase 3's sun source; until then they're set
-  // on the nodes by hand, and the zero direction they start with glows nowhere
   nodes.sunStrength.value = values[CH.SUN_STRENGTH];
   nodes.sunExponent.value = values[CH.SUN_EXPONENT];
 };
 
+/**
+ * Writes the colour and the sun into the uniforms, reading the wired sources: under `SKY` the sky's
+ * colour (the colour channels' without one, or under `MANUAL`), and the sun's direction and colour
+ * (a zero direction, no glow, without one). A source that returns false leaves the uniforms
+ * untouched by what it wrote. Allocates nothing.
+ */
+const writeSources = (rt: FogRuntime, nodes: FogNodes) => {
+  const values = rt.transitions.values;
+  const colorSource = rt.skyColorSource;
+  if (rt.current?.colorSource === 'SKY' && colorSource && colorSource(rt.sourceColor)) {
+    nodes.color.value.copy(rt.sourceColor);
+  } else {
+    nodes.color.value.setRGB(values[CH.COLOR_R], values[CH.COLOR_G], values[CH.COLOR_B]);
+  }
+  const sunSource = rt.sunSource;
+  if (sunSource && sunSource(rt.sourceSunDirection, rt.sourceSunColor)) {
+    // A zero direction stays zero: no glow
+    nodes.sunDirection.value.copy(rt.sourceSunDirection).normalize();
+    nodes.sunColor.value.copy(rt.sourceSunColor);
+  } else {
+    nodes.sunDirection.value.set(0, 0, 0);
+  }
+};
+
 /** Writes the current fog into the uniforms (when they exist): the switch and the mode at once,
- * the numbers where their transitions are. Runs on a change; `fogSystem` writes the numbers while
- * they move. */
+ * the numbers where their transitions are, the colour and the sun from the sources. Runs on a
+ * change; `fogSystem` writes the numbers while they move, and the sources every frame. */
 const writeNodes = (rt: FogRuntime) => {
   const nodes = rt.nodes;
   if (!nodes) return;
@@ -146,6 +191,7 @@ const writeNodes = (rt: FogRuntime) => {
   if (!def) return;
   nodes.modeWeights.value.fromArray(MODE_WEIGHTS[def.mode]);
   writeChannels(nodes, rt.transitions.values);
+  writeSources(rt, nodes);
 };
 
 /** Shows `def` (or none) at once: a running transition ends there (at its target, with none). */
@@ -389,6 +435,55 @@ export const onFogChange = (listener: FogChangeListener) => {
  */
 export const getFogNodes = (): FogNodes | null => (runtime ? ensureNodes(runtime) : null);
 
+/**
+ * Sets where a fog with `colorSource: 'SKY'` (the default) takes its colour from, read once a
+ * frame (null: none, the fog's `color`). The engine's features don't import each other, so the
+ * app ties it to its sky. It's kept across scenes; a `MANUAL` fog never reads it.
+ * @throws when the `fog()` feature isn't installed
+ * @remarks The colour switches with the source at once (no transition), and when it returns false
+ * the fog takes its `color` the same frame: a sky box that goes away leaves the fog its own colour.
+ * @example
+ * ```ts
+ * import { setFogColorSource } from 'aekasha/fog';
+ * import { getSkyHorizonColor } from 'aekasha/skybox';
+ *
+ * // The fog takes the sky's horizon colour, following the day-night cycle
+ * setFogColorSource((out) => getSkyHorizonColor(out) !== null);
+ * ```
+ */
+export const setFogColorSource = (source: FogSkyColorSource | null) => {
+  const rt = assertInstalled('setFogColorSource');
+  rt.skyColorSource = source;
+  writeNodes(rt);
+};
+
+/**
+ * Sets where the fog's sun glow (`sunScattering`, every mode) takes the sun's direction and colour
+ * from, read once a frame (null: none, no glow). The engine's features don't import each other,
+ * so the app ties it to its sky. It's kept across scenes.
+ * @throws when the `fog()` feature isn't installed
+ * @remarks The glow moves the fog's colour toward the source's colour by up to the fog's
+ * `sunScattering.strength`: a colour brighter than the sky's (a light's colour × its intensity)
+ * makes the fog brighter than the sky behind it.
+ * @example
+ * ```ts
+ * import { setFogSunSource } from 'aekasha/fog';
+ * import { getSunDirection } from 'aekasha/skybox';
+ *
+ * // The fog glows warm around the sky box's sun
+ * setFogSunSource((direction, color) => {
+ *   if (!getSunDirection(direction)) return false;
+ *   color.setRGB(1, 0.85, 0.6);
+ *   return true;
+ * });
+ * ```
+ */
+export const setFogSunSource = (source: FogSunSource | null) => {
+  const rt = assertInstalled('setFogSunSource');
+  rt.sunSource = source;
+  writeNodes(rt);
+};
+
 /** The transitions and the background each frame (`FOG_COLOR`). The fog is global: only the
  * default world drives it. Allocates nothing. */
 function fogSystem(world: ECSWorld) {
@@ -399,9 +494,12 @@ function fogSystem(world: ECSWorld) {
   const elapsed = getElapsedTime();
   const dt = elapsed - rt.lastElapsedTime;
   rt.lastElapsedTime = elapsed;
-  if (!isCurrentlyLoading() && stepFogTransitions(rt.transitions, dt) && rt.nodes) {
-    writeChannels(rt.nodes, rt.transitions.values);
+  const nodes = rt.nodes;
+  if (!isCurrentlyLoading() && stepFogTransitions(rt.transitions, dt) && nodes) {
+    writeChannels(nodes, rt.transitions.values);
   }
+  // The sky moves every frame (its day-night, its updates): the sources are read every frame
+  if (nodes && rt.current) writeSources(rt, nodes);
   syncBackground(rt);
 }
 
@@ -458,10 +556,15 @@ export const installFog = (ctx: FeatureContext) => {
     targets: new Float64Array(FOG_CHANNEL_COUNT),
     targetColor: new THREE.Color(),
     lastElapsedTime: getElapsedTime(),
+    skyColorSource: null,
+    sunSource: null,
+    sourceColor: new THREE.Color(),
+    sourceSunDirection: new THREE.Vector3(),
+    sourceSunColor: new THREE.Color(),
   };
   ctx.registerPlugin((world) => {
-    // MAIN, order 1 like skyBoxSystem, after it by install order: p106 Phase 3's sources read
-    // this frame's sky
+    // MAIN, order 1 like skyBoxSystem, after it by install order: the sources read this
+    // frame's sky
     world.addSystem(ECSSystemStage.MAIN, 'fogSystem', fogSystem, 1);
   });
 };
