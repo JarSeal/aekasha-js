@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Weather, Rendering, Gameplay
-Related: p420_npc-simulation-tiers.md (The gameplay contracts: C7, weather and mood, the time-of-day clock), `src/_engine/features/surface/CLAUDE.md` (the surface conditions state, p307, which this plan drives; the how-to is `docs/techniques/wet-dry-surfaces.md`), `src/_engine/features/skybox/CLAUDE.md` (the sky box's day-night time and its sky clock, which read the world clock from here once it moves), p425_game-events-missions-and-save-games.md (the world state is saved), p990_follow-ups-from-done-plans.md (volumetric clouds and weather; the surface query for wet friction)
+Related: p420_npc-simulation-tiers.md (The gameplay contracts: C7, weather and mood, the time-of-day clock), `src/_engine/features/surface/CLAUDE.md` (the surface conditions state, p307, which this plan drives; the how-to is `docs/techniques/wet-dry-surfaces.md`), `src/_engine/features/skybox/CLAUDE.md` (the sky box's day-night time and its sky clock, which read the world clock from here once it moves), p425_game-events-missions-and-save-games.md (the world state is saved), p990_follow-ups-from-done-plans.md (volumetric clouds and weather; the surface query for wet friction), p106_fog-system.md (the fog this plan drives through `updateFog`)
 
 # Weather and Mood — Stub
 
@@ -40,7 +40,9 @@ between weather presets.
   time and the simulation's) advances by `getElapsedTime()`'s change like the sky clock, stands
   still while a scene loads and restarts at every scene. It's visual, so it can stay on frame
   time; anything gameplay reads from the weather (wet friction, p307 T14) can't (open question 5).
-- No fog (`scene.fog` / fog nodes) and no audio in the engine.
+- No audio in the engine. Fog is p106's `fog()` feature (`aekasha/fog`: `LINEAR`, `EXP2` and
+  `HEIGHT` modes on one stable fog node, `updateFog(partial, { transitionSec })`), which this plan
+  drives; its colour can already follow the sky box (p106 D5).
 - PostFX passes are TSL files with `params` (`schemas/PostFxSchema.ts`, the `postFx()` feature);
   there is no colour grade or LUT pass. A mood drives a pass's params. three r187 adds a lens dirt
   TSL function (`lensDirt`, #34715, a small addon for the bloom input): rain on the lens as a PostFX
@@ -64,8 +66,9 @@ between weather presets.
    without physics (no step clock: frame time then?).
 2. **Presets and transitions:** weather presets as data (`*.weather.json`), blended over time; a
    transition's curves per value.
-3. **Fog:** height and distance fog as nodes the materials share, and its cost with impostors and
-   PostFX.
+3. **Fog:** answered by p106 (height and distance fog as one node every material shares, its
+   interactions with impostors and PostFX in its D7). What's left here: which weather values set
+   which fog parameters, and the transitions' curves.
 4. **Wind:** one vector for foliage sway in the materials (nothing sways today: static instance cells and instance sets are static by design, `src/_engine/features/instancing/CLAUDE.md`), clouds, particles and maybe physics (forces on light
    bodies), and its gusts.
 5. **Determinism:** weather that changes gameplay (wet friction, p307 T14: physics friction by the ground's wetness, read through a surface query that doesn't exist yet, p990's Terrain) changes by the step clock
