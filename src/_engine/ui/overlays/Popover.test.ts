@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { countListeners, dispatchKey, stubKitDomAsync } from '../testing/KitDom';
 import { CMP } from '../core/CMP';
-import { createHudRoot, getHUDRootCMP } from '../core/HUD';
+import { createHudRoot, getHUDRootCMP, KEEP_IN_VIEWS_CLASS } from '../core/HUD';
 import { createPopover } from './Popover';
 
 let trigger: HTMLButtonElement;
@@ -108,5 +108,22 @@ describe('popover (p803 D10)', () => {
     popover.open();
     expect(popover.cmp.elem.firstElementChild).toBe(content.elem);
     popover.cmp.remove();
+  });
+
+  it('is kept in editor views where its trigger is (the material editor’s colour panel)', () => {
+    const popover = create();
+    popover.open();
+    expect(popover.cmp.elem.classList.contains(KEEP_IN_VIEWS_CLASS)).toBe(false);
+    popover.close();
+
+    const kept = document.createElement('div');
+    kept.className = KEEP_IN_VIEWS_CLASS;
+    getHUDRootCMP().elem.append(kept);
+    kept.append(trigger);
+    popover.open();
+    expect(popover.cmp.elem.parentElement).toBe(getHUDRootCMP().elem);
+    expect(popover.cmp.elem.classList.contains(KEEP_IN_VIEWS_CLASS)).toBe(true);
+    popover.cmp.remove();
+    kept.remove();
   });
 });

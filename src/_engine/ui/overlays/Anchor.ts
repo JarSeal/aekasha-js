@@ -3,7 +3,7 @@
 // given the space left as its max size; shown in the browser's top layer (the Popover API), so no
 // window's `overflow` clips it, or in the HUD root where that's missing. Our own (about 1 KiB):
 // floating-ui would be about 3 KiB gzip for more than the kit needs.
-import { getHUDRootCMP, hasHudRoot } from '../core/HUD';
+import { getHUDRootCMP, hasHudRoot, keepOverlayWithOwner } from '../core/HUD';
 import { getWindowSize, onBoundsResize } from '../core/Window';
 
 /**
@@ -226,6 +226,7 @@ export const showAnchored = ({
     elem.showPopover();
   } else if (hasHudRoot()) {
     elem.style.zIndex = 'var(--aek-z-tooltip)';
+    keepOverlayWithOwner(elem, themeFrom ?? anchorElem);
     getHUDRootCMP().elem.appendChild(elem);
   }
   const themeSource = themeFrom ?? anchorElem;
