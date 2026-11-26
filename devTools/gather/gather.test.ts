@@ -2422,6 +2422,19 @@ describe('p106 D2: fogs', () => {
     expect((get('a')?.fogs as Record<string, unknown>[])[0]).not.toHaveProperty('debugData');
   });
 
+  it('writes each fog file into the development data, its path for the save source', () => {
+    // p106 Phase 5: without the section, every scene fog read as inline and couldn't be saved
+    const files = { 'app/fogs/valley.fog.json': valley, ...scene('a', { fogs: ['valley'] }) };
+    const { output } = gather(files);
+    expect((output?.json as Record<string, unknown>).fogs).toEqual({
+      valley: expect.objectContaining({
+        id: 'valley',
+        __sourcePath: expect.stringMatching(/app\/fogs\/valley\.fog\.json$/),
+      }),
+    });
+    expect(gather(files, { isProduction: true }).output?.json).not.toHaveProperty('fogs');
+  });
+
   it.each([
     ['an id no fog JSON has', { fogs: ['noSuchFog'] }],
     ['an id twice', { fogs: ['valley', { id: 'valley', mode: 'LINEAR' }] }],

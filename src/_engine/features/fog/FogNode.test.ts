@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import type * as THREE from 'three/webgpu';
+import { renderGroup } from 'three/tsl';
 import {
   createFogNodes,
   FOG_FLAT_RAY_EPSILON,
@@ -130,5 +132,17 @@ describe('createFogNodes', () => {
     expect(nodes.node.isNode).toBe(true);
     // Each call makes its own: the feature keeps one a page load
     expect(createFogNodes().node).not.toBe(nodes.node);
+  });
+
+  it('puts every uniform in the render group, so classic materials see each change', () => {
+    // three r187 refreshes a classic material's per-object uniforms only when it changes (p106
+    // Phase 5): a fog uniform there froze at the draw's first frame
+    const uniforms = Object.entries(createFogNodes()).filter(
+      ([, node]) => (node as { isUniformNode?: boolean }).isUniformNode
+    );
+    expect(uniforms.length).toBe(15);
+    for (const [key, node] of uniforms) {
+      expect((node as THREE.UniformNode<'float', number>).groupNode, key).toBe(renderGroup);
+    }
   });
 });

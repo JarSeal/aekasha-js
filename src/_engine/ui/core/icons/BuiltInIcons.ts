@@ -38,6 +38,7 @@ export { default as ecsIcon } from './svg/ecs-nodes.svg?raw';
 export { default as eraserIcon } from './svg/eraser-fill.svg?raw';
 export { default as fileAsterixIcon } from './svg/file-earmark-medical-fill.svg?raw';
 export { default as fileCodeIcon } from './svg/file-earmark-code-fill.svg?raw';
+export { default as fogIcon } from './svg/fog.svg?raw';
 export { default as gearIcon } from './svg/gear-fill.svg?raw';
 export { default as geometryIcon } from './svg/geometry-cube.svg?raw';
 export { default as gpuCardIcon } from './svg/gpu-card.svg?raw';

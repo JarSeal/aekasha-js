@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: in progress | Phases 1-5 implemented
 Category: Fog, Rendering
 Related: p427_weather-and-mood.md (the world state that drives the fog through `updateFog`; its open question 3 is this plan), `src/_engine/features/skybox/CLAUDE.md` (the horizon colour and the sun the fog follows), `src/_engine/features/surface/CLAUDE.md` (the stable uniforms pattern this feature copies), `src/_engine/features/postfx/` (the light shafts pass, Phase 6), p990_follow-ups-from-done-plans.md (the deferred sky ideas: auto-exposure, volumetric clouds)
 
@@ -414,13 +414,75 @@ As built:
   ground), one in `SkyBox.test.ts` (the getter through an update and a clear), four in
   `Fog.test.ts` (the sources).
 
-### Phase 4: The debug tab
+### Phase 4: The debug tab — done
 
 1. The icon (D8), in the component library.
 2. `_dbg__Fog.ts`: the pane, undo, the save source, Copy JSON, the fog factor view.
 3. `fog = false` on the debug helpers (D7).
 
-### Phase 5: The `fogShowcase` scene
+As built:
+
+- **The icon** (`ui/core/icons/svg/fog.svg`, `fogIcon` on `aekasha/ui`): D8's draft redrawn after
+  rendering it at 16 and 13 px in both themes: the sun's arc larger (radius 3.5, centred at 8, 8)
+  with its ends on the first haze line, so it sets behind it; the rays at 0° and ±45°, the same
+  distance from the arc, 1 wide; the haze lines as drafted. The component library's icons demo
+  shows six samples, not every built-in: `fog` is its seventh (`ICON_SAMPLES`,
+  `hub/_assets/ts/_library/core.ts`), so `yarn verify:ui --only icons` checks it in both themes
+  and densities. The design document's icon list is generated, so it lists it by itself.
+- **The tab** (`debug/_dbg__Fog.ts`, `fogControls` after `surfaceConditionsControls`, loaded by
+  `FogFeature.ts`' `ctx.onDebug` inside `if (IS_DEBUG_ENV)`; `keepOnSceneChange`, every field a
+  `{ get, set }` over the live fog, refreshed every 250 ms and on `onFogChange`): "Scene's fogs"
+  (a select of the scene's fogs, a code fog while it shows and none: `setFog`, undoable as
+  `fog.select`; the master switch; a note for no fog or a code fog), "Fog" (its `enabled`, the
+  mode as a segmented control, only the mode's fields shown), "Colour" (the source; under `SKY`
+  the sky's live colour as text, or that the fog falls back, and the colour field as "Fallback
+  colour"; under `MANUAL` "Colour"; switching to `MANUAL` while the sky's colour shows seeds the
+  colour from it, one undo step with the source; the background), "Sun glow" (its fields and the
+  sun's colour as text, or none), "View" (the fog factor switch) and Copy JSON (the definition as
+  `getFog()` has it). Beyond D8: the select, the sun colour readout, the fallback colour and a
+  header button clearing the overrides (the sky box tab's). The master switch and the view are
+  runtime only (no undo, no save), like the sky box's day-night transport; the view stays on
+  across scenes until switched off.
+- **Edits** (`debug/_dbg__FogEdits.ts`): a field's write goes through `updateFog` (at once) and
+  into `AEK_debugFog` (`{ [sceneId]: { [fogId]: FogOverrides } }`, `FOG_DEBUG_OVERRIDES_LS_KEY`),
+  pruned against the scene's definition (only what differs is kept), and is recorded as
+  `fog.values` (`{ sceneId, fogId, prev, next }` as partial definitions; a drag's ticks coalesce
+  by path). An undo for another scene than the current one waits for it. A fog made in code
+  (`setFog(definition)`) shows its edits but keeps none.
+- **The overrides in the runtime** (the sky box's way): `Fog.ts` merges a scene fog's overrides
+  in (`applyFogSaveEntry`) when it shows, at a scene's start and on `setFog(id)`, only in the
+  debug env (`withDebugOverrides`), so a production build never reads LS. The runtime keeps the
+  scene id (`sceneData.id`). New `@internal` exports for the tab: `_getSceneFogs` (the scene's id
+  and fogs without the edits), `_setFogViewNode` / `_getFogViewNode` and `_isFogSkyColorLive`
+  (whether `writeSources` took the sky's colour this frame).
+- **The save source** (`debug/_dbg__FogSave.ts`, the sky box's): Save writes each scene's latest
+  entry with the overrides deep-merged, pruned against the file, into the `.fog.json`'s
+  `__saveData`; an inline fog moves into `<scene folder>/<id>.fog.json` (`_dbg__SaveEntries.ts`
+  gained `fogs` in its kinds, `INLINE_FILE_TYPES` and `INLINE_FILE_SCHEMAS`).
+- **The fog factor view:** `FogNodes` gained `factor` (public: the graph's factor, a float node),
+  so `FogNode.ts` builds the factor and the glowing colour as two `Fn`s and `node` is
+  `fog(glowColor, factor)` (the same graph, the ray computed in each). The view is
+  `vec4(vec3(factor), output.a)`, shown in the graph's place by `_setFogViewNode`
+  (`showFogNode` takes it over the graph; a scene's exit takes either off).
+- **D7:** the env ball and the axes gizmo draw in private scenes (`createBallScene`, the gizmo's
+  viewport), which never get the fog node, so they're unchanged. Every debug object in the root
+  scene goes through `markDebugHelper`, which now sets `fog = false` on the subtree's materials
+  as they are at the call (its JSDoc, the Hub's debug-suite page, `debug/CLAUDE.md`): the 3D
+  symbols (marked after their per-clone materials now, not before), the light and camera
+  helpers, the ray helpers, the physics wireframes, the character gizmos and the lines overlays
+  (LOD, spatial, merging, streaming, world bounds), each line with its own material. The Debug
+  tools' grid, axes and polar grid weren't marked (the census knew them by type): they are now.
+- **Checked** (2026-11-26, Windows Chrome 157, WebGPU, AMD RDNA 3; `skyShowcase` with a `HEIGHT`
+  fog set from code, through the test bridge): the pane builds, the mode and colour source
+  switch, `MANUAL` takes the sky's colour, one undo puts back both, the factor view compiles and
+  shows grey rising with distance and falling with height (the sky not fogged), and off again
+  the graph; no console error. Not checked yet (no scene lists a fog before Phase 5): an edit of
+  a scene's fog kept across a reload and saved into its file; the unit tests cover them
+  (`_dbg__FogEdits.test.ts`, `_dbg__FogSave.test.ts`, `Fog.test.ts`' debug hooks).
+- **Baselines:** `api.json` took `fogIcon` and the five internal exports; the fog's SBP group is
+  2.4 KiB gzip (of its 3 KiB budget); no debug code in the production build.
+
+### Phase 5: The `fogShowcase` scene — done
 
 1. `src/app/scenes/fogShowcase/`: a valley between hills (the toolkit's `rulesTerrain` or
    `generateTerrain`, so no new assets), a lake at the valley floor, a row of posts receding from
@@ -429,6 +491,71 @@ As built:
    switch them, play the day (the colour following the sky), a dense valley fog preset.
 3. Its `devTools/verify/scenes.config.ts` entry, a configuration per mode, baselines on the
    Windows Chrome (real GPU).
+4. In a real browser, what Phase 4 couldn't check without a scene's fog: a scene fog's edit kept
+   across a reload, undone, and saved into its `.fog.json` (the Æ menu's Save), and the scene
+   loading with the saved entry.
+
+As built (sections 1-2):
+
+- **The valley** (`src/app/scenes/fogShowcase/fogShowcase.ts`) is `generateTerrain` on the main
+  thread, not `rulesTerrain` (seeded noise only: it can't shape a valley): 800 × 480 m, 2.5 m
+  cells, its noise (`maxHeight` 1, four octaves, seed 7) reshaped by `heightModifier` into a
+  meandering floor 2 m up, a lake basin, 20-55 m hills and a ridge closing the west end; its
+  material `fogShowcaseGround` (the toolkit's terrain material over `grass01`, `sand01`, `rocks02`,
+  `cliffs02` and `macroNoise`, no new textures) weighed by rules into its vertex colours with the
+  horizon AO. The lake is a plane at y = 0; the posts stand every 25 m from 25 to 700 m in front of
+  the camera, each 100 m a red one twice as tall. The camera is at the east end looking west, the
+  sky (`fogShowcaseSky`, `DAY_NIGHT`) standing still at 16:30 with the sun 21° up over the far end.
+  No physics.
+- **The fogs**: `fogShowcaseHeight` (the default: density 0.01, base 0, falloff 0.15: the floor
+  about 70 % fogged at 300 m, the hilltops clear), `fogShowcaseLinear` (30 to 600 m) and
+  `fogShowcaseExp2` (0.004), all `SKY`-coloured.
+- **The tab** (`_dbg__fogShowcase.ts`, `fogShowcase`, scene-scoped): the fog switch (`setFog`), the
+  day (hour, play, speed) and "Fill the valley" / "Lift it" (`updateFog` over 4 s to density 0.08,
+  base 0, falloff 0.35, and back to the values it had; another fog forgets them). Runtime only: no
+  undo, no save (the engine's Fog tab edits).
+- **A bug the scene found, fixed in `FogNode.ts`:** the fog's uniforms were three's default
+  per-object group, and three r187 refreshes a classic material's (`MeshStandardMaterial`, the
+  engine's `STANDARD`) per-object uniforms only when the material, the object or the lights change
+  (`NodeMaterialObserver.needsRefresh`: a material with node properties, the terrain's, refreshes
+  every frame). So a `STANDARD` draw kept the fog of its first frame: the posts and the lake stayed
+  16:30's bright fog colour at night and ignored every fog change (their `object` uniform buffer
+  held the load-time values while the nodes had moved; the generated shaders were identical). Every
+  fog uniform is now in three's `renderGroup` (shared, written once per render call), as three's own
+  `scene.fog` uniforms are; `FogNode.test.ts` checks it. Phases 2-4 never saw it: they checked only
+  node materials (`skyShowcase`'s spheres had no fog). Any engine uniform a classic material reads
+  through a scene-wide node has the same trap.
+- **Checked** (2026-11-26, Windows Chrome 157, WebGPU, AMD RDNA 3, through the test bridge): each
+  fog and none, the fill and the lift (`getFog()` and the uniforms), the colour at 7:00, 16:30 and
+  19:00, a `MANUAL` colour reaching the `STANDARD` materials; no console error.
+
+As built (section 3):
+
+- **The scene runner's runs** are `variants`, not configurations (the runner's configurations are
+  its physics and env setups): `fogShowcase@linear`, `@exp2` and `@height`, each with the URL
+  parameter `fogShowcaseFog` the scene reads after its build (`showFogFromUrl`: `linear`, `exp2`,
+  `height` or `none`, else the scene's default), each in the five configurations, `debugger` with
+  the scene's tab (`tabs: ['fogShowcase']`).
+- **Baselines** recorded on the Windows Chrome (WebGPU, AMD RDNA 3; local, `.cache/verify/scenes/webgpu/`):
+  15 runs, no errors, the probe hash `811c9dc5` (no bodies); a second run passed all 15 against them.
+
+As built (section 4):
+
+- **A second bug the scene found, fixed in the gather:** the development data had no `fogs`
+  section (`devTools/gatherAppData.ts` wrote `skyboxes` and not `fogs`), so `findSceneAssetFile`
+  found no file for any scene fog and called it inline: the Æ menu said "Nothing to save in this
+  scene" with an edit in `AEK_debugFog`. Phase 4's `_dbg__FogSave.test.ts` passed on its own mock
+  data, which had the section. The development data now has `fogs` (each file's fog with its
+  `__sourcePath`; not in a production build), `gather.test.ts` checks it, and
+  `devTools/gather/CLAUDE.md` says so.
+- **Checked** (2026-11-26, Windows Chrome 157, WebGPU, against `yarn dev`, through the test bridge
+  and the keyboard): `fogShowcaseHeight`'s density typed in the Fog tab (0.015) reaches the fog and
+  its uniform and `AEK_debugFog`; a reload keeps it; Ctrl+Z puts back the file's 0.01 (the
+  override pruned to none) and Ctrl+Shift+Z the edit; the Æ menu's Save scene writes
+  `__saveData.fogShowcase` into `fogShowcaseHeight.fog.json` (`{ height: { density: 0.015 } }`, the
+  `__meta` stamped with the three versions and the author), clears `AEK_debugFog` and reloads
+  through the gather; a fresh load reads 0.015 from the scene's data. The file was put back after
+  the check. Phase 4's "not checked yet" items are all checked.
 
 ### Phase 6: Sun light shafts (gated)
 
@@ -445,7 +572,8 @@ As built:
 1. The Hub: a feature page `hub/pages/features/fog/` (group World, after Surface conditions;
    `aek:covers` naming the new `CLAUDE.md`'s `##` sections), the API with `@example`s, an example
    page with `fogShowcase` and its `fogShowcase.hub.png`; `yarn hub:build`.
-2. `features/fog/CLAUDE.md`; the root `.claude/CLAUDE.md` (the map, the Bootstrap flow's feature
+2. `features/fog/CLAUDE.md` (with Phase 4's tab, its overrides and save source, and
+   `markDebugHelper`'s fog); the root `.claude/CLAUDE.md` (the map, the Bootstrap flow's feature
    list: seventeen, the Architecture's `features/` line), `kernel/init/CLAUDE.md` (the count),
    `readme.md` (Features, the `*.fog.json` asset type).
 3. `sbp.config.ts`: the `app` profile's `_engine/features/fog` budget and the raised `initial`

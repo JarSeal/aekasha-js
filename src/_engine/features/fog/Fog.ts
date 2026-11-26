@@ -4,6 +4,7 @@
 // API. The `fog()` feature creates it at its install: without the feature,
 // the getters return null and the setters throw naming it.
 import * as THREE from 'three/webgpu';
+import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import { type ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
 import type { FeatureContext } from '../../kernel/init/Features';
 import { getElapsedTime } from '../../kernel/loop/MainLoop';
@@ -12,9 +13,10 @@ import { toThreeColor } from '../../kernel/render/ThreeMath';
 import { getRootScene, type SceneData } from '../../kernel/scene/Scene';
 import { isCurrentlyLoading } from '../../kernel/scene/SceneLoader';
 import { deepMerge } from '../../utils/DeepMerge';
+import { lsGetItem } from '../../utils/LocalAndSessionStorage';
 import { lwarn } from '../../utils/Logger';
 import { createFogNodes, type FogNodes } from './FogNode';
-import { type FogInput, type FogOverrides, resolveFogDef } from './FogSchema';
+import { applyFogSaveEntry, type FogInput, type FogOverrides, resolveFogDef } from './FogSchema';
 import {
   createFogTransitions,
   FOG_CHANNEL as CH,
@@ -51,8 +53,13 @@ export type FogSunSource = (direction: THREE.Vector3, color: THREE.Color) => boo
 type FogRuntime = {
   /** The master switch (`setFogEnabled`): kept across scenes */
   isEnabled: boolean;
+  /** The scene `sceneFogs` are (its id), or null between scenes */
+  sceneId: string | null;
   /** The current scene's fogs (its data's `fogs`, resolved by the gatherer) */
   sceneFogs: readonly FogDef[];
+  /** The debug tab's fog factor view (`_setFogViewNode`), shown in the graph's place: kept across
+   * scenes */
+  viewNode: THREE.Node | null;
   /** The fog showing, or null */
   current: FogDef | null;
   listeners: Set<FogChangeListener>;
@@ -74,6 +81,8 @@ type FogRuntime = {
   skyColorSource: FogSkyColorSource | null;
   /** `setFogSunSource`'s, read in every mode: kept across scenes */
   sunSource: FogSunSource | null;
+  /** Whether the colour uniform holds the sky's (`SKY`, its source answered) this frame */
+  isSkyColorLive: boolean;
   /** Scratch: what the sources write, copied into the uniforms only when they return true */
   sourceColor: THREE.Color;
   sourceSunDirection: THREE.Vector3;
@@ -91,6 +100,23 @@ const assertInstalled = (caller: string): FogRuntime => {
 
 const notify = (rt: FogRuntime, reason: FogChangeReason) => {
   for (const listener of rt.listeners) listener(rt.current, reason);
+};
+
+/**
+ * The debug tab's edits of the scenes' fogs (`{ [sceneId]: { [fogId]: FogOverrides } }`), read
+ * when a scene's fog shows (debug env only).
+ * @internal
+ */
+export const FOG_DEBUG_OVERRIDES_LS_KEY = 'AEK_debugFog';
+
+/** A scene fog with the debug tab's edits merged in (debug env only: production never reads LS). */
+const withDebugOverrides = (rt: FogRuntime, def: FogDef): FogDef => {
+  if (!IS_DEBUG_ENV || !rt.sceneId) return def;
+  const allOverrides = lsGetItem(FOG_DEBUG_OVERRIDES_LS_KEY, {}) as {
+    [sceneId: string]: { [fogId: string]: FogOverrides } | undefined;
+  } | null;
+  const overrides = allOverrides?.[rt.sceneId]?.[def.id];
+  return overrides ? applyFogSaveEntry(def, overrides) : def;
 };
 
 /** A scene's starting fog: the last with `isDefault`, else the first, else none. */
@@ -165,7 +191,9 @@ const writeChannels = (nodes: FogNodes, values: Float64Array) => {
 const writeSources = (rt: FogRuntime, nodes: FogNodes) => {
   const values = rt.transitions.values;
   const colorSource = rt.skyColorSource;
-  if (rt.current?.colorSource === 'SKY' && colorSource && colorSource(rt.sourceColor)) {
+  rt.isSkyColorLive =
+    rt.current?.colorSource === 'SKY' && colorSource !== null && colorSource(rt.sourceColor);
+  if (rt.isSkyColorLive) {
     nodes.color.value.copy(rt.sourceColor);
   } else {
     nodes.color.value.setRGB(values[CH.COLOR_R], values[CH.COLOR_G], values[CH.COLOR_B]);
@@ -215,8 +243,13 @@ const ensureNodes = (rt: FogRuntime) => {
  * recompiles. */
 const showFogNode = (rt: FogRuntime) => {
   const rootScene = getRootScene();
-  if (rootScene) rootScene.fogNode = ensureNodes(rt).node;
+  if (rootScene) rootScene.fogNode = rt.viewNode ?? ensureNodes(rt).node;
 };
+
+/** Whether the root scene's `fogNode` is the fog's (its graph or the debug view). */
+const isFogNodeShown = (rt: FogRuntime, rootScene: THREE.Scene) =>
+  rootScene.fogNode !== null &&
+  (rootScene.fogNode === rt.nodes?.node || rootScene.fogNode === rt.viewNode);
 
 /** Puts back the background `FOG_COLOR` took, if it holds it. */
 const releaseBackground = (rt: FogRuntime, rootScene: THREE.Scene) => {
@@ -297,7 +330,7 @@ export const setFog = (fog: string | FogInput | null): Readonly<FogDef> | null =
       lwarn(`setFog: the current scene has no fog with the id '${fog}' (its JSON's fogs).`);
       return rt.current;
     }
-    setCurrent(rt, found);
+    setCurrent(rt, withDebugOverrides(rt, found));
   } else {
     setCurrent(rt, resolveFogDef(fog));
   }
@@ -504,6 +537,44 @@ function fogSystem(world: ECSWorld) {
 }
 
 /**
+ * The current scene's id and its fogs as its data has them (without the debug tab's edits), or
+ * null without the `fog()` feature: the debug tab's.
+ * @internal
+ */
+export const _getSceneFogs = (): {
+  sceneId: string | null;
+  fogs: readonly Readonly<FogDef>[];
+} | null => (runtime ? { sceneId: runtime.sceneId, fogs: runtime.sceneFogs } : null);
+
+/**
+ * Shows `node` in the fog graph's place on the root scene (the debug tab's fog factor view), or
+ * the graph again (null). Kept across scenes: each scene with a fog shows it. A different fog node
+ * recompiles every material in the scene. The debug tab's.
+ * @internal
+ */
+export const _setFogViewNode = (node: THREE.Node | null) => {
+  const rt = assertInstalled('_setFogViewNode');
+  if (rt.viewNode === node) return;
+  const rootScene = getRootScene();
+  const isShown = rootScene !== null && isFogNodeShown(rt, rootScene);
+  rt.viewNode = node;
+  if (isShown) showFogNode(rt);
+};
+
+/**
+ * Whether the fog's colour is the sky's this frame (`colorSource: 'SKY'` and its source answered),
+ * not its own `color`: the debug tab's readout.
+ * @internal
+ */
+export const _isFogSkyColorLive = () => runtime?.isSkyColorLive ?? false;
+
+/**
+ * The fog factor view the debug tab shows (`_setFogViewNode`), else null.
+ * @internal
+ */
+export const _getFogViewNode = () => runtime?.viewNode ?? null;
+
+/**
  * A scene's exit: no fog, none of its fogs, the graph off the root scene (the next scene's
  * materials build without it unless it has a fog) and the background put back.
  * @internal
@@ -511,10 +582,11 @@ function fogSystem(world: ECSWorld) {
 export const clearFogForScene = () => {
   const rt = runtime;
   if (!rt) return;
+  rt.sceneId = null;
   rt.sceneFogs = [];
   const rootScene = getRootScene();
   if (rootScene) {
-    if (rt.nodes && rootScene.fogNode === rt.nodes.node) rootScene.fogNode = null;
+    if (isFogNodeShown(rt, rootScene)) rootScene.fogNode = null;
     releaseBackground(rt, rootScene);
   }
   rt.prevBackground = null;
@@ -531,10 +603,11 @@ export const clearFogForScene = () => {
 export const applySceneFogs = (sceneData: SceneData) => {
   const rt = runtime;
   if (!rt) return;
+  rt.sceneId = sceneData.id;
   rt.sceneFogs = sceneData.fogs ?? [];
   const def = getSceneDefaultFog(rt.sceneFogs);
   if (!def) return;
-  setCurrent(rt, def);
+  setCurrent(rt, withDebugOverrides(rt, def));
   showFogNode(rt);
   notify(rt, 'set');
 };
@@ -546,7 +619,9 @@ export const applySceneFogs = (sceneData: SceneData) => {
 export const installFog = (ctx: FeatureContext) => {
   runtime = {
     isEnabled: true,
+    sceneId: null,
     sceneFogs: [],
+    viewNode: null,
     current: null,
     listeners: new Set(),
     nodes: null,
@@ -558,6 +633,7 @@ export const installFog = (ctx: FeatureContext) => {
     lastElapsedTime: getElapsedTime(),
     skyColorSource: null,
     sunSource: null,
+    isSkyColorLive: false,
     sourceColor: new THREE.Color(),
     sourceSunDirection: new THREE.Vector3(),
     sourceSunColor: new THREE.Color(),

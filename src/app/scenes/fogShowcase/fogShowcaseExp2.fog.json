@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../../.schemas/fog.schema.json",
+  "mode": "EXP2",
+  "exp2": { "density": 0.004 },
+  "debugData": {
+    "name": "Exp²",
+    "description": "three's FogExp2 over the showcase's valley: density 0.004, so a quarter fogged at 140 m, three quarters at 300 m, the hills' far end gone; the sky's horizon colour, no sun glow (the mode's default, three's look)."
+  }
+}

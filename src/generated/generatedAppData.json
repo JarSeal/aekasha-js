@@ -2293,6 +2293,626 @@
       },
       "__features": []
     },
+    "fogShowcase": {
+      "name": "Fog showcase (p106)",
+      "description": "The fog feature's verification scene (p106 Phase 5): an 800 m valley running east-west between 35-55 m hills, generated in the scene code by the toolkit's generateTerrain (seeded noise reshaped into a meandering valley floor, a lake basin and a ridge closing its west end; grass, a sandy shore, rocky slopes and triplanar cliffs laid into its vertex colours by rules, with the horizon AO), a lake at the valley floor, and a row of posts along the floor every 25 m from 30 m in front of the camera to 700 m (every fourth one, each 100 m, red and taller), so the fog's distance reads at a glance. The DAY_NIGHT sky stands still at 16:30, the sun low over the valley's far end. Three fogs, one per mode, each in the sky's horizon colour: HEIGHT (the default: the valley floor fogged, the hilltops clear, glowing toward the sun), LINEAR (30 to 600 m) and EXP2 (density 0.004). The debug drawer's Fog showcase tab switches them, sets the hour and plays the day (the fog's colour following the sky), and fills the valley with a dense fog over a few seconds (updateFog).",
+      "cameras": [
+        {
+          "camProps": {
+            "active": true,
+            "near": 0.1,
+            "far": 1200,
+            "position": {
+              "x": 372,
+              "y": 9,
+              "z": -14
+            },
+            "lookAtPoint": {
+              "x": 0,
+              "y": 6,
+              "z": 0
+            },
+            "type": "PERSPECTIVE",
+            "fov": 55,
+            "appId": "fogShowcaseCamera"
+          },
+          "entityOpts": {
+            "appId": "fogShowcaseCamera",
+            "debugData": {
+              "name": "Fog showcase camera",
+              "description": "At the valley's east end, a few metres over its floor, looking west down the valley: the posts recede on the left, the lake in the middle distance, the hills on both sides, the sun low ahead."
+            }
+          }
+        }
+      ],
+      "materials": [
+        {
+          "id": "fogShowcaseGround",
+          "debugData": {
+            "name": "Fog showcase ground",
+            "description": "The fog showcase's valley: grass01, sand01 on the lake's shore, rocks02 on the slopes and cliffs02 triplanar past a 35-50° slope gate, weighed by the vertex colours the scene's rules laid (RGB_AO, the horizon AO in A) through the height blend, DUAL_SCALE anti-tiling, the macro variation."
+          },
+          "tslFile": "scenes/fogShowcase/fogShowcaseGround.tsl.ts",
+          "staticDefines": {
+            "terrain": {
+              "layers": [
+                {},
+                {},
+                {},
+                {
+                  "projection": {
+                    "mode": "TRIPLANAR",
+                    "slopeGate": [
+                      35,
+                      50
+                    ]
+                  }
+                }
+              ],
+              "blend": {
+                "source": "VERTEX_COLOR",
+                "vertexColor": {
+                  "layout": "RGB_AO"
+                },
+                "mode": "HEIGHT"
+              },
+              "ao": {
+                "vertex": true
+              },
+              "antiTiling": {
+                "mode": "DUAL_SCALE"
+              },
+              "macro": {
+                "scale": 64
+              }
+            }
+          },
+          "inputs": {
+            "layer0": {
+              "textureSet": "grass01"
+            },
+            "layer1": {
+              "textureSet": "sand01"
+            },
+            "layer2": {
+              "textureSet": "rocks02"
+            },
+            "layer3": {
+              "textureSet": "cliffs02"
+            },
+            "macro": {
+              "texture": "macroNoise"
+            }
+          },
+          "type": "STANDARDNODEMATERIAL"
+        }
+      ],
+      "skyboxes": [
+        {
+          "base": {
+            "type": "COLOR",
+            "color": "#000000"
+          },
+          "atmosphere": {
+            "nightSkyColor": "#0a1020"
+          },
+          "suns": [
+            {
+              "glowIntensity": 0.4,
+              "light": {}
+            }
+          ],
+          "moons": [
+            {
+              "phase": 0.4,
+              "phaseMode": "CYCLE",
+              "light": {
+                "intensity": 0.5
+              }
+            }
+          ],
+          "stars": {
+            "milkyWay": {}
+          },
+          "clouds": {
+            "coverage": 0.35
+          },
+          "ground": {},
+          "dayNight": {
+            "timeOfDay": 16.5,
+            "playing": false,
+            "dayOfYear": 100
+          },
+          "id": "fogShowcaseSky",
+          "debugData": {
+            "name": "Fog showcase sky",
+            "description": "The DAY_NIGHT preset (as the shared dayNight sky box) standing still at 16:30, the sun low in the west at the valley's far end, so the fog's colour and its sun glow are the same on every visit and in the scene runner's snapshot; the showcase tab's Day section sets the hour and plays the day."
+          }
+        }
+      ],
+      "fogs": [
+        {
+          "id": "fogShowcaseLinear",
+          "isDefault": false,
+          "enabled": true,
+          "mode": "LINEAR",
+          "colorSource": "SKY",
+          "color": "#b4c0cc",
+          "linear": {
+            "near": 30,
+            "far": 600
+          },
+          "exp2": {
+            "density": 0.005
+          },
+          "height": {
+            "density": 0.02,
+            "baseHeight": 0,
+            "falloff": 0.1,
+            "startDistance": 0,
+            "maxOpacity": 1
+          },
+          "sunScattering": {
+            "strength": 0.5,
+            "exponent": 8,
+            "enabled": false
+          },
+          "background": "NONE",
+          "debugData": {
+            "name": "Linear",
+            "description": "three's Fog over the showcase's valley: none to the post at 25 m, full past 600 m (the posts at 600 and 700 m gone), the sky's horizon colour, no sun glow (the mode's default, three's look)."
+          }
+        },
+        {
+          "id": "fogShowcaseExp2",
+          "isDefault": false,
+          "enabled": true,
+          "mode": "EXP2",
+          "colorSource": "SKY",
+          "color": "#b4c0cc",
+          "linear": {
+            "near": 10,
+            "far": 500
+          },
+          "exp2": {
+            "density": 0.004
+          },
+          "height": {
+            "density": 0.02,
+            "baseHeight": 0,
+            "falloff": 0.1,
+            "startDistance": 0,
+            "maxOpacity": 1
+          },
+          "sunScattering": {
+            "strength": 0.5,
+            "exponent": 8,
+            "enabled": false
+          },
+          "background": "NONE",
+          "debugData": {
+            "name": "Exp²",
+            "description": "three's FogExp2 over the showcase's valley: density 0.004, so a quarter fogged at 140 m, three quarters at 300 m, the hills' far end gone; the sky's horizon colour, no sun glow (the mode's default, three's look)."
+          }
+        },
+        {
+          "id": "fogShowcaseHeight",
+          "isDefault": true,
+          "enabled": true,
+          "mode": "HEIGHT",
+          "colorSource": "SKY",
+          "color": "#b4c0cc",
+          "linear": {
+            "near": 10,
+            "far": 500
+          },
+          "exp2": {
+            "density": 0.005
+          },
+          "height": {
+            "density": 0.01,
+            "baseHeight": 0,
+            "falloff": 0.15,
+            "startDistance": 0,
+            "maxOpacity": 1
+          },
+          "sunScattering": {
+            "strength": 0.5,
+            "exponent": 8,
+            "enabled": true
+          },
+          "background": "NONE",
+          "debugData": {
+            "name": "Height",
+            "description": "The showcase's exponential height fog, its default: 0.01 per metre at the lake's level, falling by 0.15 per metre of height, so the valley floor is about 70 % fogged at 300 m and the 50 m hilltops stay clear; the sky's horizon colour, glowing toward the sun (the mode's default)."
+          }
+        }
+      ],
+      "id": "fogShowcase",
+      "sceneFile": "./scenes/fogShowcase/fogShowcase.ts",
+      "__sourcePath": "src/app/scenes/fogShowcase/fogShowcase.scene.json",
+      "textureSets": [
+        {
+          "id": "grass01",
+          "category": "GRASS",
+          "physicalSize": [
+            1.4,
+            1.4
+          ],
+          "heightScale": 0.002,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "grass01_albedoHeight",
+              "normal": "grass01_normal",
+              "orm": "grass01_orm"
+            },
+            "LITE": {
+              "albedoRough": "grass01_albedoRough",
+              "normalHeight": "grass01_normalHeight"
+            },
+            "MINIMAL": {
+              "albedoHeight": "grass01_albedoHeightAO"
+            }
+          },
+          "debugData": {
+            "name": "Grass 01 (lawn ground)",
+            "description": "ambientCG Grass004, CC0: lawn-grass ground seen from the top, no blades. All three packings (the gallery's packing comparison, p303 D6)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 2.5,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.6,
+            "wetDarkening": 0.35,
+            "wetRoughness": 0.55,
+            "puddleResponse": 0.2,
+            "dryingSpeed": 0.8
+          },
+          "averageColor": "#5c6730"
+        },
+        {
+          "id": "sand01",
+          "category": "SAND",
+          "physicalSize": [
+            3,
+            3
+          ],
+          "heightScale": 0.057,
+          "packings": {
+            "FULL": {
+              "albedoHeight": "sand01_albedoHeight",
+              "normal": "sand01_normal",
+              "orm": "sand01_orm"
+            },
+            "LITE": {
+              "albedoRough": "sand01_albedoRough",
+              "normalHeight": "sand01_normalHeight"
+            },
+            "MINIMAL": {
+              "albedoHeight": "sand01_albedoHeightAO"
+            }
+          },
+          "debugData": {
+            "name": "Sand 01 (dry dunes)",
+            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.85,
+            "wetDarkening": 0.55,
+            "wetRoughness": 0.4,
+            "puddleResponse": 0.3,
+            "dryingSpeed": 1.6
+          },
+          "averageColor": "#ab966b"
+        },
+        {
+          "id": "rocks02",
+          "category": "ROCKS",
+          "physicalSize": [
+            1.3,
+            1.3
+          ],
+          "heightScale": 0.037,
+          "packings": {
+            "LITE": {
+              "albedoRough": "rocks02_albedoRough",
+              "normalHeight": "rocks02_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Rocks 02 (stony mud)",
+            "description": "Poly Haven brown_mud_rocks_01, CC0: stony brown ground."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.4,
+            "wetDarkening": 0.35,
+            "wetRoughness": 0.2,
+            "puddleResponse": 0.6,
+            "dryingSpeed": 1
+          },
+          "averageColor": "#574d3d"
+        },
+        {
+          "id": "cliffs02",
+          "category": "CLIFF",
+          "physicalSize": [
+            6,
+            6
+          ],
+          "heightScale": 0.25,
+          "packings": {
+            "LITE": {
+              "albedoRough": "cliffs02_albedoRough",
+              "normalHeight": "cliffs02_normalHeight"
+            }
+          },
+          "debugData": {
+            "name": "Cliffs 02 (dark veined)",
+            "description": "ambientCG Rock058, CC0: dark blue-grey veined cliff."
+          },
+          "defaultPacking": "LITE",
+          "surface": {
+            "tint": "#ffffff",
+            "normalStrength": 1,
+            "roughnessScale": 1,
+            "aoStrength": 1,
+            "heightContrast": 1,
+            "porosity": 0.2,
+            "wetDarkening": 0.25,
+            "wetRoughness": 0.15,
+            "puddleResponse": 0,
+            "dryingSpeed": 1.2
+          },
+          "averageColor": "#4c5258"
+        }
+      ],
+      "textures": [
+        {
+          "id": "grass01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "grass01 albedoRough (LITE)",
+            "description": "The texture set grass01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/grass01/grass01_albedoRough.pack.50a0bb8d.ktx2",
+          "__bytes": {
+            "in": 14718033,
+            "out": 1310929
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.1071,
+            0.1347,
+            0.0293
+          ]
+        },
+        {
+          "id": "grass01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "grass01 normalHeight (LITE)",
+            "description": "The texture set grass01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Grass004's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/grass01/grass01_normalHeight.pack.59a4f2a1.ktx2",
+          "__bytes": {
+            "in": 13506245,
+            "out": 1321146
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "sand01_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "sand01 albedoRough (LITE)",
+            "description": "The texture set sand01's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/sand01/sand01_albedoRough.pack.42c89ed4.ktx2",
+          "__bytes": {
+            "in": 9086447,
+            "out": 861827
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.4077,
+            0.303,
+            0.1458
+          ]
+        },
+        {
+          "id": "sand01_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "sand01 normalHeight (LITE)",
+            "description": "The texture set sand01's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Ground080's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/sand01/sand01_normalHeight.pack.448c5a53.ktx2",
+          "__bytes": {
+            "in": 7695457,
+            "out": 1166404
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "rocks02_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "rocks02 albedoRough (LITE)",
+            "description": "The texture set rocks02's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from polyHaven brown_mud_rocks_01's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/rocks02/rocks02_albedoRough.pack.f728c96f.ktx2",
+          "__bytes": {
+            "in": 7098564,
+            "out": 1258849
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.0955,
+            0.0737,
+            0.046
+          ]
+        },
+        {
+          "id": "rocks02_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "rocks02 normalHeight (LITE)",
+            "description": "The texture set rocks02's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from polyHaven brown_mud_rocks_01's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/rocks02/rocks02_normalHeight.pack.77776328.ktx2",
+          "__bytes": {
+            "in": 4849638,
+            "out": 1307038
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "cliffs02_albedoRough",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX",
+            "colorSpace": "srgb"
+          },
+          "debugData": {
+            "name": "cliffs02 albedoRough (LITE)",
+            "description": "The texture set cliffs02's LITE albedoRough: RGB albedo × AO (sRGB), A roughness. Packed from ambientCG Rock058's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/cliffs02/cliffs02_albedoRough.pack.a0dfe04d.ktx2",
+          "__bytes": {
+            "in": 9750561,
+            "out": 1077378
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc",
+          "__averageColor": [
+            0.0732,
+            0.0846,
+            0.0977
+          ]
+        },
+        {
+          "id": "cliffs02_normalHeight",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000,
+            "anisotropy": "MAX"
+          },
+          "debugData": {
+            "name": "cliffs02 normalHeight (LITE)",
+            "description": "The texture set cliffs02's LITE normalHeight: RG the normal's X and Y (OpenGL; Z reconstructed), B height. Packed from ambientCG Rock058's maps (yarn fetchTextureSources)."
+          },
+          "__url": "/aek-assets/toolkit/textures/cliffs02/cliffs02_normalHeight.pack.544aeccd.ktx2",
+          "__bytes": {
+            "in": 8365422,
+            "out": 1262018
+          },
+          "__vramBytes": {
+            "in": 22369620,
+            "out": 1398128
+          },
+          "__codec": "uastc"
+        },
+        {
+          "id": "macroNoise",
+          "fileName": "./source/macroNoise.png",
+          "texOpts": {
+            "wrapS": 1000,
+            "wrapT": 1000
+          },
+          "debugData": {
+            "name": "Macro noise (shared, tileable)",
+            "description": "Four tileable noises for a terrain material's large-scale variation: R a broad fbm (brightness), G a second fbm (hue or roughness), B soft-edged patches (masks), A a blue-ish noise (dithering). Linear data, UASTC without RDO. The toolkit's bakeMacroNoise() with its defaults (512², seed 0), exported on WebGPU from the noiseLibrary scene's tab (exportBakedTexture, p304 D4-D5): the same texture without a bake at load."
+          },
+          "__fileSize": 621957,
+          "__sourceUrl": "/toolkit/textures/macroNoise/source/macroNoise.png",
+          "__url": "/aek-assets/toolkit/textures/macroNoise/source/macroNoise.ff98c92d.ktx2",
+          "__bytes": {
+            "in": 621957,
+            "out": 317838
+          },
+          "__vramBytes": {
+            "in": 1398100,
+            "out": 349552
+          },
+          "__codec": "uastc"
+        }
+      ],
+      "__features": [
+        "skybox",
+        "texturesets",
+        "fog"
+      ]
+    },
     "instanceStress": {
       "name": "Instance stress test",
       "description": "GPU-driven culling's measuring scene (p354 Phase 0): a square forest of instanced LOD trees (three mesh levels and a cull), cut into tiles of one pool each, with the camera circling inside it. The count comes from ?stressInstances= (or the scene's debug tab), ?stressPath=gpu draws it as one instance set (the compute cull on WebGPU, the CPU backend on WebGL2), ?stressShadow=true turns on the sun's VSM shadow, ?stressLight=spot or point adds a spot or point light's shadow, ?stressViewport=true a picture-in-picture from above, ?stressMove=0.01 moves 1% of the set's trees each frame, and the tab and the profiler show what the CPU path costs per frame: the pool sync, the LOD selection, the render submit.",
@@ -35406,6 +36026,34 @@
       },
       "__sourcePath": "src/app/profiles/uiKit/uiKitEmbedCamera.camera.json"
     },
+    "fogShowcaseCamera": {
+      "camProps": {
+        "active": true,
+        "near": 0.1,
+        "far": 1200,
+        "position": {
+          "x": 372,
+          "y": 9,
+          "z": -14
+        },
+        "lookAtPoint": {
+          "x": 0,
+          "y": 6,
+          "z": 0
+        },
+        "type": "PERSPECTIVE",
+        "fov": 55,
+        "appId": "fogShowcaseCamera"
+      },
+      "entityOpts": {
+        "appId": "fogShowcaseCamera",
+        "debugData": {
+          "name": "Fog showcase camera",
+          "description": "At the valley's east end, a few metres over its floor, looking west down the valley: the posts recede on the left, the lake in the middle distance, the hills on both sides, the sun low ahead."
+        }
+      },
+      "__sourcePath": "src/app/scenes/fogShowcase/fogShowcaseCamera.camera.json"
+    },
     "largeWorldOverview": {
       "camProps": {
         "active": true,
@@ -50528,6 +51176,67 @@
       "type": "STANDARDNODEMATERIAL",
       "__sourcePath": "src/app/profiles/banner/bannerAether.material.json"
     },
+    "fogShowcaseGround": {
+      "id": "fogShowcaseGround",
+      "debugData": {
+        "name": "Fog showcase ground",
+        "description": "The fog showcase's valley: grass01, sand01 on the lake's shore, rocks02 on the slopes and cliffs02 triplanar past a 35-50° slope gate, weighed by the vertex colours the scene's rules laid (RGB_AO, the horizon AO in A) through the height blend, DUAL_SCALE anti-tiling, the macro variation."
+      },
+      "tslFile": "scenes/fogShowcase/fogShowcaseGround.tsl.ts",
+      "staticDefines": {
+        "terrain": {
+          "layers": [
+            {},
+            {},
+            {},
+            {
+              "projection": {
+                "mode": "TRIPLANAR",
+                "slopeGate": [
+                  35,
+                  50
+                ]
+              }
+            }
+          ],
+          "blend": {
+            "source": "VERTEX_COLOR",
+            "vertexColor": {
+              "layout": "RGB_AO"
+            },
+            "mode": "HEIGHT"
+          },
+          "ao": {
+            "vertex": true
+          },
+          "antiTiling": {
+            "mode": "DUAL_SCALE"
+          },
+          "macro": {
+            "scale": 64
+          }
+        }
+      },
+      "inputs": {
+        "layer0": {
+          "textureSet": "grass01"
+        },
+        "layer1": {
+          "textureSet": "sand01"
+        },
+        "layer2": {
+          "textureSet": "rocks02"
+        },
+        "layer3": {
+          "textureSet": "cliffs02"
+        },
+        "macro": {
+          "texture": "macroNoise"
+        }
+      },
+      "type": "STANDARDNODEMATERIAL",
+      "__sourcePath": "src/app/scenes/fogShowcase/fogShowcaseGround.material.json"
+    },
     "lodShowcaseSphere": {
       "id": "lodShowcaseSphere",
       "params": {
@@ -52784,6 +53493,48 @@
       },
       "__sourcePath": "src/app/scenes/assetCompare/assetCompare.skybox.json"
     },
+    "fogShowcaseSky": {
+      "base": {
+        "type": "COLOR",
+        "color": "#000000"
+      },
+      "atmosphere": {
+        "nightSkyColor": "#0a1020"
+      },
+      "suns": [
+        {
+          "glowIntensity": 0.4,
+          "light": {}
+        }
+      ],
+      "moons": [
+        {
+          "phase": 0.4,
+          "phaseMode": "CYCLE",
+          "light": {
+            "intensity": 0.5
+          }
+        }
+      ],
+      "stars": {
+        "milkyWay": {}
+      },
+      "clouds": {
+        "coverage": 0.35
+      },
+      "ground": {},
+      "dayNight": {
+        "timeOfDay": 16.5,
+        "playing": false,
+        "dayOfYear": 100
+      },
+      "id": "fogShowcaseSky",
+      "debugData": {
+        "name": "Fog showcase sky",
+        "description": "The DAY_NIGHT preset (as the shared dayNight sky box) standing still at 16:30, the sun low in the west at the valley's far end, so the fog's colour and its sun glow are the same on every visit and in the scene runner's snapshot; the showcase tab's Day section sets the hour and plays the day."
+      },
+      "__sourcePath": "src/app/scenes/fogShowcase/fogShowcaseSky.skybox.json"
+    },
     "proceduralSurfacesSky": {
       "base": {
         "type": "COLOR",
@@ -52922,6 +53673,107 @@
         "description": "The DAY_NIGHT preset (as the shared dayNight sky box) standing still at 10:30, so the showcase's blocks are lit the same on every visit and in the scene runner's snapshot; the showcase tab's Day section sets the hour and plays the day (p310 Phase 3)."
       },
       "__sourcePath": "src/app/scenes/terrainShowcase/terrainShowcaseSky.skybox.json"
+    }
+  },
+  "fogs": {
+    "fogShowcaseExp2": {
+      "id": "fogShowcaseExp2",
+      "isDefault": false,
+      "enabled": true,
+      "mode": "EXP2",
+      "colorSource": "SKY",
+      "color": "#b4c0cc",
+      "linear": {
+        "near": 10,
+        "far": 500
+      },
+      "exp2": {
+        "density": 0.004
+      },
+      "height": {
+        "density": 0.02,
+        "baseHeight": 0,
+        "falloff": 0.1,
+        "startDistance": 0,
+        "maxOpacity": 1
+      },
+      "sunScattering": {
+        "strength": 0.5,
+        "exponent": 8,
+        "enabled": false
+      },
+      "background": "NONE",
+      "debugData": {
+        "name": "Exp²",
+        "description": "three's FogExp2 over the showcase's valley: density 0.004, so a quarter fogged at 140 m, three quarters at 300 m, the hills' far end gone; the sky's horizon colour, no sun glow (the mode's default, three's look)."
+      },
+      "__sourcePath": "src/app/scenes/fogShowcase/fogShowcaseExp2.fog.json"
+    },
+    "fogShowcaseHeight": {
+      "id": "fogShowcaseHeight",
+      "isDefault": true,
+      "enabled": true,
+      "mode": "HEIGHT",
+      "colorSource": "SKY",
+      "color": "#b4c0cc",
+      "linear": {
+        "near": 10,
+        "far": 500
+      },
+      "exp2": {
+        "density": 0.005
+      },
+      "height": {
+        "density": 0.01,
+        "baseHeight": 0,
+        "falloff": 0.15,
+        "startDistance": 0,
+        "maxOpacity": 1
+      },
+      "sunScattering": {
+        "strength": 0.5,
+        "exponent": 8,
+        "enabled": true
+      },
+      "background": "NONE",
+      "debugData": {
+        "name": "Height",
+        "description": "The showcase's exponential height fog, its default: 0.01 per metre at the lake's level, falling by 0.15 per metre of height, so the valley floor is about 70 % fogged at 300 m and the 50 m hilltops stay clear; the sky's horizon colour, glowing toward the sun (the mode's default)."
+      },
+      "__sourcePath": "src/app/scenes/fogShowcase/fogShowcaseHeight.fog.json"
+    },
+    "fogShowcaseLinear": {
+      "id": "fogShowcaseLinear",
+      "isDefault": false,
+      "enabled": true,
+      "mode": "LINEAR",
+      "colorSource": "SKY",
+      "color": "#b4c0cc",
+      "linear": {
+        "near": 30,
+        "far": 600
+      },
+      "exp2": {
+        "density": 0.005
+      },
+      "height": {
+        "density": 0.02,
+        "baseHeight": 0,
+        "falloff": 0.1,
+        "startDistance": 0,
+        "maxOpacity": 1
+      },
+      "sunScattering": {
+        "strength": 0.5,
+        "exponent": 8,
+        "enabled": false
+      },
+      "background": "NONE",
+      "debugData": {
+        "name": "Linear",
+        "description": "three's Fog over the showcase's valley: none to the post at 25 m, full past 600 m (the posts at 600 and 700 m gone), the sky's horizon colour, no sun glow (the mode's default, three's look)."
+      },
+      "__sourcePath": "src/app/scenes/fogShowcase/fogShowcaseLinear.fog.json"
     }
   },
   "postFx": {

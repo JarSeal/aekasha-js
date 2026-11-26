@@ -14,6 +14,7 @@ import {
   mix,
   positionView,
   rangeFogFactor,
+  renderGroup,
   select,
   uniform,
   vec4,
@@ -27,6 +28,9 @@ export type FogNodes = {
   /** The fog graph: three's `fog(color, factor)`, what the root scene's `fogNode` is while a
    * scene has a fog */
   readonly node: THREE.Node;
+  /** The fog factor `node` mixes toward the fog's colour by, 0 (clear) to 1 (full fog): the
+   * current mode's, × the master switch (a float node, for a view or a fog node of one's own) */
+  readonly factor: THREE.Node<'float'>;
   /** The fog's colour (linear, as three's colours are) */
   readonly color: THREE.UniformNode<'color', THREE.Color>;
   /** 1 while the fog renders (its own `enabled` and `setFogEnabled`'s switch), else 0 */
@@ -82,27 +86,36 @@ export const FOG_FLAT_RAY_EPSILON = 1e-3;
  * @internal
  */
 export const createFogNodes = (): FogNodes => {
-  const color = uniform(new THREE.Color());
-  const enabled = uniform(0);
-  const modeWeights = uniform(new THREE.Vector3());
-  const near = uniform(0);
-  const far = uniform(1);
-  const exp2Density = uniform(0);
-  const heightDensity = uniform(0);
-  const baseHeight = uniform(0);
-  const falloff = uniform(0);
-  const startDistance = uniform(0);
-  const maxOpacity = uniform(1);
-  const sunDirection = uniform(new THREE.Vector3());
-  const sunColor = uniform(new THREE.Color(1, 1, 1));
-  const sunStrength = uniform(0);
-  const sunExponent = uniform(1);
+  // In three's `renderGroup` (shared, written once per render call), as three's own `scene.fog`
+  // uniforms are, never the default per-object group: three r187 refreshes a classic material's
+  // (`MeshStandardMaterial`, the engine's `STANDARD`) per-object uniforms only when the material,
+  // the object or the lights change (`NodeMaterialObserver.needsRefresh`), so those draws kept
+  // the fog of their first frame (p106 Phase 5)
+  const color = uniform(new THREE.Color()).setGroup(renderGroup);
+  const enabled = uniform(0).setGroup(renderGroup);
+  const modeWeights = uniform(new THREE.Vector3()).setGroup(renderGroup);
+  const near = uniform(0).setGroup(renderGroup);
+  const far = uniform(1).setGroup(renderGroup);
+  const exp2Density = uniform(0).setGroup(renderGroup);
+  const heightDensity = uniform(0).setGroup(renderGroup);
+  const baseHeight = uniform(0).setGroup(renderGroup);
+  const falloff = uniform(0).setGroup(renderGroup);
+  const startDistance = uniform(0).setGroup(renderGroup);
+  const maxOpacity = uniform(1).setGroup(renderGroup);
+  const sunDirection = uniform(new THREE.Vector3()).setGroup(renderGroup);
+  const sunColor = uniform(new THREE.Color(1, 1, 1)).setGroup(renderGroup);
+  const sunStrength = uniform(0).setGroup(renderGroup);
+  const sunExponent = uniform(1).setGroup(renderGroup);
 
-  const graph = Fn(() => {
-    // The camera-to-fragment ray in world space, from the view position (right for sprites, fat
-    // lines and vertex nodes too, as three's fog's view depth is)
+  // The camera-to-fragment ray in world space, from the view position (right for sprites, fat
+  // lines and vertex nodes too, as three's fog's view depth is)
+  const getRay = () => {
     const ray = cameraWorldMatrix.mul(vec4(positionView, 0)).xyz.toVar();
-    const rayLength = ray.length().max(FOG_MIN_RAY_LENGTH).toVar();
+    return { ray, rayLength: ray.length().max(FOG_MIN_RAY_LENGTH).toVar() };
+  };
+
+  const factor = Fn(() => {
+    const { ray, rayLength } = getRay();
 
     // `HEIGHT` (D4): the density `heightDensity · exp(−falloff · (y − baseHeight))` integrated
     // along the ray from `startDistance` on, in closed form; `getHeightFogFactor` is its twin
@@ -129,20 +142,24 @@ export const createFogNodes = (): FogNodes => {
 
     // Every mode's factor, each × its weight (a few ALU a pixel): a select would branch on a
     // uniform for the same price
-    const factor = rangeFogFactor(near, far)
+    return rangeFogFactor(near, far)
       .mul(modeWeights.x)
       .add(densityFogFactor(exp2Density).mul(modeWeights.y))
       .add(heightFactor.mul(modeWeights.z))
       .mul(enabled);
+  })();
 
-    // The sun glow (D4): the colour toward the sun's around it; a zero sun direction gives none
+  // The sun glow (D4): the colour toward the sun's around it; a zero sun direction gives none
+  const glowColor = Fn(() => {
+    const { ray, rayLength } = getRay();
     const sunCos = ray.div(rayLength).dot(sunDirection).max(0);
     const glow = sunStrength.mul(sunCos.pow(sunExponent));
-    return fog(mix(color, sunColor, glow), factor);
+    return mix(color, sunColor, glow);
   })();
 
   return {
-    node: graph,
+    node: fog(glowColor, factor),
+    factor,
     color,
     enabled,
     modeWeights,

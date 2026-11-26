@@ -16,12 +16,15 @@ vi.hoisted(() => {
   });
 });
 
+import * as THREE from 'three/webgpu';
 import type { ECSWorld } from '../kernel/ecs/ECS';
 import { initEnvironment } from '../kernel/config/Config';
+import { isDebugHelperObject } from '../kernel/render/Object3DHelpers';
 import {
   _getEntityWindowOpener,
   _getStatsSources,
   createProfilerTab,
+  markDebugHelper,
   registerEntityWindowOpener,
   registerProfiler,
   registerStatsSource,
@@ -123,5 +126,23 @@ describe('profiler: the mode gate', () => {
 
     await fresh.registerProfiler();
     expect(fresh.isProfilerAvailable()).toBe(false);
+  });
+});
+
+describe('profiler: debug helpers', () => {
+  it('marks a subtree as a helper and turns the fog off on its materials (p106 D7)', () => {
+    const material = new THREE.MeshBasicNodeMaterial();
+    const multi = [new THREE.LineBasicNodeMaterial(), new THREE.LineBasicNodeMaterial()];
+    const root = new THREE.Group();
+    const child = new THREE.Mesh(new THREE.BoxGeometry(), material);
+    child.add(new THREE.Mesh(new THREE.BoxGeometry(), multi));
+    root.add(child);
+    expect(markDebugHelper(root)).toBe(root);
+    expect(isDebugHelperObject(root)).toBe(true);
+    expect([material.fog, ...multi.map((entry) => entry.fog)]).toEqual([false, false, false]);
+    // A material set after the mark isn't reached
+    const later = new THREE.MeshBasicNodeMaterial();
+    child.material = later;
+    expect(later.fog).toBe(true);
   });
 });

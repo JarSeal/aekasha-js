@@ -1,3 +1,5 @@
+import { IS_DEBUG_ENV } from '../../kernel/config/Config';
+import { loadDebugModuleAsync, useDebug } from '../../kernel/config/DebugModules';
 import type { EngineFeature } from '../../kernel/init/Features';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
 import { applySceneFogs, clearFogForScene, installFog } from './Fog';
@@ -10,6 +12,12 @@ import { applySceneFogs, clearFogForScene, installFog } from './Fog';
 export const fogSceneHooks: SceneHooks = {
   exit: () => clearFogForScene(),
   worldCleared: (_world, _prevSceneId, nextSceneData) => applySceneFogs(nextSceneData),
+};
+
+/** Loads and creates the debug tab (the feature's `onDebug`). */
+const createFogDebugTabAsync = async () => {
+  const debug = await loadDebugModuleAsync(() => import('./debug/_dbg__Fog'));
+  useDebug(debug)?._createFogDebugTab();
 };
 
 /**
@@ -32,5 +40,7 @@ export const fog = (): EngineFeature => ({
   install: (ctx) => {
     installFog(ctx);
     ctx.addSceneHooks(fogSceneHooks);
+    // Gated like every debug hook: a production build drops the call and the tab's chunk
+    if (IS_DEBUG_ENV) ctx.onDebug(createFogDebugTabAsync);
   },
 });

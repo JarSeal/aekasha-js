@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../../.schemas/material.schema.json",
+  "id": "fogShowcaseGround",
+  "tslFile": "scenes/fogShowcase/fogShowcaseGround.tsl.ts",
+  "type": "STANDARDNODEMATERIAL",
+  "staticDefines": {
+    "terrain": {
+      "layers": [{}, {}, {}, { "projection": { "mode": "TRIPLANAR", "slopeGate": [35, 50] } }],
+      "blend": {
+        "source": "VERTEX_COLOR",
+        "vertexColor": { "layout": "RGB_AO" },
+        "mode": "HEIGHT"
+      },
+      "ao": { "vertex": true },
+      "antiTiling": { "mode": "DUAL_SCALE" },
+      "macro": { "scale": 64 }
+    }
+  },
+  "inputs": {
+    "layer0": { "textureSet": "grass01" },
+    "layer1": { "textureSet": "sand01" },
+    "layer2": { "textureSet": "rocks02" },
+    "layer3": { "textureSet": "cliffs02" },
+    "macro": { "texture": "macroNoise" }
+  },
+  "debugData": {
+    "name": "Fog showcase ground",
+    "description": "The fog showcase's valley: grass01, sand01 on the lake's shore, rocks02 on the slopes and cliffs02 triplanar past a 35-50° slope gate, weighed by the vertex colours the scene's rules laid (RGB_AO, the horizon AO in A) through the height blend, DUAL_SCALE anti-tiling, the macro variation."
+  }
+}

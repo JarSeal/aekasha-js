@@ -144,6 +144,14 @@ export const sceneFileObjects: {
       }
     ).scene({ sceneData, assets });
   },
+  fogShowcase: async ({ sceneData, assets }) => {
+    const module = await import('../app/./scenes/fogShowcase/fogShowcase.ts');
+    await (
+      module as {
+        scene: (sceneData: { sceneData: SceneData; assets: ScenePrimitiveAssets }) => Promise<void>;
+      }
+    ).scene({ sceneData, assets });
+  },
   instanceStress: async ({ sceneData, assets }) => {
     const module = await import('../app/./scenes/instanceStress/instanceStress.ts');
     await (
@@ -342,6 +350,7 @@ export const tslMaterialFileObjects = {
   exampleTerrainGround: () => import('../app/examples/terrain/exampleTerrainGround.tsl.ts'),
   exampleTerrainRock: () => import('../app/examples/terrain/exampleTerrainRock.tsl.ts'),
   bannerAether: () => import('../app/profiles/banner/bannerAether.tsl.ts'),
+  fogShowcaseGround: () => import('../app/scenes/fogShowcase/fogShowcaseGround.tsl.ts'),
   scatterTestRulesTerrain: () => import('../app/scenes/scatterTest/scatterTestTerrain.tsl.ts'),
   testTslMat: () => import('../app/scenes/sceneTestECS/testTslMat.tsl.ts'),
   terrainGalleryPatch: () => import('../app/scenes/terrainGallery/terrainGalleryPatch.tsl.ts'),

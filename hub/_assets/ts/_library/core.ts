@@ -37,7 +37,7 @@ import type { Demo } from './page';
 
 // --- Icons ---
 
-const ICON_SAMPLES: BuiltInIconName[] = ['gear', 'info', 'warning', 'alert', 'undo', 'x'];
+const ICON_SAMPLES: BuiltInIconName[] = ['gear', 'info', 'warning', 'alert', 'undo', 'x', 'fog'];
 
 /** HTML into the page itself (`<html>` is a kit root): an icon needs no HUD root */
 const initIconsDemo: Demo = (box) => {

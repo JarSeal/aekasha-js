@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../../.schemas/fog.schema.json",
+  "isDefault": true,
+  "mode": "HEIGHT",
+  "height": { "density": 0.01, "baseHeight": 0, "falloff": 0.15 },
+  "debugData": {
+    "name": "Height",
+    "description": "The showcase's exponential height fog, its default: 0.01 per metre at the lake's level, falling by 0.15 per metre of height, so the valley floor is about 70 % fogged at 300 m and the 50 m hilltops stay clear; the sky's horizon colour, glowing toward the sun (the mode's default)."
+  }
+}

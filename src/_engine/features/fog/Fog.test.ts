@@ -1,6 +1,22 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const m = vi.hoisted(() => ({ elapsed: 0, isLoading: false }));
+const m = vi.hoisted(() => ({
+  elapsed: 0,
+  isLoading: false,
+  isDebug: false,
+  ls: {} as Record<string, unknown>,
+}));
+vi.mock(import('../../kernel/config/Config'), async (importOriginal) => {
+  const original = await importOriginal();
+  return Object.defineProperties(
+    { ...original },
+    { IS_DEBUG_ENV: { get: () => m.isDebug, enumerable: true } }
+  );
+});
+vi.mock(import('../../utils/LocalAndSessionStorage'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  lsGetItem: (key: string, defaultValue: unknown) => structuredClone(m.ls[key] ?? defaultValue),
+}));
 vi.mock(import('../../kernel/loop/MainLoop'), async (importOriginal) => ({
   ...(await importOriginal()),
   getElapsedTime: () => m.elapsed,
@@ -17,6 +33,11 @@ import type { FeatureContext } from '../../kernel/init/Features';
 import { createRootScene, getRootScene, type SceneData } from '../../kernel/scene/Scene';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
 import {
+  _getFogViewNode,
+  _getSceneFogs,
+  _isFogSkyColorLive,
+  _setFogViewNode,
+  FOG_DEBUG_OVERRIDES_LS_KEY,
   getFog,
   getFogNodes,
   isFogEnabled,
@@ -211,6 +232,63 @@ describe('the fog with the feature', () => {
     expect(nodes.sunExponent.value).toBeGreaterThan(0);
   });
 
+  describe('the debug tab’s hooks', () => {
+    beforeEach(() => {
+      m.isDebug = true;
+      m.ls = {};
+    });
+
+    afterAll(() => {
+      m.isDebug = false;
+      m.ls = {};
+      _setFogViewNode(null);
+    });
+
+    it('merges a scene fog’s debug edits in when it shows, the scene’s data unchanged', () => {
+      m.ls[FOG_DEBUG_OVERRIDES_LS_KEY] = {
+        next: { exp2: { exp2: { density: 0.04 }, mode: 'HEIGHT' } },
+        other: { linear: { linear: { far: 80 } } },
+      };
+      switchScene([exp2Fog, { ...linearFog, isDefault: false }]);
+      expect(getFog()).toMatchObject({ id: 'exp2', mode: 'HEIGHT', exp2: { density: 0.04 } });
+      expect(getFogNodes()!.exp2Density.value).toBe(0.04);
+      // Another scene's edits of a fog with the same id aren't this scene's
+      setFog('linear');
+      expect(getFog()?.linear.far).toBe(50);
+      expect(_getSceneFogs()).toEqual({
+        sceneId: 'next',
+        fogs: [resolveFogDef(exp2Fog), resolveFogDef({ ...linearFog, isDefault: false })],
+      });
+    });
+
+    it('never reads the edits outside the debug env', () => {
+      m.isDebug = false;
+      m.ls[FOG_DEBUG_OVERRIDES_LS_KEY] = { next: { exp2: { exp2: { density: 0.04 } } } };
+      switchScene([exp2Fog]);
+      expect(getFog()?.exp2.density).toBe(0.02);
+    });
+
+    it('shows the factor view in the graph’s place, across scenes, and the graph again', () => {
+      const view = uniform(0.5);
+      switchScene([exp2Fog]);
+      _setFogViewNode(view);
+      expect(rootScene.fogNode).toBe(view);
+      expect(_getFogViewNode()).toBe(view);
+      switchScene();
+      expect(rootScene.fogNode).toBeNull();
+      switchScene([linearFog]);
+      expect(rootScene.fogNode).toBe(view);
+      _setFogViewNode(null);
+      expect(rootScene.fogNode).toBe(getFogNodes()!.node);
+    });
+
+    it('leaves a scene without a fog without a fog node', () => {
+      _setFogViewNode(uniform(0.5));
+      expect(rootScene.fogNode).toBeNull();
+      _setFogViewNode(null);
+    });
+  });
+
   it('takes the graph off the root scene at a scene’s exit', () => {
     switchScene([exp2Fog]);
     switchScene();
@@ -366,9 +444,11 @@ describe('the fog with the feature', () => {
       switchScene([exp2Fog]);
       const own = new THREE.Color(resolveFogDef(exp2Fog).color as string);
       expect(nodes.color.value.equals(own)).toBe(true);
+      expect(_isFogSkyColorLive()).toBe(false);
 
       setFogColorSource(skyColor);
       expect(nodes.color.value.equals(sky)).toBe(true);
+      expect(_isFogSkyColorLive()).toBe(true);
       sky.setRGB(1.5, 0.5, 0.25);
       frame();
       expect(nodes.color.value.equals(sky)).toBe(true);
@@ -380,6 +460,7 @@ describe('the fog with the feature', () => {
       });
       frame();
       expect(nodes.color.value.equals(own)).toBe(true);
+      expect(_isFogSkyColorLive()).toBe(false);
     });
 
     it('never reads it for a MANUAL fog, and switches the colour source at once', () => {
