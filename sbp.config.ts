@@ -75,11 +75,14 @@ const profiles: SbpProfile[] = [
     // 409.8 KiB: 410 → 411 KiB (the initial stays within 415). p250 Phases 1-2: multibody joints
     // (`PhysicsMultibodyJoints.ts`, the registry's and the tiers' multibody handling; `physics`
     // +880 B) took the initial to 415.4 and `assets/index.js` to 411.2 KiB: 415 → 417 and
-    // 411 → 413 KiB (at least 1 KiB over each)
+    // 411 → 413 KiB (at least 1 KiB over each). p106 Phase 1: the `fog()` feature (its state,
+    // stable uniforms, graph and background system, 1.0 KiB; the template lists it) took the
+    // initial to 416.4 and `assets/index.js` to 412.2 KiB: 417 → 418 and 413 → 414 KiB (at least
+    // 1 KiB over each)
     budgets: {
-      initial: 417 * KIB,
+      initial: 418 * KIB,
       chunks: {
-        'assets/index.js': 413 * KIB,
+        'assets/index.js': 414 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
@@ -162,6 +165,10 @@ const profiles: SbpProfile[] = [
         // Phase 6: the `rainOcclusion()` feature in the same folder (the map's render, its node,
         // its options' checks; the template lists it) took it to 3.6 KiB: 2 → 4 KiB
         '_engine/features/surface': 4 * KIB,
+        // p106 Phase 1: the fog's state, stable uniforms, graph (LINEAR, EXP2) and background
+        // system (990 B gzip, three modules; `suggestBudget`); Phase 2's HEIGHT factor, sun glow
+        // and tweens and Phase 3's sky sources add to it, Phase 7 revisits it
+        '_engine/features/fog': 2 * KIB,
         '_engine/features/viewports': 3 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`). p302 (12 → 15
         // modules: the material code split up, the resolver registry, the input refs) took it to
