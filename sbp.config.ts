@@ -167,8 +167,9 @@ const profiles: SbpProfile[] = [
         '_engine/features/surface': 4 * KIB,
         // p106 Phase 1: the fog's state, stable uniforms, graph (LINEAR, EXP2) and background
         // system (990 B gzip, three modules; `suggestBudget`); Phase 2's HEIGHT factor, sun glow
-        // and tweens and Phase 3's sky sources add to it, Phase 7 revisits it
-        '_engine/features/fog': 2 * KIB,
+        // and tweens and Phase 3's sky sources add to it, Phase 7 revisits it. Phase 2 (HEIGHT,
+        // the glow, `updateFog` and its transitions, four modules) took it to 2.0 KiB: 2 → 3 KiB
+        '_engine/features/fog': 3 * KIB,
         '_engine/features/viewports': 3 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`). p302 (12 → 15
         // modules: the material code split up, the resolver registry, the input refs) took it to

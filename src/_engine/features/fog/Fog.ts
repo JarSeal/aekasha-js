@@ -1,16 +1,28 @@
 // The fog's runtime (p106 D1, D3, D6): the current scene's fogs, the one showing, the master
 // switch, the stable uniforms and the graph the root scene's `fogNode` holds, fogSystem (the
-// background) and the API. The `fog()` feature creates it at its install: without the feature,
+// transitions, the background) and the API. The `fog()` feature creates it at its install: without the feature,
 // the getters return null and the setters throw naming it.
 import * as THREE from 'three/webgpu';
 import { type ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
 import type { FeatureContext } from '../../kernel/init/Features';
+import { getElapsedTime } from '../../kernel/loop/MainLoop';
 import { ECSSystemStage } from '../../kernel/loop/SystemStages';
 import { toThreeColor } from '../../kernel/render/ThreeMath';
 import { getRootScene, type SceneData } from '../../kernel/scene/Scene';
+import { isCurrentlyLoading } from '../../kernel/scene/SceneLoader';
+import { deepMerge } from '../../utils/DeepMerge';
 import { lwarn } from '../../utils/Logger';
 import { createFogNodes, type FogNodes } from './FogNode';
-import { type FogInput, resolveFogDef } from './FogSchema';
+import { type FogInput, type FogOverrides, resolveFogDef } from './FogSchema';
+import {
+  createFogTransitions,
+  FOG_CHANNEL as CH,
+  FOG_CHANNEL_COUNT,
+  type FogTransitions,
+  snapFogTransitions,
+  startFogTransitions,
+  stepFogTransitions,
+} from './FogTransitions';
 import type { FogDef, FogMode } from './FogTypes';
 
 /** Why the fog changed: `set` (another fog, or a scene's own at its load), `update` (its values),
@@ -35,6 +47,14 @@ type FogRuntime = {
   backgroundColor: THREE.Color;
   /** What the root scene's background was when `FOG_COLOR` took it, put back when it lets go */
   prevBackground: THREE.Scene['background'];
+  /** The uniforms' numbers as they move (`updateFog`), toward the current fog's */
+  transitions: FogTransitions;
+  /** Scratch: the current fog's numbers, as the uniforms take them */
+  targets: Float64Array;
+  /** Scratch: the current fog's colour, linear */
+  targetColor: THREE.Color;
+  /** Last frame's `getElapsedTime()`: the transitions advance by the difference */
+  lastElapsedTime: number;
 };
 
 let runtime: FogRuntime | null = null;
@@ -70,7 +90,54 @@ const MIN_SUN_EXPONENT = 1e-3;
 
 const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);
 
-/** Writes the current fog into the uniforms (when they exist). Runs on a change, not per frame. */
+/**
+ * The current fog's numbers as the uniforms take them, into `rt.targets`. Kept drawable whatever a
+ * debug edit or an update sets: no negative distance or density, the opacity and glow within
+ * [0, 1]. A glow switched off is a strength of 0, so switching it moves like the numbers do.
+ */
+const computeTargets = (rt: FogRuntime, def: FogDef) => {
+  const targets = rt.targets;
+  const color = rt.targetColor.set(toThreeColor(def.color));
+  targets[CH.COLOR_R] = color.r;
+  targets[CH.COLOR_G] = color.g;
+  targets[CH.COLOR_B] = color.b;
+  const near = Math.max(def.linear.near, 0);
+  targets[CH.NEAR] = near;
+  targets[CH.FAR] = Math.max(def.linear.far, near + MIN_LINEAR_RANGE);
+  targets[CH.EXP2_DENSITY] = Math.max(def.exp2.density, 0);
+  const height = def.height;
+  targets[CH.HEIGHT_DENSITY] = Math.max(height.density, 0);
+  targets[CH.BASE_HEIGHT] = height.baseHeight;
+  targets[CH.FALLOFF] = Math.max(height.falloff, 0);
+  targets[CH.START_DISTANCE] = Math.max(height.startDistance, 0);
+  targets[CH.MAX_OPACITY] = clamp01(height.maxOpacity);
+  const sun = def.sunScattering;
+  targets[CH.SUN_STRENGTH] = sun.enabled ? clamp01(sun.strength) : 0;
+  targets[CH.SUN_EXPONENT] = Math.max(sun.exponent, MIN_SUN_EXPONENT);
+};
+
+/** Writes the channels' values into the uniforms. Allocates nothing. */
+const writeChannels = (nodes: FogNodes, values: Float64Array) => {
+  nodes.color.value.setRGB(values[CH.COLOR_R], values[CH.COLOR_G], values[CH.COLOR_B]);
+  const near = values[CH.NEAR];
+  nodes.near.value = near;
+  // near and far move on their own clocks: keep the far past the near on the way
+  nodes.far.value = Math.max(values[CH.FAR], near + MIN_LINEAR_RANGE);
+  nodes.exp2Density.value = values[CH.EXP2_DENSITY];
+  nodes.heightDensity.value = values[CH.HEIGHT_DENSITY];
+  nodes.baseHeight.value = values[CH.BASE_HEIGHT];
+  nodes.falloff.value = values[CH.FALLOFF];
+  nodes.startDistance.value = values[CH.START_DISTANCE];
+  nodes.maxOpacity.value = values[CH.MAX_OPACITY];
+  // The sun's direction and colour come from p106 Phase 3's sun source; until then they're set
+  // on the nodes by hand, and the zero direction they start with glows nowhere
+  nodes.sunStrength.value = values[CH.SUN_STRENGTH];
+  nodes.sunExponent.value = values[CH.SUN_EXPONENT];
+};
+
+/** Writes the current fog into the uniforms (when they exist): the switch and the mode at once,
+ * the numbers where their transitions are. Runs on a change; `fogSystem` writes the numbers while
+ * they move. */
 const writeNodes = (rt: FogRuntime) => {
   const nodes = rt.nodes;
   if (!nodes) return;
@@ -78,24 +145,15 @@ const writeNodes = (rt: FogRuntime) => {
   nodes.enabled.value = def && def.enabled && rt.isEnabled ? 1 : 0;
   if (!def) return;
   nodes.modeWeights.value.fromArray(MODE_WEIGHTS[def.mode]);
-  nodes.color.value.set(toThreeColor(def.color));
-  // Kept drawable whatever a debug edit or an update sets: no negative distance or density, and
-  // a far past the near
-  const near = Math.max(def.linear.near, 0);
-  nodes.near.value = near;
-  nodes.far.value = Math.max(def.linear.far, near + MIN_LINEAR_RANGE);
-  nodes.exp2Density.value = Math.max(def.exp2.density, 0);
-  const height = def.height;
-  nodes.heightDensity.value = Math.max(height.density, 0);
-  nodes.baseHeight.value = height.baseHeight;
-  nodes.falloff.value = Math.max(height.falloff, 0);
-  nodes.startDistance.value = Math.max(height.startDistance, 0);
-  nodes.maxOpacity.value = clamp01(height.maxOpacity);
-  // The sun's direction and colour come from p106 Phase 3's sun source; until then they're set
-  // on the nodes by hand, and the zero direction they start with glows nowhere
-  const sun = def.sunScattering;
-  nodes.sunStrength.value = sun.enabled ? clamp01(sun.strength) : 0;
-  nodes.sunExponent.value = Math.max(sun.exponent, MIN_SUN_EXPONENT);
+  writeChannels(nodes, rt.transitions.values);
+};
+
+/** Shows `def` (or none) at once: a running transition ends there (at its target, with none). */
+const setCurrent = (rt: FogRuntime, def: FogDef | null) => {
+  rt.current = def;
+  if (def) computeTargets(rt, def);
+  snapFogTransitions(rt.transitions, def ? rt.targets : rt.transitions.targets);
+  writeNodes(rt);
 };
 
 const ensureNodes = (rt: FogRuntime) => {
@@ -183,8 +241,7 @@ export const setFog = (fog: string | FogInput | null): Readonly<FogDef> | null =
   const rt = assertInstalled('setFog');
   if (fog === null) {
     if (!rt.current) return null;
-    rt.current = null;
-    writeNodes(rt);
+    setCurrent(rt, null);
     notify(rt, 'clear');
     return null;
   }
@@ -194,14 +251,79 @@ export const setFog = (fog: string | FogInput | null): Readonly<FogDef> | null =
       lwarn(`setFog: the current scene has no fog with the id '${fog}' (its JSON's fogs).`);
       return rt.current;
     }
-    rt.current = found;
+    setCurrent(rt, found);
   } else {
-    rt.current = resolveFogDef(fog);
+    setCurrent(rt, resolveFogDef(fog));
   }
-  writeNodes(rt);
   showFogNode(rt);
   notify(rt, 'set');
   return rt.current;
+};
+
+/** The values {@link updateFog} takes: any of a fog's but its id, `isDefault` and debug data. */
+export type FogUpdate = Omit<FogOverrides, '__meta'>;
+
+/** Options of {@link updateFog}. */
+export type UpdateFogOpts = {
+  /** Moves each number and the colour there over this many seconds, linearly (the colour in
+   * linear space). Default 0: at once. `mode`, `enabled`, `colorSource` and `background` always
+   * switch at once; the sun glow's `enabled` fades its strength. */
+  transitionSec?: number;
+};
+
+/** `values` without its non-finite numbers (and a colour with one), so they're ignored. */
+const withoutNonFinite = (values: object) => {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(values)) {
+    if (typeof value === 'number' && !Number.isFinite(value)) continue;
+    if (key === 'color' && typeof value === 'object' && value !== null) {
+      const { r, g, b } = value as { r: number; g: number; b: number };
+      if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) result[key] = value;
+      continue;
+    }
+    result[key] =
+      typeof value === 'object' && value !== null && !Array.isArray(value)
+        ? withoutNonFinite(value)
+        : value;
+  }
+  return result;
+};
+
+/**
+ * Changes the fog showing: any of its values, at once or over `transitionSec` (the main loop's
+ * time, as the sky's day-night runs, standing still while a scene loads). What p427's weather
+ * drives. A number that isn't finite is ignored; each is kept drawable (no negative distance or
+ * density, the opacity and the glow's strength within [0, 1]).
+ * @returns the fog after the call (what it moves to), or null when none shows (warned)
+ * @throws when the `fog()` feature isn't installed
+ * @remarks {@link getFog} returns the values it moves to at once; only the rendered values move.
+ * The latest call wins per value: one made while a value moves starts its transition again from
+ * where it is, and the values it doesn't change keep moving. Another fog (`setFog`) and a scene's
+ * exit end every transition. The scene's data isn't changed: the next visit starts from its JSON.
+ * `onFogChange` hears `'update'` once a call, not while the values move.
+ * @example
+ * ```ts
+ * import { updateFog } from 'aekasha/fog';
+ *
+ * // The valley fills with fog over the next minute
+ * updateFog({ height: { density: 0.08, maxOpacity: 0.95 }, color: '#9aa3ad' }, { transitionSec: 60 });
+ * ```
+ */
+export const updateFog = (values: FogUpdate, opts?: UpdateFogOpts): Readonly<FogDef> | null => {
+  const rt = assertInstalled('updateFog');
+  const def = rt.current;
+  if (!def) {
+    lwarn('updateFog: no fog shows (show one with setFog, or list it in the scene JSON fogs).');
+    return null;
+  }
+  // A new object: the one it replaces can be the scene's data
+  const next = deepMerge(def, withoutNonFinite(values));
+  rt.current = next;
+  computeTargets(rt, next);
+  startFogTransitions(rt.transitions, rt.targets, opts?.transitionSec ?? 0);
+  writeNodes(rt);
+  notify(rt, 'update');
+  return next;
 };
 
 /**
@@ -267,11 +389,19 @@ export const onFogChange = (listener: FogChangeListener) => {
  */
 export const getFogNodes = (): FogNodes | null => (runtime ? ensureNodes(runtime) : null);
 
-/** The background each frame (`FOG_COLOR`). The fog is global: only the default world drives
- * it. Allocates nothing. */
+/** The transitions and the background each frame (`FOG_COLOR`). The fog is global: only the
+ * default world drives it. Allocates nothing. */
 function fogSystem(world: ECSWorld) {
   const rt = runtime;
   if (!rt || world !== getECSWorld()) return;
+  // The sky's clock (its day-night): the main loop's elapsed time, standing still while a scene
+  // loads
+  const elapsed = getElapsedTime();
+  const dt = elapsed - rt.lastElapsedTime;
+  rt.lastElapsedTime = elapsed;
+  if (!isCurrentlyLoading() && stepFogTransitions(rt.transitions, dt) && rt.nodes) {
+    writeChannels(rt.nodes, rt.transitions.values);
+  }
   syncBackground(rt);
 }
 
@@ -291,8 +421,7 @@ export const clearFogForScene = () => {
   }
   rt.prevBackground = null;
   if (!rt.current) return;
-  rt.current = null;
-  writeNodes(rt);
+  setCurrent(rt, null);
   notify(rt, 'clear');
 };
 
@@ -305,9 +434,9 @@ export const applySceneFogs = (sceneData: SceneData) => {
   const rt = runtime;
   if (!rt) return;
   rt.sceneFogs = sceneData.fogs ?? [];
-  rt.current = getSceneDefaultFog(rt.sceneFogs);
-  if (!rt.current) return;
-  writeNodes(rt);
+  const def = getSceneDefaultFog(rt.sceneFogs);
+  if (!def) return;
+  setCurrent(rt, def);
   showFogNode(rt);
   notify(rt, 'set');
 };
@@ -325,6 +454,10 @@ export const installFog = (ctx: FeatureContext) => {
     nodes: null,
     backgroundColor: new THREE.Color(),
     prevBackground: null,
+    transitions: createFogTransitions(),
+    targets: new Float64Array(FOG_CHANNEL_COUNT),
+    targetColor: new THREE.Color(),
+    lastElapsedTime: getElapsedTime(),
   };
   ctx.registerPlugin((world) => {
     // MAIN, order 1 like skyBoxSystem, after it by install order: p106 Phase 3's sources read

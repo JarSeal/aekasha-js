@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Fog, Rendering
 Related: p427_weather-and-mood.md (the world state that drives the fog through `updateFog`; its open question 3 is this plan), `src/_engine/features/skybox/CLAUDE.md` (the horizon colour and the sun the fog follows), `src/_engine/features/surface/CLAUDE.md` (the stable uniforms pattern this feature copies), `src/_engine/features/postfx/` (the light shafts pass, Phase 6), p990_follow-ups-from-done-plans.md (the deferred sky ideas: auto-exposure, volumetric clouds)
 
@@ -300,7 +300,7 @@ As built:
   (`api.json` also took main's `keepOverlayWithOwner`, which `db5c995e` didn't record).
 - **Not checked in a browser yet:** no scene lists a fog before Phase 5's `fogShowcase`.
 
-### Phase 2: `HEIGHT` mode and transitions
+### Phase 2: `HEIGHT` mode and transitions — done
 
 1. D4's factor and the sun glow (every mode, `enabled`'s default by mode) in `FogNode.ts`, over
    the sun uniforms (set by hand until Phase 3 wires them), their CPU twins tested (the `Δy → 0`
@@ -308,6 +308,52 @@ As built:
    `maxOpacity` clamp, `startDistance`).
 2. `updateFog(partial, { transitionSec })`: the tween (colour in linear space), the latest call
    winning, a scene exit ending it.
+
+As built:
+
+- **`HEIGHT`'s ray** is the camera-to-fragment one in world space, `cameraWorldMatrix ×
+  (positionView, 0)` (right for sprites, fat lines and vertex nodes, as three's view depth is),
+  and its length the Euclidean distance: `LINEAR` and `EXP2` keep three's view depth, so `HEIGHT`
+  is a little thicker toward the screen's edges. The integral is `density · fogLength ·
+  meanDensity`, `meanDensity = (ρ_start − ρ_end) / (falloff · Δy)`, the midpoint `(ρ_start +
+  ρ_end) / 2` below `FOG_FLAT_RAY_EPSILON` (1e-3: the closed form's limit to second order), each
+  end's exponent at most `FOG_MAX_DENSITY_EXPONENT` (60, so a camera deep below `baseHeight` gets
+  full fog, not an overflow; the division takes the clamped exponents, so two clamped ends read
+  as the midpoint). `getHeightFogFactor` (CPU, step for step) is tested against a numeric
+  integral, up and down, across the epsilon, Beer-Lambert without a falloff, `startDistance`,
+  `maxOpacity` and the extremes. A zero-length ray is taken as 1 µm.
+- **The sun glow's uniforms:** `sunDirection` (unit, toward the sun; **zero is no sun, no glow**,
+  what it starts with), `sunColor` (white until Phase 3), `sunStrength` (0 while `sunScattering`
+  is off) and `sunExponent` (at least 1e-3: `pow(0, 0)` is undefined in WGSL). `getFogSunGlow` is
+  its twin. Phase 3 writes the direction and the colour; D5's "colour × intensity" is HDR, so with
+  a strength near 1 the fog toward the sun nears the sun's radiance: Phase 3 looks at it, and
+  normalizes the colour if it's too much.
+- **`FogNodes`** gained `heightDensity`, `baseHeight`, `falloff`, `startDistance`, `maxOpacity`,
+  `sunDirection`, `sunColor`, `sunStrength`, `sunExponent`. Phase 1's "`HEIGHT` renders no fog
+  yet" warning is gone.
+- **The transitions** (`FogTransitions.ts`, the model as plain arrays): one channel per number
+  the uniforms take (the colour's linear r, g, b, every mode's parameters, the glow's strength
+  and exponent), the targets computed from the definition with the drawable clamps. A call moves
+  only the channels whose target changed, from where they are; the others keep their running
+  transitions (the latest call wins per value, `setSurfaceConditions`' rule). The far is kept
+  past the near at the write, since they can move on different clocks. Switching the glow's
+  `enabled` fades its strength (the uniform's a number); `mode`, `enabled`, `colorSource` and
+  `background` switch at once.
+- **The clock** is the sky's day-night one: `getElapsedTime()`'s change in `fogSystem` (stops
+  with the master loop's pause and an editor view, scales with the play speed, not with the app
+  pause alone), standing still while a scene loads.
+- **`updateFog(values, { transitionSec? })`** (`FogUpdate`: a save entry's keys without
+  `__meta`; `UpdateFogOpts`): `getFog()` returns the new values at once, only the rendered ones
+  move; `'update'` fires once a call. It merges into a new object (the scene's data is never
+  changed, so the next visit starts from its JSON), ignores non-finite numbers (and a colour with
+  one), and warns and returns null without a fog. `setFog` and a scene's exit end every
+  transition (at its target).
+- **SBP:** the fog's group is 2083 B gzip (four modules), over Phase 1's 2 KiB: its budget 2 → 3
+  KiB (`sbp.config.ts`, with the reason); the initial is 417.4 of 418 KiB. The baselines are
+  recorded (`api.json`: `updateFog`, `FogUpdate`, `UpdateFogOpts` on `aekasha/fog`, the rest
+  `@internal`).
+- **Not checked in a browser yet** (no scene lists a fog before Phase 5): the graph compiles only
+  on a GPU, so `HEIGHT` and the glow are checked there first.
 
 ### Phase 3: Following the sky
 

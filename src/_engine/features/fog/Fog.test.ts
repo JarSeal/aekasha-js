@@ -1,6 +1,17 @@
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const m = vi.hoisted(() => ({ elapsed: 0, isLoading: false }));
+vi.mock(import('../../kernel/loop/MainLoop'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  getElapsedTime: () => m.elapsed,
+}));
+vi.mock(import('../../kernel/scene/SceneLoader'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  isCurrentlyLoading: () => m.isLoading,
+}));
+
 import * as THREE from 'three/webgpu';
 import { uniform } from 'three/tsl';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_ECS_WORLD_ID, ECSWorld, getECSWorld } from '../../kernel/ecs/ECS';
 import type { FeatureContext } from '../../kernel/init/Features';
 import { createRootScene, getRootScene, type SceneData } from '../../kernel/scene/Scene';
@@ -12,6 +23,7 @@ import {
   onFogChange,
   setFog,
   setFogEnabled,
+  updateFog,
   type FogChangeReason,
 } from './Fog';
 import { fog } from './FogFeature';
@@ -25,8 +37,11 @@ let hooks: SceneHooks = {};
 /** fogSystem, as the feature's install registers it */
 let system: ((world: ECSWorld) => void) | null = null;
 
-/** A frame of the fog's system, as the main loop runs it. */
-const frame = () => system!(getECSWorld());
+/** A frame of the fog's system, as the main loop runs it, `dtSec` after the last. */
+const frame = (dtSec = 0) => {
+  m.elapsed += dtSec;
+  system!(getECSWorld());
+};
 
 /** A scene switch: the exit, then the next scene's data with its fogs resolved as the gather does. */
 const switchScene = (fogs?: FogInput[]) => {
@@ -53,6 +68,7 @@ describe('the fog without the feature', () => {
     expect(() => setFog('exp2')).toThrow(/fog\(\)/);
     expect(() => setFogEnabled(false)).toThrow(/fog\(\)/);
     expect(() => onFogChange(() => {})).toThrow(/fog\(\)/);
+    expect(() => updateFog({ enabled: false })).toThrow(/fog\(\)/);
   });
 });
 
@@ -197,6 +213,133 @@ describe('the fog with the feature', () => {
     expect(rootScene.fogNode).toBeNull();
     expect(getFog()).toBeNull();
     expect(getFogNodes()!.enabled.value).toBe(0);
+  });
+
+  describe('updateFog', () => {
+    it('changes the values at once, the scene’s data kept', () => {
+      const sceneData = resolveFogDef(linearFog);
+      hooks.exit?.('previous');
+      hooks.worldCleared?.(getECSWorld(), 'previous', {
+        id: 'next',
+        fogs: [sceneData],
+      } as SceneData);
+      const nodes = getFogNodes()!;
+      const def = updateFog({ linear: { far: 80 }, mode: 'EXP2', color: { r: 255, g: 0, b: 0 } })!;
+      expect(def.linear).toEqual({ near: 5, far: 80 });
+      expect(getFog()).toBe(def);
+      expect(sceneData.linear.far).toBe(50);
+      expect(sceneData.mode).toBe('LINEAR');
+      expect(nodes.far.value).toBe(80);
+      expect(nodes.modeWeights.value.toArray()).toEqual([0, 1, 0]);
+      expect(nodes.color.value.equals(new THREE.Color('#ff0000'))).toBe(true);
+      expect(reasons).toEqual(['set', 'update']);
+      // The scene's next visit starts from its data
+      setFog('linear');
+      expect(getFog()!.linear.far).toBe(50);
+    });
+
+    it('moves the numbers and the colour over transitionSec, getFog the target at once', () => {
+      switchScene([linearFog]);
+      const nodes = getFogNodes()!;
+      frame();
+      updateFog(
+        { linear: { far: 150 }, color: '#ffffff', mode: 'HEIGHT', height: { density: 0.1 } },
+        { transitionSec: 10 }
+      );
+      expect(getFog()!.linear.far).toBe(150);
+      // The mode switches at once, the numbers wait for the clock
+      expect(nodes.modeWeights.value.toArray()).toEqual([0, 0, 1]);
+      expect(nodes.far.value).toBe(50);
+      expect(nodes.heightDensity.value).toBe(0.02);
+
+      frame(2.5);
+      expect(nodes.far.value).toBeCloseTo(75);
+      expect(nodes.heightDensity.value).toBeCloseTo(0.04);
+      // The colour moves in linear space
+      const from = new THREE.Color('#336699');
+      expect(nodes.color.value.r).toBeCloseTo(from.r + (1 - from.r) * 0.25);
+      expect(reasons).toEqual(['set', 'update']);
+
+      // Standing still while a scene loads
+      m.isLoading = true;
+      frame(5);
+      m.isLoading = false;
+      expect(nodes.far.value).toBeCloseTo(75);
+
+      frame(7.5);
+      expect(nodes.far.value).toBe(150);
+      expect(nodes.color.value.equals(new THREE.Color(1, 1, 1))).toBe(true);
+    });
+
+    it('fades the sun glow in when switched on', () => {
+      switchScene([linearFog]);
+      const nodes = getFogNodes()!;
+      updateFog({ sunScattering: { enabled: true, strength: 0.8 } }, { transitionSec: 4 });
+      expect(nodes.sunStrength.value).toBe(0);
+      frame(1);
+      expect(nodes.sunStrength.value).toBeCloseTo(0.2);
+    });
+
+    it('lets the latest call win per value', () => {
+      switchScene([linearFog]);
+      const nodes = getFogNodes()!;
+      updateFog({ linear: { near: 15, far: 150 } }, { transitionSec: 10 });
+      frame(5);
+      // far again, over 1 s from where it is; near keeps its 10 s
+      updateFog({ linear: { far: 50 } }, { transitionSec: 1 });
+      frame(1);
+      expect(nodes.far.value).toBe(50);
+      expect(nodes.near.value).toBeCloseTo(11);
+      // At once: near jumps, its transition dropped
+      updateFog({ linear: { near: 1 } });
+      expect(nodes.near.value).toBe(1);
+      frame(10);
+      expect(nodes.near.value).toBe(1);
+    });
+
+    it('keeps the far past the near while both move', () => {
+      switchScene([linearFog]);
+      const nodes = getFogNodes()!;
+      updateFog({ linear: { near: 200, far: 300 } }, { transitionSec: 10 });
+      updateFog({ linear: { far: 300 } }, { transitionSec: 1 });
+      frame(1);
+      // near 5 → 200 over 10 s is at 24.5; far 50 → 300 over 10 s too (its target didn't change)
+      expect(nodes.far.value).toBeGreaterThan(nodes.near.value);
+      updateFog({ linear: { far: 10 } });
+      expect(nodes.far.value).toBeGreaterThan(nodes.near.value);
+    });
+
+    it('ignores what isn’t finite', () => {
+      switchScene([linearFog]);
+      const def = updateFog({
+        linear: { near: NaN, far: 70 },
+        color: { r: Infinity, g: 0, b: 0 },
+        height: { density: -Infinity },
+      })!;
+      expect(def.linear).toEqual({ near: 5, far: 70 });
+      expect(def.color).toBe('#336699');
+      expect(def.height.density).toBe(0.02);
+    });
+
+    it('ends its transitions with another fog or the scene’s exit', () => {
+      switchScene([linearFog, exp2Fog]);
+      const nodes = getFogNodes()!;
+      updateFog({ exp2: { density: 0.5 } }, { transitionSec: 10 });
+      setFog('exp2');
+      frame(5);
+      expect(nodes.exp2Density.value).toBe(0.02);
+
+      updateFog({ exp2: { density: 0.5 } }, { transitionSec: 10 });
+      switchScene([exp2Fog]);
+      frame(5);
+      expect(nodes.exp2Density.value).toBe(0.02);
+    });
+
+    it('warns and changes nothing without a fog', () => {
+      expect(updateFog({ enabled: false })).toBeNull();
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('updateFog'));
+      expect(reasons).toEqual([]);
+    });
   });
 
   describe('FOG_COLOR', () => {

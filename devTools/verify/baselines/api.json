@@ -426,13 +426,16 @@
       "clearFogForScene": "Function",
       "FogChangeListener": "TypeAlias",
       "FogChangeReason": "TypeAlias",
+      "FogUpdate": "TypeAlias",
       "getFog": "Function",
       "getFogNodes": "Function",
       "installFog": "Function",
       "isFogEnabled": "Function",
       "onFogChange": "Function",
       "setFog": "Function",
-      "setFogEnabled": "Function"
+      "setFogEnabled": "Function",
+      "updateFog": "Function",
+      "UpdateFogOpts": "TypeAlias"
     },
     "src/_engine/features/fog/FogFeature.ts": {
       "fog": "Function",
@@ -440,8 +443,13 @@
     },
     "src/_engine/features/fog/FogNode.ts": {
       "createFogNodes": "Function",
+      "FOG_FLAT_RAY_EPSILON": "Variable",
+      "FOG_MAX_DENSITY_EXPONENT": "Variable",
+      "FOG_MIN_RAY_LENGTH": "Variable",
       "FogNodes": "TypeAlias",
       "getExp2FogFactor": "Function",
+      "getFogSunGlow": "Function",
+      "getHeightFogFactor": "Function",
       "getLinearFogFactor": "Function"
     },
     "src/_engine/features/fog/FogSchema.ts": {
@@ -455,6 +463,15 @@
       "FogOverridesSchema": "Variable",
       "fogSchemaPart": "Variable",
       "resolveFogDef": "Function"
+    },
+    "src/_engine/features/fog/FogTransitions.ts": {
+      "createFogTransitions": "Function",
+      "FOG_CHANNEL": "Variable",
+      "FOG_CHANNEL_COUNT": "Variable",
+      "FogTransitions": "TypeAlias",
+      "snapFogTransitions": "Function",
+      "startFogTransitions": "Function",
+      "stepFogTransitions": "Function"
     },
     "src/_engine/features/fog/FogTypes.ts": {
       "FogBackground": "TypeAlias",
@@ -6649,13 +6666,16 @@
       "FogMode",
       "FogNodes",
       "FogSunScattering",
+      "FogUpdate",
+      "UpdateFogOpts",
       "fog",
       "getFog",
       "getFogNodes",
       "isFogEnabled",
       "onFogChange",
       "setFog",
-      "setFogEnabled"
+      "setFogEnabled",
+      "updateFog"
     ],
     "aekasha/instancing": [
       "CreateInstanceSetOptions",
