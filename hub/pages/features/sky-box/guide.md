@@ -118,6 +118,10 @@ With `dayNight`, the sky keeps a running time of day. Your game drives it:
   logic that follows the sky (street lights at dusk). They read the primary sun and the first
   moon; `{ index: 1 }` reads another
   ([`SkyBodyOpts`](api:SkyBodyOpts): in a per-frame loop, keep that object in a constant).
+- [`getSkyHorizonColor`](api:getSkyHorizonColor): the sky's colour at the horizon (linear, before
+  tone mapping), away from the sun or in a direction you give, to match fog or a UI tint to the
+  sky. It's computed on the CPU from the atmosphere, a `COLOR` base and the ground: a texture
+  base counts as black behind the atmosphere, and without the atmosphere it's null.
 
 By default the time stops when the app is paused (`dayNight.timeSource: "APP"`). `MAIN` keeps it
 going, and `MANUAL` moves it only when you set it. It stands still while a scene loads.

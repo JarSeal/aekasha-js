@@ -51,6 +51,7 @@ import {
   type SkyBoxUpdate,
 } from './SkyBox';
 import { installSkyBoxSystem } from './SkyDayNight';
+import { getSkyHorizonColor } from './SkyHorizonColor';
 import { deleteTexture, saveTexture } from '../../kernel/assets/Texture';
 import type { SkyBoxDef } from './SkyBoxTypes';
 
@@ -376,5 +377,24 @@ describe('updateSkyBox: new nodes or uniform writes', () => {
   it("writes a direct path's colour without new nodes", async () => {
     await update({ base: black }, { base: { color: '#ff0000' } });
     expect(getActiveSkyBox()!.uniforms.base.color.value.getHexString()).toBe('ff0000');
+  });
+});
+
+describe('getSkyHorizonColor', () => {
+  it("follows the active sky box's updates, and is null once it's cleared", async () => {
+    registerSkyBox(
+      { id: 'sky', base: { type: 'COLOR', color: '#000000' }, atmosphere: {} },
+      'scene'
+    );
+    await setActiveSkyBox('sky');
+    const out = new THREE.Color();
+    const before = getSkyHorizonColor(out)!.clone();
+    expect(before.r + before.g + before.b).toBeGreaterThan(0);
+
+    await updateSkyBox('sky', { atmosphere: { exposure: 1.428 } });
+    expect(getSkyHorizonColor(out)!.g).toBeCloseTo(before.g * 2, 6);
+
+    clearSkyBox();
+    expect(getSkyHorizonColor(out)).toBeNull();
   });
 });

@@ -363,3 +363,41 @@ export const computeInscatter = (
     channel(betaR.z, betaM.z, _fex.z)
   );
 };
+
+const _partsFex = new THREE.Vector3();
+const _inscatter = new THREE.Vector3();
+const _floor = new THREE.Vector3();
+const _colorVec = new THREE.Vector3();
+const _tint = new THREE.Color();
+
+/**
+ * The atmosphere over `behind` in direction `dir` (unit), on the CPU: atmosphereParts' terms
+ * composed as composeAtmosphere does, `behind · Fex + (inscatter + floor) · exposure`, into `out`
+ * (linear, `behind` may be `out`). The clouds aren't in it: they draw nothing at or below the
+ * horizon. The sky's horizon colour (SkyHorizonColor.ts) uses it. Uses the uniforms' current
+ * values, allocates nothing.
+ * @internal
+ */
+export const computeAtmosphereColor = (
+  dir: THREE.Vector3,
+  behind: THREE.Color,
+  u: AtmosphereUniforms,
+  sunDirection: THREE.Vector3,
+  out: THREE.Color
+) => {
+  const fex = computeExtinction(dir.y, u.betaR.value, u.betaM.value, _partsFex);
+  const isCustom = u.isNightCustom.value;
+  // inscatter: SkyMesh's scaled Lin, tinted, plus its faint blue with an AUTO floor
+  const tint = _tint.copy(u.horizonTint.value).lerp(u.zenithTint.value, clamp01(dir.y));
+  const sum = computeInscatter(dir, u, sunDirection, _inscatter)
+    .multiply(_colorVec.set(tint.r, tint.g, tint.b))
+    .addScaledVector(NIGHT_OFFSET, 1 - isCustom);
+  // floor: mix(Fex · L0 · 0.04, Fex · nightColor, isNightCustom)
+  const night = u.nightColor.value;
+  _floor.copy(fex).multiplyScalar(NIGHT_L0 * SKY_SCALE);
+  _colorVec.set(night.r, night.g, night.b).multiply(fex);
+  sum.add(_floor.lerp(_colorVec, isCustom)).multiplyScalar(u.exposure.value);
+  return out.setRGB(behind.r * fex.x + sum.x, behind.g * fex.y + sum.y, behind.b * fex.z + sum.z);
+};
+
+const clamp01 = (value: number) => THREE.MathUtils.clamp(value, 0, 1);
