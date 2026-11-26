@@ -78,11 +78,14 @@ const profiles: SbpProfile[] = [
     // 411 → 413 KiB (at least 1 KiB over each). p106 Phase 1: the `fog()` feature (its state,
     // stable uniforms, graph and background system, 1.0 KiB; the template lists it) took the
     // initial to 416.4 and `assets/index.js` to 412.2 KiB: 417 → 418 and 413 → 414 KiB (at least
-    // 1 KiB over each)
+    // 1 KiB over each). p106 Phases 2-3: `updateFog` and the fog's sky sources (`fog` +0.3 KiB)
+    // and the sky box's `getSkyHorizonColor` with its layers' CPU twins (`skybox` +0.5 KiB, the
+    // app wires it) took the initial to 418.3 and `assets/index.js` to 414.1 KiB: 418 → 420 and
+    // 414 → 416 KiB (at least 1 KiB over each)
     budgets: {
-      initial: 418 * KIB,
+      initial: 420 * KIB,
       chunks: {
-        'assets/index.js': 414 * KIB,
+        'assets/index.js': 416 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
@@ -168,7 +171,8 @@ const profiles: SbpProfile[] = [
         // p106 Phase 1: the fog's state, stable uniforms, graph (LINEAR, EXP2) and background
         // system (990 B gzip, three modules; `suggestBudget`); Phase 2's HEIGHT factor, sun glow
         // and tweens and Phase 3's sky sources add to it, Phase 7 revisits it. Phase 2 (HEIGHT,
-        // the glow, `updateFog` and its transitions, four modules) took it to 2.0 KiB: 2 → 3 KiB
+        // the glow, `updateFog` and its transitions, four modules) took it to 2.0 KiB: 2 → 3 KiB.
+        // Phase 3's sky sources took it to 2.3 KiB, within 3
         '_engine/features/fog': 3 * KIB,
         '_engine/features/viewports': 3 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`). p302 (12 → 15

@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Fog, Rendering
 Related: p427_weather-and-mood.md (the world state that drives the fog through `updateFog`; its open question 3 is this plan), `src/_engine/features/skybox/CLAUDE.md` (the horizon colour and the sun the fog follows), `src/_engine/features/surface/CLAUDE.md` (the stable uniforms pattern this feature copies), `src/_engine/features/postfx/` (the light shafts pass, Phase 6), p990_follow-ups-from-done-plans.md (the deferred sky ideas: auto-exposure, volumetric clouds)
 
@@ -182,7 +182,9 @@ the boot's feature check (`checkSceneFeatures`).
   move fast (dusk, dawn): Phase 3 measures it at those hours, and a scene whose look needs an exact
   colour there uses `MANUAL` (or a `MANUAL` colour that `updateFog` tweens over the day).
 - The template's `appECSPlugins` wires both next to `setSurfaceSunSource`: the horizon colour at the
-  camera's azimuth, and `getSunDirection` with the sun light's colour × intensity.
+  camera's azimuth, and `getSunDirection` with the sun light's colour × intensity. (As built,
+  Phase 3: the horizon away from the sun, and the sky's horizon toward the sun as the glow's
+  colour; the getter is in `SkyHorizonColor.ts`, and measured no drift at dusk.)
 - Both colours are linear HDR before tone mapping, like the fog, so the far fog meets the sky's
   horizon band on the day-night cycle. Above the horizon, geometry against the sky keeps its
   silhouette; fogging the sky itself is a non-goal.
@@ -355,7 +357,7 @@ As built:
 - **Not checked in a browser yet** (no scene lists a fog before Phase 5): the graph compiles only
   on a GPU, so `HEIGHT` and the glow are checked there first.
 
-### Phase 3: Following the sky
+### Phase 3: Following the sky — done
 
 1. `getSkyHorizonColor` on `aekasha/skybox` (D5), tested against `computeInscatter` and the
    composite's terms; the sky box's `CLAUDE.md` and Hub page.
@@ -364,6 +366,53 @@ As built:
 4. In a real browser, the horizon colour against the sky's rendered horizon pixels at dawn, noon
    and dusk (`DAY_NIGHT`), the differences recorded here. A large one at dusk is fixed in the CPU
    twin first; if it can't be, the Hub page says to use `MANUAL` there (D5).
+
+As built:
+
+- **`getSkyHorizonColor(out, { direction? })`** (`SkyHorizonColorOpts`) is in its own
+  `SkyHorizonColor.ts`, not `SkyColor.ts` (D5): every layer imports `toSkyColor` from there, and
+  the getter imports the layers and `SkyBox.ts`. It's the composite at `dir.y = 0` in the
+  direction's horizontal part (default: away from `suns[0]`; −z when neither has one), from the
+  layers' CPU twins next to their nodes: `addSunGlow` (`layers/Sun.ts`: each enabled sun's halo,
+  not its disc), `computeAtmosphereColor` (`layers/Atmosphere.ts`: `atmosphereParts` composed as
+  `composeAtmosphere`) and `computeGroundColor` (`layers/Ground.ts`), × `env.backgroundIntensity`.
+  A texture base counts as black behind the atmosphere (null without one); the stars, Milky Way,
+  nebulae, moons and discs are left out; the clouds draw nothing at the horizon. Allocates nothing.
+- **The sources** (`FogSkyColorSource`, `FogSunSource` on `aekasha/fog`): set once, kept across
+  scenes, read on every change and every frame (`writeSources`, so an `updateFog` from a later
+  stage never renders the fallback colour for a frame). Each writes a scratch copied only on true;
+  a sun direction is normalized, none is zero (no glow). The colour channels' transitions still
+  run: they're what `MANUAL` and `SKY`'s fallback show, and `colorSource` switches at once.
+- **The wiring** (`AppECSPlugins.ts`, decided at the review): the fog's colour is the horizon
+  **away from the sun** (the getter's default), not at the camera's azimuth (D5): the camera's
+  azimuth brightened the whole fog when looking at the sun, and the glow brightened it again. The
+  glow's colour is **the sky's horizon toward the sun** (`getSkyHorizonColor` with the sun's
+  direction), not the sun light's colour × intensity (D5) nor its colour × horizon fade (the review's
+  first choice): no public API gives the light's fade (its configured intensity's default is the
+  sky box's internal 3), and the sky's own colour there can't outshine the sky, goes orange at
+  sunset and dark at night by itself. The far fog meets the sky on both sides.
+- **Measured** (2026-11-26, Windows Chrome 157, WebGPU, AMD RDNA 3; `skyShowcase`'s `dayNight`,
+  hours 0-21; the background node alone rendered into a float target, linear before tone mapping,
+  its horizon pixel looking horizontally, against the getter in the same direction):
+  - Away from the sun and to its side, by day: equal within 3e-6 absolute (float32 vs float64), at
+    dawn and dusk (sun at 0.1°, 2.7°, 5.3°) too. **No drift at dusk**: the horizon tint and the
+    exposure are uniforms the twin reads, not something it estimates.
+  - Toward the sun: the first run missed the sun's halo (`glowIntensity` 0.4 in `DAY_NIGHT`), so
+    after sunset (sun −2.5° to −10°) the sky showed a dim red glow (0.06 linear) where the twin
+    gave 0.0003; `addSunGlow` fixed it: now within 5e-4 at every hour but one, the sun 0.1° above
+    the horizon, where the pixel is on its disc (11.2 vs 4.9: the disc is left out on purpose).
+  - At night, to the side: up to 0.003 linear (the twin 0.0003): the stars and the Milky Way,
+    left out. Away from the sun (the fog's colour) equal.
+  - No `MANUAL` note is needed on the Hub page for dusk.
+- **In the app** (the same run): a `HEIGHT` fog set from code on `skyShowcase` at 18.25 h compiled
+  and rendered on WebGPU without an error (Phase 2's graph, first on a GPU), its colour uniform
+  equal to `getSkyHorizonColor` in the same frame (`fogSystem` after `skyBoxSystem`), its sun
+  direction `getSunDirection`'s, its glow colour the sky's toward the sun (16.2, 4.3, 0.9 at a
+  2.7° sun: the sky's brightness there, so the fog toward the sun reads as the sky behind it).
+- **Tests:** `SkyHorizonColor.test.ts` (10: against `computeInscatter`, `computeExtinction`,
+  SkyMesh's night floor, the exposure, the background intensity, the direction, the halo, the
+  ground), one in `SkyBox.test.ts` (the getter through an update and a clear), four in
+  `Fog.test.ts` (the sources).
 
 ### Phase 4: The debug tab
 

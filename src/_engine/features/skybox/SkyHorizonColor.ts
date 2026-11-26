@@ -5,10 +5,17 @@
 import * as THREE from 'three/webgpu';
 import type { SkyBoxDef } from './SkyBoxTypes';
 import { getActiveSkyBox } from './SkyBox';
-import { isAtmosphereEnabled, isGroundEnabled, type SkyUniforms } from './SkyComposite';
+import {
+  getSunCount,
+  isAtmosphereEnabled,
+  isGroundEnabled,
+  isSunEnabled,
+  type SkyUniforms,
+} from './SkyComposite';
 import { computeAtmosphereColor } from './layers/Atmosphere';
 import { ENV_DEFAULTS } from './layers/Base';
 import { computeGroundColor } from './layers/Ground';
+import { addSunGlow } from './layers/Sun';
 
 /** Options of {@link getSkyHorizonColor}. */
 export type SkyHorizonColorOpts = {
@@ -54,11 +61,15 @@ export const computeSkyHorizonColor = (
     (direction && toHorizontal(direction, 1, _dir)) ??
     toHorizontal(sunDirection, -1, _dir) ??
     _dir.copy(FALLBACK_DIRECTION);
-  // The layers behind the atmosphere: a COLOR base, else black (a texture can't be read here);
-  // the stars, nebulae and discs are left out
+  // The layers behind the atmosphere: a COLOR base, else black (a texture can't be read here),
+  // and the suns' halos; the stars, nebulae, moons and the suns' discs are left out (a fog
+  // shouldn't take a disc's radiance)
   const behind = isColorBase
     ? _behind.copy(u.base.color.value).multiplyScalar(u.base.intensity.value)
     : _behind.setRGB(0, 0, 0);
+  for (let i = 0; i < getSunCount(def); i++) {
+    if (isSunEnabled(def, i)) addSunGlow(dir, u.suns[i], behind);
+  }
   const color = hasAtmosphere
     ? computeAtmosphereColor(dir, behind, u.atmosphere, sunDirection, out)
     : out.copy(behind);
@@ -69,8 +80,9 @@ export const computeSkyHorizonColor = (
 
 /**
  * The active sky box's colour at the horizon (linear, HDR: it can pass 1, as the sky does before
- * tone mapping), into `out`: the atmosphere over a `COLOR` base, and the ground where its
- * horizon line is above the horizon; a `COLOR` base's colour without the atmosphere. It follows
+ * tone mapping), into `out`: the atmosphere over a `COLOR` base and the suns' halos, and the
+ * ground where its horizon line is above the horizon; without the atmosphere, a `COLOR` base's
+ * colour and the halos. It follows
  * the day-night cycle and every update. The fog's `SKY` colour reads it (the app wires it with
  * `setFogColorSource`).
  * @param out the colour written
@@ -78,8 +90,8 @@ export const computeSkyHorizonColor = (
  * @returns `out`, or null (no active sky box, or a texture base without the atmosphere: `out` is
  * untouched)
  * @remarks Computed on the CPU from the sky's uniforms, the same maths as the sky's shader, but
- * a texture base counts as black behind the atmosphere, and the stars, nebulae and sun and moon
- * discs are left out. Allocates nothing, so it can run every frame.
+ * a texture base counts as black behind the atmosphere, and the stars, nebulae, moons and the
+ * suns' discs are left out. Allocates nothing, so it can run every frame.
  * @example
  * ```ts
  * import * as THREE from 'three/webgpu';

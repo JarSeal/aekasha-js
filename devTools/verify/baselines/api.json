@@ -426,6 +426,8 @@
       "clearFogForScene": "Function",
       "FogChangeListener": "TypeAlias",
       "FogChangeReason": "TypeAlias",
+      "FogSkyColorSource": "TypeAlias",
+      "FogSunSource": "TypeAlias",
       "FogUpdate": "TypeAlias",
       "getFog": "Function",
       "getFogNodes": "Function",
@@ -433,7 +435,9 @@
       "isFogEnabled": "Function",
       "onFogChange": "Function",
       "setFog": "Function",
+      "setFogColorSource": "Function",
       "setFogEnabled": "Function",
+      "setFogSunSource": "Function",
       "updateFog": "Function",
       "UpdateFogOpts": "TypeAlias"
     },
@@ -1919,6 +1923,7 @@
       "AtmosphereTerms": "TypeAlias",
       "AtmosphereUniforms": "TypeAlias",
       "composeAtmosphere": "Function",
+      "computeAtmosphereColor": "Function",
       "computeExtinction": "Function",
       "computeInscatter": "Function",
       "computeRelativeExtinction": "Function",
@@ -1955,6 +1960,7 @@
     "src/_engine/features/skybox/layers/Ground.ts": {
       "applyGroundSunUniforms": "Function",
       "applyGroundUniforms": "Function",
+      "computeGroundColor": "Function",
       "createGroundUniforms": "Function",
       "GROUND_DEFAULTS": "Variable",
       "groundNode": "Function",
@@ -1994,6 +2000,7 @@
       "StarsUniforms": "TypeAlias"
     },
     "src/_engine/features/skybox/layers/Sun.ts": {
+      "addSunGlow": "Function",
       "applySunLightingUniforms": "Function",
       "applySunUniforms": "Function",
       "createSunUniforms": "Function",
@@ -2154,6 +2161,11 @@
       "requestEnvBake": "Function",
       "runRequestedEnvBake": "Function",
       "setEnvBake": "Function"
+    },
+    "src/_engine/features/skybox/SkyHorizonColor.ts": {
+      "computeSkyHorizonColor": "Function",
+      "getSkyHorizonColor": "Function",
+      "SkyHorizonColorOpts": "TypeAlias"
     },
     "src/_engine/features/skybox/SkyLights.ts": {
       "AMBIENT_LIGHT_DEFAULTS": "Variable",
@@ -6665,7 +6677,9 @@
       "FogLinearParams",
       "FogMode",
       "FogNodes",
+      "FogSkyColorSource",
       "FogSunScattering",
+      "FogSunSource",
       "FogUpdate",
       "UpdateFogOpts",
       "fog",
@@ -6674,7 +6688,9 @@
       "isFogEnabled",
       "onFogChange",
       "setFog",
+      "setFogColorSource",
       "setFogEnabled",
+      "setFogSunSource",
       "updateFog"
     ],
     "aekasha/instancing": [
@@ -7123,11 +7139,13 @@
       "SkyBoxPresetName",
       "SkyBoxState",
       "SkyBoxUpdate",
+      "SkyHorizonColorOpts",
       "bakeEnvironment",
       "createSkyBox",
       "getDayNightSpeed",
       "getMoonDirection",
       "getMoonPhase",
+      "getSkyHorizonColor",
       "getSkyLightIds",
       "getSunDirection",
       "getSunElevation",

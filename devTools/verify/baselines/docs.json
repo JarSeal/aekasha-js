@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 4637,
-      "total": 4637
+      "documented": 4647,
+      "total": 4647
     },
     "members": {
       "documented": 1240,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 4064,
-        "total": 4064
+        "documented": 4074,
+        "total": 4074
       },
       "members": {
         "documented": 1064,
@@ -105,8 +105,8 @@
     },
     "engine/features/fog": {
       "exports": {
-        "documented": 50,
-        "total": 50
+        "documented": 54,
+        "total": 54
       },
       "members": {
         "documented": 0,
@@ -357,8 +357,8 @@
     },
     "engine/features/skybox": {
       "exports": {
-        "documented": 174,
-        "total": 174
+        "documented": 177,
+        "total": 177
       },
       "members": {
         "documented": 0,
@@ -371,8 +371,8 @@
     },
     "engine/features/skybox/layers": {
       "exports": {
-        "documented": 79,
-        "total": 79
+        "documented": 82,
+        "total": 82
       },
       "members": {
         "documented": 0,

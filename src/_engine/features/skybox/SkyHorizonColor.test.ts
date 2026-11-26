@@ -125,6 +125,27 @@ describe('computeSkyHorizonColor', () => {
     expect(horizonOf(skyWith({}, 90)).color).not.toBeNull();
   });
 
+  it("adds each sun's halo (not its disc) behind the atmosphere", () => {
+    const glowSky = skyWith({ suns: [{ elevation: 5, azimuth: 0, glowIntensity: 0.4 }] }, 5);
+    const { color: withGlow, u } = horizonOf(glowSky, TOWARD_SUN);
+    const { color: without } = horizonOf(skyWith({}, 5), TOWARD_SUN);
+    // 5° from the sun, a halo of 10° (its default glowSize): half its intensity at 10°
+    const glowExponent = Math.log(0.5) / Math.log(Math.cos(THREE.MathUtils.degToRad(10)));
+    const glow = Math.cos(THREE.MathUtils.degToRad(5)) ** glowExponent * 0.4;
+    const fex = computeExtinction(
+      0,
+      u.atmosphere.betaR.value,
+      u.atmosphere.betaM.value,
+      new THREE.Vector3()
+    );
+    expectColor(
+      withGlow,
+      without!.r + glow * fex.x,
+      without!.g + glow * fex.y,
+      without!.b + glow * fex.z
+    );
+  });
+
   it('takes the ground where its horizon line is above the horizon, and not at height 0', () => {
     const ground = { color: '#405020', horizonBlend: 0.01, useAtmosphereHorizon: false };
     expect(horizonOf(skyWith({ ground })).color).toEqual(horizonOf(skyWith()).color);
