@@ -1,6 +1,6 @@
-Status: in progress | Phases 1-5 implemented
+Status: in progress | Phases 1-5 implemented; Phase 6 dropped
 Category: Fog, Rendering
-Related: p427_weather-and-mood.md (the world state that drives the fog through `updateFog`; its open question 3 is this plan), `src/_engine/features/skybox/CLAUDE.md` (the horizon colour and the sun the fog follows), `src/_engine/features/surface/CLAUDE.md` (the stable uniforms pattern this feature copies), `src/_engine/features/postfx/` (the light shafts pass, Phase 6), p990_follow-ups-from-done-plans.md (the deferred sky ideas: auto-exposure, volumetric clouds)
+Related: p427_weather-and-mood.md (the world state that drives the fog through `updateFog`; its open question 3 is this plan), `src/_engine/features/skybox/CLAUDE.md` (the horizon colour and the sun the fog follows), `src/_engine/features/surface/CLAUDE.md` (the stable uniforms pattern this feature copies), p990_follow-ups-from-done-plans.md (the deferred sky ideas: auto-exposure, volumetric clouds; and Rendering's sun light shafts, Phase 6's measurement)
 
 # Fog System — Plan
 
@@ -18,7 +18,8 @@ The modes:
 
 Each mode can glow toward the sun (on by default for `HEIGHT`, off for the other two).
 
-And, gated on a measurement (Phase 6), sun light shafts as a PostFX pass.
+Sun light shafts as a PostFX pass were gated on a measurement (Phase 6) and dropped: the figures
+are in Phase 6, the idea in p990's Rendering.
 
 ## Why not a raymarched volumetric fog (read before changing the modes)
 
@@ -38,8 +39,9 @@ raymarch per pixel) isn't planned:
   the sun. An exponential height fog (Unreal's, Frostbite's) gives both analytically, in every
   material, for a few ALU.
 
-The part a height fog can't do, shafts of light through gaps, is three's `godrays` addon as a PostFX
-pass (D9), built only if its cost passes Phase 6's gate.
+The part a height fog can't do, shafts of light through gaps, was to be three's `godrays` addon as a
+PostFX pass (D9), built only if it passed Phase 6's gate. It didn't (Phase 6: it doesn't compile
+under the app's VSM shadows, and its depth pre-pass is most of its cost).
 
 ## Context (measured 2026-11-26, three r187)
 
@@ -243,7 +245,10 @@ latest call winning; what p427's weather drives), `getFog()` (the current defini
   Checked at 16 px in both themes and densities before it's final; the Hub's component library
   shows it with the other built-in icons (`yarn verify:ui`).
 
-### D9. Sun light shafts (Phase 6, gated)
+### D9. Sun light shafts (Phase 6, gated) — dropped
+
+Not built: Phase 6's measurement was a no go (its figures there, the idea in p990's Rendering).
+The design as it stood:
 
 - `createFogLightShafts(ctx, params)` on `aekasha/fog`: three's `godrays(depth, camera, light)`
   (`three/addons/tsl/display/GodraysNode.js`, `import()`ed on first use, never in the initial
@@ -557,7 +562,7 @@ As built (section 4):
   through the gather; a fresh load reads 0.015 from the scene's data. The file was put back after
   the check. Phase 4's "not checked yet" items are all checked.
 
-### Phase 6: Sun light shafts (gated)
+### Phase 6: Sun light shafts (gated) — dropped
 
 1. Measure first: `godrays` on `fogShowcase` at 1080p, half resolution, through the PostFX
    profiler, on the dev GPU, with and without the depth pre-pass it needs.
@@ -566,6 +571,45 @@ As built (section 4):
    tab's switch).
 3. **No go**: record the figures in this plan, move the idea to p990's Rendering with them, mark
    the phase dropped.
+
+As measured (2026-11-27, a no go; the idea and these figures are in p990's Rendering):
+
+- **The run:** a spike pass (three r187's `godrays(depth, camera, light)` from
+  `three/addons/tsl/display/GodraysNode.js` at `resolutionScale` 0.5, its defaults: 60 steps,
+  density 0.7, max density 0.5; composited with `depthAwareBlend`; the light the root scene's
+  shadow-casting directional, the sky box's sun) in `fogShowcase`'s chain, the `HEIGHT` fog, the
+  sky at 16:30. 1920 × 1080 at pixel ratio 1, Windows Chrome 157, WebGPU, AMD RDNA 3, debug env;
+  the stats panel's GPU frame and the PostFX profiler's figures, medians over 6 s. The spike was
+  removed after.
+- **The cost**, GPU ms a frame (the frame figure sums overlapping passes,
+  `docs/issues/i120_gpu-timer-webgpu-frame-sum.md`):
+
+  | Renderer | Pass off | Pass on | Change | Of which |
+  | --- | --- | --- | --- | --- |
+  | PCF, MSAA (the app's but VSM) | 2.43 | 3.38 | +0.95 | the march 0.25, the composite 0.09, the depth pre-pass about 0.6 |
+  | PCF, MSAA, full resolution | 2.43 | 3.82 | +1.39 | the march 0.86 |
+  | PCF, no MSAA, the scene pass's own depth (no pre-pass) | 1.59 | 1.90 | +0.31 | the march 0.25 |
+  | PCF, no MSAA, the pre-pass's depth | 1.59 | 2.55 | +0.96 | so the pre-pass alone is about 0.65 |
+
+  The CPU frame +0.2 ms (the pass's own `updateBefore` 0.06). The sun's shadow box (30 m, the
+  default, or 250 m) didn't change it. With MSAA on (the app's `antialias: true`) the pass needs
+  PostFX's non-MSAA pre-pass: a second scene render, two thirds of the pass's cost on a desktop
+  GPU, so a phone would pass 1 ms well before the march does. A chain that already reads depth
+  (the AO pass) pays it already.
+- **Under VSM (the app's `shadowMapType`) it doesn't compile:** the addon reads
+  `light.shadow.map.depthTexture` with `.compare()`, and three sets that texture's
+  `compareFunction` to null under VSM (`ShadowNode.js`, `setupShadow`), so WebGPU's WGSL calls
+  `textureSampleCompare` without a comparison sampler ("unresolved value
+  'nodeUniform8_sampler'", `fragment_Godrays`) and the frame turns flat grey (the shafts' target
+  stays at its white clear, so the blend covers it). It would need a copy of `GodraysNode` that
+  compares the depth by hand (a plain sample and a `step`), D9's "three's addon" no longer.
+- **On `fogShowcase` it shows no shafts:** shafts come only from occluders inside the sun's shadow
+  box (the sky light's 30 m half-size, following the camera; 250 m the same), and the valley has
+  only its thin posts there. The pass adds a flat bright veil over the `HEIGHT` fog, a second fog.
+  A fair look needs a scene made for it (a forest edge, ruins, a gap in a ridge, near the
+  camera).
+- **The gate's "reversed depth buffer" doesn't apply:** the engine never sets
+  `reversedDepthBuffer` (three's default false; `createRenderer` has no option for it).
 
 ### Phase 7: The Hub, the docs, the budgets, the version
 
@@ -591,8 +635,8 @@ As built (section 4):
   unchanged (no fog without a `fog` field).
 - `yarn verify:baselines` (no `_dbg__` code in production; the API baseline gains `aekasha/fog`
   and `getSkyHorizonColor`).
-- `yarn sbp` (the fog feature only where it's installed, the light shafts' addon never in the
-  initial download), `yarn verify:ui` (the icon), `yarn hub:build`.
+- `yarn sbp` (the fog feature only where it's installed), `yarn verify:ui` (the icon),
+  `yarn hub:build`.
 - In a real browser (headless WebGPU doesn't render under WSL2): the day-night cycle on
   `fogShowcase` with `colorSource: 'SKY'`, the far fog meeting the horizon at dawn, noon and dusk;
   no hitch when switching modes, the sun glow or the master switch (the frame graph); the WebGL backend
@@ -602,7 +646,8 @@ As built (section 4):
 
 - A raymarched or froxel volumetric fog (see "Why not"), local fog volumes, fog in the sky itself
   (the background), animated or noise-driven fog (a later `HEIGHT` option, if a scene asks),
-  regional fog (p427's open question 6), fog in viewports' scenes (D3's recipe covers it).
+  regional fog (p427's open question 6), fog in viewports' scenes (D3's recipe covers it), sun
+  light shafts (Phase 6 dropped them: p990's Rendering).
 
 ## Decided (2026-11-26)
 
