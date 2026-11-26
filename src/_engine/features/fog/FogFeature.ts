@@ -30,7 +30,7 @@ export const fogSceneHooks: SceneHooks = {
 export const fog = (): EngineFeature => ({
   id: 'fog',
   install: (ctx) => {
-    installFog();
+    installFog(ctx);
     ctx.addSceneHooks(fogSceneHooks);
   },
 });

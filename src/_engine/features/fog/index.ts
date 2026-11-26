@@ -1,6 +1,7 @@
-export { getFog, isFogEnabled, onFogChange, setFog, setFogEnabled } from './Fog';
+export { getFog, getFogNodes, isFogEnabled, onFogChange, setFog, setFogEnabled } from './Fog';
 export type { FogChangeListener, FogChangeReason } from './Fog';
 export { fog } from './FogFeature';
+export type { FogNodes } from './FogNode';
 export type { FogInput } from './FogSchema';
 export type {
   FogBackground,
