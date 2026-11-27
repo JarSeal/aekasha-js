@@ -1,7 +1,6 @@
 Status: draft | not-implemented
 Category: Text, Rendering
 Epic: p390_text-rendering-and-text-decals.md
-Blocked by: p391_font-assets-and-msdf-font-tool.md
 Blocks: p393_text-effects.md, p394_labels-screen-text-and-debug-text.md, p397_text-decals.md
 Related: `src/_engine/features/lines/CLAUDE.md` (the pattern: handle, registry, entity binding, attach, scene exit, lazy chunk), `src/_engine/kernel/init/CLAUDE.md` (the feature contract), `src/_engine/features/merging/CLAUDE.md` (`packMergeMaterialTable`: a per-object table texture read by a shared graph), `src/_engine/features/instancing/CLAUDE.md` (instanced draws, the GPU and CPU backends), `devTools/sbp/CLAUDE.md` (the feature's group and budget)
 

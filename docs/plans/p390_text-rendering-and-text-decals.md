@@ -1,6 +1,6 @@
 Status: draft | not-implemented
 Category: Text
-Blocks: p391_font-assets-and-msdf-font-tool.md, p392_text-feature-msdf-renderer.md, p393_text-effects.md, p394_labels-screen-text-and-debug-text.md, p395_dynamic-glyph-atlas.md, p396_engine-decals-feature.md, p397_text-decals.md, p398_decal-editing-and-bake.md, p399_text-showcase-scene-and-hub.md
+Blocks: _DONE_p391_font-assets-and-msdf-font-tool.md, p392_text-feature-msdf-renderer.md, p393_text-effects.md, p394_labels-screen-text-and-debug-text.md, p395_dynamic-glyph-atlas.md, p396_engine-decals-feature.md, p397_text-decals.md, p398_decal-editing-and-bake.md, p399_text-showcase-scene-and-hub.md
 Related: `src/_engine/features/lines/CLAUDE.md` (the handle + entity pattern text copies), `src/_engine/ui/CLAUDE.md`'s Game UI (the HTML world anchors, the other label route), `src/toolkit/terrain/CLAUDE.md` (p309's decal material and runtime decals, which p396 generalizes), `src/_engine/features/terrain/CLAUDE.md` (decal sets), `src/_engine/debug/editors/CLAUDE.md` (the material editor p398 extends), `src/_engine/kernel/render/CLAUDE.md` (texture bakes, p398's bake), `devTools/assetPipeline/CLAUDE.md` (where p391's font encoder goes)
 
 # Text Rendering and Text Decals — Epic
@@ -233,6 +233,17 @@ texture and the material JSON change; a production build has no saving (that nee
   `p390-text`). One PR into `main` when p394 is done, or p395 when its spike is a go and it's built
   by then: engine minor (the `text()` feature), toolkit minor (the fonts), app minor (the scene's
   stations).
+  - **p391 was built on its own branch**, `p391_font-assets-and-msdf-font-tool` (from `main` at
+    `916af9ce`), which is `p390-text`'s base (2026-11-28, with the user): `p390-text` is created
+    from its last commit, and p392 starts there. p391 bumped no version. Its `CHANGELOG.md` entry
+    is the branch's (`## 2026-11-28 — p390-text (p391 Phases 1-6)`): each plan adds to it, and its
+    part headings stay unnumbered (`### Engine (a minor, numbered at the p390-text merge)`), so
+    the Hub's What's new shows no version `package.json` lacks.
+  - **Before the PR:** the date and the plans in the entry's heading; the bumps (engine, toolkit
+    and app minors, each once, at the level of the biggest change since `main`) and the part
+    headings' numbers and codenames; `yarn verify:baselines --update` (the API baseline gains
+    `aekasha/text` and p391's font names on `aekasha/schemas`, and whatever p392-p395 add);
+    `yarn checkVersions --against main`, which fails on this branch until the bumps.
 - **`p396-decals`** (integration branch, from `main` after `p390-text` merged, since p397 needs
   the MTSDF node): p396, p397 and p398. One PR into `main` after p398: engine minor (`decals()`),
   toolkit minor (the deprecated wrappers, the terrain decals on the engine core), app minor.

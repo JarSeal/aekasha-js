@@ -1,7 +1,7 @@
 Status: draft | feasibility study — not-implemented
 Category: Text, Assets
 Epic: p390_text-rendering-and-text-decals.md
-Blocked by: p391_font-assets-and-msdf-font-tool.md (its Phase 1 decides the generator), p392_text-feature-msdf-renderer.md
+Blocked by: p392_text-feature-msdf-renderer.md
 Related: `src/_engine/kernel/init/CLAUDE.md` (the assets worker and its lazily imported jobs), `devTools/sbp/CLAUDE.md` (the lazy chunk's budget)
 
 # The Dynamic Glyph Atlas — Plan

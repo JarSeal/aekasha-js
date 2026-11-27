@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-5 implemented
+Status: implemented (Phases 1-6)
 Category: Text, Assets
 Epic: p390_text-rendering-and-text-decals.md
 Blocks: p392_text-feature-msdf-renderer.md, p395_dynamic-glyph-atlas.md
@@ -523,11 +523,32 @@ As built (2026-11-28):
 - **Checked:** `yarn hub:build --no-embed` (142 pages, no new warning, no coverage warning),
   `yarn test`. Not run: `yarn verify:baselines --update` (Phases 2 and 4), before the PR.
 
-### Phase 6: Versions and done
+### Phase 6: Versions and done — done
 
 Toolkit minor (the fonts), engine: none yet if the feature ships with p392 on the same
 integration branch (the epic's Branches and PRs: one bump at the `p390-text` merge). `CHANGELOG.md`
 entry on the branch; mark the plan done.
+
+As built (2026-11-28):
+
+- **No version bumped** (decided with the user): the toolkit's minor wasn't bumped here either.
+  This branch (from `main` at `916af9ce`, which hadn't moved) is `p390-text`'s base, and the
+  engine, toolkit and app minors are bumped once in the `p390-text` PR, where `main`'s versions by
+  then are known. `yarn checkVersions --against main` fails until then; the epic's Branches and
+  PRs has the branch and the PR's to-do.
+- **The `CHANGELOG.md` entry is the branch's**, `## 2026-11-28 — p390-text (p391 Phases 1-6)`,
+  with Engine, Toolkit and Project sections (no App: the branch changed no app file). Its part
+  headings are unnumbered (`### Engine (a minor, numbered at the p390-text merge)`): the Hub reads
+  a part only from `### Engine <version> (<codename>)` (`devTools/hub/generated/version.ts`), so
+  What's new shows the entry without a version `package.json` lacks. p392-p395 add to it.
+  `yarn hub:build --no-api --no-embed` passes with it (its search index warning, 602 KiB, is the
+  same without the entry).
+- **Marked done:** `_DONE_p391_font-assets-and-msdf-font-tool.md`; the epic's `Blocks` names it,
+  p392's `Blocked by` (only this plan) is gone and p395's names only p392. No `CLAUDE.md` file or
+  Hub page named the file. The docs were Phase 5's.
+- **Carried:** D5's end-to-end check (`yarn build` failing on a stale collected font, passing after
+  `yarn assets`) needs p392's `texts` (Phase 3's `TODO p392` in `devTools/gather/fonts.ts`);
+  `yarn verify:baselines --update`, before the `p390-text` PR.
 
 ## Verification
 
