@@ -231,14 +231,14 @@ export default [
   // page): the Hub, `yarn docs` and the hover render it. Provenance goes in a `//` comment, which
   // nothing renders. Every block (`any`), its tags included: a tag's first word is its `name`
   // (`@remarks _DONE_p094_….md`). The lookarounds, not `\b`, so `p303_….md` and `_DONE_p094` match.
-  // No fix: rewording needs a person. `warn` until p104's last phase.
+  // No fix: rewording needs a person (p104).
   {
     files: ['src/_engine/**/*.ts', 'src/toolkit/**/*.ts'],
     ignores: ['**/*.test.ts'],
     plugins: { jsdoc },
     rules: {
       'jsdoc/no-restricted-syntax': [
-        'warn',
+        'error',
         {
           contexts: [
             {
