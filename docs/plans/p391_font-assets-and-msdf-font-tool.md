@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-4 implemented
+Status: in progress | Phases 1-5 implemented
 Category: Text, Assets
 Epic: p390_text-rendering-and-text-decals.md
 Blocks: p392_text-feature-msdf-renderer.md, p395_dynamic-glyph-atlas.md
@@ -481,7 +481,7 @@ As built (section 2, 2026-11-28):
   mutations of the parse and the drop on dispose each fail a test. The gather's test checks
   `__atlasUrl` in both datas; `assetOutputsBuildPlugin.test.ts` (new) `collectUrls`.
 
-### Phase 5: The Hub and the docs
+### Phase 5: The Hub and the docs — done
 
 1. The handbook page `docs/techniques/text-fonts.md`: formats, charsets, the dynamic option
    (p395), licences, the atlas cost table (glyph count × size → atlas size).
@@ -492,6 +492,36 @@ As built (section 2, 2026-11-28):
    `__atlasUrl`, `collectUrls`' keys), a `src/_engine/features/text/CLAUDE.md` (the runtime load:
    `FontData`, the atlas as `font:<id>`, the scene hooks; p392 extends it), the root `CLAUDE.md` (the command, the toolkit category), `readme.md` (the command,
    the asset type).
+
+As built (2026-11-28):
+
+- **The handbook** (`docs/techniques/text-fonts.md`, on the model of `texture-sets.md`): what it is,
+  best for, which atlas type, performance, **the atlas cost table measured with the encoder**
+  (`generateFontAtlasAsync` and `encodeKtx2Raw` from a scratch script: IBM Plex Sans Medium,
+  `MTSDF`, five charsets from `DIGITS` to Latin + Extended-A + Greek + Cyrillic at 32, 48, 64 and
+  96 px, the three types at 48, Plex Mono for the layout without kerning; about 100 glyphs fit 512²
+  at 48, 200 1024 × 512, 500 1024²; doubling `size` doubled the atlas in every row but one; the
+  layout is mostly kerning, quadratic in the charset), formats and their `fonttools` fixes,
+  charsets, the collection, `yarn importFont`, using a font, the parameters with choosing `size` and
+  `pxRange` (msdfgen's ≥ 2 screen px rule), licences, variations (p395's dynamic atlas as planned),
+  the checklist and budgets, the toolkit's fonts. Also a line in `README.md`'s general pages and
+  a Fonts section in `asset-optimization.md` (not in the plan).
+- **The Hub:** the Text feature page (`hub/pages/features/text/`: World group, order 73, Lucide's
+  `type` icon added at the Hub's pinned 1.53.0; covers `Font assets` and `Loading fonts`; no
+  `::: scene` or `aek:image`: `textShowcase` is p392's), whose intro says fonts come first. The
+  `importFont` output on it is real (`planFontImport` on the toolkit's Plex Sans Bold). Fonts also
+  in Scenes and assets (the asset type, the `fonts` key, the manifest), Toolkit (the tree, a Fonts
+  section) and Asset optimization; `hub/CLAUDE.md`'s feature page list.
+- **The `CLAUDE.md` files:** `src/_engine/features/text/CLAUDE.md` (new; `## Font assets`, `##
+  Loading fonts`; p392 adds its sections) and its line in the root's map; the root's command,
+  `features/`' extra folder, the toolkit's `fonts/`, the app's `fonts/` and a sentence in the data
+  pipeline; `devTools/assetPipeline/CLAUDE.md` (a Fonts bullet, `collectUrls`' keys in the build's);
+  `devTools/gather/CLAUDE.md` (`fonts.ts`, the suffix, the schema and part, the pass order);
+  `src/_engine/kernel/init/CLAUDE.md` (`text()` an eighteenth in `ENGINE_FEATURE_FACTORIES`, not in
+  the template's list). The feature counts stay seventeen (p392 Phase 1 changes them).
+- **`readme.md`:** Fonts in the engine's and the toolkit's features, the command, the tree.
+- **Checked:** `yarn hub:build --no-embed` (142 pages, no new warning, no coverage warning),
+  `yarn test`. Not run: `yarn verify:baselines --update` (Phases 2 and 4), before the PR.
 
 ### Phase 6: Versions and done
 

@@ -173,3 +173,6 @@ doesn't. The handbook has the
 - The handbook: [Fonts for 3D text](repo:docs/techniques/text-fonts.md): the atlas types, the
   cost table, charsets, choosing `size` and `pxRange`, licences and the checklist.
 - The API reference: [`aekasha/text`](hub:documentation/aekasha/text).
+
+::: claude-md
+:::
