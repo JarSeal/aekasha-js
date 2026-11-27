@@ -6,6 +6,7 @@
 import { BUDGET_FIX, getBudgetViolations } from '../assetPipeline/budgets';
 import {
   getAssetResult,
+  getFontResult,
   getMergeMaterialSlotResult,
   getTextureArrayResult,
   getTextureAtlasSlotResult,
@@ -30,6 +31,8 @@ export type ShipChecks = {
   checkAtlasSlot: (jsonFile: string, slot: string, sceneId: string) => void;
   /** A merge material palette slot's array (p374) */
   checkMergeMaterialSlot: (jsonFile: string, slot: string, sceneId: string) => void;
+  /** A font's atlas and layout (p391) */
+  checkFont: (jsonFile: string, sceneId: string) => void;
   /** Logs the assets without an output or over their budget, and fails the gather on one */
   report: () => void;
 };
@@ -63,7 +66,7 @@ const reportMissingOutputs = (
       ? ` Or ship them unoptimized in this build: ${ALLOW_UNOPTIMIZED_ENV_KEY}=true yarn build`
       : '';
     const ktxOnly = encoderMissing.some(isKtxOnlyAsset)
-      ? ` A texture array, atlas slot or cube texture has no unoptimized form: it needs ktx, even with ${ALLOW_UNOPTIMIZED_ENV_KEY}.`
+      ? ` A texture array, atlas slot, cube texture or font has no unoptimized form: it needs ktx, even with ${ALLOW_UNOPTIMIZED_ENV_KEY}.`
       : '';
     ctx.log.details(
       `  Without ktx: set it up (see [Assets] above), run yarn assets, and commit src/public/aek-assets/ and assets.lock.json.${unoptimized}${ktxOnly}`
@@ -120,6 +123,9 @@ export const createShipChecks = (ctx: GatherContext): ShipChecks => {
     },
     checkMergeMaterialSlot: (jsonFile, slot, sceneId) => {
       if (pipeline) checkResult(getMergeMaterialSlotResult(pipeline, jsonFile, slot), sceneId);
+    },
+    checkFont: (jsonFile, sceneId) => {
+      if (pipeline) checkResult(getFontResult(pipeline, jsonFile), sceneId);
     },
     report: () => {
       if (missingOutputs.size) reportMissingOutputs(ctx, missingOutputs);

@@ -5,7 +5,13 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { FONT_DEFAULTS } from '../../../src/_engine/schemas';
 import { ROOT } from '../../paths';
 import { collectPipelineAssets, getFontAssetKey, readAssetJsons } from '../assets';
-import { createFontSource, getFontKeyParams, listFontFiles, resolveFont } from './fontSource';
+import {
+  createFontSource,
+  getFontKeyParams,
+  listFontFiles,
+  readCollectedFontChars,
+  resolveFont,
+} from './fontSource';
 
 // p391 Phase 2 section 3: a font's source (D2): its defaults, its files, its cache key's params,
 // and its place in the pipeline's asset list
@@ -94,6 +100,43 @@ describe('getFontKeyParams', () => {
   });
 });
 
+describe('the collected characters (p391 D5)', () => {
+  const codePoints = (text: string) => [...text].map((c) => c.codePointAt(0) as number);
+  const sourceOf = (collectFromScenes: boolean, collected?: number[]) => {
+    const source = createFontSource(
+      JSON_FILE,
+      { fileName: './Sans.woff', charset: { presets: ['ASCII'], collectFromScenes } },
+      { collected }
+    );
+    if ('error' in source) throw new Error(source.error);
+    return source;
+  };
+
+  it('keeps them only for a font that collects them, none read as none', () => {
+    expect(sourceOf(false, codePoints('Ä')).collected).toBeUndefined();
+    expect(sourceOf(true, codePoints('Ä')).collected).toEqual([0xc4]);
+    expect(sourceOf(true).collected).toEqual([]);
+  });
+
+  it('changes the key only with a character the font doesn’t already ask for', () => {
+    const plain = getFontKeyParams(sourceOf(false)).charset;
+    expect(getFontKeyParams(sourceOf(true)).charset).toBe(plain);
+    expect(getFontKeyParams(sourceOf(true, codePoints('Hello'))).charset).toBe(plain);
+    expect(getFontKeyParams(sourceOf(true, codePoints('Hällo'))).charset).not.toBe(plain);
+  });
+
+  it('reads the generated file: none without it, and names a file that isn’t one', () => {
+    const file = path.join(TMP, 'fontCharsets.json');
+    expect(readCollectedFontChars(file)).toEqual(new Map());
+    fs.writeFileSync(file, JSON.stringify({ sans: 'Ä€😀' }));
+    expect(readCollectedFontChars(file)).toEqual(new Map([['sans', [0xc4, 0x20ac, 0x1f600]]]));
+    fs.writeFileSync(file, '{ "sans": 3 }');
+    expect(() => readCollectedFontChars(file)).toThrow(/isn't \{ "<fontId>": "<characters>" \}/);
+    fs.writeFileSync(file, '{');
+    expect(() => readCollectedFontChars(file)).toThrow(/fontCharsets\.json isn't JSON/);
+  });
+});
+
 describe('the asset list', () => {
   it('collects a font JSON as one encode by its key, and drops one whose file is missing', () => {
     fs.writeFileSync(JSON_FILE, JSON.stringify({ fileName: './Sans.woff' }));
@@ -110,6 +153,28 @@ describe('the asset list', () => {
         reason: expect.stringMatching(/Missing\.ttf doesn't exist/),
       },
     ]);
+  });
+
+  it('gives a collecting font its collected characters, or drops it when the file doesn’t read', () => {
+    const file = path.join(TMP, 'collected.json');
+    fs.writeFileSync(
+      JSON_FILE,
+      JSON.stringify({ fileName: './Sans.woff', charset: { collectFromScenes: true } })
+    );
+    fs.writeFileSync(file, JSON.stringify({ sans: 'Ö' }));
+    const { assetJsons } = readAssetJsons(path.join(TMP, 'src'));
+    const collected = collectPipelineAssets(assetJsons, { fontCharsetsFile: file });
+    expect(collected.assets.get(getFontAssetKey(JSON_FILE))?.source).toMatchObject({
+      collected: [0xd6],
+    });
+    fs.writeFileSync(file, '[]');
+    const broken = collectPipelineAssets(assetJsons, { fontCharsetsFile: file });
+    expect(broken.assets.has(getFontAssetKey(JSON_FILE))).toBe(false);
+    expect(broken.dropped).toContainEqual({
+      jsonFile: expect.stringMatching(/sans\.font\.json$/),
+      reason: expect.stringMatching(/collected\.json isn't \{ "<fontId>"/),
+    });
+    fs.writeFileSync(JSON_FILE, JSON.stringify({ fileName: './Sans.woff' }));
   });
 
   it('drops a font JSON that fails its schema (a WOFF2)', () => {

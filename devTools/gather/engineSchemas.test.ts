@@ -101,6 +101,7 @@ describe('getSceneFeatureIds (the scene manifest)', () => {
       'fogs',
       'scatters',
       'worldBounds',
+      'fonts',
     ]);
   });
 });

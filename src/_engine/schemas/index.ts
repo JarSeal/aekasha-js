@@ -110,7 +110,13 @@ export {
   FONT_TYPES,
   FontAssetSchema,
 } from '../features/text/FontSchema';
-export type { FontAsset, FontCharsetPreset, FontType } from '../features/text/FontSchema';
+export type {
+  FontAsset,
+  FontCharsetPreset,
+  FontType,
+  SceneFontDef,
+} from '../features/text/FontSchema';
+export { textSchemaPart } from '../features/text/TextSchema';
 export type {
   TerrainBlockAsset,
   TerrainBlockColliderType,

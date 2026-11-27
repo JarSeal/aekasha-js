@@ -1,6 +1,7 @@
 import path from 'path';
 import type { GeneratedAssetFields, TextureCodec } from '../../src/_engine/schemas';
 import {
+  getFontAssetKey,
   getMergeMaterialSlotAssetKey,
   getPipelineAssetKey,
   getTextureArrayAssetKey,
@@ -172,6 +173,14 @@ export const getTextureAtlasSlotResult = (run: PipelineRun, jsonFile: string, sl
 export const getMergeMaterialSlotResult = (run: PipelineRun, jsonFile: string, slot: string) =>
   run.results.get(getMergeMaterialSlotAssetKey(jsonFile, slot)) ?? null;
 
+/**
+ * The run's result for a font (p391), for the production gather's checks. Null when the run has
+ * none (its font file is missing: the gatherer reports that).
+ * @param jsonFile The font's JSON, absolute or relative to the repo root
+ */
+export const getFontResult = (run: PipelineRun, jsonFile: string) =>
+  run.results.get(getFontAssetKey(jsonFile)) ?? null;
+
 /** A texture array (p299 D2, a palette slot's too), an atlas slot (D3) or a font (p391): only ever
  * a KTX2 output, never passed through */
 export const isKtxOnlyAsset = (result: PipelineRunResult) =>
@@ -288,3 +297,25 @@ export const getMergeMaterialSlotGeneratedFields = (
   run
     ? getOutputFields('textureArray', run.results.get(getMergeMaterialSlotAssetKey(jsonFile, slot)))
     : {};
+
+/**
+ * A font's generated fields (p391 D6): its layout's `__url` (the layout names its atlas),
+ * `__bytes` (both outputs) and `__vramBytes` (the atlas). None without a run, or for a font the
+ * run has no output for.
+ * @param jsonFile The font's JSON, absolute or relative to the repo root
+ */
+export const getFontGeneratedFields = (
+  run: PipelineRun | undefined,
+  jsonFile: string
+): Pick<GeneratedAssetFields, '__url' | '__bytes' | '__vramBytes'> => {
+  if (!run) return {};
+  const { __url, __bytes, __vramBytes } = getOutputFields(
+    'font',
+    run.results.get(getFontAssetKey(jsonFile))
+  );
+  return {
+    ...(__url ? { __url } : {}),
+    ...(__bytes ? { __bytes } : {}),
+    ...(__vramBytes ? { __vramBytes } : {}),
+  };
+};

@@ -95,6 +95,9 @@
     "worldBounds": {
       "$ref": "#/definitions/__schema707"
     },
+    "fonts": {
+      "$ref": "#/definitions/__schema716"
+    },
     "id": {
       "type": "string",
       "description": "The scene id: it keys the scene's save data, its saved state and ?startScene=."
@@ -114,7 +117,7 @@
       "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
       "allOf": [
         {
-          "$ref": "#/definitions/__schema716"
+          "$ref": "#/definitions/__schema718"
         }
       ]
     }
@@ -8744,6 +8747,21 @@
       ]
     },
     "__schema716": {
+      "description": "Font ids (*.font.json) the scene loads with its assets, for its code's texts.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema717"
+        }
+      ]
+    },
+    "__schema717": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "__schema718": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -8852,6 +8870,9 @@
             },
             "worldBounds": {
               "$ref": "#/definitions/__schema707"
+            },
+            "fonts": {
+              "$ref": "#/definitions/__schema716"
             }
           },
           "additionalProperties": false

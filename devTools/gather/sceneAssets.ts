@@ -29,6 +29,7 @@ import { resolveTerrainBlocks } from './terrainBlocks';
 import { addTextureClosure } from './textureClosure';
 import { declareTextureSetArrayMembers } from './textureSetArrays';
 import { resolveTextureSets } from './textureSets';
+import { resolveFonts } from './fonts';
 
 /** A scene as the scene pass resolves it: its JSON with its own save entry */
 export type SceneJSON = Omit<EngineSceneAsset, '$schema' | '__saveData'>;
@@ -445,6 +446,7 @@ export const resolveSceneAssets = (run: SceneRun) => {
   resolveTextureSets(run);
   resolveSkyBoxes(run);
   resolveFogs(run);
+  resolveFonts(run);
   addTextureClosure(run);
   resolveTextures(run);
   // The set arrays' members the textures don't hold (pass 1 checked each slot is a texture asset)

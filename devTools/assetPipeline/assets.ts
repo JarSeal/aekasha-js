@@ -22,7 +22,7 @@ import {
   resolveLodChainOptions,
   type ResolvedLodChainOptions,
 } from '../../src/_engine/features/lod/LodChainOptions';
-import { createFontSource } from './fonts/fontSource';
+import { createFontSource, readCollectedFontChars } from './fonts/fontSource';
 import { resolveMergeOptions } from './gltfMergeOptions';
 import type { MaterialLookup } from './mergeMaterialClass';
 import { resolveMergeMaterial } from './mergeMaterials';
@@ -313,13 +313,28 @@ const collectMergeMaterial = (
  * {@link getTextureArrayAssetKey}, {@link getTextureAtlasSlotAssetKey},
  * {@link getMergeMaterialSlotAssetKey}, {@link getFontAssetKey}). A use whose source doesn't resolve, an array whose layers
  * don't, an atlas whose layout fails and a palette whose class or layers fail are left out and
- * listed in `dropped` (the gatherer reports them).
+ * listed in `dropped` (the gatherer reports them), and so is a font collecting the scenes'
+ * characters when the collected file doesn't read.
+ * @param opts.fontCharsetsFile The collected characters' file (p391 D5): the repo's by default
  */
-export const collectPipelineAssets = (assetJsons: AssetJson[]) => {
+export const collectPipelineAssets = (
+  assetJsons: AssetJson[],
+  opts: { fontCharsetsFile?: string } = {}
+) => {
   const assets = new Map<string, PipelineAsset>();
   const dropped: DroppedAsset[] = [];
   const drop = (jsonFile: string, reason: string) =>
     dropped.push({ jsonFile: toRepoPath(jsonFile), reason });
+  // The characters the scenes write with the fonts that collect them (p391 D5), read once
+  let collectedChars: Map<string, number[]> | { error: string } | undefined;
+  const getCollectedChars = () => {
+    try {
+      collectedChars ??= readCollectedFontChars(opts.fontCharsetsFile);
+    } catch (error) {
+      collectedChars = { error: (error as Error).message };
+    }
+    return collectedChars;
+  };
   const textures = new Map(
     assetJsons.flatMap((asset) => (asset.type === 'texture' ? [[asset.id, asset] as const] : []))
   );
@@ -337,7 +352,15 @@ export const collectPipelineAssets = (assetJsons: AssetJson[]) => {
     }
     if (assetJson.type === 'material') continue;
     if (assetJson.type === 'font') {
-      const source = createFontSource(assetJson.jsonFile, assetJson.data);
+      const collects = assetJson.data.charset?.collectFromScenes;
+      const chars = collects ? getCollectedChars() : undefined;
+      if (chars && 'error' in chars) {
+        drop(assetJson.jsonFile, chars.error);
+        continue;
+      }
+      const source = createFontSource(assetJson.jsonFile, assetJson.data, {
+        collected: chars?.get(assetJson.id),
+      });
       if ('error' in source) drop(assetJson.jsonFile, source.error);
       else {
         assets.set(getFontAssetKey(assetJson.jsonFile), {

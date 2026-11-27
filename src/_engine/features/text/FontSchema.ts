@@ -235,3 +235,24 @@ export const FontAssetSchema = z
 
 /** A font's JSON (`*.font.json`), as written. */
 export type FontAsset = z.infer<typeof FontAssetSchema>;
+
+/**
+ * A font in a scene's generated data (its `fonts`), as the gatherer writes it: what the load
+ * needs, the layout's URL first (the layout names its atlas).
+ */
+export type SceneFontDef = {
+  /** The font's id */
+  id: string;
+  /** The atlas type */
+  type: FontType;
+  /** The font's name for people (development data only) */
+  name?: string;
+  /** The layout JSON, the asset pipeline's output; none when the font has no output yet. */
+  __url?: string;
+  /** The download in bytes, the font file's against the atlas and layout's. */
+  __bytes?: { in: number; out: number };
+  /** The atlas's GPU memory in bytes. */
+  __vramBytes?: { in: number; out: number };
+  /** The font JSON, from the repo root (development data only) */
+  __sourcePath?: string;
+};

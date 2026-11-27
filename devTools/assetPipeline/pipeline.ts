@@ -658,7 +658,7 @@ const encodeAsync = async (
   if (source.kind === 'font') {
     // Loaded on first use: fontkit and the msdfgen WASM
     const { encodeFontAsset } = await import('./fonts/encodeFont');
-    const encoded = await encodeFontAsset(source, { getKtx, warn });
+    const encoded = await encodeFontAsset(source, { getKtx, warn, collected: source.collected });
     return {
       status: 'optimized',
       output: encoded.output,

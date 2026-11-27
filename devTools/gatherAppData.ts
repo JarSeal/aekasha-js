@@ -27,6 +27,7 @@ import { readRegistries } from './gather/registries';
 import { resolveScenes } from './gather/scenePass';
 import { createShipChecks } from './gather/shipChecks';
 import { setTextureSetGeneratorLoaders } from './gather/textureSets';
+import { collectFontChars, reportStaleFonts, toSceneFont, writeFontCharsets } from './gather/fonts';
 import { ROOT, SRC_DIR } from './paths';
 import { checkSbpProfiles, type SbpProfile } from './sbp/config';
 
@@ -88,6 +89,14 @@ const getProfileOutputs = (
 const runGather = (ctx: GatherContext, opts: GatherOptions, outDir: string): GatherResult => {
   const { log, isProduction } = ctx;
   const reg = readRegistries(ctx);
+  // The scenes' characters for the fonts that collect them (p391 D5), written even when a later
+  // step fails (a stale font fails a production build, and `yarn assets` must then read the new
+  // collection), but not after pass 1 failed: a scene it dropped would drop its characters
+  if (!log.hasError) {
+    const collectedFontChars = collectFontChars(reg);
+    writeFontCharsets(outDir, collectedFontChars);
+    reportStaleFonts(ctx, reg, collectedFontChars);
+  }
   const ship = createShipChecks(ctx);
   const { scenes, debugSceneIds } = resolveScenes(ctx, reg, ship);
   ship.report();
@@ -122,6 +131,9 @@ const runGather = (ctx: GatherContext, opts: GatherOptions, outDir: string): Gat
           fogs: reg.fogs,
           postFx: reg.postFx,
           impostors: reg.impostors,
+          fonts: Object.fromEntries(
+            Object.entries(reg.fonts).map(([id, font]) => [id, toSceneFont(ctx, font)])
+          ),
         },
     loaders: reg.loaders,
   };

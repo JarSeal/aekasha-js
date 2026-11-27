@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: in progress | Phases 1-3 implemented
 Category: Text, Assets
 Epic: p390_text-rendering-and-text-decals.md
 Blocks: p392_text-feature-msdf-renderer.md, p395_dynamic-glyph-atlas.md
@@ -299,7 +299,7 @@ As built (2026-11-27, macOS arm64, Node 22.13.0):
 - **Not run:** `yarn verify:baselines --update` (its API baseline gains `aekasha/schemas`' seven
   font names; it needs a build): before the PR.
 
-### Phase 3: `yarn importFont`, the toolkit's fonts, the gather
+### Phase 3: `yarn importFont`, the toolkit's fonts, the gather — done
 
 1. `devTools/importFont.ts` (D4) and its `package.json` script; tests on a fixture font in a temp
    folder.
@@ -338,6 +338,54 @@ As built (sections 1-2, 2026-11-27):
   written by hand (no `source.json` to generate it from). A full `yarn assets` then: 0 built.
 - **The tests' font** is `src/toolkit/fonts/plexSans/IBMPlexSans-Medium.woff` (byte for byte the
   deleted fixture), so the golden `DIGITS` files didn't change.
+
+As built (section 3, 2026-11-27):
+
+- **Nothing to collect yet:** the scene has no texts before p392 (`texts`, its D2) and p397 (text
+  decals), so the collection reads them through one function, `listSceneFontTexts`
+  (`devTools/gather/fonts.ts`), which returns none, and `resolveFonts` doesn't append the texts'
+  fonts to the scene's `fonts` (D6's closure): both are `TODO p392` / `p397` there. Everything
+  else is built and tested with texts given by the tests. D5's verification (`yarn build` failing
+  on a stale font, passing after `yarn assets`) can run end to end only with p392's texts: there it
+  is unit tests (`devTools/gather/fonts.test.ts`).
+- **The scene field:** `textSchemaPart` (`features/text/TextSchema.ts`, on `aekasha/schemas`,
+  feature id `text`, in `ENGINE_SCHEMA_PARTS` last): `fonts`, font ids. A scene listing one gets
+  `text` in its manifest, so `InitEngine` requires the `text()` feature: **Phase 4's feature id must
+  be `text`**. p392 adds `texts` to the same part.
+- **The generated data:** `SceneData.fonts` is `SceneFontDef[]` (`FontSchema.ts`, on
+  `aekasha/schemas`): `{ id, type, __url?, __bytes?, __vramBytes? }`, plus `name` and
+  `__sourcePath` in development data; `__url` is the layout (`getFontGeneratedFields`,
+  `generated.ts`, from the run's `font:<json>` result), none without an output. The development
+  data has a `fonts` section (every font by id, as scenes get them); production has none, so
+  Phase 4's `loadFontAsync(id)` finds an unlisted font only in development data (or in another
+  scene's entry). Pass 1 registers fonts in their own id space (`readFonts`: the id the JSON's or
+  the file name's; a missing font or charset file fails the gather); the scene pass
+  (`resolveFonts`, after the fogs) writes a scene's fonts once each, an unknown id failing it, and
+  a production build checks each has an output (`ShipChecks.checkFont`: a font without one fails
+  it, like an array).
+- **The collection** (`collectFontChars`): per collecting font, each code point with the scenes
+  writing it, from pass 1's scene JSONs with their save entries, **debug scenes included** (a
+  production gather must write the same file, or the font's key would change between builds);
+  control characters dropped; a text naming a font that doesn't collect adds nothing.
+- **The charset file** `src/generated/fontCharsets.json` (`FONT_CHARSETS_FILE`, committed with the
+  generated data): `{ "<fontId>": "<characters by code point>" }` for every collecting font, none
+  when no font collects (the file is then removed). The gather writes it right after pass 1, even
+  when a later step fails (a stale font fails a production build, and the `yarn assets` that fixes
+  it must read the new collection), but not when pass 1 failed (a dropped scene would drop its
+  characters). It reloads no page.
+- **The key:** the collected set is in the key's params, not its files: `createFontSource` keeps
+  `collected` only for a collecting font, and `getFontKeyParams` hashes the requested set with it
+  (a collected character a preset already holds changes no key; a non-collecting font's key is as
+  before, so no lock entry changed). `collectPipelineAssets` reads the file once
+  (`readCollectedFontChars`); a file that doesn't read drops the collecting fonts from the run (no
+  prune), naming it. The encode gets `collected` from its source.
+- **Staleness** (`reportStaleFonts`, after the collection): with a run, a collecting font whose
+  optimized output was encoded without a collected character (against the run's source's requested
+  set, so a character the font lacks isn't stale again after its encode) is warned about, naming
+  up to 20 characters, the scenes writing them and `yarn assets --only <id>`; in a production
+  build it's an error, failing the build, when a shipped scene writes one (a debug scene's only: a
+  warning). A `yarn assets` run reads the file the last gather wrote, so a scene changed since needs
+  a second run (its gather warns).
 
 ### Phase 4: The runtime load
 

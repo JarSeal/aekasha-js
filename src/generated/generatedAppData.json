@@ -54088,5 +54088,52 @@
       "normals": true,
       "__sourcePath": "src/app/scenes/lodShowcase/lodShowcaseTreeCross.impostor.json"
     }
+  },
+  "fonts": {
+    "digitsDisplay": {
+      "id": "digitsDisplay",
+      "type": "MTSDF",
+      "name": "IBM Plex Sans Bold",
+      "__sourcePath": "src/toolkit/fonts/digitsDisplay/digitsDisplay.font.json",
+      "__url": "/aek-assets/toolkit/fonts/digitsDisplay/digitsDisplay.layout.cce912c8.json",
+      "__bytes": {
+        "in": 85236,
+        "out": 42680
+      },
+      "__vramBytes": {
+        "in": 262144,
+        "out": 262144
+      }
+    },
+    "plexMono": {
+      "id": "plexMono",
+      "type": "MTSDF",
+      "name": "IBM Plex Mono",
+      "__sourcePath": "src/toolkit/fonts/plexMono/plexMono.font.json",
+      "__url": "/aek-assets/toolkit/fonts/plexMono/plexMono.layout.ccda2f8f.json",
+      "__bytes": {
+        "in": 66924,
+        "out": 180276
+      },
+      "__vramBytes": {
+        "in": 1048576,
+        "out": 1048576
+      }
+    },
+    "plexSans": {
+      "id": "plexSans",
+      "type": "MTSDF",
+      "name": "IBM Plex Sans Medium",
+      "__sourcePath": "src/toolkit/fonts/plexSans/plexSans.font.json",
+      "__url": "/aek-assets/toolkit/fonts/plexSans/plexSans.layout.0daeec7d.json",
+      "__bytes": {
+        "in": 90692,
+        "out": 446839
+      },
+      "__vramBytes": {
+        "in": 2097152,
+        "out": 2097152
+      }
+    }
   }
 }

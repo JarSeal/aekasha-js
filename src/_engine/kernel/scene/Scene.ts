@@ -31,6 +31,7 @@ import type { DecalSetDef } from '../../features/terrain/DecalSetSchema';
 import type { SceneSurfaceConditions } from '../../features/surface/SurfaceConditionsSchema';
 import type { FogDef } from '../../features/fog/FogTypes';
 import type { SceneWorldBounds } from '../../features/physics/PhysicsSchema';
+import type { SceneFontDef } from '../../features/text/FontSchema';
 
 /** A scene looper: called once per frame with the frame's delta (seconds). */
 export type Looper = (delta: number) => void;
@@ -130,6 +131,9 @@ export type SceneData = {
    * `physics()` feature keeps them as the scene's own when it's registered; its code's
    * `setSceneWorldBounds` replaces them). */
   worldBounds?: SceneWorldBounds | null;
+  /** The fonts the scene lists, resolved by the gatherer (the `text()` feature loads them with
+   * the scene's assets). */
+  fonts?: SceneFontDef[];
   // p607 D10
   /** The features this scene's data needs (the gatherer's manifest): `InitEngine`
    * fails when its `features` doesn't list one. */

@@ -6,6 +6,7 @@ import {
   type FontCharsetPreset,
   type FontType,
 } from '../../../src/_engine/schemas';
+import { GENERATED_DIR } from '../../paths';
 import { getFontLogicalPath } from '../outputs';
 import { toRepoPath } from '../sources';
 import { getRequestedCharsetHash, resolveRequestedCharset } from './charset';
@@ -21,6 +22,38 @@ import { getRequestedCharsetHash, resolveRequestedCharset } from './charset';
  * the packer, the layout's format). Every font then encodes once more.
  */
 export const FONT_ENCODER_VERSION = 1;
+
+/**
+ * The characters the scenes' texts write with each font that collects them (`collectFromScenes`,
+ * p391 D5): the gather writes it, the encode reads it. `{ "<fontId>": "<its characters, by code
+ * point>" }`, committed with the generated data.
+ */
+export const FONT_CHARSETS_FILE = path.join(GENERATED_DIR, 'fontCharsets.json');
+
+/**
+ * The collected characters by font id ({@link FONT_CHARSETS_FILE}'s): none without the file.
+ * Throws naming the file when it isn't such a JSON.
+ */
+export const readCollectedFontChars = (file = FONT_CHARSETS_FILE): Map<string, number[]> => {
+  if (!fs.existsSync(file)) return new Map();
+  let json: unknown;
+  try {
+    json = JSON.parse(fs.readFileSync(file, 'utf-8'));
+  } catch (error) {
+    throw new Error(`${toRepoPath(file)} isn't JSON: ${(error as Error).message}`);
+  }
+  const entries =
+    json && typeof json === 'object' && !Array.isArray(json) ? Object.entries(json) : null;
+  if (!entries || entries.some(([, chars]) => typeof chars !== 'string')) {
+    throw new Error(`${toRepoPath(file)} isn't { "<fontId>": "<characters>" }: gather again`);
+  }
+  return new Map(
+    entries.map(([id, chars]) => [
+      id,
+      [...(chars as string)].map((c) => c.codePointAt(0) as number),
+    ])
+  );
+};
 
 /** A font JSON with every default filled in */
 export type ResolvedFont = {
@@ -51,6 +84,9 @@ export type FontSource = {
   font: ResolvedFont;
   /** `charset.charsFromFiles`, absolute, in the JSON's order */
   charsFiles: string[];
+  /** The characters the scenes' texts write with it, when it collects them (`collectFromScenes`;
+   * {@link FONT_CHARSETS_FILE}'s, as the last gather wrote them) */
+  collected?: number[];
 };
 
 /** What a font's encode made: kept in its lock entry and the run's stats */
@@ -96,10 +132,12 @@ export const resolveFont = (data: FontAsset): ResolvedFont => {
  * A font JSON's source, or `{ error }` when its font file or a `charsFromFiles` file isn't there
  * (the font is left out of the run, and the gather reports it).
  * @param jsonFile The font JSON, absolute
+ * @param opts.collected The characters the scenes write with it: kept only when it collects them
  */
 export const createFontSource = (
   jsonFile: string,
-  data: FontAsset
+  data: FontAsset,
+  opts: { collected?: number[] } = {}
 ): FontSource | { error: string } => {
   const dir = path.dirname(jsonFile);
   const file = path.resolve(dir, data.fileName);
@@ -108,7 +146,16 @@ export const createFontSource = (
   const charsFiles = font.charset.charsFromFiles.map((name) => path.resolve(dir, name));
   const missing = charsFiles.find((charsFile) => !fs.existsSync(charsFile));
   if (missing) return { error: `its charsFromFiles file ${toRepoPath(missing)} doesn't exist` };
-  return { kind: 'font', jsonFile, file, repoPath: toRepoPath(file), font, charsFiles };
+  const collected = font.charset.collectFromScenes ? opts.collected ?? [] : undefined;
+  return {
+    kind: 'font',
+    jsonFile,
+    file,
+    repoPath: toRepoPath(file),
+    font,
+    charsFiles,
+    ...(collected ? { collected } : {}),
+  };
 };
 
 /** Every file a font's encode reads: the font, then its charset's files */
@@ -117,13 +164,16 @@ export const listFontFiles = (source: FontSource) => [source.file, ...source.cha
 /**
  * A font encode's cache key params (with {@link listFontFiles}' bytes and the tools' versions):
  * the resolved JSON, the requested characters' hash (D3; a `charsFromFiles` file is in the key's
- * files too), the encoder's version and the outputs' logical path. Throws like
+ * files too, and the collected characters in the hash: a collected one a preset already holds
+ * changes no key), the encoder's version and the outputs' logical path. Throws like
  * `resolveRequestedCharset` (a `charsFromFiles` JSON that doesn't parse).
  */
 export const getFontKeyParams = (source: FontSource) => ({
   kind: 'font',
   font: source.font,
-  charset: getRequestedCharsetHash(resolveRequestedCharset(source)),
+  charset: getRequestedCharsetHash(
+    resolveRequestedCharset(source, { collected: source.collected })
+  ),
   encoder: FONT_ENCODER_VERSION,
   output: getFontLogicalPath(source.jsonFile, 'layout'),
 });

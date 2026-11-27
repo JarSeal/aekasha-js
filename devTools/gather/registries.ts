@@ -40,6 +40,7 @@ import { readMergeMaterials } from './mergeMaterials';
 import { readDecalSets } from './decalSets';
 import { readScatters } from './scatters';
 import { readTerrainBlocks } from './terrainBlocks';
+import { readFonts } from './fonts';
 
 /** The material and PostFX ids the shipped scenes list: their TSL files get loaders (a
  * production build leaves the debug scenes out, and their files with them, p619 G6) */
@@ -237,6 +238,7 @@ export const readRegistries = (ctx: GatherContext): Registries => {
   readSkyBoxes(ctx, reg, taken);
   readFogs(ctx, reg, taken);
   readPostFx(ctx, reg, taken, shipped);
+  readFonts(ctx, reg, taken);
   readScatters(ctx, reg, taken);
   // After the materials and the imports: a decal set names them
   readDecalSets(ctx, reg, taken);

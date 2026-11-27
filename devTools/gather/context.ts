@@ -25,6 +25,7 @@ import type {
 import type { PipelineRun } from '../assetPipeline/run';
 import { listSourceFiles } from '../files';
 import type { createSettingsResolver } from '../assetPipeline/settings';
+import type { RegisteredFont } from './fonts';
 import type { GeneratedLoaders } from './output';
 import type { EngineMeshAsset, EngineSceneAsset } from './engineSchemas';
 import { GATHERED_SUFFIXES, hasGatheredSaveData, type GatheredJsonType } from './gatheredJson';
@@ -95,6 +96,8 @@ export type Registries = {
   scatters: Record<string, ScatterDef & { __sourcePath?: string }>;
   /** Decal sets (p309 D3): their defaults filled in, as scenes get them */
   decalSets: Record<string, DecalSetDef & { __sourcePath?: string }>;
+  /** Fonts (p391 D6), in their own id space: their defaults filled in */
+  fonts: Record<string, RegisteredFont>;
   /** The procedural texture set generators (p304 D3), each module by its id (`<id>.generator.ts`),
    * as paths from `srcDir` */
   generators: Record<string, string>;
@@ -128,7 +131,8 @@ export type IdSpace =
   | 'postFx'
   | 'terrainBlocks'
   | 'scatters'
-  | 'decalSets';
+  | 'decalSets'
+  | 'fonts';
 
 /** The ids taken in each space */
 export type TakenIds = Record<IdSpace, Set<string>>;
@@ -157,6 +161,7 @@ export const createRegistries = (): { registries: Registries; taken: TakenIds } 
     terrainBlocks: {},
     scatters: {},
     decalSets: {},
+    fonts: {},
     generators: {},
     loaders: { scenes: {}, tslMaterials: {}, postFx: {}, textureSetGenerators: {} },
   },
@@ -177,6 +182,7 @@ export const createRegistries = (): { registries: Registries; taken: TakenIds } 
     terrainBlocks: new Set(),
     scatters: new Set(),
     decalSets: new Set(),
+    fonts: new Set(),
   },
 });
 
