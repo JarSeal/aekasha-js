@@ -2,7 +2,7 @@
 
 The toolkit is sorted by kind. Its code has four entries, `aekasha/toolkit/ecs`,
 `aekasha/toolkit/geometry`, `aekasha/toolkit/materials` and `aekasha/toolkit/terrain`; its assets
-(the materials', models' and texture sets' JSONs) are found by id, like the app's:
+(the materials', models', texture sets' and fonts' JSONs) are found by id, like the app's:
 
 ```text
 src/toolkit/
@@ -25,6 +25,7 @@ src/toolkit/
     decals/                 the decal material, runtime decals; generators/: nine decal generators
     textures/               MacroNoise, RippleAtlas: the shared textures' bakes
   models/<category>/<id>/   the model next to its *.importedAsset.json
+  fonts/<id>/               a font next to its *.font.json and licences; CREDITS.md
   textures/<setId>/         a texture set: its JSON, recipes and source.json; CREDITS.md
   textures/<id>/            macroNoise, rippleAtlas: a texture JSON over its committed PNG;
                             leafLitter, decalsGround, decalsStructure: texture atlases
@@ -257,6 +258,15 @@ budgets by `devTools/toolkit/buildNatureRocks.ts` and imported lossless, each pi
 scatter's item names: `namaqualandStones01` (five pebbles `StoneA`-`E` of 7-14 cm at 80
 triangles, and three scaled into rocks `RockA`-`C` at 400) and `namaqualandBoulder02` (`Boulder`,
 2.5 m, 1,500), each with its `rockScatter` material over its own maps.
+
+### Fonts
+
+In `fonts/<id>/`, each a static WOFF of IBM Plex (SIL Open Font License 1.1) with its
+`*.font.json`, its `LICENSE.txt` and the licence's text (`OFL.txt`), encoded into an `MTSDF`
+atlas at 48 px: `plexSans` (Plex Sans Medium, ASCII and Latin-1 with typographic punctuation and
+`€`), `plexMono` (Plex Mono Regular, ASCII) and `digitsDisplay` (Plex Sans Bold, digits only, for
+damage numbers and timers). A scene lists one in its `fonts`; they need the `text()` feature
+([Text](hub:features/text#the-toolkit-s-fonts)). `CREDITS.md` names each one's source.
 
 ## Writing a TSL material
 

@@ -2,7 +2,8 @@
 
 - The pipeline reads every `*.texture.json` and `*.importedAsset.json` under `src/` and encodes
   what they point at into `src/public/aek-assets/`: KTX2 textures, and GLBs with meshopt (or
-  Draco) geometry and KTX2 textures. Each output is named by a hash of its content.
+  Draco) geometry and KTX2 textures. A `*.font.json` becomes a distance field atlas and its
+  layout (see [Text](hub:features/text#fonts)). Each output is named by a hash of its content.
 - `assets.lock.json` maps each asset's source, settings and tool versions to its output. Commit
   it with the outputs: a clone then gets cache hits and never encodes.
 - It runs by itself: in `yarn dev` on every save (only what the save touched), and before
@@ -274,6 +275,8 @@ The technique guide, `docs/techniques/asset-optimization.md`, has every setting:
   which to use, sizes, padding, codecs and budgets.
 - [Alpha-cut textures](repo:docs/techniques/asset-optimization.md#alpha-cut-textures) and
   [Impostor atlases](repo:docs/techniques/asset-optimization.md#impostor-atlases).
+- [Fonts](repo:docs/techniques/asset-optimization.md#fonts): the atlas's encode; the fonts'
+  own handbook page is [Fonts for 3D text](repo:docs/techniques/text-fonts.md).
 - [Budgets](repo:docs/techniques/asset-optimization.md#budgets),
   [Builds and CI](repo:docs/techniques/asset-optimization.md#builds-and-ci) and
   [Troubleshooting](repo:docs/techniques/asset-optimization.md#troubleshooting).

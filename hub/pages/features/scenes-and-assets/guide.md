@@ -14,7 +14,8 @@
   [Spatial index](hub:features/spatial-index)), `impostors` (see
   [LOD and impostors](hub:features/lod#exporting-an-impostor)) and `mergeGroups` (see
   [Mesh merging](hub:features/mesh-merging#auto)), `textureSets` and `textureSetArrays` (see
-  [Terrain](hub:features/terrain#using-a-set)).
+  [Terrain](hub:features/terrain#using-a-set)), and `fonts` (see
+  [Text](hub:features/text#loading-a-font)).
 - `name` is the scene's name in the debugger's scene lists.
 
 ## The asset types
@@ -42,6 +43,7 @@ The engine finds every file with one of these suffixes under `src/` by itself:
 | `*.terrainBlock.json`  | A [terrain block](hub:features/terrain#terrain-blocks): its geometry, material, grid and collider.                           |
 | `*.scatter.json`       | A [scatter](hub:features/terrain#terrain-scatter): instances placed on a block in cells.                                     |
 | `*.decalSet.json`      | A [decal set](hub:features/terrain#decal-sets-from-blender): an import's meshes drawn as decals.                             |
+| `*.font.json`          | A [font](hub:features/text#fonts): a font file the asset pipeline encodes into a distance field atlas.                       |
 
 Each has a Zod schema in `src/_engine/schemas/`. Start a file with a `$schema` line pointing at
 `.schemas/<type>.schema.json`, and your editor checks and autocompletes it as you type.
@@ -245,8 +247,8 @@ and `postFxEnabled` to PostFX (`postFx()`), `spatialDomains` to the spatial inde
 `impostors` and a mesh's `lod` to LOD (`lod()`), `mergeGroups` and a mesh's `merge` to mesh
 merging (`merging()`), and `textureSets` and `textureSetArrays` (which the gather fills from the
 materials' `{ textureSet }` and `{ textureSetArray }` inputs too) to texture sets
-(`textureSets()`), and `worldBounds` (unless `null`) to [physics](hub:features/physics#world-bounds)
-(`physics()`). The gatherer writes the features each scene's data uses into the generated data
+(`textureSets()`), `fonts` to [text](hub:features/text) (`text()`), and `worldBounds` (unless
+`null`) to [physics](hub:features/physics#world-bounds) (`physics()`). The gatherer writes the features each scene's data uses into the generated data
 (the scene's `__features`), and `InitEngine` checks every scene, loaded or not, against its
 `features` before anything boots:
 
