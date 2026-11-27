@@ -1,0 +1,135 @@
+// The kit's scrollbars (p105 D2), in kit.scss and the Hub's stylesheet: on every scroller under a
+// kit root and on the kit root itself (the Hub's <html>, so the page's own bar). A track the colour
+// of what it's on with a line along its middle, a rounded thumb inset from the bar's edges, and an
+// arrow button at each end. Chromium and Safari draw them from ::-webkit-scrollbar; Firefox has
+// only the colours. Only the custom properties: no token is declared here, so a stylesheet that
+// has the tokens already can @use it alone.
+//
+// Since Chrome 121 an element whose scrollbar-color or scrollbar-width isn't `auto` ignores its
+// ::-webkit-scrollbar rules, and scrollbar-color inherits: a component (or an app's stylesheet, or
+// an embed's host page) that sets either switches this style off for its whole subtree. Set
+// neither on a kit element; a piece that must look different writes its own ::-webkit-scrollbar
+// rules (the tabs' list hides its bar).
+//
+// The arrows are conic gradients, so they take the glyph token: a data URI can't read a var(). A
+// var() in a scrollbar part resolves on its element, so a forced theme's subtree gets its colours.
+$scrollbar: ':where(.aekUi, .aekUi *)::-webkit-scrollbar';
+
+@layer aek.base {
+  #{$scrollbar} {
+    width: var(--aek-scrollbar-size);
+    height: var(--aek-scrollbar-size);
+  }
+
+  // The line along the middle: a one-colour gradient sized to the line's width, over the track
+  #{$scrollbar}-track {
+    background: var(--aek-scrollbar-track);
+  }
+
+  #{$scrollbar}-track:vertical {
+    background:
+      linear-gradient(var(--aek-scrollbar-line), var(--aek-scrollbar-line)) center /
+        var(--aek-scrollbar-line-width) 100% no-repeat,
+      var(--aek-scrollbar-track);
+  }
+
+  #{$scrollbar}-track:horizontal {
+    background:
+      linear-gradient(var(--aek-scrollbar-line), var(--aek-scrollbar-line)) center / 100%
+        var(--aek-scrollbar-line-width) no-repeat,
+      var(--aek-scrollbar-track);
+  }
+
+  // Inset by a transparent border, so it doesn't touch the bar's edges; the whole bar's width is
+  // still its hit area
+  #{$scrollbar}-thumb {
+    border: calc(var(--aek-scrollbar-size) * 0.2) solid transparent;
+    border-radius: var(--aek-radius-full);
+    background: var(--aek-scrollbar-thumb) padding-box;
+  }
+
+  #{$scrollbar}-thumb:vertical {
+    min-height: calc(var(--aek-scrollbar-size) * 3);
+  }
+
+  #{$scrollbar}-thumb:horizontal {
+    min-width: calc(var(--aek-scrollbar-size) * 3);
+  }
+
+  #{$scrollbar}-thumb:hover,
+  #{$scrollbar}-thumb:active {
+    background-color: var(--aek-scrollbar-thumb-hover);
+  }
+
+  // One button at each end, its arrow a triangle 60 % of the bar wide. By :start / :end, not
+  // :single-button: macOS has no buttons, so neither placement class matches there, and the
+  // platforms with two at an end get one
+  #{$scrollbar}-button {
+    display: none;
+  }
+
+  #{$scrollbar}-button:start:decrement,
+  #{$scrollbar}-button:end:increment {
+    display: block;
+    width: var(--aek-scrollbar-size);
+    height: var(--aek-scrollbar-size);
+    background-color: var(--aek-scrollbar-button);
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
+  #{$scrollbar}-button:vertical {
+    background-size: 60% 30%;
+  }
+
+  #{$scrollbar}-button:horizontal {
+    background-size: 30% 60%;
+  }
+
+  #{$scrollbar}-button:vertical:start:decrement {
+    background-image: conic-gradient(
+      from 135deg at 50% 0,
+      var(--aek-scrollbar-button-glyph) 90deg,
+      transparent 0
+    );
+  }
+
+  #{$scrollbar}-button:vertical:end:increment {
+    background-image: conic-gradient(
+      from -45deg at 50% 100%,
+      var(--aek-scrollbar-button-glyph) 90deg,
+      transparent 0
+    );
+  }
+
+  #{$scrollbar}-button:horizontal:start:decrement {
+    background-image: conic-gradient(
+      from 45deg at 0 50%,
+      var(--aek-scrollbar-button-glyph) 90deg,
+      transparent 0
+    );
+  }
+
+  #{$scrollbar}-button:horizontal:end:increment {
+    background-image: conic-gradient(
+      from 225deg at 100% 50%,
+      var(--aek-scrollbar-button-glyph) 90deg,
+      transparent 0
+    );
+  }
+
+  #{$scrollbar}-corner {
+    background: var(--aek-scrollbar-track);
+  }
+
+  // Firefox: the colours only (no line, no buttons). Chromium and Safari pass the selector test,
+  // so they never get scrollbar-color here (it would switch their ::-webkit-scrollbar style off).
+  // On every element, not only the root: a var() resolves where it's declared, so an inherited
+  // value would keep the root's theme in a forced subtree.
+  @supports not selector(::-webkit-scrollbar) {
+    :where(.aekUi, .aekUi *) {
+      scrollbar-color: var(--aek-scrollbar-thumb) var(--aek-scrollbar-track);
+      scrollbar-width: thin;
+    }
+  }
+}

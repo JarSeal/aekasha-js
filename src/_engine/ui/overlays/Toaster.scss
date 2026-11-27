@@ -119,8 +119,6 @@ $types: (
     min-height: 0;
     overflow-y: auto;
     overflow-wrap: break-word;
-    scrollbar-color: var(--aek-border-strong) transparent;
-    scrollbar-width: thin;
 
     &:focus-visible {
       outline-offset: calc(-1 * var(--aek-focus-ring-width));

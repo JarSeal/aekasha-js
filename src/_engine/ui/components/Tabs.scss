@@ -26,7 +26,6 @@
     overflow: auto hidden;
     // A focused tab scrolled into view clears the faded edge
     scroll-padding-inline: var(--aek-tabs-fade-size, var(--aek-space-6));
-    scrollbar-width: thin;
     // The line the tabs sit on: a shadow, so it stays put while the tabs scroll
     box-shadow: inset 0 -1px 0 var(--aek-border);
   }

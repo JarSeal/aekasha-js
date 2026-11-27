@@ -1,7 +1,7 @@
 /**
  * The core pieces' checks (`core.ts`' demos): the button and button group, the link, the badge, the
  * tag, the spinner, the progress bar, the skeleton, the divider, the empty state, the loading
- * overlay, the key hint and the input glyph.
+ * overlay, the key hint, the input glyph and the scrollbars.
  */
 import type { UiDemoChecks } from '../_componentChecks';
 
@@ -24,6 +24,7 @@ const PROGRESS = (name: string) => `#hubDemoProgress${name}`;
 const PROGRESS_TRACK = (name: string) => `${PROGRESS(name)} .aekProgress__track`;
 const SKELETON_CARD = '#hubDemoSkeletonCard';
 const DIVIDER_BOX = '[data-hub-demo="divider"]';
+const SCROLLER = (name: string) => `#hubDemoScrollbars${name}`;
 const EMPTY_SAVES = '#hubDemoEmptySaves';
 const OVERLAY_PANEL = '#hubDemoOverlayPanel .aekLoadingOverlay';
 const OVERLAY_BOUNDS = '#hudRoot #hubDemoOverlayBounds';
@@ -384,6 +385,23 @@ export const CORE_CHECKS: Record<string, UiDemoChecks> = {
             name: 'aria-label',
             value: 'Cross button',
           },
+        ],
+      },
+    ],
+  },
+  scrollbars: {
+    keyboard: [
+      {
+        name: 'each scroller is a named tab stop: the arrows scroll it, its ring shows',
+        steps: [
+          { focusInBox: SCROLLER('Down') },
+          { press: 'ArrowDown' },
+          { expectFocus: SCROLLER('Down') },
+          { expectAttr: SCROLLER('Down'), name: 'role', value: 'region' },
+          { press: 'Tab' },
+          { expectFocus: SCROLLER('Both') },
+          { expectAttr: SCROLLER('Both'), name: 'aria-label', value: 'Run log, wide' },
+          { press: 'ArrowRight' },
         ],
       },
     ],

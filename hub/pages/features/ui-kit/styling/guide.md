@@ -208,7 +208,8 @@ rule of yours in the browser's dev tools shows on every piece at once.
 
 The colours have a dark and a light theme. A kit root is dark, or light when the player's system
 prefers light; `data-aek-theme="dark"` or `"light"` on any element forces its subtree's theme.
-The theme sets `color-scheme` too, so the browser's own scrollbars and form controls follow it:
+The theme sets `color-scheme` too, so the browser's own form controls follow it, and the kit's
+[scrollbars](#scrollbars) take its colours:
 
 ```ts
 setKitPreferences({ theme: 'light' }); // The whole HUD (its root by default)
@@ -218,6 +219,28 @@ settingsPanel.updateAttr({ 'data-aek-theme': 'dark' }); // One panel in it
 `data-aek-density="compact"` on any element makes the type and space scales smaller in its
 subtree (12 px text and tighter spacing at the defaults), for dense panels. The
 [component library](hub:features/ui-kit/library) switches both on every piece.
+
+## Scrollbars
+
+Every scroller under a kit root, and the kit root itself, has the kit's scrollbar: a track the
+colour of the surface it's on with a thin line along its middle, a rounded thumb, and an arrow
+button at each end, all drawn from the `--aek-scrollbar-*` tokens in both themes. Restyle it as
+any other token: `--aek-scrollbar-thumb`, `--aek-scrollbar-size` (10 px at the defaults) and the
+rest, on the kit root or on one scroller. Firefox draws the thumb and track colours only (no line,
+no buttons).
+
+::: demo scrollbars
+:::
+
+::: warning Don't set scrollbar-color or scrollbar-width
+Since Chrome 121 an element whose `scrollbar-color` or `scrollbar-width` isn't `auto` ignores the
+kit's scrollbar style, and `scrollbar-color` is inherited: one rule on a kit element or above it
+switches the kit's scrollbars off for its whole subtree. That includes a host page's rule on
+`html` around an embed, which the kit can't undo. To change the look, set the tokens.
+:::
+
+On macOS, Chrome and Safari draw the kit's scrollbars as classic ones, which take their width
+where the system's overlay scrollbars took none: a box sized to the pixel may wrap.
 
 ## UI scale and font size
 

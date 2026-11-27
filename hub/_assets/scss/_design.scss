@@ -207,6 +207,31 @@
   outline-offset: var(--aek-focus-ring-offset);
 }
 
+.hubScrollbarSamples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+// A scroller in its theme (its data-aek-theme), scrolling both ways: the kit's scrollbar rule
+// draws it, the page being a kit root
+.hubScrollbarSample {
+  width: min(100%, 18rem);
+  height: 9rem;
+  overflow: auto;
+  padding: 0.5rem 0.75rem;
+  background: var(--aek-surface);
+  border: 1px solid var(--aek-border);
+  border-radius: var(--aek-radius-md);
+  color: var(--aek-text);
+
+  p {
+    width: 28rem;
+    margin: 0;
+  }
+}
+
 .hubIconGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));

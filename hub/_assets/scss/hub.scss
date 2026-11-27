@@ -1,5 +1,8 @@
 // The Hub's stylesheet: `_assets/hub.css`
 @use 'tokens';
+// The kit's scrollbars on every Hub surface, the page's own included (<html> is a kit root): the
+// rule alone, not kit.scss, whose tokens `tokens` has already
+@use '../../../src/_engine/ui/styles/scrollbars';
 @use 'base';
 @use 'header';
 @use 'layout';

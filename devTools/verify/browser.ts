@@ -58,6 +58,9 @@ export const launchChromium = async (opts: { useWebGL: boolean; headed: boolean 
       ...(executablePath ? { executablePath } : {}),
       headless: !opts.headed,
       args,
+      // Playwright hides headless Chromium's scrollbars; the kit draws its own, so the shots
+      // show them (p105)
+      ignoreDefaultArgs: ['--hide-scrollbars'],
     });
   } catch (err) {
     const hint = executablePath

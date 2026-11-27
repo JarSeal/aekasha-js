@@ -3,7 +3,8 @@
 Every colour is a role, never a value: a style reads `var(--aek-text)`, not `#e6ebf2`. Each role
 has a value in both themes. Dark is the default, light follows `prefers-color-scheme`, and
 `data-aek-theme="dark"` or `"light"` on any element forces its subtree. Each theme sets
-`color-scheme` with its values, so the browser's scrollbars and form controls match. The debugger
+`color-scheme` with its values, so the browser's form controls match; the scrollbars are the kit's
+own, from the theme's `scrollbar-*` roles (see [Scrollbars](#scrollbars)). The debugger
 is dark whatever the system's theme (a viewport tool reads better dark, and the scene runner's
 shots don't depend on the machine): `AppConfig.debugDrawer.theme` makes it `'light'`, or `'app'`
 to follow the kit root, and the Debug tools tab's "Debugger theme" overrides it per browser. Its

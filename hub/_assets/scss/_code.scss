@@ -315,7 +315,6 @@ html:not(.hubJs) .hubCodeHeader:not(:has(.hubCodeTitle, .hubCodeLang)) {
     border: 1px solid var(--hub-border);
     border-bottom: 0;
     border-radius: var(--hub-radius) var(--hub-radius) 0 0;
-    scrollbar-width: thin;
   }
 
   > .hubCode {
