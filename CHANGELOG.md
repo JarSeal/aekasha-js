@@ -4,6 +4,50 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-28 — p390-text (p391 Phases 1-6)
+
+Fonts (p391), the first part of text in the 3D world: a font is now an asset. A `*.font.json` next to a TTF, OTF or WOFF names the characters an app needs, as presets (`ASCII`, `LATIN_1`, `GREEK`, …), extra characters, or the texts scenes write, and `yarn assets` encodes exactly those into a lossless distance-field atlas and a small layout file with the metrics and the kerning. The default atlas type, MTSDF, keeps letters sharp at any size and leaves room for outlines, glow and shadows. `yarn importFont` starts a font in one command: it refuses a font the encoder can't read before it writes anything, copies the font, writes its JSON and licence note, shows what the font covers and encodes it. The toolkit ships three fonts from IBM Plex. At runtime a new `text()` feature loads a scene's fonts with its other assets, ready for the text renderer that follows on this branch. A new handbook page, `docs/techniques/text-fonts.md`, has the measured cost of an atlas per charset and size.
+
+### Engine (a minor, numbered at the p390-text merge)
+
+**Added**
+
+- The `text()` feature on a new entry, `aekasha/text`, id `text`. For now it loads fonts; the text renderer comes later on this branch. The template doesn't list it yet.
+  - `loadFontAsync(id, { isPersistent })` loads a font outside a scene's list: the layout and the atlas download together, a second call returns the loaded font, and two at once share one load. A font belongs to the scene that loaded it, and is released with it, unless `isPersistent`.
+  - `getFont(id)`, `getFontGlyphIndex(font, codePoint)` (a code point the font lacks gives the fallback glyph) and `getFontKerningKey(first, second)` (a key for `FontData.kerning`, past the BMP too).
+  - `FontData`: the layout parsed into typed arrays (advances, glyph quads in em, atlas rectangles in UV), the metrics, a code point → glyph map, the kerning in em, and the atlas. The atlas is a registered texture, `font:<id>`, linear filtered without mips, so the Assets and GPU memory tabs list it and the scene's release frees it.
+  - The types `FontData`, `FontMetrics`, `FontAsset`, `FontCharsetPreset`, `FontType` and `SceneFontDef`.
+  - A scene's fonts start downloading with its textures and are loaded before the scene's code runs. A font that fails to load is logged, naming the scene, and the load goes on.
+  - A layout of another format, a missing fallback glyph, an atlas of the wrong size or from another encode, and a font without an output each fail its load with the fix (`yarn assets --only <id>` or `yarn gatherAppData`).
+- Fonts as assets: the `*.font.json` (`fileName`, `type` `MTSDF` (the default), `MSDF` or `SDF`, `size`, `pxRange`, `charset` with `presets`, `chars`, `charsFromFiles` and `collectFromScenes`, `fallbackGlyph`, `kerning`, `atlas`), and a scene JSON's `fonts` list. A scene that lists fonts needs the feature (the boot's feature check). On `aekasha/schemas`: `FontAssetSchema`, `FONT_TYPES`, `FONT_CHARSET_PRESETS`, `FONT_DEFAULTS`, `textSchemaPart` and the font types.
+- `SceneData.fonts`: the scene's fonts as the gatherer resolved them, with their layout's and atlas's URLs.
+
+### Toolkit (a minor, numbered at the p390-text merge)
+
+**Added**
+
+- A new asset category, `fonts/`: a folder per font with its static WOFF, its `*.font.json`, `LICENSE.txt` (from the font's name table) and `OFL.txt`, and a `CREDITS.md`. All three are `MTSDF` at 48 px:
+  - `plexSans`: IBM Plex Sans Medium, ASCII, Latin-1 and typographic punctuation (200 glyphs, 6,115 kerning pairs, a 1024 × 512 atlas).
+  - `plexMono`: IBM Plex Mono Regular, ASCII (95 glyphs, 512²).
+  - `digitsDisplay`: IBM Plex Sans Bold, the digits and `+-.,:%` only, for damage numbers and counters (18 glyphs, 256², 41 kB).
+
+### Project
+
+**Added**
+
+- The font encoder in `yarn assets` (`devTools/assetPipeline/fonts/`). msdfgen-wasm 1.0.0 makes the colour channels, the engine's own true distance field the alpha, and fontkit 3.0.0 reads the metrics, the coverage and the GPOS kerning (pinned devDependencies). Glyphs are packed into a power-of-two atlas up to `atlas.maxSize`; the encode fails past it, naming how many glyphs fit. The outputs are a KTX2 atlas (`R8G8B8A8_UNORM`, or `R8_UNORM` for `SDF`; zstd, no mips) and a layout JSON, both locked in `assets.lock.json`. WOFF2 and variable fonts are refused, naming the formats that work. It warns when a glyph's contours overlap, when a named character is missing, and past the font budgets (a 2048² atlas, 2,000 glyphs).
+- `yarn importFont <file>` (`devTools/importFont.ts`): `--id`, `--charset`, `--chars`, `--into app|toolkit|<folder>`, `--type`, `--size`, `--force` and `--no-encode`. A font goes into `src/app/fonts/<id>/` by default.
+- The gather reads `*.font.json` in an id space of their own and a scene's `fonts`, failing on an unknown id. The development data has a `fonts` section, so `loadFontAsync` finds any font in development. With `collectFromScenes`, the characters scenes write go into `src/generated/fontCharsets.json` and the font's cache key. A character the encode lacks makes the font stale: the gather warns, naming the characters, the scenes and the command, and a production build fails for a shipped scene. A production build also fails on a scene font without an output.
+- A build and an embed profile ship each font's atlas beside its layout (`collectUrls` keeps `__url` and `__atlasUrl`).
+- `.schemas/font.schema.json`, the `aekasha/text` alias, and layout rules for `src/toolkit/fonts/<id>/` and `src/app/fonts/<id>/`.
+- The handbook's `docs/techniques/text-fonts.md`: the atlas types, charsets, the collection, `yarn importFont`, choosing `size` and `pxRange`, licences and the measured atlas cost table. `asset-optimization.md` has a Fonts section.
+- The Hub's Text feature page (World): font assets and loading them. The Scenes and assets, Toolkit and Asset optimization pages list fonts, and the entry table lists `aekasha/text`.
+
+**Changed**
+
+- The asset pipeline's cache entries can have extra outputs (a font's atlas beside its layout): the presence check, the store, its restore and the prune see each one. `ktxEncode.ts` has a raw encode (`encodeKtx2Raw`) for uncompressed formats.
+- The docs: a new `src/_engine/features/text/CLAUDE.md`, the root `CLAUDE.md` (the command, the text folder, the toolkit's and the app's fonts), the asset pipeline's, the gather's and init's `CLAUDE.md` files, `hub/CLAUDE.md` and the readme. p391 is marked done (`_DONE_p391_font-assets-and-msdf-font-tool.md`).
+
 ## 2026-11-27 — p104_p105-remove-plan-references_and_themed-scrollbar (p104 Phases 1-3, p105 Phases 1-3)
 
 Plan references out of JSDoc (p104): the engine's and the toolkit's doc comments no longer cite the plans and issues that made them (`(p607 D7)`, `i250`, `p303_….md`). The Hub's API Documentation, its search snippets, `yarn docs` and the editor's hover now read as documentation of the engine, not of its history. A reference a maintainer needs moved to a `//` comment by the code, which nothing renders and a search for the plan's number still finds. One that carried meaning was reworded as the fact it pointed at, and an issue's warning was kept in words. A lint rule keeps it so.
