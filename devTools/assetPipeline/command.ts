@@ -53,11 +53,15 @@ const getAssetLabel = (asset: PipelineAsset) => {
           : count(asset.source.cells.filter((cell) => cell.source).length, 'cell')
         : '';
   const fullChain = asset.source.kind === 'atlas' && asset.source.mipChain ? ', full chain' : '';
+  const font =
+    asset.source.kind === 'font'
+      ? `, ${asset.source.font.type} ${asset.source.font.size} px, pxRange ${asset.source.font.pxRange}`
+      : '';
   const cut = asset.source.kind === 'atlas' ? asset.source.alphaCoverage : asset.alphaCoverage;
   const alphaCoverage = cut !== undefined ? `, alpha coverage ${cut}` : '';
   const colorSpace = asset.type !== 'importedAsset' && asset.isSrgb ? ', sRGB' : '';
   const flip = asset.isUnflipped ? ', unflipped' : '';
-  return `${asset.id} ${DIM}(${source}${parts}${fullChain}${alphaCoverage}${colorSpace}${flip})${RESET}`;
+  return `${asset.id} ${DIM}(${source}${parts}${font}${fullChain}${alphaCoverage}${colorSpace}${flip})${RESET}`;
 };
 
 const STATUS_LABELS: Record<PipelineRunResult['status'], string> = {
@@ -93,7 +97,14 @@ const formatResult = (
         : []),
       ...new Set(result.textures.map((texture) => texture.codec)),
     ];
-    details.push(codecs.join(' + '));
+    if (result.font) {
+      const { atlas, glyphs, kerningPairs } = result.font;
+      details.push(
+        `${atlas.width}×${atlas.height} atlas, ${glyphs} glyphs, ${kerningPairs} kerning pairs`
+      );
+    } else {
+      details.push(codecs.join(' + '));
+    }
     if (result.merge) details.push(describeMerge(result.merge));
   } else if (result.status === 'passThrough') {
     details.push('passed through');
@@ -434,7 +445,16 @@ export const runAssetsCommand = async (opts: AssetsCommandOpts): Promise<AssetsC
     if (opts.prune && !staleNote) {
       cache.prune();
       staleOutputsRemoved = removeStaleOutputs(
-        results.flatMap((result) => ('output' in result ? [result.output.url] : [])),
+        results.flatMap((result) =>
+          'output' in result
+            ? [
+                result.output.url,
+                ...(result.status === 'optimized'
+                  ? (result.extraOutputs ?? []).map((output) => output.url)
+                  : []),
+              ]
+            : []
+        ),
         undefined,
         { since: startedAt }
       );

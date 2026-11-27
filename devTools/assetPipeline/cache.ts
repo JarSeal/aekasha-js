@@ -9,6 +9,7 @@ import { ROOT } from '../paths';
 import { isFetchedSourceFile } from './sources';
 import type { GLTFMergeStats } from './gltfMergeOptions';
 import type { BuiltLodChain } from './lodChains';
+import type { FontEncodeStats } from './fonts/fontSource';
 import type { EncodedTexture } from './textures';
 
 /**
@@ -46,6 +47,8 @@ export type CacheEntry = {
   /** The output's root-absolute URL */
   url: string;
   bytes: number;
+  /** Outputs written beside it by the same encode (p391 D3: a font's atlas beside its layout) */
+  extraOutputs?: { url: string; bytes: number }[];
   textures?: EncodedTexture[];
   droppedTextures?: number;
   geometryBytes?: { in: number; out: number };
@@ -53,6 +56,8 @@ export type CacheEntry = {
   lodChains?: BuiltLodChain[];
   /** What a GLB's `merge` joined and kept (p371 D3) */
   merge?: GLTFMergeStats;
+  /** What a font's encode made (p391) */
+  font?: FontEncodeStats;
   warnings?: string[];
   /** The `ktx` that encoded it, when one did (the key has the pinned version) */
   ktxVersion?: string;
@@ -78,15 +83,18 @@ export const getPackageVersion = (name: string) => {
   return version;
 };
 
-let toolVersions: Record<'texture' | 'importedAsset', Record<string, string | number>> | null =
-  null;
+/** The kinds of encode, by the tools their outputs depend on */
+type ToolSet = 'texture' | 'importedAsset' | 'font';
+
+let toolVersions: Record<ToolSet, Record<string, string | number>> | null = null;
 
 /**
  * The versions an asset type's output depends on. sharp decodes every source image, `ktx` encodes
- * KTX2; a GLB also goes through gltf-transform and its codecs. A gltf-transform update therefore
- * doesn't re-encode the standalone textures.
+ * KTX2; a GLB also goes through gltf-transform and its codecs, a font through fontkit and
+ * msdfgen-wasm (sharp writes its atlas's PNG for `ktx`). A gltf-transform update therefore doesn't
+ * re-encode the standalone textures.
  */
-const getToolVersions = (type: 'texture' | 'importedAsset') => {
+const getToolVersions = (type: ToolSet) => {
   if (!toolVersions) {
     const texture = {
       pipeline: PIPELINE_VERSION,
@@ -100,6 +108,11 @@ const getToolVersions = (type: 'texture' | 'importedAsset') => {
         gltfTransform: getPackageVersion('@gltf-transform/core'),
         meshoptimizer: getPackageVersion('meshoptimizer'),
         draco3dgltf: getPackageVersion('draco3dgltf'),
+      },
+      font: {
+        ...texture,
+        fontkit: getPackageVersion('fontkit'),
+        msdfgenWasm: getPackageVersion('msdfgen-wasm'),
       },
     };
   }
@@ -148,11 +161,7 @@ export const saveKeyMemo = () => {
  * @param input.params Every other input: the settings that apply, the asset's own inputs and the
  * output's logical path (so the key decides the output's name too)
  */
-export const getCacheKey = (input: {
-  type: 'texture' | 'importedAsset';
-  files: string[];
-  params: unknown;
-}) => {
+export const getCacheKey = (input: { type: ToolSet; files: string[]; params: unknown }) => {
   const inputs = stableStringify({ tools: getToolVersions(input.type), params: input.params });
   const fileStats = input.files.map((file) => {
     const stat = fs.statSync(file);
@@ -205,10 +214,19 @@ const readLockEntries = (lockFile: string): Record<string, CacheEntry> => {
   }
 };
 
-const isOutputPresent = (entry: CacheEntry) => {
-  const file = getOutputFile(entry.url);
-  return fs.existsSync(file) && fs.statSync(file).size === entry.bytes;
+/** An entry's outputs: its own, then those written beside it */
+const listEntryOutputs = (entry: CacheEntry) => [
+  { url: entry.url, bytes: entry.bytes },
+  ...(entry.extraOutputs ?? []),
+];
+
+const isFilePresent = ({ url, bytes }: { url: string; bytes: number }) => {
+  const file = getOutputFile(url);
+  return fs.existsSync(file) && fs.statSync(file).size === bytes;
 };
+
+/** Every output of the entry is in place */
+const isOutputPresent = (entry: CacheEntry) => listEntryOutputs(entry).every(isFilePresent);
 
 /** Only outputs in aek-assets/ are stored: a public source used as it is isn't an output. */
 const isAekAsset = (file: string) => file.startsWith(AEK_ASSETS_DIR + path.sep);
@@ -238,11 +256,18 @@ export const createPipelineCache = (opts: { lockFile?: string; storeDir?: string
 
   const getStoreEntryDir = (key: string) => path.join(storeDir, key);
 
-  /** Copies a stored output back to its place, or returns false when it isn't stored. */
+  /** Copies a stored entry's outputs back to their place, or returns false when one isn't stored. */
   const restoreFromStore = (key: string, entry: CacheEntry) => {
-    const stored = path.join(getStoreEntryDir(key), path.basename(entry.url));
-    if (!fs.existsSync(stored) || fs.statSync(stored).size !== entry.bytes) return false;
-    writeFileAtomic(getOutputFile(entry.url), fs.readFileSync(stored));
+    const outputs = listEntryOutputs(entry);
+    const stored = outputs.map(({ url }) => path.join(getStoreEntryDir(key), path.basename(url)));
+    const isStored = stored.every(
+      (file, i) => fs.existsSync(file) && fs.statSync(file).size === outputs[i].bytes
+    );
+    if (!isStored) return false;
+    outputs.forEach(({ url }, i) => {
+      if (!isFilePresent(outputs[i]))
+        writeFileAtomic(getOutputFile(url), fs.readFileSync(stored[i]));
+    });
     return true;
   };
 
@@ -301,7 +326,9 @@ export const createPipelineCache = (opts: { lockFile?: string; storeDir?: string
       const tempDir = `${dir}.${process.pid}.tmp`;
       fs.rmSync(tempDir, { recursive: true, force: true });
       fs.mkdirSync(tempDir, { recursive: true });
-      fs.copyFileSync(file, path.join(tempDir, path.basename(entry.url)));
+      for (const { url } of listEntryOutputs(entry)) {
+        fs.copyFileSync(getOutputFile(url), path.join(tempDir, path.basename(url)));
+      }
       fs.writeFileSync(path.join(tempDir, 'entry.json'), JSON.stringify(entry, null, 2));
       try {
         fs.renameSync(tempDir, dir);

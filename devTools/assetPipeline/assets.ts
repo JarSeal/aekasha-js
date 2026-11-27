@@ -2,6 +2,7 @@ import fs from 'fs';
 import { listSourceFiles } from '../files';
 import path from 'path';
 import {
+  FontAssetSchema,
   getAtlasSlotTextureId,
   ImportedAssetSchema,
   MaterialAssetSchema,
@@ -9,6 +10,7 @@ import {
   TextureArrayAssetSchema,
   TextureAssetSchema,
   TextureAtlasAssetSchema,
+  type FontAsset,
   type ImportedAsset,
   type MaterialAsset,
   type MergeMaterialAsset,
@@ -20,6 +22,7 @@ import {
   resolveLodChainOptions,
   type ResolvedLodChainOptions,
 } from '../../src/_engine/features/lod/LodChainOptions';
+import { createFontSource } from './fonts/fontSource';
 import { resolveMergeOptions } from './gltfMergeOptions';
 import type { MaterialLookup } from './mergeMaterialClass';
 import { resolveMergeMaterial } from './mergeMaterials';
@@ -152,6 +155,13 @@ export const getTextureArrayAssetKey = (jsonFile: string) =>
 export const getTextureAtlasSlotAssetKey = (jsonFile: string, slot: string) =>
   `textureAtlas:${toRepoPath(path.resolve(ROOT, jsonFile))}:${slot}`;
 
+/**
+ * A font's key (p391): its JSON. One use, with no scene entries.
+ * @param jsonFile The font's JSON, absolute or relative to the repo root
+ */
+export const getFontAssetKey = (jsonFile: string) =>
+  `font:${toRepoPath(path.resolve(ROOT, jsonFile))}`;
+
 type AssetJsonBase = {
   id: string;
   /** Absolute */
@@ -165,7 +175,8 @@ export type AssetJson =
   | (AssetJsonBase & { type: 'textureArray'; data: TextureArrayAsset })
   | (AssetJsonBase & { type: 'textureAtlas'; data: TextureAtlasAsset })
   | (AssetJsonBase & { type: 'material'; data: MaterialAsset })
-  | (AssetJsonBase & { type: 'mergeMaterial'; data: MergeMaterialAsset });
+  | (AssetJsonBase & { type: 'mergeMaterial'; data: MergeMaterialAsset })
+  | (AssetJsonBase & { type: 'font'; data: FontAsset });
 
 const ASSET_SCHEMAS = {
   texture: { suffix: '.texture.json', schema: TextureAssetSchema },
@@ -174,6 +185,7 @@ const ASSET_SCHEMAS = {
   textureAtlas: { suffix: '.textureAtlas.json', schema: TextureAtlasAssetSchema },
   material: { suffix: '.material.json', schema: MaterialAssetSchema },
   mergeMaterial: { suffix: '.mergeMaterial.json', schema: MergeMaterialAssetSchema },
+  font: { suffix: '.font.json', schema: FontAssetSchema },
 } as const;
 
 /**
@@ -188,8 +200,8 @@ export type DroppedAsset = {
 
 /**
  * Reads every `*.texture.json`, `*.importedAsset.json`, `*.textureArray.json`,
- * `*.textureAtlas.json`, `*.material.json` (a palette's members) and `*.mergeMaterial.json` under
- * `src/` (not in the outputs' folders). An invalid one (not JSON, or failing its schema) is left
+ * `*.textureAtlas.json`, `*.material.json` (a palette's members), `*.mergeMaterial.json` and
+ * `*.font.json` under `src/` (not in the outputs' folders). An invalid one (not JSON, or failing its schema) is left
  * out and listed in `dropped`: the gatherer reports it.
  */
 export const readAssetJsons = (
@@ -205,6 +217,7 @@ export const readAssetJsons = (
     'textureAtlas',
     'material',
     'mergeMaterial',
+    'font',
   ] as const;
   for (const type of types) {
     const { suffix, schema } = ASSET_SCHEMAS[type];
@@ -298,7 +311,7 @@ const collectMergeMaterial = (
 /**
  * Every encode the asset JSONs need, one per key ({@link getPipelineAssetKey},
  * {@link getTextureArrayAssetKey}, {@link getTextureAtlasSlotAssetKey},
- * {@link getMergeMaterialSlotAssetKey}). A use whose source doesn't resolve, an array whose layers
+ * {@link getMergeMaterialSlotAssetKey}, {@link getFontAssetKey}). A use whose source doesn't resolve, an array whose layers
  * don't, an atlas whose layout fails and a palette whose class or layers fail are left out and
  * listed in `dropped` (the gatherer reports them).
  */
@@ -323,6 +336,19 @@ export const collectPipelineAssets = (assetJsons: AssetJson[]) => {
       continue;
     }
     if (assetJson.type === 'material') continue;
+    if (assetJson.type === 'font') {
+      const source = createFontSource(assetJson.jsonFile, assetJson.data);
+      if ('error' in source) drop(assetJson.jsonFile, source.error);
+      else {
+        assets.set(getFontAssetKey(assetJson.jsonFile), {
+          type: 'font',
+          id: assetJson.id,
+          jsonFile: toRepoPath(assetJson.jsonFile),
+          source,
+        });
+      }
+      continue;
+    }
     // An atlas cell's or an array layer's source only (p309 D1): read through `findTexture`
     if (assetJson.type === 'texture' && assetJson.data.sourceOnly) continue;
     if (assetJson.type === 'mergeMaterial') {

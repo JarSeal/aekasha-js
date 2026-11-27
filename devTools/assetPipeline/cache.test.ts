@@ -109,3 +109,31 @@ describe('getCacheKey', () => {
     expect(first.getCacheKey(input({ a: 1 }))).toMatch(/^[0-9a-f]{64}$/);
   });
 });
+
+describe('an entry with extra outputs (p391 D3: a font’s atlas beside its layout)', () => {
+  it('is a hit with every output in place; the store brings back a missing one', async () => {
+    const { createPipelineCache } = await loadCache();
+    const { writeOutput } = await import('./outputs');
+    const layout = writeOutput('app/fonts/a/a.layout', '.json', Buffer.from('{}'));
+    const atlas = writeOutput('app/fonts/a/a.atlas', '.ktx2', Buffer.from('atlas bytes'));
+    const opts = { lockFile: path.join(TMP, 'fonts.lock.json'), storeDir: path.join(TMP, 'store') };
+    const cache = createPipelineCache(opts);
+    cache.set('font', {
+      source: 'src/app/fonts/a/A.woff',
+      url: layout.url,
+      bytes: layout.bytes,
+      extraOutputs: [{ url: atlas.url, bytes: atlas.bytes }],
+    });
+    cache.save();
+    expect(createPipelineCache(opts).get('font')?.from).toBe('output');
+
+    fs.rmSync(atlas.file);
+    expect(createPipelineCache(opts).get('font')?.from).toBe('store');
+    expect(fs.readFileSync(atlas.file, 'utf-8')).toBe('atlas bytes');
+
+    // Neither in place nor stored: a miss, so the font encodes again
+    fs.rmSync(atlas.file);
+    fs.rmSync(opts.storeDir, { recursive: true });
+    expect(createPipelineCache(opts).get('font')).toBeNull();
+  });
+});

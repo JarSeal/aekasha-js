@@ -39,6 +39,10 @@ const ALLOWED_MODULES: Record<string, AllowedModule> = {
     reason:
       'the texture set inputs of a TSL material and the textures they need, which the gather’s texture closure and streaming manifest read as the feature’s resolver does (p303 D1)',
   },
+  'src/_engine/features/text/FontCharsets.ts': {
+    reason:
+      'a font’s charset presets, which the asset pipeline’s font encoder resolves as the text debug tab shows them (p391 D2)',
+  },
   'src/_engine/features/lod/LodChainOptions.ts': {
     reason: 'the LOD chain options and a GLB’s chain description, which the asset pipeline writes',
   },

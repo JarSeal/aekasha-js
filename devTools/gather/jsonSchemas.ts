@@ -17,6 +17,7 @@ import {
   MergeMaterialAssetSchema,
   PostFxAssetSchema,
   FogAssetSchema,
+  FontAssetSchema,
   SkyBoxAssetSchema,
   ScatterAssetSchema,
   TerrainBlockAssetSchema,
@@ -125,6 +126,7 @@ export const writeJsonSchemas = () => {
     { name: 'terrainBlock.schema.json', schema: TerrainBlockAssetSchema },
     { name: 'scatter.schema.json', schema: ScatterAssetSchema },
     { name: 'decalSet.schema.json', schema: DecalSetAssetSchema },
+    { name: 'font.schema.json', schema: FontAssetSchema },
     { name: 'assetsConfig.schema.json', schema: AssetsConfigSchema },
   ];
 

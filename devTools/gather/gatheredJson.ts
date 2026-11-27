@@ -8,6 +8,7 @@ import {
   CameraAssetSchema,
   DecalSetAssetSchema,
   FogAssetSchema,
+  FontAssetSchema,
   GeoAssetSchema,
   ImportedAssetSchema,
   ImpostorAssetSchema,
@@ -46,6 +47,7 @@ export const GATHERED_SUFFIXES = {
   terrainBlock: '.terrainBlock.json',
   scatter: '.scatter.json',
   decalSet: '.decalSet.json',
+  font: '.font.json',
 } as const;
 
 /** A gathered JSON's type, by its suffix */
@@ -74,6 +76,7 @@ const GATHERED_SCHEMAS: Record<GatheredJsonType, z.ZodType> = {
   terrainBlock: TerrainBlockAssetSchema,
   scatter: ScatterAssetSchema,
   decalSet: DecalSetAssetSchema,
+  font: FontAssetSchema,
 };
 
 // The gathered types without per-scene `__saveData`
@@ -86,6 +89,7 @@ const TYPES_WITHOUT_SAVE_DATA = new Set<GatheredJsonType>([
   'terrainBlock',
   'scatter',
   'decalSet',
+  'font',
 ]);
 
 /** A file's gathered type by its name, or undefined when it isn't one */

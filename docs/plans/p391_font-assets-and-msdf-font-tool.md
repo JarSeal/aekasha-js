@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Text, Assets
 Epic: p390_text-rendering-and-text-decals.md
 Blocks: p392_text-feature-msdf-renderer.md, p395_dynamic-glyph-atlas.md
@@ -68,7 +68,7 @@ The figures are Phase 1's As built.
 ```jsonc
 // src/toolkit/fonts/plexSans/plexSans.font.json
 {
-  "$schema": "../../../_engine/schemas/generated/font.schema.json",
+  "$schema": "../../../../.schemas/font.schema.json",
   "id": "plexSans",
   "name": "IBM Plex Sans",
   "fileName": "IBMPlexSans-Medium.woff",  // JSON-relative, TTF / OTF / WOFF (D1: no WOFF2, no variable font)
@@ -89,7 +89,8 @@ The figures are Phase 1's As built.
 
 - `presets`: `DIGITS` (`0-9 +-.,:%`), `ASCII` (printable 0x20-0x7E), `LATIN_1` (0xA0-0xFF),
   `LATIN_EXT_A`, `GREEK`, `CYRILLIC`, `PUNCTUATION` (general punctuation's common ones). A list in
-  `devTools/assetPipeline/fonts/charsets.ts`, shared with the debug tab's "what's in this font".
+  `src/_engine/features/text/FontCharsets.ts` (import-free, on `devTools/engineImports.test.ts`'
+  list: runtime code can't import `devTools/`), shared with the debug tab's "what's in this font".
 - Space and `fallbackGlyph` are always in. A character the font doesn't have is dropped with a
   warning naming it.
 - The atlas grows by powers of two up to `maxSize`; past it the encode fails, naming how many
@@ -97,7 +98,8 @@ The figures are Phase 1's As built.
 
 ### D3. The outputs
 
-- `src/public/aek-assets/fonts/<id>/<id>.atlas.ktx2`: KTX2 `R8G8B8A8_UNORM` (linear, not sRGB:
+- `src/public/aek-assets/<the JSON's path under src/>.atlas.<hash>.ktx2` (the pipeline's output
+  naming, Phase 2: `toolkit/fonts/plexSans/plexSans.atlas.9a11fc28.ktx2`): KTX2 `R8G8B8A8_UNORM` (linear, not sRGB:
   distances), zstd level 19, no mips (an SDF atlas is sampled with its derivatives; mips blur the
   field into wrong distances). No PNG fallback: Phase 1 found three's `KTX2Loader` loads it on
   both backends, texel-exact (Phase 1's As built). What the load (Phase 4) must know: it comes back
@@ -105,7 +107,8 @@ The figures are Phase 1's As built.
   level) with **`NearestFilter`** min and mag, so the load sets `LinearFilter`; and `v = 0` samples
   the PNG's **top** row on WebGPU and WebGL2 alike, so `atlasBounds` in pixels from the top map to
   `v = y / height` with no flip.
-- `src/public/aek-assets/fonts/<id>/<id>.layout.json`: the metrics the layout needs and nothing
+- `src/public/aek-assets/<the JSON's path>.layout.<hash>.json`, beside the atlas, naming it
+  (`atlas.file`), so the runtime needs the layout's URL only: the metrics the layout needs and nothing
   else: `unitsPerEm` normalized to 1, `ascender`, `descender`, `lineHeight`, `underline*`, the
   atlas size, `pxRange`, `type`; per glyph (by code point) `advance`, `planeBounds` (em units),
   `atlasBounds` (pixels, from the top); rounded to 4 decimals. `kerning` only for pairs inside the
@@ -212,7 +215,7 @@ kept; font: IBM Plex Sans Medium, static WOFF from `@ibm/plex-sans` 2.0.0):
   The readback's row order differs per backend (`readRenderTargetPixelsAsync`: bottom row first on
   WebGL2, top first on WebGPU), the texture's doesn't.
 
-### Phase 2: The schema, the encoder and the outputs
+### Phase 2: The schema, the encoder and the outputs — done
 
 1. `FontSchema.ts` (D2) beside the `text()` feature's folder (created empty here, with its
    `index.ts` exporting only the schema's types; p392 fills it) and on `aekasha/schemas`; the
@@ -236,18 +239,90 @@ kept; font: IBM Plex Sans Medium, static WOFF from `@ibm/plex-sans` 2.0.0):
    rasterized outline; `o` with no corners as the strict case), the WOFF2 and variable-font
    refusals.
 
+As built (2026-11-27, macOS arm64, Node 22.13.0):
+
+- **The schema** (`src/_engine/features/text/FontSchema.ts`, on `aekasha/schemas` with `FONT_TYPES`,
+  `FONT_CHARSET_PRESETS`, `FONT_DEFAULTS`): `id` optional (the file name), `fileName` relative to the
+  JSON and `.ttf` / `.otf` / `.woff` only (a `.woff2` refused naming the formats), `size` 8-512,
+  `pxRange` > 0, ≤ 64 and below `size`, `atlas.maxSize` a power of two 64-8192, `padding` 0-32,
+  `fallbackGlyph` one code point. No `__saveData`, `debugData` or `optimize`. A font without
+  `charset` gets `ASCII`; a `charset` without `presets` none. `*.font.json` is in
+  `GATHERED_SUFFIXES` and `.schemas/font.schema.json`; the gather's pass 1 doesn't read fonts yet
+  (Phase 3).
+- **No `features/text/index.ts` yet:** `FeatureFactories.test.ts` requires every feature entry to
+  have a `*Feature.ts`, so the `aekasha/text` entry (its alias, `tsconfig.json`'s paths, the Hub's
+  entry table in `hub/pages/documentation/intro.md`, the API baseline) comes with the `text()`
+  feature (Phase 4). The folder holds `FontSchema.ts`, `FontCharsets.ts` and the schema's test.
+- **The encoder** (`devTools/assetPipeline/fonts/`): `fontSource.ts` (the resolved JSON, its files,
+  the cache key's params, `FONT_ENCODER_VERSION`; light: no fontkit), `charset.ts`, `fontFile.ts`
+  (fontkit: the refusals by signature and `fvar`, metrics, kerning), `msdfgen.ts` (its own types:
+  the package's `exports` names no `types`), `outline.ts`, `trueSdf.ts`, `pack.ts` (skyline;
+  `textureAtlases.ts`' layout aligns cells for mip levels, which a font atlas hasn't), `layout.ts`,
+  `encodeFont.ts` (`generateFontAtlasAsync`: pixels and layout input, no `ktx`; `encodeFontAsset`:
+  then the KTX2 and both outputs), `import()`ed by `pipeline.ts` on a font's first encode.
+- **In the pipeline:** one job per font, keyed `font:<json>` (`getFontAssetKey`), its source kind
+  `font`, key type `font` (pipeline, `ktx`, sharp, fontkit, msdfgen-wasm versions). A font is always
+  encoded (no pass-through form, whatever the textures switch says) and is KTX-only for the build's
+  missing-output check. The layout is the result's `output`, the atlas its `extraOutputs` (new on
+  `CacheEntry` and the optimized outcome: the presence check, the store, its restore and the prune
+  see every output). `ktxEncode.ts`' `encodeKtx2Raw` / `getKtxRawArgs` (`--format R8G8B8A8_UNORM`
+  or `R8_UNORM --assign-tf linear --assign-primaries none --zstd 19`), `images.ts`' `encodePngBytes`.
+  The run's line and `last-run.json` carry the font's stats (`FontEncodeStats`).
+- **`SDF` is a one-channel `R8_UNORM` KTX2**, not RGBA (MTSDF and MSDF are RGBA; MSDF's alpha 255).
+  Phase 1 checked only RGBA with `KTX2Loader`: Phase 4 checks R8 on both backends.
+- **The layout's format** (`FONT_LAYOUT_FORMAT` 1, minified): `{ format, type, atlas: { file, width,
+  height, size, pxRange }, metrics: { ascender, descender, lineHeight, underlineY (the underline's
+  centre, as FreeType's), underlineThickness }, fallback, glyphs, kerningUnitsPerEm?, kerning? }`,
+  each glyph `[advance]` without ink, else `[advance, planeLeft, planeBottom, planeRight, planeTop,
+  atlasX, atlasY, atlasWidth, atlasHeight]` (em values to 4 decimals; the plane bounds are the
+  tile's whole quad, its range included; atlas pixels from the top left).
+- **Kerning** through `font.layout` of each pair with `liga`, `clig`, `dlig`, `calt`, `rlig` off; a
+  pair the font still substitutes is skipped. Missing characters: the named ones (space, the
+  fallback, `chars`, files) warned by name, a preset's counted; a missing fallback glyph fails.
+- **Budgets** are warnings (`FONT_BUDGET`: 2048² pixels, 2000 glyphs), not the texture budget's
+  ceilings (a 2048² RGBA atlas would fail those).
+- **Overlap check:** samples spread evenly along each contour (a segment midpoint misses an overlap
+  on a long straight edge); warns naming the glyphs.
+- **Figures** (the fixture, IBM Plex Sans Medium WOFF): ASCII MTSDF 512², 0.4 s; ASCII + Latin 1
+  1024 × 512, 191 glyphs, 5,036 kerned pairs, 1.5 s through the pipeline, atlas 381 kB, layout
+  47.8 kB; a second run a hit, deleted outputs restored from the store. Against the outline at 8×:
+  0.1-0.37 % of samples wrong; `o`'s within 0.032 px of the outline (one byte of the range), the
+  corners' within 0.45 px (alpha) and 0.41 px (median).
+- **Dependencies:** `msdfgen-wasm` 1.0.0, `fontkit` 3.0.0, `@types/fontkit` 2.0.9 (written for
+  fontkit 2; it matches what's used), all pinned devDependencies.
+- **Tests** (`devTools/assetPipeline/fonts/*.test.ts`, `FontSchema.test.ts`, `cache.test.ts`'
+  extra outputs, `ktxEncode.test.ts`' raw args): the fixture is
+  `devTools/assetPipeline/fonts/fixtures/IBMPlexSans-Medium.woff` (90 kB, from `@ibm/plex-sans`
+  2.0.0, its OFL beside it); the golden `DIGITS` atlas `fixtures/plexSansDigits.golden.png` / `.json`
+  (within 1 per channel; `AEK_UPDATE_FONT_GOLDEN=true` writes them, with a `FONT_ENCODER_VERSION`
+  bump); the variable-font refusal on the UI kit's variable WOFF2.
+- **Not run:** `yarn verify:baselines --update` (its API baseline gains `aekasha/schemas`' seven
+  font names; it needs a build): before the PR.
+
 ### Phase 3: `yarn importFont`, the toolkit's fonts, the gather
 
 1. `devTools/importFont.ts` (D4) and its `package.json` script; tests on a fixture font in a temp
    folder.
-2. The toolkit's `fonts/` category (D7), its layout rule, encodes committed.
+2. The toolkit's `fonts/` category (D7), its layout rule, encodes committed. `plexSans`' WOFF is
+   the Phase 2 test fixture's file: point the font tests at the toolkit's copy and delete
+   `devTools/assetPipeline/fonts/fixtures/IBMPlexSans-Medium.woff` and its licence (the golden files
+   stay in `fixtures/`).
 3. The gather: fonts in the generated data (`SceneData.fonts`, the scene's list and closure), D5's
-   collection and staleness warning; the build's failure on a stale font.
+   collection and staleness warning; the build's failure on a stale font. The encoder already takes
+   the collected characters (`encodeFontAsset`'s `collected`, `resolveRequestedCharset`'s); the
+   cache key doesn't yet (`getFontKeyParams` hashes the requested set without them): add the
+   generated charset file to the key's files (`listFontFiles`) or the collected set to its params.
+   The generated data's `__url` is the layout's (`getGeneratedFields`-like, from the run's
+   `font:<json>` result).
 
 ### Phase 4: The runtime load
 
 1. `FontData`, `getFont`, `loadFontAsync`, the scene's load and disposal (D6), in
    `features/text/Fonts.ts`; the feature's `install` registers only the load (p392 adds the rest).
+   With it the `aekasha/text` entry (`index.ts`, `devTools/aliases.ts`, `tsconfig.json`'s paths, the
+   Hub's entry table, the API baseline) and the font types on it. The parse reads Phase 2's layout
+   format (`atlas.file` relative to the layout's URL, the glyph arrays); check an `SDF` font's
+   `R8_UNORM` KTX2 through `KTX2Loader` on WebGPU and WebGL2.
    The atlas through `KTX2Loader` (D3: a `DataTexture`, its filters set to `LinearFilter`, no
    mips, no colour space), kerning scaled from `kerningUnitsPerEm` to em at the parse.
 2. Tests: the parse into typed arrays, kerning lookups, the fallback glyph, a font owned by a

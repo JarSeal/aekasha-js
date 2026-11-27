@@ -1,0 +1,273 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "$ref": "#/definitions/__schema0"
+    },
+    "id": {
+      "$ref": "#/definitions/__schema1"
+    },
+    "name": {
+      "$ref": "#/definitions/__schema3"
+    },
+    "fileName": {
+      "$ref": "#/definitions/__schema5"
+    },
+    "type": {
+      "$ref": "#/definitions/__schema6"
+    },
+    "size": {
+      "$ref": "#/definitions/__schema8"
+    },
+    "pxRange": {
+      "$ref": "#/definitions/__schema10"
+    },
+    "charset": {
+      "$ref": "#/definitions/__schema12"
+    },
+    "fallbackGlyph": {
+      "$ref": "#/definitions/__schema21"
+    },
+    "kerning": {
+      "$ref": "#/definitions/__schema23"
+    },
+    "atlas": {
+      "$ref": "#/definitions/__schema25"
+    }
+  },
+  "required": [
+    "fileName"
+  ],
+  "additionalProperties": false,
+  "description": "A font: a source font encoded into a distance field atlas and a layout JSON.",
+  "definitions": {
+    "__schema0": {
+      "type": "string",
+      "description": "The JSON Schema in .schemas/ an editor validates this file with. The gatherer ignores it."
+    },
+    "__schema1": {
+      "description": "The id. Default: the file name without .font.json.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema2"
+        }
+      ]
+    },
+    "__schema2": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema3": {
+      "description": "The font's name for people.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema4"
+        }
+      ]
+    },
+    "__schema4": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema5": {
+      "type": "string",
+      "description": "The source font, relative to this JSON (\"./IBMPlexSans-Medium.woff\"): a static TTF, OTF or WOFF (no WOFF2, no variable font)."
+    },
+    "__schema6": {
+      "description": "The atlas type: MTSDF (sharp corners and a true distance for soft effects), MSDF (sharp corners only) or SDF (the true distance alone). Default: MTSDF.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema7"
+        }
+      ]
+    },
+    "__schema7": {
+      "type": "string",
+      "enum": [
+        "MTSDF",
+        "MSDF",
+        "SDF"
+      ]
+    },
+    "__schema8": {
+      "description": "The em's size in atlas pixels (8-512). Default: 48.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema9"
+        }
+      ]
+    },
+    "__schema9": {
+      "type": "integer",
+      "minimum": 8,
+      "maximum": 512
+    },
+    "__schema10": {
+      "description": "The distance range in atlas pixels, its full width (8: ±4 px around the outline). Wider allows thicker outlines and glows. Default: 8.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema11"
+        }
+      ]
+    },
+    "__schema11": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 64
+    },
+    "__schema12": {
+      "type": "object",
+      "properties": {
+        "presets": {
+          "$ref": "#/definitions/__schema13"
+        },
+        "chars": {
+          "$ref": "#/definitions/__schema15"
+        },
+        "charsFromFiles": {
+          "$ref": "#/definitions/__schema17"
+        },
+        "collectFromScenes": {
+          "$ref": "#/definitions/__schema19"
+        }
+      },
+      "additionalProperties": false,
+      "description": "The characters the atlas holds. Space and the fallback glyph are always in; one the font lacks is dropped with a warning."
+    },
+    "__schema13": {
+      "description": "Named sets of characters. Default: [\"ASCII\"] without a charset, [] in a charset that leaves it out.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema14"
+        }
+      ]
+    },
+    "__schema14": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "DIGITS",
+          "ASCII",
+          "LATIN_1",
+          "LATIN_EXT_A",
+          "GREEK",
+          "CYRILLIC",
+          "PUNCTUATION"
+        ]
+      }
+    },
+    "__schema15": {
+      "description": "More characters, each in once however often it's written.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema16"
+        }
+      ]
+    },
+    "__schema16": {
+      "type": "string"
+    },
+    "__schema17": {
+      "description": "JSON or text files relative to this JSON: every character of a text file, and of every string in a JSON file (keys and values).",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema18"
+        }
+      ]
+    },
+    "__schema18": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "__schema19": {
+      "description": "Adds the characters of every text a scene writes with this font. Default: false.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema20"
+        }
+      ]
+    },
+    "__schema20": {
+      "type": "boolean"
+    },
+    "__schema21": {
+      "description": "The character drawn for one the atlas lacks; always in the atlas. Default: \"?\".",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema22"
+        }
+      ]
+    },
+    "__schema22": {
+      "type": "string"
+    },
+    "__schema23": {
+      "description": "Writes the font's kerning between the atlas's characters into the layout. Default: true.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema24"
+        }
+      ]
+    },
+    "__schema24": {
+      "type": "boolean"
+    },
+    "__schema25": {
+      "type": "object",
+      "properties": {
+        "maxSize": {
+          "$ref": "#/definitions/__schema26"
+        },
+        "padding": {
+          "$ref": "#/definitions/__schema28"
+        },
+        "pot": {
+          "$ref": "#/definitions/__schema30"
+        }
+      },
+      "additionalProperties": false,
+      "description": "The atlas page's size limits and the space around each glyph."
+    },
+    "__schema26": {
+      "description": "The largest side in pixels, a power of two (64-8192). The atlas grows to it, and the encode fails past it. Default: 2048.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema27"
+        }
+      ]
+    },
+    "__schema27": {
+      "type": "integer",
+      "minimum": 64,
+      "maximum": 8192
+    },
+    "__schema28": {
+      "description": "Empty pixels around each glyph's field, so a bilinear tap never reads a neighbour. Default: 2.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema29"
+        }
+      ]
+    },
+    "__schema29": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 32
+    },
+    "__schema30": {
+      "description": "Both sides powers of two. Default: true.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema31"
+        }
+      ]
+    },
+    "__schema31": {
+      "type": "boolean"
+    }
+  }
+}

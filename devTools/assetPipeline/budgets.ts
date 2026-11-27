@@ -66,3 +66,30 @@ export const getBudgetViolations = (result: PipelineRunResult): string[] => {
   }
   return violations;
 };
+
+/**
+ * A font's budget (p391 D3): its atlas and its glyph count past these are warned about, not
+ * failed (a font past `atlas.maxSize` fails its encode already). A 2048² RGBA atlas is 16 MB of
+ * VRAM, and 2000 glyphs a layout JSON of over 100 kB.
+ */
+export const FONT_BUDGET = { atlasPixels: 2048 * 2048, glyphs: 2000 } as const;
+
+/** Why a font's encode is over {@link FONT_BUDGET}, one line per limit (its warnings) */
+export const getFontBudgetWarnings = (stats: {
+  glyphs: number;
+  atlas: { width: number; height: number; channels: number };
+}): string[] => {
+  const warnings: string[] = [];
+  const { width, height, channels } = stats.atlas;
+  if (width * height > FONT_BUDGET.atlasPixels) {
+    warnings.push(
+      `its ${width} × ${height} atlas (${formatBytes(width * height * channels)} of VRAM) is over the font budget's 2048²: ask for fewer characters, or lower its size`
+    );
+  }
+  if (stats.glyphs > FONT_BUDGET.glyphs) {
+    warnings.push(
+      `its ${stats.glyphs} glyphs are over the font budget's ${FONT_BUDGET.glyphs}: ask for fewer characters (a dynamic atlas suits a large character set)`
+    );
+  }
+  return warnings;
+};

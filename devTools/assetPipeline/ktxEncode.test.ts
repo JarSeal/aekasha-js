@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getKtxCreateArgs, getKtxCubeArgs } from './ktxEncode';
+import { getKtxCreateArgs, getKtxCubeArgs, getKtxRawArgs } from './ktxEncode';
 
 // p619 D14: `ktx create`'s arguments decide the KTX2's bytes, so their order is fixed (a change
 // needs a PIPELINE_VERSION bump: every output encodes again)
@@ -58,6 +58,17 @@ describe('getKtxCreateArgs', () => {
     );
     expect(args.join(' ')).toBe(
       '--format R8G8B8_SRGB --assign-tf srgb --assign-primaries bt709 --generate-mipmap --encode basis-lz --qlevel 128 --cubemap'
+    );
+  });
+});
+
+describe('getKtxRawArgs (p391 D3: a font atlas)', () => {
+  it('uncompressed, linear, zstd 19, no mips: RGBA for an MTSDF or MSDF, R for an SDF', () => {
+    expect(getKtxRawArgs(4).join(' ')).toBe(
+      '--format R8G8B8A8_UNORM --assign-tf linear --assign-primaries none --zstd 19'
+    );
+    expect(getKtxRawArgs(1).join(' ')).toBe(
+      '--format R8_UNORM --assign-tf linear --assign-primaries none --zstd 19'
     );
   });
 });

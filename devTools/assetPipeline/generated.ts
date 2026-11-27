@@ -109,9 +109,20 @@ export const estimateTextureVramBytes = (texture: EncodedTexture) => {
  */
 export const getResultFigures = (result: PipelineRunResult) => {
   if (result.status !== 'optimized' && result.status !== 'passThrough') return null;
-  const bytes = { in: result.sourceBytes ?? result.output.bytes, out: result.output.bytes };
+  const extraBytes =
+    result.status === 'optimized'
+      ? (result.extraOutputs ?? []).reduce((sum, output) => sum + output.bytes, 0)
+      : 0;
+  const outBytes = result.output.bytes + extraBytes;
+  const bytes = { in: result.sourceBytes ?? outBytes, out: outBytes };
   if (result.status === 'passThrough') return { bytes };
   const vramBytes = { in: result.geometryBytes?.in ?? 0, out: result.geometryBytes?.out ?? 0 };
+  if (result.font) {
+    // A font's atlas (p391 D3): uncompressed, one level; it has no unoptimized form to compare
+    const { width, height, channels } = result.font.atlas;
+    vramBytes.in += width * height * channels;
+    vramBytes.out += width * height * channels;
+  }
   for (const texture of result.textures) {
     const textureVram = estimateTextureVramBytes(texture);
     vramBytes.in += textureVram.in;
@@ -161,11 +172,12 @@ export const getTextureAtlasSlotResult = (run: PipelineRun, jsonFile: string, sl
 export const getMergeMaterialSlotResult = (run: PipelineRun, jsonFile: string, slot: string) =>
   run.results.get(getMergeMaterialSlotAssetKey(jsonFile, slot)) ?? null;
 
-/** A texture array (p299 D2, a palette slot's too) or an atlas slot (D3): only ever a KTX2 output,
- * never passed through */
+/** A texture array (p299 D2, a palette slot's too), an atlas slot (D3) or a font (p391): only ever
+ * a KTX2 output, never passed through */
 export const isKtxOnlyAsset = (result: PipelineRunResult) =>
   result.asset.type === 'textureArray' ||
   result.asset.type === 'textureAtlas' ||
+  result.asset.type === 'font' ||
   result.asset.source.kind === 'cube';
 
 /**

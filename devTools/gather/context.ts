@@ -244,6 +244,7 @@ const TYPE_LABELS: Record<GatheredJsonType, string> = {
   terrainBlock: 'terrain block',
   scatter: 'scatter',
   decalSet: 'decal set',
+  font: 'font',
 };
 
 /**

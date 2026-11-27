@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { encodePng, toChannels, type Img } from './images';
+import { encodePng, encodePngBytes, toChannels, type Img } from './images';
 import { ensureKtx, getKtxEnv, type KtxTool } from './ktxTool';
 import type { ResolvedTextureSettings } from './settings';
 import { ROOT } from '../paths';
@@ -211,5 +211,36 @@ export const encodeKtx2Levels = async (
   ];
   return runKtxCreate(tool, args, levelCount, async (index) =>
     encodePng(toChannels(await readLevel(index), opts.channels), opts.isSrgb)
+  );
+};
+
+/**
+ * The `ktx create` options for an uncompressed, linear, zstd-supercompressed KTX2 with one level
+ * (p391 D3: a font atlas, whose distances no block codec keeps and no mip level holds).
+ */
+export const getKtxRawArgs = (channels: 1 | 4) => [
+  '--format',
+  channels === 4 ? 'R8G8B8A8_UNORM' : 'R8_UNORM',
+  '--assign-tf',
+  'linear',
+  '--assign-primaries',
+  'none',
+  '--zstd',
+  '19',
+];
+
+/**
+ * Encodes 8-bit pixels (rows top first) as they are into a KTX2 ({@link getKtxRawArgs}): Phase 1
+ * found three's `KTX2Loader` gives every texel back unchanged, on WebGPU and WebGL2. Throws like
+ * {@link encodeKtx2}.
+ */
+export const encodeKtx2Raw = async (
+  bytes: Uint8Array,
+  size: { width: number; height: number; channels: 1 | 4 },
+  getKtx: KtxProvider
+): Promise<Uint8Array> => {
+  const tool = await getKtx();
+  return runKtxCreate(tool, getKtxRawArgs(size.channels), 1, async () =>
+    encodePngBytes(bytes, size)
   );
 };

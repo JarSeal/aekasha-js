@@ -104,6 +104,13 @@ export {
 } from '../features/fog/FogSchema';
 export type { FogAsset, FogInput, FogOverrides } from '../features/fog/FogSchema';
 export type { FogDef } from '../features/fog/FogTypes';
+export {
+  FONT_CHARSET_PRESETS,
+  FONT_DEFAULTS,
+  FONT_TYPES,
+  FontAssetSchema,
+} from '../features/text/FontSchema';
+export type { FontAsset, FontCharsetPreset, FontType } from '../features/text/FontSchema';
 export type {
   TerrainBlockAsset,
   TerrainBlockColliderType,

@@ -67,6 +67,15 @@ export const getMergeMaterialSlotLogicalPath = (jsonFile: string, slot: string) 
 export const getAtlasLogicalPath = (jsonFile: string, slot: string) =>
   getJsonLogicalPath(jsonFile, `.atlas.${slot}`);
 
+/**
+ * A font's output's logical path (p391 D3): its JSON's, eg. 'toolkit/fonts/plexSans/plexSans.atlas'
+ * for plexSans.font.json's atlas. The two outputs share a folder, so the layout names its atlas by
+ * file name.
+ * @param jsonFile Absolute
+ */
+export const getFontLogicalPath = (jsonFile: string, part: 'atlas' | 'layout') =>
+  getJsonLogicalPath(jsonFile, `.${part}`);
+
 /** An output written into `aek-assets/` (or a public source used where it is) */
 export type PipelineOutput = {
   /** Absolute path on disk */

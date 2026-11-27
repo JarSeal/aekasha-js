@@ -68,28 +68,37 @@ import {
   type AtlasSlotSource,
 } from './textureAtlases';
 import { encodeCubeTexture, listCubeFiles, type CubeSource } from './textureCubes';
+import {
+  getFontKeyParams,
+  listFontFiles,
+  type FontEncodeStats,
+  type FontSource,
+} from './fonts/fontSource';
 import { encodeTextureAsset, type EncodedTexture } from './textures';
 
 /**
  * One asset JSON's source through the pipeline (p300 §7): pass it through as it is (DD8), or
  * optimize it: a texture into KTX2 (or a PNG for `codec: "none"`), a GLB / glTF into a
  * compressed .glb, a texture array's layers into one KTX2 array (p299 D2), an atlas slot's cells
- * into one KTX2 (p299 D3), a cube texture's faces into one KTX2 cube (p311 D1). A packed texture
- * (DD5) is built either way: passed through, it's written as a PNG. An array, an atlas slot or a
- * cube is never passed through: without its textures side, it has no output.
+ * into one KTX2 (p299 D3), a cube texture's faces into one KTX2 cube (p311 D1), a font into its
+ * distance field atlas and layout (p391). A packed texture (DD5) is built either way: passed
+ * through, it's written as a PNG. An array, an atlas slot or a cube is never passed through:
+ * without its textures side, it has no output. A font has no form to pass through, so it's
+ * always encoded, whatever the textures side says.
  */
 
 export type PipelineAsset = {
-  type: 'texture' | 'importedAsset' | 'textureArray' | 'textureAtlas';
+  type: 'texture' | 'importedAsset' | 'textureArray' | 'textureAtlas' | 'font';
   /** An atlas slot's is its texture id, `<atlasId>.<slot>` */
   id: string;
   /** The asset JSON, relative to the repo root */
   jsonFile: string;
   /**
    * An array's is always an {@link ArraySource}, and only an array's is; the same for an atlas
-   * slot and its {@link AtlasSlotSource}. A cube texture's is a {@link CubeSource}.
+   * slot and its {@link AtlasSlotSource}, a font and its {@link FontSource}. A cube texture's is a
+   * {@link CubeSource}.
    */
-  source: AssetSource | PackSource | ArraySource | AtlasSlotSource | CubeSource;
+  source: AssetSource | PackSource | ArraySource | AtlasSlotSource | CubeSource | FontSource;
   /** An atlas slot's is the slot's */
   optimize?: AssetOptimize;
   /**
@@ -142,6 +151,10 @@ export type PipelineOutcome =
       lodChains?: BuiltLodChain[];
       /** What a GLB's `merge` joined and kept (p371 D3) */
       merge?: GLTFMergeStats;
+      /** Outputs written beside `output` (p391: a font's atlas beside its layout) */
+      extraOutputs?: PipelineOutput[];
+      /** What a font's encode made (p391) */
+      font?: FontEncodeStats;
       /** Worth a look, but not errors (eg. an aspect ratio changed by the rounding to 4) */
       warnings: string[];
       /** Unset without a cache */
@@ -177,6 +190,7 @@ const COMPRESSED_TEXTURE_EXTENSIONS = ['.ktx2', '.basis'];
 
 const getPassThroughReason = (asset: PipelineAsset, settings: ResolvedAssetSettings) => {
   const { passThrough } = settings;
+  if (asset.type === 'font') return null;
   if (asset.type === 'textureArray' || asset.type === 'textureAtlas') {
     return passThrough.textures ?? null;
   }
@@ -282,6 +296,7 @@ export const listAssetSourceFiles = (asset: PipelineAsset) => {
   if (source.kind === 'array') return listTextureArrayFiles(source);
   if (source.kind === 'atlas') return listTextureAtlasFiles(source);
   if (source.kind === 'cube') return listCubeFiles(source);
+  if (source.kind === 'font') return listFontFiles(source);
   if (source.kind !== 'pack' && !fs.existsSync(source.file)) return [];
   return asset.type === 'importedAsset' && source.kind !== 'pack'
     ? listGLTFFiles(source.file, readGLTFJson(source.file))
@@ -334,24 +349,38 @@ const toCacheEntry = (
   const recipeKey = getRecipeKey(keyInput);
   const recipe = recipeKey ? { recipeKey } : {};
   if (result.status === 'passThrough') return { source: repoPath, url, bytes, ...recipe };
-  const { textures, droppedTextures, geometryBytes, lodChains, merge, warnings } = result;
+  const { textures, droppedTextures, geometryBytes, lodChains, merge, font, warnings } = result;
+  const extraOutputs = result.extraOutputs?.map((output) => ({
+    url: output.url,
+    bytes: output.bytes,
+  }));
   return {
     source: repoPath,
     url,
     bytes,
+    ...(extraOutputs?.length ? { extraOutputs } : {}),
     ...(textures.length ? { textures } : {}),
     ...(droppedTextures ? { droppedTextures } : {}),
     ...(geometryBytes ? { geometryBytes } : {}),
     ...(lodChains?.length ? { lodChains } : {}),
     ...(merge ? { merge } : {}),
+    ...(font ? { font } : {}),
     ...(warnings.length ? { warnings } : {}),
     ...(ktxVersion ? { ktxVersion } : {}),
     ...recipe,
   };
 };
 
+const toOutput = ({ url, bytes }: { url: string; bytes: number }): PipelineOutput => ({
+  file: getOutputFile(url),
+  url,
+  bytes,
+});
+
 const fromCacheEntry = ({ entry }: CacheHit) => ({
-  output: { file: getOutputFile(entry.url), url: entry.url, bytes: entry.bytes },
+  output: toOutput(entry),
+  ...(entry.extraOutputs ? { extraOutputs: entry.extraOutputs.map(toOutput) } : {}),
+  ...(entry.font ? { font: entry.font } : {}),
   textures: entry.textures ?? [],
   ...(entry.droppedTextures !== undefined ? { droppedTextures: entry.droppedTextures } : {}),
   ...(entry.geometryBytes ? { geometryBytes: entry.geometryBytes } : {}),
@@ -376,8 +405,18 @@ const runPassThroughAsync = async (
   reason: string,
   opts: ProcessAssetOpts & { isSrgb: boolean }
 ): Promise<PipelineOutcome> => {
-  if (source.kind === 'array' || source.kind === 'atlas' || source.kind === 'cube') {
-    const what = { array: 'an array', atlas: 'an atlas slot', cube: 'a cube texture' }[source.kind];
+  if (
+    source.kind === 'array' ||
+    source.kind === 'atlas' ||
+    source.kind === 'cube' ||
+    source.kind === 'font'
+  ) {
+    const what = {
+      array: 'an array',
+      atlas: 'an atlas slot',
+      cube: 'a cube texture',
+      font: 'a font',
+    }[source.kind];
     return {
       status: 'skipped',
       reason: `${what} is only built as a KTX2 file, and textures are kept as they are: ${reason}`,
@@ -566,6 +605,12 @@ const planGLTFEncode = (
   return { settings: resolved, keyInput };
 };
 
+/** A font's plan: no texture settings (its atlas's format is fixed, D3), its key from its source */
+const planFontEncode = (source: FontSource, settings: ResolvedAssetSettings): EncodePlan => ({
+  settings,
+  keyInput: { type: 'font', files: listFontFiles(source), params: getFontKeyParams(source) },
+});
+
 /** An encode's plan by its source's kind */
 const planEncode = (
   asset: PipelineAsset,
@@ -577,6 +622,7 @@ const planEncode = (
     return planArrayEncode(asset, source, settings);
   }
   if (source.kind === 'cube') return planCubeEncode(asset, source, settings);
+  if (source.kind === 'font') return planFontEncode(source, settings);
   if (asset.type === 'texture') return planTextureEncode(asset, source, settings);
   if (source.kind === 'pack') throw new Error('an imported asset has no pack');
   return planGLTFEncode(asset, source, settings, resolveSettings);
@@ -609,6 +655,19 @@ const encodeAsync = async (
     });
     return { status: 'optimized', output, settings, textures: [texture] };
   }
+  if (source.kind === 'font') {
+    // Loaded on first use: fontkit and the msdfgen WASM
+    const { encodeFontAsset } = await import('./fonts/encodeFont');
+    const encoded = await encodeFontAsset(source, { getKtx, warn });
+    return {
+      status: 'optimized',
+      output: encoded.output,
+      extraOutputs: [encoded.atlas],
+      font: encoded.stats,
+      settings,
+      textures: [],
+    };
+  }
   if (slotSettings) {
     const { output, texture } = await encodeTextureAsset(source, settings.slot, slotSettings, {
       isSrgb,
@@ -635,11 +694,12 @@ const encodeAsync = async (
 /** The `ktx` that encoded a result's KTX2 textures, warned about when it isn't the pinned one
  * (the key has the pinned version; another may encode other bytes) */
 const getEncodingKtxVersionAsync = async (
-  textures: EncodedTexture[],
+  encoded: { textures: EncodedTexture[]; font?: FontEncodeStats },
   getKtx: KtxProvider,
   warn: (message: string) => void
 ) => {
-  if (!textures.some((texture) => texture.codec !== 'none')) return undefined;
+  const isKtx = !!encoded.font || encoded.textures.some((texture) => texture.codec !== 'none');
+  if (!isKtx) return undefined;
   const ktxVersion = (await getKtx()).version;
   if (ktxVersion !== KTX_VERSION) {
     warn(
@@ -696,7 +756,7 @@ const runAsset = async (
     }
     throw error;
   }
-  const ktxVersion = await getEncodingKtxVersionAsync(encoded.textures, getKtx, warn);
+  const ktxVersion = await getEncodingKtxVersionAsync(encoded, getKtx, warn);
   const result = { ...encoded, warnings };
   if (!key || !cache) return result;
   cache.set(key, toCacheEntry(source.repoPath, result, plan.keyInput, ktxVersion));

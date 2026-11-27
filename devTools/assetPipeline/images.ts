@@ -380,3 +380,15 @@ export const encodePng = async (img: Img, isSrgb: boolean) => {
     .png({ compressionLevel: 9 })
     .toBuffer();
 };
+
+/**
+ * Writes 8-bit pixels as they are (no colour conversion) as a PNG: grey with 1 channel, RGBA with 4
+ * (a font atlas, p391 D3).
+ */
+export const encodePngBytes = async (
+  bytes: Uint8Array,
+  size: { width: number; height: number; channels: 1 | 4 }
+) => {
+  const sharp = await loadSharp();
+  return sharp(bytes, { raw: size }).png({ compressionLevel: 9 }).toBuffer();
+};

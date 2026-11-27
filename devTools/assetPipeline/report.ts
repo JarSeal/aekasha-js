@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getResultFigures } from './generated';
+import type { FontEncodeStats } from './fonts/fontSource';
 import type { GLTFMergeStats } from './gltfMergeOptions';
 import type { PipelineRun, PipelineRunResult } from './run';
 import { ROOT } from '../paths';
@@ -42,6 +43,8 @@ export type RunSummaryAsset = {
   codec?: string;
   /** What a GLB's `merge` joined and kept (p371 D3) */
   merge?: GLTFMergeStats;
+  /** What a font's encode made (p391) */
+  font?: FontEncodeStats;
   /** Why it was passed through, skipped or not encoded, or what failed */
   reason?: string;
   warnings?: string[];
@@ -107,6 +110,7 @@ export const summarizeRun = (
         ? { codec: result.textures[0].codec }
         : {}),
       ...(result.status === 'optimized' && result.merge ? { merge: result.merge } : {}),
+      ...(result.status === 'optimized' && result.font ? { font: result.font } : {}),
       ...('reason' in result ? { reason: result.reason } : {}),
       ...('warnings' in result && result.warnings.length ? { warnings: result.warnings } : {}),
       ...(opts.overBudget.has(key) ? { overBudget: opts.overBudget.get(key) } : {}),
