@@ -197,8 +197,9 @@ const createThumbSlider = (props: SliderProps, track: SingleTrack): Slider => {
   return shell.field;
 };
 
+// p804 D7
 /**
- * Creates a slider (p804 D7): a track from `min` to `max` and, by default, a number field's spin
+ * Creates a slider: a track from `min` to `max` and, by default, a number field's spin
  * button after it, its value a number from its binding (`{ target, key }`, `{ get, set }` or
  * `{ value }`) and written there. The track is for the pointer only (`aria-hidden`): the spin
  * button is the one keyboard and screen reader control, with everything the number field does

@@ -32,8 +32,9 @@ export const StreamingRingsSchema = z
   })
   .strict();
 
+// p353 §2
 /**
- * A scene's streaming settings (the `streaming()` feature's scene field, p353 §2): the world is
+ * A scene's streaming settings (the `streaming()` feature's scene field): the world is
  * cut into square `cellSize` cells on x/z, and each cell's content is loaded, reduced or unloaded
  * by its ring around the focus.
  */
@@ -120,7 +121,8 @@ export const SceneStreamingSchema = z
 /** A scene's streaming settings (`*.scene.json`'s `streaming`, or set in code before its load). */
 export type SceneStreamingSettings = z.infer<typeof SceneStreamingSchema>;
 
-/** The streaming feature's scene field (p607 D10): a scene that streams names `streaming()`. */
+// p607 D10
+/** The streaming feature's scene field: a scene that streams names `streaming()`. */
 export const streamingSchemaPart = {
   feature: 'streaming',
   scene: {

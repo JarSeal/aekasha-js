@@ -27,8 +27,9 @@ import { getNextSceneId, isCurrentlyLoading } from '../../kernel/scene/SceneLoad
 import type { SceneSpatialDomainEntry } from '../../schemas/SpatialDomainSchema';
 import { findSpatialRadiusProvider } from '../../kernel/ecs/SpatialMembership';
 
+// p346 §3.1
 /**
- * How a domain's grid is kept current (p346 §3.1):
+ * How a domain's grid is kept current:
  * - `DYNAMIC`: positions and scaled radii refreshed and the grid rebuilt every frame.
  * - `STATIC`: positions and radii are read when a member joins. The grid is rebuilt only in a
  *   frame where a member joined or left, and refreshed from every member's Transform first when
@@ -53,8 +54,9 @@ export interface SpatialDomainOptions {
   update?: SpatialUpdatePolicy;
   /** See SpatialGridOptions (default 2). */
   oversizedRadiusMultiplier?: number;
+  // p349 §3.1
   /**
-   * The scene these settings belong to (p349 §3.1).
+   * The scene these settings belong to.
    * While they exist they replace the domain's world settings (the last ones registered without
    * a scene). On that scene's exit the domain goes back to its world settings, or is
    * unregistered if it has none. A scope, not a setting: registering the same settings for

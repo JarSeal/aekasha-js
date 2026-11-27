@@ -2,8 +2,9 @@ import type { RigidBodyAPI } from './types/PhysicsBodyTypes';
 import type { ColliderAPI } from './types/PhysicsColliderTypes';
 import type { PhysVector } from './types/PhysicsCommonTypes';
 
+// p352
 /**
- * A dynamic rigid body's simulation tier (p352, `PhysicsTiers.ts`):
+ * A dynamic rigid body's simulation tier (`PhysicsTiers.ts`):
  * - `FULL`: simulated as created.
  * - `STATIC`: switched to `FIXED`: it still collides, but nothing moves it or wakes it. Rapier
  *   zeroes its velocities, so it resumes from rest when it goes back to `FULL`.
@@ -52,8 +53,9 @@ export type PhysicsTierRing = {
   within?: number;
 };
 
+// p343
 /**
- * When a tier policy decides (p343):
+ * When a tier policy decides:
  * - `STEPS` (default): it measures on a fixed physics step `k` and applies on step
  *   `k + interval`, so with a deterministic focus a scene plays out the same on every load and
  *   in both worker targets. In WORKER_THREAD mode stepping waits at `k + interval` for the

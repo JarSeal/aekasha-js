@@ -6,8 +6,9 @@
 import type { MaterialInputDependency } from '../../kernel/assets/MaterialInputRefs';
 import type { TextureSetPacking } from '../../schemas/TextureSetSchema';
 
+// p303 D1
 /**
- * A TSL input's texture set (p303 D1): `{ "textureSet": "sand01" }` is a bundle of the set's
+ * A TSL input's texture set: `{ "textureSet": "sand01" }` is a bundle of the set's
  * default packing (`"packing"` picks another): each slot's texture node, and uniforms of the set's
  * `physicalSize`, `heightScale` and `surface` fields, by name (`inputs.ground.albedoRough`,
  * `inputs.ground.physicalSize`).
@@ -75,8 +76,9 @@ export const getTextureSetInputDependencies = (
   return slots ? Object.values(slots).map((id) => ({ type: 'texture', id })) : [];
 };
 
+// p303 D4
 /**
- * A TSL input's texture set array (p303 D4): `{ "textureSetArray": ["sand01", "grass01"],
+ * A TSL input's texture set array: `{ "textureSetArray": ["sand01", "grass01"],
  * "packing": "LITE" }` is a bundle of the packing's array textures, layer `i` from the `i`th set
  * (`inputs.ground.albedoRough.sample(uv).depth(layer)`), and the layers' params (`layerParams`,
  * read with `getTextureSetLayerParams`, and `layerCount`). `{ "textureSetArray": "gallery" }` names

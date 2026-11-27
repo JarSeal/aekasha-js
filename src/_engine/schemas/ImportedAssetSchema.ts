@@ -115,7 +115,8 @@ export const ImportedAssetSchema = z.object({
   fileName: AssetFileNameSchema,
   /** Build time only: the asset pipeline's settings (not per scene, never read by the runtime). */
   optimize: ImportedAssetOptimizeSchema.optional(),
-  /** Build time only: joins the file's static pieces into `__merged` nodes (p371 D3); not per
+  // p371 D3
+  /** Build time only: joins the file's static pieces into `__merged` nodes; not per
    * scene, never read by the runtime. */
   merge: ImportedAssetMergeSchema.optional(),
   /** Set by the gatherer: the file it came from. */

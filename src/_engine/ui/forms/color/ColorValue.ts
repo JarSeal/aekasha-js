@@ -5,8 +5,9 @@
 // them and writes them back in the value's own form. No three import: the sRGB curve is three's,
 // with its constants, so a value goes through either the same way.
 
+// p804 D8
 /**
- * A colour field's value, in one of three forms kept on write (p804 D8): a 24-bit number
+ * A colour field's value, in one of three forms kept on write: a 24-bit number
  * (`0xrrggbb`, what a `THREE.Color`'s `getHex()` gives), a hex string (`'#rrggbb'`, or
  * `'#rrggbbaa'` with alpha), or an object of 0-1 floats (`{ r, g, b }`, `a` with alpha: a
  * `THREE.Color` itself, written in place).

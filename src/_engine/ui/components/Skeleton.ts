@@ -29,8 +29,9 @@ export type Skeleton = {
   cmp: CMPHandle;
 };
 
+// p803 D10
 /**
- * Creates a skeleton (p803 D10): a grey shape where content is still loading, shaped like it (text
+ * Creates a skeleton: a grey shape where content is still loading, shaped like it (text
  * lines, a block, a circle), so the layout doesn't jump when it comes.
  * - Parts: `.aekSkeleton` (`data-shape`), and a `.aekSkeleton__line` per line.
  * - Custom properties (read on any ancestor): `--aek-skeleton-color` (default

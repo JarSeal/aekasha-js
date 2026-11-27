@@ -77,8 +77,9 @@ const writeKeys = (elem: HTMLElement, keys: string, platform: KeyPlatform) => {
   elem.replaceChildren(shown, label);
 };
 
+// p803 D10
 /**
- * Creates a key hint (p803 D10): a chord's keys as the keyboard shows them, a `<kbd>` each with
+ * Creates a key hint: a chord's keys as the keyboard shows them, a `<kbd>` each with
  * `+` between them (`Ctrl+Shift+P` is three keys), on macOS with the modifiers as symbols (⌘ ⇧ ⌥
  * ⌃) and the arrows as arrows everywhere. Display only: binding the key is the app's.
  * - Parts: `.aekKbd` (the outer `<kbd>`), `.aekKbd__key` (each key), `.aekKbd__join` (the `+`),

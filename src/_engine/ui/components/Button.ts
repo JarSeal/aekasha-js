@@ -226,8 +226,9 @@ const appendParts = (elem: HTMLElement, props: ButtonProps, labelElem: HTMLEleme
   return fill;
 };
 
+// p803 D10
 /**
- * Creates a button (p803 D10): a native `<button>` (`type="button"`) with a label, and optionally
+ * Creates a button: a native `<button>` (`type="button"`) with a label, and optionally
  * an icon, a shortcut's hint, a tooltip, a toggle state, a loading state or a hold to confirm.
  * - Parts: `.aekButton` (`data-variant`, `data-size`, `data-icon-only`; the states `disabled` or
  *   `aria-disabled`, `aria-pressed`, `aria-busy`, `data-holding="filling" | "confirmed"`),

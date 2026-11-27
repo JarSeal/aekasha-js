@@ -20,8 +20,9 @@ const createFogDebugTabAsync = async () => {
   useDebug(debug)?._createFogDebugTab();
 };
 
+// p106
 /**
- * The fog feature (p106): one fog per scene, `LINEAR`, `EXP2` or `HEIGHT`, its colour the sky's
+ * The fog feature: one fog per scene, `LINEAR`, `EXP2` or `HEIGHT`, its colour the sky's
  * horizon by default, switched on and off as a whole without a recompile. A scene's JSON `fogs`
  * lists its fogs (`*.fog.json` ids or inline ones). Without the feature, the getters return null,
  * the setters throw, and a scene listing `fogs` fails the boot.

@@ -3,8 +3,9 @@ import { registerTerrainGenerator, type TerrainGeneratorOpts } from 'aekasha/ter
 /** The generators' code, loaded with the first block that uses one */
 const loadGeneratorsAsync = () => import('./TerrainBlockGenerators');
 
+// p306 D4
 /**
- * Registers the toolkit's terrain block generators (p306 D4), which a `*.terrainBlock.json`'s
+ * Registers the toolkit's terrain block generators, which a `*.terrainBlock.json`'s
  * `geometry.generator` names. Call it once, from an install (an app's `appECSPlugins`), never at
  * module load; their code loads with the first block that uses one, and they generate on the
  * toolkit's terrain worker (`generateTerrainAsync`).

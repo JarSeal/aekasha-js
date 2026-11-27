@@ -46,9 +46,10 @@ import type { BodyWorldBounds } from './types/PhysicsWorldBoundsTypes';
 /** Rigid body creates refused because the transform buffer was full (WORKER_THREAD), since boot. */
 let refusedBodyCount = 0;
 
+// p352
 /**
  * Rejection reason of a rigid body create that found every transform-buffer slot taken
- * (`WORKER_THREAD` mode, p352): nothing of it was created. Raise `AppConfig.physics.maxBodies`,
+ * (`WORKER_THREAD` mode): nothing of it was created. Raise `AppConfig.physics.maxBodies`,
  * or create the bodies that never move as `FIXED` (they take no slot).
  */
 export class PhysicsCapacityError extends Error {
@@ -343,13 +344,14 @@ export const reattachRigidBodySync = (id: number, state: RigidBodyAttachState) =
   return facade.worldEnabled ? facade.engAPI?.reattachRigidBody(id, state) : undefined;
 };
 
+// For p343's deterministic tier policy
 /**
  * The bodies' translations (x, y, z per id, in order; NaN for an unknown id; a REMOVED-tier body
  * where it was taken out), read on a fixed step: called from an APP_PHYSICS_STEP system, they
  * are read right before that sub-step runs, in both worker targets, so both get the same values
  * (Rapier's own f32). MAIN_THREAD reads at the call; WORKER_THREAD resolves with the worker's
  * reply, a frame or more later. Outside a sub-step the worker reads before the frame's first
- * step. Without a world it resolves with NaNs. For p343's deterministic tier policy.
+ * step. Without a world it resolves with NaNs. For the tier policy's `STEPS` cadence.
  */
 export const readBodyPositionsAtStep = async (ids: number[]): Promise<Float32Array> => {
   if (!facade.worldEnabled) return new Float32Array(ids.length * 3).fill(NaN);

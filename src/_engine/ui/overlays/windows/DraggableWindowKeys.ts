@@ -65,8 +65,9 @@ let cycleChords: { next: Chord; previous: Chord } | null = {
   previous: parseKeyChord(DEFAULT_CYCLE_KEYS.previous),
 };
 
+// p803 D8
 /**
- * Sets the keys that move the focus from window to window (p803 D8; default F6 for the next and
+ * Sets the keys that move the focus from window to window (default F6 for the next and
  * Shift+F6 for the previous, the platforms' "next pane" pair), or turns them off with `null`.
  * The next window is the next open one in the order they were opened, the app's windows first and
  * then the debug windows; the key focuses its first focusable element (its content's, else its

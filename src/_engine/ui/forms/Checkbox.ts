@@ -90,8 +90,9 @@ const createCheckboxMonitor = (props: CheckboxProps): Checkbox => {
   });
 };
 
+// p804 D7
 /**
- * Creates a checkbox (p804 D7): a native `<input type="checkbox">` (drawn with `appearance:
+ * Creates a checkbox: a native `<input type="checkbox">` (drawn with `appearance:
  * none`) beside its label, its value a boolean from its binding (`{ target, key }`,
  * `{ get, set }` or `{ value }`), written there on each click (one `onChange` with `last: true`).
  * - Keys: Space flips it (the browser's); a click on the label does too.
@@ -129,8 +130,9 @@ export const createCheckbox = (props: CheckboxProps): Checkbox => {
   return checkbox;
 };
 
+// p804 D7
 /**
- * Creates a switch (p804 D7): the APG switch on a native checkbox (`role="switch"`), a track and
+ * Creates a switch: the APG switch on a native checkbox (`role="switch"`), a track and
  * a thumb after its label, for a setting that takes effect at once. Its value is a boolean from
  * its binding, written on each click (one `onChange` with `last: true`).
  * - Keys: Space flips it (the browser's); a click on the label does too.

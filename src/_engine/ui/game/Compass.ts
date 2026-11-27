@@ -103,8 +103,10 @@ const createPart = (className: string) => {
   return span;
 };
 
+// p808 D7, p808 D4
+// aria-hidden: p808 D4
 /**
- * Creates a compass (p808 D7): a strip of the directions and their ticks that scrolls as the
+ * Creates a compass: a strip of the directions and their ticks that scrolls as the
  * player turns, and markers at bearings (a waypoint, a quest giver) that stay on its nearer end
  * when they're outside its field. The app gives the heading (a camera's yaw as a bearing:
  * clockwise from north) and the markers' bearings.
@@ -120,10 +122,10 @@ const createPart = (className: string) => {
  *   (default the accent), `--aek-compass-marker-color` (default the accent; a marker's `color`
  *   sets it on the marker), `--aek-compass-inset` (from the top, default `--aek-space-5`),
  *   `--aek-compass-z`.
- * - Per frame (p808 D4): the strip moves by a `transform` written when the heading moved a tenth
+ * - Per frame: the strip moves by a `transform` written when the heading moved a tenth
  *   of a degree; a marker's place when its offset from the heading did; nothing else is written,
  *   the strip's labels and ticks are made once.
- * - Assistive tech: the strip and the markers are `aria-hidden` (p808 D4: a moving picture of the
+ * - Assistive tech: the strip and the markers are `aria-hidden` (a moving picture of the
  *   heading); a visually hidden text says it in words ('Facing north-east'), written when the
  *   nearest of the eight directions changes, not per frame, and not live (a turn isn't
  *   announced). The markers are the game's to say otherwise (the objective tracker).

@@ -86,8 +86,9 @@ const setAttrIf = (elem: Element, name: string, on: boolean) => {
   else elem.removeAttribute(name);
 };
 
+// p805 D10
 /**
- * Creates an accordion (p805 D10): a stack of sections, each a heading holding a button over a
+ * Creates an accordion: a stack of sections, each a heading holding a button over a
  * panel that opens and shuts with its height animated; one open at a time, or several with
  * `multiple`. A panel built from a function is built when its section first opens. Not the
  * folder (`createFolder`): no fields' scheduler or label column, and a heading level of its own,

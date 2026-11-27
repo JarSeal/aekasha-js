@@ -1,8 +1,9 @@
 import type { EngineFeature } from '../../kernel/init/Features';
 import { terrainState } from './TerrainState';
 
+// p306 D2
 /**
- * The terrain feature (p306 D2): terrain blocks, `*.terrainBlock.json` assets that tie a block's
+ * The terrain feature: terrain blocks, `*.terrainBlock.json` assets that tie a block's
  * geometry (imported, or made by a registered generator), its terrain material and per-block
  * inputs and its collider together, spawned from scene code. A block's collider needs `physics()`
  * listed before it (a block with `collider: { type: 'NONE' }` doesn't); its code loads with the

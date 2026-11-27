@@ -129,10 +129,11 @@ type PageEntry = {
 const DEFAULT_RESET_DONE = (pageLabel: string | null) =>
   pageLabel === null ? 'Every setting reset to its default' : `${pageLabel} reset to defaults`;
 
+// p808 D9, p804 D1
 /**
- * Creates a settings menu (p808 D9): pages on tabs, each a property grid of the app's settings
+ * Creates a settings menu: pages on tabs, each a property grid of the app's settings
  * described as data (`PropertyGridItem`s bound to its settings object), with "Reset page" and
- * "Reset all". The menu reports each change and its owner applies and persists it (p804 D1). It
+ * "Reset all". The menu reports each change and its owner applies and persists it. It
  * goes in a game menu's page (`page: { title: 'Settings', content: settings.cmp }`) or a window.
  * - Parts: `.aekSettingsMenu` (`data-orientation`) holding the tabs (`.aekTabs`; see `createTabs`),
  *   a `.aekSettingsMenu__page` per page (`data-page`: the property grid, then its `content`),

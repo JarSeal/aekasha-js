@@ -57,13 +57,15 @@ const SkyBoxCubeBaseSchema = z
     /** In the order +x, -x, +y, -y, +z, -z, relative to `path`. One of `fileNames`, `file` and
      * a lone `textureId` is needed. */
     fileNames: z.array(z.string()).length(6).optional(),
+    // p311
     /** One `.ktx2` file with six faces (`ktx create --cubemap`) and its mips, relative to `path`:
-     * smaller to download than six images, and no mip generation at load (p311). */
+     * smaller to download than six images, and no mip generation at load. */
     file: z.string().optional(),
     /** The folder the files are in. Default: the site's root (`./`). */
     path: z.string().optional(),
+    // p311
     /** With `fileNames` or `file`, the id the loaded cube texture is registered under; alone, a
-     * cube texture asset's id (a `*.texture.json` with `faces`, p311), which a scene listing the
+     * cube texture asset's id (a `*.texture.json` with `faces`), which a scene listing the
      * sky box loads with its textures. */
     textureId: z.string().optional(),
     /** Default: 'srgb', or 'srgb-linear' for .hdr files; a KTX2 file's own colour space. An empty
@@ -132,8 +134,9 @@ export const SkyBoxEnvSchema = z.object({
   /** Day-night: re-bake once the sun has turned this many degrees since the last bake.
    * Default 1. */
   updateAngleDeg: z.number().min(0).optional(),
+  // The bake's cost: p110's spike
   /** Day-night: at most this many re-bakes per second while the cycle moves (0: only when it
-   * stops or reverses). A bake is ~2 ms of GPU at any size (p110 spike). Default 1. */
+   * stops or reverses). A bake is ~2 ms of GPU at any size. Default 1. */
   maxUpdatesPerSec: z.number().min(0).optional(),
   /** The nebula cube's face size (the nebulae are baked into a HalfFloat cube, re-baked only
    * when they change): 12.6 MB at 512, 50.3 MB at 1024. Default 512. */
@@ -556,11 +559,13 @@ export const SkyBoxDefSchema = z
     id: z.string(),
     /** Whether this is the sky box its scene starts with. Without one, the first registered is. */
     isDefault: z.boolean().optional(),
+    // DAY_NIGHT: p113's layers
     /** A preset to start from: its layers, under this definition's (a layer given here is
      * merged over the preset's key by key; arrays and the base replace the preset's). Resolved
      * at build time. DAY_SKY: atmosphere, sun and light, clouds, ground. NIGHT_SKY: the sun
-     * down, a moon and light, stars and Milky Way, clouds, ground. DAY_NIGHT: every p113 layer
-     * on a running cycle. SPACE: dense stars, a sun and light, two nebulae; no atmosphere. */
+     * down, a moon and light, stars and Milky Way, clouds, ground. DAY_NIGHT: the day's and the
+     * night's layers on a running cycle. SPACE: dense stars, a sun and light, two nebulae; no
+     * atmosphere. */
     preset: z.enum(SKYBOX_PRESET_NAMES).optional(),
     /** Required, unless a preset gives it. */
     base: SkyBoxBaseSchema.optional(),
@@ -634,7 +639,8 @@ export const applySkyBoxSaveEntry = <T extends object>(def: T, entry?: SkyBoxOve
   return deepMerge(def, overrides);
 };
 
-/** The sky box feature's scene field (p607 D10): `skyboxes`, ids of `*.skybox.json` files or
+// p607 D10
+/** The sky box feature's scene field: `skyboxes`, ids of `*.skybox.json` files or
  * inline definitions. */
 export const skyBoxSchemaPart = {
   feature: 'skybox',

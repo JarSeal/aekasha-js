@@ -3,8 +3,10 @@ import { registerScatterGenerator, type ScatterGeneratorInput } from 'aekasha/in
 /** The generator's code, loaded with the first scatter that uses it */
 const loadTerrainScatterAsync = () => import('./TerrainScatter');
 
+// p308 D4
+// The GPU noise: p304
 /**
- * Registers the toolkit's terrain scatter generator (p308 D4), `terrainScatter`, which a
+ * Registers the toolkit's terrain scatter generator, `terrainScatter`, which a
  * `*.scatter.json`'s `"source": { "type": "PROCEDURAL", "generator": "terrainScatter" }` names.
  * Call it once, from an install (an app's `appECSPlugins`), never at module load; its code loads
  * with the first scatter that uses it.
@@ -29,9 +31,9 @@ const loadTerrainScatterAsync = () => import('./TerrainScatter');
  *   - `slope`, `height`: `{ min?, max?, softness? }`, degrees and metres, as a terrain rule's
  *     ranges (whole inside, faded over `softness` past each end: default 5° and 2 m).
  *   - `noise`: `{ scale, amount?, seed? }`, clusters: a seeded simplex over the world's (x, z) /
- *     `scale` metres (not p304's GPU noise: none of it runs on the CPU), `1 − amount × (1 − noise)`
- *     (amount default 1). Seeded by the scatter's id, the world seed and `seed`, not the block,
- *     so clusters continue across blocks.
+ *     `scale` metres (not the toolkit's GPU noise library: none of it runs on the CPU),
+ *     `1 − amount × (1 − noise)` (amount default 1). Seeded by the scatter's id, the world seed
+ *     and `seed`, not the block, so clusters continue across blocks.
  * - `scale`: a number, or `[min, max]` (default 1).
  * - `alignToNormal`: 0 upright, 1 along the surface's normal (default 0).
  * - `sink`: the share of an item's bounding height under the surface, 0..1 (default 0).

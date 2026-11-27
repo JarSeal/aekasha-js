@@ -131,7 +131,8 @@ export const MeshLodDefSchema = z.union([
     ),
 ]) satisfies z.ZodType<MeshLodDef>;
 
-/** The LOD feature's fields (p607 D10): a mesh's `lod` and a scene's exported `impostors`. */
+// p607 D10
+/** The LOD feature's fields: a mesh's `lod` and a scene's exported `impostors`. */
 export const lodSchemaPart = {
   feature: 'lod',
   scene: {
@@ -143,7 +144,8 @@ export const lodSchemaPart = {
       ),
   },
   mesh: {
-    /** Levels of detail (p348), or `AUTO` from the geometry's LOD chain, see setMeshLod. In a save
+    // p348
+    /** Levels of detail, or `AUTO` from the geometry's LOD chain, see setMeshLod. In a save
      * entry it replaces the mesh's whole `lod` in that scene. */
     lod: MeshLodDefSchema.optional(),
   },

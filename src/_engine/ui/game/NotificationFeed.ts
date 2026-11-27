@@ -85,8 +85,9 @@ const createPart = (tag: string, className: string) => {
   return elem;
 };
 
+// p808 D10
 /**
- * Creates a notification feed (p808 D10): short lines a game shows in a corner, '+25 gold',
+ * Creates a notification feed: short lines a game shows in a corner, '+25 gold',
  * 'Quest updated', each with an optional icon and tone. The newest is on top, a repeat with the
  * same `key` merges into its line ('×3'), and each fades after its time, held while the feed is
  * hovered or holds the focus and while the page is hidden. Many at once, no dismiss, no actions:

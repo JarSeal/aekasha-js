@@ -369,9 +369,10 @@ const withoutNonFinite = (values: object) => {
   return result;
 };
 
+// The weather: p427
 /**
  * Changes the fog showing: any of its values, at once or over `transitionSec` (the main loop's
- * time, as the sky's day-night runs, standing still while a scene loads). What p427's weather
+ * time, as the sky's day-night runs, standing still while a scene loads). What a weather system
  * drives. A number that isn't finite is ignored; each is kept drawable (no negative distance or
  * density, the opacity and the glow's strength within [0, 1]).
  * @returns the fog after the call (what it moves to), or null when none shows (warned)

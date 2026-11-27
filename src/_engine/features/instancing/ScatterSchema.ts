@@ -190,8 +190,9 @@ export const SCATTER_DEFAULTS = {
   seed: 0,
 } as const;
 
+// p308 D2
 /**
- * A scatter (`*.scatter.json`, p308 D2): static instances of its items placed by its source, drawn
+ * A scatter (`*.scatter.json`): static instances of its items placed by its source, drawn
  * in cells (`createStaticInstances`), each cell switching levels and hiding as a whole by `lod`. A
  * scene lists the scatters its code spawns in `scatters`; a terrain block names its own in
  * `scatter`.
@@ -313,7 +314,8 @@ export type ScatterDef = {
   debugData?: DebugData;
 };
 
-/** The instancing feature's scene field (p308 D2): `scatters`, the ids of the `*.scatter.json`
+// p308 D2
+/** The instancing feature's scene field: `scatters`, the ids of the `*.scatter.json`
  * scatters the scene's code spawns (`spawnScatter`). */
 export const instancingSchemaPart = {
   feature: 'instancing',

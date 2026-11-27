@@ -58,8 +58,10 @@ const createSvgPart = (tag: string, className: string) => {
 /** A coordinate to a hundredth: the points' string stays short */
 const round = (n: number) => Math.round(n * 100) / 100;
 
+// p805 D9
+// The aria-hidden exception: p800 D8
 /**
- * Creates a sparkline (p805 D9): a small line of recent values beside a figure, an "over time"
+ * Creates a sparkline: a small line of recent values beside a figure, an "over time"
  * at a glance. SVG, so its stroke follows the theme in CSS and stays sharp at any pixel ratio.
  * - Parts: `.aekSparkline` (`data-area` with `area`) holding `svg.aekSparkline__svg`, with
  *   `__area` (the fill under the line), `__line` (a path, broken at each `NaN`) and `__dot` (the
@@ -71,7 +73,7 @@ const round = (n: number) => Math.round(n * 100) / 100;
  * - Scale: from `min` to `max`, each the shown values' smallest or largest when not given; one
  *   value repeated is a line across the middle.
  * - ARIA: with `label` a `role="img"` named by it; without, `aria-hidden` (a figure beside it says
- *   what it shows: p800 D8's written deviation).
+ *   what it shows: a deliberate exception to the kit's accessibility rules).
  * @example
  * ```ts
  * const drawCalls = createSparkline({ capacity: 60, min: 0, area: true });

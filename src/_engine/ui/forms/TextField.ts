@@ -41,8 +41,9 @@ const CLEAR_ICON =
 const SEARCH_ICON =
   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>';
 
+// p804 D7
 /**
- * Creates a text field (p804 D7): an `<input type="text">`, a `<textarea>` with `multiline`, or a
+ * Creates a text field: an `<input type="text">`, a `<textarea>` with `multiline`, or a
  * search field with `type: 'search'`, its value from its binding (`{ target, key }`,
  * `{ get, set }` or `{ value }`) and written there.
  * - Typing: the text is written on Enter (a single line) or Ctrl/⌘+Enter (multiline) or a blur,

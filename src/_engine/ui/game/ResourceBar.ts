@@ -12,8 +12,9 @@ export type ResourceBarThreshold = {
   below: number;
   /** The status role it draws in. */
   state: ResourceBarState;
+  // p800 D6
   /** A word for it, shown next to the label and read with the value ('Low'): colour is never the
-   * only signal (p800 D6). */
+   * only signal. */
   text: string;
 };
 
@@ -69,8 +70,9 @@ const createPart = (className: string) => {
   return span;
 };
 
+// p808 D6
 /**
- * Creates a resource bar (p808 D6): a value in a known range a game shows all the time, health,
+ * Creates a resource bar: a value in a known range a game shows all the time, health,
  * stamina, mana, a shield. A drop leaves a damage trail (the lost part holds, then shrinks), a
  * heal fills and flashes, thresholds put it in a status with a word, and dividers draw its
  * segments. Not a task's progress: that's the progress bar.

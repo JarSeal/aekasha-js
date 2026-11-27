@@ -76,15 +76,16 @@ export type OctahedralImpostorOptions = {
   alphaTest?: number;
   /** The shading model (see {@link ImpostorShading}). Default `AUTO`. */
   shading?: ImpostorShading;
+  // The GPU times: p351 Phase 3
   /** Draw the baked surface's depth in the main and the shadow pass, and receive shadows on that
    * surface. Default true. false draws the quad's flat depth (it cuts into neighbours and the
    * ground along a plane through the centre) and receives no shadows, as the flat quad would
    * shadow half of itself with its own light-facing quad. It still casts its silhouette. Writing
    * depth from the shader turns off early depth tests (and a tile GPU's hidden-surface removal),
    * so false costs much less where impostors cover many pixels: 217 rock impostors from
-   * largeWorld's overview camera took 0.34 ms of GPU time a frame with it, 0.09 ms without
-   * (p351, Phase 3). Keep it on for objects sunk deep in
-   * the ground: a flat quad through a buried centre is mostly underground. */
+   * largeWorld's overview camera took 0.34 ms of GPU time a frame with it, 0.09 ms without. Keep
+   * it on for objects sunk deep in the ground: a flat quad through a buried centre is mostly
+   * underground. */
   surfaceDepth?: boolean;
 };
 

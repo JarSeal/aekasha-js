@@ -1,8 +1,9 @@
 // The binding (p804 D3): where a field's value lives, how it's written, and the events a write
 // fires. Every field holds one; the scheduler (BindingScheduler.ts) decides when it's read.
 
+// p804 D3
 /**
- * Where a field's value lives (p804 D3), one of three:
+ * Where a field's value lives, one of three:
  * - `{ target, key }` reads `target[key]` and writes it in place (Tweakpane's model): an object
  *   value (a vector, a colour, a rotation) is written field by field into the object that's
  *   there, so a `THREE.Vector3` stays the same instance;
@@ -39,8 +40,9 @@ export type BindingSource<T> =
       set?: never;
     };
 
+// p804 D3
 /**
- * A source that is only read (p804 D3's `{ get, set }` without the `set`): a monitor's, or a field
+ * A source that is only read (a `{ get, set }` binding without the `set`): a monitor's, or a field
  * with `readonly: true`. A `setValue` draws its value until the next read.
  * @template T the value's type
  */
@@ -53,8 +55,9 @@ export type ReadonlyBindingSource<T> = {
   value?: never;
 };
 
+// p804 D3
 /**
- * What a field's `onChange` gets with the value (p804 D3). It fires on every write: each step of
+ * What a field's `onChange` gets with the value. It fires on every write: each step of
  * a drag or a held key with `last: false`, then once with `last: true` on the release, Enter, a
  * blur or the key's keyup; a click (a checkbox, a pick) writes once with `last: true`. A refresh
  * from the bound value never fires it.

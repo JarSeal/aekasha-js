@@ -261,12 +261,14 @@ export const readFirstValue = <T>(props: AnyFieldProps<T>): T => {
   return props.value as T;
 };
 
+// p804 D7; not live: p800 D8
 /**
- * Creates a monitor (p804 D7, Tweakpane's monitor binding): a value shown as text, read from its
+ * Creates a monitor (Tweakpane's monitor binding): a value shown as text, read from its
  * binding (`{ target, key }`, `{ get, set }` or `{ value }`) on its scheduler's tick every
  * `interval` ms (default 200; 0 every frame; `'refresh'` never on the tick, only by its
  * scheduler's `refresh()`: a figure its host refreshes), or on a tick the page's monitors share
- * when it has no scheduler. A read that finds the value unchanged writes nothing; a change writes the text only.
+ * when it has no scheduler. A read that finds the value unchanged writes nothing; a change writes
+ * the text only.
  * A refresh never fires `onChange` (`setValue` does). Any field's `readonly: true` is a monitor in
  * that field's own text.
  * - Text: `format`'s, else a number's decimals (`precision`, else the value's own and at least
@@ -279,7 +281,7 @@ export const readFirstValue = <T>(props: AnyFieldProps<T>): T => {
  *   `textarea.aekMonitor.aekMonitor__text`, and `.aekField__message`.
  * - Custom properties: `--aek-monitor-bg`, `--aek-monitor-color`, `--aek-monitor-font` (the
  *   multiline block's, default the mono font).
- * - ARIA: **not a live region**, on purpose (p800 D8's deviation): a value changing every frame
+ * - ARIA: **not a live region**, on purpose: a value changing every frame
  *   would drown a screen reader. A line of text is read after its label (a name on a plain
  *   `<span>` is a prohibited attribute); the multiline block is a read-only text area labelled
  *   by the `<label>`, a tab stop so its scroll is reachable. A value an app wants announced is

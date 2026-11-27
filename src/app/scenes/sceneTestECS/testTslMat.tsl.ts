@@ -5,7 +5,7 @@ import type { MeshStandardNodeMaterial, Node } from 'three/webgpu';
 import type { TextureNode } from 'three/tsl';
 
 /**
- * The graph of `testTslMat.material.json`, the app's reference `setup` material (p302 D2): one
+ * The graph of `testTslMat.material.json`, the app's reference `setup` material: one
  * sample of its `texture`, tiled twice and scrolling diagonally (one tile every two seconds),
  * drives three sockets, so the texture is sampled once:
  * - colour: the sample tinted by `baseColor * gridScale + panelColor`;

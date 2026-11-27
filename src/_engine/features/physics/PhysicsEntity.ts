@@ -161,17 +161,20 @@ export type PhysicsEntityProps = {
 /** createPhysicsEntity's entity options: CoreEntityOpts plus the physics ones, which apply to a
  * `target` entity too. */
 export type PhysicsEntityOpts = CoreEntityOpts & {
+  // p352
   /** Code only: the entity's simulation tier follows its world's distance policy
-   * (PhysicsTierPolicy.ts's setPhysicsTierPolicy, p352). DYNAMIC bodies only, and only with the
+   * (PhysicsTierPolicy.ts's setPhysicsTierPolicy). DYNAMIC bodies only, and only with the
    * `physicsTiers()` feature installed (without it, ignored with one warning). */
   tierPolicy?: boolean;
-  /** Code only: the tier a `DYNAMIC` body starts in (p353 Phase 4), as if `requestPhysicsTier`
+  // p353 Phase 4
+  /** Code only: the tier a `DYNAMIC` body starts in, as if `requestPhysicsTier`
    * had applied before its first step: `STATIC` (made `FIXED`) or `DISABLED` (`STATIC` once a
-   * joint is created on it). Default `FULL`, or
-   * inside a streaming cell's content load the cell's tier. Only with the `physicsTiers()` feature
+   * joint is created on it). Default `FULL`, or inside a
+   * streaming cell's content load the cell's tier. Only with the `physicsTiers()` feature
    * installed (without it, ignored with one warning). */
   initialTier?: 'FULL' | 'STATIC' | 'DISABLED';
-  /** Code only: the entity's own world bounds (`setEntityWorldBounds`, p102), sent with its
+  // p102
+  /** Code only: the entity's own world bounds (`setEntityWorldBounds`), sent with its
    * body's create so they apply from its first check on: they replace the scene's bounds for it,
    * or exempt it (`ignore: true`). Only dynamic bodies are checked. */
   worldBounds?: EntityWorldBounds;

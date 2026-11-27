@@ -59,8 +59,9 @@ const saturate = <T extends Node<'float'> | Node<'vec3'>>(node: T) => node.clamp
 /** A unit normal stored in 0..1, as a normal map holds it. */
 const encodeNormal = (normal: Node<'vec3'>) => normal.mul(0.5).add(0.5) as Node<'vec3'>;
 
+// p303 D2
 /**
- * Packs a surface into a texture set packing's slots (p303 D2): the graphs a bake writes, by slot
+ * Packs a surface into a texture set packing's slots: the graphs a bake writes, by slot
  * name, so a baked procedural set is channel for channel an imported one.
  *
  * - `FULL`: `albedoHeight` (RGB albedo, A height), `normal` (RGB), `orm` (R AO, G roughness, B

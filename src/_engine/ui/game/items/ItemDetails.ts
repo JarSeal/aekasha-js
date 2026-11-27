@@ -81,8 +81,9 @@ const createStatRow = (stat: ItemStat, other: ItemStat | undefined, isMissing: b
   return row;
 };
 
+// p808 D11
 /**
- * Creates an item's details (p808 D11): its name, rarity, description and stats, each stat compared
+ * Creates an item's details: its name, rarity, description and stats, each stat compared
  * with another item's (the one equipped) by an arrow, a sign and the difference, better in the
  * success role and worse in the danger role. The content for a tooltip on its slot (`createTooltip`'s
  * `content`), or for a panel beside an inventory that follows the focused slot (a gamepad's, which

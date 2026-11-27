@@ -108,8 +108,9 @@ const isEmptyValue = (value: unknown) =>
 /** Hidden by itself or a container (not by a shut folder: a summary link opens it) */
 const isHiddenField = (elem: Element) => Boolean(elem.closest('[hidden]:not(.aekFolder__region)'));
 
+// p804 D9
 /**
- * Creates a form (p804 D9): a `<form novalidate>` around fields, fieldsets and property grids, with
+ * Creates a form: a `<form novalidate>` around fields, fieldsets and property grids, with
  * its own checks, error summary, submit and reset. Each field's `required` and `validate` are
  * checked on a submit, and from then on when the focus leaves the field: its error under it, and
  * on a submit an error summary at the top (the GOV.UK pattern) that takes the focus and links each

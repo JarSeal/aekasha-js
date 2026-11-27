@@ -45,8 +45,9 @@ export type FieldChange<T> = BindingChange<T> & {
   field: Field<T>;
 };
 
+// p804 D5
 /**
- * The props every field takes (p804 D5): the binding (one of `{ target, key }`, `{ get, set }`
+ * The props every field takes: the binding (one of `{ target, key }`, `{ get, set }`
  * and `{ value }`, or `{ get }` alone with `readonly: true`), the label and the rest of the shell.
  * @template T the value's type
  */
@@ -89,7 +90,8 @@ export type FieldOptions<T> = {
    * (`createMonitor`) in the field's own text (a number's format and unit, an option's label),
    * read on the tick every `interval` ms (default 200). The field's edit props do nothing then. */
   readonly?: boolean;
-  /** Every write of the value (p804 D3): each step of a drag or a held key with `last: false`,
+  // p804 D3
+  /** Every write of the value: each step of a drag or a held key with `last: false`,
    * then once with `last: true` on the release, Enter, a blur or the keyup; a click, a pick, a
    * typed value or a reset once with `last: true`. A refresh from the bound value never calls it;
    * `setValue` does with `source: 'api'`. */
@@ -111,8 +113,9 @@ export type FieldOptions<T> = {
   id?: string;
 };
 
+// p804 D5
 /**
- * A field's handle, which each field's own extends (p804 D5).
+ * A field's handle, which each field's own extends.
  * @template T the value's type
  */
 export type Field<T> = {

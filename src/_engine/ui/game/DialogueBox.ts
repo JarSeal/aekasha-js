@@ -99,8 +99,9 @@ const getCharOffsets = (text: string) => {
   return offsets;
 };
 
+// p808 D10
 /**
- * Creates a dialogue box (p808 D10): a conversation's line at the bottom of the screen, its
+ * Creates a dialogue box: a conversation's line at the bottom of the screen, its
  * speaker over it and an optional portrait beside it, revealed by a typewriter. Enter, Space or a
  * click shows the whole line, then advances; a line with choices shows them as buttons. The
  * conversation is the game's: it sets each line and reacts to `onAdvance` and `onChoice`.

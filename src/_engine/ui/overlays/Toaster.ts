@@ -378,8 +378,9 @@ const createLiveRegion = (role: 'status' | 'alert') => {
   return region;
 };
 
+// p803 D9
 /**
- * Makes a toaster (p803 D9): a fixed element that lines up toasts. It isn't added anywhere: add
+ * Makes a toaster: a fixed element that lines up toasts. It isn't added anywhere: add
  * the returned CMP under the HUD root. The first toaster made is the default one (see
  * {@link ToasterProps.setAsDefaultToaster}). The engine makes one only in the debug env (the debug
  * toaster), so an app that shows toasts makes its own.

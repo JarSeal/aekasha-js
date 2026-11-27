@@ -58,11 +58,12 @@ export type ButtonGroup<T extends ButtonGroupItem = Button> = {
 
 const isDropDown = (item: ButtonGroupItem): item is DropDown => 'toggle' in item;
 
+// p803 D10, p806 D7
 /**
- * Creates a button group (p803 D10): buttons joined into one row (or column), named as a group.
+ * Creates a button group: buttons joined into one row (or column), named as a group.
  * With `exclusive` its toggles are a toolbar with one pressed at a time: a press of another one
  * releases the pressed one, and a press of the pressed one changes nothing. With `toolbar` its
- * buttons, toggles and drop-downs are a toolbar whose items act on their own (p806 D7).
+ * buttons, toggles and drop-downs are a toolbar whose items act on their own.
  * - Parts: `.aekButtonGroup` (`data-orientation`), its `.aekButton`s with the inner corners square.
  * - ARIA: `role="group"`, or `role="toolbar"` (with `aria-orientation`) when exclusive or a
  *   toolbar; named by `label`.

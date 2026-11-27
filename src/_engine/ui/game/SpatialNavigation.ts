@@ -201,8 +201,9 @@ const keepsArrowKey = (elem: Element, axis: Axis) => {
 /** Whether `elem` is rendered and nothing inert holds it */
 const isLive = (elem: Element) => elem.getClientRects().length > 0 && !elem.closest('[inert]');
 
+// p808 D8
 /**
- * Creates a spatial navigation (p808 D8): it moves the focus by position among the tab stops under
+ * Creates a spatial navigation: it moves the focus by position among the tab stops under
  * `root`, the way a game's menu moves with a d-pad, and reads the arrow keys itself. The app's
  * gamepad calls `move`, `nextGroup`, `previousGroup` and `back` (through its menu's action map);
  * the keyboard's Tab still works as on any page.

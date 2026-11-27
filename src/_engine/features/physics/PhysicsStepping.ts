@@ -511,12 +511,13 @@ export const setPhysicsStepLimit = (steps: number | null) => {
 /** The sub-step stepPhysics() is in (see getPhysicsSubStepIndex), -1 outside of one. */
 let subStepIndex = -1;
 
+// p343
 /**
  * Inside a sub-step's `APP_PHYSICS_STEP` systems (stepPhysics' onBeforeStep), the index of the
  * fixed step about to run: the steps run on the current world before it, the same in both worker
  * targets. The first step of a world is 0, and a write made in step `k` is in the snapshot
  * stamped `k + 1` (getPhysicsSnapshotStepIndex) and after. -1 outside a sub-step. A step clock
- * for systems that must decide on fixed steps (p343: the deterministic tier policy).
+ * for systems that must decide on fixed steps (the tier policy's `STEPS` cadence).
  */
 export const getPhysicsSubStepIndex = () => subStepIndex;
 
@@ -560,11 +561,12 @@ const isSubStepGated = (i: number, stepsTaken: number) => {
   return true;
 };
 
+// p343
 /**
  * Holds stepping before the fixed step `step` (a getPhysicsSubStepIndex index): stepPhysics()
  * issues no sub-step with an index of `step` or more until the returned function is called. With
  * several gates the lowest holds. For work that must finish before a given step runs, eg. a worker
- * reply a decision on that step needs (p343). A gate at a step already issued holds from the next.
+ * reply a decision on that step needs. A gate at a step already issued holds from the next.
  * One added by an `APP_PHYSICS_STEP` system also cuts the frame's batch it was added in.
  *
  * Unlike the debug step limit, time keeps accumulating while a gate holds, so a short hold is

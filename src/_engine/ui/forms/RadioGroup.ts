@@ -155,8 +155,9 @@ const createChoiceField = <T extends RadioValue>(
   return shell;
 };
 
+// p804 D7
 /**
- * Creates a radio group (p804 D7): native radios in a `radiogroup` named by the label, one value
+ * Creates a radio group: native radios in a `radiogroup` named by the label, one value
  * of a few from its binding (`{ target, key }`, `{ get, set }` or `{ value }`), written on each
  * pick (one `onChange` with `last: true`). A value none of the options has checks none.
  * - Keys: the browser's: Tab and Shift+Tab reach the group once (at the checked radio), the arrows
@@ -204,8 +205,9 @@ export const createRadioGroup = <T extends RadioValue>(
   }).field;
 };
 
+// p804 D7
 /**
- * Creates a segmented control (p804 D7): the radio group's native radios drawn as a row of
+ * Creates a segmented control: the radio group's native radios drawn as a row of
  * segments, each its text, an icon and its text, or an icon alone; one value of a few from its
  * binding, written on each pick (one `onChange` with `last: true`). A value, not actions: a row of
  * tool buttons is `createButtonGroup`.

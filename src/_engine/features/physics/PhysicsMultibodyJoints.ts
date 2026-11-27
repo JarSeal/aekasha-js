@@ -60,8 +60,9 @@ const countJointInFlight = (params: MultibodyJointParams, delta: 1 | -1) => {
   count(childrenOfJointsInFlight, params.body2Id, delta);
 };
 
+// p250
 /**
- * Creates a multibody joint (p250): `body1Id` the parent, `body2Id` the child, the joints between
+ * Creates a multibody joint: `body1Id` the parent, `body2Id` the child, the joints between
  * bodies making a tree solved in reduced coordinates, without the drift impulse joints have.
  * Rejects without a world, when either body doesn't exist, and on what a multibody can't be
  * ({@link MultibodyJointParams}' remarks).

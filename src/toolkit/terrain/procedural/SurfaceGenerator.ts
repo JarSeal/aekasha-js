@@ -455,8 +455,9 @@ export const buildSurfacePacking = <P extends SurfaceParamSpecs>(
   return { nodes, params, seed };
 };
 
+// p304 D3
 /**
- * Defines a procedural surface generator (p304 D3): a surface's albedo, height and roughness
+ * Defines a procedural surface generator: a surface's albedo, height and roughness
  * (optionally its AO and normal) as a TSL graph of a point in tiles. Bake it into a texture set
  * packing (`bakeSurfaceGenerator`, or a procedural set's JSON naming its id), or run it live in a
  * material (`createLiveSurface`).

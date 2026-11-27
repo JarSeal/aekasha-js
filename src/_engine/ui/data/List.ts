@@ -29,8 +29,9 @@ type FocusMark = { key: string; column: number; index: number; elem: HTMLElement
 
 const defaultGetKey = (item: unknown) => String((item as { id?: unknown }).id);
 
+// p805 D6
 /**
- * Creates a list (p805 D6): rows of an app's items, each a title with an optional icon, badge,
+ * Creates a list: rows of an app's items, each a title with an optional icon, badge,
  * sub title, description, suffix and tooltip (or a CMP of `render`), kept by key, so new items
  * write only what changed. Static (a `<ul>`), selectable (the APG listbox), or with `actions` on
  * every row (the APG grid); filtered by a query with the matches marked. Long lists render only

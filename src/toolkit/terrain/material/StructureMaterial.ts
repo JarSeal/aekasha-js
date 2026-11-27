@@ -19,8 +19,9 @@ export type StructureMaterialOpts = Partial<Omit<TerrainMaterialConfig, 'id' | '
   id: string;
 };
 
+// p305 D8
 /**
- * A structure material's config (p305 D8): the terrain material's with a structure's defaults,
+ * A structure material's config: the terrain material's with a structure's defaults,
  * `space: 'OBJECT'` (the texture sticks to the piece; `WORLD` for static pieces that must run on
  * seamlessly), `TRIPLANAR` projection, `DUAL_SCALE` anti-tiling and a `macroNoise` macro at 12 m,
  * each replaced by the options' field (`macro: undefined` for none). Load its textures with
@@ -49,8 +50,9 @@ export const getStructureMaterialConfig = (
   layers: typeof layers === 'string' ? [{ set: layers }] : layers,
 });
 
+// p305 D8
 /**
- * Creates a structure material (p305 D8): a terrain material for concrete walls, bunkers, rock
+ * Creates a structure material: a terrain material for concrete walls, bunkers, rock
  * faces and other large pieces, in the piece's own space (`OBJECT`: the texture sticks to a piece
  * that moves or turns; an `InstancedMesh`'s instances share its space), projected `TRIPLANAR`,
  * `DUAL_SCALE` anti-tiled, a `macroNoise` macro at 12 m; the options' fields over these (see

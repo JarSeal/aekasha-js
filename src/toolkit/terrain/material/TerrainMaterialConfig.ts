@@ -194,8 +194,9 @@ const dualScaleFields = (of: string) => ({
   ).optional(),
 });
 
+// p305 D3
 /**
- * How a layer breaks its tiling's repetition (p305 D3), by `mode`: `NONE`, `DUAL_SCALE` or `HEX`,
+ * How a layer breaks its tiling's repetition, by `mode`: `NONE`, `DUAL_SCALE` or `HEX`,
  * each with its own fields. The numbers are uniforms (`terrain_l<i>_<name>`), the mode a build-time
  * branch.
  */
@@ -273,7 +274,8 @@ export const TerrainAntiTilingSchema = z
   ])
   .describe("How a layer breaks its tiling's repetition: NONE, DUAL_SCALE or HEX.");
 
-/** How a layer breaks its tiling's repetition (p305 D3): `NONE`, `DUAL_SCALE` or `HEX`. */
+// p305 D3
+/** How a layer breaks its tiling's repetition: `NONE`, `DUAL_SCALE` or `HEX`. */
 export type TerrainAntiTiling = z.infer<typeof TerrainAntiTilingSchema>;
 
 /** The fields both projecting modes take, their sharpness's default the mode's */
@@ -311,8 +313,9 @@ const projectedFields = (
     ),
 });
 
+// p305 D5
 /**
- * How a layer's texture meets the surface (p305 D5), by `mode`: `PLANAR`, `BIPLANAR` or
+ * How a layer's texture meets the surface, by `mode`: `PLANAR`, `BIPLANAR` or
  * `TRIPLANAR`, the projecting modes with their sharpness, slope gate and normal blend. The numbers
  * are uniforms (`terrain_l<i>_<name>`), the mode, the gate's presence and the normal blend
  * build-time branches. The projecting modes need `uv: 'WORLD'`.
@@ -350,7 +353,8 @@ export const TerrainProjectionSchema = z
   ])
   .describe("How a layer's texture meets the surface: PLANAR, BIPLANAR or TRIPLANAR.");
 
-/** How a layer's texture meets the surface (p305 D5): `PLANAR`, `BIPLANAR` or `TRIPLANAR`. */
+// p305 D5
+/** How a layer's texture meets the surface: `PLANAR`, `BIPLANAR` or `TRIPLANAR`. */
 export type TerrainProjection = z.infer<typeof TerrainProjectionSchema>;
 
 /** What a layer samples: {@link TERRAIN_LAYER_SOURCES}' */
@@ -666,8 +670,9 @@ const vertexColorField = {
     .describe("The colour's channels (default RGB_AO)."),
 };
 
+// p305 D4
 /**
- * How the layers' weights are made (p305 D4), by `source`: `SINGLE`, `VERTEX_COLOR`,
+ * How the layers' weights are made, by `source`: `SINGLE`, `VERTEX_COLOR`,
  * `SPLAT_MAP`, `RULES`, `VERTEX_COLOR_AND_RULES` or `SPLAT_MAP_AND_RULES`, each with its own
  * fields. The layer count must suit the source ({@link TERRAIN_BLEND_LAYER_COUNTS}).
  */
@@ -760,8 +765,9 @@ export const TerrainBlendSchema = z
     "How the layers' weights are made: SINGLE, VERTEX_COLOR, SPLAT_MAP, RULES, VERTEX_COLOR_AND_RULES or SPLAT_MAP_AND_RULES."
   );
 
+// p305 D4
 /**
- * How a terrain material's layers are weighed (p305 D4): `SINGLE`, `VERTEX_COLOR`, `SPLAT_MAP`,
+ * How a terrain material's layers are weighed: `SINGLE`, `VERTEX_COLOR`, `SPLAT_MAP`,
  * `RULES`, `VERTEX_COLOR_AND_RULES` or `SPLAT_MAP_AND_RULES`.
  */
 export type TerrainBlend = z.infer<typeof TerrainBlendSchema>;
@@ -1309,8 +1315,9 @@ const colorMapOptions = <T extends z.ZodRawShape>(texture: T) =>
       .strict(),
   ] as const;
 
+// p305 D7
 /**
- * A colour map's settings, without its texture (the static define's `colorMap`; p305 D7): a
+ * A colour map's settings, without its texture (the static define's `colorMap`): a
  * texture at the mesh's UV (a block's own, unique colour), by `mode`: `DETAIL` or `FAR_ONLY`. Its
  * texture is the input `colorMap` (`{ "texture": id }`).
  */
@@ -2249,8 +2256,9 @@ export const TerrainMaterialConfigSchema = z
   .superRefine(checkStorage)
   .describe("The terrain material's config (createTerrainMaterial).");
 
+// p305 D1
 /**
- * The terrain material's config (p305 D1), {@link createTerrainMaterial}'s argument: the layers'
+ * The terrain material's config, {@link createTerrainMaterial}'s argument: the layers'
  * texture sets and settings, and the techniques it compiles. Only what the config enables is in
  * the shader: every field is a build-time branch, its tunables uniforms.
  */

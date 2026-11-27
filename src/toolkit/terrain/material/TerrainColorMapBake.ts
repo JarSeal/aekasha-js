@@ -88,8 +88,9 @@ const getTerrainSource = (opts: BakeTerrainColorMapOpts) => {
   return { inputs, define };
 };
 
+// p305 D7
 /**
- * Bakes a terrain material's colour on a block into a texture at the block's UV (p305 D7), for the
+ * Bakes a terrain material's colour on a block into a texture at the block's UV, for the
  * block's colour map: `colorMap: { mode: 'DETAIL' }` puts it under the layers' detail (unique
  * large-scale colour, one fetch), `FAR_ONLY` makes it the far surface. The texture is
  * `<id>.color` (sRGB, mipmapped, clamped at the edges), owned by the scene loading or current

@@ -2,9 +2,10 @@
 // which the kernel names with `import type` (its component registry, ECSCoreComponents.ts).
 import type * as THREE from 'three/webgpu';
 
+// BAKED: p372, BATCHED: p375
 /**
- * How a merge group draws its members. `BAKED` (the default, p372): merged into one geometry, one
- * draw, culled whole; for static content. `BATCHED` (p375): instances of one `BatchedMesh`, each
+ * How a merge group draws its members. `BAKED` (the default): merged into one geometry, one
+ * draw, culled whole; for static content. `BATCHED`: instances of one `BatchedMesh`, each
  * member's matrix written when it moves and each culled on its own; for members that move (bodies
  * included), or that need their own culling.
  */
@@ -52,7 +53,8 @@ export type MergeGroupSettings = {
    * Default false: the group goes with the scene it was created in. Only a persistent group takes
    * persistent members. */
   persistent?: boolean;
-  /** A merge material palette's id (`*.mergeMaterial.json`, p374): the group takes meshes of any
+  // p374
+  /** A merge material palette's id (`*.mergeMaterial.json`): the group takes meshes of any
    * of the palette's materials and draws them in one draw with the palette's merge material. The
    * scene must list the palette (`mergeMaterials`), and a palette group can't be `persistent`
    * (the merge material is the scene's) or `BATCHED`. Default: none, one material per group. */
@@ -109,7 +111,8 @@ export type MeshMergeOptions = {
   /** `AUTO` only: an automatic group's vertex cap; a full one opens another in its cell.
    * Default 262 144. */
   maxVertices?: number;
-  /** `AUTO` only: the merge material palettes (`*.mergeMaterial.json` ids, p374) whose materials
+  // p374
+  /** `AUTO` only: the merge material palettes (`*.mergeMaterial.json` ids) whose materials
    * share an automatic group: a mesh of a palette's material goes into its cell's group of that
    * palette, drawn by the palette's merge material. The first palette in the list that has its
    * material wins. Replaces the scene's `AUTO` entry's list; `[]`: none. The scene must list each
@@ -131,7 +134,8 @@ export type SceneAutoMergeEntry = {
   cellSize?: number;
   /** The vertex cap for the scene's meshes that don't give one. Default 262 144. */
   maxVertices?: number;
-  /** The merge material palettes (p374) whose materials share an automatic group, for the
+  // p374
+  /** The merge material palettes whose materials share an automatic group, for the
    * scene's meshes that don't give their own list: palettes the scene lists (`mergeMaterials`).
    * Default: none, one material per automatic group. */
   palettes?: string[];
@@ -171,7 +175,8 @@ export type MergeMemberData = {
   /** Its part in the group's merged geometry, or -1 until a build includes it. Always -1 in a
    * `BATCHED` group. */
   partIndex: number;
-  /** A `BATCHED` group's (p375): its instance in the group's `BatchedMesh`, or -1 until a build
+  // p375
+  /** A `BATCHED` group's: its instance in the group's `BatchedMesh`, or -1 until a build
    * adds it. Always -1 in a `BAKED` group. */
   instanceId: number;
   /** Whether it was in the `DEFAULT` spatial domain (`SPATIAL_INDEXED`) when it was merged: it
@@ -189,8 +194,9 @@ export type MergeMemberData = {
   /** A `BATCHED` member's own mesh's `OBJECT3D._lastVersion` its instance was last written at
    * (the batch sync writes it again when that changed). */
   _batchVersion?: number;
+  // p375 Phase 2
   /** A `BATCHED` member's second instance while its LOD cross-fades from one level to another
-   * (the outgoing level's geometry, p375 Phase 2), or -1. */
+   * (the outgoing level's geometry), or -1. */
   _fadeInstanceId: number;
   /** A `BATCHED` member's LOD fade its batch draws: a level change (`LEVEL`, with
    * `_fadeInstanceId`), fading out to LOD culled (`OUT`) or in from it (`IN`); undefined while

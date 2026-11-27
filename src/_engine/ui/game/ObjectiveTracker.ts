@@ -104,8 +104,9 @@ const createCheck = () => {
   return check;
 };
 
+// p808 D10
 /**
- * Creates an objective tracker (p808 D10): the objectives a game shows the player, each with an
+ * Creates an objective tracker: the objectives a game shows the player, each with an
  * optional count ('Collect crystals 3 / 5') and steps under it. The game sets them; a completed
  * one is checked and struck through, then fades out. It shows what it's given: the quests are the
  * game's.

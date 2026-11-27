@@ -80,8 +80,9 @@ const getFieldItems = (fieldElem: Element, entry: FieldMenuEntry): MenuItem[] =>
   return items;
 };
 
+// p805 D11
 /**
- * Gives every field in `container` a context menu (p805 D11): Reset (the field's default; disabled
+ * Gives every field in `container` a context menu: Reset (the field's default; disabled
  * at it, for a monitor and for a disabled field), Copy (the value as text: a number as it is, a
  * colour's hex, a vector's `1, 2.5, -3`, an option's label, a monitor's text), Paste (read when
  * it's picked, which the browser may ask about; a text that isn't a value is the field's message,

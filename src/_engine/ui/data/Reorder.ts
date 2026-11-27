@@ -107,8 +107,9 @@ type Drag = {
   after: string | null;
 };
 
+// p805 D8
 /**
- * Creates a reorder (p805 D8) for one list: the user moves a row with Alt + ArrowUp / ArrowDown,
+ * Creates a reorder for one list: the user moves a row with Alt + ArrowUp / ArrowDown,
  * or drags it (on a touch screen by its handle, `.aekList__handle`, since a drag on the row
  * scrolls). The dragged row lifts (`data-dragging`; with reduced motion an outline, no
  * movement), a line shows where it drops (`.aekList__dropLine`), the box scrolls near its edges,

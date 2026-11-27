@@ -207,8 +207,9 @@ export type DebuggerPaneSection<S extends object = object> = {
  */
 export type DebuggerTabSection<S extends object = object> = CMPHandle | DebuggerPaneSection<S>;
 
+// p806 D3
 /**
- * What a tab's `content` gets (p806 D3): its host's refresh scheduler, shared by its declarative
+ * What a tab's `content` gets: its host's refresh scheduler, shared by its declarative
  * sections, which a CMP section's own UI kit fields join too, so they refresh with the tab
  * (`refreshIntervalMs`, {@link updateDebuggerTab}) and their monitors pause with it.
  */
@@ -327,8 +328,9 @@ export type DebuggerListDef = {
   id?: string;
   /** Rendered above the list, with the item count. */
   heading?: string;
+  // p806 D6
   /** The list's accessible name without a `heading` (default 'Items'): a list under a heading of
-   * the tab's own (p806 D6) */
+   * the tab's own */
   label?: string;
   /** Shown instead of the rows when there are none */
   emptyText?: string;

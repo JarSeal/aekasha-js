@@ -54,8 +54,9 @@ type SchedulerState = {
 /** Each scheduler's own functions, kept off its public handle */
 const states = new WeakMap<BindingScheduler, SchedulerState>();
 
+// p804 D4
 /**
- * Creates a refresh scheduler for one host (p804 D4): a debugger tab, a window, an app's panel.
+ * Creates a refresh scheduler for one host: a debugger tab, a window, an app's panel.
  * Fields made with it as their `scheduler` are read by its `refresh()`, and the live ones
  * (monitors, a field with an `interval`) by its tick: one `requestAnimationFrame` loop that runs
  * only while the host shows (`setVisible`), the page isn't hidden and a live field exists, each

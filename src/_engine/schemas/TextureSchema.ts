@@ -270,13 +270,15 @@ const TextureAssetObjectSchema = z.object({
   optimize: TextureOptimizeSchema.optional(),
   /** Build time only: the texture packed from source images, in place of `fileName`. */
   pack: TexturePackSchema.optional(),
-  /** A cube texture (p311 D1): six source images in the order +x, −x, +y, −y, +z, −z, each what
+  // p311 D1
+  /** A cube texture: six source images in the order +x, −x, +y, −y, +z, −z, each what
    * `fileName` takes, in place of `fileName` and `pack`. The asset pipeline encodes them as one
    * KTX2 cube, its faces stored as they are (so no `texOpts.flipY`), ETC1S unless the JSON's
    * `optimize` names a codec. */
   faces: TextureFacesSchema.optional(),
-  /** Build time only: the texture is only a source, an atlas cell's or a texture array layer's
-   * (p309 D1). The asset pipeline doesn't encode it on its own, and no scene loads it. */
+  // p309 D1
+  /** Build time only: the texture is only a source, an atlas cell's or a texture array layer's.
+   * The asset pipeline doesn't encode it on its own, and no scene loads it. */
   sourceOnly: z
     .boolean()
     .optional()

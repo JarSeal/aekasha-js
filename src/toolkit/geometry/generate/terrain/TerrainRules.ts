@@ -47,8 +47,9 @@ export type TerrainRuleNoise = {
   channel?: (typeof TERRAIN_RULE_NOISE_CHANNELS)[number];
 };
 
+// p305 D4
 /**
- * A procedural terrain rule (p305 D4): where the surface's slope, height and facing are in the
+ * A procedural terrain rule: where the surface's slope, height and facing are in the
  * rule's ranges, its layer covers the layers under it. Its coverage is the product of the tests
  * it gives, moved by its noise and × its `strength`; the rules composite over the incoming
  * weights in order (`w = mix(w, onehot(layer), coverage)`), so a later rule covers an earlier one.
@@ -213,8 +214,9 @@ export const getTerrainRuleCoverageCPU = (
   return coverage * (rule.strength ?? TERRAIN_RULE_DEFAULTS.strength);
 };
 
+// p306 D4
 /**
- * The terrain rules on the CPU (p306 D4): composites each rule's coverage over the weights in
+ * The terrain rules on the CPU: composites each rule's coverage over the weights in
  * order (`w = mix(w, onehot(layer), coverage)`), so a later rule covers an earlier one, as the
  * terrain material does per pixel. Raw weights in, raw weights out (their sum kept). Used by
  * `generateTerrain`'s `vertexColors` to lay the rules into a mesh's vertex colours.

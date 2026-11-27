@@ -54,8 +54,9 @@ const SNAP_DEGREES = 15;
 /** An angle's difference made the shortest turn: `[-180, 180)` */
 const getTurn = (degrees: number) => ((((degrees + 180) % 360) + 360) % 360) - 180;
 
+// p804 D8
 /**
- * Creates an angle dial (p804 D8): a circle with a hand at the angle and, by default, the angle's
+ * Creates an angle dial: a circle with a hand at the angle and, by default, the angle's
  * spin button after it in degrees, its value a number from its binding (`{ target, key }`,
  * `{ get, set }` or `{ value }`), in radians unless `angleUnit` is `'degrees'`.
  * - Pointer: a press turns the hand to the pointer (the shortest way from the angle) and drags

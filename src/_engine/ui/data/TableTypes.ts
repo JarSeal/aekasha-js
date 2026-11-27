@@ -4,8 +4,9 @@ import type { BindingScheduler } from '../forms/binding/BindingScheduler';
 import type { SelectionMode } from './Selection';
 import type { VirtualRows } from './VirtualRows';
 
+// p800 D6
 /**
- * A cell's status (p800 D6): the status role's colour and a mark, never the colour alone. `muted`
+ * A cell's status: the status role's colour and a mark, never the colour alone. `muted`
  * is a figure that isn't one ("n/a", "none"): the muted text colour at the regular weight, no mark,
  * its text saying it.
  */

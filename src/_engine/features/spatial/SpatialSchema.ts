@@ -1,7 +1,8 @@
 import type { FeatureSchemaPart } from '../../schemas/FeatureSchemas';
 import { SceneSpatialDomainsSchema } from '../../schemas/SpatialDomainSchema';
 
-/** The spatial index feature's scene field (p607 D10): the domains a scene registers for itself. */
+// p607 D10
+/** The spatial index feature's scene field: the domains a scene registers for itself. */
 export const spatialSchemaPart = {
   feature: 'spatial',
   scene: {

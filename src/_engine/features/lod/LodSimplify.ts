@@ -158,9 +158,10 @@ const compactLevel = (
   return { attributes, vertexCount: unique };
 };
 
+// p347 §2.2
 /**
- * Simplifies a geometry into LOD levels (p347 §2.2). Each level
- * is simplified from the base, per group range, to its ratio of the base's triangles within
+ * Simplifies a geometry into LOD levels. Each level is simplified
+ * from the base, per group range, to its ratio of the base's triangles within
  * `maxError`. A level that drops less than 10 % from the previous one is left out, and the chain
  * stops once no group can go further. A base without an index is welded first.
  * @param data the base geometry (GeometryTransfer.ts's serializeGeometry()), without morph targets

@@ -36,8 +36,9 @@ export type LodDef = {
   fadeSeconds?: number;
 };
 
-/** Levels read from the geometry's LOD chain (p347), each used while its simplification error
- * projects to at most `maxPixelError` pixels (p348 §5). */
+// p347; the pixel error: p348 §5
+/** Levels read from the geometry's LOD chain, each used while its simplification error
+ * projects to at most `maxPixelError` pixels. */
 export type LodAutoDef = {
   auto: true;
   /** The largest error, in pixels at a viewport height of 1080, a level may show. Default 1. */
@@ -100,13 +101,14 @@ export type LodData = {
   _fadeOut?: THREE.Mesh;
 };
 
+// Cross-fades: p351 §2.4
 /**
  * How a `LOD` entity without a plain mesh shows its levels, eg. an instanced LOD pool's
  * instance (registered with `registerLodTarget`). The entity's `Transform` gives its position and
  * scale, in world space. The target owns its levels' assets: the component takes no refs on them.
  *
- * Cross-fades (p351 §2.4): a target with `setFade` fades. With
- * `fade` true, `applyLevel` and `setCulled` keep drawing what the entity showed as the outgoing
+ * Cross-fades: a target with `setFade` fades. With `fade` true,
+ * `applyLevel` and `setCulled` keep drawing what the entity showed as the outgoing
  * copy, and the LOD system then drives `setFade` until it ends the fade with 1. A target without
  * `setFade` always switches at once (its `fade` is always false).
  */

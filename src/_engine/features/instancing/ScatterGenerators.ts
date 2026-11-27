@@ -49,7 +49,8 @@ export type ScatterTarget = {
   /** The target's centre (a terrain block's). `PLACEMENTS` are relative to it. Default: the
    * origin. */
   position?: { x: number; y: number; z: number };
-  /** The target's grid place, combined into the seed (p301 §7), so every block gets its own
+  // p301 §7
+  /** The target's grid place, combined into the seed, so every block gets its own
    * placements. Default: `(0, 0)`. */
   grid?: { x: number; z: number };
   /** The side of the target's square, centred on `position`, in metres (a terrain block's size).

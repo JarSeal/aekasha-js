@@ -1,4 +1,4 @@
-// The `sandRipples` surface generator (p304 D3, SAND): wind ripples, a ridge profile along a
+// The `sandRipples` surface generator (SAND): wind ripples, a ridge profile along a
 // direction with a gentle windward slope and a steep lee, its crests bent by a periodic warp and
 // its height varied by a broad swell, over a fine grain. Baked, the waves fit the tile in whole
 // numbers along each axis (the direction and wavelength rounded to the nearest that tile).

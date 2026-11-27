@@ -56,8 +56,9 @@ export type TextureSetSlotMap<P extends TextureSetPacking, T> = P extends Textur
  */
 export type TextureSetLayerParamsNode = THREE.UniformArrayNode<'vec4'>;
 
+// p303 D4
 /**
- * Several texture sets of one packing as array textures (p303 D4), built by
+ * Several texture sets of one packing as array textures, built by
  * {@link buildTextureSetArray}: one array per slot of the packing, layer `i` of each from
  * `sets[i]`, and the sets' physical facts and surface defaults per layer in one uniform array.
  * @template P the packing
@@ -335,8 +336,9 @@ const TEXTURE_SET_ARRAY_RESOLVER: MaterialInputResolver<TextureSetArrayInputRef>
   dependencies: () => [],
 };
 
+// p303 D4
 /**
- * Builds a texture set array (p303 D4): one array texture per slot of the packing, layer `i` of
+ * Builds a texture set array: one array texture per slot of the packing, layer `i` of
  * each from `sets[i]` (two for `LITE`), registered as `<id>.<slot>`, and the sets' physical facts
  * and surface defaults as one uniform array (`layerParams`, read with
  * {@link getTextureSetLayerParams}). A terrain material then binds the packing's arrays however

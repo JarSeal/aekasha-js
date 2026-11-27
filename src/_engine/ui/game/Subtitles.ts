@@ -60,8 +60,9 @@ const getDurationMs = (line: SubtitleLine) =>
     BASE_DURATION_MS + PER_CHAR_MS * (line.text.length + (line.speaker?.length ?? 0))
   );
 
+// p808 D10
 /**
- * Creates subtitles (p808 D10): what's said in the game, a line at a time, stacked at the bottom
+ * Creates subtitles: what's said in the game, a line at a time, stacked at the bottom
  * of the screen with the speaker's name in bold and in its own colour. Each line shows for its
  * time (from its length by default) and the oldest goes when a new one passes `maxLines`. Its
  * size and background are custom properties, so an app's subtitle size setting is one write.

@@ -62,8 +62,9 @@ export type InventoryGrid = {
   focus: (index?: number) => void;
 };
 
+// p808 D11
 /**
- * Creates an inventory grid (p808 D11): slots in rows and columns whose items move by the pointer,
+ * Creates an inventory grid: slots in rows and columns whose items move by the pointer,
  * the keys or a gamepad, within the grid or to another of its group (`createItemDragGroup`). A
  * click, Enter or Space picks an item up, and on another slot drops it there (a move, a swap, or a
  * merge of a stack); a drag does both in one go, with a ghost under the pointer. The app does the

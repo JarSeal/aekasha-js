@@ -157,8 +157,9 @@ export const buildDecalPacking = <P extends SurfaceParamSpecs>(
   return { nodes: packDecalOutputs({ ...surface, normal }), params, seed };
 };
 
+// p309 D5
 /**
- * Defines a procedural decal generator (p309 D5): a decal's albedo, opacity, height, roughness
+ * Defines a procedural decal generator: a decal's albedo, opacity, height, roughness
  * and puddle mask as a TSL graph of a point over the decal (`ctx.uv`, 0..1 across it). Bake it
  * into the `DECAL` packing's slots with `bakeDecalGenerator`, and export the bake as an atlas
  * cell's PNGs (`exportBakedTexture`).

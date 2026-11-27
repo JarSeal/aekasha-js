@@ -65,8 +65,9 @@ const span = (className: string) => {
   return elem;
 };
 
+// p804 D8
 /**
- * Creates a 2D pad (p804 D8): a box with a point at an `{ x, y }` value (a `THREE.Vector2` written
+ * Creates a 2D pad: a box with a point at an `{ x, y }` value (a `THREE.Vector2` written
  * in place) over its two axes' spin buttons, from its binding (`{ target, key }`, `{ get, set }` or
  * `{ value }`). For offsets and directions: the pad spans each axis' `min` to `max` (default -1
  * to 1, by 0.01), y upwards unless `invertY`.

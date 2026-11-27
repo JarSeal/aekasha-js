@@ -133,7 +133,8 @@ export type CreateCharacterOpts = CharacterBodyKindField & {
    * creator (it may suggest controller configuration first). Disposed with the character; when
    * the creation rejects, it's still the caller's to dispose. */
   brain?: ActorBrain<CharacterIntent>;
-  /** The character's own world bounds (`setEntityWorldBounds`, p102), sent with its body's create.
+  // p102
+  /** The character's own world bounds (`setEntityWorldBounds`), sent with its body's create.
    * Without them it follows the scene's, deleted by default when it falls out: a player usually
    * wants `{ action: 'CALLBACK', onExit }` (its respawn; no box keeps the scene's) or
    * `{ ignore: true }`. */

@@ -165,7 +165,8 @@ export type FogOverrides = z.infer<typeof FogOverridesSchema>;
 /** A fog to resolve: an authored one without its file's keys. */
 export type FogInput = Omit<FogAsset, '$schema' | '__sourcePath' | '__saveData'>;
 
-/** The fog feature's scene field (p607 D10): `fogs`, ids of `*.fog.json` files or inline fogs. */
+// p607 D10
+/** The fog feature's scene field: `fogs`, ids of `*.fog.json` files or inline fogs. */
 export const fogSchemaPart = {
   feature: 'fog',
   scene: {

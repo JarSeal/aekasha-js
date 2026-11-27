@@ -63,7 +63,7 @@ const meshUv = uv as unknown as () => THREE.Node<'vec2'>;
 // #region tsl-from-code (shown in the Hub: features/toolkit, Graphs and input forms from code)
 type GradientInput = { gradient: [string, string] };
 
-/** The input resolver check's resolver (p302 D4): `{ gradient: [from, to] }` → a bundle of two
+/** The input resolver check's resolver: `{ gradient: [from, to] }` → a bundle of two
  * colour uniforms, kept as `setup_<key>_from` and `setup_<key>_to`. */
 const gradientResolver: MaterialInputResolver<GradientInput> = {
   kind: 'testDebugScene.gradient',

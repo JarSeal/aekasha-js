@@ -29,8 +29,9 @@ export type ActorController<TIntent> = {
    * @param step the step index (`getPhysicsSubStepIndex`): the controller's clock
    */
   tick: (dt: number, intent: TIntent, step: number) => void;
-  /** Takes over an actor's body. Not called yet: a controller makes its own body until one is
-   * swapped on a live actor (p421, p420). */
+  // Swapping a body on a live actor: p421, p420
+  /** Takes over an actor's body. Not called yet: a controller makes its own body and swapping one
+   * on a live actor is planned. */
   attach?: (actorId: string) => void;
   /** Lets go of the body it attached. Not called yet (see `attach`). */
   detach?: () => void;

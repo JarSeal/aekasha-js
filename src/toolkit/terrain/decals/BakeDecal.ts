@@ -54,8 +54,9 @@ export type BakedDecal<P extends SurfaceParamSpecs = SurfaceParamSpecs> = Pick<
  * returns an id's decal while its bake is alive. */
 const decals = new Map<string, Promise<BakedDecal>>();
 
+// p309 D1
 /**
- * Bakes a procedural decal generator into the `DECAL` packing (p309 D1): one `bakeTexture` of
+ * Bakes a procedural decal generator into the `DECAL` packing: one `bakeTexture` of
  * `albedoAlpha` (sRGB albedo, A opacity) and `normalRough` (normal XY, roughness, puddle mask),
  * registered as `<id>.<slot>` and owned by the scene loading or current unless `isPersistent`.
  * Export each slot as an atlas cell's PNG with `exportBakedTexture` (debug env), and name the PNGs

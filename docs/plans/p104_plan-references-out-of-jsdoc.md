@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 implemented
 Category: Documentation, Refactoring
 Related: _DONE_p103_small-bug-fixes-and-tweaks.md (the list this item came from)
 
@@ -89,7 +89,7 @@ same rule's spirit, but no lint rule covers the app.
 
 ## Phases
 
-### Phase 1: The rule and everything rendered
+### Phase 1: The rule and everything rendered — done
 
 1. The lint rule as `warn` (D3), and the rule's text (D4).
 2. A helper script in the scratchpad (not committed) that lists the blocks per file with their
@@ -98,6 +98,55 @@ same rule's spirit, but no lint rule covers the app.
 3. The 285 rendered comments and the Hub's includes (D5).
 4. `yarn hub:build`, then grep `dist-hub/documentation/` for `\b[pi]\d{3}\b`: 0. `yarn verify:baselines
    --docs`.
+
+As built:
+
+- **The pattern isn't `\b[pi]\d{3}\b`**: `_` is a word character, so `\b` misses `p303_….md` and
+  `_DONE_p094`. The rule and every grep use `(?<![A-Za-z0-9])[pi]\d{3}(?![A-Za-z0-9])|_DONE_`
+  (`PLAN_REFERENCE` in `eslint.config.js`; with `grep -P`). Every token it matched in the code was a
+  plan or an issue (many of deleted plans); `p95`, `i32`, `p1000` don't match.
+- **The rule** is `jsdoc/no-restricted-syntax` with `context: 'any'` and the selector
+  `JsdocBlock:has([description=RE]), JsdocBlock:has([name=RE])`: every block (tags, `@example` code,
+  Zod shape keys, blocks in function bodies), once per block at its `/**`. `[name=…]` is needed: a
+  tag's first word is its `name` (`@remarks _DONE_p094_….md`). `match-description` was dropped: it
+  checks only the tags listed one by one. Its own config entry after the JSDoc shape block, files
+  `src/_engine/**/*.ts` and `src/toolkit/**/*.ts`, `**/*.test.ts` ignored.
+- **The counts at the start** (2026-11-27, after the fog branch): 898 files, 16,979 blocks, 866
+  flagged in 423 files; rendered 302 blocks (the helper first found 300: it tested the comment as
+  JSON, where a line break's `\n` hid a reference starting a line from the lookbehind; the
+  `hub:build` grep found the other two, `STREAMING_MIN_CELL_SIZE` and `BuiltInIcons.ts`' module
+  comment, which every icon's page shows because TypeDoc puts the icons' source in vite's
+  `client.d.ts`). After Phase 1: 566 flagged in 277 files, none rendered.
+- **The rewording:** a reference that was provenance went to one `//` line above the `/**` (several
+  joined: `// p348; the cross-fade: p351 §2.4; AUTO: p347`; an issue's file name for an issue). One
+  that carried meaning became the fact: "p305's live layers" → "the terrain material's live
+  layers", "p343's deterministic tier policy" → "the tier policy's `STEPS` cadence", "p800 D8's
+  written deviation" → "a deliberate exception to the kit's accessibility rules", a future plan →
+  "is planned". The `(pNNN Dn)` parentheticals made only of references (most of the UI kit's and
+  the toolkit's) were removed by a script, `.cache/p104/auto.py`, and reviewed in the diff; the
+  rest by hand. Over-long comment lines were rewrapped (Prettier doesn't).
+- **The helpers are in the gitignored `.cache/p104/`**, not the scratchpad: they import `eslint` and
+  `devTools/hub/api/` from the repo. `report.ts [--lint]` (the blocks, what renders, the includes;
+  `report.md` / `report.json`), `show.mjs <prefix>`, `apply.py <edits.json>` (each change must
+  match once inside its block), `auto.py <prefix> <out.json>`.
+- **The Hub's includes** (112 of `src/` files; `devTools/` and `sbp.config.ts` aren't D5's): the
+  comments reworded, the JSON `description`s too (no `//` in JSON: the reference went),
+  `p304ProcRipples`' `name` "Procedural ripples". **Kept:** the ids `p304ProcRipples` and
+  `p302_gradientMat` (an id is in scenes and `__saveData`; renaming one is its own change).
+  `src/generated/generatedAppData.json` was gathered again (descriptions only; the asset pipeline's
+  keys don't hash a JSON's text, so `assets.lock.json` didn't change).
+- **The coding standards page's example uses `pNNN` / `iNNN`**, so `dist-hub/documentation/` keeps
+  none.
+- Also fixed: `InitEngine`'s "the template lists all ten" features (seventeen) → "every engine
+  feature"; `_dbg__OnScreenTools.test.ts` failed on macOS (Node's `navigator.platform` is the host's:
+  `Meta+S`), now pinned to Linux as `_dbg__DebugKeyShortcuts.test.ts` does (a commit of its own).
+- **Left on rendered Hub pages outside `documentation/`** (D1 leaves the Hub's Markdown out, but the
+  Verification grep covers them; decide in Phase 3): the UI kit's game page's prose "(p808's
+  measurement)"; the smallest build page's include of `sbp.config.ts` (`// The banner embed (p611
+  D8)`, `p611 Phase 4's report`); the terrain gallery's and showcase's scene names in images' `alt`
+  ("Terrain gallery (p303, …, p310)", "Terrain showcase (p310)"); the toolkit page's
+  `p302_gradientMat`; the homepage's What's new (the changelog's branch name) and an HTML comment
+  in the shell (`p802 D6`, not shown).
 
 ### Phase 2: The rest of the engine
 
@@ -108,7 +157,7 @@ there to 0.
 
 1. `src/toolkit/` (the terrain material's config and define first: most of them).
 2. The rule to `error`; `yarn lint` clean.
-3. `yarn docs`, then grep `docs-api/` for the patterns: 0.
+3. `yarn docs`, then grep `docs-api/` for the pattern (Phase 1's As built): 0.
 4. Versions: engine patch, toolkit patch (docs only); the `CHANGELOG.md` entry (Engine, Toolkit,
    Project for the lint rule); `yarn checkVersions --against main`; mark the plan done.
 
@@ -127,6 +176,7 @@ Each phase is one or more commits (by folder is fine: the diff is large).
 
 - `yarn lint` (the rule at `error`: no matches), `yarn test`, `tsc`.
 - `yarn verify:baselines --docs` (the ratchet doesn't drop) and `yarn verify:baselines`.
-- `yarn hub:build` and `yarn docs`, then a grep of `dist-hub/` and `docs-api/` for `\b[pi]\d{3}\b`
-  outside the Project section (`dist-hub/project/`), the Issues pages and the Versions section (the
+- `yarn hub:build` and `yarn docs`, then a grep of `dist-hub/` and `docs-api/` for
+  `(?<![A-Za-z0-9])[pi]\d{3}(?![A-Za-z0-9])|_DONE_` (`grep -P`; Phase 1's As built) outside the
+  Project section (`dist-hub/project/`), the Issues pages and the Versions section (the
   changelog cites plans; it's history, out of scope): 0.

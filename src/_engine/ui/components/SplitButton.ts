@@ -51,8 +51,9 @@ export type SplitButton = {
 const CARET_SVG =
   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>';
 
+// p803 D10
 /**
- * Creates a split button (p803 D10): an action's button and, joined to it, a button that opens a
+ * Creates a split button: an action's button and, joined to it, a button that opens a
  * menu of the action's variants, in a group named by the action.
  * - Parts: `.aekButtonGroup.aekSplitButton` (`role="group"`), its two `.aekButton`s (the menu
  *   button icon only, with a caret), and the menu's (see `createMenu`).

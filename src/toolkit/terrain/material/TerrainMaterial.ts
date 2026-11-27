@@ -220,8 +220,9 @@ const getAoNode = (
   return textureAo ? (textureAo.mul(vertexTerm) as Node<'float'>) : vertexTerm;
 };
 
+// p305 D2, p307
 /**
- * The terrain material's graph (p305 D2), the TSL `setup` both routes run: reads the static define
+ * The terrain material's graph, the TSL `setup` both routes run: reads the static define
  * `terrain` ({@link TerrainMaterialDefine}), samples each layer's texture set (`SEPARATE`: the
  * inputs `layer0`, `layer1`, …, a `{ textureSet }` bundle each; `ARRAY`: the input `layers`, one `{
  * textureSetArray }` bundle holding, in order, the layers without an input of their own, which a
@@ -255,7 +256,7 @@ const getAoNode = (
  * its `fade` range, and with a `far` mode the layers aren't sampled past it (a dynamic branch): the
  * far surface is the sets' average colours by the weights (`AVERAGE_COLOR`) or the colour map
  * (`COLOR_MAP`), mixed in over `farBlend` metres, its normal the geometry's (a `debugView` shows
- * the near surface everywhere). With `wet` (p307), the surface conditions' wetness (the
+ * the near surface everywhere). With `wet`, the surface conditions' wetness (the
  * `surfaceConditions()` feature's uniforms, `aekasha/surface`; without the feature the material
  * builds dry, warned) wets the blended surface where it faces the sky (`shelter`), the low points
  * and cavities first (`FULL`): the albedo darkens and the roughness falls as the pores fill, then
@@ -628,8 +629,9 @@ export const getTerrainMaterialProps = (
   };
 };
 
+// p305
 /**
- * Creates a terrain material from a config (p305): one `MeshStandardNodeMaterial` whose graph has
+ * Creates a terrain material from a config: one `MeshStandardNodeMaterial` whose graph has
  * only what the config enables, registered under the config's id (an id already registered
  * returns that material, as `createMaterial` does). Its layers' texture sets must be loaded: a
  * scene that lists them (`textureSets`) has them, else await `ensureMaterialDependencies` with
@@ -668,8 +670,9 @@ export const createTerrainMaterial = (config: TerrainMaterialConfig) => {
 /** A quality tier of a terrain material's `quality` table: `LOW`, `MEDIUM`, `HIGH` or `ULTRA`. */
 export type TerrainQualityLevel = (typeof TERRAIN_QUALITY_LEVELS)[number];
 
+// p305 D10
 /**
- * A terrain material's variant at a quality tier (p305 D10): `getMaterialVariant` with the
+ * A terrain material's variant at a quality tier: `getMaterialVariant` with the
  * material's own define and the tier as its `qualityLevel`, so the tier's `quality` overrides
  * apply over its fields and the tier is its own shader (one per tier used, shared by every caller).
  * Pass the material whose define has the `quality` table (the base, or a block's variant of it):

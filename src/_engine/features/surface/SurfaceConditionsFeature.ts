@@ -33,8 +33,9 @@ export type SurfaceConditionsFeatureOpts = {
   timeSource?: SurfaceTimeSource;
 };
 
+// p307
 /**
- * The surface conditions feature (p307): one global state of wetness, rain, puddles, water level,
+ * The surface conditions feature: one global state of wetness, rain, puddles, water level,
  * snow, temperature and wind that wet materials read through stable uniforms
  * (`getSurfaceConditionNodes`), simulated (rain wets, the sun and the wind dry, snow melts) or set
  * by the app. A scene's JSON `surfaceConditions` sets its starting values. Without it, the

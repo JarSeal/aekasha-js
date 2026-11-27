@@ -572,7 +572,8 @@ export const GeneratedAssetFieldsSchema = z.object({
     .string()
     .optional()
     .describe('Set by the gatherer: the source as the dev server serves it.'),
-  /** A cube texture's (p311 D2) six faces as the dev server serves them, in `faces`' order:
+  // p311 D2
+  /** A cube texture's six faces as the dev server serves them, in `faces`' order:
    * loaded as six images when the pipeline has no output, or under the "Load source files"
    * override. Development data only. */
   __sourceUrls: z
@@ -590,7 +591,8 @@ export const GeneratedAssetFieldsSchema = z.object({
   ),
   /** A standalone texture's codec (optimized only). */
   __codec: TextureCodecSchema.optional(),
-  /** An sRGB standalone texture's average colour (p303 D1, optimized only): the mean of the
+  // p303 D1
+  /** An sRGB standalone texture's average colour (optimized only): the mean of the
    * stored level 0's RGB, linear. Development data only: a texture set's albedo gives it to the
    * set's `averageColor`, which ships. */
   __averageColor: z

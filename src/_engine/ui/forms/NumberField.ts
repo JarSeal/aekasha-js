@@ -76,8 +76,9 @@ const getPointerScale = (step: number | undefined, value: number) => {
   return base === 0 ? 0.1 : 10 ** (Math.floor(Math.log10(base)) - 1);
 };
 
+// p804 D7
 /**
- * Creates a number field (p804 D7): a text input that is a spin button, its value from its
+ * Creates a number field: a text input that is a spin button, its value from its
  * binding (`{ target, key }`, `{ get, set }` or `{ value }`) and written there. Not
  * `type="number"`, which takes no expressions, formats by locale and changes on the wheel.
  * - Typing: an expression (`1/2`, `2 ** 3`, `pi / 4`, the field's `expressionUnits`, `90deg`) is

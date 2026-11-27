@@ -21,9 +21,10 @@ export type SaveChangeWrite =
       json: unknown;
     };
 
+// p355 §2.6
 /**
- * An asset written inline in a scene JSON, which its save moves into a file of its own (p355
- * §2.6): the save creates the change's `path` with the item as it is and the change's entry, and
+ * An asset written inline in a scene JSON, which its save moves into a file of its own: the
+ * save creates the change's `path` with the item as it is and the change's entry, and
  * replaces the item in the scene JSON's list with its id, in one commit.
  */
 export type SaveChangeExtract = {

@@ -30,8 +30,9 @@ export type Spinner = {
   setLabel: (label: string) => void;
 };
 
+// p803 D10
 /**
- * Creates a spinner (p803 D10): a turning ring for a wait of unknown length.
+ * Creates a spinner: a turning ring for a wait of unknown length.
  * - Parts: `.aekSpinner` (`data-size`; its ring is the `::before`), its label an
  *   `aekVisuallyHidden` span.
  * - Custom properties (read on any ancestor): `--aek-spinner-size` (default `1em`, or the

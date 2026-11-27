@@ -122,8 +122,10 @@ const createTextPart = (className: string, parent: Element) => {
   return text;
 };
 
+// p805 D9
+// The exception: p800 D8
 /**
- * Creates a time series (p805 D9): lines of figures that change every frame (frame time, its
+ * Creates a time series: lines of figures that change every frame (frame time, its
  * stages, draw calls) over their last `capacity` samples, on a canvas that draws only what's new.
  * - Samples: `push(value)` for one series, `pushAll(values)` for several (a reused array), as often
  *   as every frame; it draws at most once per animation frame while it shows (scrolled into view,
@@ -143,7 +145,7 @@ const createTextPart = (className: string, parent: Element) => {
  * - ARIA: the plot is hidden from assistive tech; the summary is its text (each series' latest
  *   value, min and max, written at most 4 times a second while samples come, in view or not, and
  *   held while paused; not a live region). Without `summary`, a figure beside it says what it
- *   shows (p800 D8's written deviation).
+ *   shows (a deliberate exception to the kit's accessibility rules).
  * @example
  * ```ts
  * const frame = createTimeSeries({

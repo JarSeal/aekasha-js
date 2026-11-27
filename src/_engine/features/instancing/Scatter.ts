@@ -267,8 +267,9 @@ export type SpawnedScatter = {
   dispose: () => void;
 };
 
+// p308 D2
 /**
- * Spawns a scatter (p308 D2) that the scene has (its `scatters` lists it, or a terrain block's
+ * Spawns a scatter that the scene has (its `scatters` lists it, or a terrain block's
  * `scatter` names it): its instances placed by its source on `target`, each item's split into
  * cells of `cellSize` (`createStaticInstances`), each cell with the scatter's `lod`, and a `FIXED`
  * collider per instance of an item with a `collider` (with `physics()`; without it, a warning and
@@ -279,10 +280,10 @@ export type SpawnedScatter = {
  * meanwhile
  * @throws when `instancing()` isn't installed, there's no scene, the scene doesn't have the
  * scatter, an item's geometry or material isn't registered or its geometry is quantized (a file
- * another tool quantized: give the import `"optimize": { "mesh": { "quantize": false } }`), its generator isn't registered or
- * returns instances that don't fit its items, its import has no node it takes, a node of GPU
- * instances no item draws or a point's `_ITEM` past the items, or a collider can't be made (the
- * cells made are deleted first)
+ * another tool quantized: give the import `"optimize": { "mesh": { "quantize": false } }`), its
+ * generator isn't registered or returns instances that don't fit its items, its import has no
+ * node it takes, a node of GPU instances no item draws or a point's `_ITEM` past the items, or a
+ * collider can't be made (the cells made are deleted first)
  * @remarks An `IMPORTED` source's node of GPU instances is drawn by the item whose `geometry` is
  * the node's (`<importId>/<node>`), or a plain node's of the same glTF mesh (Blender's export
  * copies a mesh for each instancing node: name the rock's own node, `<importId>/RockA`), a point

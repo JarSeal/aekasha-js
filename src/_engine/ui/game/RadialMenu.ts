@@ -94,8 +94,9 @@ const getSectorIndex = (x: number, y: number, count: number) => {
   return Math.round((angle / TURN) * count) % count;
 };
 
+// p808 D8
 /**
- * Creates a radial menu (p808 D8): a ring of items round a point (a quick item or emote wheel),
+ * Creates a radial menu: a ring of items round a point (a quick item or emote wheel),
  * picked by the pointer's direction from the centre, a stick's (`setDirection`, then `select`
  * on its release), or the arrow keys round the ring. The centre shows the highlighted item's label
  * and description; a click there, or Escape, closes it. Picking closes it, then `onSelect`.

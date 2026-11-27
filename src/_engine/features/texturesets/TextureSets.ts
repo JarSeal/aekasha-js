@@ -139,12 +139,13 @@ const ensureSlotTextureAsync = async (setId: string, textureId: string) => {
   return loadTextureAsync({ ...declaration, throwOnError: true });
 };
 
+// Procedural sets: p304 D3
 /**
  * Loads a texture set's textures of a packing (the set's `defaultPacking` without one) that
  * aren't registered, and re-tags the registered ones, all in the caller's owner scope: they're
  * the loading (or current) scene's and are released with it, as the scene load's are. A scene's
  * `textureSets` and its materials' `{ textureSet }` inputs load theirs with the scene: this is for
- * code that needs a set no scene loads, or another packing of one. A procedural set (p304 D3) is
+ * code that needs a set no scene loads, or another packing of one. A procedural set is
  * baked by its generator instead, unless its textures are registered (a scene baked it).
  *
  * Calls may overlap: two loads of one texture register one. Re-check the scene after the await
@@ -221,10 +222,11 @@ const describeInput = (value: TextureSetInputRef, key: string, group: string, id
 /** Each `{ textureSet }` bundle the resolver made, to its set (a bundle is nodes only) */
 const inputSets = new WeakMap<object, TextureSetDef>();
 
+// The live layers: p305
 /**
  * The texture set a `{ textureSet }` input was resolved from: what a TSL function needs of the set
  * beyond its bundle's nodes (its id, or a procedural set's `procedural` field: its generator, params
- * and seed, p305's live layers).
+ * and seed, which the terrain material's live layers read).
  * @param input a `{ textureSet }` bundle as a TSL function gets it
  * @returns the gathered set, or undefined for a value the resolver didn't make
  * @example
@@ -294,10 +296,11 @@ const loadBakesModuleAsync = async () => {
   return bakesModule;
 };
 
+// p304 D3; the live terrain layers: p305
 /**
- * Loads a procedural texture set generator's module (p304 D3, a `<id>.generator.ts` the gather
- * found: the gathered code names it only when a scene's set or a material input names a set of
- * it), for code that runs it itself (p305's live terrain layers) rather than through a set's bake.
+ * Loads a procedural texture set generator's module (a `<id>.generator.ts` the gather found:
+ * the gathered code names it only when a scene's set or a material input names a set of it), for
+ * code that runs it itself (the terrain material's live layers) rather than through a set's bake.
  * A bake loads it too; once loaded it's kept for the page, and {@link getTextureSetGenerator}
  * returns it synchronously.
  * @param id the generator's id (a procedural set's `procedural.generator`)

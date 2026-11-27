@@ -227,8 +227,9 @@ const readGlyphNames = (elem: Element) =>
     .map((glyph) => glyph.getAttribute('aria-label') ?? '')
     .join(' ');
 
+// p808 D9
 /**
- * Creates a controls page (p808 D9): an action map's actions as rows, each with its binding per
+ * Creates a controls page: an action map's actions as rows, each with its binding per
  * device as glyphs, rebound by capturing the next key, mouse button or gamepad button. The page
  * reports each action's new bindings (`onRebind`) and its owner applies and persists them.
  * - Parts: `.aekControlsPage` > `__table` (a `table`: `__columnHeader`s, a `__row` per action,

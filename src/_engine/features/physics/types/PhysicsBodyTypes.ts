@@ -321,8 +321,9 @@ export type RigidBodyAPI = {
   /** The body's type: on WORKER_THREAD from the proxy's copy (its creation type, and the
    * `setBodyType`s and REMOVED tier reattaches since). */
   bodyTypeSync(): RigidBodyTypeAPI;
+  // p250
   /** Changes the body's type, waking it when `wakeUp`. Throws for a multibody link with a parent
-   * unless the type is `Dynamic`: only a multibody's root can be fixed or kinematic (p250). */
+   * unless the type is `Dynamic`: only a multibody's root can be fixed or kinematic. */
   setBodyType(type: RigidBodyTypeAPI, wakeUp: boolean): void;
   /** Whether the body is `Fixed`. */
   isFixed(): Promise<boolean>;

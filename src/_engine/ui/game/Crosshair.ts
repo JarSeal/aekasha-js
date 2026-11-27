@@ -56,8 +56,9 @@ const createPart = (className: string) => {
   return span;
 };
 
+// p808 D6, p808 D4
 /**
- * Creates a crosshair (p808 D6): a reticle at the centre of the screen, its arms spread by a
+ * Creates a crosshair: a reticle at the centre of the screen, its arms spread by a
  * weapon's bloom, a ring over a target and a slash over something blocked, and a hit marker that
  * flashes on a hit. Drawn with CSS on tokens, no images.
  * - Parts: `.aekCrosshair` (`data-shape`, `data-state`), `.aekCrosshair__arm` (`data-arm="up" |
@@ -69,7 +70,7 @@ const createPart = (className: string) => {
  *   `--aek-crosshair-target-color` (the ring, default the accent), `--aek-crosshair-hit-color`
  *   (default `--aek-text`), `--aek-crosshair-gap`, `--aek-crosshair-length`,
  *   `--aek-crosshair-thickness`; `--aek-crosshair-spread` is the setter's.
- * - Assistive tech: `aria-hidden` (p808 D4): an aim point for the pointer, which the game says
+ * - Assistive tech: `aria-hidden`: an aim point for the pointer, which the game says
  *   otherwise (its sounds, its feed) for a player who doesn't see it.
  * - Motion: the spread eases over `--aek-motion-fast`; a hit marker pops and fades in 250 ms.
  *   Under reduced motion the spread jumps and a hit marker shows still for the same time.

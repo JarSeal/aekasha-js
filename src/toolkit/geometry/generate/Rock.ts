@@ -47,8 +47,9 @@ export interface GeneratedRock extends GeneratedAsteroid {
   height: number;
 }
 
+// p308 D5
 /**
- * The most triangles a scatter rock of each kind should have (p308 D5): many instances draw it.
+ * The most triangles a scatter rock of each kind should have: many instances draw it.
  */
 export const ROCK_TRIANGLE_BUDGETS: Readonly<Record<RockKind, number>> = {
   PEBBLE: 80,
@@ -94,8 +95,9 @@ const STRETCH_SALT = 0x5bd1e995;
 const Z_ELONGATION = 0.4;
 const MAX_FLATTEN = 0.5;
 
+// p308 D5
 /**
- * Builds a procedural scatter rock (p308 D5): `generateAsteroid`'s seeded lumpy icosphere, indexed
+ * Builds a procedural scatter rock: `generateAsteroid`'s seeded lumpy icosphere, indexed
  * with smooth normals and no craters, squashed to `squash` of its width, stretched along x and z
  * by its seed, and cut flat `flatten` of its height up from its lowest point, so it sits on the
  * ground. Its origin is the flat base's centre (the bounding box's x and z centre): a rock placed
@@ -189,8 +191,9 @@ const ROCK_VARIANTS: readonly { id: string; kind: RockKind; seed: number }[] = [
   { id: 'boulder_b', kind: 'BOULDER', seed: 32 },
 ];
 
+// p308 D5
 /**
- * Registers the toolkit's scatter rocks (p308 D5) for the scene loading (or current), so a
+ * Registers the toolkit's scatter rocks for the scene loading (or current), so a
  * `*.scatter.json`'s items can name them: `rockPebble_a`, `_b`, `_c` (`'PEBBLE'`), `rockSmall_a`,
  * `_b`, `_c` (`'ROCK'`) and `boulder_a`, `_b` (`'BOULDER'`), each {@link generateRock} with a seed
  * of its own. Call it in the scene's code before its scatters spawn (before `spawnTerrainBlock`

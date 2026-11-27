@@ -162,8 +162,9 @@ export const registerBuiltInIcons = () => {
   }
 };
 
+// p803 D5
 /**
- * An icon's size from the type scale (p803 D5): `--aek-icon-size-sm`, `-md` or `-lg` (12, 16 and
+ * An icon's size from the type scale: `--aek-icon-size-sm`, `-md` or `-lg` (12, 16 and
  * 20 px at the defaults, smaller in the compact density). Without one an icon is `1em`: it follows
  * its text.
  */

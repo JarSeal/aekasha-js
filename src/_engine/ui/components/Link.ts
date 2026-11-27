@@ -69,8 +69,9 @@ const createPart = (className: string, text = '') => {
   return span;
 };
 
+// p803 D10
 /**
- * Creates a link (p803 D10): an `<a>` to `href`. An external one (another origin's address, or
+ * Creates a link: an `<a>` to `href`. An external one (another origin's address, or
  * `external: true`) opens in a new tab (`target="_blank"`, `rel="noopener noreferrer"`) and shows
  * the external mark, and assistive tech hears "(opens in a new tab)" after its name. With
  * `appearance: 'button'` it looks like a button and stays a link (a navigation).

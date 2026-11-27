@@ -407,9 +407,10 @@ export interface CreateInstancedMeshPoolOptions {
   receiveShadow?: boolean;
   /** Passed to the mesh's own owning entity (e.g. to mark a long-lived pool `persistent`). */
   entityOpts?: CoreEntityOpts;
+  // p346
   /**
-   * A registered spatial domain `spawn()` joins every instance to
-   * (p346). Default: none.
+   * A registered spatial domain `spawn()` joins every instance to.
+   * Default: none.
    * @remarks An instance in `DEFAULT` is a light's receiver like any mesh, measured by its drawn
    * copy (one LOD culled lights nothing), so it keeps an object-culled point or spot light on.
    */
@@ -576,16 +577,17 @@ export interface InstancedLodPool {
   despawn: (entityId: number) => boolean;
 }
 
+// p348 §4.2; the cross-fade: p351 §2.4
 /**
- * An instanced pool with levels of detail (p348 §4.2): one
- * `InstancedMesh` per level, and every instance in exactly one of them. Each instance entity has
+ * An instanced pool with levels of detail: one `InstancedMesh` per
+ * level, and every instance in exactly one of them. Each instance entity has
  * `INSTANCED_MESH_SLOT` (pointing at its level's mesh) and `LOD`, so the engine's LOD selection
  * picks its level and moves it to that level's mesh (a swap-remove from the old one, an append to
  * the new one). A LOD-culled instance is in no mesh. One draw call per non-empty level.
  *
- * Level changes and LOD culling cross-fade (`lod.fadeSeconds`, default `AppConfig.lod.fadeSeconds`;
- * p351 §2.4): during a fade the instance is in both levels'
- * meshes, dithered by a per-instance fade. The pool calls `enableLodDither` on its level materials.
+ * Level changes and LOD culling cross-fade (`lod.fadeSeconds`, default
+ * `AppConfig.lod.fadeSeconds`): during a fade the instance is in both levels' meshes, dithered by
+ * a per-instance fade. The pool calls `enableLodDither` on its level materials.
  *
  * Every level mesh gets the union bounds of every placement, at spawn, grown by the sync when a
  * moved instance leaves them: instances moving between levels never change them, and they never

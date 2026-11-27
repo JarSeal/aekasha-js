@@ -3,10 +3,11 @@ import type { WorldBoundsDef } from './PhysicsWorldBoundsTypes';
 /** A physics backend, by its key in `backends/Engines.ts`' `ENGINES`. Only Rapier exists. */
 export type PhysicsEngine = 'RAPIER';
 
+// The server target: p511
 /**
  * Where the simulation runs: `'MAIN_THREAD'` (synchronous queries, deterministic characters) or
  * `'WORKER_THREAD'` (a worker, its transforms back through a shared buffer or one message per
- * frame). A server target would be a third (p511).
+ * frame). A server target is planned as a third.
  */
 export type PhysicsWorkerTarget = 'MAIN_THREAD' | 'WORKER_THREAD';
 

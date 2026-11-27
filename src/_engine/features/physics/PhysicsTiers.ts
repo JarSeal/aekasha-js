@@ -160,8 +160,9 @@ const resolveTierGroup = (
   return members;
 };
 
+// p352
 /**
- * Requests a simulation tier for a dynamic physics entity (p352). It applies at the start of
+ * Requests a simulation tier for a dynamic physics entity. It applies at the start of
  * the next `APP_PHYSICS_STEP` sub-step, so a request from an `APP_PHYSICS_STEP` system or from
  * scene-load code is deterministic. Requests before then collapse into the latest one.
  *

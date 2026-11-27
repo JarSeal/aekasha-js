@@ -87,8 +87,9 @@ const clamp01 = (value: number) => (value > 0 ? (value < 1 ? value : 1) : 0);
 /** An axis' rules: its own over the default range */
 const getAxisRules = (own: NumberRules | undefined): NumberRules => ({ ...DEFAULT_RULES, ...own });
 
+// p804 D8
 /**
- * Creates a curve editor (p804 D8): a plot of a curve with a handle per point and the selected
+ * Creates a curve editor: a plot of a curve with a handle per point and the selected
  * point's numbers under it, from its binding (`{ target, key }`, `{ get, set }` or `{ value }`),
  * written in place (the array and its keys stay the instances). The value's shape at creation is
  * its mode: four numbers are an easing as CSS's `cubic-bezier(x1, y1, x2, y2)` (two control

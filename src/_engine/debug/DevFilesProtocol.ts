@@ -99,7 +99,8 @@ export type DevFilesStatusBody = {
  */
 export type DevFilesStageBody = { stageId: string; bytes: number; sha256: string };
 
-/** A save entry (p342 §2.6): `entry` goes first in the file's `__saveData[sceneId]`, the older
+// p342 §2.6
+/** A save entry: `entry` goes first in the file's `__saveData[sceneId]`, the older
  * entries after it, and the server stamps its `__meta` */
 export type DevFilesSaveData = {
   /** The scene the entry applies in */

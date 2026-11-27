@@ -48,8 +48,9 @@ export type Popover = {
   isOpen: () => boolean;
 };
 
+// p803 D10
 /**
- * Creates a popover (p803 D10): interactive content anchored to its trigger, opened and closed by
+ * Creates a popover: interactive content anchored to its trigger, opened and closed by
  * a click on it (Enter or Space on a button), on its `side` when it fits there, else the other.
  * - Parts: the `.aekPopover` element (`role="dialog"`, not modal), in the HUD root while it's
  *   open, in the browser's top layer (else at `--aek-z-tooltip`), kept inside the HUD with the

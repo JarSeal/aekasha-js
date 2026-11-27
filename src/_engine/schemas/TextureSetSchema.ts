@@ -27,8 +27,9 @@ export const TEXTURE_SET_CATEGORIES = [
  * `CONCRETE` or `OTHER`. */
 export type TextureSetCategory = (typeof TEXTURE_SET_CATEGORIES)[number];
 
+// p303 D2
 /**
- * Each packing's slots (p303 D2), in their order: a packing's textures are listed (and loaded) in
+ * Each packing's slots, in their order: a packing's textures are listed (and loaded) in
  * this order. A slot whose name starts with `albedo` holds colour (sRGB in RGB); the others hold
  * linear data.
  */
@@ -44,8 +45,9 @@ export type TextureSetPacking = keyof typeof TEXTURE_SET_PACKINGS;
 /** A texture set packing's slot names, in their order. */
 export type TextureSetSlot = (typeof TEXTURE_SET_PACKINGS)[TextureSetPacking][number];
 
+// p303 D2
 /** The packings in the order a set's default is chosen when its JSON names none: `LITE` (the
- * terrain default, p303 D2) when the set has it, else `FULL`, else `MINIMAL`. */
+ * terrain default) when the set has it, else `FULL`, else `MINIMAL`. */
 export const TEXTURE_SET_PACKING_PREFERENCE = [
   'LITE',
   'FULL',
@@ -115,12 +117,13 @@ export type TextureSetWetResponse = Pick<
   'porosity' | 'wetDarkening' | 'wetRoughness' | 'puddleResponse' | 'dryingSpeed'
 >;
 
+// p307 S3; judged in p310 Phase 3
 /**
- * Each category's wet response (p307 S3): what the gatherer writes for a field the set's
+ * Each category's wet response: what the gatherer writes for a field the set's
  * `surface` doesn't give. Sand darkens strongly and dries fast, mud glosses quickly and dries
  * slowly, ice films at once; wet snow greys to slush, wet grass stays rough (its water beads, no
- * film); `OTHER` is {@link TEXTURE_SET_SURFACE_DEFAULTS}'. Judged against CC0 photos (p310 Phase 3,
- * `docs/techniques/wet-dry-surfaces.md`' references).
+ * film); `OTHER` is {@link TEXTURE_SET_SURFACE_DEFAULTS}'. Judged against CC0 photos (the
+ * references in `docs/techniques/wet-dry-surfaces.md`).
  */
 export const TEXTURE_SET_WET_RESPONSES = {
   SAND: {
@@ -182,7 +185,8 @@ export const TEXTURE_SET_WET_RESPONSES = {
   },
 } as const satisfies Record<TextureSetCategory, TextureSetWetResponse>;
 
-/** A procedural set's defaults (p304 D3): what the gatherer writes for a `procedural` field the
+// p304 D3
+/** A procedural set's defaults: what the gatherer writes for a `procedural` field the
  * JSON doesn't give. */
 export const TEXTURE_SET_PROCEDURAL_DEFAULTS = {
   packing: 'LITE',
@@ -311,11 +315,12 @@ const TextureSetSurfaceSchema = z
     'The surface defaults a terrain material copies into uniforms (each layer may override any).'
   );
 
+// p303 D1; procedural sets: p304 D3
 /**
- * A texture set JSON (`*.textureSet.json`, p303 D1): a named group of packed PBR maps (each slot a
+ * A texture set JSON (`*.textureSet.json`): a named group of packed PBR maps (each slot a
  * texture asset's id) and the physical facts of the surface. A scene lists it in its `textureSets`
  * (its default packing's textures load), or a TSL material names it in an input
- * (`{ "textureSet": "sand01" }`). A procedural set (p304 D3) gives `procedural` (a generator, baked
+ * (`{ "textureSet": "sand01" }`). A procedural set gives `procedural` (a generator, baked
  * on load into one packing) in place of `packings`. Needs the `textureSets()` feature.
  */
 export const TextureSetAssetSchema = z
@@ -363,7 +368,8 @@ export const TextureSetAssetSchema = z
       .describe(
         "The set's textures by packing (FULL, LITE, MINIMAL) and slot: at least one. A procedural set gives procedural instead."
       ),
-    /** A procedural set's generator, baked on load into one packing (p304 D3). Not with
+    // p304 D3
+    /** A procedural set's generator, baked on load into one packing. Not with
      * `packings`. */
     procedural: TextureSetProceduralSchema.optional(),
     /** The surface's defaults, which a terrain material copies into uniforms. */
@@ -423,14 +429,16 @@ export type TextureSetDef = Omit<
   /** The set's textures by packing and slot. A procedural set's one packing names the textures
    * its bake registers, `<id>.<slot>`. */
   packings: NonNullable<TextureSetAsset['packings']>;
-  /** A procedural set's generator and bake, every field given (p304 D3). */
+  // p304 D3
+  /** A procedural set's generator and bake, every field given. */
   procedural?: TextureSetProceduralDef;
   /** The surface's defaults, every field given. */
   surface: TextureSetSurface;
 };
 
+// p303 D1
 /**
- * A TSL input's texture set (p303 D1): `{ "textureSet": "sand01" }` is a bundle of the set's default
+ * A TSL input's texture set: `{ "textureSet": "sand01" }` is a bundle of the set's default
  * packing's textures (`"packing"` picks another) and its surface uniforms (`TextureSetInputRef` on
  * `aekasha/texturesets`). Needs the `textureSets()` feature.
  */
@@ -449,8 +457,9 @@ export const TextureSetInputSchema = z
     "A texture set: each slot's texture of its packing and its surface uniforms, by name. Needs the textureSets() feature."
   );
 
+// p303 D4
 /**
- * A TSL input's texture set array (p303 D4): `{ "textureSetArray": ["sand01", "grass01"],
+ * A TSL input's texture set array: `{ "textureSetArray": ["sand01", "grass01"],
  * "packing": "LITE" }` is a bundle of the packing's array textures (layer `i` from the `i`th set)
  * and the layers' params (`TextureSetArrayInputRef` on `aekasha/texturesets`), or
  * `{ "textureSetArray": "gallery" }` a set array the scene lists with that `id`. The arrays are
@@ -485,8 +494,9 @@ export const TextureSetArrayInputSchema = z
     "A texture set array: the packing's array textures and the layers' params, by name. Needs the textureSets() feature."
   );
 
+// p303 D4
 /**
- * A set array a scene builds with its load (p303 D4, the scene's `textureSetArrays`): what its
+ * A set array a scene builds with its load (the scene's `textureSetArrays`): what its
  * code and its materials' `{ textureSetArray }` inputs sample.
  */
 export const SceneTextureSetArraySchema = z

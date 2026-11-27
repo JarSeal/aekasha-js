@@ -67,7 +67,8 @@ export type MenuRadioGroup = {
   onValueChange?: (value: string) => void;
 };
 
-/** A menu's item that opens a submenu (p805 D11): ArrowRight, Enter, Space, a click or a hover
+// p805 D11
+/** A menu's item that opens a submenu: ArrowRight, Enter, Space, a click or a hover
  * of `--aek-submenu-delay` opens it beside the item. */
 export type MenuSubmenuItem = {
   /** A submenu. */
@@ -550,9 +551,11 @@ export const createMenuSurface = (props: MenuSurfaceProps): MenuSurface => {
   };
 };
 
+// p805 D11
+// p803 D10
 /**
- * Creates a menu (p803 D10, the APG menu button): a list of actions, on / off items, one-of
- * choices, submenus (p805 D11), groups and separators, opened by its trigger and anchored to it.
+ * Creates a menu (the APG menu button): a list of actions, on / off items, one-of
+ * choices, submenus, groups and separators, opened by its trigger and anchored to it.
  * - Parts: `.aekMenu` (`role="menu"`), in the HUD root while it's open, in the browser's top layer
  *   (else at `--aek-z-tooltip`); `.aekMenu__item` (`menuitem`, `menuitemcheckbox`,
  *   `menuitemradio`; `aria-disabled`, `aria-checked`; `aria-keyshortcuts` from its `kbd`) with

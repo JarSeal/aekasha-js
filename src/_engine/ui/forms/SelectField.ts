@@ -95,8 +95,9 @@ const buildSelectMonitor = <T extends SelectValue>(props: SelectFieldProps<T>) =
   }).shell.field;
 };
 
+// p804 D7
 /**
- * Creates a select field (p804 D7): the drop-down on a binding (`{ target, key }`, `{ get, set }`
+ * Creates a select field: the drop-down on a binding (`{ target, key }`, `{ get, set }`
  * or `{ value }`), one value of a list, written on each pick (one `onChange` with `last: true`).
  * `options` takes Tweakpane's two forms, `[{ text, value }]` and `{ [text]: value }` (and the
  * kit's `{ label, value }`), or a getter re-read on each open and refresh. A value no option has

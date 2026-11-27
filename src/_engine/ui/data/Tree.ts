@@ -44,8 +44,9 @@ const isBelow = <T>(line: TreeLine<T>, entry: TreeEntry<T>) => {
   return false;
 };
 
+// p805 D7
 /**
- * Creates a tree (p805 D7): an app's nested nodes as rows, each a title with an optional icon,
+ * Creates a tree: an app's nested nodes as rows, each a title with an optional icon,
  * badge, suffix and tooltip (or a CMP of `render`), opened and closed by the user, kept by key so
  * new nodes write only what changed. A node's children are `getChildren`'s, or loaded on its first
  * open (`loadChildrenAsync`: a loading row meanwhile, an error row with a retry). Selectable
