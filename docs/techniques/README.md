@@ -2,9 +2,10 @@
 
 Long-form how-to pages: how to build something with Ækasha from the source file to the running scene, with what it costs and what it suits. The Ækasha Hub's feature pages say what each API does and link here for the workflow; these pages say how to use it in a real project.
 
-Most pages are about texturing terrain and large structures (the terrain texturing epic, p301). Two are general:
+Most pages are about texturing terrain and large structures (the terrain texturing epic, p301). Three are general:
 
 - [Asset optimization](asset-optimization.md): the KTX2 and meshopt pipeline, its profiles and slots, pack channels, texture arrays and atlases, and the codec cheat sheet. Every texture on the other pages goes through it.
+- [Fonts for 3D text](text-fonts.md): `*.font.json` fonts, `yarn importFont`, the atlas types, charsets, sizes, licences and what an atlas costs.
 - [Writing Ækasha Hub pages](hub-authoring.md): authoring the Hub.
 
 ## Start here

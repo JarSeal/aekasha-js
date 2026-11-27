@@ -408,6 +408,10 @@ The codecs per slot, as an export writes them:
 
 A 12 × 12 octahedral atlas (864²) is about 1 MB of GPU memory per slot as UASTC, against about 4 MB baked at load (RGBA8 with mips).
 
+## Fonts
+
+A `*.font.json` is encoded by the same pipeline into a distance field atlas (a lossless KTX2, `R8G8B8A8_UNORM` or `R8_UNORM` with zstd, no mips: a block codec's error would move the outline) and a layout JSON, both in `src/public/aek-assets/` and `assets.lock.json` like any output. A font always encodes (no pass-through form) and needs `ktx` like a texture. Its own page: [Fonts for 3D text](text-fonts.md).
+
 ## Budgets
 
 A build fails when a shipped asset goes over its budget, so a texture that grew to 4K or slipped into `none` doesn't reach production unnoticed.
