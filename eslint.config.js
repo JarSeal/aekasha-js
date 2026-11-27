@@ -84,6 +84,9 @@ const KERNEL_FEATURE_IMPORT = {
 // Debug code is found by name, wherever its feature keeps it (p608 D4)
 const DEBUG_FILES = ['src/**/_dbg__*.ts'];
 
+// A plan or issue reference (`p607`, `i250`, `p303_….md`, `_DONE_…`), as an esquery regex
+const PLAN_REFERENCE = String.raw`/(?<![A-Za-z0-9])[pi]\d{3}(?![A-Za-z0-9])|_DONE_/`;
+
 // The simulation: code that runs at APP_PHYSICS_STEP or inside the physics step, on the main
 // thread or in the physics worker. It must run identically on every machine, so it counts time in
 // steps and draws randomness from a seeded RNG. Two feature folders, without what else they hold
@@ -222,6 +225,31 @@ export default [
       'jsdoc/sort-tags': 'error',
       'jsdoc/require-hyphen-before-param-description': ['error', 'never'],
       'jsdoc/informative-docs': 'error',
+    },
+  },
+  // No plan or issue reference in the engine's and the toolkit's JSDoc (the coding standards' JSDoc
+  // page): the Hub, `yarn docs` and the hover render it. Provenance goes in a `//` comment, which
+  // nothing renders. Every block (`any`), its tags included: a tag's first word is its `name`
+  // (`@remarks _DONE_p094_….md`). The lookarounds, not `\b`, so `p303_….md` and `_DONE_p094` match.
+  // No fix: rewording needs a person. `warn` until p104's last phase.
+  {
+    files: ['src/_engine/**/*.ts', 'src/toolkit/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    plugins: { jsdoc },
+    rules: {
+      'jsdoc/no-restricted-syntax': [
+        'warn',
+        {
+          contexts: [
+            {
+              context: 'any',
+              comment: `JsdocBlock:has([description=${PLAN_REFERENCE}]), JsdocBlock:has([name=${PLAN_REFERENCE}])`,
+              message:
+                "Plan and issue references go in `//` comments, not JSDoc (see the coding standards' JSDoc page).",
+            },
+          ],
+        },
+      ],
     },
   },
 
