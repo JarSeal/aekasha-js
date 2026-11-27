@@ -16,8 +16,13 @@ import { getScatterFeatureIds } from './scatters';
 import { getTerrainBlockFeatureIds } from './terrainBlocks';
 import { getListedTextureSetTextureIds } from './textureSets';
 
-/** A scene's inline cameras', lights' and sky boxes' ids, by list (development data only) */
-export type InlineAssetIds = { cameras?: string[]; lights?: string[]; skyboxes?: string[] };
+/** A scene's inline cameras', lights', sky boxes' and fogs' ids, by list (development data only) */
+export type InlineAssetIds = {
+  cameras?: string[];
+  lights?: string[];
+  skyboxes?: string[];
+  fogs?: string[];
+};
 
 /** A resolved scene, with the features its data needs (p607 D10) */
 export type ResolvedScene = SceneJSON & {
@@ -41,7 +46,7 @@ const getInlineAppId = (
 ) => props?.appId || entityOpts?.appId;
 
 /**
- * The ids of the cameras, lights and sky boxes written inline in a scene JSON (objects, not ids),
+ * The ids of the cameras, lights, sky boxes and fogs written inline in a scene JSON (objects, not ids),
  * which the debugger's save moves into files of their own (p355 §2.6): the development data's
  * `__inlineAssets`, so it can tell them from assets listed by id (both resolve to objects). A list
  * the scene's save entry replaces has none (its items aren't in the file's own list), and an
@@ -71,6 +76,10 @@ const getInlineAssetIds = ({ id: sceneId, data }: GatheredScene): InlineAssetIds
   add(
     'skyboxes',
     ownList('skyboxes', data.skyboxes).map((sky) => (typeof sky === 'string' ? undefined : sky.id))
+  );
+  add(
+    'fogs',
+    ownList('fogs', data.fogs).map((fog) => (typeof fog === 'string' ? undefined : fog.id))
   );
   return Object.keys(ids).length ? ids : undefined;
 };

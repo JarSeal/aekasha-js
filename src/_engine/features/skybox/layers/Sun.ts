@@ -196,6 +196,19 @@ export const applySunLightingUniforms = (
 };
 
 /**
+ * The sun's halo seen in direction `dir` (unit), on the CPU: sunNode's `tint · glow`, step for
+ * step, added to `out` (linear; the disc is left out). The sky's horizon colour
+ * (SkyHorizonColor.ts) adds it behind the atmosphere, as the composite does. Allocates nothing.
+ * @internal
+ */
+export const addSunGlow = (dir: THREE.Vector3, u: SunUniforms, out: THREE.Color) => {
+  const cosTheta = dir.dot(u.direction.value);
+  const glow = Math.max(cosTheta, 0) ** u.glowExponent.value * u.glowIntensity.value;
+  const tint = u.tint.value;
+  return out.setRGB(out.r + tint.r * glow, out.g + tint.g * glow, out.b + tint.b * glow);
+};
+
+/**
  * The sun over `behind`. ENV_BAKE: no disc when the sun has a light (the light gives that
  * highlight, twice would double it); otherwise the disc widened to a few bake texels (a 0.5°
  * disc is sub-texel there) and clamped, so the GGX filter doesn't sparkle. The halo stays.

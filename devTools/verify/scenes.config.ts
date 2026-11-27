@@ -478,6 +478,22 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
   terrainGallery: {
     debugger: { tabs: ['terrainGallery'] },
   },
+  // p106 Phase 5: the fog's verification scene, a run per mode (the scene's `fogShowcaseFog`
+  // parameter shows that fog). No physics; the sky stands still at 16:30, so each snapshot is the
+  // same on every run. `prodTest` checks the fog renders in a production-like build too
+  fogShowcase: {
+    variants: [
+      { id: 'linear', params: { fogShowcaseFog: 'linear' }, reason: "LINEAR: three's Fog" },
+      { id: 'exp2', params: { fogShowcaseFog: 'exp2' }, reason: "EXP2: three's FogExp2" },
+      {
+        id: 'height',
+        params: { fogShowcaseFog: 'height' },
+        reason: 'HEIGHT (the default): the floor fogged, the hilltops clear, the sun glow',
+      },
+    ],
+    // The scene's tab: its fog switch, day and dense valley fog
+    debugger: { tabs: ['fogShowcase'] },
+  },
   terrainShowcase: {
     // 3 s: the player character (dropped 2 m onto the coast's beach at the load) lands and
     // settles before the freeze. The blocks' heightfields, the boulders' hulls (the alpine's

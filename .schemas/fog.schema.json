@@ -1,0 +1,615 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "#/definitions/__schema0"
+    },
+    "isDefault": {
+      "$ref": "#/definitions/__schema1"
+    },
+    "mode": {
+      "$ref": "#/definitions/__schema3"
+    },
+    "enabled": {
+      "$ref": "#/definitions/__schema4"
+    },
+    "colorSource": {
+      "$ref": "#/definitions/__schema6"
+    },
+    "color": {
+      "$ref": "#/definitions/__schema8"
+    },
+    "linear": {
+      "$ref": "#/definitions/__schema12"
+    },
+    "exp2": {
+      "$ref": "#/definitions/__schema17"
+    },
+    "height": {
+      "$ref": "#/definitions/__schema20"
+    },
+    "sunScattering": {
+      "$ref": "#/definitions/__schema31"
+    },
+    "background": {
+      "$ref": "#/definitions/__schema38"
+    },
+    "debugData": {
+      "$ref": "#/definitions/__schema40"
+    },
+    "$schema": {
+      "$ref": "#/definitions/__schema51"
+    },
+    "__sourcePath": {
+      "$ref": "#/definitions/__schema52"
+    },
+    "__saveData": {
+      "$ref": "#/definitions/__schema53"
+    }
+  },
+  "required": [
+    "id",
+    "mode"
+  ],
+  "additionalProperties": false,
+  "description": "A fog (the fog() feature): one of LINEAR, EXP2 and HEIGHT, its colour and sun glow.",
+  "definitions": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What setFog and the save data name it by. A file's defaults to its name."
+    },
+    "__schema1": {
+      "description": "Whether the scene starts with it. Without one, the scene's first fog.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema2"
+        }
+      ]
+    },
+    "__schema2": {
+      "type": "boolean"
+    },
+    "__schema3": {
+      "type": "string",
+      "enum": [
+        "LINEAR",
+        "EXP2",
+        "HEIGHT"
+      ],
+      "description": "LINEAR (between near and far), EXP2 (by density) or HEIGHT (thick low down)."
+    },
+    "__schema4": {
+      "description": "Whether it renders (with setFogEnabled's switch). Default true.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema5"
+        }
+      ]
+    },
+    "__schema5": {
+      "type": "boolean"
+    },
+    "__schema6": {
+      "description": "SKY (the wired sky colour, color without one) or MANUAL (color). Default SKY.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema7"
+        }
+      ]
+    },
+    "__schema7": {
+      "type": "string",
+      "enum": [
+        "SKY",
+        "MANUAL"
+      ]
+    },
+    "__schema8": {
+      "description": "MANUAL's colour, and SKY's without a sky colour (sRGB). Default #b4c0cc.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema9"
+        }
+      ]
+    },
+    "__schema9": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/__schema10"
+        },
+        {
+          "$ref": "#/definitions/__schema11"
+        }
+      ],
+      "description": "A CSS colour string (\"#ff8800\", \"orange\") or { r, g, b } in 0-255, both sRGB."
+    },
+    "__schema10": {
+      "type": "string"
+    },
+    "__schema11": {
+      "type": "object",
+      "properties": {
+        "r": {
+          "type": "number",
+          "description": "Red, 0-255."
+        },
+        "g": {
+          "type": "number",
+          "description": "Green, 0-255."
+        },
+        "b": {
+          "type": "number",
+          "description": "Blue, 0-255."
+        }
+      },
+      "required": [
+        "r",
+        "g",
+        "b"
+      ],
+      "additionalProperties": false
+    },
+    "__schema12": {
+      "type": "object",
+      "properties": {
+        "near": {
+          "$ref": "#/definitions/__schema13"
+        },
+        "far": {
+          "$ref": "#/definitions/__schema15"
+        }
+      },
+      "additionalProperties": false,
+      "description": "LINEAR's parameters (three's Fog: a smoothstep between near and far)."
+    },
+    "__schema13": {
+      "description": "Metres from the camera where the fog starts. Default 10.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema14"
+        }
+      ]
+    },
+    "__schema14": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema15": {
+      "description": "Metres from the camera where the fog is full (more than near). Default 500.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema16"
+        }
+      ]
+    },
+    "__schema16": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema17": {
+      "type": "object",
+      "properties": {
+        "density": {
+          "$ref": "#/definitions/__schema18"
+        }
+      },
+      "additionalProperties": false,
+      "description": "EXP2's parameters (three's FogExp2)."
+    },
+    "__schema18": {
+      "description": "The factor is 1 − exp(−(density · distance)²). Default 0.005.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema19"
+        }
+      ]
+    },
+    "__schema19": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema20": {
+      "type": "object",
+      "properties": {
+        "density": {
+          "$ref": "#/definitions/__schema21"
+        },
+        "baseHeight": {
+          "$ref": "#/definitions/__schema23"
+        },
+        "falloff": {
+          "$ref": "#/definitions/__schema25"
+        },
+        "startDistance": {
+          "$ref": "#/definitions/__schema27"
+        },
+        "maxOpacity": {
+          "$ref": "#/definitions/__schema29"
+        }
+      },
+      "additionalProperties": false,
+      "description": "HEIGHT's parameters: an exponential height fog, thick low down."
+    },
+    "__schema21": {
+      "description": "The density per metre at baseHeight. Default 0.02.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema22"
+        }
+      ]
+    },
+    "__schema22": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema23": {
+      "description": "The world Y where the density is density. Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema24"
+        }
+      ]
+    },
+    "__schema24": {
+      "type": "number"
+    },
+    "__schema25": {
+      "description": "How fast the density falls with height, per metre. Default 0.1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema26"
+        }
+      ]
+    },
+    "__schema26": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema27": {
+      "description": "Metres from the camera before which there's no fog. Default 0.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema28"
+        }
+      ]
+    },
+    "__schema28": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema29": {
+      "description": "The fog factor's maximum, 0 to 1. Default 1.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema30"
+        }
+      ]
+    },
+    "__schema30": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "__schema31": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "$ref": "#/definitions/__schema32"
+        },
+        "strength": {
+          "$ref": "#/definitions/__schema34"
+        },
+        "exponent": {
+          "$ref": "#/definitions/__schema36"
+        }
+      },
+      "additionalProperties": false,
+      "description": "The sun glow: the fog's colour moves toward the sun's around it."
+    },
+    "__schema32": {
+      "description": "Whether the fog glows toward the sun. Default: on for HEIGHT, off otherwise.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema33"
+        }
+      ]
+    },
+    "__schema33": {
+      "type": "boolean"
+    },
+    "__schema34": {
+      "description": "How far the colour moves toward the sun's, looking at it, 0 to 1. Default 0.5.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema35"
+        }
+      ]
+    },
+    "__schema35": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "__schema36": {
+      "description": "How tight the glow is around the sun: higher is tighter. Default 8.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema37"
+        }
+      ]
+    },
+    "__schema37": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema38": {
+      "description": "NONE, or FOG_COLOR: the clear colour is the fog's while no sky box shows a background. Default NONE.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema39"
+        }
+      ]
+    },
+    "__schema39": {
+      "type": "string",
+      "enum": [
+        "NONE",
+        "FOG_COLOR"
+      ]
+    },
+    "__schema40": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/__schema41"
+        },
+        "description": {
+          "$ref": "#/definitions/__schema43"
+        },
+        "comments": {
+          "$ref": "#/definitions/__schema45"
+        },
+        "todo": {
+          "$ref": "#/definitions/__schema47"
+        },
+        "debugObj": {
+          "$ref": "#/definitions/__schema49"
+        }
+      },
+      "additionalProperties": false,
+      "description": "What the debug tools show for it. Production data has none."
+    },
+    "__schema41": {
+      "description": "The name the debug tools show.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema42"
+        }
+      ]
+    },
+    "__schema42": {
+      "type": "string"
+    },
+    "__schema43": {
+      "description": "A longer description for the debug tools.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema44"
+        }
+      ]
+    },
+    "__schema44": {
+      "type": "string"
+    },
+    "__schema45": {
+      "description": "Notes with their times.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema46"
+        }
+      ]
+    },
+    "__schema46": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "number",
+            "description": "Milliseconds since the UNIX epoch."
+          },
+          "comment": {
+            "type": "string",
+            "description": "The note."
+          }
+        },
+        "required": [
+          "timestamp",
+          "comment"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "__schema47": {
+      "description": "Open items, by key.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema48"
+        }
+      ]
+    },
+    "__schema48": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema49": {
+      "description": "Anything else a debug tool keeps for it.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema50"
+        }
+      ]
+    },
+    "__schema50": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema51": {
+      "type": "string",
+      "description": "The JSON Schema in .schemas/ an editor validates this file with. The gatherer ignores it."
+    },
+    "__schema52": {
+      "type": "string"
+    },
+    "__schema53": {
+      "description": "Per scene id, its save entries, newest first: the gatherer applies only the first, over the asset. Written by the debugger and the dev files.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema54"
+        }
+      ]
+    },
+    "__schema54": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "$ref": "#/definitions/__schema4"
+            },
+            "colorSource": {
+              "$ref": "#/definitions/__schema6"
+            },
+            "color": {
+              "$ref": "#/definitions/__schema8"
+            },
+            "linear": {
+              "$ref": "#/definitions/__schema12"
+            },
+            "exp2": {
+              "$ref": "#/definitions/__schema17"
+            },
+            "height": {
+              "$ref": "#/definitions/__schema20"
+            },
+            "sunScattering": {
+              "$ref": "#/definitions/__schema31"
+            },
+            "background": {
+              "$ref": "#/definitions/__schema38"
+            },
+            "mode": {
+              "$ref": "#/definitions/__schema55"
+            },
+            "__meta": {
+              "$ref": "#/definitions/__schema57"
+            }
+          },
+          "additionalProperties": false,
+          "description": "The values a fog changes in one scene, deep merged over its definition."
+        }
+      }
+    },
+    "__schema55": {
+      "description": "Which parameters render.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema56"
+        }
+      ]
+    },
+    "__schema56": {
+      "type": "string",
+      "enum": [
+        "LINEAR",
+        "EXP2",
+        "HEIGHT"
+      ]
+    },
+    "__schema57": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "$ref": "#/definitions/__schema58"
+        },
+        "engineVersion": {
+          "$ref": "#/definitions/__schema60"
+        },
+        "toolkitVersion": {
+          "$ref": "#/definitions/__schema62"
+        },
+        "appVersion": {
+          "$ref": "#/definitions/__schema63"
+        },
+        "author": {
+          "$ref": "#/definitions/__schema64"
+        }
+      },
+      "additionalProperties": false,
+      "description": "When the entry was saved, by whom, and the versions of each part then."
+    },
+    "__schema58": {
+      "description": "When the entry was saved: milliseconds since the UNIX epoch.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema59"
+        }
+      ]
+    },
+    "__schema59": {
+      "type": "number"
+    },
+    "__schema60": {
+      "description": "The engine's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema61"
+        }
+      ]
+    },
+    "__schema61": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "__schema62": {
+      "description": "The toolkit's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema61"
+        }
+      ]
+    },
+    "__schema63": {
+      "description": "The app's version when it was saved.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema61"
+        }
+      ]
+    },
+    "__schema64": {
+      "description": "Who saved the entry: git's user.name on the dev server's machine.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema65"
+        }
+      ]
+    },
+    "__schema65": {
+      "type": "string"
+    }
+  }
+}

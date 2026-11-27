@@ -118,6 +118,8 @@ const runGather = (ctx: GatherContext, opts: GatherOptions, outDir: string): Gat
           meshes: reg.meshes,
           importedAssets: reg.importedAssets,
           skyboxes: reg.skyboxes,
+          // Each fog file's `__sourcePath`: the fog save source finds its file there (p106)
+          fogs: reg.fogs,
           postFx: reg.postFx,
           impostors: reg.impostors,
         },

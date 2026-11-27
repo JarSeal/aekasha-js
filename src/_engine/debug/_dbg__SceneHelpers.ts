@@ -1,6 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { getRootScene } from '../kernel/scene/Scene';
 import { getDebugToolsState } from './DebugTools';
+import { markDebugHelper } from './Profiler';
 
 // Global helpers and won't be deleted on scene change. A create* call replaces its helper and
 // keeps its visibility (the "Show" setting while there is none), so a size or colour change of a
@@ -21,7 +22,7 @@ export const createAxesHelper = (size?: number) => {
   if (!size) size = getDebugToolsState().helpers.axesHelperSize;
   axesHelper = new THREE.AxesHelper(size);
   axesHelper.visible = visible;
-  rootScene.add(axesHelper);
+  rootScene.add(markDebugHelper(axesHelper));
 };
 export const toggleAxesHelperVisibility = (show: boolean) => {
   if (!axesHelper && show) createAxesHelper();
@@ -44,7 +45,7 @@ export const createGridHelper = (
   }
   gridHelper = new THREE.GridHelper(gridSize, gridDivisionsSize, centerLineColor, gridColor);
   gridHelper.visible = visible;
-  rootScene.add(gridHelper);
+  rootScene.add(markDebugHelper(gridHelper));
 };
 export const toggleGridHelperVisibility = (show: boolean) => {
   if (!gridHelper && show) {
@@ -77,7 +78,7 @@ export const createPolarGridHelper = (
   }
   polarGridHelper = new THREE.PolarGridHelper(radius, sectors, rings, divisions);
   polarGridHelper.visible = visible;
-  rootScene.add(polarGridHelper);
+  rootScene.add(markDebugHelper(polarGridHelper));
 };
 export const togglePolarGridHelperVisibility = (show: boolean) => {
   if (!polarGridHelper && show) {

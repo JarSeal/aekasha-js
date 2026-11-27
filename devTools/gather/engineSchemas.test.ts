@@ -98,6 +98,7 @@ describe('getSceneFeatureIds (the scene manifest)', () => {
       'terrainBlocks',
       'decalSets',
       'surfaceConditions',
+      'fogs',
       'scatters',
       'worldBounds',
     ]);

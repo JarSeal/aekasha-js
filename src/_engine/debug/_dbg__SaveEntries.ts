@@ -85,6 +85,7 @@ export const toSaveEntryWrite = (json: unknown, sceneId: string, entry: Obj) =>
 /** The dev data's lists a scene names an asset in, and its registries */
 type SceneAssetKind =
   | { list: 'skyboxes' | 'postFx'; registry: 'skyboxes' | 'postFx' }
+  | { list: 'fogs'; registry: 'fogs' }
   | { list: 'materials'; registry: 'materials' }
   | { list: 'cameras'; registry: 'cameras' }
   | { list: 'lights'; registry: 'lights' };
@@ -150,6 +151,7 @@ const INLINE_FILE_TYPES: { [list: string]: string | undefined } = {
   cameras: 'camera',
   lights: 'light',
   skyboxes: 'skybox',
+  fogs: 'fog',
 };
 
 /** The JSON Schema (`.schemas/<name>.schema.json`) of an inline asset's list */
@@ -157,6 +159,7 @@ const INLINE_FILE_SCHEMAS: { [list: string]: string | undefined } = {
   cameras: 'camera',
   lights: 'light',
   skyboxes: 'skyBox',
+  fogs: 'fog',
 };
 
 /**
@@ -207,9 +210,9 @@ const isInlineAsset = (scene: Obj, list: string, assetId: string) => {
 
 /**
  * The file a scene's asset is saved into, or why there's none: the scene isn't in the generated
- * data, or its JSON doesn't list the asset (made in code, or no longer listed). A camera, light or
- * sky box written inline in the scene JSON is saved by moving it into a file of its own (§2.6:
- * `extract`, unless its id or new file is taken); any other inline asset has no file.
+ * data, or its JSON doesn't list the asset (made in code, or no longer listed). A camera, light,
+ * sky box or fog written inline in the scene JSON is saved by moving it into a file of its own
+ * (§2.6: `extract`, unless its id or new file is taken); any other inline asset has no file.
  */
 export const findSceneAssetFile = (
   kind: SceneAssetKind,

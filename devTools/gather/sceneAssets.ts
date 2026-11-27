@@ -4,10 +4,12 @@
  * the gather (p619 G12); inline entries are kept as they are.
  */
 import {
+  applyFogSaveEntry,
   applySkyBoxSaveEntry,
   getAtlasSlotTextureId,
   type ImpostorDef,
   type MaterialAsset,
+  resolveFogDef,
 } from '../../src/_engine/schemas';
 import {
   getImpostorDefSlots,
@@ -372,6 +374,32 @@ const resolveSkyBoxes = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun
   });
 };
 
+// Each fog (an inline one resolved here) with this scene's latest save entry deep-merged over it;
+// an id twice in the list fails the gather (`setFog` finds a fog by its id)
+const resolveFogs = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun) => {
+  if (!Array.isArray(scene.fogs)) return;
+  const ids = new Set<string>();
+  scene.fogs = scene.fogs.map((fogIdOrInline) => {
+    let fog: (typeof reg.fogs)[string] | undefined;
+    if (typeof fogIdOrInline === 'string') {
+      fog = reg.fogs[fogIdOrInline];
+    } else {
+      const { $schema, __sourcePath, __saveData, ...input } = fogIdOrInline;
+      fog = { ...resolveFogDef(input), __saveData };
+    }
+    if (!fog) return reportUnknownId('fog', fogIdOrInline as string);
+    if (ids.has(fog.id)) {
+      ctx.log.error(`The scene "${sceneId}" lists the fog "${fog.id}" twice in its fogs.`);
+    }
+    ids.add(fog.id);
+
+    const { __sourcePath, __saveData, ...def } = fog;
+    const fogData = applyFogSaveEntry(def, __saveData?.[sceneId]?.[0]);
+    if (ctx.isProduction) delete fogData.debugData;
+    return fogData;
+  });
+};
+
 // The order is kept: it is the execution order
 const resolvePostFx = ({ ctx, reg, sceneId, scene, reportUnknownId }: SceneRun) => {
   if (!Array.isArray(scene.postFx)) return;
@@ -416,6 +444,7 @@ export const resolveSceneAssets = (run: SceneRun) => {
   checkPersistentAppIds(run);
   resolveTextureSets(run);
   resolveSkyBoxes(run);
+  resolveFogs(run);
   addTextureClosure(run);
   resolveTextures(run);
   // The set arrays' members the textures don't hold (pass 1 checked each slot is a texture asset)

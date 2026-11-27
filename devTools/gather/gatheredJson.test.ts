@@ -147,3 +147,16 @@ describe('bad assets fail', () => {
     expect(validateGatheredJson('src/app/notes.json', { anything: true })).toBeNull();
   });
 });
+
+describe('an id from the file name', () => {
+  test.each(['app/fogs/valley.fog.json', 'app/skyboxes/clear.skybox.json'])(
+    '%s without an id passes, one with a number for an id fails',
+    (file) => {
+      const json = file.endsWith('.fog.json')
+        ? { mode: 'LINEAR' }
+        : { base: { type: 'COLOR', color: '#000000' } };
+      expect(validateGatheredJson(file, json)).toBeNull();
+      expect(validateGatheredJson(file, { ...json, id: 5 })).not.toBeNull();
+    }
+  );
+});

@@ -7,6 +7,7 @@ import type z from 'zod';
 import {
   CameraAssetSchema,
   DecalSetAssetSchema,
+  FogAssetSchema,
   GeoAssetSchema,
   ImportedAssetSchema,
   ImpostorAssetSchema,
@@ -40,6 +41,7 @@ export const GATHERED_SUFFIXES = {
   mesh: '.mesh.json',
   importedAsset: '.importedAsset.json',
   skybox: '.skybox.json',
+  fog: '.fog.json',
   postFx: '.postFx.json',
   terrainBlock: '.terrainBlock.json',
   scatter: '.scatter.json',
@@ -67,6 +69,7 @@ const GATHERED_SCHEMAS: Record<GatheredJsonType, z.ZodType> = {
   mesh: EngineMeshAssetSchema,
   importedAsset: ImportedAssetSchema,
   skybox: SkyBoxAssetSchema,
+  fog: FogAssetSchema,
   postFx: PostFxAssetSchema,
   terrainBlock: TerrainBlockAssetSchema,
   scatter: ScatterAssetSchema,
@@ -129,12 +132,22 @@ export const expandUnionIssues = (issues: ZodIssue[]): ZodIssue[] =>
     );
   });
 
-/** A sky box's JSON with its id defaulted to the file name, as the gather validates it (the
- * schema requires one); any other value as it is */
-export const withSkyBoxIdDefault = (filePath: string, value: unknown) =>
-  value && typeof value === 'object' && !('id' in value && value.id)
-    ? { ...value, id: getIdFromFileName(filePath, 'skybox') }
+/** The types whose schema requires an `id`, which a file's name gives when it has none (an
+ * inline one in a scene must give its own) */
+const TYPES_WITH_ID_DEFAULT = new Set<GatheredJsonType>(['skybox', 'fog']);
+
+/** A sky box's or a fog's JSON with its id defaulted to the file name, as the gather validates it
+ * (the schema requires one); any other type's, or any other value, as it is */
+export const withIdDefault = (filePath: string, value: unknown) => {
+  const type = getGatheredJsonType(filePath);
+  return type &&
+    TYPES_WITH_ID_DEFAULT.has(type) &&
+    value &&
+    typeof value === 'object' &&
+    !('id' in value && value.id)
+    ? { ...value, id: getIdFromFileName(filePath, type) }
     : value;
+};
 
 /**
  * Validates a JSON value against the schema of the gathered type its file name says (the dev
@@ -145,8 +158,7 @@ export const withSkyBoxIdDefault = (filePath: string, value: unknown) =>
 export const validateGatheredJson = (filePath: string, data: unknown) => {
   const type = getGatheredJsonType(filePath);
   if (!type) return null;
-  const value = type === 'skybox' ? withSkyBoxIdDefault(filePath, data) : data;
-  const validation = GATHERED_SCHEMAS[type].safeParse(value);
+  const validation = GATHERED_SCHEMAS[type].safeParse(withIdDefault(filePath, data));
   if (validation.success) return null;
   return expandUnionIssues(validation.error.issues).map((issue) => ({
     path: issue.path.map(String).join('.'),

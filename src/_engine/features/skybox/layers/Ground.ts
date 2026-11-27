@@ -107,3 +107,24 @@ export const groundNode = (
   const ground = mix(u.color.mul(u.light), back, aerial);
   return mix(back, ground, mask);
 };
+
+const _ground = new THREE.Color();
+
+/**
+ * The ground over `behind` for a view direction of height `dirY`, on the CPU: groundNode step
+ * for step, into `out` (linear, `behind` may be `out`). The sky's horizon colour
+ * (SkyHorizonColor.ts) uses it. Allocates nothing.
+ * @internal
+ */
+export const computeGroundColor = (
+  dirY: number,
+  behind: THREE.Color,
+  u: GroundUniforms,
+  out: THREE.Color
+) => {
+  const below = u.horizonY.value - dirY;
+  const mask = THREE.MathUtils.smoothstep(below, 0, u.blend.value);
+  const aerial = (1 - THREE.MathUtils.smoothstep(below, 0, AERIAL_DEPTH)) * u.aerial.value;
+  _ground.copy(u.color.value).multiplyScalar(u.light.value).lerp(behind, aerial);
+  return out.copy(behind).lerp(_ground, mask);
+};

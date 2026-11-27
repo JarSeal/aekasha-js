@@ -4,6 +4,8 @@ import type z from 'zod';
 import type {
   CameraAsset,
   DecalSetDef,
+  FogAsset,
+  FogDef,
   GeoAsset,
   ImportedAsset,
   ImpostorAsset,
@@ -84,6 +86,8 @@ export type Registries = {
   meshes: Record<string, EngineMeshAsset>;
   importedAssets: Record<string, ImportedAsset>;
   skyboxes: Record<string, SkyBoxAsset>;
+  /** Fogs (p106 D2): their defaults filled in, their save data kept for the scenes */
+  fogs: Record<string, FogDef & Pick<FogAsset, '__sourcePath' | '__saveData'>>;
   postFx: Record<string, PostFxAsset>;
   /** Terrain blocks (p306 D2): their defaults filled in, as scenes get them */
   terrainBlocks: Record<string, TerrainBlockDef & { __sourcePath?: string }>;
@@ -120,6 +124,7 @@ export type IdSpace =
   | 'meshes'
   | 'importedAssets'
   | 'skyboxes'
+  | 'fogs'
   | 'postFx'
   | 'terrainBlocks'
   | 'scatters'
@@ -147,6 +152,7 @@ export const createRegistries = (): { registries: Registries; taken: TakenIds } 
     meshes: {},
     importedAssets: {},
     skyboxes: {},
+    fogs: {},
     postFx: {},
     terrainBlocks: {},
     scatters: {},
@@ -166,6 +172,7 @@ export const createRegistries = (): { registries: Registries; taken: TakenIds } 
     meshes: new Set(),
     importedAssets: new Set(),
     skyboxes: new Set(),
+    fogs: new Set(),
     postFx: new Set(),
     terrainBlocks: new Set(),
     scatters: new Set(),
@@ -232,6 +239,7 @@ const TYPE_LABELS: Record<GatheredJsonType, string> = {
   mesh: 'mesh',
   importedAsset: 'imported asset',
   skybox: 'skybox',
+  fog: 'fog',
   postFx: 'PostFX',
   terrainBlock: 'terrain block',
   scatter: 'scatter',

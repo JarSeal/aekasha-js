@@ -4,11 +4,13 @@
  */
 import {
   CameraAssetSchema,
+  FogAssetSchema,
   GeoAssetSchema,
   ImportedAssetSchema,
   LightAssetSchema,
   MaterialAssetSchema,
   PostFxAssetSchema,
+  resolveFogDef,
   SkyBoxAssetSchema,
   type SkyBoxAsset,
 } from '../../src/_engine/schemas';
@@ -22,7 +24,7 @@ import {
   type TakenIds,
 } from './context';
 import { EngineMeshAssetSchema, EngineSceneAssetSchema } from './engineSchemas';
-import { getIdFromFileName, withSkyBoxIdDefault } from './gatheredJson';
+import { getIdFromFileName, withIdDefault } from './gatheredJson';
 import { applySceneSaveEntry } from './saveEntries';
 import {
   checkAssetSources,
@@ -171,7 +173,7 @@ const readImportedAssets = (ctx: GatherContext, reg: Registries, taken: TakenIds
 
 const readSkyBoxes = (ctx: GatherContext, reg: Registries, taken: TakenIds) => {
   // The id defaults to the file name (set before validating: the schema requires one)
-  const prepare = (parsed: unknown, file: string) => withSkyBoxIdDefault(file, parsed);
+  const prepare = (parsed: unknown, file: string) => withIdDefault(file, parsed);
   readAssetJsons(
     ctx,
     'skybox',
@@ -187,6 +189,22 @@ const readSkyBoxes = (ctx: GatherContext, reg: Registries, taken: TakenIds) => {
     { prepare }
   );
 };
+
+// Each fog with its defaults filled in (p106 D2), its sun glow's from the file's mode, so a save
+// entry that changes the mode keeps the glow; the scene pass merges a scene's entry over it
+const readFogs = (ctx: GatherContext, reg: Registries, taken: TakenIds) =>
+  readAssetJsons(
+    ctx,
+    'fog',
+    FogAssetSchema,
+    (fogJSON, { file, sourcePath }) => {
+      if (!claimIds(ctx, taken.fogs, 'fog', file, fogJSON.id)) return;
+      const { $schema, __sourcePath, __saveData, ...input } = fogJSON;
+      reg.fogs[fogJSON.id] = { ...resolveFogDef(input), __sourcePath: sourcePath, __saveData };
+    },
+    // The id defaults to the file name, as a sky box's
+    { prepare: (parsed, file) => withIdDefault(file, parsed) }
+  );
 
 const readPostFx = (ctx: GatherContext, reg: Registries, taken: TakenIds, shipped: ShippedLists) =>
   readAssetJsons(ctx, 'postFx', PostFxAssetSchema, (postFxJSON, { file, fullPath, sourcePath }) => {
@@ -217,6 +235,7 @@ export const readRegistries = (ctx: GatherContext): Registries => {
   readMeshes(ctx, reg, taken);
   readImportedAssets(ctx, reg, taken);
   readSkyBoxes(ctx, reg, taken);
+  readFogs(ctx, reg, taken);
   readPostFx(ctx, reg, taken, shipped);
   readScatters(ctx, reg, taken);
   // After the materials and the imports: a decal set names them

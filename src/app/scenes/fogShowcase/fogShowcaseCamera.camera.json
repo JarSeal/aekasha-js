@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../../.schemas/camera.schema.json",
+  "camProps": {
+    "type": "PERSPECTIVE",
+    "fov": 55,
+    "near": 0.1,
+    "far": 1200,
+    "position": { "x": 372, "y": 9, "z": -14 },
+    "lookAtPoint": { "x": 0, "y": 6, "z": 0 },
+    "active": true
+  },
+  "entityOpts": {
+    "appId": "fogShowcaseCamera",
+    "debugData": {
+      "name": "Fog showcase camera",
+      "description": "At the valley's east end, a few metres over its floor, looking west down the valley: the posts recede on the left, the lake in the middle distance, the hills on both sides, the sun low ahead."
+    }
+  }
+}

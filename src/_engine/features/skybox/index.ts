@@ -31,4 +31,6 @@ export type {
   SkyBoxEnvDef,
   SkyBoxOverrides,
 } from './SkyBoxTypes';
+export { getSkyHorizonColor } from './SkyHorizonColor';
+export type { SkyHorizonColorOpts } from './SkyHorizonColor';
 export { getSkyLightIds } from './SkyLights';

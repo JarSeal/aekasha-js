@@ -8,6 +8,7 @@ import {
   type FeatureSchemaPart,
   createMeshAssetSchema,
   createSceneAssetSchema,
+  fogSchemaPart,
   instancingSchemaPart,
   lodSchemaPart,
   mergingSchemaPart,
@@ -34,6 +35,7 @@ export const ENGINE_SCHEMA_PARTS = [
   textureSetsSchemaPart,
   terrainSchemaPart,
   surfaceConditionsSchemaPart,
+  fogSchemaPart,
   instancingSchemaPart,
   physicsSchemaPart,
 ] as const;

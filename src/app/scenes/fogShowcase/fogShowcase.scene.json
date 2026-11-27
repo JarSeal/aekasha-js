@@ -1,0 +1,11 @@
+{
+  "$schema": "../../../../.schemas/scene.schema.json",
+  "id": "fogShowcase",
+  "sceneFile": "./scenes/fogShowcase/fogShowcase.ts",
+  "name": "Fog showcase (p106)",
+  "description": "The fog feature's verification scene (p106 Phase 5): an 800 m valley running east-west between 35-55 m hills, generated in the scene code by the toolkit's generateTerrain (seeded noise reshaped into a meandering valley floor, a lake basin and a ridge closing its west end; grass, a sandy shore, rocky slopes and triplanar cliffs laid into its vertex colours by rules, with the horizon AO), a lake at the valley floor, and a row of posts along the floor every 25 m from 30 m in front of the camera to 700 m (every fourth one, each 100 m, red and taller), so the fog's distance reads at a glance. The DAY_NIGHT sky stands still at 16:30, the sun low over the valley's far end. Three fogs, one per mode, each in the sky's horizon colour: HEIGHT (the default: the valley floor fogged, the hilltops clear, glowing toward the sun), LINEAR (30 to 600 m) and EXP2 (density 0.004). The debug drawer's Fog showcase tab switches them, sets the hour and plays the day (the fog's colour following the sky), and fills the valley with a dense fog over a few seconds (updateFog).",
+  "cameras": ["fogShowcaseCamera"],
+  "skyboxes": ["fogShowcaseSky"],
+  "fogs": ["fogShowcaseLinear", "fogShowcaseExp2", "fogShowcaseHeight"],
+  "materials": ["fogShowcaseGround"]
+}

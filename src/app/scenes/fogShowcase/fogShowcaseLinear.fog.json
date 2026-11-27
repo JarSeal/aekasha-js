@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../../.schemas/fog.schema.json",
+  "mode": "LINEAR",
+  "linear": { "near": 30, "far": 600 },
+  "debugData": {
+    "name": "Linear",
+    "description": "three's Fog over the showcase's valley: none to the post at 25 m, full past 600 m (the posts at 600 and 700 m gone), the sky's horizon colour, no sun glow (the mode's default, three's look)."
+  }
+}

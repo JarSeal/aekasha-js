@@ -2,8 +2,8 @@
   "formatVersion": 2,
   "total": {
     "exports": {
-      "documented": 4586,
-      "total": 4586
+      "documented": 4652,
+      "total": 4652
     },
     "members": {
       "documented": 1240,
@@ -13,8 +13,8 @@
   "subtrees": {
     "engine": {
       "exports": {
-        "documented": 4013,
-        "total": 4013
+        "documented": 4079,
+        "total": 4079
       },
       "members": {
         "documented": 1064,
@@ -93,6 +93,20 @@
       "exports": {
         "documented": 46,
         "total": 46
+      },
+      "members": {
+        "documented": 0,
+        "total": 0
+      },
+      "undocumented": {
+        "exports": [],
+        "members": []
+      }
+    },
+    "engine/features/fog": {
+      "exports": {
+        "documented": 59,
+        "total": 59
       },
       "members": {
         "documented": 0,
@@ -343,8 +357,8 @@
     },
     "engine/features/skybox": {
       "exports": {
-        "documented": 174,
-        "total": 174
+        "documented": 177,
+        "total": 177
       },
       "members": {
         "documented": 0,
@@ -357,8 +371,8 @@
     },
     "engine/features/skybox/layers": {
       "exports": {
-        "documented": 79,
-        "total": 79
+        "documented": 82,
+        "total": 82
       },
       "members": {
         "documented": 0,
@@ -721,8 +735,8 @@
     },
     "engine/ui/core": {
       "exports": {
-        "documented": 33,
-        "total": 33
+        "documented": 34,
+        "total": 34
       },
       "members": {
         "documented": 0,

@@ -1,4 +1,4 @@
-import type { Object3D } from 'three/webgpu';
+import type { Material, Object3D } from 'three/webgpu';
 import type { ECSWorld } from '../kernel/ecs/ECS';
 import { IS_DEBUG_ENV, IS_PROD_TEST_MODE } from '../kernel/config/Config';
 import { DEBUG_HELPER_USER_DATA_KEY } from '../kernel/render/Object3DHelpers';
@@ -266,11 +266,15 @@ export const setProfilerSettings = (partial: Partial<ProfilerSettings>) => {
 
 /**
  * Marks an object (and its subtree) as a debug helper: the profiler's in-view census counts it in
- * its own row, not in the scene figures (its "Exclude debug helpers" setting), and
- * `takeSnapshotAsync` hides it (`hideDebugHelpers`). Debug code that adds gizmos, wireframes or
- * lines to the root scene should mark them. three's `*Helper` types are recognised without it.
+ * its own row, not in the scene figures (its "Exclude debug helpers" setting),
+ * `takeSnapshotAsync` hides it (`hideDebugHelpers`), and the fog (the `fog()` feature) leaves it
+ * out: its materials get `fog = false`. Debug code that adds gizmos, wireframes or lines to the
+ * root scene should mark them. three's `*Helper` types are recognised by the census and snapshots
+ * without it, but not by the fog.
  * @param obj the helper's root
  * @returns `obj`
+ * @remarks The fog is turned off on the materials the subtree has at the call: mark a helper
+ * once its materials are set, and a material it gets later sets `fog = false` itself.
  * @example
  * ```ts
  * import * as THREE from 'three/webgpu';
@@ -283,6 +287,13 @@ export const setProfilerSettings = (partial: Partial<ProfilerSettings>) => {
  */
 export const markDebugHelper = <T extends Object3D>(obj: T) => {
   obj.userData[DEBUG_HELPER_USER_DATA_KEY] = true;
+  // A helper reads the same at any distance (p106 D7)
+  obj.traverse((child) => {
+    const material = (child as { material?: Material | Material[] }).material;
+    if (!material) return;
+    if (Array.isArray(material)) for (const entry of material) entry.fog = false;
+    else material.fog = false;
+  });
   return obj;
 };
 

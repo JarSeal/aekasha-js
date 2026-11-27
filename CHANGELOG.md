@@ -4,6 +4,53 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-27 — p106_fog-system (Phases 1-5, 7; Phase 6 dropped)
+
+Fog (p106): a new `fog()` feature gives a scene one fog at a time from the fogs its JSON lists. The fog is linear, exponential, or a height fog that lies thick in the valleys and thins out over the hills. By default its colour is the sky box's horizon colour, so on a day-night cycle the far fog meets the sky at every hour, and it can glow toward the sun. Every material reads it through one graph whose uniforms the engine writes in place, so switching the mode, the glow, a fog or the whole fog off, and `updateFog`'s smooth transitions, never recompile a material. A Fog tab in the debug drawer edits every value with undo and saves it into the fog's file. The new `fogShowcase` scene shows each mode over an 800 m valley. Sun light shafts were measured as a PostFX pass and dropped (three's godrays don't compile under VSM shadows, and their depth pre-pass costs most of a millisecond); the idea is a follow-up in p990.
+
+### Engine 6.30.0 (Sunset)
+
+**Added**
+
+- The `fog()` feature on a new entry, `aekasha/fog`, id `fog`:
+  - Three modes: `LINEAR` (three's `Fog`), `EXP2` (three's `FogExp2`) and `HEIGHT`, an exponential height fog integrated along each pixel's ray in closed form (`density`, `baseHeight`, `falloff`, `startDistance`, `maxOpacity`).
+  - The sun glow (`sunScattering`: `enabled`, `strength`, `exponent`) in every mode, on by default for `HEIGHT` only.
+  - The colour from the sky (`colorSource: 'SKY'`, the default) or the fog's own `color` (`MANUAL`), and `background: 'FOG_COLOR'`, which clears to the fog's colour while no sky box shows a background.
+  - The API: `setFog(id | definition | null)`, `getFog()`, `updateFog(values, { transitionSec })` (the latest call wins per value), `setFogEnabled` / `isFogEnabled` (the whole fog, kept across scenes), `onFogChange`, `getFogNodes()` (the graph, the factor and each uniform), and `setFogColorSource` / `setFogSunSource`, through which the app ties the fog to its sky.
+  - The types `FogDef`, `FogMode`, `FogColorSource`, `FogBackground`, `FogLinearParams`, `FogExp2Params`, `FogHeightParams`, `FogSunScattering`, `FogInput`, `FogUpdate`, `UpdateFogOpts`, `FogNodes`, `FogChangeListener`, `FogChangeReason`, `FogSkyColorSource` and `FogSunSource`.
+- Fogs as assets: a `*.fog.json`, or an inline fog, in a scene JSON's new `fogs` list. The scene starts with the one marked `isDefault`, else the first. A scene that lists `fogs` needs the feature (the boot's feature check). On `aekasha/schemas`: `FogAssetSchema`, `FogOverridesSchema`, `fogSchemaPart`, `FOG_MODES`, `FOG_DEFAULTS`, `resolveFogDef` and `applyFogSaveEntry`.
+- `getSkyHorizonColor(out, { direction? })` and `SkyHorizonColorOpts` on `aekasha/skybox`: the sky's colour at the horizon, linear and before tone mapping, away from the sun or in a given direction. It's computed on the CPU from the layers' twins of the sky's shader. Measured against the rendered sky through the `DAY_NIGHT` cycle, it agrees within float precision away from the sun, dusk and dawn included.
+- The debug drawer's Fog tab (`fogControls`, after the surface conditions' tab): the scene's fogs and the master switch, the mode and its parameters, the colour's source with the sky's live colour, the sun glow, the background, a fog factor view and Copy JSON. Edits go through undo, are kept per scene and fog over reloads, and the Æ menu's Save writes them into the fog's `.fog.json` (an inline fog moves into a file of its own).
+- The built-in icon `fog` (`fogIcon` on `aekasha/ui`).
+
+**Changed**
+
+- `markDebugHelper` sets `fog = false` on the materials of the subtree it marks, so the fog leaves debug helpers out. The 3D symbols are marked after their per-clone materials are made, and the Debug tools' grid, axes and polar grid are marked now too.
+
+### App 1.38.0 (Preschooler)
+
+**Added**
+
+- `fogShowcase`, the fog's verification scene: an 800 m valley between hills (generated in the scene code with `generateTerrain`), a lake, posts every 25 m out to 700 m, the `DAY_NIGHT` sky standing still at 16:30, and three fogs, one per mode (`HEIGHT` the default). Its debug tab switches the fogs, plays the day and fills the valley with a dense fog through `updateFog`. `?fogShowcaseFog=linear|exp2|height|none` picks the fog at load. The Hub's tab can save its image.
+
+**Changed**
+
+- The template lists `fog()` right after `rainOcclusion()`. `appECSPlugins` wires the fog to the sky: its colour is the sky's horizon away from the sun, and its glow is the sky's horizon toward the sun.
+
+### Project
+
+**Added**
+
+- The gather reads `*.fog.json` and a scene's `fogs`. It resolves each fog with its defaults, merges the scene's `__saveData` entry, and fails on an id listed twice. The development data has a `fogs` section for the save. `.schemas/fog.schema.json`, and the `aekasha/fog` alias.
+- The scene runner's `fogShowcase@linear`, `@exp2` and `@height` variants, each in the five configurations.
+- The Hub's Fog feature page (World): the modes, the colour and the sun glow, the API, what it costs and what it fogs, debugging, and the `fogShowcase` scene panel. The other pages that list the features, the entries, the asset types and the scene keys list the fog too. The component library's icons demo shows `fog`.
+
+**Changed**
+
+- The docs: a new `src/_engine/features/fog/CLAUDE.md`, the root `CLAUDE.md` (seventeen features), the sky box, debug, gather and init `CLAUDE.md` files, `hub/CLAUDE.md` and the readme. p106 is marked done (`_DONE_p106_fog-system.md`). p427 points at the fog's `CLAUDE.md`, and p990's Rendering has the sun light shafts with Phase 6's figures.
+- The SBP budgets: the fog's group (`_engine/features/fog`, 2.8 KiB gzip of 3), and the initial and `assets/index.js` budgets raised from 417 and 413 to 420 and 416 KiB. The runtime keeps zod out of the first download (`FogDefaults.ts`).
+- The bundle, API and docs baselines recorded.
+
 ## 2026-11-25 — p103_small-bug-fixes-and-tweaks (Phases 1-5)
 
 Small fixes and tweaks collected from using the app, the debugger and the Hub (p103). Three runtime warnings are gone: three's "PCFSoftShadowMap has been removed" (the Renderer tab offered it), a spatial overlay's 0-vertex draw, and Rapier's "using deprecated parameters" warning, which Rapier 0.21.0 (engine 6.27.0) had already fixed. The debug camera no longer moves while the master loop is off and then jumps once the loop runs again. The light helpers follow the sky's sun with its real shadow box, and the target line no longer shakes. A player character's keys can belong to a scene. The on-screen tools' top-left buttons sit in one box. The app's favicon shows on dark browser tabs. On the Hub, "Versions & Issues" replaces the Issues and Version menu items, and the changelog and the A–Z index each have a page of their own.

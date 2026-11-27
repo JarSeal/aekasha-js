@@ -28,6 +28,7 @@ export type BuiltInIconName =
   | 'eraser'
   | 'fileAsterix'
   | 'fileCode'
+  | 'fog'
   | 'gear'
   | 'geometry'
   | 'gpuCard'
@@ -84,6 +85,7 @@ const BUILT_IN_ICONS = {
   eraser: builtIn.eraserIcon,
   fileAsterix: builtIn.fileAsterixIcon,
   fileCode: builtIn.fileCodeIcon,
+  fog: builtIn.fogIcon,
   gear: builtIn.gearIcon,
   geometry: builtIn.geometryIcon,
   gpuCard: builtIn.gpuCardIcon,

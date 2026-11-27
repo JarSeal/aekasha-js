@@ -14,6 +14,7 @@ import path from 'path';
 export const ENTRY_FILES = {
   aekasha: 'src/_engine/index.ts',
   'aekasha/character': 'src/_engine/features/character/index.ts',
+  'aekasha/fog': 'src/_engine/features/fog/index.ts',
   'aekasha/instancing': 'src/_engine/features/instancing/index.ts',
   'aekasha/lines': 'src/_engine/features/lines/index.ts',
   'aekasha/lod': 'src/_engine/features/lod/index.ts',

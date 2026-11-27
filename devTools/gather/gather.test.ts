@@ -2364,3 +2364,89 @@ describe("p102 Phase 4: a scene's world bounds", () => {
     expect(gather(scene('a', { worldBounds: flat })).isGathered).toBe(false);
   });
 });
+
+describe('p106 D2: fogs', () => {
+  const valley = {
+    mode: 'EXP2',
+    exp2: { density: 0.01 },
+    debugData: { name: 'Valley' },
+    __saveData: { a: [{ mode: 'HEIGHT', height: { density: 0.05 }, __meta: { date: 1 } }] },
+  };
+
+  it('resolves a listed fog: its id from its file, its defaults, the scene’s entry over it', () => {
+    const { isGathered, scene: get } = gather({
+      'app/fogs/valley.fog.json': valley,
+      ...scene('a', { fogs: ['valley'] }),
+      ...scene('b', { fogs: ['valley'] }),
+    });
+    expect(isGathered).toBe(true);
+    const [fogA] = get('a')?.fogs as Record<string, unknown>[];
+    expect(fogA).toEqual({
+      id: 'valley',
+      isDefault: false,
+      enabled: true,
+      // The entry's mode and height, over the file's
+      mode: 'HEIGHT',
+      colorSource: 'SKY',
+      color: '#b4c0cc',
+      linear: { near: 10, far: 500 },
+      exp2: { density: 0.01 },
+      height: { density: 0.05, baseHeight: 0, falloff: 0.1, startDistance: 0, maxOpacity: 1 },
+      // The glow is the file's mode's (EXP2: off), not the entry's
+      sunScattering: { enabled: false, strength: 0.5, exponent: 8 },
+      background: 'NONE',
+      debugData: { name: 'Valley' },
+    });
+    // Another scene gets the file as it is
+    expect((get('b')?.fogs as Record<string, unknown>[])[0]).toMatchObject({ mode: 'EXP2' });
+    expect(get('a')?.__features).toEqual(['fog']);
+  });
+
+  it('resolves an inline fog with its own entry, and names it in the development data', () => {
+    const inline = { id: 'mist', mode: 'HEIGHT', __saveData: { a: [{ enabled: false }] } };
+    const { scene: get } = gather(scene('a', { fogs: [inline] }));
+    expect(get('a')?.fogs).toEqual([
+      expect.objectContaining({ id: 'mist', enabled: false, sunScattering: expect.anything() }),
+    ]);
+    expect(
+      (get('a')?.fogs as { sunScattering: { enabled: boolean } }[])[0].sunScattering.enabled
+    ).toBe(true);
+    expect(get('a')?.__inlineAssets).toEqual({ fogs: ['mist'] });
+  });
+
+  it('leaves the debug data out of a production build', () => {
+    const { scene: get } = gather(
+      { 'app/fogs/valley.fog.json': valley, ...scene('a', { fogs: ['valley'] }) },
+      { isProduction: true }
+    );
+    expect((get('a')?.fogs as Record<string, unknown>[])[0]).not.toHaveProperty('debugData');
+  });
+
+  it('writes each fog file into the development data, its path for the save source', () => {
+    // p106 Phase 5: without the section, every scene fog read as inline and couldn't be saved
+    const files = { 'app/fogs/valley.fog.json': valley, ...scene('a', { fogs: ['valley'] }) };
+    const { output } = gather(files);
+    expect((output?.json as Record<string, unknown>).fogs).toEqual({
+      valley: expect.objectContaining({
+        id: 'valley',
+        __sourcePath: expect.stringMatching(/app\/fogs\/valley\.fog\.json$/),
+      }),
+    });
+    expect(gather(files, { isProduction: true }).output?.json).not.toHaveProperty('fogs');
+  });
+
+  it.each([
+    ['an id no fog JSON has', { fogs: ['noSuchFog'] }],
+    ['an id twice', { fogs: ['valley', { id: 'valley', mode: 'LINEAR' }] }],
+    ['an inline fog without an id', { fogs: [{ mode: 'LINEAR' }] }],
+    [
+      'a far not past its near',
+      { fogs: [{ id: 'f', mode: 'LINEAR', linear: { near: 50, far: 50 } }] },
+    ],
+    ['an unknown key', { fogs: [{ id: 'f', mode: 'EXP2', exp2: { densitty: 0.1 } }] }],
+  ])('fails on %s', (_case, fields) => {
+    expect(gather({ 'app/fogs/valley.fog.json': valley, ...scene('a', fields) }).isGathered).toBe(
+      false
+    );
+  });
+});

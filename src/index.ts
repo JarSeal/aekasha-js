@@ -8,6 +8,7 @@ import {
   IS_DEBUG_ENV,
 } from 'aekasha';
 import { character } from 'aekasha/character';
+import { fog } from 'aekasha/fog';
 import { instancing } from 'aekasha/instancing';
 import { lines } from 'aekasha/lines';
 import { lod } from 'aekasha/lod';
@@ -37,6 +38,7 @@ InitEngine({
     skyBox(),
     surfaceConditions(),
     rainOcclusion(),
+    fog(),
     lod(),
     spatial(),
     instancing(),

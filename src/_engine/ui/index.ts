@@ -371,6 +371,7 @@ export {
   eraserIcon,
   fileAsterixIcon,
   fileCodeIcon,
+  fogIcon,
   gearIcon,
   geometryIcon,
   gpuCardIcon,

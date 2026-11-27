@@ -95,6 +95,15 @@ export {
   surfaceConditionsSchemaPart,
 } from '../features/surface/SurfaceConditionsSchema';
 export type { SceneSurfaceConditions } from '../features/surface/SurfaceConditionsSchema';
+export { applyFogSaveEntry, FOG_DEFAULTS, resolveFogDef } from '../features/fog/FogDefaults';
+export {
+  FOG_MODES,
+  FogAssetSchema,
+  FogOverridesSchema,
+  fogSchemaPart,
+} from '../features/fog/FogSchema';
+export type { FogAsset, FogInput, FogOverrides } from '../features/fog/FogSchema';
+export type { FogDef } from '../features/fog/FogTypes';
 export type {
   TerrainBlockAsset,
   TerrainBlockColliderType,

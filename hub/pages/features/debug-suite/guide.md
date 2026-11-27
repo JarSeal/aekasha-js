@@ -390,8 +390,10 @@ bytes from three's own bookkeeping.
 
 Debug code that adds gizmos, wireframes or lines to the root scene marks them with
 [`markDebugHelper`](api:markDebugHelper). The profiler's census then counts them in a row of
-their own instead of the scene's figures, and snapshots (the Hub images among them) leave them
-out. three's `*Helper` objects are recognised without it.
+their own instead of the scene's figures, snapshots (the Hub images among them) leave them out,
+and the fog doesn't reach them: the mark sets `fog = false` on the materials they have, so mark a
+helper once its materials are set. three's `*Helper` objects are recognised by the census and
+snapshots without it, but they need the mark to stay out of the fog.
 
 [`registerEntityWindowOpener`](api:registerEntityWindowOpener) lets the Objects tab's heaviest
 rows open your own entity edit window.
