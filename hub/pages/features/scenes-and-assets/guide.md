@@ -5,7 +5,7 @@
 - `sceneFile` is the scene's code, from `src/app/`. It exports `scene`, which the engine calls
   once the JSON's assets are loaded.
 - The lists name assets by their id (or hold one inline): `cameras`, `lights`, `geometries`,
-  `textures`, `materials`, `meshes`, `importedAssets`, `skyboxes` and `postFx`. The cameras are
+  `textures`, `materials`, `meshes`, `importedAssets`, `skyboxes`, `fogs` and `postFx`. The cameras are
   created first, before the assets load; the lights and meshes right after the scene file runs,
   so its code reaches them on the scene's enter. The textures its materials, spot lights and
   background name needn't be listed: the gather adds them (see
@@ -36,6 +36,7 @@ The engine finds every file with one of these suffixes under `src/` by itself:
 | `*.mesh.json`          | A mesh: its geometry, material, transform, shadows and levels of detail.                                                     |
 | `*.importedAsset.json` | A glTF or GLB model to import, and how the asset pipeline optimizes it.                                                      |
 | `*.skybox.json`        | A [sky box](hub:features/sky-box).                                                                                           |
+| `*.fog.json`           | A [fog](hub:features/fog#a-scene-s-fogs): its mode, colour and sun glow.                                                     |
 | `*.postFx.json`        | A [PostFX pass](hub:features/rendering#post-effects), with its `*.tsl.ts`.                                                   |
 | `*.impostor.json`      | An exported [impostor](hub:features/lod#impostors), written by its export.                                                   |
 | `*.terrainBlock.json`  | A [terrain block](hub:features/terrain#terrain-blocks): its geometry, material, grid and collider.                           |
@@ -238,7 +239,8 @@ and load, release and stream with the scene as listed ones do.
 
 ### The feature manifest
 
-Some scene and mesh fields belong to a feature: `skyboxes` to the sky box (`skyBox()`), `postFx`
+Some scene and mesh fields belong to a feature: `skyboxes` to the sky box (`skyBox()`), `fogs` to
+the [fog](hub:features/fog) (`fog()`), `postFx`
 and `postFxEnabled` to PostFX (`postFx()`), `spatialDomains` to the spatial index (`spatial()`),
 `impostors` and a mesh's `lod` to LOD (`lod()`), `mergeGroups` and a mesh's `merge` to mesh
 merging (`merging()`), and `textureSets` and `textureSetArrays` (which the gather fills from the

@@ -57,7 +57,7 @@ vi.mock(import('../../../debug/_dbg__UndoRedo'), () => ({
 }));
 
 import { FOG_DEBUG_OVERRIDES_LS_KEY } from '../Fog';
-import { resolveFogDef } from '../FogSchema';
+import { resolveFogDef } from '../FogDefaults';
 import {
   clearFogOverrides,
   getAllFogOverrides,

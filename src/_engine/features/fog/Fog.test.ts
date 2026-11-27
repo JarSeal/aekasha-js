@@ -50,7 +50,8 @@ import {
   type FogChangeReason,
 } from './Fog';
 import { fog } from './FogFeature';
-import { type FogInput, resolveFogDef } from './FogSchema';
+import { resolveFogDef } from './FogDefaults';
+import type { FogInput } from './FogSchema';
 
 new ECSWorld({ id: DEFAULT_ECS_WORLD_ID });
 createRootScene();

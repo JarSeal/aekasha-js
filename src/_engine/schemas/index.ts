@@ -95,14 +95,12 @@ export {
   surfaceConditionsSchemaPart,
 } from '../features/surface/SurfaceConditionsSchema';
 export type { SceneSurfaceConditions } from '../features/surface/SurfaceConditionsSchema';
+export { applyFogSaveEntry, FOG_DEFAULTS, resolveFogDef } from '../features/fog/FogDefaults';
 export {
-  applyFogSaveEntry,
-  FOG_DEFAULTS,
   FOG_MODES,
   FogAssetSchema,
   FogOverridesSchema,
   fogSchemaPart,
-  resolveFogDef,
 } from '../features/fog/FogSchema';
 export type { FogAsset, FogInput, FogOverrides } from '../features/fog/FogSchema';
 export type { FogDef } from '../features/fog/FogTypes';

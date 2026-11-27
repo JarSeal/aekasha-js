@@ -1,6 +1,6 @@
 Status: stub — not-implemented
 Category: Weather, Rendering, Gameplay
-Related: p420_npc-simulation-tiers.md (The gameplay contracts: C7, weather and mood, the time-of-day clock), `src/_engine/features/surface/CLAUDE.md` (the surface conditions state, p307, which this plan drives; the how-to is `docs/techniques/wet-dry-surfaces.md`), `src/_engine/features/skybox/CLAUDE.md` (the sky box's day-night time and its sky clock, which read the world clock from here once it moves), p425_game-events-missions-and-save-games.md (the world state is saved), p990_follow-ups-from-done-plans.md (volumetric clouds and weather; the surface query for wet friction), p106_fog-system.md (the fog this plan drives through `updateFog`)
+Related: p420_npc-simulation-tiers.md (The gameplay contracts: C7, weather and mood, the time-of-day clock), `src/_engine/features/surface/CLAUDE.md` (the surface conditions state, p307, which this plan drives; the how-to is `docs/techniques/wet-dry-surfaces.md`), `src/_engine/features/skybox/CLAUDE.md` (the sky box's day-night time and its sky clock, which read the world clock from here once it moves), p425_game-events-missions-and-save-games.md (the world state is saved), p990_follow-ups-from-done-plans.md (volumetric clouds and weather; the surface query for wet friction), `src/_engine/features/fog/CLAUDE.md` (the fog, p106, which this plan drives through `updateFog`; the how-to is the Hub's Fog page)
 
 # Weather and Mood — Stub
 
@@ -67,8 +67,8 @@ between weather presets.
 2. **Presets and transitions:** weather presets as data (`*.weather.json`), blended over time; a
    transition's curves per value.
 3. **Fog:** answered by p106 (height and distance fog as one node every material shares, its
-   interactions with impostors and PostFX in its D7). What's left here: which weather values set
-   which fog parameters, and the transitions' curves.
+   interactions with impostors and PostFX in `features/fog/CLAUDE.md`'s "What it fogs"). What's
+   left here: which weather values set which fog parameters, and the transitions' curves.
 4. **Wind:** one vector for foliage sway in the materials (nothing sways today: static instance cells and instance sets are static by design, `src/_engine/features/instancing/CLAUDE.md`), clouds, particles and maybe physics (forces on light
    bodies), and its gusts.
 5. **Determinism:** weather that changes gameplay (wet friction, p307 T14: physics friction by the ground's wetness, read through a surface query that doesn't exist yet, p990's Terrain) changes by the step clock

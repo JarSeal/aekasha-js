@@ -1,7 +1,7 @@
 import type { ColorJSON, DebugData } from '../../schemas/_HelperSchemas';
 
 // The fog's runtime types (p106 D2): a definition as the feature uses it, every key filled in
-// (`resolveFogDef`, FogSchema.ts: the gatherer resolves the scenes' fogs, `setFog` a code one).
+// (`resolveFogDef`, FogDefaults.ts: the gatherer resolves the scenes' fogs, `setFog` a code one).
 
 /** How the fog thickens with distance: `LINEAR` (three's `Fog`, a smoothstep between `near` and
  * `far`), `EXP2` (three's `FogExp2`) or `HEIGHT` (an exponential height fog, thick low down). */

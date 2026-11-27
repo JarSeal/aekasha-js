@@ -16,7 +16,8 @@ import { deepMerge } from '../../utils/DeepMerge';
 import { lsGetItem } from '../../utils/LocalAndSessionStorage';
 import { lwarn } from '../../utils/Logger';
 import { createFogNodes, type FogNodes } from './FogNode';
-import { applyFogSaveEntry, type FogInput, type FogOverrides, resolveFogDef } from './FogSchema';
+import { applyFogSaveEntry, resolveFogDef } from './FogDefaults';
+import type { FogInput, FogOverrides } from './FogSchema';
 import {
   createFogTransitions,
   FOG_CHANNEL as CH,

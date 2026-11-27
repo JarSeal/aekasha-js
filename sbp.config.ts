@@ -81,7 +81,10 @@ const profiles: SbpProfile[] = [
     // 1 KiB over each). p106 Phases 2-3: `updateFog` and the fog's sky sources (`fog` +0.3 KiB)
     // and the sky box's `getSkyHorizonColor` with its layers' CPU twins (`skybox` +0.5 KiB, the
     // app wires it) took the initial to 418.3 and `assets/index.js` to 414.1 KiB: 418 → 420 and
-    // 414 → 416 KiB (at least 1 KiB over each)
+    // 414 → 416 KiB (at least 1 KiB over each). p106 Phase 7: zod (19.4 KiB) and
+    // `_engine/schemas` (1.4 KiB) were in the first download, through the fog's runtime importing
+    // `FogSchema.ts`; with its defaults moved out (`FogDefaults.ts`) the initial is 419.4 and
+    // `assets/index.js` 415.2 KiB, within both
     budgets: {
       initial: 420 * KIB,
       chunks: {
@@ -172,7 +175,9 @@ const profiles: SbpProfile[] = [
         // system (990 B gzip, three modules; `suggestBudget`); Phase 2's HEIGHT factor, sun glow
         // and tweens and Phase 3's sky sources add to it, Phase 7 revisits it. Phase 2 (HEIGHT,
         // the glow, `updateFog` and its transitions, four modules) took it to 2.0 KiB: 2 → 3 KiB.
-        // Phase 3's sky sources took it to 2.3 KiB, within 3
+        // Phase 3's sky sources took it to 2.3 KiB, Phase 4's debug overrides and factor node to
+        // 2.4 KiB, and Phase 7's `FogDefaults.ts` (the defaults and the resolve, out of the zod
+        // schema's module) to 2.8 KiB in five modules, within 3
         '_engine/features/fog': 3 * KIB,
         '_engine/features/viewports': 3 * KIB,
         // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`). p302 (12 → 15

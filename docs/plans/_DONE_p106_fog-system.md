@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-5 implemented; Phase 6 dropped
+Status: implemented (Phases 1-5, 7; Phase 6 dropped)
 Category: Fog, Rendering
 Related: p427_weather-and-mood.md (the world state that drives the fog through `updateFog`; its open question 3 is this plan), `src/_engine/features/skybox/CLAUDE.md` (the horizon colour and the sun the fog follows), `src/_engine/features/surface/CLAUDE.md` (the stable uniforms pattern this feature copies), p990_follow-ups-from-done-plans.md (the deferred sky ideas: auto-exposure, volumetric clouds; and Rendering's sun light shafts, Phase 6's measurement)
 
@@ -611,7 +611,7 @@ As measured (2026-11-27, a no go; the idea and these figures are in p990's Rende
 - **The gate's "reversed depth buffer" doesn't apply:** the engine never sets
   `reversedDepthBuffer` (three's default false; `createRenderer` has no option for it).
 
-### Phase 7: The Hub, the docs, the budgets, the version
+### Phase 7: The Hub, the docs, the budgets, the version — done
 
 1. The Hub: a feature page `hub/pages/features/fog/` (group World, after Surface conditions;
    `aek:covers` naming the new `CLAUDE.md`'s `##` sections), the API with `@example`s, an example
@@ -626,6 +626,35 @@ As measured (2026-11-27, a no go; the idea and these figures are in p990's Rende
    question 3 already say so).
 5. Versions: engine minor (a new feature, the sky box's getter), app minor (the scene, the wiring),
    the toolkit untouched; `CHANGELOG.md`; `yarn checkVersions --against main`.
+
+As built:
+
+- **No example page** (decided at the review): `fogShowcase` is a verification scene (a `_dbg__`
+  tab, a valley shaped in code), and the Hub's example pages show only `src/app/examples/` scenes
+  whose file holds just the example. The feature page (`hub/pages/features/fog/`, World, after
+  Surface conditions, the Hub icon Lucide's `cloud-fog`) has the `::: scene fogShowcase` panel
+  and includes `fogShowcaseHeight.fog.json`, as Surface conditions does with `terrainGallery`;
+  `fogShowcase` joined the Hub tab's `OTHER_HUB_SCENES`; its `fogShowcase.hub.png` is saved from
+  that tab in a real browser.
+  The Hub pages that counted sixteen features, the entries table, the asset types table, the
+  scene keys and the feature manifest list the fog too.
+- **`features/fog/CLAUDE.md`'s sections** are "Fog" and "Fog debugging", the page's `aek:covers`.
+- **zod was in the first download** (Phase 7's `yarn sbp`): the runtime's value imports from
+  `FogSchema.ts` (`resolveFogDef`, and Phase 4's `applyFogSaveEntry`) kept the module's zod
+  schemas, so zod (19.4 KiB gzip) and `_engine/schemas` (1.4 KiB) were in the main chunk, over
+  the initial and `assets/index.js` budgets by about 21 KiB. `FOG_DEFAULTS`, `resolveFogDef` and
+  `applyFogSaveEntry` moved into `FogDefaults.ts` (no zod; still on `aekasha/schemas`), and the
+  runtime imports only types from `FogSchema.ts` (the sky box's way). Phases 4-5's committed
+  `bundle.json` didn't show it: it was recorded before the scene's chunks existed.
+- **SBP, final:** the fog's group 2.8 KiB gzip in five modules (budget 3 KiB, unchanged), the
+  initial 419.4 KiB (budget 420) and `assets/index.js` 415.2 KiB (budget 416): no budget raised,
+  their reasons updated in `sbp.config.ts`. The banner and the UI kit embed are unchanged. The
+  baselines are recorded (`bundle.json`: the `fogShowcase` chunks, the terrain material a shared
+  chunk of its own now that two lazy scenes use it; `api.json`: the three moved exports).
+- **p427** already named the fog as this plan's; its Related line and open question 3 now point at
+  `src/_engine/features/fog/CLAUDE.md` instead of this file and its D7.
+- **Versions:** engine (and project) 6.29.0 → 6.30.0 and app 1.37.1 → 1.38.0, the toolkit
+  unchanged (3.8.1); the `CHANGELOG.md` entry `p106_fog-system`.
 
 ## Verification
 

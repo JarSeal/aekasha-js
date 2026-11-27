@@ -31,6 +31,7 @@ import { createPhysicsEntity } from 'aekasha/physics';
 | [`aekasha/character`](hub:documentation/aekasha/character)                 | Characters and their controllers.                                                                                                                                                                                                                                                |
 | [`aekasha/skybox`](hub:documentation/aekasha/skybox)                       | Sky boxes, the day-night cycle and environment bakes.                                                                                                                                                                                                                            |
 | [`aekasha/surface`](hub:documentation/aekasha/surface)                     | Surface conditions: the weather on the ground (wetness, rain, puddles, a water level, snow) that wet materials read, and the rain occlusion map.                                                                                                                                 |
+| [`aekasha/fog`](hub:documentation/aekasha/fog)                             | Fog: linear, exponential or a height fog in the sky's colour with a sun glow, switched and tweened without a recompile.                                                                                                                                                          |
 | [`aekasha/lod`](hub:documentation/aekasha/lod)                             | Levels of detail, LOD chains and impostors.                                                                                                                                                                                                                                      |
 | [`aekasha/spatial`](hub:documentation/aekasha/spatial)                     | The spatial index and its domains.                                                                                                                                                                                                                                               |
 | [`aekasha/streaming`](hub:documentation/aekasha/streaming)                 | World streaming: a scene's cells, loaded and unloaded around a focus.                                                                                                                                                                                                            |
@@ -52,7 +53,7 @@ import { createPhysicsEntity } from 'aekasha/physics';
 
 - Each feature's entry exports its factory, named after it: `physics()` (with
   `physicsTiers()`, the simulation tiers), `character()`, `skyBox()`, `surfaceConditions()`
-  (with `rainOcclusion()`, the rain occlusion map), `lod()`, `spatial()`, `instancing()`,
+  (with `rainOcclusion()`, the rain occlusion map), `fog()`, `lod()`, `spatial()`, `instancing()`,
   `lines()`, `postFx()`, `viewports()`, `streaming()`, `merging()`, `textureSets()` and
   `terrain()`. A
   feature is installed only when [`InitEngine`](api:InitEngine)'s `features` lists it (see

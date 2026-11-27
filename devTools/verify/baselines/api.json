@@ -446,6 +446,11 @@
       "updateFog": "Function",
       "UpdateFogOpts": "TypeAlias"
     },
+    "src/_engine/features/fog/FogDefaults.ts": {
+      "applyFogSaveEntry": "Function",
+      "FOG_DEFAULTS": "Variable",
+      "resolveFogDef": "Function"
+    },
     "src/_engine/features/fog/FogFeature.ts": {
       "fog": "Function",
       "fogSceneHooks": "Variable"
@@ -462,16 +467,13 @@
       "getLinearFogFactor": "Function"
     },
     "src/_engine/features/fog/FogSchema.ts": {
-      "applyFogSaveEntry": "Function",
-      "FOG_DEFAULTS": "Variable",
       "FOG_MODES": "Variable",
       "FogAsset": "TypeAlias",
       "FogAssetSchema": "Variable",
       "FogInput": "TypeAlias",
       "FogOverrides": "TypeAlias",
       "FogOverridesSchema": "Variable",
-      "fogSchemaPart": "Variable",
-      "resolveFogDef": "Function"
+      "fogSchemaPart": "Variable"
     },
     "src/_engine/features/fog/FogTransitions.ts": {
       "createFogTransitions": "Function",
