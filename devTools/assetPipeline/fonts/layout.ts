@@ -1,4 +1,12 @@
 import type { FontType } from '../../../src/_engine/schemas';
+import {
+  FONT_LAYOUT_FORMAT,
+  type FontLayout,
+  type FontLayoutGlyph,
+} from '../../../src/_engine/features/text/FontLayoutFormat';
+
+// The format's version and types are the engine's (the runtime parses what this writes)
+export { FONT_LAYOUT_FORMAT, type FontLayout, type FontLayoutGlyph };
 
 /**
  * A font's layout JSON (p391 D3): what the text layout needs and nothing else, minified. Em values
@@ -12,42 +20,6 @@ import type { FontType } from '../../../src/_engine/schemas';
  * - `kerning[first]`: `[second, amount, second, amount, …]`, the amounts in `kerningUnitsPerEm`
  *   (Phase 1: about half the bytes of em amounts in triples).
  */
-
-/** The layout format's version, read by the runtime's parse */
-export const FONT_LAYOUT_FORMAT = 1;
-
-/** A glyph's entry: `[advance]`, or the advance, the plane bounds and the atlas rect */
-export type FontLayoutGlyph =
-  | [number]
-  | [number, number, number, number, number, number, number, number, number];
-
-/** A font's layout JSON */
-export type FontLayout = {
-  format: number;
-  type: FontType;
-  atlas: {
-    file: string;
-    width: number;
-    height: number;
-    /** The em's size in atlas pixels */
-    size: number;
-    /** The distance range in atlas pixels, its full width */
-    pxRange: number;
-  };
-  metrics: {
-    ascender: number;
-    descender: number;
-    lineHeight: number;
-    /** The underline's centre */
-    underlineY: number;
-    underlineThickness: number;
-  };
-  /** The fallback glyph's code point */
-  fallback: number;
-  glyphs: Record<string, FontLayoutGlyph>;
-  kerningUnitsPerEm?: number;
-  kerning?: Record<string, number[]>;
-};
 
 /** Rounded to 4 decimals, never -0 */
 export const roundEm = (value: number) => Math.round(value * 1e4) / 1e4 || 0;

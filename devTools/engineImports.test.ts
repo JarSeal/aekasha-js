@@ -43,6 +43,10 @@ const ALLOWED_MODULES: Record<string, AllowedModule> = {
     reason:
       'a font’s charset presets, which the asset pipeline’s font encoder resolves as the text debug tab shows them (p391 D2)',
   },
+  'src/_engine/features/text/FontLayoutFormat.ts': {
+    reason:
+      'a font’s layout JSON format, which the asset pipeline’s font encoder writes and the text feature parses (p391 D3)',
+  },
   'src/_engine/features/lod/LodChainOptions.ts': {
     reason: 'the LOD chain options and a GLB’s chain description, which the asset pipeline writes',
   },

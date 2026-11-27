@@ -400,6 +400,62 @@ As built (section 3, 2026-11-27):
 2. Tests: the parse into typed arrays, kerning lookups, the fallback glyph, a font owned by a
    scene disposed with it.
 
+As built (section 1, 2026-11-28):
+
+- **`features/text/Fonts.ts`**: `FontData` is `{ id, type, atlas, atlasWidth, atlasHeight, size,
+  pxRange, metrics, glyphCount, codePoints (Uint32Array, ascending), advances, planeRects,
+  atlasRects (Float32Array, 4 a glyph), glyphIndices (Map), fallbackIndex, kerning (Map) }`:
+  `planeRects` are `left, bottom, width, height` in em (p392's `planeRect`), `atlasRects` `u, v,
+  width, height` in UV with `v` from the top (D3: no flip); a glyph without ink has zeros.
+  `getFontGlyphIndex(font, codePoint)` falls back to `fallbackIndex`. **The kerning key isn't D6's
+  `first << 16 | second`** (a code point past the BMP needs 21 bits, and `chars` or a scene's
+  collected text can hold one): `getFontKerningKey(first, second)`, `first * 0x110000 + second`,
+  the amounts in em (scaled from `kerningUnitsPerEm` at the parse). **`isPersistent`, not D6's
+  `persistent`**, as the asset loaders name it (`loadFontAsync(id, { isPersistent })`).
+- **The layout format moved into the engine**: `features/text/FontLayoutFormat.ts`
+  (`FONT_LAYOUT_FORMAT`, `FontLayout`, `FontLayoutGlyph`, types only, on
+  `devTools/engineImports.test.ts`' list); the encoder's `layout.ts` imports and re-exports them,
+  so the encoder and the parse read one definition. The parse refuses another format (before the
+  atlas's download), a glyph entry of another length and a missing fallback glyph, each naming
+  the font and `yarn assets --only <id>`.
+- **The atlas is an ordinary registered texture**, `font:<id>`, loaded by `loadTextureAsync` with
+  `__url` the layout's folder plus `atlas.file` (`LinearFilter` both ways, `generateMipmaps`
+  false, `NoColorSpace`; `throwOnError`), so its owners, its release with the scene (once no
+  material samples it), the Assets tab and the GPU memory tab are the kernel's; its `dispose`
+  event drops the font from the map. The load checks the atlas's size against the layout's.
+- **The load:** the declaration is the development data's `fonts` section, else the first scene
+  entry (production: the scenes' only, as Phase 3 wrote). The owner scope is captured at the call,
+  the atlas loads in it after the layout's await; a loaded font is re-tagged to the caller's
+  scope; a call while one loads shares it and is re-tagged after it. Persistence is the first
+  load's (the atlas's registration): a later `isPersistent` load of a non-persistent font warns.
+  A font without `__url`, or no data's, rejects naming `yarn assets --only <id>`.
+- **The scene load:** `installFonts` (the `text()` feature's only install) starts a scene's
+  `fonts` in `worldCleared` from the scene's own entries, so they download beside its textures,
+  and awaits them in `assetsLoaded` (before the scene code). A font that fails is logged naming
+  the scene, and the load goes on.
+- **The feature and the entry:** `text()` (`TextFeature.ts`, id `text`), `aekasha/text`
+  (`index.ts`: the four functions, `FontData`, `FontMetrics` and the schema's `FontAsset`,
+  `FontCharsetPreset`, `FontType`, `SceneFontDef`; before `aekasha/schemas` in `ENTRY_FILES`, so
+  the font types' API docs are on the text page), `devTools/aliases.ts`, `tsconfig.json`'s paths,
+  `ENGINE_FEATURE_FACTORIES`, the Hub's entry table. **Not in the template's list** (`src/index.ts`):
+  p392 Phase 1 adds it after `lines()` with the count of 18 in the `CLAUDE.md` files, so the app's
+  first download doesn't change here.
+- **Checked in the browser** (2026-11-28, system Chrome headless on macOS arm64, the dev app's
+  `textureSets` scene; a temporary `SDF` `DIGITS` font of Plex Sans Bold, encoded, checked, then
+  removed and pruned): `loadFontAsync` of `plexSans` (200 glyphs, 6,115 kerning pairs, `AV`
+  −0.047 em; 12 ms on WebGPU, 23 ms on WebGL2 through SwiftShader), `digitsDisplay` and the `SDF`
+  font: **every texel of every channel read back at texel centres equals the KTX2's data, the `SDF`
+  font's `R8_UNORM` (a `DataTexture`, `RedFormat`, `UnsignedByteType`) included**, on both backends;
+  the readback's row order flips between them for R8 as for RGBA (Phase 1), so R8 has D3's
+  orientation. A second load returns the same font, two at once share one load, a scene switch
+  releases a scene's font and its atlas, and a persistent one stays.
+- **Open: a production build drops the atlas.** `assetOutputsBuildPlugin` (and `embedBuild.ts`'
+  copy for an embed profile) keep only the files a `__url` in the generated data names, and the
+  atlas is named only inside the layout. Not reached yet (no shipped scene lists a font), but
+  p392's first one would load a layout whose atlas 404s.
+- **Not run:** `yarn verify:baselines --update` (the API baseline gains `aekasha/text`; it needs a
+  build): before the PR, with Phase 2's.
+
 ### Phase 5: The Hub and the docs
 
 1. The handbook page `docs/techniques/text-fonts.md`: formats, charsets, the dynamic option

@@ -33,6 +33,7 @@
       "aekasha/streaming": ["./src/_engine/features/streaming/index.ts"],
       "aekasha/surface": ["./src/_engine/features/surface/index.ts"],
       "aekasha/terrain": ["./src/_engine/features/terrain/index.ts"],
+      "aekasha/text": ["./src/_engine/features/text/index.ts"],
       "aekasha/texturesets": ["./src/_engine/features/texturesets/index.ts"],
       "aekasha/viewports": ["./src/_engine/features/viewports/index.ts"],
       "aekasha/ui": ["./src/_engine/ui/index.ts"],
