@@ -40,8 +40,9 @@ export class EngineMultibodyJointProxyAPI implements MultibodyJointAPI {
     return this.joint;
   }
 
+  // p500
   /**
-   * Points the proxy at its copy in a restored world (p500).
+   * Points the proxy at its copy in a restored world.
    * @internal
    */
   _rebind(joint: Rapier.MultibodyJoint) {

@@ -1,7 +1,8 @@
+// p114
 /**
  * Moon layer: the disc, drawn as a small sphere lit by the sun into its phase, behind the
  * atmosphere (which gives it its extinction and hides it by day, like the sun disc). Up to
- * MAX_MOONS moons (p114), each with its own uniforms, phase and texture.
+ * MAX_MOONS moons, each with its own uniforms, phase and texture.
  *
  * The disc's lit direction is the moon's direction turned toward the sun by the phase's
  * elongation, taken the short way (`2π · phase` folded into [0, π]): the phase always shows as

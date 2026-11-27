@@ -8,14 +8,16 @@ import type { ColliderAPI, ColliderParams } from './types/PhysicsColliderTypes';
 import type { TempContactForceEvent } from './types/PhysicsEventTypes';
 import type { JointAPI, MultibodyJointAPI } from './types/PhysicsJointTypes';
 
-/** Told the id of every rigid body moved by setTranslation/setRotation (p352). */
+// p352
+/** Told the id of every rigid body moved by setTranslation/setRotation. */
 let bodyMovedListener: ((rigidBodyId: number) => void) | null = null;
 
+// p352
 /**
  * Sets (or clears, with null) the one listener told the id of every rigid body moved by
  * `setTranslation` / `setRotation`, in both worker targets. `BODY_STATIC` entities (bodies
  * created `FIXED`, and dynamic ones in the `STATIC` or `DISABLED` physics tier) aren't synced to
- * their entities every frame (p352), so PhysicsEntity.ts uses this to bring such a move to the
+ * their entities every frame, so PhysicsEntity.ts uses this to bring such a move to the
  * mesh. It's called for every move, so it must be cheap.
  * @internal
  */
@@ -45,8 +47,9 @@ export const colliders = new Map<number, ColliderAPI>();
  * @internal
  */
 export const joints = new Map<number, JointAPI>();
+// p250
 /**
- * The world's multibody joints by their running id, their own ids (both worker targets, p250).
+ * The world's multibody joints by their running id, their own ids (both worker targets).
  * @internal
  */
 export const multibodyJoints = new Map<number, MultibodyJointAPI>();

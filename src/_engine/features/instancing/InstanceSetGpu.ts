@@ -266,11 +266,12 @@ const createVariant = (
 /** The level geometries whose dispose the sets forward to their buffers (below). */
 const forwardedGeometries = new WeakSet<THREE.BufferGeometry>();
 
+// p354 Phase 5 step 5
 /** A level geometry's dispose, forwarded to its attributes and index. three frees a geometry's
  * buffers on its dispose only when it drew that geometry itself (`Geometries.initGeometry` adds
  * the listener), and a set draws its levels through wrappers sharing their buffers (a geometry has
  * one indirect offset), so a level's buffers stayed in three's totals after the registry disposed
- * it (p354 Phase 5 step 5). An attribute three made no buffer for, or freed already, does nothing;
+ * it. An attribute three made no buffer for, or freed already, does nothing;
  * an interleaved one isn't an event dispatcher (three frees it with a geometry it drew). */
 const disposeLevelBuffers = (event: { target: THREE.BufferGeometry }) => {
   const geometry = event.target;

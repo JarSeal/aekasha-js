@@ -8,13 +8,15 @@ import { DEFAULT_SPATIAL_DOMAIN } from '../SpatialDomains';
 export const SPATIAL_GRID_TAB_ID = 'spatialGridControls';
 export const SPATIAL_GRID_LS_KEY = 'AEK_debugSpatialGrid';
 
-/** One domain's tab settings (p346 §3.6). */
+// p346 §3.6
+/** One domain's tab settings. */
 export type DomainDebugSettings = {
   /** Overrides the cell size of the domain's world settings; absent = the app's. */
   cellSize?: number;
+  // p349 §3.5
   /**
    * Overrides the cell size of a scene's settings, by scene id; absent = the app's (never the
-   * world value, p349 §3.5).
+   * world value).
    */
   cellSizeByScene?: Record<string, number>;
   showCells: boolean;

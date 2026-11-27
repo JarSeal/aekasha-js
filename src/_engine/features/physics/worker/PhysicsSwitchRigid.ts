@@ -37,8 +37,9 @@ const createEntityColliders = (
   return ids;
 };
 
+// p352
 /** A new body's transform buffer slot, seeded with its pose. -1 without a buffer and for a FIXED
- * body, which never moves under simulation: its proxy keeps its pose instead (p352). `refused`
+ * body, which never moves under simulation: its proxy keeps its pose instead. `refused`
  * when the buffer is full. */
 const allocateBodySlot = (rb: RigidBodyAPI, transformBuffer?: PhysicsTransformBuffer) => {
   const pose = toPlainPose(rb.pos, rb.rot);
@@ -51,7 +52,8 @@ const allocateBodySlot = (rb: RigidBodyAPI, transformBuffer?: PhysicsTransformBu
   return { slot, pose, refused: false };
 };
 
-/** Switches a body just made to its create-time tier (p353 Phase 4 D3): `STATIC` makes it `FIXED`,
+// p353 Phase 4 D3
+/** Switches a body just made to its create-time tier: `STATIC` makes it `FIXED`,
  * `DISABLED` disables it, as `requestPhysicsTier` would (`createRigidBodyWithCollidersSync` does
  * the same on MAIN_THREAD). */
 const applyCreateTier = (rb: RigidBodyAPI, tier: 'STATIC' | 'DISABLED' | undefined) => {

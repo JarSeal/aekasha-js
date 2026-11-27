@@ -241,8 +241,9 @@ const inputSets = new WeakMap<object, TextureSetDef>();
  */
 export const getTextureSetOfInput = (input: TextureSetInput) => inputSets.get(input);
 
+// p303 D1, decision 2
 /**
- * `{ "textureSet": id, "packing"? }` (p303 D1, decision 2): a bundle of the packing's texture
+ * `{ "textureSet": id, "packing"? }`: a bundle of the packing's texture
  * nodes by slot, and uniforms of the set's `physicalSize`, `heightScale`, `surface` fields and
  * `averageColor` when it has one (`TextureSetInput`). A texture that isn't registered samples the
  * white texel, warned, as a bare id does. The bundle maps to its set (`getTextureSetOfInput`).
@@ -338,7 +339,8 @@ export const loadTextureSetGeneratorAsync = async (id: string) => {
  */
 export const getTextureSetGenerator = (id: string) => bakesModule?.getLoadedGenerator(id);
 
-/** Starts the bakes of a scene's procedural sets (p304 D3): synchronously once the module is
+// p304 D3
+/** Starts the bakes of a scene's procedural sets: synchronously once the module is
  * loaded, so a set the next scene shares is re-tagged before the previous scene's release */
 const startSceneBakes = (sceneData: SceneData) => {
   if (!sceneData.textureSets?.some((set) => set.procedural)) return undefined;
@@ -372,9 +374,10 @@ export const registerTextureSetsDebug = async () => {
   useDebug(debugModule)?._registerTextureSetsDebug();
 };
 
+// p303 D4, p304 D3
 /**
  * The texture sets' install: registers the `{ textureSet }` material input resolver, and the
- * scene hooks that build a scene's set arrays (p303 D4) and bake its procedural sets (p304 D3)
+ * scene hooks that build a scene's set arrays and bake its procedural sets
  * before its materials: started when the world is cleared (the next scene's data, which owns what
  * registers from then on), awaited before its assets load. The `{ textureSetArray }` resolver
  * registers with the first build.

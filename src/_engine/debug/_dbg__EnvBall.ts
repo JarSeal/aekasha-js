@@ -1,5 +1,6 @@
+// p115, p083
 /**
- * Environment ball (p115): a reflective sphere in
+ * Environment ball: a reflective sphere in
  * the top-right viewport stack, left of the axes gizmo, showing the environment map PBR
  * materials sample (the PMREM, not the background). It is a core viewport (Viewports.ts) with
  * a private scene: one unlit sphere sampling the PMREM along the reflection vector at the
@@ -7,7 +8,7 @@
  * lights involved. Its camera turns with the active camera, so the ball shows what that camera
  * would see reflected.
  *
- * Views (p083): in an editor view the ball follows the view's camera (Camera/_dbg__CameraRig.ts)
+ * Views: in an editor view the ball follows the view's camera (Camera/_dbg__CameraRig.ts)
  * and shows the view scene's own environment (`scene.environment`), what the view's materials
  * sample; the root scene's sky box environment is shown only in the Runtime view.
  *

@@ -35,8 +35,9 @@ import type {
   WorldBoundsBox,
 } from './types/PhysicsWorldBoundsTypes';
 
+// p614 D5
 /** The channel to the worker (WORKER_THREAD mode, from initPhysics): every message to it and from
- * it goes through this (p614 D5). */
+ * it goes through this. */
 let workerTransport: PhysicsTransport<PhysicsUpProtocol, PhysicsDownProtocol> | null = null;
 /** Requests sent to the worker (or captured for a sub-step) and not settled yet: what stopPhysics
  * rejects. The resolvers themselves are PromiseResolver's, shared with the assets API. */
@@ -246,9 +247,10 @@ export const throwWorkerSync = (api: string, getter: string): never => {
   );
 };
 
+// p352
 /** A request that runs where a one-way command would (messageWorker): inside an APP_PHYSICS_STEP
  * sub-step it's captured and replayed right before that sub-step, and the worker replies from
- * the replay. So what it does lands on a fixed step, not on the frame's first one (p352).
+ * the replay. So what it does lands on a fixed step, not on the frame's first one.
  * @internal
  */
 export const messageWorkerAtStep = async <T>(message: PhysicsUpProtocol) => {
@@ -309,8 +311,9 @@ const onWorkerMessage = (data: PhysicsDownProtocol) => {
 
 let pendingEventPushes: EventsPushMessage[] = [];
 
+// p102
 /**
- * What handles the bodies the backend found outside the world bounds (p102): told each push's or
+ * What handles the bodies the backend found outside the world bounds: told each push's or
  * sub-step's records, in order.
  * @internal
  */
@@ -341,8 +344,9 @@ export const clearPendingEventPushes = () => {
   exitStepByBodyId.clear();
 };
 
+// p500
 /**
- * A snapshot restore (p500): drops the event pushes and the world bounds' exits not delivered yet,
+ * A snapshot restore: drops the event pushes and the world bounds' exits not delivered yet,
  * which belong to the steps the restore took back (on `MAIN_THREAD` the backend drops its own
  * records), and the exits noted after the restored `step`.
  * @internal
@@ -355,7 +359,8 @@ export const dropEventPushesAfterRestore = (step: number) => {
   }
 };
 
-/** The current world's exited bodies (p102), each body's exit step by its id: noted when the exit
+// p102
+/** The current world's exited bodies, each body's exit step by its id: noted when the exit
  * reaches the main thread, before its delivery. */
 const exitStepByBodyId = new Map<number, number>();
 /** MAIN_THREAD: the exits taken from the backend and not delivered yet. */

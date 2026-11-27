@@ -15,8 +15,9 @@ export const STREAMING_MIN_CELL_SIZE = 32;
  */
 export const DEFAULT_STREAMING_RINGS = { resident: 1, nearby: 2, far: 5 } as const;
 
+// p353 Phase 4 D7
 /**
- * The physics tiers a `NEARBY` cell's dynamic bodies can have (p353 Phase 4 D7), the first the
+ * The physics tiers a `NEARBY` cell's dynamic bodies can have, the first the
  * default: `STATIC` still collides (something can reach it), `DISABLED` keeps its velocities.
  */
 export const STREAMING_NEARBY_PHYSICS_TIERS = ['STATIC', 'DISABLED'] as const;

@@ -104,10 +104,11 @@ const placementMatrices = (placements: readonly ScatterPlacementDef[], origin: T
   return matrices;
 };
 
+// i020
 /**
  * Whether a geometry's positions are quantized: an import another tool quantized, whose scale is
  * in its node, which a scatter's cell doesn't draw (the asset pipeline's are made floats again
- * by the import, i020).
+ * by the import).
  * @internal
  */
 export const hasQuantizedPositions = (geometry: THREE.BufferGeometry) => {

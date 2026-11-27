@@ -37,8 +37,9 @@ import {
 // The running id (see RapierState.ts' maps)
 let nextRigidBodyId = 0;
 
+// p352
 /**
- * Awake and sleeping dynamic bodies right now (step stats, p352), written into `out`.
+ * Awake and sleeping dynamic bodies right now (step stats), written into `out`.
  * @internal
  */
 export const countDynamicBodyActivity = (out: PhysicsBodyActivity) => {
@@ -52,10 +53,11 @@ export const countDynamicBodyActivity = (out: PhysicsBodyActivity) => {
   return out;
 };
 
+// p343
 /**
  * Writes each body's translation into `out` (x, y, z per id, in order), also for a detached body
  * (the REMOVED tier: where it was taken out), NaN for an unknown id. Rapier stores f32, so the
- * values are exact in a Float32Array (p343: a deterministic tier policy reads them on a step).
+ * values are exact in a Float32Array (a deterministic tier policy reads them on a step).
  * @internal
  */
 export const readBodyPositions = (ids: ArrayLike<number>, out: Float32Array) => {
@@ -270,8 +272,9 @@ export const deleteRigidBodies = (ids: number[]) => {
   };
 };
 
+// p352
 /**
- * The REMOVED physics tier (p352): takes the body and its colliders out of the world. Their state
+ * The REMOVED physics tier: takes the body and its colliders out of the world. Their state
  * is read first, so reattachRigidBody can put them back exactly; their ids, proxies and event
  * callbacks are kept for that, outside the live maps (so nothing iterates or finds them). Rapier
  * has no getter for some of it (locked axes, additional mass, how a collider's mass was given): the

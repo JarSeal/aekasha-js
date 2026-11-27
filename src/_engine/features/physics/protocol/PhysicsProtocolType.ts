@@ -24,7 +24,8 @@ export enum PhysicsProtocolType {
   /** One-way: sets the worker's PhysicsState.stepStatsEnabled (setPhysicsStepStatsEnabled).
    * The worker's state outlives world resets, so it is sent once per change. */
   SET_STEP_STATS = 7,
-  /** One-way: sets (or clears) the current world's bounds (p102), which the backend checks after
+  // p102
+  /** One-way: sets (or clears) the current world's bounds, which the backend checks after
    * every step. In the ENGINE range because it calls the worker's engAPI, which the WORLD
    * switchboard doesn't receive. A new world starts without, so it's sent after each one. */
   SET_WORLD_BOUNDS = 8,
@@ -137,13 +138,17 @@ export enum PhysicsProtocolType {
   RIGID_USER_TORQUE = 471,
   /** A rigid body (optional) and its colliders in one message (see createRigidBodyWithColliders) */
   CREATE_PHYSICS_ENTITY = 472,
-  /** The REMOVED physics tier (p352): body and colliders out of the world, state and ids kept */
+  // p352
+  /** The REMOVED physics tier: body and colliders out of the world, state and ids kept */
   RIGID_DETACH = 473,
-  /** Back from the REMOVED physics tier (p352) */
+  // p352
+  /** Back from the REMOVED physics tier */
   RIGID_REATTACH = 474,
-  /** Body positions read on a fixed step (p343's deterministic tier policy) */
+  // p343
+  /** Body positions read on a fixed step (the tier policy's `STEPS` cadence) */
   RIGID_READ_POSITIONS = 475,
-  /** One-way: sets (or clears) a body's own world bounds (p102 Phase 2), replacing the world's */
+  // p102 Phase 2
+  /** One-way: sets (or clears) a body's own world bounds, replacing the world's */
   RIGID_SET_BOUNDS = 476,
 
   // COLLIDER >= 600 && COLLIDER < 800

@@ -20,8 +20,9 @@ export type {
   DevFilesWriteStatus,
 } from './DevFilesProtocol';
 
+// p342
 /**
- * Dev files (p342): debug tooling writes files into the repo while `yarn dev` runs (an exported
+ * Dev files: debug tooling writes files into the repo while `yarn dev` runs (an exported
  * impostor, a baked texture). The dev server's plugin (`devTools/devFilesPlugin.ts`) does the
  * writing; this is the browser side. Debug env only, and only with the dev server: in a build,
  * or with `AEK_DEV_FILES=false`, {@link getDevFilesStatus} reports it unavailable and
@@ -218,7 +219,8 @@ export const getDevFilesSaveHistorySize = (): number => {
   );
 };
 
-/** The "File server" folder's switches (p355 §2.4) that {@link isDevFilesOptionOn} reads. */
+// p355 §2.4
+/** The "File server" folder's switches that {@link isDevFilesOptionOn} reads. */
 export type DevFilesOption = 'gatherToasts' | 'confirmWrites';
 
 /**
@@ -306,9 +308,10 @@ export const getDevFilesStatus = async (): Promise<DevFilesStatus> => {
 export const writeDevFiles = async (writes: DevFileWrite[]): Promise<DevFilesCommitBody> =>
   (await requireDevFiles())._writeDevFiles(writes);
 
+// p355 §2.3
 /**
  * {@link writeDevFiles} without the "Confirm writes" dialog: the save menu's "Save specific
- * data…" dialog's, which is its own confirmation (p355 §2.3). Not public, so no other tool skips
+ * data…" dialog's, which is its own confirmation. Not public, so no other tool skips
  * the setting.
  * @internal
  */

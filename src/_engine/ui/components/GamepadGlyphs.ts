@@ -46,11 +46,12 @@ export type InputGlyphGamepadInput =
 type Shape = 'circle' | 'pill' | 'trigger' | 'plain';
 type FamilyLabels = [shown: string, spoken: string];
 
+// p808 Phase 8
 /**
  * Per family, by button: [shown, spoken]. The face buttons' PlayStation labels are shapes (SVG).
  * A spoken name starts with the shown label when the label is a word of its own ('RT, right
  * trigger'): a control a glyph names (the controls page's slot) has its shown text in its name
- * (WCAG 2.5.3, axe's `label-content-name-mismatch`, p808 Phase 8)
+ * (WCAG 2.5.3, axe's `label-content-name-mismatch`)
  */
 const LABELS: Record<
   Exclude<InputGlyphGamepadButton, `DPAD_${string}`>,

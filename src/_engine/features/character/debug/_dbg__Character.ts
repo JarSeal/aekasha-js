@@ -122,7 +122,8 @@ const getCharacterInfoItems = (character: CharacterObject): PropertyGridItem[] =
   ];
 };
 
-/** Content for the character's edit window (p806 D10): its pose rows when it has a body (a copy
+// p806 D10
+/** Content for the character's edit window: its pose rows when it has a body (a copy
  * the Set buttons apply, recorded for undo), its buttons and its info rows */
 export const createEditCharacterContent = (data?: { [key: string]: unknown }) => {
   const d = data as { id: string };

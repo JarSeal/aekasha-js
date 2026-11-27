@@ -86,8 +86,9 @@ export const roundToDecimals = (value: number, decimals: number) => {
   return Number.isFinite(rounded) ? rounded + 0 : value;
 };
 
+// p804 D6
 /**
- * A typed, stepped or dragged number made a value (p804 D6): snapped to the step's grid (from
+ * A typed, stepped or dragged number made a value: snapped to the step's grid (from
  * `min`, else 0), wrapped (`wrap`) or clamped to the range, then rounded so no float noise is
  * written (`1 + 0.1` is `1.1`). `decimals` is `getFixedRoundingDecimals`' answer when the caller
  * kept it.
@@ -126,8 +127,9 @@ export type ValueTextOptions = NumberRules & {
   unit?: string;
 };
 
+// p804 D6
 /**
- * A number part's text maker (p804 D6): `format`'s text, else the value with its shown decimals,
+ * A number part's text maker: `format`'s text, else the value with its shown decimals,
  * worked out once when `precision` or `step` sets them (a field draws on every change, D4: one
  * `toFixed` per draw). The unit isn't in the text (the field shows it after the text, and says it
  * with `getSpokenText`).

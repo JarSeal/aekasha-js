@@ -11,8 +11,9 @@ import { getTextureRegistry } from '../../kernel/assets/Texture';
 import { getAssetOwners, isSceneOwnerKey } from '../../kernel/assets/AssetOwners';
 import { getCompressedTextureByteSize } from '../../kernel/assets/debug/_dbg__AssetStats';
 
+// p345 §2.1–2.2
 /**
- * Per-asset GPU bytes for the GPU memory tab's "By owner" view (p345 §2.1–2.2).
+ * Per-asset GPU bytes for the GPU memory tab's "By owner" view.
  *
  * The bytes are three's own: `renderer.info.memoryMap` holds, per uploaded texture and attribute,
  * exactly what `info.memory` counted for it. So owners plus untracked add up to
@@ -28,9 +29,10 @@ const getCellOfOwner = (owner: string) => {
   return slashAt < 0 ? owner : owner.slice(0, slashAt);
 };
 
+// p353 Phase 5 D10
 /**
  * The owner an asset's bytes are listed under: its only owner; for one several layers of one
- * streaming cell hold (its near and far content, p353 Phase 5 D10), that cell's key
+ * streaming cell hold (its near and far content), that cell's key
  * (`sceneId#cellKey`, its near layer's: the Streaming tab sums a cell's keys); for one several
  * cells or a cell and its scene hold, the scene they're all of; else the latest of them
  * (AssetOwners).
@@ -227,7 +229,8 @@ export type OwnerSums = OwnerItem & {
 };
 
 export type OwnerGroup = OwnerSums & {
-  /** Per-cell sums (streaming cells' `sceneId#cellKey` owners, p353), largest first */
+  // p353
+  /** Per-cell sums (streaming cells' `sceneId#cellKey` owners), largest first */
   cells: OwnerSums[];
 };
 

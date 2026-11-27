@@ -64,8 +64,9 @@ export const setEntityWireframeFolderExpanded = (expanded: boolean) => {
   savePhysicsUIState();
 };
 
+// p102
 /** Whether the world bounds' box was drawn when last saved (the tab turns it on again at its
- * registration, p102) */
+ * registration) */
 export const isWorldBoundsBoxShownSaved = () => physicsUIState.worldBoundsBoxShown;
 
 /** Saves whether the world bounds' box is drawn */

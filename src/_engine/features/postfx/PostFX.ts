@@ -80,11 +80,12 @@ let pipeline: THREE.RenderPipeline | null = null;
 let scenePass: THREE.PassNode | null = null;
 /** Lazy non-MSAA depth + normal pre-pass, see buildPostFxPipeline(). */
 let prePass: THREE.PassNode | null = null;
+// p056
 /**
  * The pre-pass's MRT, one for every build: three caches a render context per MRT id for the
  * renderer's lifetime (`RenderContexts`, three r187), and each keeps the last camera it rendered
  * with, so a new MRT per build kept every rebuilt scene's camera, its render list and that list's
- * lights alive (p056).
+ * lights alive.
  */
 let prePassMRT: THREE.MRTNode | null = null;
 /** The camera the current build's scene pass renders with. */
@@ -107,9 +108,10 @@ export const installPostFx = (ctx: FeatureContext) => {
   isMasterEnabled = ctx.config.postFx?.enabled !== false;
 };
 
+// p607 D11
 /**
  * Loads the files of the PostFX passes a scene's chain names (its options' `postFx`), which the
- * gathered data loads on demand (p607 D11): the `created` scene hook awaits it before
+ * gathered data loads on demand: the `created` scene hook awaits it before
  * buildPostFxForScene. A file loads once; one that fails is logged and its pass left out (as a
  * pass without a file is).
  * @internal
@@ -323,12 +325,13 @@ const compileInScenePassAsync = async (
   }
 };
 
+// p057 Phase 3
 /**
  * PostFX's render pipeline compiler (`RenderPipelineCompiler`, the `postFx()` feature's
  * `setRenderPipeline`): a pre-warm compiles in the scene pass's target, then, when a PostFX pass
  * reads depth or normals, in the pre-pass's (its MRT). Null while the chain is off; builds the
  * chain when the next frame would. Without it, a pre-warmed mesh compiled for the direct render
- * and its first PostFX frame compiled again (p057 Phase 3: the pipelines' colour space differs,
+ * and its first PostFX frame compiled again (the pipelines' colour space differs,
  * and the pre-pass has its own build).
  * @internal
  */

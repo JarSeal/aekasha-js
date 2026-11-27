@@ -42,7 +42,8 @@ const getProfilerTooltip = () => {
   return chord ? `Open the profiler (${chord})` : 'Open the profiler';
 };
 
-/** Shows the stats panels as the settings say (p807 D4), live: every toggle but PHY's. */
+// p807 D4
+/** Shows the stats panels as the settings say, live: every toggle but PHY's. */
 const applyStatsSettings = () => {
   const cfg = statsConfig;
   if (!cfg.enabled) {
@@ -80,8 +81,9 @@ const onSettingChange = () => {
   updateDebuggerTab(STATS_TAB_ID);
 };
 
+// p807 D4
 /**
- * Builds the stats panels from the Statistics tab's settings (p807 D4).
+ * Builds the stats panels from the Statistics tab's settings.
  * @param config optional configurations for stats
  */
 export const _initStats = (config?: StatsOptions) => {

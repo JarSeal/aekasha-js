@@ -2,8 +2,9 @@ import { lwarn } from '../../../utils/Logger';
 import * as builtIn from './BuiltInIcons';
 import '../../styles/kit.scss';
 
+// p607 D12
 /**
- * The icon registry (p607 D12): `getSvgIcon` renders only a registered icon, so a build holds the
+ * The icon registry: `getSvgIcon` renders only a registered icon, so a build holds the
  * SVGs that something registers and no others. The debug tools register every built-in in
  * InitEngine (debug env and prod test mode); a production build registers none unless the app does.
  */

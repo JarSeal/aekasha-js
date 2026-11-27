@@ -16,8 +16,9 @@ import type {
 import type { PhysicsProtocolType } from './PhysicsProtocolType';
 import type { PhysicsUpProtocol } from './PhysicsUpProtocol';
 
+// p500 Phase 2
 /**
- * A body a snapshot restore kept (p500 Phase 2), with what its `WORKER_THREAD` proxy keeps a copy
+ * A body a snapshot restore kept, with what its `WORKER_THREAD` proxy keeps a copy
  * of, read off the restored world: the snapshot may hold another type, enabled state or pose than
  * the proxy last cached.
  * @internal
@@ -70,7 +71,8 @@ export type PhysicsDownProtocol =
         /** Banks in `buffer` (PhysicsTransformBuffer), present with it, so the main-thread
          * wrapper uses the worker's layout instead of assuming one. */
         bankCount?: number;
-        /** Step-statistics scratch buffer (p027), present whenever transportMode is
+        // p027
+        /** Step-statistics scratch buffer, present whenever transportMode is
          * 'SHARED_MEMORY', whatever PhysicsState.stepStatsEnabled is, so the flag can be
          * switched at runtime. See PHYSICS_STEP_STATS_SLOTS for its layout. In MESSAGE_BATCH
          * mode the same numbers ride on TRANSFORMS_PUSH instead, so no buffer is handed over. */
@@ -122,7 +124,8 @@ export type PhysicsDownProtocol =
     | {
         type: PhysicsProtocolType.CREATE_RIGID_BODY;
         id: number;
-        /** -1 for a FIXED body: it has no transform-buffer slot (p352) */
+        // p352
+        /** -1 for a FIXED body: it has no transform-buffer slot */
         slot: number;
         /** The new body's pose as Rapier reports it, readable before any transform write-back */
         pose: RigidBodyPose;
@@ -284,7 +287,8 @@ export type PhysicsDownProtocol =
         type: PhysicsProtocolType.TRANSFORMS_PUSH;
         /** The worker bank's used slots and its header (PhysicsTransformBuffer.copyUsedBank). */
         buffer: ArrayBuffer;
-        /** Step statistics (p027), only populated when PhysicsState.stepStatsEnabled is on.
+        // p027
+        /** Step statistics, only populated when PhysicsState.stepStatsEnabled is on.
          * MESSAGE_BATCH mode only — the SHARED_MEMORY transport has no per-step message, so
          * there it uses the CREATE_WORLD statsBuffer instead. The three stay separate and
          * are never summed: stepDuration is the pure simulation cost, the other two bracket
@@ -292,7 +296,8 @@ export type PhysicsDownProtocol =
         stepDuration?: number;
         dispatchMs?: number;
         stepEndAt?: number;
-        /** Awake and sleeping dynamic bodies after the step (p352), with the stats above. */
+        // p352
+        /** Awake and sleeping dynamic bodies after the step, with the stats above. */
         awakeBodies?: number;
         sleepingBodies?: number;
       }
@@ -301,7 +306,8 @@ export type PhysicsDownProtocol =
         type: PhysicsProtocolType.EVENTS_PUSH;
         collisions: CollisionEventRecord[];
         contactForces: ContactForceEventRecord[];
-        /** The bodies the backend found outside the world bounds (p102), in order. */
+        // p102
+        /** The bodies the backend found outside the world bounds, in order. */
         outOfBounds: readonly OutOfBoundsRecord[];
       }
     // Error --------------------------------------

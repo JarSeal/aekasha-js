@@ -142,8 +142,9 @@ export const buildNumberMonitor = (props: NumberFieldProps): NumberField =>
     getText: createValueFormatter(props).getText,
   }).shell.field;
 
+// p805 D11
 /**
- * A number field's value as text for the fields' context menu (p805 D11): copied as it is, pasted
+ * A number field's value as text for the fields' context menu: copied as it is, pasted
  * as a typed text is (an expression with the field's units), then kept to its rules.
  * @internal
  */

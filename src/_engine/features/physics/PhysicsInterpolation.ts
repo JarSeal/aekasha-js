@@ -69,9 +69,10 @@ type InterpolationHistory = {
   snapPose: Float32Array | null;
 };
 
+// p352
 /**
  * Throws away one entity's pose history: its next capture reseeds it, so it doesn't blend from
- * a pose it left (a body back from the REMOVED physics tier, p352; a deleted entity).
+ * a pose it left (a body back from the REMOVED physics tier, a deleted entity).
  * @internal
  */
 export const resetPhysicsInterpolationHistory = (world: ECSWorld, entityId: number) => {
@@ -170,11 +171,12 @@ const resetInterpolationHistory = (state: WorldInterpolationState) => {
   state.isClockAnchored = false;
 };
 
+// p601
 /**
  * Debug and test only: while pinned, every interpolated body of `world` is drawn at the newest
  * visible snapshot, with no blend toward it. The scene runner's test bridge pins it once the
  * determinism probe has held physics, so a still frame shows the exact step the probe hashed,
- * not a pose between the last two steps that depends on frame timing (p601).
+ * not a pose between the last two steps that depends on frame timing.
  * @internal
  */
 export const setPhysicsInterpolationPinnedToNewest = (world: ECSWorld, isPinned: boolean) => {

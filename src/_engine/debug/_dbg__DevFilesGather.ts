@@ -19,7 +19,8 @@ export type GatherNote = {
   files: string[];
   /** The assets the pipeline failed to build */
   assetErrors: DevDataGatheredEvent['assetErrors'];
-  /** A save's own warnings, shown after the reload (p355 Phase 6: "Save scene"'s materials it
+  // p355 Phase 6
+  /** A save's own warnings, shown after the reload ("Save scene"'s materials it
    * couldn't save) */
   warnings?: GatherNoteWarning[];
 };

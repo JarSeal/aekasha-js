@@ -4,8 +4,9 @@ import { getRenderer } from '../../kernel/render/Renderer';
 import { getElapsedTime } from '../../kernel/loop/MainLoop';
 import type { SkyBoxNebulaSize } from './SkyBoxTypes';
 
+// p114
 /**
- * Static layers (p114): sky layers that only change when their params do (the nebulae), baked
+ * Static layers: sky layers that only change when their params do (the nebulae), baked
  * into a HalfFloat cube once per change and sampled with one cube lookup per pixel
  * (SkyComposite.ts), in the view and in the env bake. They sit at infinity in their own frame,
  * which turns with the sky (the sidereal rotation) as a lookup rotation, so moving the sky never
@@ -110,6 +111,7 @@ const createTarget = (resolution: StaticLayersResolution) => {
   return target;
 };
 
+// p057 Phase 3; docs/issues/i240_three-cube-render-target-texture-link.md
 /**
  * Sets up a new target's GPU texture now, by clearing every face (a clear runs three's render
  * target setup, as a render would). The cube is sampled for the whole scene load, and bakes wait
@@ -117,9 +119,9 @@ const createTarget = (resolution: StaticLayersResolution) => {
  * bind groups already sample (the env bake target has the same fix, see SkyEnvironment.ts).
  * Kept with three r187: it's a `CubeRenderTarget` like the env bake's, whose missing texture
  * back-link keeps the trap (initEnvBakeTarget). The scene runner never caught this one, even on
- * three r186 with the clear removed (p057 Phase 3: `skyShowcase` and `space`), so a run without
- * it proves nothing. Reported in docs/issues/i240_three-cube-render-target-texture-link.md: this clear
- * can go once three links the texture.
+ * three r186 with the clear removed (`skyShowcase` and `space`), so a run without
+ * it proves nothing. This clear can go
+ * once three links the texture.
  */
 const initTarget = (renderer: THREE.Renderer, target: THREE.CubeRenderTarget) => {
   if (!renderer.hasInitialized()) return;

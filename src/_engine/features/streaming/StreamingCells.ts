@@ -123,8 +123,9 @@ export type StreamingPrimer = {
  */
 export type StreamingFadeJob = object;
 
+// p353 Phase 5 D4-D6
 /**
- * What fades a streamed layer's entities in and out (p353 Phase 5 D4-D6, StreamingFades.ts; none
+ * What fades a streamed layer's entities in and out (StreamingFades.ts; none
  * in most machine tests, which then show and take down at once).
  * @internal
  */
@@ -146,8 +147,9 @@ export type StreamingFader = {
   release(world: ECSWorld, entityIds: readonly number[]): void;
 };
 
+// p353 Phase 5 D8
 /**
- * The entities several cells' units hold at once (a scene JSON's oversized mesh, p353 Phase 5 D8:
+ * The entities several cells' units hold at once (a scene JSON's oversized mesh:
  * one entity, returned by the unit of every cell it overlaps), and which of their holders draws
  * them: the first holder holds it while priming and fades it in, and it fades out only once every
  * holder is leaving, by the first of them (StreamingLayers.ts' `getDrawnEntityIds`).
@@ -201,8 +203,9 @@ export type StreamingStats = {
   fadesStarted: number;
   /** Fades turned around (a layer fading out wanted again, or one fading in no longer wanted). */
   fadesReversed: number;
-  /** Shown layers taken down during play without a fade out while fades are on (an exit check of
-   * p353 Phase 5: 0, but for a content's own `unload` that leaves its entities alive). */
+  // an exit check of p353 Phase 5
+  /** Shown layers taken down during play without a fade out while fades are on
+   * (expected 0, but for a content's own `unload` that leaves its entities alive). */
   unfadedTakeDowns: number;
 };
 
@@ -524,9 +527,10 @@ const loadLayerNowAsync = async (rt: StreamingRuntime, layer: StreamingLayer) =>
   await Promise.all(pending);
 };
 
+// p353 §4.1
 /**
  * Loads every layer the last decision wants loaded at once, with no budget, and resolves when
- * their async units have settled: a scene load's cells around the focus (p353 §4.1). The layers
+ * their async units have settled: a scene load's cells around the focus. The layers
  * load side by side; within one, a unit that waits runs once the units before it are in.
  * @internal
  */

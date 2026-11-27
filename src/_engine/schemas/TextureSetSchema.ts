@@ -200,7 +200,8 @@ const PackingEnumSchema = z.enum(
 
 const bakeSide = z.number().int().min(1).max(8192);
 
-/** A procedural set's generator and how it's baked (p304 D3), in place of `packings`. */
+// p304 D3
+/** A procedural set's generator and how it's baked, in place of `packings`. */
 const TextureSetProceduralSchema = z
   .object({
     /** The generator's id: a `<id>.generator.ts` module exporting `generator` (the toolkit's in

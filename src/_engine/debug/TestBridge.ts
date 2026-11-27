@@ -24,9 +24,10 @@ export type TestBridgeInputScript = {
   frames: { step: number; down?: string[]; up?: string[] }[];
 };
 
+// p610
 /**
  * A scene's character paths ({@link AekTestBridge.getCharacterPaths}): what the scene runner
- * compares, run to run, to check that the characters move the same way (p610). The test bridge's
+ * compares, run to run, to check that the characters move the same way. The test bridge's
  * and the scene runner's.
  * @internal
  */
@@ -90,9 +91,10 @@ export type TestBridgeSnapshot = {
  */
 export type TestBridgeSystemOrder = Record<string, Record<string, string[]>>;
 
+// p806 D14
 /**
  * A debugger tab host the scene runner's `debugger` configuration drives: the drawer, the
- * profiler window or the material editor's drawer (p806 D14). The test bridge's and the scene
+ * profiler window or the material editor's drawer. The test bridge's and the scene
  * runner's.
  * @internal
  */
@@ -134,8 +136,9 @@ export type TestBridgeFocusResult =
   | { status: 'FOCUSED'; tag: string }
   | { status: 'MISSING'; seen: string[] };
 
+// p601
 /**
- * `window.__AEK_TEST__`: what the scene runner (`devTools/verify/scenes.ts`, p601) drives a page
+ * `window.__AEK_TEST__`: what the scene runner (`devTools/verify/scenes.ts`) drives a page
  * through. Every method is safe to call more than once.
  * @internal
  */

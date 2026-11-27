@@ -1,8 +1,8 @@
+// p085 DD3
 /**
- * The material editor's settings per material
- * (p085 DD3): the stage (background,
- * environment, light intensities) and the preview (auto-rotation), their defaults, checking a
- * saved value, and the Settings tab's pane items.
+ * The material editor's settings per material: the stage (background, environment, light
+ * intensities) and the preview (auto-rotation), their defaults, checking a saved value, and the
+ * Settings tab's pane items.
  *
  * The camera's fov is not a setting: it is part of the camera pose (the record's `camera`), so
  * "Reset camera to default" resets it with the rest of the pose.
@@ -27,7 +27,8 @@ export type MaterialEditorSettings = {
 
 export type MaterialEditorSettingKey = keyof MaterialEditorSettings;
 
-/** The settings of a material without saved ones (p084's stage constants). */
+// p084
+/** The settings of a material without saved ones (the editor's stage constants). */
 export const DEFAULT_MATERIAL_EDITOR_SETTINGS: Readonly<MaterialEditorSettings> = {
   backgroundColor: '#5a5a5a',
   environment: 'STUDIO',

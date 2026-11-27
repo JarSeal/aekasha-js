@@ -179,9 +179,10 @@ export const reapBodyMultibodyJoints = (rbHandle: number) => {
 export const isInMultibody = (bodyId: number) =>
   multibodyParents.has(bodyId) || multibodyChildCounts.has(bodyId);
 
+// p250 D6
 /**
  * The dynamic bodies of `bodyId`'s multibody, `bodyId` first: every link of its tree, through a
- * fixed or kinematic root too. The world bounds' exit of a link takes them all (p250 D6): an
+ * fixed or kinematic root too. The world bounds' exit of a link takes them all: an
  * impulse joint between two branches of a multibody panics at the next step when one branch is
  * disabled and the other isn't (a branch alone is fine without one).
  * @internal

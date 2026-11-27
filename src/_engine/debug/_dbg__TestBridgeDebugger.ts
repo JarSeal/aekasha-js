@@ -95,8 +95,9 @@ const findControlAfter = (label: Element, row: Element) => {
   return null;
 };
 
+// i180
 /** The controls an element named `name` labels: its text (a leaf's) or its title, then the control
- * it's inside (a button's text part, whose row label is in its name too, i180) or else the first
+ * it's inside (a button's text part, whose row label is in its name too) or else the first
  * control after it in its row, up to {@link LABEL_ROW_DEPTH} ancestors inside the root */
 const findLabelledControls = (root: Element, name: string) => {
   const found: HTMLElement[] = [];

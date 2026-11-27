@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 implemented
+Status: in progress | Phases 1-2 implemented
 Category: Documentation, Refactoring
 Related: _DONE_p103_small-bug-fixes-and-tweaks.md (the list this item came from)
 
@@ -148,10 +148,51 @@ As built:
   `p302_gradientMat`; the homepage's What's new (the changelog's branch name) and an HTML comment
   in the shell (`p802 D6`, not shown).
 
-### Phase 2: The rest of the engine
+### Phase 2: The rest of the engine — done
 
 `src/_engine/` (kernel, features, ui, schemas, utils, debug, `_dbg__` files): the lint warnings
 there to 0.
+
+As built:
+
+- **477 blocks in 252 files to 0**, by folder: kernel 97, `features/physics/` 124, the other
+  features 97, ui + schemas + utils 73, debug 89 (the debug count grew by 4 between the first
+  report and its turn: blocks other edits had split). `report.ts --lint` after it: engine 0,
+  toolkit 87 in 24 files, rendered 0.
+- **The same rewording as Phase 1**, by the same split: `auto.py` cut the parentheticals made only
+  of references (304 blocks, each read in its context first), the rest by hand (187 blocks, some
+  of them after an automatic cut). What
+  became a fact rather than a `//` line: the kernel installers' "(the kernel, p607)" → "(part of
+  the kernel)"; "p352's simulation tiers" → "the simulation tiers"; "p343's deterministic tier
+  policy" → "the tier policy's `STEPS` cadence" (Phase 1's); "p299 places cells" → "the asset
+  pipeline's atlas packing"; "p309's decals" → "the terrain decals"; "p057 couldn't reproduce it"
+  → "a later check"; "pre-p094 keys" → "older versions' keys"; p420 (not started) → "the planned
+  NPC simulation tiers". The issue files (i010, i120, i240, i250, `_DONE_on-screen-tools-…`)
+  went to `//` lines, their warnings kept in words; RapierJoints.ts's "the issue's second symptom"
+  names the symptom.
+- **A `//` reference line already above a block takes the new references** (`// p250 D5; i250`)
+  instead of a second line: `apply.py` merges into it when it holds a reference.
+- **Line-start cuts:** a reference that began a line left a stub (` *.`, ` *: a scene`);
+  `fixstubs.py` moves the punctuation up. Long lines were rewrapped, three that were too long
+  before this branch too (Anchor.ts' `showAnchored`, `_dbg__GPUMemory.ts`'s header,
+  `_dbg__SpatialGridReadouts.ts`).
+- **Module headers an older mechanical edit had wrapped mid-sentence** (the material editor's
+  modules, `_dbg__EditorDrawer.ts`, `_dbg__ViewCamera.ts`: "The material editor (p084,\n *
+  p085), the first…") were rewrapped whole.
+- **Not covered by the rule, left for Phase 3 to decide:** bare decision references with no plan
+  number, which the lint can't see and a reader can't follow: 78 lines in 37 files of
+  `src/_engine` (`(D6)`, `(§9 of the plan)`, `(Phase 0 finding 5)`, `DD5`; most in spatial,
+  streaming, instancing, merging and the UI kit), all older than this branch. Where a cut of
+  this phase orphaned one, it was fixed (DeviceObserver.ts, SceneDataLoader.ts,
+  DefaultDebugKeyBindings.ts, `_dbg__GPUMemory.ts`, StreamingBodies.ts). Also seen:
+  `_dbg__LightShadowItems.ts`' select still says "Tweakpane's `view: 'list'` blade".
+- **The helpers added** (`.cache/p104/`): `scan.py <prefix>...` (report.json's shape from the
+  files, no ESLint), `blocks.py <prefix> [--count]` (the flagged blocks with line numbers),
+  `review.py <edits.json>` (each cut in context, `BAD` at a line start), `fixstubs.py <file>...`;
+  `auto.py` takes `--all` (not only rendered blocks) and a report path; the batches are
+  `p2-<folder>-auto.json` / `p2-<folder>-manual.json`.
+- Checked after each folder: ESLint, `tsc` (and `tsc -p hub` for the kit), `yarn test`,
+  `yarn verify:baselines --docs` (4652 / 4652 exports, unchanged).
 
 ### Phase 3: The toolkit, the rule's error, the release
 

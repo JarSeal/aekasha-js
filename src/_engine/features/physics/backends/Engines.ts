@@ -19,8 +19,9 @@ export const ENGINES: Record<
     init: () => Promise<unknown>;
     /** Types what init resolved with as the engine's module (a cast, nothing checked). */
     forceTypeEngine: (engineObj: unknown) => unknown;
+    // p607
     /** Loads the backend: only by `import()`, so the engine's package (Rapier: 829 kB gzip) is
-     * in no chunk but the one that starts the simulation (p607) */
+     * in no chunk but the one that starts the simulation */
     loadEngineAPI: () => Promise<EngineAPIType>;
   }
 > = {

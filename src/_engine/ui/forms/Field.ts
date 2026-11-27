@@ -143,8 +143,9 @@ export type Field<T> = {
   focus: () => void;
 };
 
+// p805 D11
 /**
- * A field's value as text, for the fields' context menu (p805 D11): Copy, Paste and "Copy as".
+ * A field's value as text, for the fields' context menu: Copy, Paste and "Copy as".
  * @template T the value's type
  * @internal
  */
@@ -305,8 +306,9 @@ const formFields = new WeakMap<Element, FormFieldEntry>();
  */
 export const getFormField = (elem: Element) => formFields.get(elem);
 
+// p805 D11
 /**
- * What the fields' context menu (p805 D11, `FieldContextMenu.ts`) reads of a field, any field's,
+ * What the fields' context menu (`FieldContextMenu.ts`) reads of a field, any field's,
  * a monitor's too.
  * @internal
  */
@@ -359,8 +361,9 @@ const getDefaultClipboard = <T>(value: T): FieldClipboard<T> | null => {
   return null;
 };
 
+// p805 D11
 /**
- * A choice field's value as text for the fields' context menu (p805 D11): Copy its option's label
+ * A choice field's value as text for the fields' context menu: Copy its option's label
  * (else the value), Paste an enabled option's label (case ignored) or value.
  * @internal
  */
@@ -428,8 +431,9 @@ const setAttrIf = (elem: Element, name: string, on: boolean, value = '') => {
   else elem.removeAttribute(name);
 };
 
+// p804 D5
 /**
- * Makes a field's shell (p804 D5) around the control a field built: the label (a `<label for>`
+ * Makes a field's shell around the control a field built: the label (a `<label for>`
  * its part, or a group's name), the reset button (shown while the value isn't the default), the
  * message line (the hint, or an error with `aria-invalid`), `hidden` / `disabled`, the binding
  * with the field's `onChange`, and the scheduler entry (an outside change flashes).

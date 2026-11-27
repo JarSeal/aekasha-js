@@ -16,8 +16,9 @@ import { getStaticLayers } from '../../features/skybox/SkyStaticLayers';
 import { getLiveAllocations } from './_dbg__GPUMemoryAllocations';
 import { getUncountedCubeBytes } from './_dbg__GPUMemoryOwners';
 
+// p345 §2.3
 /**
- * GPU memory sources (p345 §2.3): engine and app GPU resources that aren't registered assets,
+ * GPU memory sources: engine and app GPU resources that aren't registered assets,
  * resolved to three's own bytes, so they add up with the "By owner" assets to
  * `info.memory.total`.
  *

@@ -517,8 +517,9 @@ const createToastCmp = (
   return toastCmp;
 };
 
-/** The pause on hover and focus, and Escape while it holds the focus (the overlay stack, p803
- * D7): its entry gives the focus back to what had it before */
+// p803 D7
+/** The pause on hover and focus, and Escape while it holds the focus (the overlay
+ * stack): its entry gives the focus back to what had it before */
 const addToastListeners = (toast: Toast) => {
   const elem = toast.cmp.elem;
   elem.addEventListener('pointerenter', () => {

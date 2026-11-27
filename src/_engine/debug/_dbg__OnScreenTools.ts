@@ -135,7 +135,8 @@ const loadSceneFromTools = (sceneId: string) => {
 let topRowCMP: CMPHandle | null = null;
 /** The fixed row in the top left corner: its box, `topLeftBoxCMP` */
 let topLeftRowCMP: CMPHandle | null = null;
-/** The top left row's one box (p103): the Æ menu and undo / redo tools, then the view tools */
+// p103
+/** The top left row's one box: the Æ menu and undo / redo tools, then the view tools */
 let topLeftBoxCMP: CMPHandle | null = null;
 /** The fixed, centred bottom row: the switch tools */
 let bottomRowCMP: CMPHandle | null = null;
@@ -369,7 +370,8 @@ const getKeyHint = (keyId: string) => {
   return createKbd({ keys: chords.find((c) => c.includes('Meta') === isMac) ?? chords[0] });
 };
 
-/** The Æ menu's items (p355 §2.2), read on every open: the save items' states then. The status
+// p355 §2.2
+/** The Æ menu's items, read on every open: the save items' states then. The status
  * of the dev files is read again for the next open. */
 const getAekashaMenuItems = (): MenuItem[] => {
   void _refreshSaveStatus();
@@ -474,7 +476,8 @@ const GROUPS: Record<ToolTypes, GroupDef> = {
 };
 
 const toolbars = new Map<ToolTypes, OnScreenToolbar>();
-/** During a scene load (p806 D7): every control `aria-disabled`, its tooltip saying why */
+// p806 D7
+/** During a scene load: every control `aria-disabled`, its tooltip saying why */
 let isLoading = false;
 
 /** Shows a group's tools now: refreshed in place when they're the same tools, else rebuilt where
@@ -548,12 +551,12 @@ export const _updateOnScreenTools = (tools?: ToolTypes[] | ToolTypes) => {
   syncGroup(tools);
 };
 
+// p806 D7; docs/issues/_DONE_on-screen-tools-during-scene-load.md
 /**
- * Disables every on-screen tool during a scene load, or enables them again (p806 D7, closing
- * `docs/issues/_DONE_on-screen-tools-during-scene-load.md`): each control is `aria-disabled` (still
- * focusable, so the focus stays where it is) with the tooltip "Loading the scene…", its clicks are
- * ignored, and an open drop-down closes. The debug keys stop by themselves (their maps' context).
- * `_disableDebugger`'s.
+ * Disables every on-screen tool during a scene load, or enables them again: each control is
+ * `aria-disabled` (still focusable, so the focus stays where it is) with the tooltip "Loading the
+ * scene…", its clicks are ignored, and an open drop-down closes. The debug keys stop by themselves
+ * (their maps' context). `_disableDebugger`'s.
  */
 export const _setOnScreenToolsDisabled = (disable: boolean) => {
   if (!IS_DEBUG_ENV || isLoading === disable) return;

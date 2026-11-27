@@ -1,8 +1,8 @@
+// p083 DD7
 /**
- * An editor view's orbit camera (p083 DD7), written once for
- * every editor (material, particles, skybox, animation, …). A `PerspectiveCamera` with
- * `OrbitControls` on the canvas, owned by the view (not an ECS entity), and its
- * {@link ViewCameraRig}, which the axes gizmo follows, aligns and orbits.
+ * An editor view's orbit camera, written once for every editor (material, particles, skybox,
+ * animation, …). A `PerspectiveCamera` with `OrbitControls` on the canvas, owned by the view (not
+ * an ECS entity), and its {@link ViewCameraRig}, which the axes gizmo follows, aligns and orbits.
  *
  * Wire it into a ViewDef: `getCamera: () => viewCam.camera`, `getCameraRig: () => viewCam.rig`,
  * and call `onEnter`, `onExit` and `mainUpdate` from the view's own. The controls take canvas

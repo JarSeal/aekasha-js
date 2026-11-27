@@ -234,7 +234,8 @@ export type LongTaskStats = { count: number; longestMs: number };
 
 export type SceneStats = { currentId: string | null; isLoading: boolean; nextId: string | null };
 
-/** The device capability check's levels (p240), a debug tab's forced ones included, and the
+// p240
+/** The device capability check's levels, a debug tab's forced ones included, and the
  * observed scenes' correction of its prediction (Phase 4; null without one). */
 export type DeviceStats = { levels: DeviceLevels; observedCorrection: number | null };
 

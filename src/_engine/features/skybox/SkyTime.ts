@@ -1,5 +1,6 @@
+// p113, p114
 /**
- * The day-night cycle's time model (p113): the runtime time of day and moon phase, and the sun's
+ * The day-night cycle's time model: the runtime time of day and moon phase, and the sun's
  * and moon's directions from them. CPU only, plain scalar maths into caller-owned vectors:
  * nothing here allocates on the per-frame path.
  *
@@ -10,14 +11,14 @@
  * - a moon is `2π · phase` further along: hour angle `H − 2π · phase`, declination
  *   `(axialTilt + inclination) · sin(λ + 2π · phase)` (its orbit's node fixed where that tilt
  *   adds to the Earth's). So a full moon rises as the sun sets, low in summer and high in winter.
- *   Each moon has its own phase (and phase mode, cycle length and inclination): p114's second
+ *   Each moon has its own phase (and phase mode, cycle length and inclination): a second
  *   moon is a second orbit.
  * - the standard latitude formula into east/north/up, then into world space with +y up and
  *   north at -z, turned clockwise (seen from above) by northOffset.
  * - the stars sit still in their own frame, which turns into world space by the local sidereal
  *   time (`H + λ`: the sun's hour angle plus its right ascension, taken as its longitude), so
  *   a star where the sun is stays with the sun.
- * - the extra suns (p114) that turn with the sky stand at their elevation and azimuth at the
+ * - the extra suns that turn with the sky stand at their elevation and azimuth at the
  *   start time, and turn by the sidereal time from there (turnWithSky).
  *
  * Internal to the sky box (the composite, SkyDayNight.ts' API and step) and its debug tab;

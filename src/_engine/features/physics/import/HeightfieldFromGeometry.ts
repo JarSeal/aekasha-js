@@ -12,7 +12,8 @@ import { toHeightfieldColliderParams } from '../HeightfieldColliderParams';
 const GRID_TOLERANCE = 0.01;
 /** How far apart in height two vertices on one grid point may be (m): a seam's duplicates. */
 const HEIGHT_TOLERANCE = 1e-3;
-/** A terrain block's offset from its origin (m) past which the import warns (p306 D1). */
+// p306 D1
+/** A terrain block's offset from its origin (m) past which the import warns. */
 const BLOCK_CENTRE_TOLERANCE = 1e-3;
 
 /**

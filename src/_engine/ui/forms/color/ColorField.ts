@@ -78,8 +78,9 @@ export type ColorField<T extends ColorFieldValue = ColorFieldValue> = Field<T>;
 /** An sRGB channel as `rgb()` writes it: 0-255 */
 const toByte = (channel: number) => Math.round(Math.min(1, Math.max(0, channel)) * 255);
 
+// p805 D11
 /**
- * A colour field's value as text for the fields' context menu (p805 D11): its text, a pasted colour
+ * A colour field's value as text for the fields' context menu: its text, a pasted colour
  * as a typed one, and Copy as hex, `rgb()` and sRGB floats.
  */
 const getColorClipboard = <T extends ColorFieldValue>(codec: ColorCodec): FieldClipboard<T> => {

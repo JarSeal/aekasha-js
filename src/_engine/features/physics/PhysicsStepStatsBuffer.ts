@@ -1,5 +1,6 @@
+// p027, p352
 /**
- * Slot layout for the physics step statistics buffer (p027).
+ * Slot layout for the physics step statistics buffer.
  *
  * A five-`Float64` scratch buffer the worker writes after every STEP message and the main
  * thread polls once per frame, written and polled only while `PhysicsState.stepStatsEnabled`
@@ -9,7 +10,7 @@
  * allocated at all. A fresh buffer reads STEP_END_AT 0, "no step yet".
  *
  * The three timings are kept strictly separate and are never summed: STEP_MS is the pure
- * simulation cost, the other two are messaging overhead around it. The body counts (p352)
+ * simulation cost, the other two are messaging overhead around it. The body counts
  * describe the world after the step.
  * @internal
  */
@@ -26,9 +27,11 @@ export const PHYSICS_STEP_STATS_SLOTS = {
    * main thread subtracts this from its own `performance.now()` to derive the
    * write-back/read-cadence latency. */
   STEP_END_AT: 2,
-  /** Awake dynamic bodies after the last sub-step (p352): a body kept awake shows here. */
+  // p352
+  /** Awake dynamic bodies after the last sub-step: a body kept awake shows here. */
   AWAKE_BODIES: 3,
-  /** Sleeping dynamic bodies after the last sub-step (p352). */
+  // p352
+  /** Sleeping dynamic bodies after the last sub-step. */
   SLEEPING_BODIES: 4,
 } as const;
 

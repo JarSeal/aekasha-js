@@ -191,8 +191,9 @@ export type GraphMonitorBuild = {
   attach: (graph: { cmp: CMPHandle; push: (value: number) => void }) => boolean;
 };
 
+// p805 D9
 /**
- * A graph monitor's field without its graph (p805 D9): the number's text and an empty line under
+ * A graph monitor's field without its graph: the number's text and an empty line under
  * it, which `GraphMonitor.ts`' time series joins. The property grid's `view: 'graph'` item shows
  * this at once and loads the graph with `import()`; `createGraphMonitor` attaches it at once.
  * @internal

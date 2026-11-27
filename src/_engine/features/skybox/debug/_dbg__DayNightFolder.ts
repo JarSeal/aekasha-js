@@ -88,8 +88,9 @@ const SPEED_BUTTONS: [string, number][] = [
   ['×100', 100],
 ];
 
+// p806 D10
 /**
- * The speed buttons (a press sets the speed and plays): an exclusive button group (p806 D10), its
+ * The speed buttons (a press sets the speed and plays): an exclusive button group, its
  * pressed button the speed the cycle plays at, none while it's paused. The function it returns is
  * the custom item's refresh.
  */

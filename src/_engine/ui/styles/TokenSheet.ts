@@ -1,5 +1,6 @@
+// p801 D6, p802 D8
 /**
- * `tokens.css` read as data (p801 D6, p802 D8): a parser for its subset of CSS, its rules by role
+ * `tokens.css` read as data: a parser for its subset of CSS, its rules by role
  * (the kit root, each theme, the compact density), and the WCAG contrast pairs its colours must
  * meet. `Tokens.test.ts` checks the pairs, the Hub's design document (`devTools/hub/generated/`)
  * renders them, so the rule and the page are one computation. Takes the text, reads no file, and
@@ -169,10 +170,11 @@ export const CONTRAST_CONTROLS = ['border-control', 'focus-ring-color'];
  * @internal
  */
 export const CONTRAST_SOFTS = ['accent', 'danger', 'warning', 'success', 'info'];
+// p805 D9, p805 Phase 0
 /**
- * The chart series (p805 D9), in their order: each at 3:1 (a graphical object, WCAG 1.4.11) on
+ * The chart series, in their order: each at 3:1 (a graphical object, WCAG 1.4.11) on
  * the surfaces a chart sits on, `CONTRAST_SERIES_SURFACES`. Their order keeps neighbours apart
- * under the common colour vision deficiencies (p805 Phase 0), which no pair here checks.
+ * under the common colour vision deficiencies, which no pair here checks.
  * @internal
  */
 export const CONTRAST_SERIES = ['chart-1', 'chart-2', 'chart-3', 'chart-4', 'chart-5', 'chart-6'];

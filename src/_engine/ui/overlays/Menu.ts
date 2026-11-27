@@ -250,8 +250,9 @@ type Level = {
 /** An entry of an open level, with its level's index */
 type Hit = { depth: number; entry: MenuEntry };
 
+// p803 D10, p805 D11
 /**
- * Makes a menu that opens at an element or a point (p803 D10, p805 D11), with its submenus: one
+ * Makes a menu that opens at an element or a point, with its submenus: one
  * level per open submenu, each anchored to its item (`showAnchored`, on its right, flipped at the
  * bounds) and an overlay stack entry of its own, so Escape closes one level.
  * @internal

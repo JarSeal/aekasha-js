@@ -199,8 +199,9 @@ export type PropertyGridFieldItem = (BindingSource<unknown> | ReadonlyBindingSou
     onCreate?(field: Field<unknown>): void;
   };
 
+// p806 D4
 /**
- * Every key a field item takes (p806 D4): what the debugger's pane builder checks an item's keys
+ * Every key a field item takes: what the debugger's pane builder checks an item's keys
  * against, so a JS app's or an `as` cast's unknown key is an error, not a key ignored. Its test
  * keeps it complete.
  * @internal
@@ -404,7 +405,8 @@ export const inferFieldKind = (
   return null;
 };
 
-/** An `{ x, y, z?, w? }` object (not a `THREE.Euler`'s shape: a rotation, p804 D10), or an array
+// p804 D10
+/** An `{ x, y, z?, w? }` object (not a `THREE.Euler`'s shape: a rotation), or an array
  * of 2 to 4 numbers */
 const isVectorValue = (value: unknown) => {
   if (Array.isArray(value)) {
@@ -422,8 +424,9 @@ const toRadioOptions = (options: PropertyGridFieldItem['options']) => {
   })) as SegmentOption<SelectValue>[];
 };
 
+// p805 D9
 /**
- * A `view: 'graph'` item's graph monitor (p805 D9): its text at once, its time series after the
+ * A `view: 'graph'` item's graph monitor: its text at once, its time series after the
  * `import()` of `GraphMonitor.ts` (D13: a grid without one carries none of it); a failed load
  * leaves the text
  */

@@ -168,7 +168,8 @@ const getOrderedTabs = () =>
 
 /** The window content's root, while the window is open (its content is mounted). */
 let windowRoot: CMPHandle | null = null;
-/** The tab menu (p806 D6: horizontal, icon only, manual activation), while the window is open */
+// p806 D6
+/** The tab menu (horizontal, icon only, manual activation), while the window is open */
 let menu: Tabs | null = null;
 /** Each tab's container, its scroller (the menu's panel content) */
 const containers = createTabContainers({ class: styles.tabContent });
@@ -317,7 +318,8 @@ export const _openProfilerTab = (id: string) => {
 
 export const _isProfilerTabOpen = (id: string) => Boolean(windowRoot) && host.mountedId === id;
 
-/** The profiler window for the test bridge (p806 D14): its content root, the mounted tab and the
+// p806 D14
+/** The profiler window for the test bridge: its content root, the mounted tab and the
  * tab ids in menu order. */
 export const _getProfilerTestInfo = () => ({
   element: windowRoot?.elem ?? null,
@@ -330,7 +332,8 @@ export const _updateProfilerTab = (id: string, opts?: UpdateDebuggerTabOpts) => 
   host.refresh(opts?.rebuild);
 };
 
-/** A scene change (p807 D9, the drawer's contract): the open tab is rebuilt, or kept with
+// p807 D9
+/** A scene change (the drawer's contract): the open tab is rebuilt, or kept with
  * `keepOnSceneChange` (its `onSceneChange`, then a refresh). The window itself stays open. */
 export const _updateProfilerScene = () => host.sceneChanged();
 

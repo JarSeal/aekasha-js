@@ -21,7 +21,8 @@ export const getOwnerGPUBytes = (): Map<string, number> => {
   return bytes;
 };
 
-/** A cell's GPU bytes: its layers' owner keys' (p353 Phase 5 D10). */
+// p353 Phase 5 D10
+/** A cell's GPU bytes: its layers' owner keys'. */
 export const getCellGPUBytes = (bytes: ReadonlyMap<string, number>, cell: StreamingCell) => {
   let total = 0;
   for (const layer of cell.layers) total += bytes.get(layer.ownerKey) ?? 0;

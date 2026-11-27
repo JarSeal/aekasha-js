@@ -1,7 +1,9 @@
 import type { ColliderAPI } from './PhysicsColliderTypes';
 import type { OmitSync, PhysRotation, PhysVector } from './PhysicsCommonTypes';
 
-/** What a reattached body (p352 REMOVED tier) comes back as; everything else is as detached. */
+// p352
+/** What a reattached body (the REMOVED physics tier) comes back as; everything else is as
+ * detached. */
 export type RigidBodyAttachState = {
   /** The type it comes back with. */
   bodyType: RigidBodyTypeAPI;
@@ -9,7 +11,8 @@ export type RigidBodyAttachState = {
   enabled: boolean;
 };
 
-/** Dynamic bodies awake and asleep after the last measured step (step stats, p352). */
+// p352
+/** Dynamic bodies awake and asleep after the last measured step (step stats). */
 export type PhysicsBodyActivity = {
   /** Awake dynamic bodies. */
   awake: number;

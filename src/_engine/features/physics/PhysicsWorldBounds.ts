@@ -236,8 +236,9 @@ const holdExitedTier = (world: ECSWorld, entityId: number) => {
   if (tier && tier.target !== tier.tier) tier.target = tier.tier;
 };
 
+// i250
 /** 'DISABLE': the entity disabled (its OBJECT3D hidden). A frozen body (FIXED, it has joints) gets
- * only the DISABLED component: world.setDisabled would disable a jointed body (i250). */
+ * only the DISABLED component: world.setDisabled would disable a jointed body. */
 const disableExited = (world: ECSWorld, entityId: number, frozen: boolean) => {
   if (frozen) world.addComponent(entityId, ComponentType.DISABLED, true);
   else world.setDisabled(entityId, true);

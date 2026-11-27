@@ -162,7 +162,8 @@ const isSameMultibodyParent = (world: Rapier.World, id: number, handle: number) 
   return isListed;
 };
 
-/** Takes the orphan multibody joints out of `world`, whatever the orphan policy (p250 D7): Rapier
+// p250 D7
+/** Takes the orphan multibody joints out of `world`, whatever the orphan policy: Rapier
  * can't tell the engine their bodies, so a kept one would hide a link from the guards. */
 const removeOrphanMultibodyJoints = (world: Rapier.World, handles: number[]) => {
   for (const handle of handles) {

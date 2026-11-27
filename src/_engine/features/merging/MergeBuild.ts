@@ -37,9 +37,10 @@ import {
 } from './MergeState';
 import type { MergeGroupData } from './MergeTypes';
 
+// p371
 /**
  * A build of more vertices than this merges in the assets worker (`mergeGeometryPartsAsync`):
- * p371 measured a warm 100k-vertex merge at about 11 ms on the main thread.
+ * a warm 100k-vertex merge measured about 11 ms on the main thread.
  * @internal
  */
 export const WORKER_BUILD_VERTICES = 65_536;

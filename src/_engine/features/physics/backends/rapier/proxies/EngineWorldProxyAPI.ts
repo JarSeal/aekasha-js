@@ -49,7 +49,8 @@ import {
   getRigidBodyAPIWithId,
 } from '../RapierState';
 
-/** The one Rapier ray every ray query reuses (p614 R4), made on the first query (Rapier is loaded
+// p614 R4
+/** The one Rapier ray every ray query reuses, made on the first query (Rapier is loaded
  * by then). Rapier reads its origin and dir into raw vectors before a query runs, so a query
  * started from an intersectionsWithRay callback can set it again. */
 let scratchRay: Rapier.Ray | undefined;

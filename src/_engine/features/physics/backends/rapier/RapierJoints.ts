@@ -10,10 +10,12 @@ import { backend, getRigidBody, handleToJointId, jointAPIs, joints } from './Rap
 // The running id (see RapierState.ts' maps)
 let nextJointId = 0;
 
+// docs/issues/i250_rapier-joint-on-disabled-bodies-panics.md
 /** Rapier 0.19.3 panicked (`unreachable`, in the next step) on a joint inserted when neither body
  * is an enabled dynamic one and they've been stepped so (two disabled bodies, or a disabled one and
- * a fixed one: the DISABLED physics tier's, docs/issues/i250_rapier-joint-on-disabled-bodies-panics.md).
- * 0.21.0 doesn't; kept until the issue's second symptom is checked on it. A disabled body is
+ * a fixed one: the DISABLED physics tier's). 0.21.0 doesn't;
+ * kept until the second symptom (stepping such bodies corrupted other joints' solving) is
+ * checked on it. A disabled body is
  * enabled for the insert and disabled again: it stays where it was, with its velocities. */
 const createImpulseJointOnDisabled = (
   jointData: Rapier.JointData,

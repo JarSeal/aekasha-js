@@ -1,7 +1,8 @@
+// p114
 /**
  * Sun layer: the disc and an optional halo, drawn behind the atmosphere (which gives it its
- * extinction colour, as SkyMesh does, three r186 `SkyMesh.js:275-276`). Up to MAX_SUNS suns
- * (p114), each with its own uniforms; suns[0] is the primary, whose direction also drives the
+ * extinction colour, as SkyMesh does, three r186 `SkyMesh.js:275-276`). Up to MAX_SUNS suns,
+ * each with its own uniforms; suns[0] is the primary, whose direction also drives the
  * atmosphere. Every sun is dimmed and coloured by the atmosphere along its own direction.
  *
  * Like every layer, internal to the sky box (the composite, the lights) and its debug tab.
@@ -45,7 +46,8 @@ export const SUN_DEFAULTS = {
 export const SUN_DISC_RADIUS = Math.acos(0.9999566769464484);
 const DISC_EDGE = 50000;
 const DISC_SCALE = 760;
-/** The env bake's disc: at most this bright (GGX fireflies, p110 §0.2), and at least this many
+// p110 §0.2
+/** The env bake's disc: at most this bright (GGX fireflies), and at least this many
  * bake texels wide. */
 const ENV_DISC_CLAMP = 20;
 const ENV_DISC_MIN_TEXELS = 2;

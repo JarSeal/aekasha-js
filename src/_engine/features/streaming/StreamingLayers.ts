@@ -116,8 +116,9 @@ export type StreamingLayer = {
   primeStartedAt: number;
   /** How long its last finished priming took, in ms (-1 before one). */
   lastPrimeMs: number;
-  /** Bodies other cells' layers of its range made that moved into its cell and were handed to it
-   * (p353 Phase 4 D1): deleted with it, unless they moved on by then. */
+  // p353 Phase 4 D1
+  /** Bodies other cells' layers of its range made that moved into its cell and were handed to it:
+   * deleted with it, unless they moved on by then. */
   adopted: number[];
   /** Whether its current load fades in once it's shown (streamed in during play, with a fader). */
   fadesIn: boolean;
@@ -357,8 +358,9 @@ export const pumpStreamingLayerFade = (rt: StreamingRuntime, layer: StreamingLay
   if (fade.direction === 'OUT') beginStreamingLayerUnload(rt, layer, true);
 };
 
+// p353 Phase 4 D1
 /**
- * A body handed to `layer` (p353 Phase 4 D1) draws as the layer does: one handed to a shown layer
+ * A body handed to `layer` draws as the layer does: one handed to a shown layer
  * is let go of a fade or hold its old layer left on it (a fade out's end holds what it faded); one
  * handed to a layer not shown yet takes that layer's fade in.
  * @internal
@@ -433,8 +435,9 @@ const releaseLayerAssetsIfDone = (rt: StreamingRuntime, layer: StreamingLayer) =
   rt.stats.assetsReleased += rt.releaseCellAssets(layer.cell.key, layer.ownerLayer);
 };
 
+// p353 Phase 4 D1
 /**
- * Deletes the bodies a layer adopted (its unload, or the scene's exit; p353 Phase 4 D1).
+ * Deletes the bodies a layer adopted (its unload, or the scene's exit).
  * @internal
  */
 export const deleteAdoptedBodies = (rt: StreamingRuntime, layer: StreamingLayer) => {

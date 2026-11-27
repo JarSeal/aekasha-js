@@ -394,9 +394,10 @@ export type SaveResult =
 /** Picks the collected changes a save writes (only saveable ones reach it) */
 export type SaveChangeFilter = (change: SaveChange, source: SaveSource) => boolean;
 
+// p355 §2.1
 /**
- * Saves the saveable changes `filter` picks, collected again when the save starts, as one commit
- * (p355 §2.1): a fresh read of each file, one write per file, every source's `onSaved` after the
+ * Saves the saveable changes `filter` picks, collected again when the save starts, as one commit:
+ * a fresh read of each file, one write per file, every source's `onSaved` after the
  * commit. "Save scene"'s and the "Save specific data…" dialog's; neither toasts here.
  * @param opts.skipConfirm no "Confirm writes" dialog (the "Save specific data…" dialog is its own)
  * @param opts.warning a warning toast for a save that writes files (`SAVED`), after the reload
@@ -477,8 +478,9 @@ export const _getSaveSpecificDisabledReason = (): string | null => {
   }
 };
 
+// p355 §2.3
 /**
- * Opens the "Save specific data…" dialog (p355 §2.3): the Æ menu's item and its key. With
+ * Opens the "Save specific data…" dialog: the Æ menu's item and its key. With
  * nothing to save, saving off or a save running, a toast says why instead.
  */
 export const _openSaveSpecificAsync = async (): Promise<void> => {
@@ -510,8 +512,9 @@ const getUnsavedMaterials = (sceneId: string | null) => {
   }
 };
 
+// p355 §2.1
 /**
- * Saves the current scene's changes and the global ones (p355 §2.1, "Save scene") as one commit:
+ * Saves the current scene's changes and the global ones ("Save scene") as one commit:
  * the Æ menu's item and its key, toasting how it went. A call while a save runs only toasts.
  */
 export const _saveSceneAsync = async (): Promise<void> => {

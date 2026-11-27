@@ -38,7 +38,8 @@ import {
 } from './TextureSetRefs';
 import { getTextureSet } from './TextureSets';
 
-/** The vec4s each layer takes in a set array's `layerParams` (the fifth p307's wet response's). */
+// p307
+/** The vec4s each layer takes in a set array's `layerParams` (the fifth is the wet response's). */
 const PARAMS_PER_LAYER = 5;
 
 /**
@@ -300,8 +301,9 @@ const getStandInBundle = (
   return bundle;
 };
 
+// p303 D4
 /**
- * `{ "textureSetArray": [ids], "packing" }` or `{ "textureSetArray": id }` (p303 D4): the set
+ * `{ "textureSetArray": [ids], "packing" }` or `{ "textureSetArray": id }`: the set
  * array's bundle (`TextureSetArrayInput`). A list's array not built samples white, warned; an id
  * no set array has throws naming the input.
  */

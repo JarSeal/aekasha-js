@@ -236,7 +236,8 @@ const restoreHeldSnapshot = () =>
     llog(`[PhysicsSnapshot] restored step ${delta.step}:`, delta);
   });
 
-/** Takes, restores and clears one held snapshot of the world (p500), with its size and step, the
+// p500
+/** Takes, restores and clears one held snapshot of the world, with its size and step, the
  * take's and the last restore's time (on WORKER_THREAD the round trip), and what the last restore
  * reaped (made since the snapshot: deleted with their entities) and found orphaned (deleted
  * since). The restore's whole delta goes to the console. Dropped on every scene exit. */
@@ -328,7 +329,8 @@ const refreshBodiesReadout = () => {
     : 'Measured with the step time';
 };
 
-/** Transform-buffer slots and refused creates (p352: FIXED bodies take no slot, a full buffer
+// p352
+/** Transform-buffer slots and refused creates (FIXED bodies take no slot, a full buffer
  * refuses a create), and how many dynamic bodies sleep (with the step stats on). */
 export const getBodiesFolder = (): DebuggerPaneItem<PhysicsState> => ({
   type: 'folder',
@@ -421,7 +423,8 @@ const refreshTiersReadout = () => {
   tierPolicyProxy.frozen = isPhysicsTierPolicyFrozen(world, TIER_POLICY_FREEZE_SOURCE);
 };
 
-/** p352's simulation tiers: per-tier counts, transitions waiting for their step (pending) or
+// p352
+/** The simulation tiers: per-tier counts, transitions waiting for their step (pending) or
  * for the worker's reply (in flight, WORKER_THREAD), and the default world's distance policy
  * with a freeze toggle. */
 export const getTiersFolder = (): DebuggerPaneItem<PhysicsState> => {

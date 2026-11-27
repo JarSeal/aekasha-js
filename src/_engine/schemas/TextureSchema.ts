@@ -14,8 +14,9 @@ import {
   TexturePackSchema,
 } from './AssetsConfigSchema';
 
+// p302 D1
 /**
- * three's texture constants a texture JSON names (p302 D1): per `texOpts` field, each name and
+ * three's texture constants a texture JSON names: per `texOpts` field, each name and
  * its number. A JSON gives either (`"wrapS": "REPEAT"` or `"wrapS": 1000`); the schema maps a
  * name to its number, so the gathered data and the runtime see three's constants only.
  * `TextureSchema.test.ts` checks the numbers against three's.
@@ -247,7 +248,8 @@ const TextureOverridesSchema = z.object({
   ...TEXTURE_FIELDS,
 });
 
-/** A cube texture's six faces (p311 D1), each what `fileName` takes. */
+// p311 D1
+/** A cube texture's six faces, each what `fileName` takes. */
 const TextureFacesSchema = z
   .tuple([
     AssetFileNameSchema,

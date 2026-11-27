@@ -56,15 +56,17 @@ import type {
   WindowEntry,
 } from './DraggableWindowTypes';
 
+// p803 D7
 /** The window stacks: the app's windows, the app's modal dialogs, the debug windows and the debug
- * modal dialogs (p803 D7) */
+ * modal dialogs */
 type Layer = 'APP' | 'DIALOG' | 'DEBUG' | 'DEBUG_DIALOG';
+// p803 D7
 /**
  * Each stack's z-index base: its token's value (`tokens.css`' `--aek-z-window`, `-dialog`,
  * `-debug-window`, `-debug-dialog`; `DraggableWindow.test.ts` keeps them equal). Each window takes
  * two z levels (its backdrop right below it). The app's windows stay below the scene loader
  * (1000), room for about 450; the app's dialogs below the debugger (10000 and up), so an app's
- * modal dialog leaves it usable (p803 D7).
+ * modal dialog leaves it usable.
  * @internal
  */
 export const Z_INDEX_BASES: Record<Layer, number> = {
@@ -107,8 +109,9 @@ const getWindowKind = (config: DraggableWindowConfig) => config.kind ?? config.i
 
 let areWindowHooksAdded = false;
 
+// p613 D5
 /** Adds the windows' part of every scene load and the boot's restore from LS, on the windows'
- * first use (p613 D5): neither the scene loader nor the boot names this module, so a build that
+ * first use: neither the scene loader nor the boot names this module, so a build that
  * uses no window leaves it out. A first use after the boot restores nothing. */
 const addWindowHooks = () => {
   if (areWindowHooksAdded) return;
@@ -167,9 +170,10 @@ const toPublicWindow = ({ config, runtime }: WindowEntry): DraggableWindow => ({
 const getLayer = ({ id, isDebugWindow }: DraggableWindowConfig): Layer =>
   modalIds.has(id) ? (isDebugWindow ? 'DEBUG_DIALOG' : 'DIALOG') : isDebugWindow ? 'DEBUG' : 'APP';
 
+// p803 D7
 /**
  * Makes a window a modal dialog (`openDialog`, before it opens it): it stacks with the dialogs,
- * above the windows of its layer (p803 D7). Kept until the window is removed.
+ * above the windows of its layer. Kept until the window is removed.
  * @internal
  */
 export const setDraggableWindowModal = (id: string) => {
@@ -749,9 +753,10 @@ const loadDraggableWindowStatesFromLS = () => {
   saveDraggableWindowStatesToLS();
 };
 
+// p806 D14
 /**
  * The open windows' ids, each layer bottom to top: the app's windows, the app's dialogs, the debug
- * windows, the debug dialogs. The test bridge's (p806 D14).
+ * windows, the debug dialogs. The test bridge's.
  * @internal
  */
 export const getOpenDraggableWindowIds = () => [

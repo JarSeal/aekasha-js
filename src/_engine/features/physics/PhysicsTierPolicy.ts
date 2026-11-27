@@ -377,8 +377,9 @@ export const getPhysicsTierPolicyFreezeSources = (ecsWorld?: ECSWorld): string[]
 
 const _focus = new THREE.Vector3();
 
+// p612 D7
 /** The main camera's position, the default focus: the default world's main camera is cached
- * (getMainCamera, p612 D7), another world's is queried. */
+ * (getMainCamera), another world's is queried. */
 const readCameraFocus = (world: ECSWorld, out: THREE.Vector3): THREE.Vector3 | null => {
   let camera: THREE.Object3D | undefined;
   if (world.id === DEFAULT_ECS_WORLD_ID) {

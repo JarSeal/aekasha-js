@@ -11,7 +11,8 @@ import { createMenu, type Menu, type MenuItem } from '../ui/overlays/Menu';
 import { getDebugKeyChordLabel } from './DefaultDebugKeyBindings';
 import styles from './OnScreenTools.module.scss';
 
-/** Every control's tooltip during a scene load (p806 D7) */
+// p806 D7
+/** Every control's tooltip during a scene load */
 export const ON_SCREEN_TOOLS_LOADING_TEXT = 'Loading the scene…';
 
 /** An on-screen tool: a kit icon button, its label the name and the tooltip. */
@@ -71,7 +72,8 @@ export type OnScreenToolbar = {
   cmp: CMPHandle;
   /** Its tools' keys and labels: a group whose items give another signature is rebuilt */
   signature: string;
-  /** Re-reads every tool's state; `isLoading` disables them all (p806 D7) */
+  // p806 D7
+  /** Re-reads every tool's state; `isLoading` disables them all */
   refresh: (isLoading: boolean) => void;
   /** Removes the group and its tools' menus */
   remove: () => void;
@@ -94,8 +96,9 @@ const getTooltip = (tool: OnScreenTool) => {
   return chord ? `${tool.label} (${chord})` : tool.label;
 };
 
+// p806 D12
 /** A press on a tool leaves the focus where it was (the canvas, the page): the app's keys go on
- * working after a click on a tool (a debugger control's keys are the debugger's, p806 D12). The
+ * working after a click on a tool (a debugger control's keys are the debugger's). The
  * keys reach the tools by Tab. The rows' `mousedown` listener. */
 export const keepFocusOnPress = (e: Event) => {
   if ((e as MouseEvent).button === 0) e.preventDefault();

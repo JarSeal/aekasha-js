@@ -120,7 +120,8 @@ const getAcross = (from: Box, to: Box, axis: Axis) => {
   return { gap, offset: Math.abs(toStart + toEnd - fromStart - fromEnd) / 2 };
 };
 
-/** The entry nearest ahead of `from` in the direction (p808 D8): its distance along the direction
+// p808 D8
+/** The entry nearest ahead of `from` in the direction: its distance along the direction
  * plus twice its gap across it, the smaller wins, then the smaller centre offset, then the first.
  * The boxes wholly ahead first; with none, the ones whose centre is (an overlapping layout). */
 const findNearestAhead = <T extends { box: Box }>(

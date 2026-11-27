@@ -529,10 +529,11 @@ export const getDefaultDebugKeyBindings = (): {
   prodTest: readonly Readonly<DefaultDebugKeyBinding>[];
 } => ({ debug: DEFAULT_DEBUG_KEY_BINDINGS, prodTest: DEFAULT_PROD_TEST_KEY_BINDINGS });
 
+// p806 D6; the tooltips: p806 D7
 /**
  * A default debug key's (or prod test key's) chord as `getKeyChordLabel` writes it, with
- * `AppConfig.debugKeys`' rebinding ('' when it has none). The drawer toggler's key hint (p806 D6)
- * and the on-screen tools' tooltips (D7).
+ * `AppConfig.debugKeys`' rebinding ('' when it has none). The drawer toggler's key hint
+ * and the on-screen tools' tooltips.
  * @internal
  */
 export const getDebugKeyChordLabel = (id: string) => {

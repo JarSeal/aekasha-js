@@ -1,6 +1,7 @@
+// p806 Phase 2 section 3
 /** What Tab reaches: an enabled control, a link, or an element with a `tabindex`, none with
- * `tabindex="-1"` (a roving composite's items but its tab stop: p806 Phase 2 section 3 found a
- * window's first focus on a tab list's unselected tab) */
+ * `tabindex="-1"` (a roving composite's items but its tab stop: else a window's first
+ * focus could land on a tab list's unselected tab) */
 const FOCUSABLE_SELECTOR = [
   'button:not([disabled])',
   'a[href]',
@@ -12,10 +13,11 @@ const FOCUSABLE_SELECTOR = [
   .map((selector) => `${selector}:not([tabindex="-1"])`)
   .join(', ');
 
+// p803 Phase 0
 /**
  * The rendered elements Tab reaches in `root`, in document order (not `tabindex` order: the kit
  * writes no positive `tabindex`). Found by selector, since a `<button>`'s `tabIndex` isn't
- * reliable in every DOM (p803 Phase 0); an element with no box (in a collapsed folder,
+ * reliable in every DOM; an element with no box (in a collapsed folder,
  * `display: none`) is left out.
  * @internal
  */
@@ -35,8 +37,9 @@ export const getFocusableElements = (root: Element) => {
 export const getFirstFocusable = (root?: Element) =>
   (root && getFocusableElements(root)[0]) || null;
 
+// p803 D7
 /**
- * Keeps Tab and Shift+Tab inside `elem` (p803 D7, a modal dialog's): Tab on its last focusable
+ * Keeps Tab and Shift+Tab inside `elem` (a modal dialog's): Tab on its last focusable
  * element goes to its first, Shift+Tab on its first (or on `elem` itself) to its last, and with
  * none the key does nothing. Between those, the browser moves the focus as usual.
  * @internal

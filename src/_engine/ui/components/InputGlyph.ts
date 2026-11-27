@@ -21,7 +21,8 @@ export type InputGlyphInput =
   | { device: 'MOUSE'; button: 'LEFT' | 'MIDDLE' | 'RIGHT' }
   /** The mouse's movement or its wheel */
   | { device: 'MOUSE'; delta: 'MOVE' | 'WHEEL' }
-  /** A gamepad's button, stick or axis, labelled by the pad's family (p808) */
+  // p808
+  /** A gamepad's button, stick or axis, labelled by the pad's family */
   | InputGlyphGamepadInput;
 
 /** What {@link createInputGlyph} draws. */

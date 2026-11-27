@@ -22,8 +22,9 @@ import {
   type ListConfig,
 } from './_dbg__ListFolderItems';
 
+// p114
 /**
- * The Moons folder (p114): the active sky box's moons list (up to 2: select, add, duplicate,
+ * The Moons folder: the active sky box's moons list (up to 2: select, add, duplicate,
  * remove) and the selected moon's position without day-night, its disc and phase, and its
  * light. With day-night on, each moon has its own orbit: the time of day and its phase place it.
  */

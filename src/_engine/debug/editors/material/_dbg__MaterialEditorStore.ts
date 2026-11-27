@@ -1,9 +1,9 @@
+// p084 DD4, DD8; the record: p085 DD1
 /**
- * The material editor's LocalStorage
- * (p084 DD4, DD8):
+ * The material editor's LocalStorage:
  * - the editor's UI state, `AEK_debugMatEditorUI`: the selected material, the selector's and the
  *   right drawer's state;
- * - one record per material, `AEK_debugMatEditorMat_<id>` (p085 DD1): its overrides (the edited
+ * - one record per material, `AEK_debugMatEditorMat_<id>`: its overrides (the edited
  *   params and TSL inputs), its editor settings and its camera pose here. The editor module owns
  *   the record: every write is a read, merge, write of the fields it changes, so the fields
  *   another part wrote are kept;

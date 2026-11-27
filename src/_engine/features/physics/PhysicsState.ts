@@ -44,8 +44,9 @@ export const facade: {
    * the policy's setters throw without it, and createPhysicsEntity's `tierPolicy` warns. Here so
    * that reading it imports neither of their modules. */
   tiersInstalled: boolean;
+  // p500
   /** Whether restorePhysicsSnapshot (PhysicsWorld.ts) is restoring: stepPhysics doesn't step
-   * meanwhile (p500). */
+   * meanwhile. */
   isRestoringSnapshot: boolean;
 } = {
   state: {

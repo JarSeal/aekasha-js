@@ -20,7 +20,8 @@ export const DEBUGGER_THEMES: readonly DebuggerTheme[] = ['dark', 'light', 'app'
 const THEME_ATTR = 'data-aek-theme';
 const DENSITY_ATTR = 'data-aek-density';
 
-/** Dark until the setting is read (p806 D8: the default) */
+// p806 D8
+/** Dark until the setting is read (the default) */
 let currentTheme: DebuggerTheme = 'dark';
 /** The mounted roots made with getDebuggerRootProps, which a theme change rewrites */
 const roots = new Set<CMPHandle>();
@@ -39,9 +40,10 @@ const writeTheme = (cmp: CMPHandle) => {
   }
 };
 
+// p803 D7
 /**
  * The attributes a debugger root is made with: `DEBUGGER_ROOT_ATTR` (an app's modal dialog leaves
- * it live, p803 D7), the debugger's theme and `data-aek-density="compact"`. Use
+ * it live), the debugger's theme and `data-aek-density="compact"`. Use
  * `getDebuggerRootProps` for a CMP, so a theme change reaches it.
  * @internal
  */
@@ -51,8 +53,9 @@ export const getDebuggerRootAttr = (): Record<string, string> => ({
   [DENSITY_ATTR]: 'compact',
 });
 
+// p806 D8
 /**
- * A debugger root's CMP props (p806 D8): the attributes (`getDebuggerRootAttr`), and the hooks
+ * A debugger root's CMP props: the attributes (`getDebuggerRootAttr`), and the hooks
  * that keep its theme live while it's mounted. Spread them into the root's props; a root that has
  * its own `attr` merges the two.
  * @internal

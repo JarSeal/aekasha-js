@@ -134,10 +134,11 @@ export const getSceneListItem = (
 export const getDevScene = (sceneId: string): Obj | undefined =>
   (getGeneratedAppData() as unknown as DevData).scenes[sceneId];
 
+// p355 §2.5
 /**
- * A scene's JSON file, which its own save entries go into (the dev data's `__sourcePath`, p355
- * §2.5), or why there's none: the scene isn't in the generated data, or has no file there (data
- * gathered before the scenes had one).
+ * A scene's JSON file, which its own save entries go into (the dev data's `__sourcePath`), or why
+ * there's none: the scene isn't in the generated data, or has no file there (data gathered before
+ * the scenes had one).
  */
 export const findSceneFile = (sceneId: string): { path: string } | { unsaveable: string } => {
   const scene = getDevScene(sceneId);

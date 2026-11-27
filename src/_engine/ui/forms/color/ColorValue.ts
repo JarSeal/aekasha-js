@@ -218,8 +218,9 @@ const readFunction = (name: string, body: string): Rgba | null => {
   return readHsl(h, clamp01(s), clamp01(l), clamp01(alpha), { r: 0, g: 0, b: 0, a: 1 });
 };
 
+// p804 D8
 /**
- * A typed or pasted colour (p804 D8): `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa` (or `0x` and the
+ * A typed or pasted colour: `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa` (or `0x` and the
  * digits, or 6 or 8 digits alone), `rgb()` / `rgba()` (0-255 or percentages), `hsl()` / `hsla()`
  * (a hue in degrees or with `deg`, `rad`, `grad`, `turn`), with CSS's commas or spaces and
  * `/ alpha`, or three or four numbers 0-1 (the float form: `0.2, 0.8, 0.9`). Case and the spaces

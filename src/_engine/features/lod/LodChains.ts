@@ -305,8 +305,9 @@ export const generateLodChain = (
   return promise;
 };
 
+// p347 Phase 3
 /**
- * Registers a LOD chain the asset pipeline built into a GLB (p347 Phase 3), for a geometry the
+ * Registers a LOD chain the asset pipeline built into a GLB, for a geometry the
  * import just registered: its levels become geometries `${geometryId}#lod${n}` as generated ones
  * do. A chain without levels is registered too (the build found nothing to remove), so a
  * `lodChain` import doesn't simplify it again on the client.

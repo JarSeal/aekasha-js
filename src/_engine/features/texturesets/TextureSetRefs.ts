@@ -29,7 +29,8 @@ export type TextureSetPackingData = {
   defaultPacking: string;
   /** Each packing's texture ids by slot. */
   packings: Partial<Record<string, Record<string, string>>>;
-  /** A procedural set's generator (p304 D3): its textures are baked, not loaded. */
+  // p304 D3
+  /** A procedural set's generator: its textures are baked, not loaded. */
   procedural?: unknown;
 };
 
@@ -58,10 +59,11 @@ export const isTextureSetInputRef = (value: unknown): value is TextureSetInputRe
 export const getTextureSetSlotTextures = (set: TextureSetPackingData, packing: string) =>
   set.packings[packing];
 
+// p304 D3
 /**
  * The textures a texture set input needs: its packing's (the set's default without one). None
  * for another value, a set the lookup doesn't know, a packing the set doesn't have, or a
- * procedural set (p304 D3: the `textureSets()` feature bakes its textures, a scene's with its load
+ * procedural set (the `textureSets()` feature bakes its textures, a scene's with its load
  * and code's with `loadTextureSetAsync`; no texture data declares them).
  * @internal
  */

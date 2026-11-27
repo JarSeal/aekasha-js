@@ -32,13 +32,15 @@ import {
   toPlainVec,
 } from './RapierState';
 
-/** The settings init() was given: the facade's own (p612 D4, one owner of the defaults). */
+// p612 D4
+/** The settings init() was given: the facade's own (one owner of the defaults). */
 let physicsState: PhysicsState | undefined;
 
 let worldCreated = false;
 let physicsWorldAPI: WorldAPI | undefined;
+// p500 D5
 /** Which world this is: bumped by every create and delete, so a snapshot names its world and a
- * restore refuses one of another (p500 D5). */
+ * restore refuses one of another. */
 let worldEpoch = 0;
 
 /**
@@ -152,9 +154,10 @@ export const deleteWorld = () => {
   return { worldDeleted: true };
 };
 
+// p500
 /**
  * The world's snapshot: Rapier's bytes, the world's epoch and its step count (undefined without a
- * world); see p500. The one implementation: the world's API object delegates to it.
+ * world). The one implementation: the world's API object delegates to it.
  * @internal
  */
 export const takeSnapshot = (): PhysicsSnapshot | undefined =>
@@ -162,8 +165,9 @@ export const takeSnapshot = (): PhysicsSnapshot | undefined =>
     ? { bytes: backend.world.takeSnapshot(), worldEpoch, step: backend.stepCount }
     : undefined;
 
+// p500
 /**
- * Puts the world back to a snapshot taken in it (p500): Rapier restores a new world from its
+ * Puts the world back to a snapshot taken in it: Rapier restores a new world from its
  * bytes, which replaces the current one, the API objects both know are rebound to it, the rest are
  * forgotten or taken out (RapierRestore.ts), the step count goes back to the snapshot's, and the
  * replaced world is freed. The world's API object stays (it reads `backend.world`). The one

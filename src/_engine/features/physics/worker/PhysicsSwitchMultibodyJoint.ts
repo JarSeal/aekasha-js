@@ -12,8 +12,9 @@ const sendNoJointErrorMessage = (sendMessage: PhysicsWorkerReply, data: PhysicsU
     data
   );
 
+// p250
 /**
- * The worker's switch for the multibody joints' messages (1000-1199, p250): the create and the
+ * The worker's switch for the multibody joints' messages (1000-1199): the create and the
  * delete, and each getter and setter of one joint by id. An unknown joint id replies `ERROR`; a
  * throw (the create's refusals) reaches `PhysicsWorker.ts`' catch, which does the same with the
  * request's id.

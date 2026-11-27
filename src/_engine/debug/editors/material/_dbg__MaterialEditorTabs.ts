@@ -1,9 +1,8 @@
+// p084 DD6, p085
 /**
- * The material editor's right drawer tabs
- * (p084 DD6,
- * p085): **Params** (the selected
- * material's info, its editable params and TSL inputs, the rest of its params read-only, and a
- * "Reset params" heading button) and **Settings** (the material's stage and preview settings, the
+ * The material editor's right drawer tabs: **Params** (the selected material's info, its editable
+ * params and TSL inputs, the rest of its params read-only, and a "Reset params" heading button)
+ * and **Settings** (the material's stage and preview settings, the
  * camera's fov, pose and reset, and "Clear editor data of all materials").
  *
  * Both tabs have the material's record as their `lsKey`, for the heading's clear button (this

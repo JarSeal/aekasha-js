@@ -3,9 +3,10 @@ import { getCurrentSceneId } from '../../kernel/scene/Scene';
 import { getNextSceneId, isCurrentlyLoading } from '../../kernel/scene/SceneLoader';
 import { BOOT_OWNER } from './_dbg__GPUMemoryOwners';
 
+// p345 §2.5
 /**
  * Every GPU resource three's `renderer.info` tracks, recorded as it is created and dropped as it is
- * destroyed (p345 §2.5), so a snapshot diff can name what a scene left behind even when it is not a
+ * destroyed, so a snapshot diff can name what a scene left behind even when it is not a
  * registered asset (instance attributes, render targets, uniform buffers, programs).
  *
  * The tracker wraps `info`'s own create / destroy calls, installed when the renderer is created

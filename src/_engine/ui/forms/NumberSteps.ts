@@ -18,8 +18,9 @@ const SLIDER_STEP_KEYS: Readonly<Record<string, number>> = {
   ArrowLeft: -1,
 };
 
+// p804 D6
 /**
- * Shift is ×10, Alt ×0.1 (p804 D6).
+ * Shift is ×10, Alt ×0.1.
  * @internal
  */
 export const getStepModifier = (e: { shiftKey: boolean; altKey: boolean }) =>

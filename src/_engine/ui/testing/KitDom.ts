@@ -221,8 +221,9 @@ type Selection = { start: number; end: number };
 /** The elements holding a pointer's capture, by pointer id */
 const pointerCaptures = new Map<number, Element>();
 
+// p804 D14, Phase 0 step 5
 /**
- * The form controls as the fields use them (p804 D14; linkedom 0.18.13's gaps, Phase 0 step 5),
+ * The form controls as the fields use them (linkedom 0.18.13's gaps),
  * grown as the fields need them: an input's or a textarea's `value` kept apart from its
  * `defaultValue` (linkedom writes the attribute on every set), the selection API
  * (`selectionStart`, `selectionEnd`, `setSelectionRange`, `select()`; a new value puts the caret
@@ -553,9 +554,10 @@ export const dispatchPointer = (
   return event as unknown as PointerEvent;
 };
 
+// p803 D11
 /**
  * The listeners on `target` (of `type`, or of every type): a test's check that nothing is left
- * after a piece's `remove()` (p803 D11).
+ * after a piece's `remove()`.
  * @internal
  */
 export const countListeners = (target: EventTarget, type?: string) => {
@@ -570,8 +572,9 @@ export const countListeners = (target: EventTarget, type?: string) => {
   return count;
 };
 
+// p805 D14
 /**
- * A clipboard for a test (p805 D14; Node's `navigator` has none): `navigator.clipboard`'s
+ * A clipboard for a test (Node's `navigator` has none): `navigator.clipboard`'s
  * `readText` and `writeText` over a text the test reads (`getText`) and fills (`setText`).
  * `readable: false` makes `readText` reject, as a denied permission does. `restore()` takes it
  * away again.
@@ -604,8 +607,9 @@ export const stubClipboard = (props: { text?: string; readable?: boolean } = {})
   };
 };
 
+// p805 D14
 /**
- * A `ResizeObserver` for a test (p805 D14; linkedom has none): the observers a piece makes, which
+ * A `ResizeObserver` for a test (linkedom has none): the observers a piece makes, which
  * the test fires with a content box's size (`resize(elem, { width?, height })`, the observers
  * watching `elem` called as a browser would after a layout). `observerCount()` says how many still
  * watch something (none after the piece's removal); `restore()` takes it away again.
@@ -648,8 +652,9 @@ export const stubResizeObserver = () => {
   };
 };
 
+// p805 D14
 /**
- * An `IntersectionObserver` for a test (p805 D14; linkedom has none): the observers a piece makes,
+ * An `IntersectionObserver` for a test (linkedom has none): the observers a piece makes,
  * which the test fires (`intersect(elem, isIntersecting)`, the observers watching `elem` called as
  * a browser would after a scroll or a show). `observerCount()` says how many still watch something
  * (none after the piece's removal); `restore()` takes it away again.
@@ -691,8 +696,9 @@ export const stubIntersectionObserver = () => {
   };
 };
 
+// p805 D14
 /**
- * `window.matchMedia` for a test (p805 D14; linkedom has none): every query a dark-scheme one
+ * `window.matchMedia` for a test (linkedom has none): every query a dark-scheme one
  * (`prefers-color-scheme: dark`), which the test flips (`setDark(on)`, the lists' `change`
  * listeners called). `listenerCount()` says how many listen (none after the last subscriber left);
  * `restore()` takes it away again.
@@ -732,8 +738,9 @@ export const stubMatchMedia = (props: { dark?: boolean } = {}) => {
 /** A recorded 2D context call: its name and arguments, or `['set', property, value]` */
 export type Recorded2dCall = [string, ...unknown[]];
 
+// p805 D14
 /**
- * A canvas 2D context for a test (p805 D14; linkedom's `getContext` returns null): every
+ * A canvas 2D context for a test (linkedom's `getContext` returns null): every
  * `<canvas>`'s `getContext('2d')` gives a context that records each method call and property
  * write in order (`calls(canvas)`; `clear(canvas)` empties its list), the same one per canvas.
  * Reads of a property return the last value written. `computedStyle` stubs `getComputedStyle` too

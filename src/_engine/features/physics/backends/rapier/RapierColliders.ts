@@ -112,9 +112,10 @@ export const createCollider = (params: ColliderParams, parentIdArg?: number) => 
   return colliderAPI;
 };
 
+// p614 A10
 /**
  * Creates the colliders in order, all or nothing: when one throws, the ones made before it are
- * deleted and the throw goes on (p614 A10).
+ * deleted and the throw goes on.
  * @internal
  */
 export const createColliders = (paramsArray: ColliderParams[]) => {

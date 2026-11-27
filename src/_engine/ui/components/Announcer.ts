@@ -41,12 +41,13 @@ const getRegion = (parent: Element) => {
   return region;
 };
 
+// p808 D10
 /**
  * Reads `text` to a screen reader, politely, through the live region of `elem`'s kit root (made
  * there on the first announcement, visually hidden, and kept). The region is emptied at once and
  * filled 50 ms later, so a repeated text is read again; an announcement before that replaces the
  * pending one, or with `append` joins it ('+25 gold. Quest updated': a game's lines that come
- * together, p808 D10). Never assertive: a sort, a filter's count or a move waits for the reader.
+ * together). Never assertive: a sort, a filter's count or a move waits for the reader.
  * @internal
  * @param elem the announcing piece's element (its kit root takes the region)
  * @param text what's read; empty does nothing

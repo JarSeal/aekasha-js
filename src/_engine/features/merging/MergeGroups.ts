@@ -489,10 +489,11 @@ const mergeGroupBuildSystem = (world: ECSWorld) => {
   void buildPendingGroups(world);
 };
 
+// p372 §6
 /**
  * Joins the queued `merge`s and builds the world's pending merge groups now, worker builds
  * included, without waiting for the build system: for a scene load, so its first frame draws them
- * merged (p372 §6).
+ * merged.
  * @internal
  */
 export const buildPendingMergeGroupsAsync = async (world?: ECSWorld) => {
@@ -508,8 +509,9 @@ export const buildPendingMergeGroupsAsync = async (world?: ECSWorld) => {
  * built again after it lands when it's pending. */
 const SCENE_STEP_BUILD_ROUNDS = 3;
 
+// p372 §6
 /**
- * The scene step (p372 §6, the `entered` scene hook): joins the scene's queued `merge`s and builds
+ * The scene step (the `entered` scene hook): joins the scene's queued `merge`s and builds
  * every pending group, awaiting the worker builds, then lets go of the members the load held, so
  * the scene's first frame draws them merged and their own geometry is never uploaded. Runs after
  * the `entered` hooks of the features listed before `merging()` (physics' waits for the scene's
@@ -539,9 +541,10 @@ const onSceneLoadSettled = () => {
   releaseSceneLoadHolds(getECSWorld());
 };
 
+// p373
 /**
  * Loads and installs the moved-member check (debug/_dbg__MergeGroups.ts) and the Merging tab with
- * its windows (debug/_dbg__Merging.ts, p373): the `merging()` feature's `onDebug` hook.
+ * its windows (debug/_dbg__Merging.ts): the `merging()` feature's `onDebug` hook.
  * @internal
  */
 export const registerMergeDebug = async () => {

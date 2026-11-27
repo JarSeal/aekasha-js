@@ -307,7 +307,8 @@ export type PartsFieldSpec<T> = {
   draw?: (value: T) => void;
   applyDisabled?: (disabled: boolean) => void;
   onRemove?: () => void;
-  /** More forms the fields' context menu copies the value as (p805 D11: a vector's array) */
+  // p805 D11
+  /** More forms the fields' context menu copies the value as (a vector's array) */
   copyAs?: { label: string; getText: (value: T) => string }[];
 };
 

@@ -55,8 +55,9 @@ export const getMaterialAssets = () => {
   return materialAssets;
 };
 
+// p355 Phase 6
 /**
- * A material as the editor shows it (p355 Phase 6): as the current scene has it when the scene
+ * A material as the editor shows it: as the current scene has it when the scene
  * lists it (the dev data's resolved entry, the scene's latest save entry in it), else as its file.
  * The copy is made from it, and an override equal to its value is dropped, so a saved entry's
  * value shows after the save and an edit back to the file's value is an override the save writes.
@@ -100,9 +101,10 @@ export const getCopyProps = (asset: MaterialAsset, tslOverrides: MaterialTslInpu
   return props as MatProps;
 };
 
+// p302 D4, D6
 /**
  * The texture ids a material asset uses: its `params` texture slots and its TSL inputs' (`nodes`
- * and `inputs`), as `ensureMaterialDependencies` loads them (p302 D4, D6).
+ * and `inputs`), as `ensureMaterialDependencies` loads them.
  * @returns (string[]) the texture ids, without duplicates
  */
 export const getMaterialTextureIds = (asset: MaterialAsset) => getTextureIdsOf(asset);

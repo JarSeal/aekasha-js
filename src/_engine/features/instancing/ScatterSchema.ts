@@ -138,7 +138,8 @@ const PlacementsSourceSchema = z
   })
   .describe("Hand-placed instances (or a tool's).");
 
-/** An import's instances (p308 D3): its nodes of GPU instances and its point clouds. */
+// p308 D3
+/** An import's instances: its nodes of GPU instances and its point clouds. */
 const ImportedSourceSchema = z
   .strictObject({
     /** The instances of an import's nodes. */

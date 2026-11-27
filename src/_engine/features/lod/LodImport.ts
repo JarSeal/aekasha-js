@@ -9,7 +9,8 @@ import { deserializeLodChain, readGLTFLodChains, type ExtractedLodChain } from '
 import type { LodChainOptions } from './LodChainOptions';
 import { trackLodChainRequest } from './LodChainRequests';
 
-/** Starts the LOD chains an import asks for (`lodChain`, p347): one per rendered geometry that
+// p347
+/** Starts the LOD chains an import asks for (`lodChain`): one per rendered geometry that
  * has no chain yet and none pending. Not awaited by the import. LodChains is loaded on first use,
  * so apps that never ask for a chain don't download it. generateLodChain refuses (and warns about)
  * skinned and morph-target geometry. */
@@ -40,7 +41,8 @@ const requestLodChains = (manifest: ImportedAssetManifest, lodChain: true | LodC
   }
 };
 
-/** Registers the LOD chains the asset pipeline built into the file (p347 Phase 3), whatever the
+// p347 Phase 3
+/** Registers the LOD chains the asset pipeline built into the file, whatever the
  * import's `lodChain` says: the file is shared by every use, and its levels were downloaded
  * anyway. Awaited, so a `lodChain` request right after the import finds them. */
 const registerPrebuiltLodChains = async (

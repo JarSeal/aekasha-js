@@ -306,8 +306,9 @@ export const resetPhysicsWorld = async () => {
   await createPhysicsWorld();
 };
 
+// p102
 /**
- * Sets (or clears, with null) the current world's bounds (p102): from then on, a dynamic body whose
+ * Sets (or clears, with null) the current world's bounds: from then on, a dynamic body whose
  * translation is outside the box after a step is taken out of the simulation on that step (disabled,
  * or FIXED when jointed) and handed to the out-of-bounds handler (setOutOfBoundsHandler). Every
  * enabled dynamic body is checked against them at once. A new world starts without (physics' scene
@@ -358,9 +359,10 @@ export const takePhysicsSnapshot = async (): Promise<PhysicsSnapshot | undefined
 type PhysicsRestoreFn = (delta: RestoreSnapshotDelta) => void;
 const restoreFns = new Set<PhysicsRestoreFn>();
 
+// p500 D15
 /**
  * Calls `fn` after every snapshot restore, with the restore's delta, once the facade has applied
- * it (the reaped objects forgotten, the world's settings and the step clock set; p500 D15).
+ * it (the reaped objects forgotten, the world's settings and the step clock set).
  * Returns its remover.
  * @internal
  */

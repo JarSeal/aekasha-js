@@ -63,8 +63,9 @@ const primeBudgets: StreamingPrimeBudgets = {
   maxNewStructuresPerFrame: null,
   maxShownObjectsPerFrame: null,
 };
+// p353 Phase 5 D12
 /** The cells' machine (StreamingCells.ts and its layers), loaded with the first scene that streams
- * (p353 Phase 5 D12: a build's first download carries the API and the hooks, not the machine) */
+ * (a build's first download carries the API and the hooks, not the machine) */
 type StreamingMachine = typeof import('./StreamingCells');
 let machine: StreamingMachine | null = null;
 /** Primes the layers streamed in during play (StreamingPriming.ts, loaded with the machine), its
@@ -390,9 +391,10 @@ const streamingSystem = (world: ECSWorld) => {
   machine.pumpStreamingCells(runtime, budgets);
 };
 
+// p353 Phase 3 D6
 /** The `created` hook's load: the scene's machine with its JSON cell content, and its cells
  * around the focus at once. A scene whose JSON content was cut into cells streams at the cell size
- * it was cut at (p353 Phase 3 D6). */
+ * it was cut at. */
 const loadSceneCellsAsync = async (sceneId: string) => {
   const settings = getSceneSettings(sceneId);
   const manifest = manifests.get(sceneId);
@@ -451,10 +453,11 @@ const loadSceneCellsAsync = async (sceneId: string) => {
   await cellsModule.loadStreamingCellsNowAsync(rt);
 };
 
+// p101
 /**
  * Streaming's part of a scene load: the previous scene's cells go first on the exit (reverse
  * install order: before physics' entities), and the next scene's cells around the focus load in
- * `created`, awaited, so they're part of the load (inside physics' hold, p101).
+ * `created`, awaited, so they're part of the load (inside physics' hold).
  * @internal
  */
 export const streamingSceneHooks: SceneHooks = {

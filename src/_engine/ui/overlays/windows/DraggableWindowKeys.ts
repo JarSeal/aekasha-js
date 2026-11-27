@@ -218,8 +218,9 @@ const resizeByKey = ({ config, runtime }: WindowEntry, dw: number, dh: number) =
   return g.w !== prev.w || g.h !== prev.h;
 };
 
+// p803 D8
 /**
- * The header's keys (p803 D8), for a key pressed on the header itself (not on its buttons): the
+ * The header's keys, for a key pressed on the header itself (not on its buttons): the
  * arrows move the window a step (`--aek-space-5`, 16 px at the defaults), Alt+arrows resize it
  * (left and up shrink), Shift makes it four steps, and Enter toggles its collapse. A key it uses
  * goes no further (no key binding gets it). The change is committed (`onCommit`: recorded and

@@ -159,8 +159,9 @@ export type Binding<T> = {
   isInGesture: () => boolean;
 };
 
+// p804 D3
 /**
- * Binds a value (p804 D3): `{ target, key }`, `{ get, set }` or `{ value }`, compared and copied
+ * Binds a value: `{ target, key }`, `{ get, set }` or `{ value }`, compared and copied
  * by `kind`. The events are D3's order: each `step` fires `last: false`, `commit` fires `last:
  * true` with the gesture's first `prev`, `change` one `last: true`; the handler gets copies (it
  * may keep them), after the value is written and kept, so a refresh from inside it reads no

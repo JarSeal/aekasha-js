@@ -317,8 +317,9 @@ const PackFileSchema = z
     'A source image relative to this JSON ("./source/ao.png"), or a URL path served from src/public. 8 or 16 bits.'
   );
 
+// p303 D2
 /**
- * A cavity term from a height map (p303 D2): `1 − strength × max(0, blur(h, radius) − h)`, `h`
+ * A cavity term from a height map: `1 − strength × max(0, blur(h, radius) − h)`, `h`
  * the height normalized to 0..1, the blur wrapping at the edges (a tiling map). Dark in the
  * crevices: the AO of a source without one. Applied after `remap` and `invert`.
  * @internal

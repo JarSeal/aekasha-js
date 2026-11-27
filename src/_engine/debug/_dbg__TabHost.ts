@@ -36,7 +36,8 @@ export type TabHost = {
    * the lists, then the fields through the scheduler), or with `rebuild` mounts it again, keeping
    * the scroll position. */
   refresh: (rebuild?: boolean) => void;
-  /** A scene change (p806 D5): the mounted tab is rebuilt, or with `keepOnSceneChange` kept
+  // p806 D5
+  /** A scene change: the mounted tab is rebuilt, or with `keepOnSceneChange` kept
    * (`onSceneChange`, then a refresh). */
   sceneChanged: () => void;
   /** Runs the mounted tab's lifecycle cleanup. The DOM/CMP removal is up to the owner. */
@@ -118,7 +119,8 @@ const buildSections = (
   }
 };
 
-/** The error line in a failed tab's place (p806 D5): a kit empty state in the danger role */
+// p806 D5
+/** The error line in a failed tab's place: a kit empty state in the danger role */
 const createTabError = (err: unknown) => {
   const message = err instanceof Error ? err.message : String(err);
   return createEmptyState({
@@ -175,11 +177,12 @@ const buildTabContent = (def: AnyDebuggerTabDef, label: string, scheduler: Bindi
   return { container, sectionRefreshers, failed: false };
 };
 
+// p806 D5
 /**
  * Creates a tab host: the lifecycle of one mounted debugger tab ({@link AnyDebuggerTabDef}) in a
  * container. It builds the heading row and the sections, refreshes them, runs `onOpen` and its
  * cleanup, and runs `refreshIntervalMs` only while the host is visible. Its one refresh scheduler
- * (p806 D5) is every declarative section's and `content`'s `ctx.scheduler`, its tick running
+ * is every declarative section's and `content`'s `ctx.scheduler`, its tick running
  * while the host shows, and one fields' context menu covers its container. The owner keeps its own
  * menu, ordering and state (the debug drawer and the profiler window each use one host).
  * @param opts ({@link TabHostOpts})

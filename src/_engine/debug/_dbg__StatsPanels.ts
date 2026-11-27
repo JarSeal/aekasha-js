@@ -1,5 +1,6 @@
+// p807 D4
 /**
- * The on-screen stats panels (p807 D4): one debugger root in the bottom-left corner, a panel per
+ * The on-screen stats panels: one debugger root in the bottom-left corner, a panel per
  * figure in PANEL_ORDER, each with its label, its figure (written at 4 Hz), the graph's lowest and
  * highest sample, and a time series of the figure (pushed at 30 Hz, each sample the worst frame
  * since the last, so a spike still shows). Debug only.
@@ -105,14 +106,16 @@ type Panel = {
 
 /** The figures' text rate: 4 Hz, readable while they change */
 const TEXT_MS = 250;
-/** The graphs' sample rate: 30 Hz (p807 Phase 0's cost bar) */
+// p807 Phase 0's cost bar
+/** The graphs' sample rate: 30 Hz (kept within the panels' cost budget) */
 const GRAPH_MS = 1000 / 30;
 /** Samples a graph holds: one per CSS px of its width at the default size (Stats.module.scss'
  * `.graph`, the compact density's `--aek-space-7` × 4), 3.2 s at 30 Hz */
 const GRAPH_CAPACITY = 96;
 /** The GPU figures' window (the profiler's) */
 const GPU_WINDOW_MS = 1000;
-/** TFPS: the frames its mean CPU time covers (unchanged since before p807) */
+// unchanged since before p807
+/** TFPS: the frames its mean CPU time covers */
 const TFPS_SAMPLES = 60;
 /** Hz: the animation frame intervals kept, and the share of the shortest one read */
 const HZ_SAMPLES = 120;
@@ -556,8 +559,9 @@ const addPanel = (target: CMPHandle, id: StatsPanelId) => {
   nextTextAt = 0;
 };
 
+// p806 D12
 /** A press on the button leaves the focus where it was (the canvas): the app's keys go on working
- * after a click (a debugger control's keys are the debugger's, p806 D12). Tab reaches it. */
+ * after a click (a debugger control's keys are the debugger's). Tab reaches it. */
 const keepFocusOnPress = (e: Event) => {
   if ((e as MouseEvent).button === 0) e.preventDefault();
 };

@@ -289,7 +289,8 @@ export const getUndoRedoFolder = (): Item => {
   };
 };
 
-/** The "File server" folder's rows (p342, p355): `status`, `author` and `backups` are what
+// p342, p355
+/** The "File server" folder's rows: `status`, `author` and `backups` are what
  * getDevFilesStatus said at the tab's last mount (the server's settings change only with a dev
  * server restart, which reloads the page; the author with a git config change), `saving` what the
  * save history size means. */
@@ -345,7 +346,8 @@ export const refreshDevFilesRow = () => {
     .then(() => updateDebuggerTab(DEBUG_TOOLS_TAB_ID));
 };
 
-/** "File server": the debug tools writing files into the repo (p342, debug/DevFiles.ts). */
+// p342
+/** "File server": the debug tools writing files into the repo (debug/DevFiles.ts). */
 export const getFileServerFolder = (): Item => {
   fileServerRows.saving = describeSaveHistorySize();
   return {

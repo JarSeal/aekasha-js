@@ -1,7 +1,8 @@
+// p604 §4.5, p614 D5, p511; the facade's awaited INIT_PHYSICS: p614 W4
 /**
- * The channel between the physics facade and the simulation it drives (p604 §4.5, p614 D5): the
+ * The channel between the physics facade and the simulation it drives: the
  * physics worker today (`createWorkerTransport` on the main thread, `createWorkerScopeTransport`
- * in the worker), a network peer's channel later (p511). Nothing in physics calls `postMessage`
+ * in the worker), a network peer's channel later. Nothing in physics calls `postMessage`
  * but the two implementations.
  *
  * The contract every implementation keeps:
@@ -12,7 +13,7 @@
  *   listeners were added.
  * - A receiver handles one message to the end before the next. The worker's handler is `async`,
  *   and only `INIT_PHYSICS` awaits real work, which the facade awaits before it sends anything
- *   else (p614 W4).
+ *   else.
  * - After `close()` nothing is sent or delivered, and the channel can't be opened again.
  *
  * Requests ride on it as messages with a `requestId`: the reply carrying that id settles the

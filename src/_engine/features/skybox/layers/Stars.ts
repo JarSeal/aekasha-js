@@ -1,9 +1,10 @@
+// p110 §0.2
 /**
  * Stars layer: procedural stars (and an optional Milky Way band) in the stars' own frame, which
  * turns with the sky (SkyTime.ts computeSkyRotation). Inside a nebula with a star boost, more
  * cells have a star (the nebula cube's alpha, SkyStaticLayers.ts). Drawn behind the atmosphere:
  * its extinction dims them near the horizon and its inscatter hides them by day. Never in the
- * env bake (p110 §0.2).
+ * env bake.
  *
  * Placement is cube-projected (no pinching at the poles): the lookup direction's dominant axis
  * picks a face, and each face is a grid of cells, two grids at different scales. A PCG hash per

@@ -47,11 +47,13 @@ type RapierShapeFields = {
  */
 export class EngineColliderProxyAPI implements ColliderAPI {
   private coll: Rapier.Collider;
+  // p352
   /** How its mass was last given, which Rapier can't tell (density() of a collider given a
-   * mass is derived): a detached collider (p352 REMOVED tier) comes back with it. */
+   * mass is derived): a detached collider (the REMOVED physics tier) comes back with it. */
   massMode: ColliderMassMode = { density: 1 };
+  // p352
   /** Its own enabled flag, which Rapier can't tell apart from its body's (isEnabled() is false
-   * on a disabled body), for a detached collider to come back with (p352 REMOVED tier). */
+   * on a disabled body), for a detached collider to come back with (the REMOVED tier). */
   ownEnabled = true;
   uData: Record<string, unknown> = {};
 
@@ -78,9 +80,10 @@ export class EngineColliderProxyAPI implements ColliderAPI {
     return this.coll.shape as Rapier.Shape & RapierShapeFields;
   }
 
+  // p500; p352
   /**
-   * Points the proxy at its re-created Rapier collider (reattachRigidBody, p352), or at its copy in
-   * a restored world (p500).
+   * Points the proxy at its re-created Rapier collider (reattachRigidBody), or at its copy in
+   * a restored world.
    * @internal
    */
   _rebind(coll: Rapier.Collider) {

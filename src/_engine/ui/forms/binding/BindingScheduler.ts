@@ -222,8 +222,9 @@ export const createBindingScheduler = (props: BindingSchedulerProps = {}): Bindi
 export const addScheduledBinding = (scheduler: BindingScheduler, binding: ScheduledEntry) =>
   states.get(scheduler)?.add(binding) ?? (() => {});
 
+// p805 D3
 /**
- * Adds a collection (a table, a list, a tree; p805 D3) to a scheduler: its `refresh` runs on the
+ * Adds a collection (a table, a list, a tree) to a scheduler: its `refresh` runs on the
  * scheduler's `refresh()`, on the tick every `interval` ms while `isShown`, and once when it
  * shows again (`revealScheduledBindings`), as a field's read does. The collection calls the
  * remover when it's removed.
@@ -265,8 +266,9 @@ export const revealScheduledBindings = (scheduler: BindingScheduler) => {
 const FLASH_MS = 200;
 const FLASH_ATTR = 'data-flash';
 
+// p804 D4
 /**
- * An edit field's flash (p804 D4): `flash()` sets `data-flash` on `elem` for 200 ms (a second
+ * An edit field's flash: `flash()` sets `data-flash` on `elem` for 200 ms (a second
  * flash restarts it), which the field's stylesheet draws (the accent's soft background, a static
  * tint under reduced motion). Monitors never flash. `dispose()` clears its timer.
  * @internal

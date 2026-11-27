@@ -35,8 +35,9 @@ export const kindGeometry: { [kind: string]: KindGeometry } = {};
  */
 export const createRuntime = (): DraggableWindowRuntime => ({ session: null, zIndex: -1 });
 
+// older versions' keys: before p094
 /** A full config from partial values: lists every persisted key, so nothing else (runtime
- * objects, pre-p094 keys) ends up in LS. */
+ * objects, older versions' keys) ends up in LS. */
 const createConfig = (
   id: string,
   v: Partial<DraggableWindowConfig> & Pick<DraggableWindowConfig, 'geometry'>

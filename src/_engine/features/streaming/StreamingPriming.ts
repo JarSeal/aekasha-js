@@ -348,8 +348,9 @@ export const createStreamingPrimer = (budgets: StreamingPrimeBudgets): Streaming
   cancel: () => {},
 });
 
+// p353 Phase 5 D6
 /**
- * Forgets that a material was shown (p353 Phase 5 D6): its build changed (the fades dithered it),
+ * Forgets that a material was shown: its build changed (the fades dithered it),
  * so the next priming that holds it compiles it again before showing it.
  * @internal
  */

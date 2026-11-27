@@ -125,8 +125,9 @@ type BodyDeleteResult = ({ id?: number } & BodyParts) | undefined;
 /** A delete-many's reply (the backend's or the worker's). */
 type BodiesDeleteResult = ({ ids?: number[] } & BodyParts) | undefined;
 
+// p352
 /**
- * The transform buffer's capacity (`WORKER_THREAD` mode, p352): slots taken by live non-fixed
+ * The transform buffer's capacity (`WORKER_THREAD` mode): slots taken by live non-fixed
  * bodies, `AppConfig.physics.maxBodies`, and the creates refused since boot because it was
  * full ({@link PhysicsCapacityError}). `undefined` in `MAIN_THREAD` mode, which has no buffer
  * and no cap. Walks every body: for debug readouts, not per frame.
@@ -275,8 +276,9 @@ export const deleteRigidBodiesSync = (ids: number[]) => {
   return finishBodiesDelete(ids, facade.engAPI?.deleteRigidBodies(ids));
 };
 
+// p352
 /**
- * For the REMOVED physics tier (p352, PhysicsTiers.ts): takes a body and its colliders out of
+ * For the REMOVED physics tier (PhysicsTiers.ts): takes a body and its colliders out of
  * the world with their state, ids and proxies kept (engine side), and frees its transform-buffer
  * slot. Resolves with its pose, or undefined when nothing was detached or a later
  * detach/reattach of the body has overtaken this one. In WORKER_THREAD mode, called from an
@@ -305,8 +307,9 @@ export const detachRigidBodySync = (id: number) => {
   return facade.worldEnabled ? facade.engAPI?.detachRigidBody(id) : undefined;
 };
 
+// p352
 /**
- * For the REMOVED physics tier (p352): puts a detached body ({@link detachRigidBody}) back, as
+ * For the REMOVED physics tier: puts a detached body ({@link detachRigidBody}) back, as
  * it was detached except for `state`. Resolves with its pose, or undefined when it wasn't
  * detached or a later detach/reattach has overtaken this one. Rejects with a
  * {@link PhysicsCapacityError} when a WORKER_THREAD world's transform buffer is full: the body
@@ -385,8 +388,9 @@ export type RigidBodyWithColliders = {
   colliders: ColliderAPI[];
 };
 
+// p353 Phase 4 D3
 /**
- * A DYNAMIC body's create-time tier (p353 Phase 4 D3): `STATIC` (made `FIXED`) or `DISABLED`,
+ * A DYNAMIC body's create-time tier: `STATIC` (made `FIXED`) or `DISABLED`,
  * switched to before any step, its transform-buffer slot kept (as a requested tier leaves it).
  * @internal
  */
@@ -399,7 +403,8 @@ export type CreateTier = 'STATIC' | 'DISABLED';
 export type CreateBodyOpts = {
   /** A `DYNAMIC` body's create-time tier, switched to after its colliders. */
   tier?: CreateTier;
-  /** The body's own world bounds (p102 Phase 2, `toWireBodyWorldBounds`), from its first check
+  // p102 Phase 2
+  /** The body's own world bounds (`toWireBodyWorldBounds`), from its first check
    * on (the backend checks a new body before the next step). */
   worldBounds?: BodyWorldBounds;
 };
@@ -487,8 +492,9 @@ export const createRigidBodyWithCollidersSync = (
   return { rigidBody, colliders: colls };
 };
 
+// p102 Phase 2
 /**
- * Sets (or clears, with null) a body's own world bounds (p102 Phase 2), which replace the world's
+ * Sets (or clears, with null) a body's own world bounds, which replace the world's
  * for it (`'IGNORE'` exempts it), checked before the next step. A no-op without a world, and for a
  * deleted body. `WORKER_THREAD`: one-way; from an `APP_PHYSICS_STEP` system, applied before that
  * sub-step, as on `MAIN_THREAD`. `bounds` is plain data (`toWireBodyWorldBounds`).

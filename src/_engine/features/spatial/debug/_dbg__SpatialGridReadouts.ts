@@ -51,12 +51,13 @@ const HISTOGRAM_BAR_LENGTH = 10;
 /** The histogram's height in lines. */
 const HISTOGRAM_ROWS = 8;
 
+// docs/plans/_DONE_p050_spatial-index.md §9
 /**
  * Debug-only occupancy: the occupied cells' count and spread, and a histogram of how many members
  * each occupied cell holds, bucketed by exact count, a line per count (the count, a bar, the
- * cells). Meant to guide cellSize tuning (§9 of docs/plans/_DONE_p050_spatial-index.md): a
- * handful of very full cells next to many single-member ones is the signal that cellSize is too
- * large (or an area is genuinely dense and belongs in the oversized tier instead).
+ * cells). Meant to guide cellSize tuning: a handful of very full cells next to many single-member
+ * ones is the signal that cellSize is too large (or an area is genuinely dense and belongs in the
+ * oversized tier instead).
  */
 export const formatOccupancy = (counts: number[]) => {
   if (counts.length === 0) return { cells: 'None occupied', histogram: '' };
@@ -166,9 +167,10 @@ export const getOccupancyFolder = (stats: SpatialStatsReadout): Item => ({
   ],
 });
 
+// p346 Phase 3
 /**
  * Domain `id`'s policy and members, then its rebuilds out of the frames since it was registered
- * and the last rebuild's cost: which domains rebuild every frame, at a glance (p346 Phase 3).
+ * and the last rebuild's cost: which domains rebuild every frame, at a glance.
  */
 const describeDomain = (world: ECSWorld, id: string) => {
   const opts = getSpatialDomainOptions(world, id);

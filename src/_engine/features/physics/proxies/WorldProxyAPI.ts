@@ -127,8 +127,9 @@ export class WorldProxyAPI implements WorldAPI {
     return restorePhysicsSnapshot(snapshot, opts);
   }
 
+  // p500 D7
   /**
-   * A snapshot restore's world settings (p500 D7: Rapier restores them), each taken where it
+   * A snapshot restore's world settings (Rapier restores them), each taken where it
    * differs from this copy at f32 (an unchanged read-back would replace the copy's double).
    * @internal
    */

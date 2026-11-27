@@ -44,13 +44,14 @@ const applyWallHit = (c: DynamicCharacterContext, hit: ShapeCastHitAPI | null, s
   wallHit.distance = hit.timeOfImpact;
 };
 
+// p428
 /**
  * Casts the wall probe along the horizontal velocity and updates the wall hit. On MAIN_THREAD the
  * cast is synchronous, so the tick uses the result of its own step: the same on every run, whatever
  * the frame timing. The sync casts throw in WORKER_THREAD mode (spatial queries need the live
  * physics world, which lives off-thread there), so there an async cast is fired again once the
  * previous one resolved, and the latest resolved result is used meanwhile: a frame or so late,
- * depending on the frame timing, so the worker targets aren't deterministic (p428). Reads the
+ * depending on the frame timing, so the worker targets aren't deterministic. Reads the
  * tick's pose and velocity scratch.
  */
 const refreshWallHit = (c: DynamicCharacterContext) => {

@@ -32,10 +32,11 @@ export const ValidProtocolTypes = new Set(
   Object.values(PhysicsProtocolType).filter((v) => typeof v === 'number')
 );
 
+// p500
 /**
  * Whether a setting Rapier read back (`value`) differs from a copy's (`copied`) at f32: Rapier
  * stores f32, so writing an unchanged read-back over the copy's double would change it for nothing
- * (a snapshot restore's settings, p500).
+ * (a snapshot restore's settings).
  * @internal
  */
 export const isF32Changed = (copied: number, value: number) => Math.fround(copied) !== value;

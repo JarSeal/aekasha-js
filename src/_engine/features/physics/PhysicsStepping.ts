@@ -295,11 +295,12 @@ export const setPhysicsStepStatsEnabled = (enabled: boolean) => {
  */
 export const isPhysicsStepStatsEnabled = () => facade.state.stepStatsEnabled;
 
+// p059 D10
 /** The transform buffer step index from which a write made right now is visible in it: the
  * worker applies the write before (or, for captured sub-step commands, during) the next STEP,
  * whose steps are all numbered after the ones issued so far. Keyed on the producer's own step
  * stamp, so it can't drift from the worker when a world is recreated (unlike a count of posted
- * messages, which MESSAGE_BATCH never reset — p059 D10).
+ * messages, which MESSAGE_BATCH never reset).
  * @internal
  */
 export const getWriteVisibleStep = () => stepsIssued + 1;
@@ -416,8 +417,9 @@ const stampStepBatch = (stepsTaken: number) => {
   snapshotPhase[i] = facade.state.timestepRatio > 0 ? accDelta / facade.state.timestepRatio : 0;
 };
 
+// p500
 /** A new world starts a new simulated timeline: the step count restarts with it (as the
- * worker's own count does at CREATE_WORLD), at 0 or, for a restored snapshot, at its step (p500).
+ * worker's own count does at CREATE_WORLD), at 0 or, for a restored snapshot, at its step.
  * @internal
  */
 export const resetSimClock = (step = 0) => {
@@ -429,7 +431,8 @@ export const resetSimClock = (step = 0) => {
   simHistoryEpoch++;
 };
 
-/** Latches the newest physics snapshot for this frame (p063). Called by MainLoop at the very
+// p063
+/** Latches the newest physics snapshot for this frame. Called by MainLoop at the very
  * start of every frame, before any stage, held-key polling, APP_PHYSICS_STEP or event callback
  * reads a pose, so all of them see the same complete snapshot. Only SHARED_MEMORY has anything
  * to latch (the worker writes it concurrently); a write-back that lands mid-frame waits for the
@@ -440,12 +443,13 @@ export const latchPhysicsSnapshot = () => {
   facade.transformBuffer?.latch();
 };
 
+// p500
 /** Step index of the latest physics snapshot readable on the main thread — how many steps had
  * been executed on the current world when its poses were captured (0 before the first one).
  * MAIN_THREAD steps synchronously, so it is simply the steps issued; WORKER_THREAD reads the
  * stamp the worker writes into the transform buffer with every write-back. Changes exactly when
  * a new snapshot becomes visible, and only ever increases within one world, except at a snapshot
- * restore, which sets it back to the restored step (p500).
+ * restore, which sets it back to the restored step.
  * @internal
  */
 export const getPhysicsSnapshotStepIndex = () =>
@@ -549,9 +553,10 @@ const noteStepGateHeld = (held: boolean) => {
   stepGateHeldSince = null;
 };
 
+// p343
 /**
  * Whether sub-step `i` of a batch of `stepsTaken` is held by a gate an earlier sub-step of the
- * same batch added (p343: a measurement whose reply its decision step needs). The batch then ends
+ * same batch added (a measurement whose reply its decision step needs). The batch then ends
  * before it, and its remaining steps go back to the accumulator, to run once the gate opens.
  */
 const isSubStepGated = (i: number, stepsTaken: number) => {
