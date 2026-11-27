@@ -4,6 +4,46 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-27 — p104_p105-remove-plan-references_and_themed-scrollbar (p104 Phases 1-3)
+
+Plan references out of JSDoc (p104): the engine's and the toolkit's doc comments no longer cite the plans and issues that made them (`(p607 D7)`, `i250`, `p303_….md`). The Hub's API Documentation, its search snippets, `yarn docs` and the editor's hover now read as documentation of the engine, not of its history. A reference a maintainer needs moved to a `//` comment by the code, which nothing renders and a search for the plan's number still finds. One that carried meaning was reworded as the fact it pointed at, and an issue's warning was kept in words. A lint rule keeps it so.
+
+### Engine 6.30.1 (Sunset)
+
+**Changed**
+
+- The JSDoc of every engine module, `_dbg__` modules included: 743 blocks in 383 files had their plan and issue references moved to `//` comments or reworded. Nothing else changed, and no summary was emptied (the docs baseline is unchanged).
+
+**Fixed**
+
+- `InitEngine`'s JSDoc said the template lists "all ten" features (it lists seventeen); it now says every engine feature.
+- `_dbg__OnScreenTools.test.ts` failed on macOS, where Node's `navigator.platform` is the host's (`Meta+S`). It is pinned to Linux, as `_dbg__DebugKeyShortcuts.test.ts` is.
+
+### Toolkit 3.8.2 (Gibbous)
+
+**Changed**
+
+- The JSDoc of the toolkit, the terrain material's config and define the most of it: 123 blocks in 40 files, as the engine's.
+
+### App 1.38.1 (Preschooler)
+
+**Changed**
+
+- The app code and asset JSONs the Hub includes have no plan references in what a reader sees: the comments, and the JSON `description`s. The procedural set `p304ProcRipples` is named "Procedural ripples" (its id stays: scenes and `__saveData` name it).
+- The `terrainGallery` and `terrainShowcase` scenes are named "Terrain gallery" and "Terrain showcase", without their plan numbers (the Hub's image `alt` texts show the names).
+
+### Project
+
+**Added**
+
+- A lint rule (`jsdoc/no-restricted-syntax`, an error) that flags a plan or issue reference in any `/** */` block of `src/_engine/` and `src/toolkit/`, tags included, tests aside. It has no fix: rewording needs a person.
+- The rule in the coding standards: the root `CLAUDE.md`'s JSDoc line, and the Hub's JSDoc page with a before-and-after example.
+
+**Changed**
+
+- The Hub's pages show no plan references outside the Project section, the Issues and the Versions. The UI kit's game page and the smallest build page's include of `sbp.config.ts` were reworded; the banner profile's history is a `//` line above its region. Two remain on purpose: the toolkit page's `p302_gradientMat` (an asset id) and the homepage's What's new (the changelog's branch name).
+- p104 is marked done (`_DONE_p104_plan-references-out-of-jsdoc.md`).
+
 ## 2026-11-27 — p106_fog-system (Phases 1-5, 7; Phase 6 dropped)
 
 Fog (p106): a new `fog()` feature gives a scene one fog at a time from the fogs its JSON lists. The fog is linear, exponential, or a height fog that lies thick in the valleys and thins out over the hills. By default its colour is the sky box's horizon colour, so on a day-night cycle the far fog meets the sky at every hour, and it can glow toward the sun. Every material reads it through one graph whose uniforms the engine writes in place, so switching the mode, the glow, a fog or the whole fog off, and `updateFog`'s smooth transitions, never recompile a material. A Fog tab in the debug drawer edits every value with undo and saves it into the fog's file. The new `fogShowcase` scene shows each mode over an 800 m valley. Sun light shafts were measured as a PostFX pass and dropped (three's godrays don't compile under VSM shadows, and their depth pre-pass costs most of a millisecond); the idea is a follow-up in p990.

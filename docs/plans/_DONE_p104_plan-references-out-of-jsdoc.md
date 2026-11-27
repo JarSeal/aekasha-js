@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-2 implemented
+Status: implemented (Phases 1-3)
 Category: Documentation, Refactoring
 Related: _DONE_p103_small-bug-fixes-and-tweaks.md (the list this item came from)
 
@@ -194,13 +194,35 @@ As built:
 - Checked after each folder: ESLint, `tsc` (and `tsc -p hub` for the kit), `yarn test`,
   `yarn verify:baselines --docs` (4652 / 4652 exports, unchanged).
 
-### Phase 3: The toolkit, the rule's error, the release
+### Phase 3: The toolkit, the rule's error, the release — done
 
 1. `src/toolkit/` (the terrain material's config and define first: most of them).
 2. The rule to `error`; `yarn lint` clean.
 3. `yarn docs`, then grep `docs-api/` for the pattern (Phase 1's As built): 0.
 4. Versions: engine patch, toolkit patch (docs only); the `CHANGELOG.md` entry (Engine, Toolkit,
    Project for the lint rule); `yarn checkVersions --against main`; mark the plan done.
+
+As built:
+
+- **The toolkit's 87 blocks in 24 files to 0** (123 in 40 on `main`; Phase 1 did the rendered
+  ones), in three stops: `terrain/material/` (63; `auto.py` 54, by hand 10), the rest of
+  `terrain/` (18, by hand) and `materials/` with `geometry/` (6, `auto.py`). The batches are
+  `p3-<folder>-auto.json` / `p3-<folder>-manual.json`. What became a fact: "(p240's scale)" →
+  "(the engine's `QualityLevel` scale)"; "p303 D2's packings" → "by its set's packing"; the
+  planar frame's "p305 D5 projects it" → "a projection covers it"; "p307's regional wetness" →
+  "the wet response's regional wetness"; the `TAPS` view's "p301 §6's estimate made visible" →
+  "as `estimateTerrainFetches` counts them".
+- **The rule is `error`**; `yarn lint` 0 errors (its 4 warnings are the generated
+  `generatedAppFns.ts`' `camelcase`, older than this branch). `yarn docs`: 5,352 pages, 0 matches.
+- **Phase 1's leftovers on the Hub, decided:** reworded the UI kit's game page ("200 anchors
+  measured about 0.1 ms a frame"), `sbp.config.ts`' `banner-profile` region (the facts kept; the
+  plans on one `//` line above the `#region` marker, outside the include) and the two scenes'
+  names, which are their images' `alt` ("Terrain gallery", "Terrain showcase"; an app patch).
+  Kept, as Verification says: `p302_gradientMat`, the homepage's What's new and the shell's HTML
+  comment.
+- **Versions:** engine (and project) 6.30.0 → 6.30.1, toolkit 3.8.1 → 3.8.2, app 1.38.0 →
+  1.38.1. The branch is shared with p105 (not started): its entry and bumps extend this one, a
+  minor bump raising these patches.
 
 Each phase is one or more commits (by folder is fine: the diff is large).
 
@@ -220,4 +242,7 @@ Each phase is one or more commits (by folder is fine: the diff is large).
 - `yarn hub:build` and `yarn docs`, then a grep of `dist-hub/` and `docs-api/` for
   `(?<![A-Za-z0-9])[pi]\d{3}(?![A-Za-z0-9])|_DONE_` (`grep -P`; Phase 1's As built) outside the
   Project section (`dist-hub/project/`), the Issues pages and the Versions section (the
-  changelog cites plans; it's history, out of scope): 0.
+  changelog cites plans; it's history, out of scope): 0, but for three left on purpose: the
+  toolkit page's `p302_gradientMat` (an asset id: renaming it is its own change), the homepage's
+  What's new (the changelog's latest branch name) and the shell's HTML comment `p802 D6` (not
+  shown).

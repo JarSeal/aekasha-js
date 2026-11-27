@@ -34,8 +34,8 @@ const beacon = layer.addAnchor({ content: waypoint, offScreen: 'clamp', maxDista
   with an arrow turned to it. `getDistance()` is the camera's distance (a waypoint's "120 m").
 - **Nearer on top.** `depthSort` puts a nearer anchor over a farther one, writing `z-index` only
   where the order changed.
-- **Many anchors.** 200 anchors cost about 0.1 ms a frame (p808's measurement); the layer's
-  `contain: strict` keeps its layout to itself.
+- **Many anchors.** 200 anchors measured about 0.1 ms a frame; the layer's `contain: strict`
+  keeps its layout to itself.
 
 | World anchors     |                                                                                                                                   |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------- |
