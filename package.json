@@ -57,6 +57,7 @@
     "setupBlenderMcp": "tsx ./devTools/blender/setupBlenderMcp.ts",
     "assets": "tsx ./devTools/assets.ts",
     "fetchTextureSources": "tsx ./devTools/fetchTextureSources.ts",
+    "importFont": "tsx ./devTools/importFont.ts",
     "checkVersions": "tsx ./devTools/checkVersions.ts",
     "tagRelease": "tsx ./devTools/tagRelease.ts",
     "dev": "yarn copyDecoders && yarn gatherAppData && VITE_APP_ENV=development vite serve --port 8080 --host",

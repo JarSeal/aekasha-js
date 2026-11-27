@@ -146,6 +146,8 @@ const getToolkitRules = (files: string[]): LayoutRule[] => [
  */
 const APP_ASSET_FOLDERS = [
   'cameras',
+  // p391 D4: `yarn importFont`'s default, a folder per font (`fonts/<id>/`)
+  'fonts',
   'geometries',
   'importedAssets',
   'impostors',
