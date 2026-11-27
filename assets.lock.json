@@ -363,6 +363,30 @@
       ],
       "ktxVersion": "4.4.2"
     },
+    "22760fbac8e445b46dcad5a25afe5051491bf9ab26d0c4a695009c76b1c60540": {
+      "source": "src/toolkit/fonts/plexMono/IBMPlexMono-Regular.woff",
+      "url": "/aek-assets/toolkit/fonts/plexMono/plexMono.layout.ccda2f8f.json",
+      "bytes": 5314,
+      "extraOutputs": [
+        {
+          "url": "/aek-assets/toolkit/fonts/plexMono/plexMono.atlas.0c1bce25.ktx2",
+          "bytes": 174962
+        }
+      ],
+      "font": {
+        "type": "MTSDF",
+        "glyphs": 95,
+        "missing": 0,
+        "kerningPairs": 0,
+        "overlaps": 0,
+        "atlas": {
+          "width": 512,
+          "height": 512,
+          "channels": 4
+        }
+      },
+      "ktxVersion": "4.4.2"
+    },
     "2528000093f37ba9713d8f005549c2a4f81e4a050bebee9b7ee48f042d4447de": {
       "source": "src/toolkit/textures/mud01/mud01_normalHeight.texture.json",
       "url": "/aek-assets/toolkit/textures/mud01/mud01_normalHeight.pack.37d9ac74.ktx2",
@@ -1975,6 +1999,30 @@
       ],
       "ktxVersion": "4.4.2"
     },
+    "b799c9ecddf535b172ea6a0ba569ef68c85fad80ecb683e259091838db213ea6": {
+      "source": "src/toolkit/fonts/digitsDisplay/IBMPlexSans-Bold.woff",
+      "url": "/aek-assets/toolkit/fonts/digitsDisplay/digitsDisplay.layout.cce912c8.json",
+      "bytes": 1261,
+      "extraOutputs": [
+        {
+          "url": "/aek-assets/toolkit/fonts/digitsDisplay/digitsDisplay.atlas.a62b7267.ktx2",
+          "bytes": 41419
+        }
+      ],
+      "font": {
+        "type": "MTSDF",
+        "glyphs": 18,
+        "missing": 0,
+        "kerningPairs": 4,
+        "overlaps": 0,
+        "atlas": {
+          "width": 256,
+          "height": 256,
+          "channels": 4
+        }
+      },
+      "ktxVersion": "4.4.2"
+    },
     "b8836914247b1687a75db5eae572718ae06039d0b206a085a1eb2ad62cf22a2c": {
       "source": "src/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender_splat0.png",
       "url": "/aek-assets/app/terrainBlocks/terrainBlockTestBlender/terrainBlockTestBlender_splat0.98f9f948.png",
@@ -2498,6 +2546,30 @@
       ],
       "ktxVersion": "4.4.2",
       "recipeKey": "21f1717ad9243ba581c883212ae00996b856d949c9db3a59da8f3a271ad74f4e"
+    },
+    "ee65dc8dcf7062bb6eaadf73534b178adbe637f9c4103583bcb5b8518e513317": {
+      "source": "src/toolkit/fonts/plexSans/IBMPlexSans-Medium.woff",
+      "url": "/aek-assets/toolkit/fonts/plexSans/plexSans.layout.0daeec7d.json",
+      "bytes": 56994,
+      "extraOutputs": [
+        {
+          "url": "/aek-assets/toolkit/fonts/plexSans/plexSans.atlas.7c24ae32.ktx2",
+          "bytes": 389845
+        }
+      ],
+      "font": {
+        "type": "MTSDF",
+        "glyphs": 200,
+        "missing": 0,
+        "kerningPairs": 6115,
+        "overlaps": 0,
+        "atlas": {
+          "width": 1024,
+          "height": 512,
+          "channels": 4
+        }
+      },
+      "ktxVersion": "4.4.2"
     },
     "eefece9336958e3dd669543689043dde43e15a789523d191f0f0a9bec394d9e1": {
       "source": "src/toolkit/textures/cliffs01/cliffs01_normalHeight.texture.json",

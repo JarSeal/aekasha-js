@@ -7,9 +7,9 @@ import { ROOT } from '../../paths';
 import { getFontKerning, getFontMetrics, getVariableFontError, openFont } from './fontFile';
 
 // p391 Phase 2 section 3: fontkit's side (D1): the refusals, the metrics and the kerning of the
-// fixture (IBM Plex Sans Medium, its static WOFF)
+// toolkit's plexSans (IBM Plex Sans Medium, its static WOFF)
 
-const FIXTURE = path.join(ROOT, 'devTools/assetPipeline/fonts/fixtures/IBMPlexSans-Medium.woff');
+const FIXTURE = path.join(ROOT, 'src/toolkit/fonts/plexSans/IBMPlexSans-Medium.woff');
 /** The UI kit's IBM Plex Sans: a variable WOFF2 (a `wght` axis) */
 const VARIABLE_WOFF2 = path.join(
   ROOT,

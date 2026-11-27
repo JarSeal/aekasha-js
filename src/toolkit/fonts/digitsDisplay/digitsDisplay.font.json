@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../../.schemas/font.schema.json",
+  "id": "digitsDisplay",
+  "name": "IBM Plex Sans Bold",
+  "fileName": "./IBMPlexSans-Bold.woff",
+  "type": "MTSDF",
+  "size": 48,
+  "pxRange": 8,
+  "charset": {
+    "presets": ["DIGITS"],
+    "chars": "",
+    "charsFromFiles": [],
+    "collectFromScenes": false
+  },
+  "fallbackGlyph": "?",
+  "kerning": true,
+  "atlas": {
+    "maxSize": 2048,
+    "padding": 2,
+    "pot": true
+  }
+}

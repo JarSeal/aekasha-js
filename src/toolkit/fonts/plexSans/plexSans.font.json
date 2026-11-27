@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../../.schemas/font.schema.json",
+  "id": "plexSans",
+  "name": "IBM Plex Sans Medium",
+  "fileName": "./IBMPlexSans-Medium.woff",
+  "type": "MTSDF",
+  "size": 48,
+  "pxRange": 8,
+  "charset": {
+    "presets": ["ASCII", "LATIN_1"],
+    "chars": "€–—…“”‘’•°",
+    "charsFromFiles": [],
+    "collectFromScenes": false
+  },
+  "fallbackGlyph": "?",
+  "kerning": true,
+  "atlas": {
+    "maxSize": 2048,
+    "padding": 2,
+    "pot": true
+  }
+}

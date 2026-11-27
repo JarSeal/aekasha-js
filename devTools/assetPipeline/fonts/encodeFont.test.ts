@@ -11,7 +11,7 @@ import { createFontSource, FONT_ENCODER_VERSION } from './fontSource';
 import { buildFontLayout } from './layout';
 import { flattenOutline, getContourWinding, type OutlineCommand } from './outline';
 
-// p391 Phase 2 section 3: a font's atlas and layout from the fixture (IBM Plex Sans Medium, a
+// p391 Phase 2 section 3: a font's atlas and layout from the toolkit's plexSans (IBM Plex Sans Medium, a
 // static WOFF), without `ktx`: the golden DIGITS atlas, the fields against the outline (Phase 1's
 // method), the three types, the warnings and the errors.
 //
@@ -20,13 +20,15 @@ import { flattenOutline, getContourWinding, type OutlineCommand } from './outlin
 // write them again: AEK_UPDATE_FONT_GOLDEN=true yarn test devTools/assetPipeline/fonts
 
 const FIXTURES = path.join(ROOT, 'devTools/assetPipeline/fonts/fixtures');
-const FIXTURE = path.join(FIXTURES, 'IBMPlexSans-Medium.woff');
+/** The toolkit's plexSans folder: its font is the tests' (p391 Phase 3) */
+const PLEX_SANS_DIR = path.join(ROOT, 'src/toolkit/fonts/plexSans');
+const FIXTURE = path.join(PLEX_SANS_DIR, 'IBMPlexSans-Medium.woff');
 const GOLDEN_PNG = path.join(FIXTURES, 'plexSansDigits.golden.png');
 const GOLDEN_JSON = path.join(FIXTURES, 'plexSansDigits.golden.json');
 
-/** The fixture's atlas for a font JSON's fields (its JSON beside the fixture) */
+/** The font's atlas for a font JSON's fields (its JSON beside the font) */
 const generate = async (data: Omit<FontAsset, 'fileName'>, warnings: string[] = []) => {
-  const source = createFontSource(path.join(FIXTURES, 'test.font.json'), {
+  const source = createFontSource(path.join(PLEX_SANS_DIR, 'test.font.json'), {
     fileName: './IBMPlexSans-Medium.woff',
     ...data,
   });

@@ -17,7 +17,8 @@ import { ROOT } from './paths';
 
 // p391 D4: `yarn importFont`'s plan and writes, in a temp repo (its `src/`), without the encode
 
-const FIXTURE = path.join(ROOT, 'devTools/assetPipeline/fonts/fixtures/IBMPlexSans-Medium.woff');
+/** The toolkit's plexSans font */
+const FIXTURE = path.join(ROOT, 'src/toolkit/fonts/plexSans/IBMPlexSans-Medium.woff');
 /** The UI kit's IBM Plex Sans: a variable WOFF2 */
 const VARIABLE_WOFF2 = path.join(
   ROOT,
@@ -141,7 +142,7 @@ describe('planFontImport and writeFontImportAsync', () => {
   });
 
   it('counts a font with gaps, and warns on an asked preset it lacks part of', () => {
-    // The fixture covers every preset: a stub with only the digits (glyph 0 is .notdef)
+    // plexSans covers every preset: a stub with only the digits (glyph 0 is .notdef)
     const isDigit = (codePoint: number) => codePoint >= 0x30 && codePoint <= 0x39;
     const font = {
       hasGlyphForCodePoint: () => true,

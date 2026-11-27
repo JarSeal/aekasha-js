@@ -315,6 +315,30 @@ As built (2026-11-27, macOS arm64, Node 22.13.0):
    The generated data's `__url` is the layout's (`getGeneratedFields`-like, from the run's
    `font:<json>` result).
 
+As built (sections 1-2, 2026-11-27):
+
+- **`yarn importFont`** (`devTools/importFont.ts`, `planFontImport` then `writeFontImportAsync`,
+  tested in a temp `src/`): beyond D4, `--no-encode` (the files only); the id defaults to the file
+  name in camelCase (`IBMPlexSans-Medium.woff` → `ibmPlexSansMedium`), letters, digits, `_`, `-`;
+  `--into app` (default, `src/app/fonts/<id>/`, a new rule in `layoutRules.ts`' app asset folders),
+  `toolkit` or a folder under `src/` (not `generated/`, `public/`); relative paths from yarn's
+  `INIT_CWD`; an id another `*.font.json` has is refused (font JSONs only, until section 3 gives
+  fonts an id space). The encode is `yarn assets --only <id>` as a child process (`assets.ts` runs
+  at import). The licence note is `LICENSE.txt` (the name table's copyright, trademark, designer,
+  manufacturer, version, licence and its URL), written only when the font names a licence, else a
+  warning.
+- **The toolkit's fonts** (`src/toolkit/fonts/<id>/`, a subfolder rule and `CREDITS.md` in
+  `layoutRules.ts`), each imported by `yarn importFont --into toolkit`, its folder the font, its
+  JSON, `LICENSE.txt` and `OFL.txt` (the npm package's licence text, which the OFL asks to travel
+  with the font): `plexSans` (`@ibm/plex-sans` 2.0.0's `IBMPlexSans-Medium.woff`, ASCII + Latin 1 +
+  D2's `chars`: 1024 × 512, 200 glyphs, 6,115 kerning pairs, atlas 390 kB, layout 57 kB),
+  `plexMono` (`@ibm/plex-mono` 2.5.0's `IBMPlexMono-Regular.woff`, ASCII: 512², 95 glyphs, no
+  kerning, 175 kB / 5.3 kB), `digitsDisplay` (**IBM Plex Sans Bold**, the plan named no face: same
+  package and licence; `DIGITS`: 256², 18 glyphs, 4 pairs, 41 kB / 1.3 kB). `CREDITS.md` is
+  written by hand (no `source.json` to generate it from). A full `yarn assets` then: 0 built.
+- **The tests' font** is `src/toolkit/fonts/plexSans/IBMPlexSans-Medium.woff` (byte for byte the
+  deleted fixture), so the golden `DIGITS` files didn't change.
+
 ### Phase 4: The runtime load
 
 1. `FontData`, `getFont`, `loadFontAsync`, the scene's load and disposal (D6), in

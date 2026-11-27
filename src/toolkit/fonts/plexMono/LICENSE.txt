@@ -1,0 +1,15 @@
+IBM Plex Mono (IBMPlexMono-Regular.woff)
+
+Copyright: Copyright 2017 IBM Corp. All rights reserved.
+Trademark: IBM Plex® is a trademark of IBM Corp, registered in many jurisdictions worldwide.
+Designer: Mike Abbink, Paul van der Laan, Pieter van Rosmalen, http://www.ibm.com
+Manufacturer: Bold Monday, http://www.boldmonday.com
+Version: Version 2.005
+
+License:
+This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: http://scripts.sil.org/OFL
+
+License URL: http://scripts.sil.org/OFL
+
+Read from the font's name table by `yarn importFont`. When the licence asks for its full text
+to travel with the font (the SIL Open Font License does), add that text beside it.

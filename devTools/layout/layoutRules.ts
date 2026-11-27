@@ -86,7 +86,7 @@ const getSubfolderRules = (prefix: string, depth: number, files: string[]): Layo
 
 /**
  * The toolkit's layout since p609's move (D1, D5): code by category, each with its entry, and the
- * assets by id. Models, textures and sky boxes are asset JSONs reached by id, so no entry.
+ * assets by id. Models, textures, sky boxes and fonts are asset JSONs reached by id, so no entry.
  */
 const getToolkitRules = (files: string[]): LayoutRule[] => [
   ...['ecs', 'geometry', 'materials', 'terrain'].map(
@@ -138,6 +138,9 @@ const getToolkitRules = (files: string[]): LayoutRule[] => [
     note: "the texture sets' and source folders' credits, generated from their `source.json`s (p303 D5, p309 D1)",
   },
   ...getSubfolderRules(`${T}skyboxes/`, 1, files),
+  // One folder per font (p391 D7: the font, its `*.font.json`, its licence note and OFL text)
+  ...getSubfolderRules(`${T}fonts/`, 1, files),
+  { from: `${T}fonts/CREDITS.md`, note: "the toolkit fonts' sources and licences (p391 D7)" },
 ];
 
 /**

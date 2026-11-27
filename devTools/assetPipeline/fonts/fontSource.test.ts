@@ -16,7 +16,7 @@ afterAll(() => fs.rmSync(TMP, { recursive: true, force: true }));
 const FONT_DIR = path.join(TMP, 'src/app/fonts/sans');
 fs.mkdirSync(FONT_DIR, { recursive: true });
 fs.copyFileSync(
-  path.join(ROOT, 'devTools/assetPipeline/fonts/fixtures/IBMPlexSans-Medium.woff'),
+  path.join(ROOT, 'src/toolkit/fonts/plexSans/IBMPlexSans-Medium.woff'),
   path.join(FONT_DIR, 'Sans.woff')
 );
 const JSON_FILE = path.join(FONT_DIR, 'sans.font.json');
