@@ -131,8 +131,9 @@ the table, no variant. A variant is built once per font, effect set and blend mo
 
 ### D5. Fonts: a font asset, charsets, and the dynamic atlas later
 
-- **Input formats:** TTF and OTF (TrueType or CFF outlines). WOFF and WOFF2 are decoded by the
-  tool first. Variable fonts are read at a named or default instance. Colour fonts (COLR, SVG,
+- **Input formats:** TTF, OTF (TrueType or CFF outlines) and WOFF. WOFF2 and variable fonts are
+  refused for now (p391 D1: its generator reads a font file at its default instance only, and has
+  no brotli); a static instance in one of the three formats is the route. Colour fonts (COLR, SVG,
   bitmap emoji) are out of scope.
 - **The Ækasha font** is a `*.font.json` (its source font beside it, like a model's GLB) that
   `yarn assets` encodes into an MTSDF atlas plus a layout JSON (metrics, advances, plane and atlas
@@ -206,6 +207,9 @@ texture and the material JSON change; a production build has no saving (that nee
    confirmed), the native tool where present, then a TypeScript port of msdfgen's core (edge
    colouring, the distance per channel, error correction) as the last resort. The spike's
    go / no-go decides p395 too (it needs a generator that runs in a browser worker).
+   **Decided** (p391 Phase 1, 2026-11-27): msdfgen-wasm is MSDF-only, so a hybrid: its MSDF in RGB,
+   our own true SDF in alpha, fontkit for metrics and GPOS kerning (msdfgen-wasm reads none).
+   p391 D1 has the figures and what the hybrid can't read (WOFF2, variable fonts).
 2. **Effect reach** is bounded by `pxRange` (see the explainer). Documented, with the atlas cost
    of a larger range.
 3. **Complex scripts** (Arabic, Indic, Thai) need shaping (HarfBuzz), and colour emoji need colour

@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 implemented
 Category: Text, Assets
 Epic: p390_text-rendering-and-text-decals.md
 Blocks: p392_text-feature-msdf-renderer.md, p395_dynamic-glyph-atlas.md
@@ -34,6 +34,35 @@ The atlas generator turns a glyph outline into an MTSDF tile. The candidates, tr
 `@zappar/msdf-generator` (WebAssembly msdfgen for the browser) is checked in Phase 1 too, for
 p395's worker. The spike writes its figures and the choice into this plan.
 
+**As decided (Phase 1, 2026-11-27, with the user): a hybrid.** Neither WebAssembly package makes
+MTSDF: both are MSDF-only builds of msdfgen (msdfgen-wasm exports only `_generateMSDF` and its
+wrapper writes alpha 255; Zappar's exports `generateMSDF` / `generateMSDFWithOverlapFix`). So:
+
+- **RGB: `msdfgen-wasm` 1.0.0** (MIT; Chlumsky's msdfgen with Skia's overlap preprocessing; one
+  release, 2025-03, one maintainer; 1.2 MB unpacked), pinned, as a devDependency of the pipeline.
+- **A: our true SDF** (`devTools/assetPipeline/fonts/trueSdf.ts`, about 150 lines): fontkit's
+  outline in the same per-glyph projection as msdfgen-wasm's (`computeGlpyhMsdfData`'s scale and
+  translation), curves flattened to 1/100 px, the nearest segment's distance, signed by non-zero
+  winding, mapped like msdfgen's channels (`distance / range + 0.5`, byte `clamp(256 x)`).
+- **Everything else: fontkit 3.0.0** (MIT): metrics, the cmap (what a font covers), kerning
+  (GPOS, through `font.layout` of each pair), the name table's licence. Not opentype.js (below).
+- **Inputs:** TTF, OTF and WOFF (what msdfgen-wasm reads). **WOFF2 is refused** (its FreeType has no
+  brotli; a decoder, `wawoff2`, last released 2022, is a follow-up if an app needs one) and so is
+  **a variable font** (an `fvar` table: msdfgen-wasm reads a font file at its default instance and
+  can't be given another), each with a message naming a static TTF / OTF / WOFF. D2 drops
+  `variation`.
+- **Not chosen:** route 2 (msdf-atlas-gen native) stays an unbuilt option; route 3 (the full
+  TypeScript port) is the way to variable fonts and WOFF2 if they're ever needed, with
+  msdfgen-wasm as its test reference.
+- **p395 (a browser worker):** msdfgen-wasm is built for the browser (its README's purpose) and the
+  true SDF is plain TypeScript, so the hybrid is a candidate there; not run in a browser by this
+  spike. Its ESM entry has extensionless imports, which Node's ESM can't load (`createRequire` of
+  the CJS entry works) and a bundler (Vite) resolves. fontkit in a worker is p395's size question.
+  Zappar's package is a browser-worker wrapper (comlink, `new Worker`) sized for `@pmndrs/uikit`,
+  MSDF-only: no use to p395 either.
+
+The figures are Phase 1's As built.
+
 ### D2. The font asset (`FontSchema.ts`, the `text()` feature's, on `aekasha/schemas`)
 
 ```jsonc
@@ -42,11 +71,10 @@ p395's worker. The spike writes its figures and the choice into this plan.
   "$schema": "../../../_engine/schemas/generated/font.schema.json",
   "id": "plexSans",
   "name": "IBM Plex Sans",
-  "fileName": "IBMPlexSans-Medium.ttf",   // JSON-relative, TTF / OTF / WOFF / WOFF2
-  "variation": { "wght": 500 },          // a variable font's instance (optional)
+  "fileName": "IBMPlexSans-Medium.woff",  // JSON-relative, TTF / OTF / WOFF (D1: no WOFF2, no variable font)
   "type": "MTSDF",                       // MTSDF (default) | MSDF | SDF
   "size": 48,                            // glyph em size in atlas pixels
-  "pxRange": 8,                          // the distance range in atlas pixels
+  "pxRange": 8,                          // the distance range in atlas pixels, its full width (±4 px)
   "charset": {
     "presets": ["ASCII", "LATIN_1"],
     "chars": "€–—…“”‘’•°",
@@ -71,13 +99,21 @@ p395's worker. The spike writes its figures and the choice into this plan.
 
 - `src/public/aek-assets/fonts/<id>/<id>.atlas.ktx2`: KTX2 `R8G8B8A8_UNORM` (linear, not sRGB:
   distances), zstd level 19, no mips (an SDF atlas is sampled with its derivatives; mips blur the
-  field into wrong distances). A PNG fallback (`atlas.format: 'PNG'`) only if Phase 1 finds three's
-  `KTX2Loader` can't load uncompressed zstd KTX2 on both backends.
+  field into wrong distances). No PNG fallback: Phase 1 found three's `KTX2Loader` loads it on
+  both backends, texel-exact (Phase 1's As built). What the load (Phase 4) must know: it comes back
+  as a `DataTexture` (`RGBAFormat`, `UnsignedByteType`, `colorSpace` none, `flipY` false, one
+  level) with **`NearestFilter`** min and mag, so the load sets `LinearFilter`; and `v = 0` samples
+  the PNG's **top** row on WebGPU and WebGL2 alike, so `atlasBounds` in pixels from the top map to
+  `v = y / height` with no flip.
 - `src/public/aek-assets/fonts/<id>/<id>.layout.json`: the metrics the layout needs and nothing
   else: `unitsPerEm` normalized to 1, `ascender`, `descender`, `lineHeight`, `underline*`, the
   atlas size, `pxRange`, `type`; per glyph (by code point) `advance`, `planeBounds` (em units),
-  `atlasBounds` (pixels); `kerning` as a flat `[first, second, amount, …]` array, only pairs
-  inside the charset. Rounded to 4 decimals. Typically 10-20 kB for Latin 1.
+  `atlasBounds` (pixels, from the top); rounded to 4 decimals. `kerning` only for pairs inside the
+  charset, **grouped by the first code point, amounts in font units** with the font's
+  `kerningUnitsPerEm` beside them (`{ "65": [86, -50, 87, -40, …], … }`): Phase 1 measured Plex Sans
+  Medium's 5,036 kerned pairs inside Latin 1 at 70 kB (14.7 kB gzip) as the flat
+  `[first, second, em amount, …]` array first planned, 37 kB (6.8 kB gzip) grouped in font units.
+  The glyph table is about 8 kB for Latin 1.
 - `assets.lock.json` records both with the source's hash, the generator and its version, the
   resolved charset's hash, so `yarn assets` re-encodes only on a change and prunes the old ones.
 - Budgets (`devTools/assetPipeline/budgets.ts`): a font's atlas bytes and glyph count, warned past
@@ -87,7 +123,8 @@ p395's worker. The spike writes its figures and the choice into this plan.
 
 `yarn importFont <file> [--id <id>] [--charset ASCII,LATIN_1] [--chars "…"] [--into <folder>]
 [--type MTSDF] [--size 48]` (`devTools/importFont.ts`): copies the font into the folder (default
-`src/app/fonts/<id>/`; the toolkit's `src/toolkit/fonts/<id>/` with `--into toolkit`), writes the
+`src/app/fonts/<id>/`; the toolkit's `src/toolkit/fonts/<id>/` with `--into toolkit`; a WOFF2 or
+variable font is refused first, D1), writes the
 `*.font.json` with the defaults filled in, reads the font's name and licence fields and writes them
 into a `LICENSE` note beside it when the font embeds one, prints what the font covers of each
 preset, then runs `yarn assets --only <id>`. Refuses to overwrite without `--force`. Its `main()`
@@ -118,13 +155,14 @@ that the encoder reads. The gather never encodes: a new character in a scene mak
 
 A new toolkit asset category `fonts/` (`src/toolkit/fonts/<id>/`; `layoutRules.ts`, the root
 `CLAUDE.md`'s toolkit list): `plexSans` (IBM Plex Sans Medium, ASCII + Latin 1) and `plexMono`
-(IBM Plex Mono Regular, ASCII; the debug text's), from the TTFs of the same OFL family the UI kit
-ships as WOFF2, and `digitsDisplay` (a bold display face, `DIGITS` only, for damage numbers: shows
+(IBM Plex Mono Regular, ASCII; the debug text's), from IBM's static WOFFs of the same OFL family
+the UI kit ships as WOFF2 (npm `@ibm/plex-sans` 2.0.0 and `@ibm/plex-mono` 2.5.0 ship static
+WOFF and WOFF2, no TTF; the UI kit's own WOFF2s are a variable Latin subset, refused by D1), and `digitsDisplay` (a bold display face, `DIGITS` only, for damage numbers: shows
 how small a font can be). Licences beside each; `CREDITS.md` like the textures'.
 
 ## Phases
 
-### Phase 1: The generator spike
+### Phase 1: The generator spike — done
 
 1. Try D1's routes on `plexSans` at 48 px, `pxRange` 8, ASCII: output type (MTSDF or not),
    correctness (render each atlas with a reference median shader in a Node canvas or a small
@@ -137,17 +175,66 @@ how small a font can be). Licences beside each; `CREDITS.md` like the textures'.
    runs in a browser worker (p395's input). Commit nothing but the plan and, if any, the spike's
    script under `devTools/spikes/` deleted at the phase's end.
 
+As built (2026-11-27, macOS arm64, Node 22.13.0; the spike ran outside the repo, nothing of it is
+kept; font: IBM Plex Sans Medium, static WOFF from `@ibm/plex-sans` 2.0.0):
+
+- **Output type:** msdfgen-wasm and Zappar both MSDF-only (D1). Zappar runs only in a browser
+  Worker, so it wasn't run.
+- **msdfgen-wasm, timed:** module 6 ms; ASCII 94 glyphs 178 ms, Latin 1 188 glyphs 437 ms (the
+  bitmaps alone; space and the blank code points have none). **No kerning:** it reads only the
+  legacy `kern` table through FreeType (0 pairs), and Plex, like most current fonts, kerns in GPOS.
+  Its own packer (maxrects) left half of the 512² ASCII page empty.
+- **The hybrid, timed:** the true SDF for all of Latin 1 115 ms in plain JS; a whole MTSDF page,
+  load to bytes: ASCII 267 ms (512²), Latin 1 614 ms (1024 × 512). `ktx create --format
+  R8G8B8A8_UNORM --assign-tf linear --assign-primaries none --zstd 19`: 0.2-0.3 s, 182 kB (ASCII;
+  the PNG 241 kB) and 393 kB (Latin 1; 570 kB).
+- **Correctness** (each glyph's field drawn at 8× with bilinear sampling, against the outline
+  rasterized by librsvg in the same projection; the error is coverage per output pixel):
+  - the median (msdfgen-wasm's RGB), `A W @ ß & R e g o`: mean 0.19-0.33 %; up to 61 output pixels
+    on the wrong side (about one atlas texel), at sharp inner corners only (`A`'s counter apex,
+    `g`'s ink traps, `W`'s vertices); `e`, `o` none.
+  - the alpha (our true SDF): mean 0.14-0.33 %; its wrong pixels are the corners a one-channel
+    field rounds (45-239 at 8×), `o` none. As intended: the fill reads the median, the soft effects
+    the alpha.
+  - **The native msdf-atlas-gen reference wasn't run:** Homebrew fails on this macOS (26.5,
+    "unsupported macOS version"). msdfgen-wasm is msdfgen itself, so the outline was the reference.
+- **opentype.js 2.0.0 is out:** after drawing `&` and `@`, the same process's `A` came back with
+  NaN coordinates (fine when drawn first): state leaks between glyphs. fontkit 3.0.0 gave the
+  right outline every time, the same figures elsewhere.
+- **fontkit's kerning:** the layout of all 36,481 Latin 1 pairs 447 ms, 5,036 kerned (D3's
+  format). It reads WOFF2 and variable instances too (`getVariation({ wght: 500 })` on the UI
+  kit's WOFF2), which msdfgen-wasm can't follow (D1).
+- **KTX2 on three 0.187.0** (system Chrome headless through playwright-core: WebGPU on the GPU, the
+  WebGL2 backend on the GPU, WebGL2 on SwiftShader; both pages): `KTX2Loader` (its raw path,
+  zstd through its own `ZSTDDecoder`, no transcoder) loads 10-27 ms; every texel of all four
+  channels read back through a render target at texel centres equals the source, 0 of 262,144 and
+  0 of 524,288 off on every configuration; the loaded texture's shape and orientation are D3's.
+  The readback's row order differs per backend (`readRenderTargetPixelsAsync`: bottom row first on
+  WebGL2, top first on WebGPU), the texture's doesn't.
+
 ### Phase 2: The schema, the encoder and the outputs
 
 1. `FontSchema.ts` (D2) beside the `text()` feature's folder (created empty here, with its
    `index.ts` exporting only the schema's types; p392 fills it) and on `aekasha/schemas`; the
    generated JSON schema; `*.font.json` in `GATHERED_SUFFIXES`.
-2. `devTools/assetPipeline/fonts/`: parse (opentype.js, or fontkit if variable instances need it;
-   WOFF2 through `wawoff2` or fontkit), resolve the charset (`charsets.ts`), generate per glyph,
-   pack (`textureAtlases.ts`' packer if it fits glyph rects, else a skyline packer in
-   `fonts/pack.ts`), write D3's outputs, lock entries, prune, budgets.
+2. `devTools/assetPipeline/fonts/`: parse with fontkit (refusing WOFF2 and a variable font, D1),
+   resolve the charset (`charsets.ts`) against its cmap, generate per glyph (D1's hybrid:
+   msdfgen-wasm loaded through `createRequire` of its CJS entry, its `.wasm` from
+   `msdfgen-wasm/wasm`, `loadGlyphs` with `preprocess: true`, `computeGlpyhMsdfData` for each
+   glyph's box and projection and `generateBitmap` for RGB, then `trueSdf.ts` for A in that
+   projection; `MSDF` skips the alpha (255), `SDF` writes only it), pack (`textureAtlases.ts`'
+   packer if it fits glyph rects, else a skyline packer in `fonts/pack.ts`; not msdfgen-wasm's),
+   write D3's outputs, lock entries (msdfgen-wasm's and fontkit's versions in the key), prune,
+   budgets. Two traps from Phase 1: msdfgen-wasm's bitmap rows are top first (it flips them), and
+   the true SDF takes the raw outline, so in a glyph whose contours overlap (a static font cut from
+   a variable one without removing overlaps) the alpha inside is too small near the inner edges
+   (outside it's right: the nearest point of the union is on its boundary). The encoder warns on
+   such a glyph (a contour's segment inside another contour) rather than fixing it here.
 3. Tests: charset resolution, kerning extraction (a fixture font's known pairs), the layout JSON's
-   shape and rounding, the packer, a golden small atlas (`DIGITS`) compared within a tolerance.
+   shape and rounding, the packer, a golden small atlas (`DIGITS`) compared within a tolerance,
+   the true SDF against the outline (Phase 1's method: the field drawn magnified against a
+   rasterized outline; `o` with no corners as the strict case), the WOFF2 and variable-font
+   refusals.
 
 ### Phase 3: `yarn importFont`, the toolkit's fonts, the gather
 
@@ -161,6 +248,8 @@ how small a font can be). Licences beside each; `CREDITS.md` like the textures'.
 
 1. `FontData`, `getFont`, `loadFontAsync`, the scene's load and disposal (D6), in
    `features/text/Fonts.ts`; the feature's `install` registers only the load (p392 adds the rest).
+   The atlas through `KTX2Loader` (D3: a `DataTexture`, its filters set to `LinearFilter`, no
+   mips, no colour space), kerning scaled from `kerningUnitsPerEm` to em at the parse.
 2. Tests: the parse into typed arrays, kerning lookups, the fallback glyph, a font owned by a
    scene disposed with it.
 
