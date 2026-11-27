@@ -12,37 +12,6 @@ If for some reason this plan or some of its features can't or shouldn't be creat
 
 ************************************
 
-UNDER_CONSTRUCTION
-Create "Billboard text and decal text features" plan set, from priority 390 onwards.
-
-Category: Text
-
-We should be able to add billboard text entities to the world (or attach them to the other entities). If they shouldn't be entities, then give a reason why not and suggest an alternative. I did some research and was quite interested in the SDF/MSDF text method but did not fully understand it. Study the different possibilities considering performance and text quality/sharpness. I would like to have the text symbols be able to (if not all then some) have these features:
-- world-space text
-- UI text
-- labels
-- debug overlays
-- distance fields
-- outlines
-- color pulse
-- glow
-- drop shadows
-- blur
-- world space sizing or fixed sizing options
-- option to have it as a billboard or have it have regular world plane orientation
-- fade in/fade out as the text is added to or removed from a world/scene
-(these features should not affect performance if turned off)
-
-If we need to somehow import different fonts, we should be have a helper to transform fonts into Aekasha fonts and this could be a command line tool with a package.json script which defines the font which we want to import. If it is not needed, then describe the font formats that can be used. If the fonts are too large of a set (sometimes we only need for example numbers), then research the possibility to only select certain characters from a font. Could this be a build optimization to include only characters that are used (if opted in, because this would not work for all cases such as dynamic text, player names etc.)? I am not sure if this how modern engines build these nowadays, but if I am way of, please suggest something else.
-
-We should also be able to add text decals to meshes. I am not sure if this requires a separate material or a custom node we can attach to any TSL material, but we should be able to add text to meshes with positioning and orientation, and if possible also be able to add some effects to the text (such as worn out text). If it would act the same way as adding any decals to a mesh then the whole decal system should be added as a plan here as well.
-
-Debugger wise the decals should be editable from the material editor. There is a plan for the material editor view so these decal feature(s) should be blocked by that. In the material editor we should be able to attach decals, edit the text (if text decal), select the placement, select color, FX, what else? What about normal and other maps for the text, can they be implemented (maybe not as maps but normal map as a value that would make the text look like thick paint or something like that if possible)? I don't yet have the saving feature (I need a backend to handle saving files), but I would love to have the option to bake the decal onto the material if possible, so keep that in mind for future implementations.
-
-If for some reason this plan or some of its features or some features of it can't or shouldn't be created with this specification or has some high risks of failing the implementation, notify immediately. You are allowed to change the naming of the plan or the header information if they are not well described, but please notify about this.
-
-************************************
-
 Create "Refactor dynamic character code" plan in docs/plans/p070_refactor-dynamic-character-code.md
 
 Category: Character
