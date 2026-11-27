@@ -249,6 +249,9 @@ export type SceneFontDef = {
   name?: string;
   /** The layout JSON, the asset pipeline's output; none when the font has no output yet. */
   __url?: string;
+  /** The atlas (KTX2), the output beside the layout, which the layout also names: here so the
+   * load starts both at once and a build copies it with the layout. */
+  __atlasUrl?: string;
   /** The download in bytes, the font file's against the atlas and layout's. */
   __bytes?: { in: number; out: number };
   /** The atlas's GPU memory in bytes. */

@@ -1,4 +1,4 @@
-Status: in progress | Phases 1-3 implemented
+Status: in progress | Phases 1-4 implemented
 Category: Text, Assets
 Epic: p390_text-rendering-and-text-decals.md
 Blocks: p392_text-feature-msdf-renderer.md, p395_dynamic-glyph-atlas.md
@@ -387,7 +387,7 @@ As built (section 3, 2026-11-27):
   warning). A `yarn assets` run reads the file the last gather wrote, so a scene changed since needs
   a second run (its gather warns).
 
-### Phase 4: The runtime load
+### Phase 4: The runtime load — done
 
 1. `FontData`, `getFont`, `loadFontAsync`, the scene's load and disposal (D6), in
    `features/text/Fonts.ts`; the feature's `install` registers only the load (p392 adds the rest).
@@ -418,15 +418,15 @@ As built (section 1, 2026-11-28):
   so the encoder and the parse read one definition. The parse refuses another format (before the
   atlas's download), a glyph entry of another length and a missing fallback glyph, each naming
   the font and `yarn assets --only <id>`.
-- **The atlas is an ordinary registered texture**, `font:<id>`, loaded by `loadTextureAsync` with
-  `__url` the layout's folder plus `atlas.file` (`LinearFilter` both ways, `generateMipmaps`
+- **The atlas is an ordinary registered texture**, `font:<id>`, loaded by `loadTextureAsync` from
+  the data's `__atlasUrl` (section 2's fix, below; `LinearFilter` both ways, `generateMipmaps`
   false, `NoColorSpace`; `throwOnError`), so its owners, its release with the scene (once no
   material samples it), the Assets tab and the GPU memory tab are the kernel's; its `dispose`
   event drops the font from the map. The load checks the atlas's size against the layout's.
 - **The load:** the declaration is the development data's `fonts` section, else the first scene
-  entry (production: the scenes' only, as Phase 3 wrote). The owner scope is captured at the call,
-  the atlas loads in it after the layout's await; a loaded font is re-tagged to the caller's
-  scope; a call while one loads shares it and is re-tagged after it. Persistence is the first
+  entry (production: the scenes' only, as Phase 3 wrote). The layout's fetch and the atlas's load
+  start together at the call (the atlas in the caller's owner scope); a loaded font is re-tagged to
+  the caller's scope; a call while one loads shares it and is re-tagged after it. Persistence is the first
   load's (the atlas's registration): a later `isPersistent` load of a non-persistent font warns.
   A font without `__url`, or no data's, rejects naming `yarn assets --only <id>`.
 - **The scene load:** `installFonts` (the `text()` feature's only install) starts a scene's
@@ -449,12 +449,37 @@ As built (section 1, 2026-11-28):
   the readback's row order flips between them for R8 as for RGBA (Phase 1), so R8 has D3's
   orientation. A second load returns the same font, two at once share one load, a scene switch
   releases a scene's font and its atlas, and a persistent one stays.
-- **Open: a production build drops the atlas.** `assetOutputsBuildPlugin` (and `embedBuild.ts`'
-  copy for an embed profile) keep only the files a `__url` in the generated data names, and the
-  atlas is named only inside the layout. Not reached yet (no shipped scene lists a font), but
-  p392's first one would load a layout whose atlas 404s.
+- **Found: a production build dropped the atlas** (Phase 3's gap). `assetOutputsBuildPlugin` (and
+  `embedBuild.ts`' copy for an embed profile) kept only the files a `__url` in the generated data
+  names, and the atlas was named only inside the layout. Fixed in section 2 (below).
 - **Not run:** `yarn verify:baselines --update` (the API baseline gains `aekasha/text`; it needs a
   build): before the PR, with Phase 2's.
+
+As built (section 2, 2026-11-28):
+
+- **The atlas's URL is in the data** (D3 changed, with the user: the runtime needed only the
+  layout's URL): `SceneFontDef.__atlasUrl`, the run's extra output (`getFontGeneratedFields`,
+  `generated.ts`), written beside `__url` in development and production data. `collectUrls`
+  (`assetOutputsBuildPlugin.ts`, which `embedBuild.ts` uses too) keeps `__url` and `__atlasUrl`
+  (`OUTPUT_URL_KEYS`), so a build and an embed ship the atlas. The load starts both downloads at
+  once (a round trip less per font) and refuses a layout whose `atlas.file` isn't
+  `__atlasUrl`'s file (generated data older than the outputs: `yarn gatherAppData`), and a font
+  without either URL. The layout still names its atlas. Re-checked in the browser (WebGPU): every
+  texel as before, the release and the shared load the same.
+- **Tests** (`features/text/Fonts.test.ts`, 22): on the kernel's own texture registry, owners and
+  scene release, with the KTX2 file's load, `fetch` and `document` stubbed: the parse (code point
+  order, the typed arrays, a glyph without ink, the rects in em and UV from the top, the metrics
+  copied, kerning in em and none, the fallback for a missing code point, the three refusals), the
+  kerning key past the BMP, the load (both downloads started before either ends, the atlas's
+  sampler state, a loaded font without a load, a shared load, a scene's entry without the fonts
+  section, no data, no output, a 404 naming both files and a retry, a wrong atlas size or another
+  encode's atlas, the late `isPersistent` warning), a font's scene (owned by the loading scene, kept
+  by the next scene's re-tag, released with the last one and gone with its atlas; a persistent one
+  kept; outside an owner scope, the scene current at the atlas's registration, as a texture), the
+  scene hooks (started at the world's clear from the scene's own entries, awaited once after its
+  assets; a failed font logged naming the scene; a scene without fonts) and `text()`. Four
+  mutations of the parse and the drop on dispose each fail a test. The gather's test checks
+  `__atlasUrl` in both datas; `assetOutputsBuildPlugin.test.ts` (new) `collectUrls`.
 
 ### Phase 5: The Hub and the docs
 
@@ -462,8 +487,10 @@ As built (section 1, 2026-11-28):
    (p395), licences, the atlas cost table (glyph count × size → atlas size).
 2. The Hub: a section on fonts in the Text feature page started here (`hub/pages/features/text/`,
    finished by p392 and p399), the `*.font.json` asset type, `yarn importFont`.
-3. `devTools/assetPipeline/CLAUDE.md` (the font encoder), `devTools/gather/CLAUDE.md` (the
-   collection), the root `CLAUDE.md` (the command, the toolkit category), `readme.md` (the command,
+3. `devTools/assetPipeline/CLAUDE.md` (the font encoder; `FontLayoutFormat.ts` is the layout's one
+   definition), `devTools/gather/CLAUDE.md` (the collection, `SceneFontDef`'s `__url` and
+   `__atlasUrl`, `collectUrls`' keys), a `src/_engine/features/text/CLAUDE.md` (the runtime load:
+   `FontData`, the atlas as `font:<id>`, the scene hooks; p392 extends it), the root `CLAUDE.md` (the command, the toolkit category), `readme.md` (the command,
    the asset type).
 
 ### Phase 6: Versions and done

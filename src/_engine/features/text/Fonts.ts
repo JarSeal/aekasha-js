@@ -1,6 +1,7 @@
 // Fonts at runtime (p391 D6): a font is the asset pipeline's two outputs, a layout JSON (the
-// gathered data's `__url`) naming its distance field atlas (a KTX2 beside it, D3). The load parses
-// the layout into typed arrays (`FontData`) and loads the atlas as an ordinary registered texture
+// gathered data's `__url`) and its distance field atlas (a KTX2 beside it, D3: `__atlasUrl`, which
+// the layout names too). The load downloads both at once, parses the layout into typed arrays
+// (`FontData`) and registers the atlas as an ordinary texture
 // (`font:<id>`), so the atlas is owned and released like any other: a scene's release frees it
 // once no material samples it, and its `dispose` drops the font. The `text()` feature's install
 // adds the scene hooks that load a scene's `fonts` with its assets; `getFont` and `loadFontAsync`
@@ -236,33 +237,41 @@ const ATLAS_TEX_OPTS = {
   colorSpace: THREE.NoColorSpace,
 } as const;
 
-/** The layout, then its atlas in the caller's owner scope, then the parse; rejects naming the
- * font and the file */
+/** The layout JSON, checked for its format */
+const fetchFontLayoutAsync = async (id: string, url: string) => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`its layout: HTTP ${response.status}`);
+  const layout = (await response.json()) as FontLayout;
+  checkFontLayoutFormat(id, layout);
+  return layout;
+};
+
+/** The layout and the atlas, both started at the call (the atlas registers in the caller's owner
+ * scope), then the parse; rejects naming the font and both files */
 const loadFontFilesAsync = async (
-  def: SceneFontDef & { __url: string },
-  ownerScope: string | null | undefined,
+  def: SceneFontDef & { __url: string; __atlasUrl: string },
   isPersistent: boolean
 ): Promise<FontData> => {
-  const { id, __url } = def;
-  let url = toAppUrl(__url);
+  const { id } = def;
+  const layoutUrl = toAppUrl(def.__url);
   try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const layout = (await response.json()) as FontLayout;
-    // Before the atlas's download
-    checkFontLayoutFormat(id, layout);
-    // The atlas is beside the layout: the same folder of the generated URL
-    url = toAppUrl(`${__url.slice(0, __url.lastIndexOf('/') + 1)}${layout.atlas.file}`);
-    const atlas = await runInAssetOwnerScope(ownerScope, () =>
+    const [layout, atlas] = await Promise.all([
+      fetchFontLayoutAsync(id, layoutUrl),
       loadTextureAsync({
         id: getFontAtlasId(id),
-        __url: url,
+        __url: def.__atlasUrl,
         texOpts: ATLAS_TEX_OPTS,
         throwOnError: true,
         isPersistent,
         debugData: { name: `${def.name ?? id} atlas`, description: `The font "${id}"'s atlas` },
-      })
-    );
+      }),
+    ]);
+    // Generated data older than the outputs names another encode's atlas
+    if (!def.__atlasUrl.endsWith(`/${layout.atlas.file}`)) {
+      throw new Error(
+        `its layout names the atlas "${layout.atlas.file}", and its data another: run "yarn gatherAppData"`
+      );
+    }
     const image = atlas.image as { width?: number; height?: number } | null;
     if (image?.width !== layout.atlas.width || image.height !== layout.atlas.height) {
       throw new Error(
@@ -277,7 +286,7 @@ const loadFontFilesAsync = async (
     return font;
   } catch (err) {
     throw new Error(
-      `loadFontAsync: the font "${id}" didn't load (url: "${url}"): ${(err as Error).message}`
+      `loadFontAsync: the font "${id}" didn't load (layout "${layoutUrl}", atlas "${def.__atlasUrl}"): ${(err as Error).message}`
     );
   }
 };
@@ -292,7 +301,8 @@ const warnNotPersistent = (font: FontData, isPersistent: boolean) => {
 
 /** loadFontAsync from a gathered entry */
 const loadFontFromDefAsync = async (def: SceneFontDef, isPersistent: boolean) => {
-  // Before the first await: the atlas registers in the caller's owner scope (AssetOwners)
+  // Before the first await: a shared load re-tags the atlas to the caller's owner scope, and a
+  // new one starts the atlas's load synchronously, in that scope (AssetOwners)
   const ownerScope = getAssetOwnerScope();
   const loaded = fonts.get(def.id);
   if (loaded) {
@@ -307,13 +317,13 @@ const loadFontFromDefAsync = async (def: SceneFontDef, isPersistent: boolean) =>
     warnNotPersistent(font, isPersistent);
     return font;
   }
-  const { __url } = def;
-  if (!__url) {
+  const { __url, __atlasUrl } = def;
+  if (!__url || !__atlasUrl) {
     throw new Error(
       `loadFontAsync: the font "${def.id}" has no asset pipeline output (not encoded yet, or its encode failed; see the dev server's log, or run "yarn assets --only ${def.id}").`
     );
   }
-  const load = loadFontFilesAsync({ ...def, __url }, ownerScope, isPersistent).finally(() => {
+  const load = loadFontFilesAsync({ ...def, __url, __atlasUrl }, isPersistent).finally(() => {
     if (loading.get(def.id) === load) loading.delete(def.id);
   });
   loading.set(def.id, load);

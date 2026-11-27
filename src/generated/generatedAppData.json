@@ -54096,6 +54096,7 @@
       "name": "IBM Plex Sans Bold",
       "__sourcePath": "src/toolkit/fonts/digitsDisplay/digitsDisplay.font.json",
       "__url": "/aek-assets/toolkit/fonts/digitsDisplay/digitsDisplay.layout.cce912c8.json",
+      "__atlasUrl": "/aek-assets/toolkit/fonts/digitsDisplay/digitsDisplay.atlas.a62b7267.ktx2",
       "__bytes": {
         "in": 85236,
         "out": 42680
@@ -54111,6 +54112,7 @@
       "name": "IBM Plex Mono",
       "__sourcePath": "src/toolkit/fonts/plexMono/plexMono.font.json",
       "__url": "/aek-assets/toolkit/fonts/plexMono/plexMono.layout.ccda2f8f.json",
+      "__atlasUrl": "/aek-assets/toolkit/fonts/plexMono/plexMono.atlas.0c1bce25.ktx2",
       "__bytes": {
         "in": 66924,
         "out": 180276
@@ -54126,6 +54128,7 @@
       "name": "IBM Plex Sans Medium",
       "__sourcePath": "src/toolkit/fonts/plexSans/plexSans.font.json",
       "__url": "/aek-assets/toolkit/fonts/plexSans/plexSans.layout.0daeec7d.json",
+      "__atlasUrl": "/aek-assets/toolkit/fonts/plexSans/plexSans.atlas.7c24ae32.ktx2",
       "__bytes": {
         "in": 90692,
         "out": 446839

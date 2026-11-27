@@ -299,22 +299,24 @@ export const getMergeMaterialSlotGeneratedFields = (
     : {};
 
 /**
- * A font's generated fields (p391 D6): its layout's `__url` (the layout names its atlas),
- * `__bytes` (both outputs) and `__vramBytes` (the atlas). None without a run, or for a font the
- * run has no output for.
+ * A font's generated fields (p391 D6): its layout's `__url`, its atlas's `__atlasUrl` (the
+ * layout names it too; the data names it so the load starts both at once and a build's copy,
+ * `collectUrls`, keeps it), `__bytes` (both outputs) and `__vramBytes` (the atlas). None without a
+ * run, or for a font the run has no output for.
  * @param jsonFile The font's JSON, absolute or relative to the repo root
  */
 export const getFontGeneratedFields = (
   run: PipelineRun | undefined,
   jsonFile: string
-): Pick<GeneratedAssetFields, '__url' | '__bytes' | '__vramBytes'> => {
+): Pick<GeneratedAssetFields, '__url' | '__bytes' | '__vramBytes'> & { __atlasUrl?: string } => {
   if (!run) return {};
-  const { __url, __bytes, __vramBytes } = getOutputFields(
-    'font',
-    run.results.get(getFontAssetKey(jsonFile))
-  );
+  const result = run.results.get(getFontAssetKey(jsonFile));
+  const { __url, __bytes, __vramBytes } = getOutputFields('font', result);
+  const __atlasUrl =
+    __url && result?.status === 'optimized' ? result.extraOutputs?.[0]?.url : undefined;
   return {
     ...(__url ? { __url } : {}),
+    ...(__atlasUrl ? { __atlasUrl } : {}),
     ...(__bytes ? { __bytes } : {}),
     ...(__vramBytes ? { __vramBytes } : {}),
   };

@@ -11,19 +11,23 @@ import { GENERATED_APP_DATA_FILE } from './gather/output';
  * `src/public/aek-assets/` into `dist/`, which holds more than the build loads: stale outputs
  * (only a full `yarn assets` removes them) and the outputs of debug scenes, which the production
  * data leaves out. After the bundle is written, this removes from `dist/aek-assets/` every file
- * that no `__url` in the bundled generated data points to. `src/public/aek-assets/` is untouched.
+ * that no `__url` (or a font's `__atlasUrl`) in the bundled generated data points to. `src/public/aek-assets/` is untouched.
  *
- * Every `__url` counts, so a build of dev data (eg. `vite build` without the production gather)
+ * Every one counts, so a build of dev data (eg. `vite build` without the production gather)
  * keeps every current output instead of too few.
  */
 
-/** Every `__url` in the generated data, into `urls` */
+/** The generated data's keys that name an output a build ships: an asset's, and a font's atlas
+ * beside its layout (p391) */
+const OUTPUT_URL_KEYS = new Set(['__url', '__atlasUrl']);
+
+/** Every output URL in the generated data (`__url`, a font's `__atlasUrl`), into `urls` */
 export const collectUrls = (value: unknown, urls: Set<string>) => {
   if (Array.isArray(value)) {
     for (const item of value) collectUrls(item, urls);
   } else if (value && typeof value === 'object') {
     for (const [key, item] of Object.entries(value)) {
-      if (key === '__url' && typeof item === 'string') urls.add(item);
+      if (OUTPUT_URL_KEYS.has(key) && typeof item === 'string') urls.add(item);
       else collectUrls(item, urls);
     }
   }
@@ -43,7 +47,7 @@ const formatBytes = (bytes: number) =>
   bytes < 1e6 ? `${(bytes / 1e3).toFixed(1)} KB` : `${(bytes / 1e6).toFixed(2)} MB`;
 
 /** The build's plugin that copies into `dist/aek-assets/` only the outputs the production data
- * loads (its `__url`s), and logs their size */
+ * loads (`collectUrls`), and logs their size */
 export const assetOutputsBuildPlugin = (): Plugin => {
   let outDir = '';
   /** `closeBundle` runs after a failed build too: its own throw would hide the build's (B4) */

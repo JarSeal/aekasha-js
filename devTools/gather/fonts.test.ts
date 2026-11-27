@@ -142,12 +142,13 @@ describe('fonts in the generated data', () => {
     expect(Object.keys(json?.fonts ?? {})).toEqual(['mono', 'sans']);
   });
 
-  it('takes the layout’s URL and the figures from the run; production only the load’s fields', () => {
+  it('takes the layout’s and the atlas’s URLs and the figures from the run; production only the load’s fields', () => {
     const files = { ...font('sans'), ...scene('a', { fonts: ['sans'] }) };
     const pipeline = runWith(['app/fonts/sans/sans.font.json']);
     const dev = gather(files, { pipeline });
     expect(dev.json?.scenes.a.fonts?.[0]).toMatchObject({
       __url: '/aek-assets/app/fonts/sans/sans.font.json.layout.json',
+      __atlasUrl: '/aek-assets/app/fonts/sans/sans.font.json.atlas.ktx2',
       __bytes: { in: 90, out: 1100 },
       __vramBytes: { in: 64 * 64 * 4, out: 64 * 64 * 4 },
     });
@@ -157,6 +158,7 @@ describe('fonts in the generated data', () => {
         id: 'sans',
         type: 'MTSDF',
         __url: '/aek-assets/app/fonts/sans/sans.font.json.layout.json',
+        __atlasUrl: '/aek-assets/app/fonts/sans/sans.font.json.atlas.ktx2',
         __bytes: { in: 90, out: 1100 },
         __vramBytes: { in: 64 * 64 * 4, out: 64 * 64 * 4 },
       },
