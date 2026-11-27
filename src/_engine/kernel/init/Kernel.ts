@@ -8,8 +8,9 @@ import { installCameras } from '../camera/Camera';
 import { installLights } from '../light/Light';
 import { installMaterialInputResolvers } from '../assets/MaterialInputResolvers';
 
+// p607 D2
 /**
- * Installs the kernel's systems and hooks (p607 D2): the core ECS plumbing, frustum culling,
+ * Installs the kernel's systems and hooks: the core ECS plumbing, frustum culling,
  * meshes, groups, ray casting, cameras and lights, and the material input resolvers. Always installed, never listed in `features`.
  * `InitEngine` calls it before the first world, so the core plugin's systems come first in every
  * world. Their debug modules load later in the boot (debug env), before the features install; the

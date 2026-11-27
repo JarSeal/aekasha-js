@@ -47,10 +47,11 @@ export type ThroughputOpts = {
   onBatch?: (progress01: number) => void;
 };
 
+// p240 Phase 2
 /**
  * Grows a workload until a batch takes `TARGET_BATCH_MS` or reaches `max`, then repeats that batch
  * until the next one would end past the deadline (`MAX_REPEATS` at most), and keeps the fastest:
- * a GPU that idles at a low clock (Apple silicon's, p240 Phase 2) ramps up under the repeats, as
+ * a GPU that idles at a low clock (Apple silicon's) ramps up under the repeats, as
  * it does under a game's frames. At least one batch runs, whatever the deadline.
  * @internal
  * @returns the fastest grown batch (the last one when none grew in time): its count and timing

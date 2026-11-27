@@ -41,7 +41,8 @@ const LS_KEY = 'debugRayCast';
 const TAB_ID = 'rayCastControls';
 /** How often the open tab writes the stats tables' figures */
 const STATS_VIEW_REFRESH_MS = 200;
-/** The pre-p141 single helper toggle, migrated to `threeShow` */
+// p141
+/** The old single helper toggle, migrated to `threeShow` */
 const LEGACY_SHOW_HELPERS_KEY = 'showAllRayDebugHelpers';
 
 /** The helper settings in the tab, per kind: state key suffix → the kind's setting. The state

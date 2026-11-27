@@ -15,8 +15,9 @@ import {
   type TextureProps,
 } from './Texture';
 
+// p299 D1
 /**
- * Runtime texture arrays (p299 D1): many same-sized textures as the layers of one array texture,
+ * Runtime texture arrays: many same-sized textures as the layers of one array texture,
  * one binding in a shader (`texture(array, uv).depth(layer)`). Each layer wraps and mips on its
  * own, so tiling textures work, unlike in an atlas.
  *

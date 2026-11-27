@@ -79,7 +79,8 @@ type DebugAssetsBoot = {
   textureWorkerTarget?: AssetsWorkerTarget;
   simplifyWorkerTarget?: AssetsWorkerTarget;
   mergeWorkerTarget?: AssetsWorkerTarget;
-  /** Load the asset pipeline's source files instead of its outputs (p300 DD8 level 3) */
+  // p300 DD8 level 3
+  /** Load the asset pipeline's source files instead of its outputs */
   loadSourceFiles?: boolean;
 };
 type WorkerTargetKey =

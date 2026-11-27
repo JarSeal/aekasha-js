@@ -189,10 +189,11 @@ export const readEngineObserverEnv = (): DeviceObserverEnv => {
   };
 };
 
+// p240 Phase 4
 /**
- * Starts observing the main loop's frames (p240 Phase 4): each window of `frames` rendered frames
- * (D3's frames left out) goes to `onWindow`, summarized and classified. Windows follow each other
- * while nothing breaks them.
+ * Starts observing the main loop's frames: each window of `frames` rendered frames (the frames
+ * the file's header lists left out) goes to `onWindow`, summarized and classified. Windows follow
+ * each other while nothing breaks them.
  * @internal
  */
 export const startDeviceObserver = (

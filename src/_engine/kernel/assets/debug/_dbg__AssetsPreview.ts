@@ -13,12 +13,13 @@ import {
 } from './_dbg__TexturePreview';
 import styles from './Assets.module.scss';
 
+// p299 D6, p806 D10
 /**
- * The Assets tab info window's previews (p299 D6): an array texture's layers as thumbnails, an
+ * The Assets tab info window's previews: an array texture's layers as thumbnails, an
  * atlas slot's image with its cells' content and padded rects (the cell's id on hover), at one mip
  * level picked in the window. Rendered on the GPU and read back (_dbg__TexturePreview.ts), since a
  * KTX2 texture can't be drawn into a 2D canvas. Its Level select and Cell rects checkbox are items of
- * the window's grid (p806 D10), the images a custom item.
+ * the window's grid, the images a custom item.
  */
 
 /** A layer thumbnail's largest side, in px */

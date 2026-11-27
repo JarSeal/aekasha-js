@@ -69,7 +69,8 @@ const ARRAY_ORIGIN_TEXT = {
 
 type LayerRow = { id: string; index: number; member: string; source: string };
 
-/** The array folder (p299 D6): what it was built from and its layers' table.
+// p299 D6
+/** The array folder: what it was built from and its layers' table.
  * @param registered the array asset's dev data registry entry (its JSON's layer list) */
 const getTextureArrayFolder = (
   texture: THREE.Texture,
@@ -166,7 +167,8 @@ const getAtlasCellRows = (info: TextureAtlasInfo): CellRow[] => {
   });
 };
 
-/** The atlas folder (p299 D6): the layout and the cells' table. */
+// p299 D6
+/** The atlas folder: the layout and the cells' table. */
 const getTextureAtlasFolder = (texture: THREE.Texture): PropertyGridItem[] => {
   const info = getTextureAtlasInfo(texture);
   if (!info) return [];
@@ -227,7 +229,8 @@ const getTextureAtlasFolder = (texture: THREE.Texture): PropertyGridItem[] => {
   ];
 };
 
-/** The texture set folder (p303 D1): each set the texture is a slot of, with its packings and
+// p303 D1
+/** The texture set folder: each set the texture is a slot of, with its packings and
  * slots ("LITE albedoRough"); none when no set names it. */
 const getTextureSetFolder = (id: string): PropertyGridItem[] => {
   const bySet = new Map<string, string[]>();

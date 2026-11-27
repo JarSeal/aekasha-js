@@ -20,8 +20,9 @@ import { retagAssetOwner, runInAssetOwnerScope } from '../assets/AssetOwners';
 // What a scene load builds from the scene's data (`SceneData`): its cameras, its assets and its
 // JSON lights and meshes. The load itself, its order and its hooks are SceneLoader.ts'.
 
+// i060
 /** A persistent camera's, light's or mesh's entity from an earlier load, which this one reuses
- * instead of creating another (i060): the live entity with its app id, if it's `PERSISTENT`. The
+ * instead of creating another: the live entity with its app id, if it's `PERSISTENT`. The
  * gather fails on a persistent entity without an app id. */
 const findLivePersistentEntity = (
   appId: string | undefined,
@@ -36,7 +37,8 @@ const findLivePersistentEntity = (
     : undefined;
 };
 
-/** Tags an entity created from a scene's data as such (its `DEBUG_DATA.source`, p150): the camera
+// p150
+/** Tags an entity created from a scene's data as such (its `DEBUG_DATA.source`): the camera
  * and light edit windows show where its values came from. Debug env and prod test only. */
 const tagSceneJsonEntity = (entityId: number) => {
   if (!IS_DEBUG_ENV && !IS_PROD_TEST_MODE) return;
@@ -82,9 +84,10 @@ export const createCameras = (sceneData: SceneData) => {
   }
 };
 
+// p353 Phase 3
 /**
  * The asset lists of a scene's data that {@link loadSceneAssetsAsync} loads: a scene's, or a part
- * of one (a streaming cell's assets, p353 Phase 3).
+ * of one (a streaming cell's assets).
  * @internal
  */
 export type SceneAssetLists = Pick<
@@ -106,9 +109,10 @@ const createOwned =
   (fn) =>
     owner === undefined ? fn() : runInAssetOwnerScope(owner, fn);
 
+// p613 D4
 /** Imports a scene's imported assets into `importedAssets`, and re-tags the ones it names by id.
- * The import registry (the glTF import path) loads here, only for a scene that names an import
- * (p613 D4): a scene, or an app, without one never loads it. */
+ * The import registry (the glTF import path) loads here, only for a scene that names an import:
+ * a scene, or an app, without one never loads it. */
 const loadSceneImportsAsync = async (
   assets: SceneData['importedAssets'],
   importedAssets: ScenePrimitiveAssets['importedAssets'],
@@ -260,8 +264,9 @@ export const loadSceneAssetsAsync = async (
   return { textures, materials, geometries, importedAssets };
 };
 
-/** Registers a scene's MERGED geometries from their parts (p371 D2), in the assets worker
- * (`AppConfig.assets.mergeWorkerTarget`, D4), all at once: a part is never another MERGED one.
+// p371 D2, D4
+/** Registers a scene's MERGED geometries from their parts, in the assets worker
+ * (`AppConfig.assets.mergeWorkerTarget`), all at once: a part is never another MERGED one.
  * The merge code loads here, on the first one: an app without one never loads it. Each merge
  * captures the owner scope at its call, so it registers in it after its await. A merge that
  * fails (a part not registered, a morphed or skinned one) is logged and left out, so a mesh using

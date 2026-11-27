@@ -177,10 +177,11 @@ export const clearLodObjectFade = (object: THREE.Object3D) => {
   objectFades.delete(object);
 };
 
+// p353 Phase 5 D5
 /**
- * Sets an object's visibility fade, the second fade every dither-enabled material reads (p353
- * Phase 5 D5: streamed content dithering in and out), ANDed with its LOD fade: a LOD cross-fade
- * under it stays split right. Set it on each drawn mesh of an entity (a LOD fade copy reads its
+ * Sets an object's visibility fade, the second fade every dither-enabled material reads (streamed
+ * content dithering in and out), ANDed with its LOD fade: a LOD cross-fade under it stays split
+ * right. Set it on each drawn mesh of an entity (a LOD fade copy reads its
  * mesh's). {@link LOD_FADE_OPAQUE} (or `clearObjectVisibilityFade`) shows it whole.
  * @internal
  * @param object the drawn mesh

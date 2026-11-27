@@ -330,7 +330,8 @@ export type AssetsLoadGLTFResponse = {
   primitives: { geometryIndex: number; info: ImportedGeometryInfo }[];
   /** The point clouds (their `instances`' buffers transferred). */
   pointClouds: ImportedPointCloudInfo[];
-  /** The asset pipeline's prebuilt LOD chains (p347 Phase 3), one per base in `geometries`. */
+  // p347 Phase 3
+  /** The asset pipeline's prebuilt LOD chains, one per base in `geometries`. */
   lodChains: { geometryIndex: number; chain: TransferableLodChain }[];
   /** Empty without importTextures. ImageBitmaps, or KTX2 textures' compressed mip levels. */
   images: TransferableImage[];

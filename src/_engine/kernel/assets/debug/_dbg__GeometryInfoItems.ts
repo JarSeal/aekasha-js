@@ -120,8 +120,9 @@ const runLodChainAction = async (
   refreshAssetsTab();
 };
 
+// p347 §2.5
 /** The LOD chain folder: the chain, or which chain a level belongs to, and the generate / release
- * buttons (p347 §2.5). */
+ * buttons. */
 const getLodChainFolder = (id: string, windowId: string): PropertyGridItem => {
   const ofLevel = getLodChainOfLevel(id);
   if (ofLevel) {

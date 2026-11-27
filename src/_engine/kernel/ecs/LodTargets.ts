@@ -42,8 +42,9 @@ export const registerLodTarget = (componentType: ComponentType, target: LodTarge
  */
 export const getLodTargets = (): readonly LodTargetEntry[] => lodTargets;
 
+// p375 Phase 2
 /**
- * What draws a plain mesh's LOD levels while the mesh itself isn't drawn (p375 Phase 2: a batched
+ * What draws a plain mesh's LOD levels while the mesh itself isn't drawn (a batched
  * merge member, drawn by its group's batch). `lod()` resolves the levels, holds their refs,
  * selects, and sets each applied level on the mesh as for any plain mesh (so a mesh drawn on its
  * own again shows the right one); for an entity the delegate draws, it calls the delegate in place
@@ -88,8 +89,9 @@ export const setLodMeshDrawDelegate = (delegate: LodMeshDrawDelegate | null) => 
 export const getLodMeshDrawDelegateFor = (entityId: number, world: ECSWorld) =>
   meshDrawDelegate?.isDrawing(entityId, world) ? meshDrawDelegate : undefined;
 
+// p354 D3
 /**
- * A frame's LOD selection inputs (p354 D3): what `lodSelectionSystem` measures and selects with,
+ * A frame's LOD selection inputs: what `lodSelectionSystem` measures and selects with,
  * for LOD content without a `LOD` entity, which applies the same rules (`utils/LodRules.ts`).
  * @internal
  */
@@ -159,8 +161,9 @@ export const setLodFrameInputs = (inputs: Readonly<LodFrameInputs>) => {
  */
 export const getLodFrameInputs = (): Readonly<LodFrameInputs> => lodFrameInputs;
 
+// p354 D11
 /**
- * LOD content without entities (an instance set), as the LOD tab lists it (p354 D11).
+ * LOD content without entities (an instance set), as the LOD tab lists it.
  * @internal
  */
 export type LodContentDebugInfo = {

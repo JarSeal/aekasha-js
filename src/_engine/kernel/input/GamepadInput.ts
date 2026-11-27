@@ -127,9 +127,10 @@ const removeGamepadListeners = (): void => {
   pads.length = 0;
 };
 
+// p808 D5
 /** Whether the pads are read, by the input scope: always for the window, never for none, and for
  * the canvas while the focus is on it or in the scope's root (the mount's container: a HUD
- * menu's button a gamepad moves the focus through, p808 D5). */
+ * menu's button a gamepad moves the focus through). */
 const isInScope = () => {
   const scope = getInputScope();
   if (scope === 'WINDOW') return true;

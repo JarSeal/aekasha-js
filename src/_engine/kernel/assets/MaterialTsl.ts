@@ -227,11 +227,12 @@ const getInputTexture = (textureId: string, where: string, id: string | undefine
   return getMissingTexture();
 };
 
+// p299 D5
 /**
  * One TSL input as its node by the built-in rules: a texture id as a texture node (one white
  * texel when it isn't registered, warned), a `#rrggbb` colour, a boolean, a number, a 2-4 array or
  * a `{ x, y(, z, w) }` or `{ r, g, b(, a) }` object as a uniform. A texture array layer or an atlas
- * cell gets here only before its resolvers registered (p299 D5: with the first array or atlas slot
+ * cell gets here only before its resolvers registered (with the first array or atlas slot
  * loaded), so its texture isn't loaded: one white texel, warned as a missing texture id. Throws
  * for anything else.
  */

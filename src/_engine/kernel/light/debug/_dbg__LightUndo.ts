@@ -245,9 +245,10 @@ export type LightWindowContext = {
   refresh: () => void;
 };
 
+// p804 D3
 /**
  * A light edit window field's change handler: `apply` on every write; at the gesture's end the
- * value is saved, recorded with the gesture's `prev` (p804 D3) and the grid re-read. `toSaved`
+ * value is saved, recorded with the gesture's `prev` and the grid re-read. `toSaved`
  * makes the saved and recorded values from the field's (a tuple of several fields'), with `prev`
  * the field's own value before the gesture.
  */

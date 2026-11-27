@@ -33,8 +33,9 @@ import type { LodAutoDef, LodDef, MeshLodDef } from '../../features/lod/LodTypes
 import type { MeshMergeDef } from '../../features/merging/MergeTypes';
 import type { FeatureContext } from '../init/Features';
 
+// p607
 /**
- * Installs the meshes (the kernel, p607): a mesh entity's deletion disposes its mesh.
+ * Installs the meshes (part of the kernel): a mesh entity's deletion disposes its mesh.
  * @internal
  */
 export const installMeshes = (ctx: FeatureContext) => {
@@ -177,6 +178,7 @@ export const preWarmMesh = (mesh: THREE.Mesh, label: string) => {
   });
 };
 
+// p353 Phase 0 finding 4: three's parallel pipeline builds
 /**
  * Compiles a set of objects already in the root scene in one `renderer.compileAsync` of the root
  * scene, ahead of their first draw, as {@link preWarmMesh} does one mesh (the render pipeline's
@@ -184,7 +186,7 @@ export const preWarmMesh = (mesh: THREE.Mesh, label: string) => {
  * visible for the call's synchronous part only, so held objects (`TAG_DRAW_HELD`) compile without
  * a frame showing them; everything else in view compiles too (what's compiled already costs a
  * lookup). One call, not one per object: three r187 builds up to 16 pipelines at once only
- * within a call (p353 Phase 0 finding 4). Resolves when done; a failed compile is logged and
+ * within a call. Resolves when done; a failed compile is logged and
  * resolves too (the first draw compiles instead). Compiles the real objects, never stand-ins:
  * three releases a pipeline with its last render object.
  * @internal

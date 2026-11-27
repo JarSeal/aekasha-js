@@ -66,9 +66,10 @@ const IS_ENABLED = Object.freeze({ isDisabled: false });
 const IS_DRAW_HELD = Object.freeze({ isDrawHeld: true });
 const IS_DRAW_RELEASED = Object.freeze({ isDrawHeld: false });
 
+// p607
 /**
- * Installs the core ECS plumbing (the kernel, p607): the visibility and persistence hooks, and the
- * core plugin's object3D sync, lifetime and look-at systems, which every world runs.
+ * Installs the core ECS plumbing (part of the kernel): the visibility and persistence hooks, and
+ * the core plugin's object3D sync, lifetime and look-at systems, which every world runs.
  * @internal
  */
 export const installCoreSystems = (ctx: FeatureContext) => {

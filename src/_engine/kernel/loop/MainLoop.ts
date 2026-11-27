@@ -108,12 +108,13 @@ const loopState: LoopState = {
   isSceneSuspended: false,
 };
 
+// p601
 /**
  * Debug and test only: makes every frame advance by `seconds` of time, whatever the wall clock
  * says (null: real time again). Physics stepping takes the same delta, so at the default 60 Hz
  * timestep a 1/60 s frame is exactly one step, and everything driven by the loop's deltas (app
  * systems, scene loopers, the elapsed time, the day-night cycle) is the same on every run for the
- * same number of frames. The scene runner's test bridge sets it (p601).
+ * same number of frames. The scene runner's test bridge sets it.
  * @param seconds (number | null) the frame delta in seconds, or null
  */
 export const setFixedFrameDelta = (seconds: number | null) => {
@@ -135,10 +136,11 @@ export const getDelta = () => delta;
  */
 export const getAppDelta = () => deltaApp;
 
+// p354 D7
 /**
  * The main loop's frame: counts every frame the loop ran (a frame the max FPS cap held back and
  * one in an editor view included), 0 before the first. For work that must happen once a frame
- * whatever calls it (p354 D7: an instance set's state advances in its frame's first dispatch).
+ * whatever calls it (an instance set's state advances in its frame's first dispatch).
  * @internal
  */
 export const getMainLoopFrame = () => frameCounter;
@@ -191,9 +193,10 @@ export type FrameProbe = {
 /** Replaced, never changed in place: a probe removed during a frame doesn't shift the loop's walk */
 let frameProbes: readonly FrameProbe[] = [];
 
+// p240 Phase 4
 /**
  * Adds a frame probe, called at the start and end of every frame: the profiler's while its window
- * is open, the device capability check's observer while it observes (p240 Phase 4). Without one a
+ * is open, the device capability check's observer while it observes. Without one a
  * frame costs two length checks. Adding the same probe again does nothing.
  * @internal
  * @returns its remover

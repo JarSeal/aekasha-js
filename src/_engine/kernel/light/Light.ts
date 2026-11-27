@@ -17,8 +17,9 @@ import { setFrustumCullingEnabled } from '../ecs/ObjectFrustumCullingSystem';
 import type { FeatureContext } from '../init/Features';
 import type { ShadowQuality } from '../../schemas/_HelperSchemas';
 
+// p607
 /**
- * Installs the lights (the kernel, p607): a light entity's deletion disposes its light (and its
+ * Installs the lights (part of the kernel): a light entity's deletion disposes its light (and its
  * target entity).
  * @internal
  */
@@ -116,13 +117,14 @@ export const SHADOW_PRESETS: Record<ShadowQuality, ShadowPreset> = {
   },
 };
 
+// docs/issues/_DONE_i010_vsm-stripes-on-unshadowed-slopes.md
 /**
  * The most a preset's depth bias is under `VSMShadowMap`: one step of three's half-float targets
  * (r187), which its blur stores the depth's mean in, at depths 0.5..1 (2^-11), where the ground
  * under a light that follows the camera lands (the sky lights put the camera at 0.5). The blur's
  * two passes round the mean by up to that step, and a surface facing the light keeps its variance
  * at the filter's floor, so a smaller bias draws stripes down a slope nothing shadows (VSM draws
- * every receiver into the map): `docs/issues/_DONE_i010_vsm-stripes-on-unshadowed-slopes.md`.
+ * every receiver into the map).
  * @internal
  */
 export const VSM_PRESET_BIAS = -0.0005;

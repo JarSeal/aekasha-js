@@ -498,7 +498,8 @@ const runLoadPhasesAsync = async (load: ActiveLoad) => {
   if (loader.loadEndFn) await loader.loadEndFn(loader);
 };
 
-/** A failed load's part of its scene (i110): when it failed after the teardown, before its scene
+// i110
+/** A failed load's part of its scene: when it failed after the teardown, before its scene
  * became current, deletes what it built (the features' parts, its groups, loopers and entities,
  * which hold refs on its materials and geometries), then releases the assets the scene holds alone
  * (`releaseSceneOwnedAssets`: what the scene that's current, or a `retainedTextures` hook, holds
@@ -690,11 +691,12 @@ export const reportSceneLoadBakeStatus = (status: SceneLoadBakeStatus) => {
  */
 export const isCurrentlyLoading = () => currentlyLoading;
 
+// p354 Phase 5 step 6
 /**
  * Runs `run` now, or once the scene load running has settled (finished or failed, its
  * `loadSettled` hooks): a load creates its scene data's lights and meshes after the scene code, so
  * a pre-warm asked for from scene code compiles a lit material with the scene's lights then, not
- * a variant without them that no frame draws (p354 Phase 5 step 6).
+ * a variant without them that no frame draws.
  * @internal
  */
 export const runWhenSceneLoadSettled = (run: () => void) => {

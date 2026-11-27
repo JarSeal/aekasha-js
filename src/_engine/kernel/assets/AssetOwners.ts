@@ -35,9 +35,10 @@ export const setAssetOwnerScene = (sceneId: string | null) => {
   ownerSceneId = sceneId;
 };
 
+// p353 Phase 5 D10
 /**
  * The owner key of a streaming cell's assets: `sceneId#cellKey`, or `sceneId#cellKey/layer` for
- * one of the cell's other content layers (p353 Phase 5 D10: `far`, `kept`), so a layer's release
+ * one of the cell's other content layers (`far`, `kept`), so a layer's release
  * frees nothing another layer of the cell still loads. The GPU memory tab groups the keys by the
  * part before `#`.
  * @internal

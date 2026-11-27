@@ -47,7 +47,8 @@ export type DeclaredFile = {
 type GeneratedData = {
   textures?: Record<string, DeclaredFile>;
   importedAssets?: Record<string, DeclaredFile>;
-  /** The texture sets by id (dev data; p303 D1) */
+  // p303 D1
+  /** The texture sets by id (dev data) */
   textureSets?: Record<string, TextureSetDef>;
   scenes: Record<
     string,
@@ -81,7 +82,8 @@ export const findDeclaration = (kind: 'textures' | 'importedAssets', id: string)
   return undefined;
 };
 
-/** A texture set's packing and slot that a texture fills (p303 D1). */
+// p303 D1
+/** A texture set's packing and slot that a texture fills. */
 export type TextureSetSlotRef = { set: string; packing: string; slot: string };
 
 /**
@@ -234,8 +236,9 @@ export type PipelineDescription = {
   rows: [string, string][];
 };
 
+// p300
 /**
- * The asset pipeline's side of a declared asset (p300): the file this page load loaded (the
+ * The asset pipeline's side of a declared asset: the file this page load loaded (the
  * pipeline's output, or its source with the "Load source files" override or without an output)
  * and the pipeline's figures. Undefined for an asset without pipeline data.
  * @param declared the asset's generated data

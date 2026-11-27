@@ -18,8 +18,9 @@ const warnedSourceUrls = new Set<string>();
 /** Packed textures already logged by the "Load source files" override. */
 const loggedPackedAssets = new Set<string>();
 
-/** The URL the app's files are served from when it isn't the page's (the mount's `assetBaseUrl`,
- * p611 D6), absolute with a trailing slash */
+// p611 D6
+/** The URL the app's files are served from when it isn't the page's (the mount's
+ * `assetBaseUrl`), absolute with a trailing slash */
 let assetBaseUrl: string | null = null;
 
 /**
@@ -71,9 +72,10 @@ export const isJsonRelativeFileName = (fileName: string) =>
 
 let loadSourceFiles: boolean | undefined;
 
+// p300 DD8 level 3
 /**
  * Whether this page load loads the pipeline's source files instead of its outputs: the Assets
- * debug tab's "Load source files" boot override (p300 DD8 level 3, `AEK_debugAssetsBoot`), debug
+ * debug tab's "Load source files" boot override (`AEK_debugAssetsBoot`), debug
  * env only. Read once, on the first call. A production build ships no sources, so there it's
  * always false (warned once when the override is saved).
  * @internal
@@ -166,8 +168,9 @@ export const resolveAssetUrl = (
   return legacyUrl(asset.fileName);
 };
 
+// p311 D2
 /**
- * The URLs a cube texture asset (p311 D2) loads its six faces from instead of its output
+ * The URLs a cube texture asset loads its six faces from instead of its output
  * (`__sourceUrls`, development data only): when the pipeline has no output for it (warned once,
  * as `resolveAssetUrl` warns for one file), or under the "Load source files" override (see
  * isLoadingSourceFiles). Null when it loads its output, and for any other texture.

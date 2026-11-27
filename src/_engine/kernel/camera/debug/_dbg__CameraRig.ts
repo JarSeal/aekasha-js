@@ -1,7 +1,7 @@
+// p083 DD7
 /**
  * The camera the view-following debug viewports (the axes gizmo, the environment ball) follow,
- * and the rig they can drive (p083 DD7). One resolver for
- * every view:
+ * and the rig they can drive. One resolver for every view:
  * - Runtime view: the active camera; the scene debug camera's rig while it is active.
  * - Editor view: the view's rig camera (`getCameraRig`), or its plain camera (`getCamera`)
  *   when it has no rig, like the main camera in the Runtime view.
