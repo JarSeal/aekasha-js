@@ -1,7 +1,7 @@
 export { getFont, getFontGlyphIndex, getFontKerningKey, loadFontAsync } from './Fonts';
 export type { FontData, FontMetrics } from './Fonts';
 export type { FontAsset, FontCharsetPreset, FontType, SceneFontDef } from './FontSchema';
-export { createText, getText } from './Texts';
+export { bindTextToEntity, createText, createTextEntity, getText, getTextForEntity } from './Texts';
 export type { TextObject } from './TextObject';
 export {
   TEXT_ALIGNS,
@@ -15,6 +15,7 @@ export type {
   TextAnchor,
   TextAttachment,
   TextBlend,
+  TextEntityProps,
   TextLocalTransform,
   TextOrientation,
   TextProps,

@@ -10,6 +10,7 @@ import { existsOrThrow } from '../../utils/Assert';
 import { lerror, lwarn } from '../../utils/Logger';
 import { getFont, type FontData } from './Fonts';
 import { layoutText, type TextLayoutBuffer, type TextLayoutParams } from './TextLayout';
+import { releaseTextEntity, type TextEntityBinding } from './TextEntity';
 import { queueTextUpdate, unregisterText } from './TextRegistry';
 import type {
   TextAlign,
@@ -114,6 +115,11 @@ export class TextObject {
    * @internal
    */
   isQueued = false;
+  /**
+   * Set by Texts.ts (`createTextEntity`, `bindTextToEntity`) while an entity owns this text.
+   * @internal
+   */
+  entityBinding: TextEntityBinding | null = null;
 
   private _text: string;
   private _font: FontData;
@@ -428,13 +434,17 @@ export class TextObject {
     this.markDirty(TEXT_DIRTY_ROW);
   }
 
-  /** Removes the text and frees its glyphs. Idempotent. */
+  /** Removes the text and frees its glyphs. Idempotent. A text entity (`createTextEntity`) is
+   * deleted with it; a bound entity (`bindTextToEntity`) loses its `TEXT` component. */
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    const binding = this.entityBinding;
+    this.entityBinding = null;
     unregisterText(this.id);
     // Queued, so the system frees its glyphs' range in its batch
     queueTextUpdate(this);
+    if (binding) releaseTextEntity(binding);
   }
 
   // --------------------------------------------------------------------------

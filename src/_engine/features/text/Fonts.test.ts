@@ -401,14 +401,20 @@ describe('the scene hooks', () => {
 });
 
 describe('text()', () => {
-  test('is the feature `text`, and its install adds the fonts’ scene hooks', () => {
+  test('is the feature `text`; its install adds the fonts’ and the texts’ scene hooks', () => {
     const feature = text();
     expect(feature.id).toBe('text');
     const addSceneHooks = vi.fn(() => () => {});
-    void feature.install({ addSceneHooks } as unknown as FeatureContext);
+    const registerComponentHooks = vi.fn();
+    void feature.install({ addSceneHooks, registerComponentHooks } as unknown as FeatureContext);
     expect(addSceneHooks).toHaveBeenCalledWith({
       worldCleared: expect.any(Function),
       assetsLoaded: expect.any(Function),
+    });
+    expect(addSceneHooks).toHaveBeenCalledWith({ exit: expect.any(Function) });
+    expect(registerComponentHooks).toHaveBeenCalledWith('CORE_TEXT', {
+      onDeleteEntity: expect.any(Function),
+      onRemoveComponent: expect.any(Function),
     });
   });
 });

@@ -32,6 +32,8 @@ export const ComponentType = {
   CAMERA_SETTINGS: 'CORE_CAMERA_SETTINGS',
   ORBIT_CONTROLS: 'CORE_ORBIT_CONTROLS',
   LINE: 'CORE_LINE',
+  /** A text bound to this entity (`aekasha/text`'s createTextEntity / bindTextToEntity). */
+  TEXT: 'CORE_TEXT',
   /** An entity a manager owns and drives (eg. a sky box's sun light), see ManagedByData. */
   MANAGED_BY: 'CORE_MANAGED_BY',
   /** A character's registry entry (Character.ts's createCharacter), see CharacterObject. */
@@ -155,6 +157,10 @@ export interface CoreComponentData {
    * line swaps its Object3D when it moves between the thin and thick backends, so a stored
    * object would go stale. Resolve it with getLineForEntity. */
   [ComponentType.LINE]: { lineId: string };
+  /** A text bound to this entity (`features/text/Texts.ts`' createTextEntity /
+   * bindTextToEntity): the entity's deletion disposes it. Holds the id; resolve the text with
+   * getTextForEntity. */
+  [ComponentType.TEXT]: { textId: string };
   /** The manager that owns the entity ({@link ManagedByData}, `CoreEntityOpts.managedBy`). */
   [ComponentType.MANAGED_BY]: ManagedByData;
   /** A character's registry entry (`aekasha/character`'s `createCharacter`). */

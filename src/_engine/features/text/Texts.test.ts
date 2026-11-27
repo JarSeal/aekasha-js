@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
-import type * as THREE from 'three/webgpu';
+import * as THREE from 'three/webgpu';
 
 const m = vi.hoisted(() => ({
   isDebug: true,
@@ -24,13 +24,23 @@ vi.mock(import('./Fonts'), async (importOriginal) => ({
   getFont: (id: string) => m.fonts.get(id) as FontData | undefined,
 }));
 
+import { ECSWorld } from '../../kernel/ecs/ECS';
+import { ComponentType } from '../../kernel/ecs/ECSCoreComponents';
 import type { FeatureContext } from '../../kernel/init/Features';
+import { createRootScene, getRootScene } from '../../kernel/scene/Scene';
 import type { SceneHooks } from '../../kernel/scene/SceneHooks';
 import type { FontData } from './Fonts';
 import { TextLayoutBuffer } from './TextLayout';
 import { TEXT_DIRTY_BATCH, TEXT_DIRTY_LAYOUT, TEXT_DIRTY_ROW, type TextObject } from './TextObject';
 import { clearTextUpdateQueue, getTextUpdateQueue } from './TextRegistry';
-import { createText, getText, installTexts } from './Texts';
+import {
+  bindTextToEntity,
+  createText,
+  createTextEntity,
+  getText,
+  getTextForEntity,
+  installTexts,
+} from './Texts';
 
 /** A font of a space and two inked glyphs, `?` (the fallback) and `A`, each 0.5 em wide */
 const createFont = (id: string): FontData => ({
@@ -86,12 +96,14 @@ describe('createText before the install', () => {
 
 describe('texts', () => {
   beforeAll(() => {
+    createRootScene();
     installTexts({
       addSceneHooks: (hooks: SceneHooks) => {
         sceneHooks.push(hooks);
         return () => {};
       },
-    } as unknown as FeatureContext);
+      registerComponentHooks: (type, hooks) => ECSWorld.registerComponentHooks(type, hooks),
+    } as Partial<FeatureContext> as FeatureContext);
   });
 
   beforeEach(() => {
@@ -264,8 +276,7 @@ describe('texts', () => {
     expect(m.lwarn).toHaveBeenCalledTimes(2);
   });
 
-  test('attach: world, an Object3D, an entity without an Object3D throws', async () => {
-    const { ECSWorld } = await import('../../kernel/ecs/ECS');
+  test('attach: world, an Object3D, an entity without an Object3D throws', () => {
     const world = new ECSWorld({ id: 'textAttach' });
     const text = createText({ font: 'sans' });
     drain();
@@ -299,5 +310,171 @@ describe('texts', () => {
     expect(kept.isDisposed).toBe(false);
     expect(getText(kept.id)).toBe(kept);
     kept.dispose();
+  });
+
+  describe('text entities', () => {
+    const world = new ECSWorld({ id: 'textEntities' });
+
+    /** The text entity's Object3D */
+    const objectOf = (entityId: number) =>
+      world.getComponent(entityId, ComponentType.OBJECT3D)!.value;
+
+    test('createTextEntity: an Object3D in the scene, the TEXT component, the transform', () => {
+      const entityId = createTextEntity(
+        {
+          text: 'EXIT',
+          font: 'sans',
+          position: { x: 1, y: 2, z: 3 },
+          rotation: { x: 0, y: Math.PI, z: 0 },
+          scale: { x: 2, y: 2, z: 2 },
+        },
+        { world, appId: 'exitSign' }
+      );
+      const text = getTextForEntity(entityId, world)!;
+      expect(text.id).toBe('exitSign');
+      expect(getText('exitSign')).toBe(text);
+      expect(world.getComponent(entityId, ComponentType.TEXT)).toEqual({ textId: 'exitSign' });
+
+      const obj = objectOf(entityId);
+      expect(obj.constructor).toBe(THREE.Object3D);
+      expect(obj.parent).toBe(getRootScene());
+      expect([obj.name, obj.userData.textId, obj.userData.entityId]).toEqual([
+        'exitSign',
+        'exitSign',
+        entityId,
+      ]);
+      // The text follows the entity's object; its own transform stays the identity
+      expect(text.attachment).toEqual({ to: 'OBJECT3D', object3D: obj });
+      expect(text.position.toArray()).toEqual([0, 0, 0]);
+      expect(text.quaternion.toArray()).toEqual([0, 0, 0, 1]);
+
+      const transform = world.getComponent(entityId, ComponentType.TRANSFORM)!;
+      expect(transform.position.toArray()).toEqual([1, 2, 3]);
+      expect(Math.abs(transform.quaternion.y)).toBeCloseTo(1, 6);
+      expect(transform.scale.toArray()).toEqual([2, 2, 2]);
+      expect(text.persistent).toBe(false);
+      world.deleteEntity(entityId);
+    });
+
+    test("the entity's persistent is the text's; doNotAddToScene leaves the object out", () => {
+      const entityId = createTextEntity(
+        { font: 'sans' },
+        { world, persistent: true, doNotAddToScene: true }
+      );
+      const text = getTextForEntity(entityId, world)!;
+      expect(text.persistent).toBe(true);
+      expect(world.hasComponent(entityId, ComponentType.PERSISTENT)).toBe(true);
+      expect(objectOf(entityId).parent).toBeNull();
+      text.dispose();
+    });
+
+    test('an unloaded font or a taken id throws before the entity exists', () => {
+      const before = getRootScene()!.children.length;
+      expect(() => createTextEntity({ font: 'serif' }, { world })).toThrow(/"serif"/);
+      createText({ font: 'sans', id: 'taken' });
+      expect(() => createTextEntity({ font: 'sans' }, { world, appId: 'taken' })).toThrow(
+        /"taken" already exists/
+      );
+      expect(getRootScene()!.children.length).toBe(before);
+    });
+
+    test('deleting a text entity disposes its text and takes its object out', () => {
+      const entityId = createTextEntity({ font: 'sans' }, { world });
+      const text = getTextForEntity(entityId, world)!;
+      const obj = objectOf(entityId);
+      world.deleteEntity(entityId);
+      expect(text.isDisposed).toBe(true);
+      expect(text.entityBinding).toBeNull();
+      expect(getText(text.id)).toBeUndefined();
+      expect(obj.parent).toBeNull();
+    });
+
+    test("disposing a text entity's text deletes the entity and takes its object out", () => {
+      const entityId = createTextEntity({ font: 'sans' }, { world });
+      const obj = objectOf(entityId);
+      getTextForEntity(entityId, world)!.dispose();
+      expect(world.isAlive(entityId)).toBe(false);
+      expect(obj.parent).toBeNull();
+    });
+
+    test('removing the TEXT component disposes the text; the entity stays', () => {
+      const entityId = createTextEntity({ font: 'sans' }, { world });
+      const text = getTextForEntity(entityId, world)!;
+      world.removeComponent(entityId, ComponentType.TEXT);
+      expect(text.isDisposed).toBe(true);
+      expect(world.isAlive(entityId)).toBe(true);
+      world.deleteEntity(entityId);
+    });
+
+    test('bindTextToEntity: the entity owns the text, the text only its component', () => {
+      const entityId = world.createEntity();
+      const text = createText({ font: 'sans' });
+      bindTextToEntity(text, entityId, world);
+      expect(getTextForEntity(entityId, world)).toBe(text);
+      expect(text.entityBinding).toEqual({ world, entityId, ownsEntity: false });
+
+      // Disposing the text keeps the entity, without its component
+      text.dispose();
+      expect(world.isAlive(entityId)).toBe(true);
+      expect(world.hasComponent(entityId, ComponentType.TEXT)).toBe(false);
+
+      // Deleting the entity disposes a bound text
+      const second = createText({ font: 'sans' });
+      bindTextToEntity(second, entityId, world);
+      world.deleteEntity(entityId);
+      expect(second.isDisposed).toBe(true);
+    });
+
+    test('bindTextToEntity refuses a bound or disposed text, an entity with a text or gone', () => {
+      const entityId = world.createEntity();
+      const text = createText({ font: 'sans' });
+      bindTextToEntity(text, entityId, world);
+      const other = world.createEntity();
+      expect(() => bindTextToEntity(text, other, world)).toThrow(/already bound/);
+      expect(() => bindTextToEntity(createText({ font: 'sans' }), entityId, world)).toThrow(
+        /already has a text/
+      );
+      const disposed = createText({ font: 'sans' });
+      disposed.dispose();
+      expect(() => bindTextToEntity(disposed, other, world)).toThrow(/disposed/);
+      world.deleteEntity(other);
+      expect(() => bindTextToEntity(createText({ font: 'sans' }), other, world)).toThrow(/gone/);
+      world.deleteEntity(entityId);
+    });
+
+    test("an entity in another world with the same id doesn't take the text", () => {
+      const otherWorld = new ECSWorld({ id: 'textEntitiesOther' });
+      const entityId = world.createEntity();
+      const text = createText({ font: 'sans' });
+      bindTextToEntity(text, entityId, world);
+      const otherId = otherWorld.createEntity();
+      otherWorld.addComponent(otherId, ComponentType.TEXT, { textId: text.id });
+      otherWorld.deleteEntity(otherId);
+      expect(text.isDisposed).toBe(false);
+      world.deleteEntity(entityId);
+      expect(text.isDisposed).toBe(true);
+    });
+
+    test('attach to an entity follows its Object3D, in its world', () => {
+      const entityId = createTextEntity({ font: 'sans' }, { world });
+      const label = createText({ font: 'sans' });
+      label.attach({ to: 'ENTITY', entityId, world });
+      expect(label.attachment).toEqual({ to: 'ENTITY', entityId, world });
+      world.deleteEntity(entityId);
+    });
+
+    test("the scene exit leaves the entities' texts to their entities", () => {
+      const entityId = createTextEntity({ font: 'sans' }, { world });
+      const owned = getTextForEntity(entityId, world)!;
+      const boundId = world.createEntity();
+      const bound = createText({ font: 'sans' });
+      bindTextToEntity(bound, boundId, world);
+      sceneHooks[0].exit?.('scene');
+      expect(owned.isDisposed).toBe(false);
+      expect(bound.isDisposed).toBe(false);
+      world.deleteEntity(entityId);
+      world.deleteEntity(boundId);
+      expect(owned.isDisposed && bound.isDisposed).toBe(true);
+    });
   });
 });

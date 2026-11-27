@@ -1,4 +1,4 @@
-Status: in progress | Phase 1 section 1 implemented
+Status: in progress | Phase 1 implemented
 Category: Text, Rendering
 Epic: p390_text-rendering-and-text-decals.md
 Blocks: p393_text-effects.md, p394_labels-screen-text-and-debug-text.md, p397_text-decals.md
@@ -124,7 +124,7 @@ text's box with `lines()` when it's installed.
 
 ## Phases
 
-### Phase 1: The feature, the handle and layout
+### Phase 1: The feature, the handle and layout — done
 
 1. `TextFeature.ts` (`text()`, after `lines()` in the template's list; the feature count 18 in the
    root `CLAUDE.md` and `kernel/init/CLAUDE.md`), `index.ts`, `TextRegistry.ts`, `TextObject.ts`
@@ -182,7 +182,8 @@ As built (section 1, 2026-11-28):
 - **The template** lists `text()` after `lines()`; the counts are eighteen in the root and init
   `CLAUDE.md` files and the Hub's intro, architecture, quick start and SBP pages.
 - **SBP (moved forward from Phase 4):** `text()` in the template is 1.7 KiB of the app's first
-  download (p391's `Fonts.ts` and `installTexts`; `createText`, the handle and the layout are
+  download (1.9 KiB with section 2's `TEXT` hooks: initial 421.4, `assets/index.js` 416.7 KiB;
+  p391's `Fonts.ts` and `installTexts`; `createText`, the handle and the layout are
   shaken out without a caller), which with `assets/index.css`' drift since its baseline (+0.5 KiB)
   put the initial at 421.3 KiB: `sbp.config.ts`' `initial` 420 → 423 and `assets/index.js` 416 →
   418 KiB, so `yarn build` passes meanwhile. Phase 4 still adds the `_engine/features/text` group
@@ -194,6 +195,37 @@ As built (section 1, 2026-11-28):
   the transform props, an unloaded font, a duplicate id, each setter's bits and one queue entry,
   equal values, a refused size, `setFont`'s refusal, `updateLayout`, the missing-glyph warning,
   `attach`, `dispose`, the scene exit).
+
+As built (section 2, 2026-11-28):
+
+- **The `TEXT` component** (`ComponentType.TEXT`, `'CORE_TEXT'`, `{ textId }`, in the kernel's
+  `ECSCoreComponents.ts` beside `LINE`); its hooks (`onDeleteEntity`, `onRemoveComponent`:
+  `disposeEntityText`) are registered by `installTexts`. `TextEntity.ts` holds the binding
+  (`TextEntityBinding`, `{ world, entityId, ownsEntity }`, on `TextObject.entityBinding`),
+  `releaseTextEntity` and `detachTextEntityObject`; the creators are `Texts.ts`', as `Lines.ts`'.
+- **`createTextEntity(props, opts?)`**: the entity's `OBJECT3D` is a plain `THREE.Object3D` (no
+  kind tag; its name the text's, `userData.textId` and `entityId`), added to the root scene unless
+  `doNotAddToScene`, which the text is attached to (`{ to: 'OBJECT3D' }`, so Phase 2's row write
+  reads its `matrixWorld`; the entity's transform and parenting move it). The props' `position`,
+  `rotation` / `quaternion` and `scale` go to the object at once and seed the `TRANSFORM` (lines'
+  way); the text's own transform stays the identity. `TextEntityProps` is `TextProps` without
+  `attach` and `persistent`: the entity's options' `persistent` is the text's too (Phase 4's
+  atlas rule reads it). The text's id is `props.id`, else `opts.appId`. A missing font or a taken
+  id throws before the entity or its object exists.
+- **A plain Object3D entity's deletion doesn't detach its object** (a mesh's and a group's hooks
+  do), so the text side does: `releaseTextEntity` (the text disposed first) and
+  `disposeEntityText` (the entity first) take a text entity's object out of its parent. Removing
+  the `TEXT` component from a text entity disposes the text and leaves the entity (as lines).
+- **`bindTextToEntity(text, entityId, world?)`** refuses a disposed or bound text, an entity that
+  has a text, and (beyond lines') a dead entity. **`getTextForEntity(entityId, world?)`**.
+- **The scene exit** skips a text with an `entityBinding`: a non-persistent entity's text goes
+  with the world's clear, a persistent one's stays.
+- **Tests** (`Texts.test.ts`, 11 more): the entity's object, component, transform and the text's
+  attachment, `persistent` and `doNotAddToScene`, the refusals before the entity, either side
+  deleted first (the object detached), the component removed, `bindTextToEntity` both ways and
+  its refusals, an entity of another world with the same id, `attach` to an entity, the scene
+  exit; `Fonts.test.ts`' `text()` test checks the texts' hooks too. `kernel/ecs/CLAUDE.md`'s
+  creators list has `createTextEntity`.
 
 ### Phase 2: The batches and the graph (the fill)
 

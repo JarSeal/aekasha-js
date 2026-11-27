@@ -134,3 +134,9 @@ export type TextProps = TextLocalTransform & {
    * false. A text bound to an entity follows its entity instead. */
   persistent?: boolean;
 };
+
+/**
+ * What `createTextEntity` takes: `createText`'s props without `attach` (the entity places the
+ * text) and `persistent` (the entity's options' `persistent` keeps both).
+ */
+export type TextEntityProps = Omit<TextProps, 'attach' | 'persistent'>;

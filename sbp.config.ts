@@ -85,9 +85,10 @@ const profiles: SbpProfile[] = [
     // `_engine/schemas` (1.4 KiB) were in the first download, through the fog's runtime importing
     // `FogSchema.ts`; with its defaults moved out (`FogDefaults.ts`) the initial is 419.4 and
     // `assets/index.js` 415.2 KiB, within both. p392 Phase 1: the template lists `text()` (p391's
-    // font load and the texts' install, `_engine/features/text` 1.7 KiB; `createText`, the handle
-    // and the layout ship only with a caller), with `assets/index.css`' drift since its baseline
-    // (+0.5 KiB, no text CSS), took the initial to 421.3 and `assets/index.js` to 416.6 KiB:
+    // font load and the texts' install with the `TEXT` hooks, `_engine/features/text` 1.9 KiB;
+    // `createText`, the handle and the layout ship only with a caller), with `assets/index.css`'
+    // drift since its baseline (+0.5 KiB, no text CSS), took the initial to 421.4 and
+    // `assets/index.js` to 416.7 KiB:
     // 420 → 423 and 416 → 418 KiB (at least 1 KiB over each)
     budgets: {
       initial: 423 * KIB,
