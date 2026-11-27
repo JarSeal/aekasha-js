@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: in progress | Phase 1 section 1 implemented
 Category: Text, Rendering
 Epic: p390_text-rendering-and-text-decals.md
 Blocks: p393_text-effects.md, p394_labels-screen-text-and-debug-text.md, p397_text-decals.md
@@ -131,6 +131,69 @@ text's box with `lines()` when it's installed.
    (the handle, its options and setters), `TextLayout.ts` with its tests.
 2. The `TEXT` component and `createTextEntity` / `bindTextToEntity` / `attach`, the hooks as
    `LineEntity.ts`; tests with the ECS.
+
+As built (section 1, 2026-11-28):
+
+- **Files:** `TextTypes.ts` (`TextProps` and the option types, each with an `as const` value list,
+  `TEXT_SIZINGS`, `TEXT_ORIENTATIONS`, `TEXT_ALIGNS`, `TEXT_ANCHORS`, `TEXT_BLENDS`, for Phase 3's
+  schema and D7's tab), `TextLayout.ts`, `TextRegistry.ts`, `TextObject.ts` and `Texts.ts` (the
+  API and `installTexts`, as lines' `Lines.ts`; not in the plan's list). On `aekasha/text`:
+  `createText`, `getText`, the types (`TextObject` as a type, as `LineObject`) and the lists.
+- **Props, not D1's sketch:** `position` / `rotation` (Euler, radians) / `quaternion` (over
+  `rotation`) / `scale` as `{ x, y, z }` objects, the engine's form (`ObjectTransformProps`, the
+  scene JSONs), not tuples; `setLocalTransform` takes the same keys. Defaults: `size` 1 (`WORLD`) or
+  16 (`SCREEN`), `sizing` `WORLD`, `orientation` `PLANE`, `align` `CENTER`, `anchor`
+  `MIDDLE_CENTER`, `lineHeight` the font's `metrics.lineHeight` (an option in em; `setLineHeight
+  (undefined)` goes back to the font's), `renderOrder` 0, `text` `''`. `id` and `name` as lines'.
+- **Anchors:** twelve, D1's nine plus a `BASELINE` row (`BASELINE_LEFT`, `_CENTER`, `_RIGHT`: the
+  first line's baseline at the origin, for signs and labels on a line). The box is the lines'
+  advances (not ink), from the first line's ascender to the last line's descender.
+- **`attach` has no `offset`:** the text's own transform is relative to its attachment (as a
+  line's), so `attach({ to: 'ENTITY', entityId })` then `setLocalTransform({ position })` is D1's
+  offset; one way to say it. Attachments: `WORLD` (default), `ENTITY` (its `OBJECT3D` required at
+  the call, the world resolved and stored) and `OBJECT3D` (any Object3D: a camera, a bone). A text
+  is in no scene graph; Phase 2's row write follows the target's `matrixWorld` × the local
+  transform (an `ENTITY` target resolved each time, since an entity's `OBJECT3D` can be swapped).
+  What a deleted target does (an attached, unbound text) is Phase 2's to decide.
+- **The setters** write in place and mark `dirtyFlags`: `TEXT_DIRTY_LAYOUT` (string, font, size,
+  align, anchor, maxWidth, lineHeight, letterSpacing), `TEXT_DIRTY_ROW` (colour, opacity,
+  visibility, transform, attachment), `TEXT_DIRTY_BATCH` (font, sizing, orientation, blend,
+  depthTest, renderOrder); a new text has all three. A changed text is queued once
+  (`queueTextUpdate`, its `isQueued`; `getTextUpdateQueue` / `clearTextUpdateQueue` for Phase 2's
+  system); an equal value marks nothing. `dispose()` queues the text too (its range is freed by
+  the system) and leaves it inert. A size not above 0 (or NaN) is refused with a warning.
+- **The layout writes a shared buffer, not the batch:** `layoutText(font, text, params, out,
+  onMissingGlyph?)` fills a `TextLayoutBuffer` (growable typed arrays, doubling; its constructor
+  takes a code point capacity): per inked glyph `planeRects` (x, y, w, h in the text's unit,
+  em × size, y up, the anchor at the origin) and `atlasRects` (the font's UV rect), plus
+  `glyphCount`, `lineCount` and the box (`minX`…`maxY`). `TextObject.updateLayout(out)` runs it
+  and keeps the counts and `bounds` (a `Box3`, z 0). Phase 2's system lays a dirty text out into
+  one buffer and copies its glyphs into the text's range (the row index is the batch's to write),
+  so a text holds no glyph copy and a batch move only relays out.
+- **Layout rules beyond D3:** a tab is a space; `\r` and other control characters are dropped; a
+  lone surrogate is U+FFFD; wrapping drops the spaces at a soft break (and a wrapped line's leading
+  ones), trailing spaces don't count to a line's width, a break after `-`, U+2010 or U+2013 only
+  when it ends a word (not a leading minus); letter spacing goes between a line's glyphs, not after
+  the last; `maxWidth` 0 puts each glyph on a line, negative or NaN wraps nothing. The missing-glyph
+  warning is `TextObject.ts`' (debug env, once per character per font, naming
+  `yarn assets --only <id>`), so the layout stays pure.
+- **D6's scene exit now:** the feature's install adds an `exit` hook disposing every text that
+  isn't `persistent` (section 2 adds "nor bound"); the rest of D6 stays Phase 4's.
+- **The template** lists `text()` after `lines()`; the counts are eighteen in the root and init
+  `CLAUDE.md` files and the Hub's intro, architecture, quick start and SBP pages.
+- **SBP (moved forward from Phase 4):** `text()` in the template is 1.7 KiB of the app's first
+  download (p391's `Fonts.ts` and `installTexts`; `createText`, the handle and the layout are
+  shaken out without a caller), which with `assets/index.css`' drift since its baseline (+0.5 KiB)
+  put the initial at 421.3 KiB: `sbp.config.ts`' `initial` 420 → 423 and `assets/index.js` 416 →
+  418 KiB, so `yarn build` passes meanwhile. Phase 4 still adds the `_engine/features/text` group
+  budget (the banner's at 0) and measures again with the renderer.
+- **Tests:** `TextLayout.test.ts` (15: the pen and size, a space, kerning and letter spacing,
+  `\n`, wrapping at spaces, `maxWidth` in the text's unit, after a hyphen, by glyph and a leading
+  minus, alignment with trailing spaces, four anchors, surrogate pairs and a missing one, an empty
+  string, `\n\n`, tab and CR, a reused buffer), `Texts.test.ts` (13: before the install, defaults,
+  the transform props, an unloaded font, a duplicate id, each setter's bits and one queue entry,
+  equal values, a refused size, `setFont`'s refusal, `updateLayout`, the missing-glyph warning,
+  `attach`, `dispose`, the scene exit).
 
 ### Phase 2: The batches and the graph (the fill)
 

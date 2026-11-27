@@ -1,12 +1,14 @@
 import type { EngineFeature } from '../../kernel/init/Features';
 import { installFonts } from './Fonts';
+import { installTexts } from './Texts';
 
-// p391 D6 (the fonts' load); p392 adds the texts
+// p391 D6 (the fonts' load), p392 D1 (the texts)
 /**
- * The text feature: `*.font.json` fonts, distance field atlases the asset pipeline encodes with
- * their layouts. A scene lists the fonts its code draws with (`fonts`), loaded with its assets
- * before its scene code runs; `loadFontAsync` loads one no scene lists. Without it, a scene
- * whose data names a font fails the boot.
+ * The text feature: texts in the 3D world (`createText`), drawn from `*.font.json` fonts,
+ * distance field atlases the asset pipeline encodes with their layouts. A scene lists the fonts
+ * its texts use (`fonts`), loaded with its assets before its scene code runs; `loadFontAsync`
+ * loads one no scene lists. Without it, `createText` throws and a scene whose data names a font
+ * fails the boot.
  * @example
  * ```ts
  * import { InitEngine } from 'aekasha';
@@ -20,5 +22,6 @@ export const text = (): EngineFeature => ({
   id: 'text',
   install: (ctx) => {
     installFonts(ctx);
+    installTexts(ctx);
   },
 });

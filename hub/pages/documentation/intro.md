@@ -55,7 +55,7 @@ import { createPhysicsEntity } from 'aekasha/physics';
 - Each feature's entry exports its factory, named after it: `physics()` (with
   `physicsTiers()`, the simulation tiers), `character()`, `skyBox()`, `surfaceConditions()`
   (with `rainOcclusion()`, the rain occlusion map), `fog()`, `lod()`, `spatial()`, `instancing()`,
-  `lines()`, `postFx()`, `viewports()`, `streaming()`, `merging()`, `textureSets()` and
+  `lines()`, `text()`, `postFx()`, `viewports()`, `streaming()`, `merging()`, `textureSets()` and
   `terrain()`. A
   feature is installed only when [`InitEngine`](api:InitEngine)'s `features` lists it (see
   [How the app starts](hub:examples/quick-start#how-the-app-starts)), and a production build holds

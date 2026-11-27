@@ -84,11 +84,15 @@ const profiles: SbpProfile[] = [
     // 414 → 416 KiB (at least 1 KiB over each). p106 Phase 7: zod (19.4 KiB) and
     // `_engine/schemas` (1.4 KiB) were in the first download, through the fog's runtime importing
     // `FogSchema.ts`; with its defaults moved out (`FogDefaults.ts`) the initial is 419.4 and
-    // `assets/index.js` 415.2 KiB, within both
+    // `assets/index.js` 415.2 KiB, within both. p392 Phase 1: the template lists `text()` (p391's
+    // font load and the texts' install, `_engine/features/text` 1.7 KiB; `createText`, the handle
+    // and the layout ship only with a caller), with `assets/index.css`' drift since its baseline
+    // (+0.5 KiB, no text CSS), took the initial to 421.3 and `assets/index.js` to 416.6 KiB:
+    // 420 → 423 and 416 → 418 KiB (at least 1 KiB over each)
     budgets: {
-      initial: 420 * KIB,
+      initial: 423 * KIB,
       chunks: {
-        'assets/index.js': 416 * KIB,
+        'assets/index.js': 418 * KIB,
         // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
         // tokens (`ui/styles/tokens.css`, in every build) took it from 0.9 to 2.3 KiB. p808
         // Phase 8: 4 → 6 KiB (`suggestBudget` of 4.2 KiB): the game HUD example's minimap is the
