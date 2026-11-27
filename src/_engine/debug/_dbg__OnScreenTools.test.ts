@@ -97,6 +97,12 @@ const click = (elem: HTMLElement) =>
 
 beforeAll(async () => {
   await stubKitDomAsync();
+  // The keys' hints as on Windows and Linux (Node's navigator says the host's platform: on macOS
+  // the save key's hint would be the ⌘ chord)
+  Object.defineProperty(globalThis.navigator, 'platform', {
+    value: 'Linux x86_64',
+    configurable: true,
+  });
   initEnvironment({ search: '?isDebug=true', env: { VITE_APP_ENV: 'development' } });
   registerBuiltInIcons();
   hud.root = CMP({ id: 'hudRoot', idAttr: true });

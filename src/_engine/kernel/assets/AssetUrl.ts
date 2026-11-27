@@ -3,8 +3,9 @@ import { lsGetItem } from '../../utils/LocalAndSessionStorage';
 import { DEBUG_ASSETS_BOOT_LS_KEY, IS_DEBUG_ENV } from '../config/Config';
 import type { GeneratedAssetFields } from '../../schemas/AssetsConfigSchema';
 
+// p300
 /**
- * The asset pipeline's URLs (p300), baked into a texture's or an imported asset's generated data
+ * The asset pipeline's URLs, baked into a texture's or an imported asset's generated data
  * by gatherAppData. Scene data carries them; code that loads a file by its name doesn't set them.
  */
 export type GeneratedAssetUrls = Pick<

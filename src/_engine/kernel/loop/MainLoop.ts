@@ -217,8 +217,9 @@ const endFrameProbes = (rendered: boolean) => {
   for (let i = 0; i < probes.length; i++) probes[i].end(now, rendered, loopState);
 };
 
+// p607 D5
 /**
- * The loop's fixed-step seam (p607 D5): what drives a simulation at a fixed timestep, set by the
+ * The loop's fixed-step seam: what drives a simulation at a fixed timestep, set by the
  * feature that owns it (`physics()`, through `FeatureContext.setFixedStepDriver`). One per page.
  * Without one, the loop polls held keys once per frame with the frame's delta.
  */

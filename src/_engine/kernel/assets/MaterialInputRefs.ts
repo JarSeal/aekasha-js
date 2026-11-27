@@ -29,8 +29,9 @@ export type TextureInputRef = {
   channel?: string;
 };
 
+// p299 D5
 /**
- * A TSL input's texture array layer (p299 D5): `{ "textureArray": "id", "layer": "rock" }` is the
+ * A TSL input's texture array layer: `{ "textureArray": "id", "layer": "rock" }` is the
  * layer sampled at the mesh's UV. The node keeps its layer through `.sample(uv)`.
  */
 export type TextureArrayInputRef = {
@@ -41,8 +42,9 @@ export type TextureArrayInputRef = {
   layer: number | string;
 };
 
+// p299 D5
 /**
- * A TSL input's atlas cell (p299 D5): `{ "atlas": "id", "slot": "albedo", "cell": "fern" }` is the
+ * A TSL input's atlas cell: `{ "atlas": "id", "slot": "albedo", "cell": "fern" }` is the
  * slot sampled at the mesh's UV mapped into the cell's rect, so the mesh needs no remapped UVs.
  * The node is that sample: `.sample(uv)` on it would read the whole slot.
  */

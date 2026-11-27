@@ -31,7 +31,8 @@ export type MergePart = {
   /** Its material slot: the geometry group (`materialIndex`) it lands in with `groups: 'BY_SLOT'`.
    * Default 0. */
   materialSlot?: number;
-  /** Its entry in a merge material's palette (p374): when any part has one, every merged vertex
+  // p374
+  /** Its entry in a merge material's palette: when any part has one, every merged vertex
    * gets its part's index (0 for a part without) in the integer attribute `aekMatIndex` (`Uint8`,
    * `Uint16` past 255), which the merge material reads. An integer from 0 to 65 535. */
   paletteIndex?: number;
@@ -58,6 +59,7 @@ const logWarnings = (warnings: string[], caller: string) => {
   if (IS_DEBUG_ENV) for (const warning of warnings) lwarn(`${caller}: ${warning}`);
 };
 
+// p374: the palette index
 /**
  * Merges several geometries, each with its transform, into one new geometry, for one draw where
  * there were many. The parts are only read. The result is unregistered: register it with
@@ -68,7 +70,7 @@ const logWarnings = (warnings: string[], caller: string) => {
  * - Attributes are unified (`attributes`, default `UNION`: a missing one filled with uv 0,
  *   colour 1, others 0, a missing tangent computed or else dropped with a warning) and read as
  *   values, so quantized (normalized) and interleaved ones merge with float ones.
- * - A part's `paletteIndex` (p374) goes into every one of its vertices' `aekMatIndex`, an
+ * - A part's `paletteIndex` goes into every one of its vertices' `aekMatIndex`, an
  *   integer attribute (`gpuType` `IntType`), when any part has one. Other integer attributes stay
  *   integers.
  * - The index is `Uint16` up to 65 535 vertices, else `Uint32`.

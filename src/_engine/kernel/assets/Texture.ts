@@ -90,13 +90,15 @@ export type TextureProps = {
   userData?: Record<string, unknown>;
   /** The name (also the texture's `name`) and description for the debug tooling. */
   debugData?: { name?: string; description?: string };
+  // p299 D2
   /**
-   * A texture array asset's (`*.textureArray.json`, p299 D2) layer names by layer index, baked in
+   * A texture array asset's (`*.textureArray.json`) layer names by layer index, baked in
    * by gatherAppData: its `__url` is one KTX2 array file, loaded as a `CompressedArrayTexture`.
    */
   __layers?: string[];
+  // p299 D3
   /**
-   * A texture atlas slot's (`*.textureAtlas.json`, p299 D3) layout and cell table, baked in by
+   * A texture atlas slot's (`*.textureAtlas.json`) layout and cell table, baked in by
    * gatherAppData: its `__url` is the slot's KTX2 output, with a mip chain cut where the layout
    * stops keeping the cells apart.
    */
@@ -552,6 +554,7 @@ const loadTextureAtlasSlotAsync = async (
   }
 };
 
+// Texture arrays: p299 D2, atlas slots: p299 D3, cube texture assets: p311
 /**
  * Loads a texture asynchronously supporting standard textures, HDR data textures, KTX2 compressed
  * textures and CubeTextures. Standard and HDR textures load where AppConfig.assets targets
@@ -561,10 +564,10 @@ const loadTextureAtlasSlotAsync = async (
  *
  * A texture from generated data (a `*.texture.json`) loads the asset pipeline's output (`__url`)
  * instead of its `fileName`, see resolveAssetUrl. The loader is picked by the loaded URL. A
- * texture array asset (`*.textureArray.json`, p299 D2) loads its KTX2 output as a
- * `CompressedArrayTexture`, a one-layer array too. A texture atlas slot (`*.textureAtlas.json`,
- * p299 D3) loads its KTX2 output with its cell table on `userData.textureAtlas`. A cube texture
- * asset (a `*.texture.json` with `faces`, p311) loads its KTX2 cube output as a
+ * texture array asset (`*.textureArray.json`) loads its KTX2 output as a
+ * `CompressedArrayTexture`, a one-layer array too. A texture atlas slot (`*.textureAtlas.json`)
+ * loads its KTX2 output with its cell table on `userData.textureAtlas`. A cube texture asset (a
+ * `*.texture.json` with `faces`) loads its KTX2 cube output as a
  * `CompressedCubeTexture`, or, in development data without one, its six faces as a `CubeTexture`.
  *
  * The texture is registered under `id` (else its uuid), owned by the scene loading (or current)

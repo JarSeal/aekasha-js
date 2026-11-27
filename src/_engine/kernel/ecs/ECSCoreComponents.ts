@@ -174,7 +174,8 @@ export interface CoreComponentData {
   /** Added by createPhysicsEntity's `tierPolicy` option or setPhysicsTierPolicyMember
    * (features/physics/PhysicsTierPolicy.ts). */
   [ComponentType.PHYSICS_TIER_POLICY]: PhysicsTierPolicyMemberData;
-  /** The entity's own world bounds, replacing the scene's for its body (p102): set them with
+  // p102
+  /** The entity's own world bounds, replacing the scene's for its body: set them with
    * `setEntityWorldBounds` or `createPhysicsEntity`'s `worldBounds` option (a copy is stored, and
    * a change made to the stored object reaches nothing). */
   [ComponentType.WORLD_BOUNDS]: EntityWorldBounds;

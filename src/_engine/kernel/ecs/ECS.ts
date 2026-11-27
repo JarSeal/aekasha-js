@@ -540,6 +540,7 @@ export class ECSWorld {
     return id;
   }
 
+  // The reuse: docs/issues/_DONE_i060_entity-persistent-flag-not-applied.md
   /**
    * Creates an entity with the core components: `APP_ID` (`opts.appId`, else a generated UUID),
    * `TRANSFORM` (identity), `USER_DATA`, `DEBUG_DATA` (debug env and prod test only, a copy of
@@ -548,7 +549,7 @@ export class ECSWorld {
    * @returns the new entity's id
    * @remarks A persistent entity outlives the scene switch, so code that runs on every visit
    * (scene code) creates another one each time: create it once, or look its app id up first. A
-   * scene's JSON cameras, lights and meshes are reused by the load (i060).
+   * scene's JSON cameras, lights and meshes are reused by the load.
    */
   createEntity(opts?: CoreEntityOpts): number {
     const id = this._getNewEntityId();

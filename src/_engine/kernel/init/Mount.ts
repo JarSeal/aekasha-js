@@ -146,6 +146,7 @@ const createFallbackMount = (container: HTMLElement): AekashaMount => ({
   unmount: () => container.remove(),
 });
 
+// The second mount: docs/issues/_DONE_remount-after-unmount.md
 /**
  * Mounts the engine into an element of a page it doesn't own: a site's background, a banner, a
  * product view. It boots like {@link _engine/kernel/init/InitEngine!InitEngine} (the same
@@ -157,10 +158,11 @@ const createFallbackMount = (container: HTMLElement): AekashaMount => ({
  * @returns the mount's handle
  * @remarks
  * One engine per page load: the engine's state is module-level, so a second mount throws, also
- * after `unmount()` (docs/issues/_DONE_remount-after-unmount.md), and so does a mount after
+ * after `unmount()`, and so does a mount after
  * {@link _engine/kernel/init/InitEngine!InitEngine}. `unmount()` stops what the features started
- * (physics' worker and world, the sky box's bakes and lights), through their `onUnmount` hooks. The app's files are loaded from `assetBaseUrl`, and workers
- * start from the embed's own files: serve them from the page's origin.
+ * (physics' worker and world, the sky box's bakes and lights), through their `onUnmount` hooks.
+ * The app's files are loaded from `assetBaseUrl`, and workers start from the embed's own files:
+ * serve them from the page's origin.
  * @example
  * ```ts
  * import { mountAekasha } from 'aekasha';

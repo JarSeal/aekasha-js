@@ -56,9 +56,11 @@ export type Environments = 'development' | 'test' | 'unitTest' | 'production';
  * a sensor, and `awake` is the fallback when nothing else applies.
  */
 export type PhysicsWireframeColors = {
-  /** The body's physics simulation tier (p352) is `DISABLED`: the reason it's disabled. */
+  // p352
+  /** The body's physics simulation tier is `DISABLED`: the reason it's disabled. */
   tierDisabled?: number;
-  /** The body's physics simulation tier (p352) is `STATIC`: a dynamic body frozen as `FIXED`,
+  // p352
+  /** The body's physics simulation tier is `STATIC`: a dynamic body frozen as `FIXED`,
    * told apart from a body created fixed. */
   tierStatic?: number;
   /** The collider, or its owning rigid body, is disabled. */
@@ -198,11 +200,12 @@ export type AppConfig = {
      * reply or crash) on the main thread, warning once per cause. When false, the request
      * fails instead. Default true. */
     fallbackToMainThread?: boolean;
+    // p300
     /** Build time only: read by the asset pipeline (gatherAppData, `yarn assets`), never by the
      * runtime, so a change needs a pipeline run. Off passes every asset through as it is
      * (copied, content-hashed, into src/public/aek-assets/). The env var
      * `AEK_ASSETS_OPTIMIZE=false` turns `enabled` off for one run. Asset profiles and rules
-     * are in assets.config.json (p300). */
+     * are in assets.config.json. */
     optimization?: {
       /** Master switch. Default true. */
       enabled?: boolean;
@@ -212,7 +215,8 @@ export type AppConfig = {
       meshes?: boolean;
     };
   };
-  /** LOD selection (`lod()`: features/lod/LodSystem.ts, p348). */
+  // p348
+  /** LOD selection (`lod()`: features/lod/LodSystem.ts). */
   lod?: {
     /** Global LOD bias: multiplies every entity's screen size, >1 keeps detail longer. The
      * initial value: setLodBias() changes it at runtime. Default 1. */
@@ -231,7 +235,8 @@ export type AppConfig = {
      * Default `src/app/impostors`. */
     impostorExportDir?: string;
   };
-  /** World streaming's budgets (`streaming()`: features/streaming/, p353).
+  // p353
+  /** World streaming's budgets (`streaming()`: features/streaming/).
    * A scene's cells and rings are its own (`streaming` in its JSON, or setSceneStreamingSettings()). */
   streaming?: {
     /** How often the cells' states are decided from the focus, in frames. Default 10. */
@@ -279,8 +284,9 @@ export type AppConfig = {
     far?: number;
     zoom?: number;
   };
-  /** PostFX engine-level defaults (p070). Per-scene and
-   * per-pass state lives in the scene / `*.postFx.json` files, not here. */
+  // p070
+  /** PostFX engine-level defaults. Per-scene and per-pass state lives
+   * in the scene / `*.postFx.json` files, not here. */
   postFx?: {
     /** Global master switch: when false, no scene's PostFX chain is ever rendered. A scene
      * still has to declare PostFX passes for anything to happen. Default true. */
@@ -299,7 +305,8 @@ export type AppConfig = {
      * whole, it is not merged. Tabs not listed go last, in registration order. A tab's own
      * `orderNr` overrides its place on this 0-based scale (eg. 1.5 = between the 2nd and 3rd tab). */
     tabOrder?: string[];
-    /** The debugger's theme (p806 D8): `'dark'` (the default) or `'light'` forces it on the
+    // p806 D8
+    /** The debugger's theme: `'dark'` (the default) or `'light'` forces it on the
      * drawer, the on-screen tools and the debug windows, `'app'` follows the app's UI (its forced
      * theme, else the system's). The Debug tools tab's "Debugger theme" overrides it per browser,
      * once changed there. */

@@ -84,8 +84,9 @@ export type ResolvedDeviceCapabilityTargets = Required<
  * without a value is never given. */
 export type DeviceLevelBands = Partial<Record<Exclude<QualityLevel, 'LOW'>, number>>;
 
+// p240 §3.1
 /**
- * The values the device levels are rated by, per input (p240 §3.1): a category gets the highest
+ * The values the device levels are rated by, per input: a category gets the highest
  * level whose value its reading meets. Each is merged over the engine's.
  */
 export type DeviceLevelThresholds = {
@@ -136,9 +137,10 @@ export type DeviceCapabilitiesConfig = {
   observe?: DeviceObserveConfig;
 };
 
+// p240 Phase 4
 /**
  * `AppConfig.deviceCapabilities.observe`: the observer, which samples the running scene's frames in
- * windows and tells which ones the GPU held (p240 Phase 4). It starts once a check has a report
+ * windows and tells which ones the GPU held. It starts once a check has a report
  * with a GPU benchmark, and its code is downloaded only when it's enabled.
  */
 export type DeviceObserveConfig = {
