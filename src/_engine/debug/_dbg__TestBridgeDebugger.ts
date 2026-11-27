@@ -31,6 +31,10 @@ const CONTROL_SELECTOR = [
   '[role="checkbox"]',
   '[role="option"]',
   '[role="tab"]',
+  // An open menu's items (their tabindex is -1): the Æ menu's About Ækasha
+  '[role="menuitem"]',
+  '[role="menuitemcheckbox"]',
+  '[role="menuitemradio"]',
 ].join(', ');
 /** How many ancestors up from a label its control may be (Tweakpane's row is two) */
 const LABEL_ROW_DEPTH = 4;
@@ -223,8 +227,11 @@ const openDebuggerListRow: AekTestBridge['openDebuggerListRow'] = async ({ index
 };
 
 const focusDebuggerControl: AekTestBridge['focusDebuggerControl'] = async ({ root, name, nth }) => {
+  // Without a root, the open menus too: a debugger root's menu shows in the HUD root, not in it
   const roots = [
-    ...document.querySelectorAll(root ? `[${ROOT_ATTR}="${root}"]` : `[${DEBUGGER_ROOT_ATTR}]`),
+    ...document.querySelectorAll(
+      root ? `[${ROOT_ATTR}="${root}"]` : `[${DEBUGGER_ROOT_ATTR}], [role="menu"]`
+    ),
   ];
   const seen: string[] = [];
   const named: HTMLElement[] = [];

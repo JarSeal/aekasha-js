@@ -181,10 +181,10 @@ export type AekTestBridge = {
    * which opens an edit window: see {@link AekTestBridge.markDebuggerWindows} */
   openDebuggerListRow: (opts: { index: number }) => Promise<TestBridgeListRowResult>;
   /**
-   * Focuses a control by its name, inside a marked root (`root`) or any debugger root: a control
-   * whose label, `aria-label`, title or text is `name`, else the first control after an element
-   * whose text or title is `name` in its row (Tweakpane's labels aren't tied to their inputs).
-   * `nth` picks among several (0-based).
+   * Focuses a control by its name, inside a marked root (`root`) or any debugger root or open
+   * menu (its items too: the Æ menu's): a control whose label, `aria-label`, title or text is
+   * `name`, else the first control after an element whose text or title is `name` in its row
+   * (Tweakpane's labels aren't tied to their inputs). `nth` picks among several (0-based).
    */
   focusDebuggerControl: (opts: {
     root?: string;

@@ -1,6 +1,6 @@
 Status: implemented (Phases 1-5)
 Category: Bug fix, Refactoring
-Related: _DONE_p104_plan-references-out-of-jsdoc.md (the JSDoc item of the same list, split out: about 840 blocks), p105_themed-scrollbars.md (the scrollbar item of the same list, split out: tokens, a kit-wide rule, the Hub and the design doc)
+Related: _DONE_p104_plan-references-out-of-jsdoc.md (the JSDoc item of the same list, split out: about 840 blocks), _DONE_p105_themed-scrollbars.md (the scrollbar item of the same list, split out: tokens, a kit-wide rule, the Hub and the design doc)
 
 # Small Bug Fixes and Tweaks — Plan
 

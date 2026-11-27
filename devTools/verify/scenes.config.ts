@@ -262,7 +262,8 @@ export const SCENE_VERIFY_CONFIG: Record<string, SceneVerifyConfig> = {
         { name: 'asset', tab: 'assetsControls', row: 0 },
         { name: 'rayTesterThree', tab: 'rayCastControls', press: ['Three.js ray tester'] },
         { name: 'rayTesterPhysics', tab: 'rayCastControls', press: ['Physics ray tester'] },
-        { name: 'about', press: ['About Ækasha'] },
+        // The Æ button's menu, then its item
+        { name: 'about', press: ['Ækasha menu', 'About Ækasha'] },
         { name: 'keysAekasha', tab: 'debugToolsControls', press: ['Debug key shortcuts [I]'] },
         {
           name: 'keysApp',

@@ -3156,8 +3156,8 @@
             "distanceExponent": 1,
             "distanceFallOff": 0.42,
             "scale": 1,
-            "samples": 8,
-            "resolutionScale": 0.45,
+            "samples": 12,
+            "resolutionScale": 0.5,
             "useTemporalFiltering": false
           },
           "paramsMeta": {
@@ -53844,6 +53844,20 @@
       },
       "__saveData": {
         "largeWorld": [
+          {
+            "__meta": {
+              "date": 1795789312431,
+              "engineVersion": "6.30.1",
+              "toolkitVersion": "3.8.2",
+              "appVersion": "1.38.1",
+              "author": "JarSeal"
+            },
+            "params": {
+              "distanceFallOff": 0.42,
+              "samples": 12,
+              "resolutionScale": 0.5
+            }
+          },
           {
             "__meta": {
               "date": 1795788990793,
