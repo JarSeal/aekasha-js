@@ -3154,10 +3154,10 @@
             "radius": 0.25,
             "thickness": 1,
             "distanceExponent": 1,
-            "distanceFallOff": 1,
+            "distanceFallOff": 0.42,
             "scale": 1,
-            "samples": 16,
-            "resolutionScale": 1,
+            "samples": 8,
+            "resolutionScale": 0.45,
             "useTemporalFiltering": false
           },
           "paramsMeta": {
@@ -35546,8 +35546,8 @@
             "distanceExponent": 1,
             "distanceFallOff": 1,
             "scale": 1,
-            "samples": 16,
-            "resolutionScale": 1,
+            "samples": 10,
+            "resolutionScale": 0.39999999999999997,
             "useTemporalFiltering": false
           },
           "paramsMeta": {
@@ -53841,6 +53841,53 @@
       "debugData": {
         "name": "Ambient Occlusion",
         "description": "Ground Truth Ambient Occlusion (GTAO). Darkens creases and contact points using the scene depth and normal buffers. Screen-space only — cannot see off-screen geometry."
+      },
+      "__saveData": {
+        "largeWorld": [
+          {
+            "__meta": {
+              "date": 1795788990793,
+              "engineVersion": "6.30.1",
+              "toolkitVersion": "3.8.2",
+              "appVersion": "1.38.1",
+              "author": "JarSeal"
+            },
+            "params": {
+              "distanceFallOff": 0.42,
+              "samples": 8,
+              "resolutionScale": 0.45
+            }
+          },
+          {
+            "__meta": {
+              "date": 1795788865850,
+              "engineVersion": "6.30.1",
+              "toolkitVersion": "3.8.2",
+              "appVersion": "1.38.1",
+              "author": "JarSeal"
+            },
+            "params": {
+              "distanceFallOff": 0.42,
+              "samples": 8,
+              "resolutionScale": 0.5
+            }
+          }
+        ],
+        "topDownTestScene": [
+          {
+            "__meta": {
+              "date": 1795788921555,
+              "engineVersion": "6.30.1",
+              "toolkitVersion": "3.8.2",
+              "appVersion": "1.38.1",
+              "author": "JarSeal"
+            },
+            "params": {
+              "samples": 10,
+              "resolutionScale": 0.39999999999999997
+            }
+          }
+        ]
       },
       "__sourcePath": "src/app/postFx/ambientOcclusion.postFx.json"
     },
