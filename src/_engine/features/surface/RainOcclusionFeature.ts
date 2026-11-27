@@ -2,8 +2,9 @@ import type { EngineFeature } from '../../kernel/init/Features';
 import { installRainOcclusion, rainOcclusionSceneHooks, stopRainOcclusion } from './RainOcclusion';
 import { type RainOcclusionOpts, resolveRainOcclusionOpts } from './RainOcclusionModel';
 
+// p307 T12
 /**
- * The rain occlusion feature (p307 T12): a depth map rendered straight down around the active
+ * The rain occlusion feature: a depth map rendered straight down around the active
  * camera, so a wet material with it (`getRainOcclusionNode`, the terrain material's
  * `wet.rainOcclusion: 'MAP'`) stays dry, unpuddled and unsnowed under roofs, trees and bridges.
  * Occluders are the objects that cast shadows, or those whose `userData.rainOccluder` says so

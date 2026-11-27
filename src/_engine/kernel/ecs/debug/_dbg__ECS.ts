@@ -112,7 +112,8 @@ const getStorageFolder = (world: ECSWorld): PropertyGridItem => {
   };
 };
 
-/** Logic for the Edit ECS World Draggable Window (p806 D10: the UI kit's property grid) */
+// p806 D10
+/** Logic for the Edit ECS World Draggable Window (the UI kit's property grid) */
 export const createEditECSWorldContent = (data?: { [key: string]: unknown }) => {
   const d = data as { id: string };
   const world = ECSWorld.getWorld(d.id);

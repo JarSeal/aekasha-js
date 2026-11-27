@@ -37,8 +37,9 @@ export type Cooldown = {
 
 const SECOND = 1000;
 
+// p808 D6, p808 D4
 /**
- * Creates a cooldown (p808 D6): an overlay for an ability's button or a hotbar slot, a sweep that
+ * Creates a cooldown: an overlay for an ability's button or a hotbar slot, a sweep that
  * uncovers it clockwise and the seconds left, then a flash when it's ready. The sweep is a CSS
  * animation from the start time, so a frame costs no script; the seconds are written once a
  * second.
@@ -52,7 +53,7 @@ const SECOND = 1000;
  *   `aria-disabled="true"` and an `aria-describedby` text, "Ready in 3 seconds", written once a
  *   second, while it runs, both put back after.
  * - Motion: the sweep turns smoothly; under reduced motion it steps once a second, since the time
- *   left is information (p808 D4), and the ready flash doesn't play.
+ *   left is information, and the ready flash doesn't play.
  * @example
  * ```ts
  * import { createButton, createCooldown } from 'aekasha/ui';

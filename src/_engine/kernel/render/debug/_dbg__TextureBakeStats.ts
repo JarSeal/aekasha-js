@@ -1,7 +1,8 @@
 import { createBakeStats, type BakeStats } from '../../../debug/_dbg__BakeStats';
 
+// p304 D1
 /**
- * The texture baker's stats (p304 D1, debug only): a bake stats tracker per bake id
+ * The texture baker's stats (debug only): a bake stats tracker per bake id
  * (`debug/_dbg__BakeStats.ts`: the bake count, the CPU and the GPU ms, the bakes per second),
  * made on the id's first bake and kept for the page's life, so a scene visited again keeps
  * counting. Loaded by `TextureBaker.ts` through the debug loader, so a production build has none

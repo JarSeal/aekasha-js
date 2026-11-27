@@ -166,8 +166,9 @@ const toJsonShading = (shading: { type: string; params: Record<string, unknown> 
   ),
 });
 
+// p341
 /** The albedo slot's `optimize`: the `baseColor` profile, and its levels' alpha scaled to keep
- * level 0's coverage at the impostor's cut (p341; `alphaCoverage` takes a cut in (0, 1]) */
+ * level 0's coverage at the impostor's cut (`alphaCoverage` takes a cut in (0, 1]) */
 const getAlbedoOptimize = (alphaTest: number) => ({
   slot: 'baseColor',
   ...(alphaTest > 0 && alphaTest <= 1 && { alphaCoverage: alphaTest }),

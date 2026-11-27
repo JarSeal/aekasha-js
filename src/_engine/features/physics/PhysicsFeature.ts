@@ -92,8 +92,9 @@ export const physics = (): EngineFeature => ({
   },
 });
 
+// p101
 /**
- * Physics' part of a scene load (p101's deterministic loads): stepping is held from the start of
+ * Physics' part of a scene load (the deterministic loads): stepping is held from the start of
  * the load until every body of the next scene exists, which starts on a fresh world with the
  * scene's world bounds (its JSON's, kept when the scenes are registered, or its code's).
  * @internal

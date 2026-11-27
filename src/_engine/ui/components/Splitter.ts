@@ -63,8 +63,9 @@ export type Splitter = {
 
 const SIZE_PROPERTY = '--aek-splitter-size';
 
+// p805 D10
 /**
- * Creates a splitter (p805 D10): two panes and the separator between them, which the pointer drags
+ * Creates a splitter: two panes and the separator between them, which the pointer drags
  * and the keys move (the APG window splitter); with `collapsible`, Enter collapses the first pane
  * and restores it. The size is the first pane's, in a percent of the splitter or in px; the second
  * takes the rest. Its owner keeps it: `onSizeChange` reports a finished move.

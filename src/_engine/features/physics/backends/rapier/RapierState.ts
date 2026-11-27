@@ -106,8 +106,9 @@ export const handleToRigidBodyId = new Map<number, number>();
  */
 export const handleToJointId = new Map<number, number>();
 
+// p250
 /**
- * Each live multibody joint's Rapier handle, by running id (its own ids, p250). Rapier's handle
+ * Each live multibody joint's Rapier handle, by running id (its own ids). Rapier's handle
  * is the child body's handle, so a joint made again on the same child gets the deleted one's.
  * @internal
  */
@@ -124,8 +125,9 @@ export const multibodyJointAPIs = new Map<number, MultibodyJointAPI>();
  */
 export const handleToMultibodyJointId = new Map<number, number>();
 
+// p250
 /**
- * A body's place in its multibody: its parent's id and the joint's (p250).
+ * A body's place in its multibody: its parent's id and the joint's.
  * @internal
  */
 export type MultibodyLink = { parentId: number; jointId: number };
@@ -168,8 +170,9 @@ export type DetachedCollider = {
   contactSkin: number;
 };
 
+// p352
 /**
- * A body of the REMOVED physics tier (p352) and its colliders: their state, read when detached,
+ * A body of the REMOVED physics tier and its colliders: their state, read when detached,
  * and their proxies, which keep their ids and come back with them (reattachRigidBody).
  * @internal
  */
@@ -305,9 +308,10 @@ export const setQueryObserver = (observer: PhysicsQueryObserver | null) => {
   backend.queryObserver = observer;
 };
 
+// p352
 /**
  * Sets (or clears, with null) the observer told about moved bodies. Only the facade sets it, on the
- * main thread, where it brings the move to the body's entity (p352: BODY_STATIC bodies aren't
+ * main thread, where it brings the move to the body's entity (BODY_STATIC bodies aren't
  * synced per frame). The worker's engine never has one.
  * @internal
  */

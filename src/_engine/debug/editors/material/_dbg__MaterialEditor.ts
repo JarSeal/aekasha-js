@@ -1,16 +1,16 @@
+// p806 D11; p084, p085
 /**
- * The material editor (p084,
- * p085), the first editor view: a
- * preview object on a stage of its own (lights, a studio environment, a grey background), seen
- * through the editor's orbit camera, showing an editor copy of a project material
- * (`*.material.json`), picked in the selector (the bottom drawer).
+ * The material editor, the first editor view: a preview object on a stage of its own (lights, a
+ * studio environment, a grey background), seen through the editor's orbit camera, showing an
+ * editor copy of a project material (`*.material.json`), picked in the selector (the bottom
+ * drawer).
  *
  * The copy is a separate registered material (`__matEditor__<id>`), so the scene's own instance
  * of the material is never used or changed. It only lives while the view is active: it is
  * created on enter and deleted on exit.
  *
  * This module is the load, the UI and the view; the project data, the stage and the edits are
- * their own modules (p806 D11): `_dbg__MaterialEditorAssets.ts`, `_dbg__MaterialEditorStage.ts`
+ * their own modules: `_dbg__MaterialEditorAssets.ts`, `_dbg__MaterialEditorStage.ts`
  * and `_dbg__MaterialEditorEdits.ts`.
  */
 import type * as THREE from 'three/webgpu';
@@ -301,7 +301,8 @@ const getDrawerTabs = () =>
     refresh: () => ui?.drawer.refresh(),
   });
 
-/** The HUD: a debugger root (p806 D8: the debugger's theme and density, spared by an app modal's
+// p806 D8
+/** The HUD: a debugger root (the debugger's theme and density, spared by an app modal's
  * `inert`) kept in views, shown only in this one; the notice, the selector and the drawer in it */
 const createUI = (): EditorUI => {
   const rootProps = getDebuggerRootProps();
@@ -376,8 +377,9 @@ const onExit = () => {
   retagLoadedTextures();
 };
 
+// p806 D14
 /**
- * The material editor for the test bridge (p806 D14): whether its view is active, its drawer's
+ * The material editor for the test bridge: whether its view is active, its drawer's
  * root (the shell's) and the selector's, the drawer's mounted tab and its tab ids in menu order
  * (read from the tab definitions, so known before the first enter).
  */

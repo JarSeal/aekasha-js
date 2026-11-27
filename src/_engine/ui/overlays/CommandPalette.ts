@@ -75,8 +75,9 @@ const groupInOrder = <C>(shown: Shown<C>[], fixed: readonly string[] | undefined
 const countText = (shown: number, total: number) =>
   shown < total ? `${shown} of ${total} results` : `${shown} result${shown === 1 ? '' : 's'}`;
 
+// p805 D12
 /**
- * Creates a command palette (p805 D12): a modal search over the app's commands, opened with
+ * Creates a command palette: a modal search over the app's commands, opened with
  * `open()` (the kit reads no keys of its own: bind Ctrl / ⌘ + K in an action map and call it).
  * The query ranks `commands` (every word in a command's label, whole or as its letters in order,
  * else in its `keywords`; word starts and runs of letters first), or a `source` gives the results

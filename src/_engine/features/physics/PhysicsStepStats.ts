@@ -10,7 +10,8 @@ import { PHYSICS_STEP_STATS_FIELD_COUNT, PHYSICS_STEP_STATS_SLOTS } from './Phys
 import type { TransformsPushMessage } from './protocol/PhysicsResponses';
 import type { PhysicsBodyActivity } from './types/PhysicsBodyTypes';
 
-/** Step statistics (p027), all only ever populated while physicsState.stepStatsEnabled is on.
+// p027
+/** Step statistics, all only ever populated while physicsState.stepStatsEnabled is on.
  * Pure simulation time for the last stepped frame — the sum of that frame's engine step()
  * calls, with nothing else folded in. Deliberately never includes messaging overhead; that
  * is reported separately by lastPhysicsMessagingLatency. */
@@ -23,7 +24,8 @@ let lastPhysicsMessagingLatency: { dispatchMs: number; writeBackMs: number } | u
  * (MAIN_THREAD, MESSAGE_BATCH). */
 let stepStatsFloats: Float64Array | undefined;
 
-/** Dynamic bodies awake and asleep after the last measured step (p352), mutated in place. Only
+// p352
+/** Dynamic bodies awake and asleep after the last measured step, mutated in place. Only
  * meaningful while hasBodyActivity is set (a measured step has reported it). */
 const bodyActivity: PhysicsBodyActivity = { awake: 0, sleeping: 0 };
 let hasBodyActivity = false;
@@ -147,8 +149,9 @@ export const getLastPhysicsStepDuration = () => lastPhysicsStepDurationMs;
  */
 export const getLastPhysicsStepMessagingLatency = () => lastPhysicsMessagingLatency;
 
+// p352
 /**
- * Dynamic bodies awake and asleep after the last measured physics step (p352): a body that
+ * Dynamic bodies awake and asleep after the last measured physics step: a body that
  * should be resting but stays awake shows here. Measured with the step stats, so `undefined`
  * while they are off and until a measured step has happened, like
  * {@link getLastPhysicsStepDuration}. The returned object is reused: read it, don't keep it.

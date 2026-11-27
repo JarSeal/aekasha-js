@@ -94,9 +94,10 @@ const getMissingTexture = () => {
   return missingTexture;
 };
 
+// p607 D11: the TSL files load on demand
 /**
  * Loads a material's TSL file (its material JSON's `tslFile`) so `createMaterial` can build it:
- * the gathered data loads these files on demand (p607 D11). A scene load does it for the scene's
+ * the gathered data loads these files on demand. A scene load does it for the scene's
  * materials; code that creates such a material at another time awaits this first. A file loads
  * once. A production build has the files of the materials its scenes list (a development one has
  * all). A TSL material registered from code ({@link registerTslMaterial}) needs no load.
@@ -226,11 +227,12 @@ const getInputTexture = (textureId: string, where: string, id: string | undefine
   return getMissingTexture();
 };
 
+// p299 D5
 /**
  * One TSL input as its node by the built-in rules: a texture id as a texture node (one white
  * texel when it isn't registered, warned), a `#rrggbb` colour, a boolean, a number, a 2-4 array or
  * a `{ x, y(, z, w) }` or `{ r, g, b(, a) }` object as a uniform. A texture array layer or an atlas
- * cell gets here only before its resolvers registered (p299 D5: with the first array or atlas slot
+ * cell gets here only before its resolvers registered (with the first array or atlas slot
  * loaded), so its texture isn't loaded: one white texel, warned as a missing texture id. Throws
  * for anything else.
  */

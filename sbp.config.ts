@@ -218,41 +218,42 @@ const profiles: SbpProfile[] = [
       },
     },
   },
+  // The banner profile's history: p611 D8 and Phase 4, p057, p613 D4-D5, p619, p801, p308, p808 D12
   // #region banner-profile (shown in the Hub: hub/pages/features/smallest-build/)
   {
-    // The banner embed (p611 D8): one code-made scene, no feature, built into dist-embed/banner/
+    // The banner embed: one code-made scene, no feature, built into dist-embed/banner/
     id: 'banner',
     entry: 'src/app/profiles/banner/banner.embed.ts',
     scenes: ['banner'],
-    // Set from p611 Phase 4's report (initial 300.6 KiB gzip): the measured floor; p057 (three
-    // r187) lowered the initial, the shared chunk and three to `suggestBudget` of 265.8, 263.7 and
-    // 231.1 KiB
+    // Set from the profile's first report (initial 300.6 KiB gzip): the measured floor; three r187
+    // lowered the initial, the shared chunk and three to `suggestBudget` of 265.8, 263.7 and 231.1
+    // KiB
     budgets: {
       initial: 277 * KIB,
       chunks: {
         // The entry only re-exports `mount` from the shared chunk
         'banner.embed.js': 2 * KIB,
         'assets/banner.embed.js': 275 * KIB,
-        // p613 D5: the draggable windows' styles left with the windows. p801: the UI kit's design
-        // tokens took it from 0.1 to 1.5 KiB
+        // The draggable windows' styles left with the windows; the UI kit's design tokens took it
+        // from 0.1 to 1.5 KiB
         'assets/banner.css': 3 * KIB,
       },
-      // Set from p619's report (the modules minified, as the app's)
+      // Set from the report of the modules minified (the workers' code included), as the app's
       groups: {
         three: 241 * KIB,
-        // p613 D4: the glTF import path loads on demand (`ImportRegistry.js`). p308's import
-        // extension member for GPU instances (`spawnInstances`) took it 22 B past 11 KiB: 11 → 12 KiB
+        // The glTF import path loads on demand (`ImportRegistry.js`). The import extension member
+        // for GPU instances (`spawnInstances`) took it 22 B past 11 KiB: 11 → 12 KiB
         '_engine/kernel/assets': 12 * KIB,
         '_engine/kernel/ecs': 8 * KIB,
         '_engine/kernel/scene': 5 * KIB,
-        // p613 D5: the draggable windows load only where they're used
+        // The draggable windows load only where they're used
         '_engine/ui': 5 * KIB,
         app: 2 * KIB,
         // The floor's promise: no feature reaches the initial chunks
         ...Object.fromEntries(FEATURE_GROUPS.map((group) => [group, 0])),
       },
       modules: {
-        // p808 D12: no game UI and no device tracker in the floor
+        // No game UI and no device tracker in the floor
         '_engine/ui/game/': 0,
         '_engine/kernel/input/InputDevice.ts': 0,
       },

@@ -176,7 +176,8 @@ export type OutOfBoundsRecord = {
   source: OutOfBoundsSource;
   /** True when the body was made FIXED (it has impulse joints), false when it was disabled. */
   frozen: boolean;
+  // p250
   /** Set on a multibody link that didn't leave its box itself: another link of its multibody did,
-   * this body's id (p250). The multibody's records follow that one's. */
+   * this body's id. The multibody's records follow that one's. */
   takenWith?: number;
 };

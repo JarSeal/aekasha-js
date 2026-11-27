@@ -118,10 +118,11 @@ export const setMergeSceneLoading = (isLoading: boolean) => {
  */
 export const isMergeSceneLoading = () => isSceneLoading;
 
+// p372 Phase 1
 /**
  * Holds a mesh joining a group during a scene load from drawing until the scene step has built its
  * group: a mesh drawn on its own even once uploads its geometry, which three keeps until it's
- * disposed (p372 Phase 1). Not one something else holds already. Outside a load, nothing.
+ * disposed. Not one something else holds already. Outside a load, nothing.
  * @internal
  */
 export const holdForSceneLoad = (entityId: number, world: ECSWorld) => {

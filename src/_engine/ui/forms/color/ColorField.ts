@@ -28,8 +28,9 @@ import { addRecentColor } from './RecentColors';
 import './ColorField.scss';
 import '../../styles/kit.scss';
 
+// p804 D8
 /**
- * A colour field's intensity (p804 D8's HDR): a number part after the colour, bound on its own
+ * A colour field's intensity, for an HDR colour: a number part after the colour, bound on its own
  * (a light's `intensity`, an emissive strength), with a number's rules.
  */
 export type ColorIntensityProps = BindingSource<number> &
@@ -38,7 +39,8 @@ export type ColorIntensityProps = BindingSource<number> &
     label?: string;
     /** A unit shown after it. */
     unit?: string;
-    /** Every write of the intensity (p804 D3), as a field's `onChange`. */
+    // p804 D3
+    /** Every write of the intensity, as a field's `onChange`. */
     onChange?: (value: number, change: BindingChange<number>) => void;
   };
 
@@ -76,8 +78,9 @@ export type ColorField<T extends ColorFieldValue = ColorFieldValue> = Field<T>;
 /** An sRGB channel as `rgb()` writes it: 0-255 */
 const toByte = (channel: number) => Math.round(Math.min(1, Math.max(0, channel)) * 255);
 
+// p805 D11
 /**
- * A colour field's value as text for the fields' context menu (p805 D11): its text, a pasted colour
+ * A colour field's value as text for the fields' context menu: its text, a pasted colour
  * as a typed one, and Copy as hex, `rgb()` and sRGB floats.
  */
 const getColorClipboard = <T extends ColorFieldValue>(codec: ColorCodec): FieldClipboard<T> => {
@@ -116,8 +119,9 @@ const getColorClipboard = <T extends ColorFieldValue>(codec: ColorCodec): FieldC
   };
 };
 
+// p804 D8
 /**
- * Creates a colour field (p804 D8): a swatch that opens the colour panel, and the colour as text,
+ * Creates a colour field: a swatch that opens the colour panel, and the colour as text,
  * its value from its binding (`{ target, key }`, `{ get, set }` or `{ value }`) and written back
  * in its form: a 24-bit number (`0xrrggbb`, a `THREE.Color`'s `getHex()`), a hex string
  * (`'#rrggbb'`, `'#rrggbbaa'`) or an `{ r, g, b, a? }` object of 0-1 floats, written in place (a

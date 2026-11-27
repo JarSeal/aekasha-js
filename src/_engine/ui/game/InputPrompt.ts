@@ -168,8 +168,9 @@ const pickInputs = (bindings: readonly InputPromptBinding[], device: InputPrompt
   return fallback ?? [];
 };
 
+// p808 D5
 /**
- * Creates an input prompt (p808 D5): an action's binding for the device the player uses, as
+ * Creates an input prompt: an action's binding for the device the player uses, as
  * glyphs, and its name ("[E] Interact", "(A) Interact"). Every prompt follows
  * {@link setPromptDevice}, so one call switches them all when the player picks up a gamepad.
  * - Parts: `.aekInputPrompt` (`data-device="keyboard_mouse" | "gamepad" | "touch"`, the prompt

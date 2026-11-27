@@ -53,12 +53,13 @@ export const ENV_DEFAULTS = {
   nebulaSize: 512 as SkyBoxNebulaSize,
 };
 
+// p057
 /**
  * The `env.size` values below three r187's smallest PMREM face (256): they bake at 256, so they
  * cost what 256 does. Internal to the sky box's debug-env warning (SkyBox.ts).
  * @internal
  * @deprecated `env.size` 64 and 128: use 256, what they bake at. Removed in engine 7.0.0 with their
- * two literals in `SkyBoxEnvSizeSchema` (p057).
+ * two literals in `SkyBoxEnvSizeSchema`.
  */
 export const DEPRECATED_ENV_SIZES: readonly number[] = [64, 128];
 
@@ -148,10 +149,11 @@ const loadEquirectTexture = async (
   return texture;
 };
 
+// p311; the lone textureId: D2
 /**
  * A cube base's texture: six images (`fileNames`) as a CubeTexture, mipmapped at upload, one
- * KTX2 cube file (`file`) as a CompressedCubeTexture with its own mips and colour space (p311),
- * or a registered cube texture asset (a lone `textureId`, p311 D2: the scene's load registered
+ * KTX2 cube file (`file`) as a CompressedCubeTexture with its own mips and colour space,
+ * or a registered cube texture asset (a lone `textureId`: the scene's load registered
  * it) with its own colour space. A texture that isn't a cube is reported and shows black, like a
  * failed load.
  */

@@ -5,8 +5,9 @@
 /** A gradient's stop: its place on 0-1 and its colour as hex (`'#rrggbb'`, `'#rrggbbaa'`). */
 export type GradientStop = { t: number; color: string };
 
+// p804 D8
 /**
- * A gradient's value (p804 D8): its stops, in any order (the editor keeps a moved stop where it
+ * A gradient's value: its stops, in any order (the editor keeps a moved stop where it
  * is in the array).
  */
 export type GradientValue = { stops: GradientStop[] };

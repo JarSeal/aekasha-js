@@ -40,12 +40,13 @@ import {
 import { PROFILER_SOURCE, type DrawStats } from './_dbg__ProfilerSources';
 import { _readStatsSource, createStatsSourceHolder } from './_dbg__StatsSources';
 
+// p807 D7
 /**
  * The Objects tab (§2.8): the in-view census broken down by kind and by owner (two-tone bars:
  * in view solid, culled faded, the length the share of the scene total), the ECS worlds and
  * component counts, the heaviest objects in view, and a short history of the in-view figures.
  * Refreshed at the update rate while visible; it holds the census and the draw counters while
- * it is mounted. Its sections are the UI kit's (p807 D7), built once per mount on the tab's
+ * it is mounted. Its sections are the UI kit's, built once per mount on the tab's
  * scheduler: a refresh updates the rows they read (kept by key) and the scheduler's refresh
  * writes what changed.
  */

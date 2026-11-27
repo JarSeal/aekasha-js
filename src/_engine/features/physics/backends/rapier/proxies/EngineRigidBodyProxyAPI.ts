@@ -39,12 +39,14 @@ export type AdditionalMass =
  */
 export class EngineRigidBodyProxyAPI implements RigidBodyAPI {
   private rb: Rapier.RigidBody;
-  /** Created FIXED (p352): its entity is never synced per frame. A dynamic body switched to
+  // p352
+  /** Created FIXED: its entity is never synced per frame. A dynamic body switched to
    * FIXED (the STATIC physics tier) is a different case: its entity goes back to a dynamic
    * bucket when it's switched back. */
   private readonly isCreatedFixed: boolean;
-  /** State Rapier has no getter for, mirrored from every write, so a detached body (p352
-   * REMOVED tier) comes back with it (reattachRigidBody). */
+  // p352
+  /** State Rapier has no getter for, mirrored from every write, so a detached body (the
+   * REMOVED physics tier) comes back with it (reattachRigidBody). */
   readonly writeOnly: {
     translationsEnabled: [boolean, boolean, boolean];
     rotationsEnabled: [boolean, boolean, boolean];
@@ -116,9 +118,10 @@ export class EngineRigidBodyProxyAPI implements RigidBodyAPI {
     this.isCreatedFixed = rb.isFixed();
   }
 
+  // p500; p352
   /**
-   * Points the proxy at its re-created Rapier body (reattachRigidBody, p352), or at its copy in a
-   * restored world (p500), which gets the Rapier-side user data with `keepUserData` (Rapier doesn't
+   * Points the proxy at its re-created Rapier body (reattachRigidBody), or at its copy in a
+   * restored world, which gets the Rapier-side user data with `keepUserData` (Rapier doesn't
    * serialize it, and a detach reads it).
    * @internal
    */
@@ -224,7 +227,8 @@ export class EngineRigidBodyProxyAPI implements RigidBodyAPI {
     return this.nextRotationSync();
   }
 
-  /** Debug env: warns once that Rapier ignores a move of a multibody link with a parent (p250). */
+  // p250
+  /** Debug env: warns once that Rapier ignores a move of a multibody link with a parent. */
   private warnLinkMove(what: string) {
     if (!backend.isDebugEnvironment || this.hasWarnedMultibodyMove) return;
     const parent = multibodyParents.get(this.id);
@@ -235,7 +239,8 @@ export class EngineRigidBodyProxyAPI implements RigidBodyAPI {
     );
   }
 
-  /** Debug env: warns once that Rapier ignores a kinematic target on a multibody's root (p250). */
+  // p250
+  /** Debug env: warns once that Rapier ignores a kinematic target on a multibody's root. */
   private warnRootKinematicMove(what: string) {
     if (!backend.isDebugEnvironment || this.hasWarnedMultibodyMove) return;
     if (multibodyParents.has(this.id) || !multibodyChildCounts.has(this.id)) return;

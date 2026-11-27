@@ -31,6 +31,10 @@ const CONTROL_SELECTOR = [
   '[role="checkbox"]',
   '[role="option"]',
   '[role="tab"]',
+  // An open menu's items (their tabindex is -1): the Æ menu's About Ækasha
+  '[role="menuitem"]',
+  '[role="menuitemcheckbox"]',
+  '[role="menuitemradio"]',
 ].join(', ');
 /** How many ancestors up from a label its control may be (Tweakpane's row is two) */
 const LABEL_ROW_DEPTH = 4;
@@ -95,8 +99,9 @@ const findControlAfter = (label: Element, row: Element) => {
   return null;
 };
 
+// i180
 /** The controls an element named `name` labels: its text (a leaf's) or its title, then the control
- * it's inside (a button's text part, whose row label is in its name too, i180) or else the first
+ * it's inside (a button's text part, whose row label is in its name too) or else the first
  * control after it in its row, up to {@link LABEL_ROW_DEPTH} ancestors inside the root */
 const findLabelledControls = (root: Element, name: string) => {
   const found: HTMLElement[] = [];
@@ -222,8 +227,11 @@ const openDebuggerListRow: AekTestBridge['openDebuggerListRow'] = async ({ index
 };
 
 const focusDebuggerControl: AekTestBridge['focusDebuggerControl'] = async ({ root, name, nth }) => {
+  // Without a root, the open menus too: a debugger root's menu shows in the HUD root, not in it
   const roots = [
-    ...document.querySelectorAll(root ? `[${ROOT_ATTR}="${root}"]` : `[${DEBUGGER_ROOT_ATTR}]`),
+    ...document.querySelectorAll(
+      root ? `[${ROOT_ATTR}="${root}"]` : `[${DEBUGGER_ROOT_ATTR}], [role="menu"]`
+    ),
   ];
   const seen: string[] = [];
   const named: HTMLElement[] = [];

@@ -41,10 +41,11 @@ const toActions = (
     },
   }));
 
+// p805 D4
 /**
  * Creates the shared debugger list on the kit's list: rows with an optional sub title line, icon,
  * badge, title, description and suffix, and optional per-row icon toggles. A list with a row click
- * or toggles is one tab stop with the arrows inside (p805 D4); without either it's a static list.
+ * or toggles is one tab stop with the arrows inside; without either it's a static list.
  */
 export const _debuggerListCMP = (def: DebuggerListDef): CMPHandle => {
   const id = def.id ?? `auto${++autoIdCounter}`;
@@ -136,8 +137,9 @@ export const _refreshDebuggerLists = (root: HTMLElement) => {
   }
 };
 
+// p806 D14
 /** Runs the click of row `index` (0-based) of the first list inside `root` that has row clicks,
- * as a click on it does: the test bridge's (p806 D14). The row's id, or null when there's none. */
+ * as a click on it does: the test bridge's. The row's id, or null when there's none. */
 export const _clickDebuggerListRow = (root: HTMLElement, index: number) => {
   for (const list of mountedLists) {
     if (!root.contains(list.cmp.elem)) continue;

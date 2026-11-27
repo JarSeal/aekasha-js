@@ -45,8 +45,9 @@ export type SurfaceToggleParam = {
   label?: string;
 };
 
+// p309 D5
 /** A choice param: a build-time string, one of its options (a variant of the surface or decal,
- * eg. a footprint's shape; p309 D5). */
+ * eg. a footprint's shape). */
 export type SurfaceChoiceParam = {
   type: 'choice';
   /** The values it takes. */

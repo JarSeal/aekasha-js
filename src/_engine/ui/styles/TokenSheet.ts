@@ -1,5 +1,6 @@
+// p801 D6, p802 D8
 /**
- * `tokens.css` read as data (p801 D6, p802 D8): a parser for its subset of CSS, its rules by role
+ * `tokens.css` read as data: a parser for its subset of CSS, its rules by role
  * (the kit root, each theme, the compact density), and the WCAG contrast pairs its colours must
  * meet. `Tokens.test.ts` checks the pairs, the Hub's design document (`devTools/hub/generated/`)
  * renders them, so the rule and the page are one computation. Takes the text, reads no file, and
@@ -165,14 +166,26 @@ export const CONTRAST_TEXTS = [
  */
 export const CONTRAST_CONTROLS = ['border-control', 'focus-ring-color'];
 /**
+ * A scrollbar's thumb, its hover and its end buttons' arrows, at 3:1 (a non-text part, WCAG
+ * 1.4.11) on every surface: the track and the buttons are transparent, so the surface is what
+ * they sit on
+ * @internal
+ */
+export const CONTRAST_SCROLLBAR = [
+  'scrollbar-thumb',
+  'scrollbar-thumb-hover',
+  'scrollbar-button-glyph',
+];
+/**
  * A status' background, under `text` and its own colour (a badge, a toast)
  * @internal
  */
 export const CONTRAST_SOFTS = ['accent', 'danger', 'warning', 'success', 'info'];
+// p805 D9, p805 Phase 0
 /**
- * The chart series (p805 D9), in their order: each at 3:1 (a graphical object, WCAG 1.4.11) on
+ * The chart series, in their order: each at 3:1 (a graphical object, WCAG 1.4.11) on
  * the surfaces a chart sits on, `CONTRAST_SERIES_SURFACES`. Their order keeps neighbours apart
- * under the common colour vision deficiencies (p805 Phase 0), which no pair here checks.
+ * under the common colour vision deficiencies, which no pair here checks.
  * @internal
  */
 export const CONTRAST_SERIES = ['chart-1', 'chart-2', 'chart-3', 'chart-4', 'chart-5', 'chart-6'];
@@ -195,6 +208,9 @@ export const CONTRAST_UNCHECKED: Record<string, string> = {
   backdrop: 'an overlay, not a pair',
   'shadow-sm': 'not a colour pair',
   'shadow-lg': 'not a colour pair',
+  'scrollbar-track': 'transparent, the surface it sits on (its parts are checked on every surface)',
+  'scrollbar-line': 'decorative: the track’s length, not the position (that’s the thumb)',
+  'scrollbar-button': 'transparent, the track’s (its arrow is checked on every surface)',
 };
 /**
  * Every theme token a pair checks
@@ -204,6 +220,7 @@ export const CONTRAST_CHECKED = new Set([
   ...CONTRAST_SURFACES,
   ...CONTRAST_TEXTS,
   ...CONTRAST_CONTROLS,
+  ...CONTRAST_SCROLLBAR,
   ...CONTRAST_SERIES,
   'on-accent',
   ...CONTRAST_SOFTS.map((role) => `${role}-soft`),
@@ -260,8 +277,9 @@ export const getContrastRatio = (a: TokenColor, b: TokenColor) => {
 
 /**
  * Every pair of a theme's declarations the contrast rule checks, with its ratio and minimum:
- * the texts at 4.5 and the controls at 3 on each surface, the chart series at 3 on theirs,
- * `on-accent` on `accent`, and `text` and each status colour on its `-soft` over `surface`. Throws when a token is missing or unreadable.
+ * the texts at 4.5 and the controls and the scrollbar's parts at 3 on each surface, the chart
+ * series at 3 on theirs, `on-accent` on `accent`, and `text` and each status colour on its `-soft`
+ * over `surface`. Throws when a token is missing or unreadable.
  * @internal
  */
 export const listContrastPairs = (decls: Map<string, string>): ContrastPair[] => {
@@ -271,7 +289,9 @@ export const listContrastPairs = (decls: Map<string, string>): ContrastPair[] =>
     pairs.push({ fg, bg, ratio: getContrastRatio(fgColor, bgColor), min });
   for (const bg of CONTRAST_SURFACES) {
     for (const fg of CONTRAST_TEXTS) add(fg, color(fg), bg, color(bg), 4.5);
-    for (const fg of CONTRAST_CONTROLS) add(fg, color(fg), bg, color(bg), 3);
+    for (const fg of [...CONTRAST_CONTROLS, ...CONTRAST_SCROLLBAR]) {
+      add(fg, color(fg), bg, color(bg), 3);
+    }
   }
   for (const bg of CONTRAST_SERIES_SURFACES) {
     for (const fg of CONTRAST_SERIES) add(fg, color(fg), bg, color(bg), 3);

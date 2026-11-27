@@ -13,6 +13,6 @@
   "texOpts": { "colorSpace": "srgb" },
   "debugData": {
     "name": "Desert dunes (cube)",
-    "description": "The desert-dunes cube's six 2048 PNGs as one cube texture asset: the asset pipeline encodes them as one ETC1S KTX2 cube at 1024 per face (p311 Phase 2). The faces in the order scene01's desert-dunes lists them (its y faces swapped), so its sky box keeps flipY."
+    "description": "The desert-dunes cube's six 2048 PNGs as one cube texture asset: the asset pipeline encodes them as one ETC1S KTX2 cube at 1024 per face. The faces in the order scene01's desert-dunes lists them (its y faces swapped), so its sky box keeps flipY."
   }
 }

@@ -28,12 +28,13 @@ export type WorldTangentFrame = {
   normal: Node<'vec3'>;
 };
 
+// p305 D5
 /**
  * The analytic tangent frame of planar world tiling, the UV `(x, −z)` over a tile size turned by
  * an angle (counter-clockwise from above, as the tiling's rotation): U along `(cos, 0, −sin)`, V
  * along `(−sin, 0, −cos)`, made orthogonal to the geometry normal (Gram–Schmidt). No derivatives,
  * so it holds at any distance and mip. A vertical face has no planar frame: its normal is the
- * geometry's there (planar tiling stretches it anyway; p305 D5 projects it).
+ * geometry's there (planar tiling stretches it anyway; a projection covers it).
  * @internal
  * @param rotation the tiling's angle in radians, or null for none
  * @param space the material's space (default the world's): the frame is in it

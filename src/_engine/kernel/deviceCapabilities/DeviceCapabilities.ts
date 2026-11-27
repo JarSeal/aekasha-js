@@ -67,7 +67,8 @@ const FALLBACK_CANVAS_SIZE = { width: 1280, height: 720 };
 /** The check's progress when the probe is done (the benchmark's steps follow). */
 const PROGRESS_PROBE_END = 0.05;
 
-/** What localStorage keeps: the raw measurements, never a verdict (p240 §4). */
+// p240 §4
+/** What localStorage keeps: the raw measurements, never a verdict. */
 type StoredDeviceCapabilities = {
   reportVersion: number;
   fingerprint: string;
@@ -140,7 +141,8 @@ const scoreMeasurements = (
     }
   );
 
-/** The stored result when it's valid for this device (p240 §4): the same version and fingerprint,
+// p240 §4
+/** The stored result when it's valid for this device: the same version and fingerprint,
  * not older than `maxAgeDays`, and benchmarked when the check wants a benchmark. */
 const readStored = (fingerprint: string, now: number, wantsBenchmark: boolean) => {
   const stored = lsGetItem(
@@ -302,7 +304,8 @@ const rewriteStoredMeasurements = (measurements: DeviceCapabilityMeasurements) =
   lsSetItem(DEVICE_CAPABILITIES_LS_KEY, toStore);
 };
 
-/** An observed window (p240 D6-D8): a `GPU` window slower than its scene's kept one goes into the
+// p240 D6-D8
+/** An observed window: a `GPU` window slower than its scene's kept one goes into the
  * measurements and the stored result, and the report is scored again with it. A window that comes
  * while a check runs is dropped: the check's report replaces the one it would go into. */
 const handleObservedWindow = (observation: DeviceObservation) => {

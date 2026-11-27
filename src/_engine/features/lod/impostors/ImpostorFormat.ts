@@ -37,9 +37,11 @@ export const getImpostorDefSlots = (def: { kind: ImpostorKind; normals?: boolean
     ? [...IMPOSTOR_ATLAS_SLOTS.CROSS_QUADS.required, 'normal']
     : [...IMPOSTOR_ATLAS_SLOTS[def.kind].required];
 
+// p299
 /**
  * Where an impostor atlas's v = 0 is: `TOP` for a bake's render targets (three r186 and r187,
- * both backends), `BOTTOM` for an export's loaded KTX2 slots (p299 stores them v-up, three's UVs)
+ * both backends), `BOTTOM` for an export's loaded KTX2 slots (the asset pipeline
+ * stores them v-up, three's UVs).
  * For the two generators' materials and geometry.
  * @internal
  */

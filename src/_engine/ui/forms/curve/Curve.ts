@@ -2,14 +2,16 @@
 // (the falloff and animation curves p426 needs), its evaluation at a point and its presets. No DOM
 // and no allocation per call: an animation may read it every frame.
 
+// p804 D8
 /**
- * A curve as CSS's `cubic-bezier(x1, y1, x2, y2)` (p804 D8): its two control points, the ends at
+ * A curve as CSS's `cubic-bezier(x1, y1, x2, y2)`: its two control points, the ends at
  * (0, 0) and (1, 1). The x's are 0-1; the y's may overshoot (a "back" easing).
  */
 export type CurveBezier = [x1: number, y1: number, x2: number, y2: number];
 
+// p804 D8
 /**
- * A curve's key (p804 D8): a point, and the slopes (dy / dx) the curve leaves it with on either
+ * A curve's key: a point, and the slopes (dy / dx) the curve leaves it with on either
  * side. A missing tangent is its segment's straight slope, so keys without tangents are joined by
  * straight lines.
  */
@@ -24,8 +26,9 @@ export type CurveKey = {
   outTangent?: number;
 };
 
+// p804 D8
 /**
- * A curve's value (p804 D8): a CSS-like easing (four numbers) or keys (`{ x, y, inTangent?,
+ * A curve's value: a CSS-like easing (four numbers) or keys (`{ x, y, inTangent?,
  * outTangent? }[]`, in any order). The value's shape says which.
  */
 export type CurveValue = CurveBezier | CurveKey[];

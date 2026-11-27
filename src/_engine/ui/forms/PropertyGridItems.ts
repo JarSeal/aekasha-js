@@ -63,8 +63,9 @@ export type PropertyGridFieldKind =
   | 'curve'
   | 'monitor';
 
+// p804 D10
 /**
- * A field item (p804 D10): a binding (`{ target, key }`, `{ get, set }`, `{ get }` alone for a
+ * A field item: a binding (`{ target, key }`, `{ get, set }`, `{ get }` alone for a
  * read-only one, or `{ value }`) with the field's props, in Tweakpane's names where it has them.
  * Without `kind` the field is inferred from the value at creation: `options` make a select, a
  * number a number field (a slider with both `min` and `max`), a boolean a checkbox, a hex colour
@@ -191,14 +192,16 @@ export type PropertyGridFieldItem = (BindingSource<unknown> | ReadonlyBindingSou
     bufferSize?: number;
     /** Each keystroke's text in a typed field. */
     onInput?(text: string): void;
-    /** Every write of the value, as the field's `onChange` (p804 D3). */
+    // p804 D3
+    /** Every write of the value, as the field's `onChange`. */
     onChange?(value: unknown, change: FieldChange<unknown>): void;
     /** Called with the field made (Tweakpane's `onCreate`, with the field's handle). */
     onCreate?(field: Field<unknown>): void;
   };
 
+// p806 D4
 /**
- * Every key a field item takes (p806 D4): what the debugger's pane builder checks an item's keys
+ * Every key a field item takes: what the debugger's pane builder checks an item's keys
  * against, so a JS app's or an `as` cast's unknown key is an error, not a key ignored. Its test
  * keeps it complete.
  * @internal
@@ -283,7 +286,8 @@ export const PROPERTY_GRID_FIELD_ITEM_KEYS = [
   'onCreate',
 ] as const satisfies readonly (keyof PropertyGridFieldItem)[];
 
-/** A folder item (p804 D10): a folder of items, its open state the grid's options' by its id. */
+// p804 D10
+/** A folder item: a folder of items, its open state the grid's options' by its id. */
 export type PropertyGridFolderItem = {
   /** A folder. */
   type: 'folder';
@@ -300,7 +304,8 @@ export type PropertyGridFolderItem = {
   items: readonly PropertyGridItem[];
 };
 
-/** A button item (p804 D10): the kit's button, with an optional label in the label column. */
+// p804 D10
+/** A button item: the kit's button, with an optional label in the label column. */
 export type PropertyGridButtonItem = {
   /** A button. */
   type: 'button';
@@ -318,7 +323,8 @@ export type PropertyGridButtonItem = {
   onClick(): void;
 };
 
-/** A separator item (p804 D10): the kit's divider across both columns. */
+// p804 D10
+/** A separator item: the kit's divider across both columns. */
 export type PropertyGridSeparatorItem = {
   /** A separator. */
   type: 'separator';
@@ -326,8 +332,9 @@ export type PropertyGridSeparatorItem = {
   hidden?: FieldDyn<boolean>;
 };
 
+// p804 D10
 /**
- * A custom item (p804 D10): anything the items don't cover, built into a CMP across both
+ * A custom item: anything the items don't cover, built into a CMP across both
  * columns.
  */
 export type PropertyGridCustomItem = {
@@ -337,8 +344,9 @@ export type PropertyGridCustomItem = {
   build(container: CMPHandle): void | (() => void);
 };
 
+// p804 D10
 /**
- * One item of a declarative property grid (p804 D10): a field, a folder, a button, a separator or
+ * One item of a declarative property grid: a field, a folder, a button, a separator or
  * a custom item, Tweakpane's pane items with its names.
  */
 export type PropertyGridItem =
@@ -397,7 +405,8 @@ export const inferFieldKind = (
   return null;
 };
 
-/** An `{ x, y, z?, w? }` object (not a `THREE.Euler`'s shape: a rotation, p804 D10), or an array
+// p804 D10
+/** An `{ x, y, z?, w? }` object (not a `THREE.Euler`'s shape: a rotation), or an array
  * of 2 to 4 numbers */
 const isVectorValue = (value: unknown) => {
   if (Array.isArray(value)) {
@@ -415,8 +424,9 @@ const toRadioOptions = (options: PropertyGridFieldItem['options']) => {
   })) as SegmentOption<SelectValue>[];
 };
 
+// p805 D9
 /**
- * A `view: 'graph'` item's graph monitor (p805 D9): its text at once, its time series after the
+ * A `view: 'graph'` item's graph monitor: its text at once, its time series after the
  * `import()` of `GraphMonitor.ts` (D13: a grid without one carries none of it); a failed load
  * leaves the text
  */
@@ -638,8 +648,9 @@ const buildItems = (
     }
   });
 
+// p804 D10
 /**
- * Adds declarative items to a property grid (p804 D10): a panel described as data, Tweakpane's
+ * Adds declarative items to a property grid: a panel described as data, Tweakpane's
  * pane items with its names (`label`, `min`, `max`, `step`, `format`, `options`, `readonly`,
  * `interval`, `multiline`, `rows`, `hidden`, `disabled`, `expanded`), so a ported pane is a rename.
  * - A field item binds `{ target, key }`, `{ get, set }` or `{ value }`; without `kind` its field

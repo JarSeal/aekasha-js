@@ -118,8 +118,9 @@ export type JointParams =
       userData?: Record<string, unknown>;
     };
 
+// p250
 /**
- * Params for creating a multibody joint (p250): {@link JointParams}' `FIXED`, `REVOLUTE`,
+ * Params for creating a multibody joint: {@link JointParams}' `FIXED`, `REVOLUTE`,
  * `PRISMATIC` and `SPHERICAL` shapes, with `body1Id` the parent and `body2Id` the child. Joined
  * this way, bodies form a tree (a multibody) solved in reduced coordinates: no drift between them.
  * @remarks Rapier panics on what a multibody can't be, so the engine refuses it first, throwing
@@ -135,8 +136,9 @@ export type MultibodyJointParams = Extract<
   { type: 'FIXED' | 'REVOLUTE' | 'PRISMATIC' | 'SPHERICAL' }
 >;
 
+// p250
 /**
- * A multibody joint connecting a parent and a child rigid body (by id, p250). Rapier's multibody
+ * A multibody joint connecting a parent and a child rigid body (by id). Rapier's multibody
  * joints have no anchor getters, limits or motors, so it has fewer methods than {@link JointAPI}.
  * @remarks On MAIN_THREAD every query answers at once. On WORKER_THREAD the async forms ask the
  * worker and the `*Sync` twins throw, except `getUserDataSync`, `body1IdSync` and `body2IdSync`,

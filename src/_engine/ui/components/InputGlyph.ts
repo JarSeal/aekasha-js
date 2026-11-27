@@ -21,7 +21,8 @@ export type InputGlyphInput =
   | { device: 'MOUSE'; button: 'LEFT' | 'MIDDLE' | 'RIGHT' }
   /** The mouse's movement or its wheel */
   | { device: 'MOUSE'; delta: 'MOVE' | 'WHEEL' }
-  /** A gamepad's button, stick or axis, labelled by the pad's family (p808) */
+  // p808
+  /** A gamepad's button, stick or axis, labelled by the pad's family */
   | InputGlyphGamepadInput;
 
 /** What {@link createInputGlyph} draws. */
@@ -102,8 +103,9 @@ const writeGlyph = (
   elem.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${MOUSE_BODY}${MOUSE_LINE(part === 'MIDDLE' || part === 'WHEEL')}${MOUSE_PARTS[part]}</svg>`;
 };
 
+// p803 D10, p808 D5, p800 D6
 /**
- * Creates an input glyph (p803 D10, p808 D5): one key as a key cap, a mouse button, the wheel or
+ * Creates an input glyph: one key as a key cap, a mouse button, the wheel or
  * the mouse's movement as a mouse with that part in the accent, or a gamepad's button, stick or
  * axis labelled by the pad's family, for a prompt ("Press [E] to open"). One input; a prompt that
  * follows the player's device is `createInputPrompt`.
@@ -114,7 +116,7 @@ const writeGlyph = (
  *   axis' arrows: filled with the accent).
  * - Custom properties: `--aek-input-glyph-size` (its height, default `1.6em`: it follows its text).
  * - Assistive tech: `role="img"` named by the input ("E", "Left mouse button", "Cross button").
- * - Colour: a gamepad's buttons are neutral, never the brands' colours (p800 D6); restyle
+ * - Colour: a gamepad's buttons are neutral, never the brands' colours; restyle
  *   `.aekInputGlyph[data-family='xbox'][data-button='SOUTH']` for them.
  * @example
  * ```ts

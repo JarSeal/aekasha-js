@@ -117,8 +117,9 @@ const MergeMaterialEntrySchema = z.object({
   aoMapIntensity: z.number(),
 });
 
+// p374 D3
 /**
- * A palette member's parameter table entry (p374 D3), baked by the gatherer from its material
+ * A palette member's parameter table entry, baked by the gatherer from its material
  * JSON's `params`: each value as the JSON gives it, three's default where it gives none. Colours
  * are sRGB values the runtime converts with `THREE.Color`, as a material's parameters are.
  */
@@ -220,8 +221,9 @@ export const MergeMaterialAssetSchema = z.object({
  * validates it. */
 export type MergeMaterialAsset = z.infer<typeof MergeMaterialAssetSchema>;
 
+// p374 Phase 2
 /**
- * A palette as a scene's generated data carries it (the scene's `mergeMaterials`, p374 Phase 2):
+ * A palette as a scene's generated data carries it (the scene's `mergeMaterials`):
  * the gatherer's resolved palette without its build-time fields, its slot textures in the scene's
  * `textures`.
  */

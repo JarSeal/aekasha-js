@@ -25,7 +25,8 @@ type ClearLSButtonOpts = {
   watchKey?: string;
 };
 
-/** A clear-LS icon button (a kit ghost icon button, p806 D12's 24 px target), disabled while
+// p806 D12
+/** A clear-LS icon button (a kit ghost icon button, a 24 px target), disabled while
  * `hasData` is false. The tab and list variants below preset the icon and the title; another icon
  * fits a button that clears a part of a key. */
 export const createClearLSButton = (

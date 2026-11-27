@@ -89,7 +89,8 @@ export type SceneData = {
   impostors?: ImpostorDef[];
   /** Cuts the scene into cells loaded by their distance to the focus (the `streaming()` feature). */
   streaming?: SceneStreamingSettings;
-  /** A streaming scene's cell manifest (the gatherer's, p353 §3.2): the JSON content its cells
+  // p353 §3.2
+  /** A streaming scene's cell manifest (the gatherer's): the JSON content its cells
    * hold, which the `streaming()` feature loads per cell. The lists above hold only its base. */
   __streaming?: StreamingManifest;
   /** Merge group settings and `AUTO`'s defaults for the groups made in this scene (the
@@ -129,7 +130,8 @@ export type SceneData = {
    * `physics()` feature keeps them as the scene's own when it's registered; its code's
    * `setSceneWorldBounds` replaces them). */
   worldBounds?: SceneWorldBounds | null;
-  /** The features this scene's data needs (the gatherer's manifest, p607 D10): `InitEngine`
+  // p607 D10
+  /** The features this scene's data needs (the gatherer's manifest): `InitEngine`
    * fails when its `features` doesn't list one. */
   __features?: string[];
 };

@@ -62,8 +62,9 @@ const setAttr = (elem: Element, name: string, value: string) => {
   if (elem.getAttribute(name) !== value) elem.setAttribute(name, value);
 };
 
+// p804 D7
 /**
- * Creates a range slider (p804 D7): two thumbs on a track from `min` to `max`, the APG
+ * Creates a range slider: two thumbs on a track from `min` to `max`, the APG
  * multi-thumb slider, its value `{ min, max }` from its binding (`{ target, key }`, written in
  * place, `{ get, set }` or `{ value }`) and written there. The span between the thumbs is a third
  * stop that moves both. Neither thumb passes the other, and `minGap` keeps them apart.

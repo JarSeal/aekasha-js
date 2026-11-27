@@ -1,9 +1,9 @@
+// p084 DD6, p806 D6
 /**
- * An editor view's right drawer (p084 DD6),
- * written for every editor: the scene debug drawer's shell (p806 D6, `_dbg__DrawerShell.ts`: the
- * toggler, the width handle, the heading row with a title and a close button, the tab rail, a
- * scrolling container per tab) mounting ordinary
- * debugger tab definitions ({@link AnyDebuggerTabDef}) through a tab host of its own, so panes,
+ * An editor view's right drawer, written for every editor: the scene debug drawer's shell
+ * (`_dbg__DrawerShell.ts`: the toggler, the width handle, the heading row with a title and a
+ * close button, the tab rail, a scrolling container per tab) mounting ordinary debugger tab
+ * definitions ({@link AnyDebuggerTabDef}) through a tab host of its own, so panes,
  * lists, clear-LS buttons, `onRefresh` / `onOpen` / `refreshIntervalMs` and folder persistence
  * work as in the scene drawer.
  *
@@ -172,7 +172,8 @@ export const createEditorDrawer = (opts: EditorDrawerOpts): EditorDrawer => {
     if (state.isOpen) setBodyDrawerWidth(shell.getWidth());
   };
 
-  /** The toggler's click puts the focus on the open tab in the rail (p806 D12) */
+  // p806 D12
+  /** The toggler's click puts the focus on the open tab in the rail */
   const toggle = (open?: boolean, focusTab?: boolean) => {
     const nextOpen = open ?? !state.isOpen;
     if (nextOpen === state.isOpen) return;

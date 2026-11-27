@@ -25,8 +25,9 @@ export type TypedTextProps<T> = {
   onInput?: (text: string) => void;
 };
 
+// p804 D3, D6
 /**
- * Tracks an input's typed text (p804 D3, D6): the `input` event makes it dirty (an overlay stack
+ * Tracks an input's typed text: the `input` event makes it dirty (an overlay stack
  * entry, so Escape reverts it first), `commit()` writes it (`change`: one `last: true`, or the
  * end of the live writes), `revert()` puts the value's text back (and the value from before the
  * typing, after live writes), `end()` drops it without either (a key step, a paste took over).

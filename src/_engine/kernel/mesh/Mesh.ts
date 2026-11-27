@@ -33,8 +33,9 @@ import type { LodAutoDef, LodDef, MeshLodDef } from '../../features/lod/LodTypes
 import type { MeshMergeDef } from '../../features/merging/MergeTypes';
 import type { FeatureContext } from '../init/Features';
 
+// p607
 /**
- * Installs the meshes (the kernel, p607): a mesh entity's deletion disposes its mesh.
+ * Installs the meshes (part of the kernel): a mesh entity's deletion disposes its mesh.
  * @internal
  */
 export const installMeshes = (ctx: FeatureContext) => {
@@ -177,6 +178,7 @@ export const preWarmMesh = (mesh: THREE.Mesh, label: string) => {
   });
 };
 
+// p353 Phase 0 finding 4: three's parallel pipeline builds
 /**
  * Compiles a set of objects already in the root scene in one `renderer.compileAsync` of the root
  * scene, ahead of their first draw, as {@link preWarmMesh} does one mesh (the render pipeline's
@@ -184,7 +186,7 @@ export const preWarmMesh = (mesh: THREE.Mesh, label: string) => {
  * visible for the call's synchronous part only, so held objects (`TAG_DRAW_HELD`) compile without
  * a frame showing them; everything else in view compiles too (what's compiled already costs a
  * lookup). One call, not one per object: three r187 builds up to 16 pipelines at once only
- * within a call (p353 Phase 0 finding 4). Resolves when done; a failed compile is logged and
+ * within a call. Resolves when done; a failed compile is logged and
  * resolves too (the first draw compiles instead). Compiles the real objects, never stand-ins:
  * three releases a pipeline with its last render object.
  * @internal
@@ -477,20 +479,21 @@ const addLodComponent = (entityId: number, def: LodDef, world: ECSWorld) => {
   });
 };
 
+// p348; the cross-fade: p351 §2.4; AUTO: p347
 /**
- * Gives a mesh entity levels of detail (p348): from the next
- * frame, lodSelectionSystem picks a level by the mesh's screen size and lodApplySystem swaps its
+ * Gives a mesh entity levels of detail: from the next frame,
+ * lodSelectionSystem picks a level by the mesh's screen size and lodApplySystem swaps its
  * geometry, material(s) and `castShadow`. Level 0 is the mesh's own unless it names others. Every
  * level's assets are held (ref counted) until the LOD is removed or the entity deleted, and
  * pre-warmed when the mesh was created with `preWarm`. Replaces a LOD the mesh already has (back
  * to level 0 first). The definition is read, not copied: after changing its levels, set it again.
  *
  * Level changes and hiding / showing cross-fade with a dither over `fadeSeconds` (default
- * `AppConfig.lod.fadeSeconds`; p351 §2.4): the previous level
+ * `AppConfig.lod.fadeSeconds`): the previous level
  * is drawn by a temporary copy of the mesh meanwhile. Unless `fadeSeconds` is 0, the levels'
  * materials get `enableLodDither` (shared with other meshes, those get it too).
  *
- * `'AUTO'` (or `{ auto: true, ... }`) reads the levels from the geometry's LOD chain (p347): each
+ * `'AUTO'` (or `{ auto: true, ... }`) reads the levels from the geometry's LOD chain: each
  * is used while its simplification error stays within `maxPixelError` pixels at a viewport height
  * of 1080. The mesh stays on level 0 until the chain is ready (it waits for one the geometry's
  * import requested or one being generated), and warns when the geometry has none.

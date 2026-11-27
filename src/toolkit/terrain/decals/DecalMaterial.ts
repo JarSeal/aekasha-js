@@ -259,8 +259,9 @@ const getRainOcclusion = (material: NodeMaterial, define: DecalDefine) => {
   return occlusion ?? undefined;
 };
 
+// p309 D2
 /**
- * The decal material's graph (p309 D2), the toolkit's decal materials' `setup`
+ * The decal material's graph, the toolkit's decal materials' `setup`
  * (`decalsGround_blend`, `decalsGround_cutout`, `decalsStructure_blend`, `decalsStructure_cutout`):
  * a cell of a `DECAL` atlas on a decal mesh, wet with the ground.
  *

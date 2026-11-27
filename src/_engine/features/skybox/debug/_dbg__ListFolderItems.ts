@@ -11,8 +11,9 @@ import {
   type SkyBoxListKey,
 } from './_dbg__SkyBoxShared';
 
+// p114
 /**
- * The list controls of a definition's list (suns, moons, nebulae; p114): the entry dropdown,
+ * The list controls of a definition's list (suns, moons, nebulae): the entry dropdown,
  * "Add", "Duplicate", "Remove" and "Reset list". A list edit writes the whole array as one undo
  * step (setSkyBoxArray, `skybox.param` on the list's path) and selects the entry it made.
  */

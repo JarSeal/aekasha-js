@@ -16,8 +16,9 @@ const ThreeJsParamsSchema = z
     "That three material's parameters by name (color, roughness, …); a texture map key (map, normalMap, …) takes a texture's id."
   );
 
+// p302 D4
 /**
- * A TSL input's object-form texture ref (p302 D4): `{ "texture": "id" }` is the texture node a bare
+ * A TSL input's object-form texture ref: `{ "texture": "id" }` is the texture node a bare
  * id makes, `"channel"` the sample's channels (`TextureInputRef` on `aekasha`).
  */
 export const TextureInputRefSchema = z
@@ -35,8 +36,9 @@ export const TextureInputRefSchema = z
   .strict()
   .describe("A texture ref: the texture node, or with channel its sample's channels (eg. r, rgb).");
 
+// p299 D5
 /**
- * A TSL input's texture array layer (p299 D5): `{ "textureArray": "id", "layer": "rock" }` is that
+ * A TSL input's texture array layer: `{ "textureArray": "id", "layer": "rock" }` is that
  * layer sampled at the mesh's UV (`TextureArrayInputRef` on `aekasha`).
  */
 export const TextureArrayInputSchema = z
@@ -54,8 +56,9 @@ export const TextureArrayInputSchema = z
   .strict()
   .describe("A texture array's layer, sampled at the mesh's UV.");
 
+// p299 D5
 /**
- * A TSL input's atlas cell (p299 D5): `{ "atlas": "id", "slot": "albedo", "cell": "fern" }` is the
+ * A TSL input's atlas cell: `{ "atlas": "id", "slot": "albedo", "cell": "fern" }` is the
  * slot sampled at the mesh's UV mapped into the cell's rect (`AtlasCellInputRef` on `aekasha`).
  */
 export const AtlasCellInputSchema = z

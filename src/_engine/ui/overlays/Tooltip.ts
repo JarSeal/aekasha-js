@@ -12,9 +12,10 @@ export type TooltipProps = {
   anchor: HTMLElement;
   /** The tooltip's text (text, not HTML). Give this or `content`. */
   text?: string;
+  // p808
   /** Content in place of `text`, read as the anchor's description too: a CMP added once and kept
    * (removed with the tooltip), or a function built on each show and removed on hide (an item's
-   * details for the slot's item then, p808). Never interactive: a control in it is a popover's. */
+   * details for the slot's item then). Never interactive: a control in it is a popover's. */
   content?: CMPHandle | (() => CMPHandle);
   /** The side of the anchor it shows on when it fits there, else the opposite one. Default 'top'. */
   side?: 'top' | 'bottom' | 'left' | 'right';
@@ -73,8 +74,9 @@ const isFocusVisible = (elem: HTMLElement) => {
   }
 };
 
+// p803 D10, p808
 /**
- * Creates a tooltip (p803 D10): a short text describing `anchor`, shown on its `side` after
+ * Creates a tooltip: a short text describing `anchor`, shown on its `side` after
  * `--aek-tooltip-delay` (500 ms) of hover and at once on keyboard focus, and hidden when the
  * pointer leaves (it can move onto the tooltip), on blur, on a press of the anchor and on Escape.
  * Never interactive: content with a control in it is a popover.
@@ -86,7 +88,7 @@ const isFocusVisible = (elem: HTMLElement) => {
  * - Keys: Escape hides it (the kit's overlay stack: the press goes no further), wherever the focus
  *   is in the HUD.
  * - Custom properties: `--aek-tooltip-delay` (on the anchor or any ancestor).
- * - `content` (p808) in place of `text`: a richer description (an item's details), wider
+ * - `content` in place of `text`: a richer description (an item's details), wider
  *   (`data-content`, up to 40ch), read as the anchor's description all the same.
  *
  * The tooltip isn't added anywhere: dispose of it with `cmp.remove()` when its anchor goes.

@@ -105,8 +105,9 @@ export type CrossQuadsLayout = {
 
 /** Texels between the object's bounds and a frame's edge, so its silhouette never touches it. */
 const FRAME_MARGIN = 2;
+// p299
 /** A cell's sides are multiples of this: an export's atlas is block-compressed (4 × 4 texels), and
- * p299 places cells on that grid */
+ * the asset pipeline's atlas packing places cells on that grid */
 const CELL_ALIGN = 4;
 
 const _up = new THREE.Vector3(0, 1, 0);

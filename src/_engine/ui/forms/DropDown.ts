@@ -39,7 +39,8 @@ export type DropDownProps = {
    * `disabled`, so the keys still reach it and its title (the reason `setDisabled` gives) can be
    * read, while its clicks are ignored. A toolbar's drop-down (`createButtonGroup`'s `toolbar`). */
   focusableWhenDisabled?: boolean;
-  /** A filter field over the list (p803 D9, the APG combobox with a list): typing filters the
+  // p803 D9
+  /** A filter field over the list (the APG combobox with a list): typing filters the
    * options by their labels and marks the matching text, the arrows move through what's left, and
    * Enter picks. Default false. */
   searchable?: boolean;

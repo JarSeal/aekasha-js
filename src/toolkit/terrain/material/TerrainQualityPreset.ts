@@ -20,10 +20,11 @@ export type TerrainQualityPresetOpts = {
   cliffLayers?: readonly number[];
   /** The slopes in degrees over which a cliff layer's projection fades in (default `[35, 50]`). */
   cliffGate?: [number, number];
+  // p305 Phase 8
   /**
    * The live layers (`source: 'PROCEDURAL_LIVE'`), by index: `LOW` and `MEDIUM` sample their set's
    * bake (`source: 'TEXTURE'`), `HIGH` and `ULTRA` run them live (default none). A live layer
-   * about doubled a 48 m block's cost with the cheapest generator (p305 Phase 8).
+   * about doubled a 48 m block's cost with the cheapest generator.
    */
   liveLayers?: readonly number[];
   /**
@@ -52,7 +53,8 @@ type PresetTier = {
 /** `ULTRA`'s detail normals' fade end, without a far surface: `HIGH`'s far start */
 const ULTRA_FADE_TO = 200;
 
-/** The tiers (p305 D10's table; macro on in every tier, the material's own) */
+// p305 D10's table
+/** The tiers (macro on in every tier, the material's own) */
 const PRESET_TIERS: Record<TerrainQualityLevel, PresetTier> = {
   LOW: {
     antiTiling: { mode: 'NONE' },
@@ -86,14 +88,16 @@ const PRESET_TIERS: Record<TerrainQualityLevel, PresetTier> = {
 
 const DEFAULT_CLIFF_GATE: [number, number] = [35, 50];
 
+// p305 D10
+// The tiers' costs: p305 Phase 6
 /**
- * The suggested quality tiers of a terrain material (p305 D10), a `quality` table for its config:
+ * The suggested quality tiers of a terrain material, a `quality` table for its config:
  * each tier's anti-tiling (`LOW` none, `MEDIUM` `DUAL_SCALE`, `HIGH` `HEX` on the dominant layer
  * and `DUAL_SCALE` on the others, `ULTRA` `HEX` on all), sparse sampling (`LOW` 2 layers a pixel,
  * `MEDIUM` and `HIGH` 3, `ULTRA` 4), the cliff layers' projection, and with `far` the far surface
  * (`LOW` from 60 m, `MEDIUM` 120 m, `HIGH` 200 m, `ULTRA` none), and with `liveLayers` their
  * bake on `LOW` and `MEDIUM`, their generator live on `HIGH` and `ULTRA`. On an 8-layer terrain at
- * 1080p (p305 Phase 6, an AMD RDNA 3 GPU) `LOW` cost about half of `MEDIUM`, `HIGH` about a fifth
+ * 1080p (an AMD RDNA 3 GPU) `LOW` cost about half of `MEDIUM`, `HIGH` about a fifth
  * more than `MEDIUM` (1.7 ms for the whole frame) and `ULTRA` 1.7-2.6 × `HIGH`. Sparse sampling and
  * `DOMINANT` read the layers from a set array: the code route's `storage: 'AUTO'` takes `ARRAY`
  * for such a material, whose set array must be built (a scene's `textureSetArrays`, or

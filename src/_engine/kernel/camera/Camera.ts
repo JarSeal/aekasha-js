@@ -47,8 +47,9 @@ let debugCamera: DebugModuleRef<DebugCameraModule> | null = null;
 const _m1 = new THREE.Matrix4();
 const _v1 = new THREE.Vector3();
 
+// p607
 /**
- * Installs the cameras (the kernel, p607): a camera entity's deletion disposes its camera, the
+ * Installs the cameras (part of the kernel): a camera entity's deletion disposes its camera, the
  * main camera cache follows its tag, and every camera's aspect follows the canvas.
  * @internal
  */

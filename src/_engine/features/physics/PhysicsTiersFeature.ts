@@ -22,8 +22,9 @@ export const physicsTiersSceneHooks: SceneHooks = {
   exit: (prevSceneId) => deleteScenePhysicsTierPolicies(prevSceneId),
 };
 
+// p622 D8
 /**
- * The physics tiers feature (engine 6.0.0, p622 D8): simulation tiers (`requestPhysicsTier`: a
+ * The physics tiers feature (engine 6.0.0): simulation tiers (`requestPhysicsTier`: a
  * dynamic body frozen, disabled or taken out of the physics world, and put back) and the tier
  * distance policy (`setPhysicsTierPolicy`, its members through `createPhysicsEntity`'s
  * `tierPolicy`). Needs `physics()` listed before it; list it right after. Without it,

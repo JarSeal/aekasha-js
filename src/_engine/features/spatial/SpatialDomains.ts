@@ -27,8 +27,9 @@ import { getNextSceneId, isCurrentlyLoading } from '../../kernel/scene/SceneLoad
 import type { SceneSpatialDomainEntry } from '../../schemas/SpatialDomainSchema';
 import { findSpatialRadiusProvider } from '../../kernel/ecs/SpatialMembership';
 
+// p346 §3.1
 /**
- * How a domain's grid is kept current (p346 §3.1):
+ * How a domain's grid is kept current:
  * - `DYNAMIC`: positions and scaled radii refreshed and the grid rebuilt every frame.
  * - `STATIC`: positions and radii are read when a member joins. The grid is rebuilt only in a
  *   frame where a member joined or left, and refreshed from every member's Transform first when
@@ -53,8 +54,9 @@ export interface SpatialDomainOptions {
   update?: SpatialUpdatePolicy;
   /** See SpatialGridOptions (default 2). */
   oversizedRadiusMultiplier?: number;
+  // p349 §3.1
   /**
-   * The scene these settings belong to (p349 §3.1).
+   * The scene these settings belong to.
    * While they exist they replace the domain's world settings (the last ones registered without
    * a scene). On that scene's exit the domain goes back to its world settings, or is
    * unregistered if it has none. A scope, not a setting: registering the same settings for
@@ -81,8 +83,9 @@ const DEFAULT_CELL_SIZE = 20;
 /** Bits 0-30 of SPATIAL_DOMAINS' mask, so the mask stays a small positive integer. */
 const MAX_NON_DEFAULT_DOMAINS = 31;
 
+// p349 §3.1
 /**
- * A domain's settings layers (p349 §3.1), as the app registered them (before the debug override).
+ * A domain's settings layers, as the app registered them (before the debug override).
  * @internal
  */
 export type DomainSettingsLayers = {
@@ -148,7 +151,8 @@ export type WorldDomains = {
   byBit: (SpatialDomain | undefined)[];
   /** Debug env only: how many times the rebuild system has run in this world. */
   frame: number;
-  /** DEFAULT's settings, kept for the session while its grid comes and goes (p349 §3.6). */
+  // p349 §3.6
+  /** DEFAULT's settings, kept for the session while its grid comes and goes. */
   defaultLayers: DomainSettingsLayers;
   /** Debug env only: the oracle's state by domain id (SpatialOracle.ts), which outlives DEFAULT's
    * grid and goes with an unregistered domain. */
@@ -412,10 +416,10 @@ export function registerSpatialDomain(world: ECSWorld, opts: SpatialDomainOption
   );
 }
 
+// p349 §3.6
 /**
  * Builds `DEFAULT`'s grid with the settings in effect, holding every current SPATIAL_INDEXED
- * entity (persistent ones from earlier scenes included), rebuilt so it can be queried at once
- * (p349 §3.6).
+ * entity (persistent ones from earlier scenes included), rebuilt so it can be queried at once.
  * @internal
  */
 export function buildDefaultDomain(world: ECSWorld, domains: WorldDomains): SpatialDomain {
@@ -622,9 +626,10 @@ export function getSpatialGrid(world: ECSWorld): SpatialGrid {
 // The "Spatial index" tab's per-domain settings (_dbg__SpatialGrid.ts). Applied on every
 // registration, so they hold when the app registers a domain again on its next scene visit.
 
+// p349 §3.5
 /**
  * Gets the settings of a registration without its scope, and the scope separately: `sceneId`
- * for a scene's settings, undefined for the world settings (p349 §3.5).
+ * for a scene's settings, undefined for the world settings.
  * @internal
  */
 export type SpatialDomainOptionsOverride = (
@@ -675,8 +680,9 @@ export function getLastRebuildDurationMs(
   return domainsByWorld.get(world)?.byId.get(domainId)?.lastRebuildMs ?? 0;
 }
 
+// p346 Phase 3
 /**
- * Debug env only (p346 Phase 3): how often a domain actually rebuilds, and what it costs.
+ * Debug env only: how often a domain actually rebuilds, and what it costs.
  * @internal
  */
 export type SpatialDomainRebuildStats = {

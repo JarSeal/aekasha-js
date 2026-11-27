@@ -111,8 +111,9 @@ const createPart = <K extends keyof HTMLElementTagNameMap>(tag: K, className: st
   return elem;
 };
 
+// p808 D8
 /**
- * Creates a game menu (p808 D8): a modal menu of large buttons over the game (the pause menu, a
+ * Creates a game menu: a modal menu of large buttons over the game (the pause menu, a
  * title screen), moved through by position with the arrows or a d-pad (its spatial navigation),
  * Back on Escape, the gamepad's `EAST` (the app calls `back()`) and a visible Back button. An item
  * acts, or opens a page in the panel's place (more items, or a settings menu), with Back to

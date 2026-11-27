@@ -166,8 +166,9 @@ const isNewKeyDown = (e: Event | null): e is KeyboardEvent =>
 const isKeyEvent = (e: Event | null): e is KeyboardEvent =>
   e !== null && (e.type === 'keydown' || e.type === 'keyup');
 
+// p806 D12
 /** Whether the map leaves a key event alone: an app's map (outside `DEBUG`) and a key a debugger
- * control took (p806 D12). It neither counts it nor prevents its default. */
+ * control took. It neither counts it nor prevents its default. */
 const isLeftToDebugger = (map: MapRuntime, e: Event | null) =>
   map.context !== 'DEBUG' && isKeyEvent(e) && isKeyEventOnDebugger(e);
 

@@ -2,8 +2,9 @@ import { loadDebugModuleAsync } from '../kernel/config/DebugModules';
 import { lerror } from '../utils/Logger';
 import type { DevFilesSaveData } from './DevFilesProtocol';
 
+// p355 §2.1
 /**
- * Save sources (p355 §2.1): the debug tools that keep edits of asset JSONs (a sky box's layers, a
+ * Save sources: the debug tools that keep edits of asset JSONs (a sky box's layers, a
  * PostFX pass's params) register one, and the Æ menu's "Save scene" writes their changes into
  * the files in one commit of the dev files. The registry is kept here, not in the implementation
  * (`_dbg__SaveData.ts`), so a source registered before it loads still counts.
@@ -21,9 +22,10 @@ export type SaveChangeWrite =
       json: unknown;
     };
 
+// p355 §2.6
 /**
- * An asset written inline in a scene JSON, which its save moves into a file of its own (p355
- * §2.6): the save creates the change's `path` with the item as it is and the change's entry, and
+ * An asset written inline in a scene JSON, which its save moves into a file of its own: the
+ * save creates the change's `path` with the item as it is and the change's entry, and
  * replaces the item in the scene JSON's list with its id, in one commit.
  */
 export type SaveChangeExtract = {

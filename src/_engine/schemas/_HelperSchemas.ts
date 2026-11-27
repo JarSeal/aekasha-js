@@ -181,9 +181,10 @@ export type CoreEntityOpts = z.infer<typeof CoreEntityOptsSchema> & {
   managedBy?: ManagedByData;
 };
 
+// p240 §3.1
 /**
  * A quality level, `LOW` to `ULTRA` (`QualityLevel`, `utils/QualityLevel.ts`, built from its
- * `QUALITY_LEVELS`): the one scale of the shadow presets and the device levels (p240 §3.1).
+ * `QUALITY_LEVELS`): the one scale of the shadow presets and the device levels.
  * @internal
  */
 export const QualityLevelSchema = z.enum(QUALITY_LEVELS);

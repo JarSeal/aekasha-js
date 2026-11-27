@@ -145,8 +145,9 @@ const getBlockMaterial = (block: TerrainBlockDef) =>
     ? getMaterialVariant(block.material, { inputs: block.materialInputs })
     : block.material;
 
+// p306 D2
 /**
- * Spawns a terrain block (p306 D2) that the scene lists in its `terrainBlocks`: its mesh at
+ * Spawns a terrain block that the scene lists in its `terrainBlocks`: its mesh at
  * `(grid.x · size, 0, grid.z · size)` from its imported node's geometry or its generator's, with
  * its material (a variant when it has `materialInputs`) and shadows, its collider on the mesh
  * entity (a `FIXED` body; `HEIGHTFIELD` or `TRIMESH`, read from the geometry or the generator's
@@ -163,8 +164,8 @@ const getBlockMaterial = (block: TerrainBlockDef) =>
  * collider needs `physics()` or its scatters `instancing()`, which isn't installed, or a scatter's
  * spawn throws, or a decal set's import or material isn't loaded
  * @remarks Re-check your scene after the `await`: a load that leaves the scene while the block
- * spawns (a generator's, the collider's, a scatter's or a decal set's await) gets `null`, and what the spawn made
- * is deleted.
+ * spawns (a generator's, the collider's, a scatter's or a decal set's await) gets `null`, and
+ * what the spawn made is deleted.
  * @example
  * ```ts
  * import { spawnTerrainBlock } from 'aekasha/terrain';

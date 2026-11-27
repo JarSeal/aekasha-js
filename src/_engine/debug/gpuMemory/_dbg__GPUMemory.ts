@@ -33,12 +33,12 @@ import {
   type GPUMemoryPeak,
 } from './_dbg__GPUMemoryView';
 
+// p345; p344; the sections: p807 D8, D9; the budget: p240 Phase 3
 /**
- * GPU memory and draw-call tab (p345), a
- * profiler window tab (p344: read next to the frame figures). Loaded wherever the
- * profiler is, so in prodTest mode too when the profiler is enabled there. prodTest has no drawer
- * and no debug toaster: the links to drawer tabs are hidden and there is no budget toast (the
- * budget bar still shows it).
+ * GPU memory and draw-call tab, a profiler window tab (read next to the frame figures). Loaded
+ * wherever the profiler is, so in prodTest mode too when the profiler is enabled there. prodTest
+ * has no drawer and no debug toaster: the links to drawer tabs are hidden and there is no budget
+ * toast (the budget bar still shows it).
  *
  * Everything here is three's own bookkeeping (`renderer.info`) of the buffers and textures it
  * created, not a driver measurement: browsers expose no real VRAM figure.
@@ -49,14 +49,15 @@ import {
  * `render()`, which requests it after the main loop has requested its next frame). So the frame
  * counters are read by a LATE_MAIN system, right after the frame's renderScene() (MainLoop.ts),
  * and never from the tab's refresh interval: that would read 0 whenever three's reset ran last
- * (on r187, after every rendered frame), the loop is paused or the FPS limiter skipped the frame. The same system tracks the memory peaks and the budget, so they are
- * caught while the tab is closed too.
+ * (on r187, after every rendered frame), the loop is paused or the FPS limiter skipped the frame.
+ * The same system tracks the memory peaks and the budget, so they are caught while the tab is
+ * closed too.
  *
- * The sections are the UI kit's tables and stacked bar (p807 D8: the live ones in
+ * The sections are the UI kit's tables and stacked bar (the live ones in
  * `_dbg__GPUMemoryView.ts`, the snapshot's in `_dbg__GPUMemorySnapshotView.ts`), built once per
- * mount and written in place on each refresh (D9).
+ * mount and written in place on each refresh.
  *
- * The budget's default follows the device's GPU memory level (p240 Phase 3: the device capability
+ * The budget's default follows the device's GPU memory level (the device capability
  * check's report, a forced level included) until a budget is saved here.
  */
 

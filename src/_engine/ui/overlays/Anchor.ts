@@ -97,8 +97,9 @@ const alignOnAxis = (
   return Math.max(start, boundsStart + gap);
 };
 
+// p803 D7
 /**
- * Places an element at a side of an anchor (p803 D7), all in viewport px: on `side` when its size
+ * Places an element at a side of an anchor, all in viewport px: on `side` when its size
  * fits there or fits better than on the opposite side (else flipped), aligned along the side and
  * shifted to stay inside the bounds, with the space left on its side and across as its max size.
  * Pure: the anchor's tests run it in Node.
@@ -143,7 +144,8 @@ export type ShowAnchoredProps = {
   /** The overlay, in the document already (the top layer keeps its place in the DOM, so it
    * inherits the tokens and the theme from there) */
   elem: HTMLElement;
-  /** What it's anchored to: an element, or a point (p805 D11), which doesn't move with a scroll */
+  // p805 D11
+  /** What it's anchored to: an element, or a point, which doesn't move with a scroll */
   anchor: HTMLElement | AnchorPoint;
   /** The element whose forced theme and density the overlay takes along (default the anchor
    * element; a point's overlay takes none without it) */
@@ -170,8 +172,9 @@ const MAX_HEIGHT_PROP = '--aek-anchor-max-height';
 /** The attribute `showAnchored` writes the side it took to, for an arrow or a caret */
 const SIDE_ATTR = 'data-side';
 
+// p803 D7
 /**
- * Whether the browser has the Popover API's top layer (p803 D7; not in linkedom, nor in some
+ * Whether the browser has the Popover API's top layer (not in linkedom, nor in some
  * WebGL 2 browsers).
  * @internal
  */
@@ -189,15 +192,17 @@ const copyInheritedAttrs = (elem: HTMLElement, anchor: HTMLElement) => {
   }
 };
 
+// p803 D7; the point: p805 D11
 /**
- * Shows `elem` anchored to `anchor` (p803 D7; or at a point, p805 D11: a context menu at the
- * pointer, which stays put) and keeps it there while the page scrolls (any
- * ancestor: a capture listener on the document) or the window or the HUD's bounds resize, each
- * read in one animation frame (and written only when the anchor, the bounds or its size moved). In the top layer (`popover="manual"`, so the browser closes it on
- * nothing: the overlay stack does) neither a window's `overflow` nor an embed's container clips
- * it, and its position is the viewport's. Without the Popover API it moves to the HUD root at
- * `--aek-z-tooltip` (a dialog's centring transform would make a fixed element inside it relative
- * to the dialog), and its position is the HUD's bounds'. An overlay outside its anchor's forced
+ * Shows `elem` anchored to `anchor` (or at a point: a context menu at the pointer, which stays
+ * put) and keeps it there while the page scrolls (any ancestor: a capture listener on the
+ * document) or the window or the HUD's bounds resize, each read in one animation frame (and
+ * written only when the anchor, the bounds or its size moved). In the top layer
+ * (`popover="manual"`, so the browser closes it on nothing: the overlay stack does) neither a
+ * window's `overflow` nor an embed's container clips it, and its position is the viewport's.
+ * Without the Popover API it moves to the HUD root at `--aek-z-tooltip` (a dialog's centring
+ * transform would make a fixed element inside it relative to the dialog), and its position is the
+ * HUD's bounds'. An overlay outside its anchor's forced
  * `data-aek-theme` / `data-aek-density` (the fallback's, or one made in the HUD root) gets them.
  * Either way it gets `position: fixed` and its place as inline styles, the space left as
  * `--aek-anchor-max-width` / `--aek-anchor-max-height` (its stylesheet's max size reads them) and

@@ -306,8 +306,9 @@ export const resetPhysicsWorld = async () => {
   await createPhysicsWorld();
 };
 
+// p102
 /**
- * Sets (or clears, with null) the current world's bounds (p102): from then on, a dynamic body whose
+ * Sets (or clears, with null) the current world's bounds: from then on, a dynamic body whose
  * translation is outside the box after a step is taken out of the simulation on that step (disabled,
  * or FIXED when jointed) and handed to the out-of-bounds handler (setOutOfBoundsHandler). Every
  * enabled dynamic body is checked against them at once. A new world starts without (physics' scene
@@ -325,8 +326,9 @@ export const setPhysicsWorldBounds = (box: WorldBoundsBox | null) => {
   messageWorker({ type: PhysicsProtocolType.SET_WORLD_BOUNDS, bounds, isOneWay: true });
 };
 
+// p500
 /**
- * Takes a snapshot of the physics world (p500), to put it back later with
+ * Takes a snapshot of the physics world, to put it back later with
  * {@link restorePhysicsSnapshot}: its state serialized by the backend, the world it was taken in
  * and its step. Only physics: no entity, mesh or creation params. Throws without a world.
  * @returns the snapshot, plain data the caller keeps as long as it likes
@@ -357,9 +359,10 @@ export const takePhysicsSnapshot = async (): Promise<PhysicsSnapshot | undefined
 type PhysicsRestoreFn = (delta: RestoreSnapshotDelta) => void;
 const restoreFns = new Set<PhysicsRestoreFn>();
 
+// p500 D15
 /**
  * Calls `fn` after every snapshot restore, with the restore's delta, once the facade has applied
- * it (the reaped objects forgotten, the world's settings and the step clock set; p500 D15).
+ * it (the reaped objects forgotten, the world's settings and the step clock set).
  * Returns its remover.
  * @internal
  */
@@ -416,8 +419,9 @@ const applyRestoreDelta = (delta: RestoreSnapshotDelta) => {
   }
 };
 
+// p500; the copy: p500 D9
 /**
- * Puts the physics world back to a snapshot taken in it (p500), keeping every body, collider and
+ * Puts the physics world back to a snapshot taken in it, keeping every body, collider and
  * joint that both the snapshot and the API know (their entities need nothing). What was made after
  * the snapshot is deleted, physics entities included, and what was deleted since stays gone
  * ({@link RestoreSnapshotDelta}); the world's settings become the snapshot's, and the step clock
@@ -425,7 +429,7 @@ const applyRestoreDelta = (delta: RestoreSnapshotDelta) => {
  * used up: restore it again and again. Throws without a world, for a snapshot of another world (a
  * scene load replaces the world), or for bytes the backend can't read; then nothing changed.
  *
- * `WORKER_THREAD`: the snapshot is copied to the worker (p500 D9: the caller's stays usable, to
+ * `WORKER_THREAD`: the snapshot is copied to the worker (the caller's stays usable, to
  * restore again), and the restored poses are in the transform buffer when it resolves. The worker
  * handles messages in order: steps and commands sent before the call run on the replaced world,
  * those sent after on the restored one. Overlapping restores apply in call order, the last one

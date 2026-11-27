@@ -38,7 +38,8 @@ export type ExtractedPrimitive = {
   material: THREE.Material | THREE.Material[];
   /** `geometryId` is the preferred id; the registry step may still add a collision suffix. */
   info: ImportedGeometryInfo;
-  /** The LOD chain the asset pipeline built for this primitive (p347 Phase 3), if any. Primitives
+  // p347 Phase 3
+  /** The LOD chain the asset pipeline built for this primitive, if any. Primitives
    * sharing a geometry share it. */
   lodChain?: ExtractedLodChain;
 };
@@ -52,7 +53,8 @@ export type ExtractResult =
   | { primitives: ExtractedPrimitive[]; pointClouds: ImportedPointCloudInfo[]; error?: undefined }
   | { primitives?: undefined; pointClouds?: undefined; error: string };
 
-/** The asset pipeline's record of a quantized mesh's dequantization on a node (i020), when it's
+// i020
+/** The asset pipeline's record of a quantized mesh's dequantization on a node, when it's
  * of the format this build reads */
 const readQuantization = (node: THREE.Object3D) => {
   const record = node.userData[GLTF_QUANTIZATION_EXTRAS_KEY] as GLTFQuantizationExtras | undefined;
@@ -199,8 +201,9 @@ const getDequantizationInverse = ({ offset, scale }: GLTFQuantizationExtras) =>
     .makeScale(1 / scale, 1 / scale, 1 / scale)
     .multiply(new THREE.Matrix4().makeTranslation(-offset[0], -offset[1], -offset[2]));
 
+// i020
 /** An instanced node's matrices and colours (linear RGB floats, whatever the accessor's type).
- * `dequantizationInverse` takes a quantized mesh's dequantization out of each matrix (i020). */
+ * `dequantizationInverse` takes a quantized mesh's dequantization out of each matrix. */
 const readGPUInstances = (
   mesh: THREE.InstancedMesh,
   dequantizationInverse?: THREE.Matrix4
@@ -306,6 +309,7 @@ const hasPropUp = (node: THREE.Object3D, scene: THREE.Object3D, prop: string) =>
   return false;
 };
 
+// i020
 /**
  * Walks a parsed glTF and describes every mesh primitive in it (or only in the node picked with
  * `meshIndex`): its geometry, glTF-root-relative transform, parsed custom props, its glTF mesh's
@@ -314,7 +318,7 @@ const hasPropUp = (node: THREE.Object3D, scene: THREE.Object3D, prop: string) =>
  * prop `aekScatterPoints`, or a points node under one (Blender writes a Geometry Nodes point cloud
  * as a child `GN Instance` of its object's node), is a point cloud: its points are instances
  * (positions, `_ROT`, `_SCALE`, `_ITEM`) and its geometry is left out. A quantized mesh whose
- * dequantization the asset pipeline recorded (`GLTFQuantization.ts`, i020) gets it back in its
+ * dequantization the asset pipeline recorded (`GLTFQuantization.ts`) gets it back in its
  * positions (floats; its LOD levels' too), out of its transform or instance matrices, so its
  * geometry is in its node's space for every use by id; a pivot `quantize()` moved it into takes
  * its parent's name, props and place. Pure: nothing is registered, disposed or logged.

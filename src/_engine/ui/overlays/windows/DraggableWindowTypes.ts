@@ -299,8 +299,9 @@ export type DraggableWindowRuntime = {
  */
 export type WindowEntry = { config: DraggableWindowConfig; runtime: DraggableWindowRuntime };
 
+// an older version's state: before p094
 /**
- * What a window stored in LS can carry: the config, or a pre-p094 state.
+ * What a window stored in LS can carry: the config, or an older version's state.
  * @internal
  */
 export type StoredWindow = Partial<DraggableWindowConfig> & {

@@ -39,8 +39,9 @@ export type EmptyState = {
   setText: (text: string) => void;
 };
 
+// p803 D10
 /**
- * Creates an empty state (p803 D10): what a list, a panel or a search shows when it has nothing to
+ * Creates an empty state: what a list, a panel or a search shows when it has nothing to
  * show (no saves, no matches), with what to do about it.
  * - Parts: `.aekEmptyState`, `.aekEmptyState__icon` (`aria-hidden`), `.aekEmptyState__title` (a
  *   `<p>`, or a heading at `headingLevel`), `.aekEmptyState__text`, `.aekEmptyState__action` (a

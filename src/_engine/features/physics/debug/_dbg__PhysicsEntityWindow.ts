@@ -178,8 +178,9 @@ const getWireframeItems = (ctx: PhysWindowContext): PropertyGridItem[] => {
   return items;
 };
 
+// p102
 /**
- * The "World bounds" folder's items (p102): the entity's own bounds as text, and the toggle that
+ * The "World bounds" folder's items: the entity's own bounds as text, and the toggle that
  * draws its own box (left out without the lines() feature). Only for a body created DYNAMIC, the
  * only kind the bounds check.
  */

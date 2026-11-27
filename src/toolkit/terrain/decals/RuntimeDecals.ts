@@ -48,7 +48,8 @@ const DEFAULTS = {
   maxPatchVertices: 169,
   /** Metres along the block's normals; the material's polygon offset does the coplanar work */
   lift: 0.005,
-  /** After the terrain (0), before other transparents (20 and up): p309's bands */
+  // p309's render order bands
+  /** After the terrain (0), before other transparents (20 and up) */
   renderOrder: 10,
   transparentOrder: 'JOIN' as MergeTransparentOrder,
   randomStream: 'decals',

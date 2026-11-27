@@ -112,8 +112,9 @@ const createSpacer = ({ spacerTag, spacerClass }: VirtualRowsParts) => {
   return spacer;
 };
 
+// p805 D8
 /**
- * Creates virtual rows (p805 D8) for one list, tree or table: only the rows its box shows are
+ * Creates virtual rows for one list, tree or table: only the rows its box shows are
  * rendered (and the focused one, so the focus never drops), a spacer before and after standing in
  * for the others. Past about 200 rows a list, a tree or a table scrolls and filters faster with
  * them.

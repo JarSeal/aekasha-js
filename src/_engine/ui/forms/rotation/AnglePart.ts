@@ -35,8 +35,9 @@ export type AnglePartProps = {
   toDegrees?: number;
 };
 
+// p804 D8
 /**
- * An angle part's rules (p804 D8): degrees, wrapping at ±180° by default, the step, `min` and
+ * An angle part's rules: degrees, wrapping at ±180° by default, the step, `min` and
  * `max` given in the value's unit (radians).
  * @internal
  */

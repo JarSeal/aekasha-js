@@ -12,8 +12,9 @@ import { getRootScene } from '../../kernel/scene/Scene';
 import { getGroupPaletteIndex } from './MergePalettes';
 import type { MergeGroupData, MergeGroupMode } from './MergeTypes';
 
+// p371 D1
 /** A geometry's attribute sizes differ from the other's where both have one: the merge throws on
- * that (p371 D1). The name of the first, or undefined. */
+ * that. The name of the first, or undefined. */
 const getAttributeMismatch = (a: THREE.BufferGeometry, b: THREE.BufferGeometry) => {
   for (const name in a.attributes) {
     const other = b.attributes[name];

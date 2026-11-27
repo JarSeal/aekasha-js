@@ -66,8 +66,9 @@ export type Hotbar = {
 /** The number keys' order on a keyboard: 1 to 9, then 0 */
 const NUMBER_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
 
+// p808 D11
 /**
- * Creates a hotbar (p808 D11): a row of item slots, one of them selected (the item in hand) or none
+ * Creates a hotbar: a row of item slots, one of them selected (the item in hand) or none
  * (an ability bar), with the number keys' hints. The app binds the keys: a number selects or uses
  * its slot, the wheel and the shoulder buttons call `selectNext(±1)`, a click calls `onUse`.
  * - Parts: `.aekHotbar` (`data-placement`, `data-orientation`) holding the slots (`.aekItemSlot`,

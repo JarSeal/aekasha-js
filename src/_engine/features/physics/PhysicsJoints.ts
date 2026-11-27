@@ -12,8 +12,9 @@ import type { CreateJointResponse, DeleteJointResponse } from './protocol/Physic
 import { JointProxyAPI } from './proxies/JointProxyAPI';
 import type { JointAPI, JointParams } from './types/PhysicsJointTypes';
 
+// p353 Phase 4
 /** Told the two body ids of every joint `createJoint` makes, at its call (the physics tiers: a
- * jointed body leaves the `DISABLED` tier, p353 Phase 4). */
+ * jointed body leaves the `DISABLED` tier). */
 let jointCreatedListener: ((body1Id: number, body2Id: number) => void) | null = null;
 
 /**
@@ -113,9 +114,10 @@ export const deleteJointSync = (id: number, wakeUp?: boolean) => {
   return checkDeletedId('a joint', id, facade.engAPI?.deleteJoint(id, wakeUp)?.id);
 };
 
+// p352
 /**
  * Calls `fn` with the two body ids of every live impulse joint, synchronously in both worker
- * targets (p352's joint groups).
+ * targets (the physics tiers' joint groups).
  * @internal
  */
 export const forEachJointBodyPair = (fn: (body1Id: number, body2Id: number) => void) => {

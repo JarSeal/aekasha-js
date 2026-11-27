@@ -161,17 +161,20 @@ export type PhysicsEntityProps = {
 /** createPhysicsEntity's entity options: CoreEntityOpts plus the physics ones, which apply to a
  * `target` entity too. */
 export type PhysicsEntityOpts = CoreEntityOpts & {
+  // p352
   /** Code only: the entity's simulation tier follows its world's distance policy
-   * (PhysicsTierPolicy.ts's setPhysicsTierPolicy, p352). DYNAMIC bodies only, and only with the
+   * (PhysicsTierPolicy.ts's setPhysicsTierPolicy). DYNAMIC bodies only, and only with the
    * `physicsTiers()` feature installed (without it, ignored with one warning). */
   tierPolicy?: boolean;
-  /** Code only: the tier a `DYNAMIC` body starts in (p353 Phase 4), as if `requestPhysicsTier`
+  // p353 Phase 4
+  /** Code only: the tier a `DYNAMIC` body starts in, as if `requestPhysicsTier`
    * had applied before its first step: `STATIC` (made `FIXED`) or `DISABLED` (`STATIC` once a
-   * joint is created on it). Default `FULL`, or
-   * inside a streaming cell's content load the cell's tier. Only with the `physicsTiers()` feature
+   * joint is created on it). Default `FULL`, or inside a
+   * streaming cell's content load the cell's tier. Only with the `physicsTiers()` feature
    * installed (without it, ignored with one warning). */
   initialTier?: 'FULL' | 'STATIC' | 'DISABLED';
-  /** Code only: the entity's own world bounds (`setEntityWorldBounds`, p102), sent with its
+  // p102
+  /** Code only: the entity's own world bounds (`setEntityWorldBounds`), sent with its
    * body's create so they apply from its first check on: they replace the scene's bounds for it,
    * or exempt it (`ignore: true`). Only dynamic bodies are checked. */
   worldBounds?: EntityWorldBounds;
@@ -446,9 +449,10 @@ const createPhysicsEntityNow = async (
   return entityId;
 };
 
+// p102 §1.1
 /**
  * Debug env: warns that an entity's own world bounds are never read, its body being fixed,
- * kinematic or missing (colliders only): only dynamic bodies are checked (p102 §1.1).
+ * kinematic or missing (colliders only): only dynamic bodies are checked.
  * @internal
  * @param rigidType the type the body was created with, none for colliders only
  */
@@ -463,7 +467,8 @@ export const warnWorldBoundsNotChecked = (
   );
 };
 
-/** The create-time tier of a `DYNAMIC` body (p353 Phase 4 D3): the option's, else the creation
+// p353 Phase 4 D3
+/** The create-time tier of a `DYNAMIC` body: the option's, else the creation
  * scope's (a streaming cell's); none for `FULL`, another body type or without physicsTiers()
  * (the option then warns once, the scope is quietly ignored). */
 const resolveCreateTier = (
@@ -499,8 +504,9 @@ const deleteCreatedBodyAndColliders = async ({ rigidBody, colliders }: RigidBody
   else if (colliders.length) await deleteColliders(colliders.map((c) => c.id));
 };
 
+// p352
 /**
- * The entity's body, also while a REMOVED physics tier (p352) has taken its bucket component
+ * The entity's body, also while a REMOVED physics tier has taken its bucket component
  * away (or one in flight back has none yet): the body keeps its id, and deleting it frees what
  * the engine kept of it. Undefined for an entity without a body.
  * @internal
@@ -569,9 +575,10 @@ export type PhysicsBodyOwner = {
   rigidType: RigidBodyParams['rigidType'];
 };
 
+// p352
 /** The entity of every createPhysicsEntity body, by body id (body ids are unique across ECS
  * worlds): a moved BODY_STATIC body is synced alone through it, and physics tiers resolve joint
- * groups with it (p352). */
+ * groups with it. */
 const bodyOwners = new Map<number, PhysicsBodyOwner>();
 
 /**
@@ -590,8 +597,9 @@ const getPhysicsEntityColliders = (world: ECSWorld, entityId: number) =>
   world.getComponent(entityId, ComponentType.COLLIDER) ??
   world.getComponent(entityId, ComponentType.PHYSICS_SIM_TIER)?.colliders;
 
+// p500 Phase 3
 /**
- * Physics' restore hook (p500 Phase 3, `onPhysicsRestore`): brings the physics entities of every
+ * Physics' restore hook (`onPhysicsRestore`): brings the physics entities of every
  * ECS world in line with a snapshot restore.
  * - An entity whose body the restore reaped (made after the snapshot) is deleted, as the
  *   debugger's delete does, its visual with it; a reaped collider leaves its entity's colliders,

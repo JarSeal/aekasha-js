@@ -84,10 +84,11 @@ const readOctaves = (read: ParamReader, value: unknown): TerrainNoiseOctave[] | 
   }));
 };
 
+// p301 §7
 /**
  * The noise terrain's options for a block: its grid's size and resolution, its world-continuous
  * noise (the block's seed as it is, sampled at its place `grid × size`, so blocks of one seed
- * continue each other; p301 §7) and the params' heights, normals and skirt
+ * continue each other) and the params' heights, normals and skirt
  */
 const getNoiseOptions = (opts: TerrainGeneratorOpts, read: ParamReader): TerrainOptions => {
   const { params, seed, grid } = opts;

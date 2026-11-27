@@ -141,6 +141,7 @@ const createEnvBakeTarget = (faceSize: SkyBoxEnvSize) => {
   return target;
 };
 
+// p057 Phase 3 measured it; docs/issues/i240_three-cube-render-target-texture-link.md
 /**
  * Sets up a new target's GPU texture now, by clearing it (a clear runs three's render target
  * setup, as a render would). Without it, the target is first sampled (by every lit material,
@@ -150,10 +151,8 @@ const createEnvBakeTarget = (faceSize: SkyBoxEnvSize) => {
  * "Destroyed texture used in a submit" on every frame after that (WebGPU). Still needed with
  * three r187: its fix (#35204, a sampled render target texture is created with its target) goes
  * through `texture.renderTarget`, which a `CubeRenderTarget`'s cube texture doesn't have (its
- * constructor swaps the texture in through the setter, which sets no back-link; p057 Phase 3
- * measured the error without this clear on r187). Reported in
- * docs/issues/i240_three-cube-render-target-texture-link.md: this clear can go once three links the
- * texture.
+ * constructor swaps the texture in through the setter, which sets no back-link; without this
+ * clear the error still shows on r187). This clear can go once three links the texture.
  */
 const initEnvBakeTarget = (renderer: THREE.Renderer, target: THREE.RenderTarget) => {
   if (!renderer.hasInitialized()) return;

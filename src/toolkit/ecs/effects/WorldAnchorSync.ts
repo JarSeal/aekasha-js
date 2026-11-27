@@ -115,8 +115,9 @@ const syncWorld = (world: ECSWorld) => {
   options.compass?.setHeading(getCameraHeading(camera));
 };
 
+// p808 D7
 /**
- * Registers the world anchor sync on `world` (p808 D7): one `LATE_MAIN` system (after the render
+ * Registers the world anchor sync on `world`: one `LATE_MAIN` system (after the render
  * has updated every matrix, and while the app is paused too: a paused fly camera still moves the
  * labels) that moves each `WORLD_ANCHOR` entity's anchor to its `OBJECT3D`'s world position, then
  * projects the layer's anchors with the camera, and turns the compass. An entity without an

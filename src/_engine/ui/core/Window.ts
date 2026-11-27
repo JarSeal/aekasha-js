@@ -35,8 +35,9 @@ export const setWindowBoundsElement = (elem: HTMLElement | null) => {
   detachResizeSource = attachResizeSource();
 };
 
+// p803 D4
 /**
- * Runs `listener` whenever the HUD's bounds change size (p803 D4: the windows' clamp follows them
+ * Runs `listener` whenever the HUD's bounds change size (the windows' clamp follows them
  * without the main loop). The source attaches with the first listener and stops with the last: a
  * `ResizeObserver` on the bounds element (`setWindowBoundsElement`), whose first call follows its
  * `observe()`, or the browser window's `resize`.

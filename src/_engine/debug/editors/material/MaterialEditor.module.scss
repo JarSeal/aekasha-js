@@ -155,7 +155,6 @@
   height: var(--aek-mat-selector-height, 150px);
   padding: var(--aek-space-4);
   overflow-y: auto;
-  scrollbar-width: thin;
 
   &[hidden] {
     display: none;

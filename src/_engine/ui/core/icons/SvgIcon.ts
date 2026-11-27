@@ -2,8 +2,9 @@ import { lwarn } from '../../../utils/Logger';
 import * as builtIn from './BuiltInIcons';
 import '../../styles/kit.scss';
 
+// p607 D12
 /**
- * The icon registry (p607 D12): `getSvgIcon` renders only a registered icon, so a build holds the
+ * The icon registry: `getSvgIcon` renders only a registered icon, so a build holds the
  * SVGs that something registers and no others. The debug tools register every built-in in
  * InitEngine (debug env and prod test mode); a production build registers none unless the app does.
  */
@@ -162,8 +163,9 @@ export const registerBuiltInIcons = () => {
   }
 };
 
+// p803 D5
 /**
- * An icon's size from the type scale (p803 D5): `--aek-icon-size-sm`, `-md` or `-lg` (12, 16 and
+ * An icon's size from the type scale: `--aek-icon-size-sm`, `-md` or `-lg` (12, 16 and
  * 20 px at the defaults, smaller in the compact density). Without one an icon is `1em`: it follows
  * its text.
  */

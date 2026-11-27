@@ -20,8 +20,9 @@ const isSymbolChar = (char: string) => !/[\w\s.()+\-*/]/.test(char);
 /** An expression's own error, which the caller gets as text */
 class ExpressionError extends Error {}
 
+// p804 D6
 /**
- * Evaluates a number typed into a field (p804 D6): numbers (`1.5`, `.5`, `2e-3`), `+ - * / **`,
+ * Evaluates a number typed into a field: numbers (`1.5`, `.5`, `2e-3`), `+ - * / **`,
  * parentheses, a unary `-` or `+`, `pi` (or `π`), and the units the field declares, each a factor
  * written after a number or a closing parenthesis (`90deg`, `(1 + 2)deg`, `50%`). `**` binds
  * tighter than a unary sign and from the right (`-2 ** 2` is -4, `2 ** 3 ** 2` 512); names are

@@ -47,8 +47,9 @@ export const areAppInputsSuspended = (): boolean => appInputsSuspended;
  */
 export const areAppInputsEnabled = (): boolean => allInputsEnabled && !appInputsSuspended;
 
+// p611 D6
 /**
- * Where the input devices listen (p611 D6). `WINDOW`: the whole page (the full-page boot,
+ * Where the input devices listen. `WINDOW`: the whole page (the full-page boot,
  * `InitEngine`). `CANVAS`: the canvas only, for an engine mounted into a page it doesn't own
  * (`mountAekasha`): the pointer and touch events on the canvas, the keys while it has focus (it
  * gets a `tabindex`), the gamepads too. `NONE`: no listeners at all, so the bindings and action
@@ -60,13 +61,14 @@ export type InputScope = 'WINDOW' | 'CANVAS' | 'NONE';
 let inputScope: InputScope = 'WINDOW';
 let inputScopeRoot: HTMLElement | null = null;
 
+// p808 D5
 /**
  * Sets where the input devices listen. A device reads it when it adds its listeners (its first
  * binding or action source), so set it before: the mount does, before the boot.
  * @internal
  * @param scope where the devices listen
  * @param root the element the `CANVAS` scope's engine owns (the mount's container: the canvas
- * and the HUD), where focus keeps the gamepads read and the device tracker listens (p808 D5)
+ * and the HUD), where focus keeps the gamepads read and the device tracker listens
  */
 export const setInputScope = (scope: InputScope, root?: HTMLElement | null): void => {
   inputScope = scope;

@@ -77,6 +77,34 @@ A new folder starts at none. Deleting documented code passes, and so does docume
 repo's Stop hook runs it after an engine or toolkit change, and `--update` records a grown count
 only with `--allow-docs-drop`, so a drop is on purpose and shows in the file's diff.
 
+### No plan or issue references
+
+The plans and issues in `docs/` are the repo's history, and a reader of the API reference doesn't
+have them. A JSDoc comment in the engine or the toolkit cites none: no `(pNNN D7)`, `pNNN's`,
+`iNNN`, or a plan's or an issue's file name. A reference a maintainer needs goes in a `//` comment
+by the code it explains, or on the line above the `/**` when it's about the whole declaration:
+nothing renders a `//` comment, and a search for the plan's number still finds it.
+
+```ts
+// Before
+/** DEFAULT's settings, kept for the session while its grid comes and goes (pNNN §3.6). */
+defaultLayers: DomainSettingsLayers;
+
+// After
+// pNNN §3.6
+/** DEFAULT's settings, kept for the session while its grid comes and goes. */
+defaultLayers: DomainSettingsLayers;
+```
+
+A reference that carried meaning is written as the fact it pointed at: "pNNN removed it" becomes
+"removed in 6.0.0", "see pNNN D5" names the Hub page or the nested `CLAUDE.md` section that holds
+the decision. A comment warning about a known problem keeps the warning in words ("Rapier mis-solves
+the joints of a disabled body"), and the issue's file name goes in a `//` comment.
+
+The lint flags a reference in any `/** */` block of `src/_engine/` and `src/toolkit/`, its tags
+included (`jsdoc/no-restricted-syntax`, in `eslint.config.js`). It has no fix: rewording needs a
+person.
+
 ### Types
 
 - **Interfaces and object types:** a summary on the type, and a comment on every property a

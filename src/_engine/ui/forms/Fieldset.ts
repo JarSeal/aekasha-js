@@ -42,8 +42,9 @@ export type Fieldset = {
   isDisabled: () => boolean;
 };
 
+// p804 D9
 /**
- * Creates a fieldset (p804 D9): a native `<fieldset>` with its `<legend>` (the group's name) and
+ * Creates a fieldset: a native `<fieldset>` with its `<legend>` (the group's name) and
  * an optional hint, around a group of fields outside the property grid: a form's section, a
  * dialog's group of settings. `disabled` (and `setDisabled`) disables the group as the browser
  * does, and every field in it as its own `disabled` would: their labels, their state and the kit's

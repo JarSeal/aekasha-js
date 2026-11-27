@@ -78,8 +78,9 @@ export const moveOverviewMetric = (
   return next;
 };
 
+// p806 D10
 /** One group's rows (the engine's or the app sources') as a kit list: a visibility toggle per row,
- * moved by Alt + ArrowUp / ArrowDown or a drag (p806 D10) */
+ * moved by Alt + ArrowUp / ArrowDown or a drag */
 const createMetricList = (opts: SettingsTabOpts, ctx: DebuggerTabContext, isApp: boolean) => {
   const getRows = () =>
     getOverviewMetricEntries(opts.settings).filter((entry) => isAppMetricId(entry.id) === isApp);
@@ -115,8 +116,9 @@ const createMetricList = (opts: SettingsTabOpts, ctx: DebuggerTabContext, isApp:
   });
 };
 
+// p806 D10
 /**
- * The Overview rows editor (p806 D10): the engine's rows and the app sources' (a group of their
+ * The Overview rows editor: the engine's rows and the app sources' (a group of their
  * own after the engine's, shown once there is one) as two kit lists, and "Reset to default". Every
  * change goes through `setSettings`, whose tab refresh reads the lists and the button again on the
  * tab's scheduler.

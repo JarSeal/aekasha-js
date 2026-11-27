@@ -11,8 +11,9 @@ import { JsonSchemaRefSchema, SourcePathSchema } from '../../schemas/_SaveDataSc
  * (20 and up), receiving shadows. */
 export const DECAL_SET_DEFAULTS = { renderOrder: 10, receiveShadow: true } as const;
 
+// p309 D3
 /**
- * A decal set (`*.decalSet.json`, p309 D3): an import's mesh decals drawn in a decal material. Each
+ * A decal set (`*.decalSet.json`): an import's mesh decals drawn in a decal material. Each
  * node's mesh is a decal: its UVs in its atlas cell and a second UV set (`uv1`) 0..1 over the
  * decal, which the decal material's edge fade reads. A terrain block lists its sets in `decals`, a
  * scene the ones its code spawns in `decalSets`.

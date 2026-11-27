@@ -60,8 +60,9 @@ const AXIS_PART: Omit<NumberPart, 'axis' | 'label'> = { min: -1, max: 1, step: 0
 const isSameQuaternion = (a: Quat, b: Quat) =>
   a.x === b.x && a.y === b.y && a.z === b.z && a.w === b.w;
 
+// p804 D8
 /**
- * Creates a quaternion field (p804 D8): a quaternion (a `THREE.Quaternion` written in place) from
+ * Creates a quaternion field: a quaternion (a `THREE.Quaternion` written in place) from
  * its binding (`{ target, key }`, `{ get, set }` or `{ value }`), edited as Euler angles in
  * degrees (`order`, default XYZ) or, with `edit: 'axisAngle'`, an axis and an angle, and
  * normalised on write.

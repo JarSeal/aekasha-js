@@ -59,7 +59,8 @@ export const SKYBOX_PRESETS: Record<SkyBoxPresetName, SkyBoxPreset> = {
     clouds: { coverage: 0.2 },
     ground: {},
   },
-  /** Every p113 layer on a running day-night cycle (the showcase's dayNight.skybox.json). */
+  // p113
+  /** Every layer on a running day-night cycle (the showcase's dayNight.skybox.json). */
   DAY_NIGHT: {
     base: BLACK_BASE,
     atmosphere: { nightSkyColor: '#0a1020' },

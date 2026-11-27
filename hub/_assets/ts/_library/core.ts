@@ -1,8 +1,8 @@
 /**
  * The component library's core pieces and components (the Hub's `features/ui-kit/core/` page):
  * the icons, the button and button group, the link, the badge, the tag, the spinner, the
- * progress bar, the skeleton, the divider, the empty state, the loading overlay, the key hint
- * and the input glyph.
+ * progress bar, the skeleton, the divider, the empty state, the loading overlay, the key hint,
+ * the input glyph and the kit's scrollbars.
  */
 import {
   createBadge,
@@ -680,6 +680,42 @@ const initInputGlyphDemo: Demo = (box) => {
   prompt.append(line);
 };
 
+// --- Scrollbars ---
+
+const SCROLLBARS_ID = (name: string) => `${ID_PREFIX}Scrollbars${name}`;
+
+/** A scroller in the page: a tab stop named by `label` (the keyboard scrolls it), its text `lines` */
+const createScroller = (id: string, label: string, className: string, lines: string[]) => {
+  const scroller = document.createElement('div');
+  scroller.id = id;
+  scroller.className = `hubDemoScroller ${className}`;
+  scroller.tabIndex = 0;
+  scroller.setAttribute('role', 'region');
+  scroller.setAttribute('aria-label', label);
+  for (const text of lines) {
+    const line = document.createElement('p');
+    line.textContent = text;
+    scroller.append(line);
+  }
+  return scroller;
+};
+
+/** In the page: the kit's scrollbar, a panel that scrolls down and a box that scrolls both ways */
+const initScrollbarsDemo: Demo = (box) => {
+  const root = addKitRoot(box);
+  const log = Array.from(
+    { length: 12 },
+    (_, i) => `${String(i + 1).padStart(2, '0')}:00 Checkpoint ${i + 1} reached, the run saved.`
+  );
+  addGroup(root, 'Down: the track, its centre line, the thumb and the arrows').append(
+    createScroller(SCROLLBARS_ID('Down'), 'Run log', 'hubDemoScroller_down', log)
+  );
+  const wide = log.map((line) => `${line} ${line}`);
+  addGroup(root, 'Both ways: two bars and the corner between them').append(
+    createScroller(SCROLLBARS_ID('Both'), 'Run log, wide', 'hubDemoScroller_both', wide)
+  );
+};
+
 /** The core group's demos by their box's key (`data-hub-demo`) */
 export const CORE_DEMOS: Record<string, Demo> = {
   icons: initIconsDemo,
@@ -696,4 +732,5 @@ export const CORE_DEMOS: Record<string, Demo> = {
   loadingOverlay: initLoadingOverlayDemo,
   kbd: initKbdDemo,
   inputGlyph: initInputGlyphDemo,
+  scrollbars: initScrollbarsDemo,
 };

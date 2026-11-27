@@ -21,8 +21,9 @@ import {
   type ListConfig,
 } from './_dbg__ListFolderItems';
 
+// p114
 /**
- * The nebula creator (p114): the active sky box's nebulae list (select, add, duplicate, remove),
+ * The nebula creator: the active sky box's nebulae list (select, add, duplicate, remove),
  * the selected nebula's params, and the nebula cube (its size, memory and bake stats). Params
  * are ordinary overrides with undo (`skybox.param`, coalesced by path, eg. `nebulae.1.warp`);
  * a list edit writes the whole array as one undo step.

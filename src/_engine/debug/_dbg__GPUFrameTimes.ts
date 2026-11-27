@@ -1,5 +1,6 @@
+// p807 D5
 /**
- * The GPU time of each rendered frame (p807 D5), for the profiler's GPU row and the stats panels'
+ * The GPU time of each rendered frame, for the profiler's GPU row and the stats panels'
  * GPU and CPT panels. Debug only.
  *
  * - A side (RENDER, COMPUTE) is measured while anyone holds it (_acquireGpuFrameTimes). The
@@ -210,6 +211,6 @@ export const _onGpuFrameTime = (listener: GpuFrameListener) => {
   };
 };
 
-/** The frames completed and dropped since the page loaded (the tests and the p807 gate read
- * them). */
+// p807's gate read them too
+/** The frames completed and dropped since the page loaded (the tests read them). */
 export const _getGpuFrameTimesCounts = (): Readonly<typeof counts> => counts;

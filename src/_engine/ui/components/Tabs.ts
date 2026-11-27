@@ -97,8 +97,9 @@ const createPart = (className: string, text?: string) => {
   return span;
 };
 
+// p805 D10
 /**
- * Creates tabs (p805 D10): a tab list over panels, one panel shown at a time. A panel built from a
+ * Creates tabs: a tab list over panels, one panel shown at a time. A panel built from a
  * function is built on its tab's first selection and kept (`keepMounted`) or removed when another
  * is selected; an overflowing tab list scrolls, its cut edges faded.
  * - Parts: `.aekTabs` (`data-orientation`), `.aekTabs__list` (`data-overflow="start" | "end" |

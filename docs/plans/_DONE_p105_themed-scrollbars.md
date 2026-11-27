@@ -1,4 +1,4 @@
-Status: draft | not-implemented
+Status: implemented (Phases 1-3)
 Category: UI kit, Hub
 Related: _DONE_p103_small-bug-fixes-and-tweaks.md (the list this item came from)
 
@@ -90,7 +90,7 @@ gets a scrolling demo (a list or a fixed-height panel) in both themes, so `verif
 
 ## Phases
 
-### Phase 1: The tokens and the kit rule
+### Phase 1: The tokens and the kit rule — done
 
 1. The tokens (D1), their contrast entries, `Tokens.test.ts`.
 2. The kit rule and the removals (D2).
@@ -99,13 +99,47 @@ gets a scrolling demo (a list or a fixed-height panel) in both themes, so `verif
 4. `yarn verify:ui --update` after looking at the changed screenshots (every scrolled demo changes);
    `yarn verify:scenes` (the debugger's windows are in the scene shots: update after a look).
 
-### Phase 2: The Hub, the design document, the component library
+As built:
+
+- The rule is its own stylesheet, `ui/styles/scrollbars.scss`, which `kit.scss` `@use`s: the Hub
+  loads only `tokens.css`, so D3 `@use`s the rule alone (the Hub's `<html>` is a kit root, but
+  `kit.scss` reaches a Hub page only through the component library's script).
+- The buttons are `:start:decrement` and `:end:increment`, not `:single-button`, which matches
+  nothing on macOS (no platform buttons there); the arrows are conic gradients, so they take the
+  glyph token. The line is `border-strong` in the dark theme (`border` was nearly invisible on
+  `surface-raised`), `border` in the light; the thumb's hover is `text-muted`.
+- The tabs' list keeps a visible bar (the kit's): it was a visible thin bar, not hidden as Context
+  said, and the tabs have no wheel handling, so a hidden bar would leave a mouse no way to scroll
+  them.
+- The compact density keeps the 10 px bar: `Tokens.test.ts` keeps the density to the type and
+  space scales.
+- The design document's size table and its slot (`generated-design-scrollbars`) came in Phase 1:
+  `design.test.ts` fails on a root token no table shows.
+- Playwright's headless Chromium hides scrollbars (`--hide-scrollbars`): `devTools/verify/
+  browser.ts` launches without it, so `verify:ui`'s and the scene runner's shots show them. The
+  window demo's key script expects 555 px, not 560 (the page's own bar takes 10 px).
+- The scene runner's baseline was stale (recorded before the fog, surface and rain systems): it
+  was recorded again at the branch's last commit before the comparison. Its About setting pressed
+  a control that had moved into the Æ button's menu: the test bridge's `focusDebuggerControl` now
+  finds an open menu's items, and the setting presses the menu, then About Ækasha.
+- Firefox's colours were checked by their computed values (headless Firefox draws no scrollbar);
+  Safari wasn't reachable.
+
+### Phase 2: The Hub, the design document, the component library — done
 
 1. The Hub's surfaces (D3); `yarn hub:build`, `yarn hub:preview` in both themes, the mobile nav.
 2. The design document's Scrollbars section and the rewritten sentences (D4); the root token group.
 3. The component library's scrolling demo; `yarn verify:ui` for it.
 
-### Phase 3: Versions and the changelog
+As built:
+
+- No `--hub-*` alias: a transparent track works on every Hub surface.
+- The design document's scrollbar slot also shows a live scroller in each theme; the styling guide
+  has a Scrollbars section of its own with the demo and the Chrome 121 warning.
+- With the mobile nav open, its bar and the page's sit side by side at the right edge (overlay bars
+  hid it before): left for a later plan on the mobile navigation.
+
+### Phase 3: Versions and the changelog — done
 
 1. `src/_engine/ui/CLAUDE.md` (tokens and units: the scrollbar tokens; the styles).
 2. Versions: engine minor (new public tokens and a new look); the `CHANGELOG.md` entry (Engine,

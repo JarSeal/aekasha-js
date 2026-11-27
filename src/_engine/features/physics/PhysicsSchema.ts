@@ -60,8 +60,9 @@ export const SceneWorldBoundsSchema = z
 /** A scene's world bounds in its JSON (`worldBounds`): the box and the action, no callback. */
 export type SceneWorldBounds = z.infer<typeof SceneWorldBoundsSchema>;
 
-/** Physics' scene field (p102 Phase 4): a scene that sets `worldBounds` names `physics()` (a `null`
- * one doesn't: without physics there are no bounds to turn off). */
+// p102 Phase 4
+/** Physics' scene field: a scene that sets `worldBounds` names `physics()` (a `null` one
+ * doesn't: without physics there are no bounds to turn off). */
 export const physicsSchemaPart = {
   feature: 'physics',
   scene: {

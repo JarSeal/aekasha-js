@@ -76,8 +76,9 @@ const MOTION_MS = 200;
 const resolveDyn = (value: FieldDyn<boolean> | undefined) =>
   typeof value === 'function' ? value() : Boolean(value);
 
+// p804 D9
 /**
- * Creates a folder (p804 D9): the APG disclosure, a button (`aria-expanded`, `aria-controls`)
+ * Creates a folder: the APG disclosure, a button (`aria-expanded`, `aria-controls`)
  * over a region its children are in, which opens and shuts with the height animated and the
  * chevron turning. A shut folder's region is `hidden`, so its fields aren't read (D4) until it
  * opens, when its `scheduler` reads those once. Folders nest, each level's content indented.

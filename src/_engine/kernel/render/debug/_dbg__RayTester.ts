@@ -64,8 +64,9 @@ import {
 } from './_dbg__RayTesterState';
 import styles from './RayDebug.module.scss';
 
+// p143
 /**
- * Ray tester windows (p143), opened from the Ray cast controls tab: configure a ray, fire it
+ * Ray tester windows, opened from the Ray cast controls tab: configure a ray, fire it
  * into the current scene through the same code paths gameplay uses, see it as a debug helper
  * and read the hits. One window per ray kind: Three.js rays (Raycast.ts) and physics rays (the
  * WorldAPI queries, in either workerTarget mode).

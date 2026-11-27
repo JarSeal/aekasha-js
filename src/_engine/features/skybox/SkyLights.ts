@@ -1,6 +1,7 @@
+// p110 §0.4, p114; the later check: p057
 /**
- * The active sky box's managed lights (MANAGED_BY, p110 §0.4): a directional "disc light" per
- * sun and moon that has one (roles SUN_0..3 and MOON_0..1, p114), and an optional hemisphere or
+ * The active sky box's managed lights (MANAGED_BY): a directional "disc light" per
+ * sun and moon that has one (roles SUN_0..3 and MOON_0..1), and an optional hemisphere or
  * ambient light that follows the primary sun. They are ordinary ECS lights made by
  * createLightEntity, created on activation and deleted with the sky box. A moon light only
  * shines at night: it's scaled by its moon's lit fraction and fades out as the day comes up.
@@ -16,9 +17,9 @@
  * A `castShadow` change re-creates the disc light instead of setting the flag: with PostFX on
  * (WebGPU, three r186, 2026-09-30), turning a light's shadow back on after it was off crashed the
  * frame ("Texture 'output' ... writable usage and another usage in the same synchronization
- * scope"), while a new light with `castShadow: true` rendered fine. p057 couldn't reproduce it on
- * r186 or r187 (syncSkyLights' remarks), so the guard stays: the cost is the same one lit-material
- * rebuild either way.
+ * scope"), while a new light with `castShadow: true` rendered fine. A later check couldn't
+ * reproduce it on r186 or r187 (syncSkyLights' remarks), so the guard stays: the cost is the same
+ * one lit-material rebuild either way.
  *
  * Internal to the sky box and its debug tab, but getSkyLightIds (on the entry).
  */
@@ -595,6 +596,7 @@ export const deleteSkyLights = () => {
   warnedShadowCasters = 0;
 };
 
+// the later check: p057 Phase 3
 /**
  * Creates, updates or deletes the sky box's lights to match its definition (after every
  * activation and change). Another sky box's lights are deleted first, and an entity deleted
@@ -606,7 +608,7 @@ export const deleteSkyLights = () => {
  * light and creates a new one, never sets the flag: with PostFX on, a light whose shadow was
  * turned back on after it was off crashed the frame ("Texture 'output' ... writable usage and
  * another usage in the same synchronization scope"). Something else changing the light's flag is
- * treated the same way. p057 (Phase 3) didn't reproduce it on r186 or r187 with today's engine
+ * treated the same way. A later check didn't reproduce it on r186 or r187 with today's engine
  * (macOS, Chrome, WebGPU: largeWorld's ambient occlusion with the dayNight sun and the hub hero's
  * bloom, each shadow-casting light's flag set off and on in place twice, no error on either
  * version), so it's unknown whether three or the PostFX of then caused it; the guard costs no
@@ -616,7 +618,7 @@ export const deleteSkyLights = () => {
  * (`shadow.autoUpdate` false): three r187 renders a new map once itself. On three r186 a map
  * sampled before its first render had its GPU texture destroyed in place by that render
  * ("Destroyed texture used in a submit" on every frame, setEnvBake's remarks), so a new light
- * set `needsUpdate` until p057 (Phase 3: 120 errors on r186 without it, none on r187).
+ * set `needsUpdate` until the move to r187 (120 errors on r186 without it, none on r187).
  */
 export const syncSkyLights = (skyBoxId: string, def: SkyBoxDef, u: SkyUniforms) => {
   const world = getECSWorld();

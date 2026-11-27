@@ -15,8 +15,9 @@ export type ResolvedMergePart = {
   key?: string;
 };
 
+// p374 D3
 /**
- * The per-vertex attribute a merge writes each part's `paletteIndex` into (p374 D3): an integer
+ * The per-vertex attribute a merge writes each part's `paletteIndex` into: an integer
  * (`gpuType` `IntType`), which the merge material reads as a flat `uint`.
  * @internal
  */
@@ -110,7 +111,8 @@ const readValue = (attr: AnyAttribute, index: number, component: number) => {
 
 const defaultValue = (name: string) => (name === 'color' ? 1 : 0);
 
-/** Parts with morph targets or skinning can't share one buffer (p370 §4). */
+// p370 §4
+/** Parts with morph targets or skinning can't share one buffer. */
 const assertMergeable = (geometry: THREE.BufferGeometry, i: number) => {
   const morphs = Object.entries(geometry.morphAttributes)
     .filter(([, list]) => list?.length)
@@ -405,8 +407,9 @@ const createEmpty = (): MergedGeometry => {
   return geometry;
 };
 
+// p371 D1
 /**
- * Merges resolved parts into one new geometry with their transforms baked (p371 D1): see
+ * Merges resolved parts into one new geometry with their transforms baked: see
  * `mergeGeometryParts` for the rules. Worker-safe; the parts are only read.
  * @internal
  * @returns the merged geometry (unregistered) and the warnings for the caller to log

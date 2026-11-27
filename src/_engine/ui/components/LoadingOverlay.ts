@@ -21,15 +21,17 @@ export type LoadingOverlayProps = {
   fadeInMs?: number;
   /** Its fade out, in ms (default 250), times the motion factor. */
   fadeOutMs?: number;
+  // p808 D1
   /** Tips shown under the text while it's shown, one at a time (a loading screen's 'Hold Shift to
-   * run'), the first a random one, then in order (p808 D1). */
+   * run'), the first a random one, then in order. */
   tips?: readonly string[];
   /** How long each tip shows, in ms (default 7000; not times the motion factor: it's read). */
   tipIntervalMs?: number;
   /** The word before a tip (default 'Tip'). */
   tipLabel?: string;
+  // p808 D1
   /** An image covering the overlay behind its content (a URL: a loading screen's art),
-   * decorative; the content gets a panel over it (p808 D1). */
+   * decorative; the content gets a panel over it. */
   image?: string;
   /** Extra classes for its element. */
   class?: string | string[];
@@ -68,11 +70,12 @@ const FADE_IN_MS = 150;
 const FADE_OUT_MS = 250;
 const TIP_INTERVAL_MS = 7000;
 
+// p803 D10, p808 D1
 /**
- * Creates a loading overlay (p803 D10): it covers the HUD's bounds (a scene load) or a panel of
+ * Creates a loading overlay: it covers the HUD's bounds (a scene load) or a panel of
  * the app's while something loads, with a spinner or a progress bar and a text. It fades in and
  * out, and blocks the pointer while shown (a scene load turns the inputs off itself). With `tips`
- * and an `image` it's a game's loading screen (p808 D1).
+ * and an `image` it's a game's loading screen.
  * - Parts: `.aekLoadingOverlay` (`data-cover`, `data-state`: `hidden`, `showing`, `shown`,
  *   `hiding`; `data-image` with an image), `.aekLoadingOverlay__image` (an `img`),
  *   `.aekLoadingOverlay__content`, a decorative `createSpinner` or a `createProgressBar`

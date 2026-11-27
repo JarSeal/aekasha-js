@@ -23,8 +23,9 @@ import {
   type ListConfig,
 } from './_dbg__ListFolderItems';
 
+// p114
 /**
- * The Suns folder (p114): the active sky box's suns list (up to 4: select, add, duplicate,
+ * The Suns folder: the active sky box's suns list (up to 4: select, add, duplicate,
  * remove) and the selected sun's position, disc, halo and light. suns[0] is the primary: with
  * day-night on, the time of day places it. An extra sun's elevation and azimuth are its own,
  * which with day-night and `rotateWithSky` are where it stands at the start time.

@@ -14,8 +14,9 @@ const toListColor = (text: string) => {
   return value ? formatColorHex(value, value.a < 1) : null;
 };
 
+// p804 D8
 /**
- * The colours the page's colour fields last set (p804 D8): newest first, at most 8, each
+ * The colours the page's colour fields last set: newest first, at most 8, each
  * `'#rrggbb'` (`'#rrggbbaa'` when not opaque). A copy: what an owner saves.
  */
 export const getRecentColors = (): string[] => [...recentColors];

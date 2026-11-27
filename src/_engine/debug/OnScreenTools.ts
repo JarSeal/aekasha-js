@@ -35,8 +35,9 @@ export const updateOnScreenTools = (tools?: ToolTypes[] | ToolTypes) => {
   useDebug(debugGUI, true)?._updateOnScreenTools(tools);
 };
 
+// p806 D7
 /**
- * Disables every on-screen tool during a scene load, or enables them again (p806 D7): each
+ * Disables every on-screen tool during a scene load, or enables them again: each
  * control `aria-disabled` with the tooltip "Loading the scene…", an open drop-down closed. Debug
  * environment only. `disableDebugger`'s.
  * @internal

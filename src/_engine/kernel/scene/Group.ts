@@ -9,8 +9,9 @@ import type { CreateEntityOpts } from '../ecs/ECSHelpers';
 import { existsOrThrow } from '../../utils/Assert';
 import type { FeatureContext } from '../init/Features';
 
+// p607
 /**
- * Installs the groups (the kernel, p607): a group entity's deletion disposes its group.
+ * Installs the groups (part of the kernel): a group entity's deletion disposes its group.
  * @internal
  */
 export const installGroups = (ctx: FeatureContext) => {

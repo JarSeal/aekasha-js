@@ -62,8 +62,9 @@ export const DEFAULT_DEVICE_TARGETS: ResolvedDeviceCapabilityTargets = {
   unknownIs: 'PASS',
 };
 
+// p240 §3.1
 /**
- * The engine's level thresholds (p240 §3.1), under `AppConfig.deviceCapabilities.levelThresholds`.
+ * The engine's level thresholds, under `AppConfig.deviceCapabilities.levelThresholds`.
  * @internal
  */
 export const DEFAULT_DEVICE_LEVEL_THRESHOLDS: ResolvedDeviceLevelThresholds = {
@@ -148,9 +149,10 @@ export const resolveTargetPixelSize = (
       }
     : { width: resolution.width, height: resolution.height };
 
+// p240 §1.2
 /**
  * The reference frame's predicted GPU time over `pixels`, ms: its fixed work and its fill at the
- * benchmark's fill rate plus its triangles at the triangle rate (p240 §1.2).
+ * benchmark's fill rate plus its triangles at the triangle rate.
  * @internal
  * @returns the time, null without throughputs to predict from
  */
@@ -182,9 +184,10 @@ export const estimateFps = (
   return frameMs === null ? null : Math.round((1000 / frameMs) * 10) / 10;
 };
 
+// p240 D5
 /**
  * A window's median interval over the reference frame's predicted time at its drawing buffer's
- * pixels (p240 D5), from the measured benchmark: 1 is the prediction, 2 twice as slow. Meaningful
+ * pixels, from the measured benchmark: 1 is the prediction, 2 twice as slow. Meaningful
  * for a `GPU` window only.
  * @internal
  * @returns the ratio, rounded to 0.01; null without a prediction
@@ -204,8 +207,9 @@ export const readObservedOverPredicted = (
     : Math.round((observation.p50FrameMs / predictedMs) * 100) / 100;
 };
 
+// p240 D6
 /**
- * The observed windows' correction (p240 D6): the largest ratio of their `GPU` windows when it's
+ * The observed windows' correction: the largest ratio of their `GPU` windows when it's
  * over `slowerThan`, else null. Only lowering: a window faster than predicted corrects nothing.
  * @internal
  */
@@ -247,8 +251,9 @@ export const solvePixelRatio = (
   return ratios[ratios.length - 1];
 };
 
+// p240 §3.1
 /**
- * The GPU's level from its adapter alone (p240 §3.1, the benchmark off): `LOW` for software or no
+ * The GPU's level from its adapter alone (the benchmark off): `LOW` for software or no
  * GPU API, `MEDIUM` for WebGL2 only or an integrated GPU, `HIGH` for a discrete or unified-memory
  * one, `MEDIUM` when it can't be told. Never `ULTRA`: only a benchmark can rate that.
  * @internal
@@ -260,8 +265,9 @@ export const rateGpuHeuristic = (gpu: DeviceCapabilityMeasurements['gpu']): Qual
   return 'MEDIUM';
 };
 
+// p240 §3.1
 /**
- * The device's levels per category and overall (p240 §3.1): the GPU's from its benchmark headroom
+ * The device's levels per category and overall: the GPU's from its benchmark headroom
  * (`gpuHeadroom`, null when not benchmarked: from the adapter then). The overall level is the
  * lowest of the categories that were measured: an unknown one is skipped, and so is a memory
  * reading of 8 GB (an older browser's cap: it may be more).
@@ -317,8 +323,9 @@ export const rateDeviceLevels = (
   };
 };
 
+// p240 Phase 3
 /**
- * The debug tab's forced levels (p240 Phase 3), by category and overall; a category left out keeps
+ * The debug tab's forced levels, by category and overall; a category left out keeps
  * the device's level.
  * @internal
  */
@@ -441,8 +448,9 @@ export const readEffectiveFpsTarget = (
   return refreshHz ? Math.min(targets.fps, refreshHz) : targets.fps;
 };
 
+// p240 §1.1
 /**
- * Each target's check (p240 §1.1). The `fps` check is `UNKNOWN` without a predicted frame rate (not
+ * Each target's check. The `fps` check is `UNKNOWN` without a predicted frame rate (not
  * benchmarked); a memory reading of 8 GB is `UNKNOWN` against a higher target (an older browser's
  * cap).
  * @internal
@@ -575,8 +583,9 @@ export const scoreDeviceCapabilities = (
   };
 };
 
+// p240 D8
 /**
- * Whether `next` suggests less than `prev` (p240 D8): a known level lower, or a recommendation
+ * Whether `next` suggests less than `prev`: a known level lower, or a recommendation
  * lower (the pixel ratio, the shadow quality) or turned off (antialias, PostFX).
  * @internal
  */

@@ -101,8 +101,9 @@ export const CAM_DEBUGGER_ONLY_KEYS: ReadonlySet<string> = new Set([
   '_lensSettingsOpen',
 ]);
 
+// p150
 /**
- * The saved values of a camera in the current scene that override its creation props (p150): its
+ * The saved values of a camera in the current scene that override its creation props: its
  * saved keys but the debugger's own preferences (the helper, the folder).
  */
 export const getCameraOverriddenKeys = (appId?: string): string[] =>

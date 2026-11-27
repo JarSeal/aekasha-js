@@ -16,7 +16,8 @@ import {
 import type { EntityDebugData } from '../kernel/ecs/ECSRegistry';
 import styles from './DebugWindowGrid.module.scss';
 
-/** The label column's width: the kit's 40 %, not the drawer's 50 % (p806 Phase 0): a window is
+// p806 Phase 0
+/** The label column's width: the kit's 40 %, not the drawer's 50 %: a window is
  * narrower than the drawer (320 px by default), and at 50 % a vector's boxes cut its values */
 const LABEL_WIDTH = 40;
 
@@ -95,7 +96,8 @@ export const getEntityInfoItems = (info: DebugEntityInfo): PropertyGridItem[] =>
   ...(info.description ? [getInfoRowItem('Description', info.description)] : []),
 ];
 
-/** Where an edited entity's values come from (p150): what {@link getValueSourceItems} shows. */
+// p150
+/** Where an edited entity's values come from: what {@link getValueSourceItems} shows. */
 export type DebugValueSourceInfo = {
   /** Its `DEBUG_DATA.source`: a scene's data or code */
   source: EntityDebugData['source'];
@@ -111,8 +113,9 @@ const SOURCE_LABELS: Record<NonNullable<EntityDebugData['source']>, string> = {
   CODE: 'Code',
 };
 
+// p150
 /**
- * Where an edited entity's values come from (p150), after its info rows: its origin, whether its
+ * Where an edited entity's values come from, after its info rows: its origin, whether its
  * edits are saved, the saved values in force and the order they apply in.
  */
 export const getValueSourceItems = (info: DebugValueSourceInfo): PropertyGridItem[] => [

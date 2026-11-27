@@ -69,8 +69,9 @@ const resolveBounds = (id: number) => {
   return effective.box !== null;
 };
 
-/** Whether the body has an impulse joint: Rapier mis-solves the joints of a disabled body
- * (docs/issues/i250_rapier-joint-on-disabled-bodies-panics.md), so such a body is made FIXED. */
+// docs/issues/i250_rapier-joint-on-disabled-bodies-panics.md
+/** Whether the body has an impulse joint: Rapier mis-solves the joints of a disabled body,
+ * so such a body is made FIXED. */
 const isJointed = (rb: Rapier.RigidBody) => {
   let jointed = false;
   backend.world.impulseJoints.forEachJointHandleAttachedToRigidBody(rb.handle, () => {
@@ -79,7 +80,8 @@ const isJointed = (rb: Rapier.RigidBody) => {
   return jointed;
 };
 
-/** Takes a multibody link's multibody out with it (p250 D6): Rapier panics on a fixed link,
+// p250 D6
+/** Takes a multibody link's multibody out with it: Rapier panics on a fixed link,
  * ignores a link disabled alone, and panics with one branch disabled when an impulse joint joins
  * it to another (getMultibodyLinks), so every dynamic link is disabled and recorded, the ones taken
  * along with `takenWith`. */

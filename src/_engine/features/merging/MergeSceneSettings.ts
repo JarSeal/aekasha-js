@@ -34,7 +34,8 @@ export type SceneMergeSettings = {
   autoCellSize: number;
   /** `AUTO`'s vertex cap for a mesh that doesn't give one. */
   autoMaxVertices: number;
-  /** `AUTO`'s palettes for a mesh that doesn't give its own list (p374). */
+  // p374
+  /** `AUTO`'s palettes for a mesh that doesn't give its own list. */
   autoPalettes: readonly string[];
   /** The JSON's streaming cell size, when the scene streams. */
   streamingCellSize: number | undefined;

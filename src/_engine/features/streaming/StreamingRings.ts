@@ -2,8 +2,9 @@
 // asymmetric thresholds. Pure: the state machine (StreamingCells.ts) and its tests call it.
 import type { ResolvedStreamingSettings } from './StreamingSettings';
 
+// p353 §2's table
 /**
- * A cell's level: what its content is (p353 §2's table), from the nearest to the focus.
+ * A cell's level: what its content is, from the nearest to the focus.
  * `UNLOADED` is past the last ring.
  * @internal
  */
@@ -20,9 +21,10 @@ export const StreamingLevel = {
  */
 export type StreamingLevel = (typeof StreamingLevel)[keyof typeof StreamingLevel];
 
+// p353 Phase 5 D1
 /**
  * The deepest level whose cells have content loaded: `FAR`, whose cells hold their far and kept
- * layers (p353 Phase 5 D1).
+ * layers.
  * @internal
  */
 export const DEEPEST_LOADED_LEVEL = StreamingLevel.FAR;

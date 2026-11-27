@@ -38,7 +38,8 @@ import { physicsSwitchWorld } from './PhysicsSwitchWorld';
 import { createWorkerScopeTransport } from '../transport/WorkerScopeTransport';
 
 const STATUS_READY_STRING = 'INIT_READY';
-/** The channel to the main thread (p614 D5): every message both ways goes through it. Its first
+// p614 D5
+/** The channel to the main thread: every message both ways goes through it. Its first
  * message is initWorker's handshake. */
 const transport = createWorkerScopeTransport<
   PhysicsDownProtocol | { status: string },
@@ -49,10 +50,11 @@ let physicsWorldAPI: WorldAPI;
 let workerPhysicsState: PhysicsState | undefined;
 let transformBuffer: PhysicsTransformBuffer | undefined;
 let resolvedUseSAB = false;
+// p500
 /** Steps executed on the current world since CREATE_WORLD — the step index every transform
  * write-back is stamped with. Mirrors the main thread's own count of steps issued (reset at the
  * same CREATE_WORLD), so the two agree exactly once a STEP has been processed. RESTORE_SNAPSHOT
- * sets it to the snapshot's step, as the main thread sets its own (p500). */
+ * sets it to the snapshot's step, as the main thread sets its own. */
 let stepsExecuted = 0;
 /** Debug wireframe state mirror. Stays undefined until the main thread enables
  * tracking, which is what keeps the feature's cost at zero while no wireframe is on. */
@@ -60,7 +62,8 @@ let debugStateBuffer: PhysicsDebugStateBuffer | undefined;
 /** Tracked ids, in the order the main thread sent them — index IS slot on both sides. */
 let debugTrackedRigidBodyIds: number[] = [];
 let debugTrackedColliderIds: number[] = [];
-/** Step-statistics scratch view (p027). Allocated at every CREATE_WORLD with the SHARED_MEMORY
+// p027
+/** Step-statistics scratch view. Allocated at every CREATE_WORLD with the SHARED_MEMORY
  * transport, whatever stepStatsEnabled is (it can be switched at runtime, SET_STEP_STATS), and
  * written only while it is on. In MESSAGE_BATCH mode the stats ride on TRANSFORMS_PUSH and this
  * stays undefined. */
@@ -70,8 +73,9 @@ let stepStatsFloats: Float64Array | undefined;
  * at INIT_PHYSICS. Only the step stats' timestamps (receipt, step end) use it. */
 let mainClockOffset = 0;
 
+// p027
 /** One frame's step measurements, kept as three independent numbers all the way through —
- * they are never added together (p027). */
+ * they are never added together. */
 type StepStats = {
   /** Pure simulation time: the sum of this message's engAPI.step() calls, with sub-step
    * command replay and write-back excluded. */
@@ -81,7 +85,8 @@ type StepStats = {
   /** Worker clock at the instant the last sub-step returned, for the main thread to derive
    * the return-leg latency from. */
   stepEndAt: number;
-  /** Dynamic bodies awake and asleep after the last sub-step (p352). */
+  // p352
+  /** Dynamic bodies awake and asleep after the last sub-step. */
   awake: number;
   sleeping: number;
 };
@@ -374,9 +379,10 @@ const sendMessage: PhysicsWorkerReply = (message, data, isError, transfer) => {
 const sendMessageSimple = (message: PhysicsDownProtocol, transfer?: Transferable[]) =>
   transport.send(message, transfer);
 
+// p352
 /** Writes every slotted rigid body's transform into the hot-path buffer after a step, then
  * (MESSAGE_BATCH fallback only) pushes a copy of the used slots to the main thread as one
- * Transferable message — never one message per body. Bodies created FIXED have no slot (p352): they never
+ * Transferable message — never one message per body. Bodies created FIXED have no slot: they never
  * move under simulation, and an explicit reposition (setTranslation/setRotation) reaches the
  * main thread through the body's proxy, which keeps the pose it was given. */
 const writeBackTransforms = (stats?: StepStats) => {
@@ -458,9 +464,10 @@ const writeBackDebugState = () => {
   }
 };
 
+// p500
 /** Every body a snapshot restore kept (the backend's bodies after it: a reaped one is gone, a
  * detached one isn't listed), with what its main-thread proxy keeps a copy of (RESTORE_SNAPSHOT's
- * reply, p500). */
+ * reply). */
 const readRestoredBodies = () => {
   const bodies: RestoredBodyState[] = [];
   for (const id of engAPI.getAllRigidBodyIds()) {
@@ -477,7 +484,8 @@ const readRestoredBodies = () => {
   return bodies;
 };
 
-/** Pushes whatever collision/contact-force events and world bounds exits (p102) were collected
+// p102
+/** Pushes whatever collision/contact-force events and world bounds exits were collected
  * since the last push (the STEP that just ran, and the bounds' set and creates before it), but
  * only when at least one occurred — these are sparse and discrete, unlike the continuously-valid
  * transform buffer, so there's no reason to pay a postMessage every frame when nothing happened. */

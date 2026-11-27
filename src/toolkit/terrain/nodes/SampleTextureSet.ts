@@ -32,8 +32,9 @@ export type SampleTextureSetOptions = {
   grad?: { dx: Node<'vec2'>; dy: Node<'vec2'> };
 };
 
+// The packings: p303 D2
 /**
- * A texture set's surface at a UV, decoded from its packing (p303 D2's table). A value the packing
+ * A texture set's surface at a UV, decoded from its packing. A value the packing
  * doesn't have is null: the caller picks the stand-in (a flat normal or a bump, a roughness).
  */
 export type TextureSetSample = {
@@ -79,9 +80,10 @@ export const getBundlePacking = (bundle: AnyBundle): TextureSetPacking => {
   );
 };
 
+// The packings: p303 D2; the terrain techniques: p305
 /**
- * Decodes a texture set's packed maps at a UV into surface values (p303 D2's packings): the shared
- * first step of the toolkit's texture set materials (`textureSetSurface`) and p305's terrain
+ * Decodes a texture set's packed maps at a UV into surface values: the shared first step
+ * of the toolkit's texture set materials (`textureSetSurface`) and the terrain material's
  * techniques. It samples only the bundle's slots, once each, and applies none of the set's
  * `surface` fields: scale them in (`tint`, `normalStrength`, `roughnessScale`, `aoStrength`, the
  * `heightScale`), as the material's look needs.

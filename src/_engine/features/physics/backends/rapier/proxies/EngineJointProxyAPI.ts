@@ -32,8 +32,9 @@ export class EngineJointProxyAPI implements JointAPI {
     );
   }
 
+  // p500
   /**
-   * Points the proxy at its copy in a restored world (p500).
+   * Points the proxy at its copy in a restored world.
    * @internal
    */
   _rebind(joint: Rapier.ImpulseJoint) {

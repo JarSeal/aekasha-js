@@ -239,8 +239,9 @@ const rayCastFrameEndSystem = () => {
   helpers?._updateRayHelpers(now);
 };
 
+// p607
 /**
- * Installs ray casting (the kernel, p607): the system that ends the ray stats frame.
+ * Installs ray casting (part of the kernel): the system that ends the ray stats frame.
  * @internal
  */
 export const installRaycast = (ctx: FeatureContext) => {

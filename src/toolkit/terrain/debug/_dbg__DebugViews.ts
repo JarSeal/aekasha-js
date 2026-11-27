@@ -92,7 +92,8 @@ export type TerrainDebugViewContext = {
   define: ResolvedTerrainDefine;
   /** The packing the layers sample */
   packing: TextureSetPacking;
-  /** The snow set's taps where the snow covers (its packing's slots; p307 T10), 0 without snow */
+  // p307 T10
+  /** The snow set's taps where the snow covers (its packing's slots), 0 without snow */
   snowTaps: number;
 };
 
@@ -232,12 +233,15 @@ const buildProjection = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
   return mix(color, vec3(1), band.mul(stripes).mul(BAND_LIGHTEN)) as unknown as Node<'vec3'>;
 };
 
-/** The rain ripples' taps (p307 T4): two samples of the atlas */
+// p307 T4
+/** The rain ripples' taps: two samples of the atlas */
 const RIPPLE_TAPS = 2;
-/** The rain streaks' tap (p307 T5): one sample of the macro texture */
+// p307 T5
+/** The rain streaks' tap: one sample of the macro texture */
 const STREAK_TAPS = 1;
 
-/** The anti-tiling modes' taps (p305 D3) */
+// p305 D3
+/** The anti-tiling modes' taps */
 const ANTI_TILING_TAPS = { NONE: 1, DUAL_SCALE: 2, HEX: 3 } as const;
 
 /**
@@ -254,10 +258,11 @@ const getSampledFetches = (ctx: TerrainDebugViewContext, sampled: TerrainDebugVi
   return { always: tap * (projection.mode === 'TRIPLANAR' ? 3 : 2), gated: 0 };
 };
 
+// p307
 /**
  * The material's own texture fetches beside the layers': the splat maps, the macro variation's
  * one, each rule's noise, the colour map's one (`DETAIL`, or the far `COLOR_MAP`: sampled
- * outside the far branch), the puddle patches' one and the rain occlusion map's one (p307);
+ * outside the far branch), the puddle patches' one and the rain occlusion map's one;
  * three's lighting, shadows and environment not counted
  */
 const getMaterialFetches = ({ define }: TerrainDebugViewContext) => {
@@ -320,16 +325,17 @@ const TAP_COLORS = [
   vec3(0.85, 0.2, 0.85),
 ] as unknown as Node<'vec3'>[];
 
+// p301 §6
 /**
- * `TAPS`: the material's own texture fetches at the pixel (p301 §6's estimate made visible): every
- * sampled layer's or slot's taps (its packing slots × its anti-tiling's taps × its planes), its
- * slope gate's branch's where the share is over 0, the splat maps, the macro, the rules' noise,
- * the colour map, the puddle patches, the rain ripples' two where it rains on standing water and
- * the streaks' one on a steep face while it's wet or rains, the snow set's where snow covers; past
- * a far mode's band, those last alone (the far surface samples no layer). In
- * bands (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more magenta)
- * over the faint 1 m checker. A layer at its own index is sampled whatever its weight; sparse
- * sampling samples its slots alone.
+ * `TAPS`: the material's own texture fetches at the pixel, as `estimateTerrainFetches` counts
+ * them: every sampled layer's or slot's taps (its packing slots × its anti-tiling's taps × its
+ * planes), its slope gate's branch's where the share is over 0, the splat maps, the macro, the
+ * rules' noise, the colour map, the puddle patches, the rain ripples' two where it rains on
+ * standing water and the streaks' one on a steep face while it's wet or rains, the snow set's
+ * where snow covers; past a far mode's band, those last alone (the far surface samples no layer).
+ * In bands (up to 2 dark blue, 4 blue, 8 cyan, 12 green, 16 yellow, 24 orange, 32 red, more
+ * magenta) over the faint 1 m checker. A layer at its own index is sampled whatever its weight;
+ * sparse sampling samples its slots alone.
  */
 const buildTaps = (ctx: TerrainDebugViewContext): Node<'vec3'> => {
   const { always, gated, material } = estimateTerrainFetches(ctx);

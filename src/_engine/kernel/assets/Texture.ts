@@ -90,13 +90,15 @@ export type TextureProps = {
   userData?: Record<string, unknown>;
   /** The name (also the texture's `name`) and description for the debug tooling. */
   debugData?: { name?: string; description?: string };
+  // p299 D2
   /**
-   * A texture array asset's (`*.textureArray.json`, p299 D2) layer names by layer index, baked in
+   * A texture array asset's (`*.textureArray.json`) layer names by layer index, baked in
    * by gatherAppData: its `__url` is one KTX2 array file, loaded as a `CompressedArrayTexture`.
    */
   __layers?: string[];
+  // p299 D3
   /**
-   * A texture atlas slot's (`*.textureAtlas.json`, p299 D3) layout and cell table, baked in by
+   * A texture atlas slot's (`*.textureAtlas.json`) layout and cell table, baked in by
    * gatherAppData: its `__url` is the slot's KTX2 output, with a mip chain cut where the layout
    * stops keeping the cells apart.
    */
@@ -162,8 +164,9 @@ const createHDRTextureFromWorkerData = ({
   return texture;
 };
 
+// p607 D14
 /**
- * HDRLoader, imported with the first `.hdr` file (p607 D14).
+ * HDRLoader, imported with the first `.hdr` file.
  * @internal
  */
 export const importHDRLoader = async () =>
@@ -187,9 +190,10 @@ export const saveLoadedTexture = <T extends THREE.Texture>(
 /** The texture input resolvers' module, once loaded and registered */
 let textureInputResolvers: Promise<void> | undefined;
 
+// p299 D5
 /**
- * Loads and registers the texture array and atlas cell material input resolvers (p299 D5,
- * `TextureInputResolvers.ts`) on the first call: the loads of an array or an atlas slot await it
+ * Loads and registers the texture array and atlas cell material input resolvers
+ * (`TextureInputResolvers.ts`) on the first call: the loads of an array or an atlas slot await it
  * before they resolve, so the materials made after them find the resolvers. Not in the kernel's
  * install, so a build without arrays or atlases doesn't carry them. A failed import rejects (the
  * load that awaited it fails with it), and the next call tries again.
@@ -419,8 +423,9 @@ const toCompressedArrayTexture = (texture: THREE.Texture, layers: string[]) => {
   return array;
 };
 
+// p299 D2
 /**
- * loadTextureAsync for a texture array asset (`__layers`, p299 D2): its KTX2 output, or (without
+ * loadTextureAsync for a texture array asset (`__layers`): its KTX2 output, or (without
  * `throwOnError`) an empty array texture with the same layer count when there is none or it
  * fails. It has no source file to fall back to. Its `userData.textureArray` describes it like a
  * runtime array's (`getTextureArrayInfo`).
@@ -510,8 +515,9 @@ const getAtlasSlotInfo = (texture: THREE.Texture, atlas: TextureAtlasSlotInfo) =
   return info;
 };
 
+// p299 D3
 /**
- * loadTextureAsync for a texture atlas slot (`__atlas`, p299 D3): its KTX2 output, or (without
+ * loadTextureAsync for a texture atlas slot (`__atlas`): its KTX2 output, or (without
  * `throwOnError`) an empty texture when there is none or it fails. A slot has no source file to
  * fall back to. Its `userData.textureAtlas` has the cell table (`getTextureAtlasInfo`).
  */
@@ -552,6 +558,7 @@ const loadTextureAtlasSlotAsync = async (
   }
 };
 
+// Texture arrays: p299 D2, atlas slots: p299 D3, cube texture assets: p311
 /**
  * Loads a texture asynchronously supporting standard textures, HDR data textures, KTX2 compressed
  * textures and CubeTextures. Standard and HDR textures load where AppConfig.assets targets
@@ -561,10 +568,10 @@ const loadTextureAtlasSlotAsync = async (
  *
  * A texture from generated data (a `*.texture.json`) loads the asset pipeline's output (`__url`)
  * instead of its `fileName`, see resolveAssetUrl. The loader is picked by the loaded URL. A
- * texture array asset (`*.textureArray.json`, p299 D2) loads its KTX2 output as a
- * `CompressedArrayTexture`, a one-layer array too. A texture atlas slot (`*.textureAtlas.json`,
- * p299 D3) loads its KTX2 output with its cell table on `userData.textureAtlas`. A cube texture
- * asset (a `*.texture.json` with `faces`, p311) loads its KTX2 cube output as a
+ * texture array asset (`*.textureArray.json`) loads its KTX2 output as a
+ * `CompressedArrayTexture`, a one-layer array too. A texture atlas slot (`*.textureAtlas.json`)
+ * loads its KTX2 output with its cell table on `userData.textureAtlas`. A cube texture asset (a
+ * `*.texture.json` with `faces`) loads its KTX2 cube output as a
  * `CompressedCubeTexture`, or, in development data without one, its six faces as a `CubeTexture`.
  *
  * The texture is registered under `id` (else its uuid), owned by the scene loading (or current)

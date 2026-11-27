@@ -5,6 +5,7 @@ import { getCurrentSceneId } from '../../../kernel/scene/Scene';
 import { getNextSceneId, isCurrentlyLoading } from '../../../kernel/scene/SceneLoader';
 import type { CharacterObject } from '../CharacterTypes';
 
+// p610
 /**
  * Tuned character configuration (the Character state window's edits), saved per scene and
  * character id so it survives a reload: only the values that differ from the character's
@@ -12,7 +13,7 @@ import type { CharacterObject } from '../CharacterTypes';
  * debug env only. Copy changes is still the way to make the tuning permanent.
  *
  * The saved keys keep the flat data's underscore (`_maxVelocity`), the format from before the
- * controllers' `config` objects (p610), so tuning saved earlier still applies: the functions here
+ * controllers' `config` objects, so tuning saved earlier still applies: the functions here
  * take and give the configuration's own keys (`maxVelocity`) and map them.
  */
 

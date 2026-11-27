@@ -102,8 +102,9 @@ const getInsertT = (stops: readonly GradientStop[], index: number) => {
   return before !== -Infinity ? (t + before) / 2 : t;
 };
 
+// p804 D8
 /**
- * Creates a gradient editor (p804 D8): a preview bar with a handle under it per colour stop, and
+ * Creates a gradient editor: a preview bar with a handle under it per colour stop, and
  * the selected stop's position and colour, its value `{ stops: { t, color }[] }` (`t` 0-1, `color`
  * hex) from its binding (`{ target, key }`, `{ get, set }` or `{ value }`), written in place (the
  * object and its stops stay the instances). {@link evaluateGradient} reads a colour from it.

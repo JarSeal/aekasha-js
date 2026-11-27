@@ -70,8 +70,10 @@ const toThousandths = (value: number) =>
 /** A share as a gradient stop's percent, to a thousandth of one */
 const toPercent = (share: number) => `${Math.round(share * 100000) / 1000}%`;
 
+// p805 D9
+// The aria-hidden exception: p800 D8
 /**
- * Creates a donut (p805 D9): a ring that fills to one value, or shows the parts of a whole. A
+ * Creates a donut: a ring that fills to one value, or shows the parts of a whole. A
  * conic gradient, so it costs one custom property per change.
  * - Parts: `.aekDonut` (`data-mode`: `value` or `parts`) holding `__ring` (`__disc`, the gradient
  *   with its hole, and `__centre`, the text) and, with parts and `legend`, `.aekGraphLegend` (an
@@ -83,7 +85,8 @@ const toPercent = (share: number) => `${Math.round(share * 100000) / 1000}%`;
  * - ARIA: with `label`, one value is a `role="meter"` (`aria-valuemin` 0, `-max` 100,
  *   `aria-valuenow` the percent, `aria-valuetext` from `format`) and parts a `role="img"` whose
  *   label lists them; the legend and the centre are `aria-hidden`. Without `label` it's
- *   `aria-hidden` (p800 D8's written deviation: a figure beside it says what it shows).
+ *   `aria-hidden` (a deliberate exception to the kit's accessibility rules: a figure beside
+ *   it says what it shows).
  * @example
  * ```ts
  * // How far a measuring window has run, beside its figure: decorative

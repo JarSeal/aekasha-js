@@ -58,8 +58,9 @@ const createPart = (tag: string, className: string) => {
   return part;
 };
 
+// p805 D9
 /**
- * Creates a stat tile (p805 D9): one figure that matters, large, with its unit, the change since
+ * Creates a stat tile: one figure that matters, large, with its unit, the change since
  * the last period and, optionally, a sparkline of its recent values. A HUD's or a dashboard's
  * figure, set as often as it changes.
  * - Parts: `.aekStatTile` (`data-trend`: `up`, `down`, `flat` while a change shows; `data-tone`:

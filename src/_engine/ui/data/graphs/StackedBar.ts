@@ -49,8 +49,9 @@ export type StackedBar = {
 
 type Segment = { elem: HTMLElement; share: number; color: string; title: string };
 
+// p805 D9
 /**
- * Creates a stacked bar (p805 D9): the parts of a whole side by side in one bar (a frame's time
+ * Creates a stacked bar: the parts of a whole side by side in one bar (a frame's time
  * by stage, memory by category), or one part against a budget (`total`). A segment per part, its
  * width its share; no SVG, no canvas.
  * - Parts: `.aekStackedBar` (`data-over` when the parts pass `total`) holding `__track` (a

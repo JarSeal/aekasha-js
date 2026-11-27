@@ -29,7 +29,8 @@ import { _handleOwnGather, _rememberWrittenPaths } from './_dbg__DevFilesGather'
 
 export { _showGatherNoteAfterReload } from './_dbg__DevFilesGather';
 
-/** The dev files' browser side (p342 §2.4, p355 §2.4); the public API is `debug/DevFiles.ts`. */
+// p342 §2.4, p355 §2.4
+/** The dev files' browser side; the public API is `debug/DevFiles.ts`. */
 
 const getToken = () =>
   document.querySelector<HTMLMetaElement>(`meta[name="${DEV_FILES_TOKEN_META}"]`)?.content || null;
@@ -147,11 +148,12 @@ const commit = async (body: DevFilesCommitRequest) => {
   return readJson<DevFilesCommitBody>(response, 'commit');
 };
 
+// p355 §2.3
 /**
  * `writeDevFiles` (its JSDoc): with "Confirm writes" on, a dry run, its dialog, then the commit
  * against the dry run's hashes.
  * @param opts.skipConfirm no dry run and dialog: the caller showed its own (the save menu's
- * "Save specific data…" dialog, p355 §2.3)
+ * "Save specific data…" dialog)
  */
 export const _writeDevFiles = async (
   writes: DevFileWrite[],

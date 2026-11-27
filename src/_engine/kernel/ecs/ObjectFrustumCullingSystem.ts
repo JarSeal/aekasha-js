@@ -6,11 +6,11 @@ import { ComponentType } from './ECSCoreComponents';
 import { reconcileObject3DVisibility } from './ECSCoreSystems';
 import type { FeatureContext } from '../init/Features';
 
+// p080 §2.4
 /**
  * Opts the entity in or out of frustum culling (`FRUSTUM_CULLING_ENABLED`): a mesh, a point or a
  * spot light is then hidden while outside the main camera's frustum. Opting out shows it again.
- * `Light.ts`' `setLightFrustumCullingEnabled` delegates here
- * (p080 §2.4).
+ * `Light.ts`' `setLightFrustumCullingEnabled` delegates here.
  * @internal
  */
 export const setFrustumCullingEnabled = (entityId: number, enabled: boolean, world: ECSWorld) => {
@@ -117,13 +117,14 @@ const getInstanceWorldBoundingSphere = (entityId: number, world: ECSWorld) => {
 
 const _meshBoundingSphere = new THREE.Sphere();
 
+// i090; the conservative radius: p080 §2.2; the instance bounds provider: i100
 /**
  * A mesh entity's world-space bounding sphere: its geometry's (computed if missing) at its world
- * position, the radius scaled by its largest scale axis (conservative for a non-uniform scale,
- * p080 §2.2). An `InstancedMesh`'s is its own sphere over every instance (computed if missing)
- * in its world space, so a cell of static instances is measured whole (i090). An entity without
+ * position, the radius scaled by its largest scale axis (conservative for a non-uniform scale).
+ * An `InstancedMesh`'s is its own sphere over every instance (computed if missing)
+ * in its world space, so a cell of static instances is measured whole. An entity without
  * an `OBJECT3D` is measured by its instance bounds provider (`registerInstanceBoundsProvider`: a
- * pool instance's drawn copy, i100). Undefined for an entity without a mesh, or an instance not
+ * pool instance's drawn copy). Undefined for an entity without a mesh, or an instance not
  * drawn.
  * Shared with the spatial feature's light culling.
  * @internal
@@ -215,8 +216,9 @@ export const objectFrustumCullingSystem = (world: ECSWorld) => {
 const FRUSTUM_CULLED = Object.freeze({ isFrustumCulled: true });
 const FRUSTUM_SHOWN = Object.freeze({ isFrustumCulled: false });
 
+// p607
 /**
- * Installs frustum culling (the kernel, p607): the visibility hook and the culling system.
+ * Installs frustum culling (part of the kernel): the visibility hook and the culling system.
  * @internal
  */
 export const installObjectFrustumCulling = (ctx: FeatureContext) => {

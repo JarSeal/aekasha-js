@@ -136,8 +136,10 @@ const setBodyContent = (body: CMPHandle, content: CMPHandle | string | null | un
   else if (content) body.add(content);
 };
 
+// p808 D7, p808 D4
+// aria-hidden: p808 D4
 /**
- * Creates a world anchor layer (p808 D7): HUD content that follows points in the 3D world,
+ * Creates a world anchor layer: HUD content that follows points in the 3D world,
  * nameplates over characters, a waypoint, a damage number. The app (or the toolkit's
  * `registerWorldAnchorSync`, from entities) sets each anchor's world position, and `update`
  * projects them all with the camera once a frame: an anchor behind the camera or off the screen
@@ -152,13 +154,13 @@ const setBodyContent = (body: CMPHandle, content: CMPHandle | string | null | un
  *   `--aek-world-anchor-arrow-distance` (from the content's centre, default 20 px),
  *   `--aek-world-anchor-layer-z` (the layer's `z-index`, default `auto`: under the HUD's other
  *   pieces added after it); `--aek-world-anchor-angle` is the update's.
- * - Per frame (p808 D4): an anchor's `transform` is written only when its rounded pixel position
+ * - Per frame: an anchor's `transform` is written only when its rounded pixel position
  *   changed, its state and arrow only when they changed, nothing is allocated but those strings,
  *   and nothing is sorted unless `depthSort` (an insertion sort in place, nearly sorted from the
  *   frame before, and a `z-index` written only where an anchor's place changed). The layer has
  *   `contain: strict`, so its anchors' moves lay out nothing outside it.
  * - Assistive tech: the content is the app's and is read as it is (a nameplate's name), a hidden
- *   anchor is `display: none`; the arrow is `aria-hidden` (p808 D4: the direction to a waypoint
+ *   anchor is `display: none`; the arrow is `aria-hidden` (the direction to a waypoint
  *   the game also gives otherwise, the compass's marker, the tracker's text). The layer takes no
  *   pointer events.
  * - Motion: none; an anchor moves with the camera.

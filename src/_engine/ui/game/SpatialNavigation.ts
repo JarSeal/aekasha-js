@@ -120,7 +120,8 @@ const getAcross = (from: Box, to: Box, axis: Axis) => {
   return { gap, offset: Math.abs(toStart + toEnd - fromStart - fromEnd) / 2 };
 };
 
-/** The entry nearest ahead of `from` in the direction (p808 D8): its distance along the direction
+// p808 D8
+/** The entry nearest ahead of `from` in the direction: its distance along the direction
  * plus twice its gap across it, the smaller wins, then the smaller centre offset, then the first.
  * The boxes wholly ahead first; with none, the ones whose centre is (an overlapping layout). */
 const findNearestAhead = <T extends { box: Box }>(
@@ -201,8 +202,9 @@ const keepsArrowKey = (elem: Element, axis: Axis) => {
 /** Whether `elem` is rendered and nothing inert holds it */
 const isLive = (elem: Element) => elem.getClientRects().length > 0 && !elem.closest('[inert]');
 
+// p808 D8
 /**
- * Creates a spatial navigation (p808 D8): it moves the focus by position among the tab stops under
+ * Creates a spatial navigation: it moves the focus by position among the tab stops under
  * `root`, the way a game's menu moves with a d-pad, and reads the arrow keys itself. The app's
  * gamepad calls `move`, `nextGroup`, `previousGroup` and `back` (through its menu's action map);
  * the keyboard's Tab still works as on any page.

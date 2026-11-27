@@ -77,8 +77,9 @@ const isDecalNode = (where: string, info: ImportedGeometryInfo) => {
   return true;
 };
 
+// p309 D3
 /**
- * Spawns a decal set (p309 D3) that the scene lists: a mesh per node of its import (a decal, UV'd
+ * Spawns a decal set that the scene lists: a mesh per node of its import (a decal, UV'd
  * into its atlas cell), drawn in the set's decal material at its render order, receiving shadows
  * by its `receiveShadow` and never casting them, without physics. A terrain block spawns the sets
  * its `decals` names; call this for a set of the scene's own. Its meshes belong to the spawning

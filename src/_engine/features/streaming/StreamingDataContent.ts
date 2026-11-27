@@ -108,11 +108,12 @@ const setFarInstanceMatrix = (mesh: THREE.InstancedMesh, i: number, t: FarTransf
  * of its own: it names its entries, or has the deprecated instances */
 const isFarGroup = (far: StreamingFarMesh) => !!(far.entries ?? far.instances);
 
+// p353 Phase 5 D7; p377 D3
 /**
- * A far group's entity (p353 Phase 5 D7): one `InstancedMesh` of the group's registered geometry
+ * A far group's entity: one `InstancedMesh` of the group's registered geometry
  * and material, an instance per entry, holding a ref on both (the mesh tag's delete hook releases
  * them). An instance is at its near entry's transform (`far.entries`, indices into the manifest's
- * `meshes`, p377 D3), or at the deprecated `far.instances`' when the group has no `entries`. Not in
+ * `meshes`), or at the deprecated `far.instances`' when the group has no `entries`. Not in
  * the ECS frustum culling (it measures one instance at the origin): three culls the mesh by its
  * bounds over every instance. Throws when its geometry or material isn't registered.
  * @internal

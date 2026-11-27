@@ -1,5 +1,6 @@
+// p114
 /**
- * Nebula layer (p114): procedural emission nebulae, baked into the static-layers cube
+ * Nebula layer: procedural emission nebulae, baked into the static-layers cube
  * (SkyStaticLayers.ts), never evaluated per frame. Each nebula is a patch of the sky around its
  * direction: an elliptical shape (size, stretch, orientation, falloff) that erodes a
  * domain-warped fbm cloud (filaments over a soft glow), coloured by density through 2-3 colour

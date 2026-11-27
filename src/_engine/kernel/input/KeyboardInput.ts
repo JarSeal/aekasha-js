@@ -112,7 +112,8 @@ const heldRawKeys = new Set<string>();
 const heldLowerKeys = new Set<string>();
 /** Written in place on each key event */
 const heldModifiers: Modifiers = {};
-/** The held keys (lowercased) whose keydown went to a debugger control (p806 D12): the app's
+// p806 D12
+/** The held keys (lowercased) whose keydown went to a debugger control: the app's
  * input doesn't see them until their keyup */
 const debuggerHeldLowerKeys = new Set<string>();
 
@@ -195,8 +196,9 @@ const readKeyEvent = (e: KeyboardEvent) => {
 let debuggerTestedEvent: KeyboardEvent | null = null;
 let isDebuggerTestedEventOnControl = false;
 
+// p806 D12
 /**
- * Whether a key event belongs to a debugger control (p806 D12): its keydown went to an element in
+ * Whether a key event belongs to a debugger control: its keydown went to an element in
  * a debugger root (`DEBUGGER_ROOT_ATTR`: the focus was on the drawer, a debug window, the on-screen
  * tools), or, for a keyup, the keydown of its key did. The app's input (the action maps outside
  * the `DEBUG` context, the key bindings that aren't debug keys) leaves such a key alone: it

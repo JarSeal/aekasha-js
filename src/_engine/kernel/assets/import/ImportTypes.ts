@@ -38,7 +38,8 @@ export type ImportAssetParams = {
   /** Registers the geometries as persistent (they survive a ref count of 0 and
    * releaseImportedAsset without `includePersistent`). */
   isPersistent?: boolean;
-  /** Generate a LOD chain (generateLodChain, p347) for every rendered geometry after the import:
+  // p347
+  /** Generate a LOD chain (generateLodChain) for every rendered geometry after the import:
    * true for the default options, or the options. Not awaited by the import; collider-only nodes
    * and skinned or morph-target geometry are skipped. A geometry that already has a chain keeps
    * it. Default false. */
@@ -119,8 +120,9 @@ export type ImportedGeometryInfo = {
   meshName?: string;
   /** The primitive came from KHR_draco_mesh_compression (vertex order is not preserved). */
   isDracoCompressed: boolean;
-  /** Its positions were quantized by the asset pipeline and the import made them floats again
-   * (i020): in its node's space like any other, but only within the encode's precision of the
+  // docs/issues/_DONE_i020_quantized-glb-geometry-by-id.md
+  /** Its positions were quantized by the asset pipeline and the import made them floats again:
+   * in its node's space like any other, but only within the encode's precision of the
    * source's (a terrain block needs them exact). */
   isDequantized?: boolean;
   /** Only with importTextures: which registered texture filled which slot of this primitive's glTF

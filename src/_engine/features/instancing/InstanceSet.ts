@@ -222,9 +222,10 @@ const loadBackendAsync = async (kind: InstanceSetBackendKind) =>
     ? (await import('./InstanceSetGpu')).createGpuInstanceSetBackend
     : (await import('./InstanceSetCpu')).createCpuInstanceSetBackend;
 
+// p354
 /**
- * Creates an instance set (p354): up to millions of
- * instances of an instanced LOD pool's levels as plain data, with no entity per instance. On
+ * Creates an instance set: up to millions of instances of
+ * an instanced LOD pool's levels as plain data, with no entity per instance. On
  * WebGPU, compute passes cull each instance against the camera and select its level by the LOD
  * rules (`LodDef`'s screen sizes, `hysteresis` and `cullScreenSize`, against the LOD selection's
  * camera), and each level and geometry group draws with one indirect draw: the CPU cost per frame

@@ -10,8 +10,9 @@ import type { ImportAssetParams } from '../../kernel/assets/import/ImportTypes';
 import type { LightProps } from '../../kernel/light/Light';
 import type { MeshProps } from '../../kernel/mesh/Mesh';
 
+// p353 Phase 5 D9
 /**
- * A cell's far or kept content layer in a {@link StreamingManifestCell} (p353 Phase 5 D9):
+ * A cell's far or kept content layer in a {@link StreamingManifestCell}:
  * indices into the manifest's lists, and its estimated GPU memory. A list it has nothing in is
  * left out.
  */
@@ -31,10 +32,11 @@ export type StreamingManifestLayer = {
   bytesEstimate: number;
 };
 
+// Deprecated by p377 D3
 /**
  * One instance of a far mesh group ({@link StreamingFarMesh}): an entry's transform, as its mesh
  * props had it.
- * @deprecated A group names its near entries in `entries` (p377 D3), whose props hold the
+ * @deprecated A group names its near entries in `entries`, whose props hold the
  * transforms. Removed in engine 7.0.0.
  */
 export type StreamingFarInstance = Pick<
@@ -42,8 +44,9 @@ export type StreamingFarInstance = Pick<
   'position' | 'rotation' | 'quaternion' | 'scale'
 >;
 
+// p353 Phase 5 D7, p377 D1-D3
 /**
- * A far representation in a {@link StreamingManifest} (p353 Phase 5 D7, p377 D1-D3): an entry's
+ * A far representation in a {@link StreamingManifest}: an entry's
  * coarsest LOD level, or a mesh without `lod` itself. A group (with `entries`, or the deprecated
  * `instances`) is one `InstancedMesh` of the props' `geo`, `mat`, `castShadow` and
  * `receiveShadow` drawing every entry of a cell that shares them; without either, one mesh of its
@@ -54,13 +57,15 @@ export type StreamingFarMesh = {
    * and `castShadow`, no `lod`, app id or `merge` (the near entry keeps them). A group's: those
    * four only. */
   props: MeshProps;
+  // p377 D3
   /** A group's entries: indices into the manifest's `meshes`, an instance each at the near
-   * entry's `position`, `rotation` (or `quaternion`) and `scale` (p377 D3: an index in the first
-   * download instead of a second transform). */
+   * entry's `position`, `rotation` (or `quaternion`) and `scale` (an index in the first download
+   * instead of a second transform). */
   entries?: number[];
+  // Deprecated by p377 D3
   /**
    * A group's instances, one per entry. Still drawn when given (a group has `entries` or this).
-   * @deprecated Use `entries` (p377 D3): the gather writes it instead since engine 6.9.0.
+   * @deprecated Use `entries`: the gather writes it instead since engine 6.9.0.
    * Removed in engine 7.0.0.
    */
   instances?: StreamingFarInstance[];
@@ -107,7 +112,8 @@ export type StreamingManifest = {
   cellSize: number;
   /** The cells' meshes, resolved (save entries applied). */
   meshes: { props: MeshProps; entityOpts?: CoreEntityOpts }[];
-  /** The cells' far representations (p353 Phase 5 D7, p377 D1); left out when there are none. */
+  // p353 Phase 5 D7, p377 D1
+  /** The cells' far representations; left out when there are none. */
   farMeshes?: StreamingFarMesh[];
   /** The cells' point and spot lights, resolved. */
   lights: { lightProps: LightProps; entityOpts?: CoreEntityOpts }[];

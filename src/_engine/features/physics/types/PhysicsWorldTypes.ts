@@ -22,8 +22,9 @@ import type {
   ShapeCastHitAPI,
 } from './PhysicsQueryTypes';
 
+// p500
 /**
- * A physics world's state, taken by `WorldAPI.takeSnapshot` (p500): the backend's serialized
+ * A physics world's state, taken by `WorldAPI.takeSnapshot`: the backend's serialized
  * bytes, and what a restore checks them against. Restoring it into another world (one made since,
  * by a scene load or a delete and create) is refused. It's plain data, kept by the caller as long
  * as it likes, and restoring it doesn't consume it: one snapshot can be restored again and again.
@@ -47,8 +48,9 @@ export type RestoreSnapshotOpts = {
   orphanPolicy?: 'DELETE' | 'KEEP';
 };
 
+// p500 D3
 /**
- * What a restore changed besides the poses (p500 D3): the restored world holds exactly what both
+ * What a restore changed besides the poses: the restored world holds exactly what both
  * the snapshot and the API knew. Everything the API made after the snapshot is gone (reaped), and
  * what the API deleted after it stays gone (the orphans). Both are empty when nothing was created
  * or deleted since the snapshot, the only case where a restore is an exact rewind.
@@ -552,8 +554,9 @@ export type WorldAPI = {
   createJoint(params: JointParams): Promise<JointAPI>;
   /** `createJoint()` without the wait: MAIN_THREAD only (throws on WORKER_THREAD). */
   createJointSync(params: JointParams): JointAPI;
+  // p250
   /**
-   * Creates a new multibody joint, `body1Id` the parent and `body2Id` the child (p250); throws
+   * Creates a new multibody joint, `body1Id` the parent and `body2Id` the child; throws
    * (rejects) on what a multibody can't be, as `createMultibodyJoint` does.
    */
   createMultibodyJoint(params: MultibodyJointParams): Promise<MultibodyJointAPI>;

@@ -6,7 +6,8 @@ import { float, max, uv, vertexColor } from 'three/tsl';
 // The real generic `Node<T>` typings (the `three/tsl` `Node` is a loose local shim)
 import type { Node, TextureNode } from 'three/webgpu';
 
-/** The vertex colour's channel layouts (p301 §4.4) */
+// p301 §4.4
+/** The vertex colour's channel layouts */
 export type VertexColorLayout = 'RGB_AO' | 'RGBA';
 
 /**
@@ -17,9 +18,10 @@ export type PaintedWeights = {
   weights: Node<'float'>[];
   /** `RGB_AO`'s A, 0..1; null for `RGBA` and splat maps */
   vertexAo: Node<'float'> | null;
+  // p307 T7
   /**
-   * The first splat map's A (a layer's weight, or with at most 4 painted layers free: p307's
-   * regional wetness); null for the vertex colour
+   * The first splat map's A (a layer's weight, or with at most 4 painted layers free: the wet
+   * response's regional wetness); null for the vertex colour
    */
   splatAlpha: Node<'float'> | null;
 };

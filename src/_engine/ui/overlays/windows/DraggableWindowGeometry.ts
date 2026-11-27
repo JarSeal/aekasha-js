@@ -17,8 +17,9 @@ import type {
  * @internal
  */
 export const RESIZING_ATTR = 'data-resizing';
+// p803 D5
 /**
- * The window element's state attribute: `collapsed` or `expanded` (p803 D5).
+ * The window element's state attribute: `collapsed` or `expanded`.
  * @internal
  */
 export const STATE_ATTR = 'data-state';

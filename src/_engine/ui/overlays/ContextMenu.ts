@@ -58,8 +58,9 @@ const isMenuKey = (e: KeyboardEvent) =>
   e.key === 'ContextMenu' ||
   (e.key === 'F10' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey);
 
+// p805 D11
 /**
- * Creates a context menu (p805 D11): the kit's menu (`createMenu`'s items, submenus included)
+ * Creates a context menu: the kit's menu (`createMenu`'s items, submenus included)
  * opened over `target`'s descendants, its items read at each open from the element it opens on.
  * - Opens: a right click at the pointer (Shift+right click keeps the browser's own menu, as does a
  *   right click where `items` gives none); the ContextMenu key or Shift+F10 on a focused element

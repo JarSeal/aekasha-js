@@ -25,8 +25,9 @@ export type Divider = {
   cmp: CMPHandle;
 };
 
+// p803 D10
 /**
- * Creates a divider (p803 D10): a line between two groups of content, across a column or down a
+ * Creates a divider: a line between two groups of content, across a column or down a
  * row.
  * - Parts: `.aekDivider` (`data-orientation`): an `<hr>` across, a `<div>` down.
  * - Custom properties (read on any ancestor): `--aek-divider-color` (default `--aek-border`),

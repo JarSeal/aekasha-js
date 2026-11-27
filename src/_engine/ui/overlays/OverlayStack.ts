@@ -4,16 +4,18 @@
 // of the HUD inert.
 import { getHUDRootCMP, hasHudRoot } from '../core/HUD';
 
+// p803 D7
 /**
  * The attribute on a debugger root (the drawer, the editor drawer, the on-screen tools, a debug
  * window): an app's inert entry leaves the element live, so the debugger still works over an app's
- * modal dialog; a debug entry's (`isDebug`) doesn't (p803 D7).
+ * modal dialog; a debug entry's (`isDebug`) doesn't.
  * @internal
  */
 export const DEBUGGER_ROOT_ATTR = 'data-aek-debugger';
 
+// p805 D4
 /**
- * The attribute on a HUD root child no inert entry covers: the announcer's live region (p805 D4),
+ * The attribute on a HUD root child no inert entry covers: the announcer's live region,
  * which holds nothing focusable and must be read under a modal too.
  * @internal
  */
@@ -123,8 +125,9 @@ const applyInert = () => {
   inertElems = next;
 };
 
+// p803 D7
 /**
- * Puts an overlay on top of the stack (p803 D7). While it's the top entry, Escape pressed with
+ * Puts an overlay on top of the stack. While it's the top entry, Escape pressed with
  * the focus inside the HUD root closes it (its `close`) and goes no further, its keyup included:
  * no key binding or other listener gets it. A key pressed outside the HUD root is the page's.
  * @internal

@@ -103,8 +103,9 @@ const declareInputs = (layer: ProjectedLayer, ctx: ProjectionContext) => {
 export const getSlopeGateShare = (gate: Node<'vec2'>, slope: Node<'float'>) =>
   smoothstep(gate.x, gate.y, slope) as unknown as Node<'float'>;
 
+// p305 D5
 /**
- * A projecting layer with a slope gate (p305 D5): its planar tap under the gate's first slope, its
+ * A projecting layer with a slope gate: its planar tap under the gate's first slope, its
  * projection past the second, mixed between, the projection's taps sampled only where the share is
  * over 0 (a dynamic branch). Returns the layer's sample and normal as members of one struct var.
  * @internal

@@ -30,7 +30,8 @@ export type BuiltDebuggerPane = {
   refresh: () => void;
 };
 
-/** A tab's UI state under its `uiLsKey`: 5.x's `folders`, and the label column's width (p806) */
+// p806
+/** A tab's UI state under its `uiLsKey`: 5.x's `folders`, and the label column's width */
 type UIState = { folders?: { [folderId: string]: boolean }; labelWidth?: number };
 
 /** What a pane needs of its owner: a debugger tab, or eg. a debug window with its own state. */

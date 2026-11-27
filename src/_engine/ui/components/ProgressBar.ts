@@ -50,8 +50,9 @@ const createPart = (className: string) => {
   return span;
 };
 
+// p803 D10
 /**
- * Creates a progress bar (p803 D10): how far a task is (a download, a level's load, a health bar),
+ * Creates a progress bar: how far a task is (a download, a level's load, a health bar),
  * or that it's going on with no known end (indeterminate).
  * - Parts: `.aekProgress` (`data-indeterminate` while it is), `.aekProgress__header` with
  *   `.aekProgress__label` and `.aekProgress__value` (`showValue`), `.aekProgress__track` (the

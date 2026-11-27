@@ -73,7 +73,8 @@ export const MeshMergeOptionsSchema = z
       .union([z.literal('AUTO'), GroupIdSchema])
       .optional()
       .describe("The group's id, or AUTO (the default)."),
-    /** The mode of the group it joins (p375): a group of the other mode refuses the mesh. */
+    // p375
+    /** The mode of the group it joins: a group of the other mode refuses the mesh. */
     mode: ModeSchema.optional(),
     /** `AUTO` only: the cells' side, in metres. */
     cellSize: CellSizeSchema.optional(),
@@ -133,7 +134,8 @@ export const SceneMergeGroupEntrySchema = z.union([
       castShadow: z.boolean().optional(),
       /** Whether the group's mesh receives shadows (default: its first member's). */
       receiveShadow: z.boolean().optional(),
-      /** A palette the scene lists: the group takes any of its materials (p374). */
+      // p374
+      /** A palette the scene lists: the group takes any of its materials. */
       palette: z
         .string()
         .min(1)
@@ -141,7 +143,8 @@ export const SceneMergeGroupEntrySchema = z.union([
         .describe(
           'A merge material palette the scene lists (mergeMaterials): the group takes meshes of any of its materials, drawn in one draw by its merge material. Not with mode BATCHED.'
         ),
-      /** How the group draws its members (p375). */
+      // p375
+      /** How the group draws its members. */
       mode: ModeSchema.optional(),
       /** `BATCHED` only: each member culled on its own (default true). */
       perMemberCulling: z
@@ -150,7 +153,8 @@ export const SceneMergeGroupEntrySchema = z.union([
         .describe(
           'BATCHED only: each member is frustum-culled on its own, in every pass (default true). false skips the per-member walk, for a batch that is always in view.'
         ),
-      /** `BATCHED` only: the least room each geometry's slot reserves (p375 Phase 3). */
+      // p375 Phase 3
+      /** `BATCHED` only: the least room each geometry's slot reserves. */
       geometryReserve: z
         .strictObject({
           /** Vertices, a positive integer. */
@@ -162,7 +166,8 @@ export const SceneMergeGroupEntrySchema = z.union([
         .describe(
           "BATCHED only: the least room each geometry's slot in the batch reserves ({ vertices, indices? }; its own size when larger), so a pool whose geometries come and go (decals) reuses its slots and its buffers stop growing."
         ),
-      /** `BATCHED` only: a transparent batch's order (p375 Phase 3). */
+      // p375 Phase 3
+      /** `BATCHED` only: a transparent batch's order. */
       transparentOrder: z
         .enum(['DEPTH', 'JOIN'])
         .optional()
@@ -198,7 +203,8 @@ const SceneMergeMaterialsSchema = createUniqueIdsSchema('merge material')
     "Merge material palettes (*.mergeMaterial.json ids) the scene uses: their slot arrays load with the scene's textures, and only a listed palette's merge material can be made in it."
   );
 
-/** The merging feature's fields (p372 §4, p374): a mesh's `merge`, a scene's `mergeGroups` and
+// p372 §4, p374
+/** The merging feature's fields: a mesh's `merge`, a scene's `mergeGroups` and
  * `mergeMaterials`. */
 export const mergingSchemaPart = {
   feature: 'merging',
@@ -223,7 +229,8 @@ export const mergingSchemaPart = {
       .describe(
         "Merge group settings for the groups made in this scene ({ id, castShadow?, receiveShadow?, palette?, mode?, perMemberCulling?, geometryReserve?, transparentOrder? }), and AUTO's defaults ({ id: 'AUTO', cellSize?, maxVertices?, palettes? })."
       ),
-    /** The merge material palettes the scene uses (p374): their arrays load with its textures. */
+    // p374
+    /** The merge material palettes the scene uses: their arrays load with its textures. */
     mergeMaterials: SceneMergeMaterialsSchema,
   },
   mesh: {

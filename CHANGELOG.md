@@ -4,6 +4,63 @@ One entry per branch merged to `main`, newest first, written in that branch's PR
 
 Earlier releases are only recorded in the git history.
 
+## 2026-11-27 — p104_p105-remove-plan-references_and_themed-scrollbar (p104 Phases 1-3, p105 Phases 1-3)
+
+Plan references out of JSDoc (p104): the engine's and the toolkit's doc comments no longer cite the plans and issues that made them (`(p607 D7)`, `i250`, `p303_….md`). The Hub's API Documentation, its search snippets, `yarn docs` and the editor's hover now read as documentation of the engine, not of its history. A reference a maintainer needs moved to a `//` comment by the code, which nothing renders and a search for the plan's number still finds. One that carried meaning was reworded as the fact it pointed at, and an issue's warning was kept in words. A lint rule keeps it so.
+
+Themed scrollbars (p105): every scroller in the UI kit, the debugger and the Hub has one scrollbar, drawn from new theme tokens. The track is the colour of the surface it's on, with a thin line along its middle that shows its length; the thumb is a rounded bar in a control's colour, lighter under the pointer; an arrow button sits at each end. Firefox gets the thumb and track colours. The scrollbar is a documented part of the design: its tokens are in the design document's tables, its anatomy in a section of its own.
+
+### Engine 6.31.0 (Sunset)
+
+**Added**
+
+- The scrollbar tokens in both themes: `--aek-scrollbar-track`, `--aek-scrollbar-line`, `--aek-scrollbar-thumb`, `--aek-scrollbar-thumb-hover`, `--aek-scrollbar-button` and `--aek-scrollbar-button-glyph`, and on the kit root `--aek-scrollbar-size` (10 px at the defaults) and `--aek-scrollbar-line-width`. The thumb, its hover and the arrows hold 3:1 on every surface in both themes; the contrast test checks them.
+- The kit's scrollbar (`ui/styles/scrollbars.scss`, in `kit.scss`): every scroller under a kit root and the kit root itself, in `aek.base` with `:where()`, so an app's rule wins. Chrome, Edge and Safari draw all of it (`::-webkit-scrollbar`); Firefox the thumb and track colours (`scrollbar-color`).
+
+**Changed**
+
+- Every scrolling part of the kit and the debugger takes the kit's scrollbar: the draggable windows, the drop-down's list, the toasts, the tabs' list, the debugger's drawer, the profiler, the material editor, About, the key shortcuts, Save data and the dev files. Their own `scrollbar-color` and `scrollbar-width` declarations went: since Chrome 121 either one switches the `::-webkit-scrollbar` style off for the element and everything under it. Set the tokens to change the look, never those two properties.
+- The theme blocks' `color-scheme` now themes the native form controls only; the scrollbars are the kit's.
+- On macOS, Chrome and Safari draw the kit's scrollbars as classic ones, which take their width where the system's overlay scrollbars took none: a window's or the drawer's content is 10 px narrower when it scrolls.
+- The JSDoc of every engine module, `_dbg__` modules included (p104): 743 blocks in 383 files had their plan and issue references moved to `//` comments or reworded. Nothing else changed, and no summary was emptied (the docs baseline is unchanged).
+
+**Fixed**
+
+- `InitEngine`'s JSDoc said the template lists "all ten" features (it lists seventeen); it now says every engine feature.
+- `_dbg__OnScreenTools.test.ts` failed on macOS, where Node's `navigator.platform` is the host's (`Meta+S`). It is pinned to Linux, as `_dbg__DebugKeyShortcuts.test.ts` is.
+- The test bridge's `focusDebuggerControl` finds an open menu's items, so the scene runner reaches About Ækasha in the Æ button's menu again (its setting pressed a control that moved into the menu).
+
+### Toolkit 3.8.2 (Gibbous)
+
+**Changed**
+
+- The JSDoc of the toolkit, the terrain material's config and define the most of it: 123 blocks in 40 files, as the engine's.
+
+### App 1.38.1 (Preschooler)
+
+**Changed**
+
+- The app code and asset JSONs the Hub includes have no plan references in what a reader sees: the comments, and the JSON `description`s. The procedural set `p304ProcRipples` is named "Procedural ripples" (its id stays: scenes and `__saveData` name it).
+- The `terrainGallery` and `terrainShowcase` scenes are named "Terrain gallery" and "Terrain showcase", without their plan numbers (the Hub's image `alt` texts show the names).
+
+### Project
+
+**Added**
+
+- A lint rule (`jsdoc/no-restricted-syntax`, an error) that flags a plan or issue reference in any `/** */` block of `src/_engine/` and `src/toolkit/`, tags included, tests aside. It has no fix: rewording needs a person.
+- The rule in the coding standards: the root `CLAUDE.md`'s JSDoc line, and the Hub's JSDoc page with a before-and-after example.
+
+**Changed**
+
+- The Hub's pages show no plan references outside the Project section, the Issues and the Versions. The UI kit's game page and the smallest build page's include of `sbp.config.ts` were reworded; the banner profile's history is a `//` line above its region. Two remain on purpose: the toolkit page's `p302_gradientMat` (an asset id) and the homepage's What's new (the changelog's branch name).
+- p104 is marked done (`_DONE_p104_plan-references-out-of-jsdoc.md`).
+- The Hub has the kit's scrollbar everywhere (`hub.scss` uses `scrollbars.scss`): the page's own, the code blocks, the navigation, the table of contents and the tables. The code tabs' `scrollbar-width` went.
+- The design document's Scrollbars section (its anatomy, the browsers, the macOS note, a don't) with a generated table of the size tokens and a live scroller in each theme; the Colours page's and the styling guide's `color-scheme` sentences rewritten, and the guide's own Scrollbars section with the Chrome 121 warning.
+- The component library's `scrollbars` demo (a panel that scrolls down, one that scrolls both ways, each a named tab stop) with its keyboard script, on both library pages and the styling guide.
+- `yarn verify:ui` and the scene runner launch Chromium without Playwright's `--hide-scrollbars`, so their shots show the scrollbars. The window demo's key script expects the window 5 px further left: the page's own scrollbar takes 10 px of the viewport.
+- The scene runner's About setting opens the Æ button's menu, then About Ækasha.
+- p105 is marked done (`_DONE_p105_themed-scrollbars.md`).
+
 ## 2026-11-27 — p106_fog-system (Phases 1-5, 7; Phase 6 dropped)
 
 Fog (p106): a new `fog()` feature gives a scene one fog at a time from the fogs its JSON lists. The fog is linear, exponential, or a height fog that lies thick in the valleys and thins out over the hills. By default its colour is the sky box's horizon colour, so on a day-night cycle the far fog meets the sky at every hour, and it can glow toward the sun. Every material reads it through one graph whose uniforms the engine writes in place, so switching the mode, the glow, a fog or the whole fog off, and `updateFog`'s smooth transitions, never recompile a material. A Fog tab in the debug drawer edits every value with undo and saves it into the fog's file. The new `fogShowcase` scene shows each mode over an 800 m valley. Sun light shafts were measured as a PostFX pass and dropped (three's godrays don't compile under VSM shadows, and their depth pre-pass costs most of a millisecond); the idea is a follow-up in p990.

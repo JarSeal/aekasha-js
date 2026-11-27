@@ -184,10 +184,12 @@ export type PhysicsUpProtocol =
         rigidBody?: RigidBodyParams;
         /** Their parentId is set to the new body's id by the worker, when there is a body */
         colliders: ColliderParams[];
-        /** A DYNAMIC body's create-time tier (p353 Phase 4 D3): switched to before the reply, so
+        // p353 Phase 4 D3
+        /** A DYNAMIC body's create-time tier: switched to before the reply, so
          * it never takes a step as created. */
         tier?: 'STATIC' | 'DISABLED';
-        /** The body's own world bounds (p102 Phase 2), set with the body: they apply from its
+        // p102 Phase 2
+        /** The body's own world bounds, set with the body: they apply from its
          * first check on. */
         worldBounds?: BodyWorldBounds;
       }

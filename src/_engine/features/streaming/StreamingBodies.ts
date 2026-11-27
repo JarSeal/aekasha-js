@@ -64,10 +64,12 @@ export type StreamingBodiesSummary = {
   heldOutOfPolicy: number;
   /** Bodies per tier (`FULL` for one that never got a tier). */
   byTier: Record<string, number>;
+  // the NPC simulation tiers: p420
   /** Bodies with no tier request pending whose tier isn't their layer's: a non-policy body of a
    * `RESIDENT` cell that isn't `FULL`, a `NEARBY` cell's (or a leaving layer's) not in its
    * `nearbyPhysicsTier`, a `FAR` cell's not `REMOVED` (characters and jointed bodies left out:
-   * their tiers aren't the cell's, but p420's and their joint group's). Without `physicsTiers()`,
+   * a character's tier is left to the planned NPC simulation tiers, a jointed body's to its
+   * joint group). Without `physicsTiers()`,
    * every body of a cell that isn't `RESIDENT`. */
   offTier: number;
 };
@@ -90,8 +92,9 @@ const forEachLayerEntity = (layer: StreamingLayer, fn: (entityId: number) => voi
 
 let hasWarnedNoTiers = false;
 
+// p353 Phase 5 D11
 /**
- * A layer's bodies' tier (p353 Phase 5 D11): a `RESIDENT` cell's `FULL` (or their policy's), a
+ * A layer's bodies' tier: a `RESIDENT` cell's `FULL` (or their policy's), a
  * `NEARBY` cell's `nearbyTier`, a `FAR` cell's `REMOVED`; a layer its cell is leaving keeps
  * `nearbyTier` until it's deleted (a `REMOVED` round trip for a fade's length is waste).
  */
@@ -111,12 +114,13 @@ const getLayerWant = (
   }
 };
 
+// p353 Phase 4; p352; p353 D2, Phase 5 D11
 /**
- * A scene's cells' bodies as the engine has them (p353 Phase 4): a mover's position is its
- * `TRANSFORM`'s (a `REMOVED` body's is the pose it was taken out at, p352), and its tier its
+ * A scene's cells' bodies as the engine has them: a mover's position is its
+ * `TRANSFORM`'s (a `REMOVED` body's is the pose it was taken out at), and its tier its
  * layer's: a `RESIDENT` cell's bodies `FULL` or their policy's, a `NEARBY` cell's `nearbyTier`
- * (the scene's `nearbyPhysicsTier`), a `FAR` cell's `REMOVED` (Phase 5 D11). The requests go out
- * on the frames the cells change (D2), so their steps depend on frame timing.
+ * (the scene's `nearbyPhysicsTier`), a `FAR` cell's `REMOVED`. The requests go out
+ * on the frames the cells change, so their steps depend on frame timing.
  * @internal
  */
 export const createStreamingBodies = (

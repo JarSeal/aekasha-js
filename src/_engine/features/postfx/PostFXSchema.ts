@@ -2,7 +2,8 @@ import { z } from 'zod';
 import type { FeatureSchemaPart } from '../../schemas/FeatureSchemas';
 import { PostFxAssetSchema } from '../../schemas/PostFxSchema';
 
-/** The PostFX feature's scene fields (p607 D10): the pass chain and whether it starts on. */
+// p607 D10
+/** The PostFX feature's scene fields: the pass chain and whether it starts on. */
 export const postFxSchemaPart = {
   feature: 'postfx',
   scene: {

@@ -141,7 +141,8 @@ export const countFarGroups = (rt: StreamingRuntime, cell: StreamingCell) => {
   return { groups, instances };
 };
 
-/** A cell's layers (p353 Phase 5 D1, D10): each one's phase, units, generation and running fade,
+// p353 Phase 5 D1, D10
+/** A cell's layers: each one's phase, units, generation and running fade,
  * then its owner key and GPU memory. */
 const formatLayers = (cell: StreamingCell | undefined) => {
   const rt = getStreamingRuntime();

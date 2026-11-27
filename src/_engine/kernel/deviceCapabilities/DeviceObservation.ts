@@ -95,8 +95,9 @@ export const readComparedIntervalMs = (refreshHz: number | null, maxFPSInterval:
   return compared > 0 ? round3(compared) : null;
 };
 
+// p240 D4
 /**
- * What held a window's frame rate (p240 D4): `REFRESH` at the compared interval, else `GPU` when at
+ * What held a window's frame rate: `REFRESH` at the compared interval, else `GPU` when at
  * least half its checked frames began with the GPU busy, else `CPU` when its CPU time takes half
  * its interval, else `CAPPED`. Without marks (the GPU's queue can't be checked) a window under the
  * compared interval is never `GPU`: only lowering needs the evidence.
@@ -118,8 +119,9 @@ export const classifyObservation = (
  */
 export const MAX_OBSERVED_SCENES = 8;
 
+// p240 D6-D7
 /**
- * The kept windows with `observation` merged in (p240 D6-D7): a `GPU` window is kept when its scene
+ * The kept windows with `observation` merged in: a `GPU` window is kept when its scene
  * has none or a faster one (by `readRatio`, its frame time over the prediction), and moves to the
  * end; past `MAX_OBSERVED_SCENES` the oldest goes. The slowest, not the latest: once the app lowers
  * its settings, the scene runs lighter than the reference frame stands for, and a latest window

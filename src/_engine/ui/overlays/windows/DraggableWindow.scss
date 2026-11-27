@@ -188,8 +188,6 @@ $collapseTime: var(--aek-motion-base);
     flex: 1;
     min-height: 0;
     overflow: auto;
-    scrollbar-color: var(--aek-border-strong) transparent;
-    scrollbar-width: thin;
 
     @include insetRing;
   }

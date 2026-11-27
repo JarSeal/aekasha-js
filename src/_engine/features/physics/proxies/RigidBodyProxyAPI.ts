@@ -57,7 +57,8 @@ export class RigidBodyProxyAPI implements RigidBodyAPI {
   private pendingAvel?: PendingWrite<PhysVector>;
   /** Last known mass, for reflecting applyImpulse locally (refreshed by every mass() call) */
   private cachedMass?: number;
-  /** A body without a slot (created FIXED, p352) is never written back: it keeps its pose here
+  // p352
+  /** A body without a slot (created FIXED) is never written back: it keeps its pose here
    * instead, its creation pose updated by every setTranslation/setRotation, for good. */
   private staticPose?: RigidBodyPose;
 
@@ -105,7 +106,8 @@ export class RigidBodyProxyAPI implements RigidBodyAPI {
     return this.slot !== -1;
   }
 
-  /** Bumped by every detach and reattach (p352), so a reply to an older one is ignored. */
+  // p352
+  /** Bumped by every detach and reattach, so a reply to an older one is ignored. */
   private attachGeneration = 0;
 
   /**
@@ -152,8 +154,9 @@ export class RigidBodyProxyAPI implements RigidBodyAPI {
     this.pendingRot = { value: { ...pose.rot }, visibleAt };
   }
 
+  // p102
   /**
-   * The backend took the body out of the simulation for leaving its world bounds (p102): made
+   * The backend took the body out of the simulation for leaving its world bounds: made
    * FIXED (`frozen`, it has joints) or disabled. The cached type or enabled state follows, from the
    * exit's delivery on.
    * @internal
@@ -163,8 +166,9 @@ export class RigidBodyProxyAPI implements RigidBodyAPI {
     else this.cachedEnabled = false;
   }
 
+  // p500
   /**
-   * A snapshot restore kept the body (p500): its cached type, enabled state and (without a slot)
+   * A snapshot restore kept the body: its cached type, enabled state and (without a slot)
    * pose become the restored world's, and the writes the buffer doesn't show yet are dropped (the
    * restore replaced them, and their steps are on the clock it took back). The cached mass stays.
    * @internal

@@ -74,7 +74,8 @@ export const restoreWorldBoundsBoxShown = () => {
   if (isWorldBoundsBoxShownSaved() && canDrawWorldBounds()) setWorldBoundsBoxShown(true);
 };
 
-/** The current world's bounds (p102): its box, where it comes from and its action, the scene's
+// p102
+/** The current world's bounds: its box, where it comes from and its action, the scene's
  * exits, and how many entities have bounds of their own (the default world's). */
 export const getWorldBoundsFolder = (): DebuggerPaneItem<PhysicsState> => {
   const count = (key: 'exits' | 'ownBounds', label: string) => ({

@@ -80,14 +80,15 @@ import {
   type NebulaUniforms,
 } from './layers/Nebula';
 
+// Composite order: p110; the nebulae, suns, moons: p114
 /**
  * The composite path: every layer of a sky box composited into one node, used as the
  * background (VIEW) and as what the env bake renders (ENV_BAKE). A sky box uses it whenever a
  * procedural layer is enabled; a texture-only or colour-only one keeps the direct path
  * (buildBaseLayer), which needs no bake.
  *
- * Layer order, back to front (p110 "Composite order"): base, static layers (the nebulae's baked
- * cube, p114), stars, discs (the suns, then the moons, p114), atmosphere, clouds, ground. Each
+ * Layer order, back to front: base, static layers (the nebulae's baked
+ * cube), stars, discs (the suns, then the moons), atmosphere, clouds, ground. Each
  * layer takes the colour behind it and returns the new colour; an absent or disabled layer is
  * left out of the graph (changing which layers exist is a rebuild, anything else is a uniform
  * write).

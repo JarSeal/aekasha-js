@@ -2597,7 +2597,7 @@
           },
           "debugData": {
             "name": "Sand 01 (dry dunes)",
-            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison)."
           },
           "defaultPacking": "LITE",
           "surface": {
@@ -3154,10 +3154,10 @@
             "radius": 0.25,
             "thickness": 1,
             "distanceExponent": 1,
-            "distanceFallOff": 1,
+            "distanceFallOff": 0.42,
             "scale": 1,
-            "samples": 16,
-            "resolutionScale": 1,
+            "samples": 12,
+            "resolutionScale": 0.5,
             "useTemporalFiltering": false
           },
           "paramsMeta": {
@@ -15305,8 +15305,8 @@
             "packing": "LITE"
           },
           "debugData": {
-            "name": "p304 procedural ripples",
-            "description": "p304 Phase 4's JSON path: sandRipples baked on load into LITE (the default packing), with params, a seed and a size; the proceduralSurfaces scene compares it with a code bake of the same values."
+            "name": "Procedural ripples",
+            "description": "A procedural set from JSON: sandRipples baked on load into LITE (the default packing), with params, a seed and a size; the proceduralSurfaces scene compares it with a code bake of the same values."
           },
           "defaultPacking": "LITE",
           "surface": {
@@ -15386,7 +15386,7 @@
           },
           "debugData": {
             "name": "Sand 01 (dry dunes)",
-            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison)."
           },
           "defaultPacking": "LITE",
           "surface": {
@@ -16098,7 +16098,7 @@
           },
           "debugData": {
             "name": "Sand 01 (dry dunes)",
-            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison)."
           },
           "defaultPacking": "LITE",
           "surface": {
@@ -16355,7 +16355,7 @@
           },
           "debugData": {
             "name": "Desert dunes (KTX2 cube)",
-            "description": "The desert-dunes cube as the cube texture asset desertDunes: one ETC1S KTX2 cube at 1024 per face, its mips in the file, built by the asset pipeline from the six 2048 PNGs (22.6 MB) the PNG cube loads (p311). Switch to it in the sky box tab."
+            "description": "The desert-dunes cube as the cube texture asset desertDunes: one ETC1S KTX2 cube at 1024 per face, its mips in the file, built by the asset pipeline from the six 2048 PNGs (22.6 MB) the PNG cube loads. Switch to it in the sky box tab."
           }
         }
       ],
@@ -16370,7 +16370,7 @@
           },
           "debugData": {
             "name": "Desert dunes (cube)",
-            "description": "The desert-dunes cube's six 2048 PNGs as one cube texture asset: the asset pipeline encodes them as one ETC1S KTX2 cube at 1024 per face (p311 Phase 2). The faces in the order scene01's desert-dunes lists them (its y faces swapped), so its sky box keeps flipY."
+            "description": "The desert-dunes cube's six 2048 PNGs as one cube texture asset: the asset pipeline encodes them as one ETC1S KTX2 cube at 1024 per face. The faces in the order scene01's desert-dunes lists them (its y faces swapped), so its sky box keeps flipY."
           },
           "__fileSize": 22609060,
           "__sourceUrls": [
@@ -22777,7 +22777,7 @@
           },
           "debugData": {
             "name": "Sand 01 (dry dunes)",
-            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison)."
           },
           "defaultPacking": "LITE",
           "surface": {
@@ -23960,7 +23960,7 @@
     },
     "terrainGallery": {
       "isDebugScene": true,
-      "name": "Terrain gallery (p303, p304, p305, p306, p307, p308, p309, p310)",
+      "name": "Terrain gallery",
       "description": "The toolkit's terrain texture library, one isolated 12 × 12 m block per texture set (rows from the back: sand and mud, rocks and cliffs, snow and ice, grass and concrete), each drawn by the toolkit's terrain material (p305, its JSON route; one layer, world tiling) in the set's default packing, which the debug tab switches to the code route or to the baseline textureSetSurface (they look the same). Each block is a generated terrain with gentle 0.4 m noise and its back edge raised into a 35° ramp; the cliff blocks have a 6 m wall (tiled at its UVs in metres). Behind the library, the Anti-tiling row (p305): three flat 48 × 48 m grass01 blocks with the terrain material's anti-tiling NONE, DUAL_SCALE and HEX, the macro variation (macroNoise) on, which the debug tab switches and tunes. Left of the library, the Splatting row (p305): six 24 × 24 m generated blocks blending several sets by weights painted in code, the vertex colour (RGBA, 5 layers) and a splat map (5 layers) each LINEAR beside HEIGHT, RGB_AO with the vertex AO (4 layers), and 9 layers with two splat maps (code route materials, storage AUTO: the splat blocks bind one texture too many for SEPARATE, so each takes a set array the scene lists), which the debug tab tunes. In front of the library, the Rules row (p305): two 64 × 64 m blocks on one generated terrain with a cliff band, their layers laid by procedural rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces, macroNoise breaking the borders), the rules alone beside a splat map's sandy path and mud under the same rules (its six sets a set array the scene lists), which the debug tab tunes. In front of the Cliffs row, the Colour map row (p305): the Rules row's 8-layer material on four 64 × 64 m blocks of its terrain, then with a DETAIL colour map (baked at the load from the source on the block's own mesh), with the far COLOR_MAP surface and with the far AVERAGE_COLOR one, which the debug tab tunes and bakes again. In front of that, the Structures row (p305): structure materials (createStructureMaterial: triplanar, dual-scale anti-tiling, a 12 m macro) on pieces made in code, a wall of two segments in world space and a bunker's passage piece in object space worn by their vertex colour (RGBA: clean and stained concrete, grime, damage), and two pillars turning and rising, concrete02 in object space beside world space, which the debug tab pauses. Left of the Splatting row, the Wet/dry row (p307): 3 × 3 library blocks, a set of each category (sand02, mud02, rocks01, cliffs01, snow01, ice01, grass01, concrete02) and a beach (sand02 with rocks01 on the ramp by slope), each the terrain material with wet over the surface conditions' wetness, which the scene holds (MANUAL, 0.6) and the debug tab sets, with puddles, rain ripples, streaks on a concrete wall and a cliff boulder, a shoreline on the beach, and snow (snow01) by the snow cover, slush above 0 °C, which the debug tab sets too, with the row's quality (FULL, SIMPLE) and the WETNESS and TAPS views. Right of the library, the Procedural row (p304): the toolkit's ten surface generators on a block each (five rows of two), baked at the load (1024² LITE), which the debug tab switches between the bake, the generator live in the material and an imported set of its category, with each generator's params, its export and a GPU measurement. Right of that, the Live block (p305): a 48 × 48 m generated terrain, grass, rocks by slope and snow on the tops by rules, sand ripples in the hollows from the gallery's procedural set terrainGalleryLiveDunes (sandRipples, baked at the load) run live in the terrain material or sampled baked (the imported sets in a set array, the procedural set beside it), which the debug tab switches, tunes and measures. Behind the Anti-tiling row, past the ground, the Blocks patch (p306): 3 × 3 terrain blocks of 32 m (*.terrainBlock.json) of the toolkit's rulesTerrain, one world-continuous noise with HEIGHT_FN normals, the rules (grass, rocks by slope, snow by height and north facing, cliffs on steep faces) laid into the vertex colours on the CPU with the horizon AO in their A, which the debug tab switches to the same rules in the shader (RULES) on the same blocks. In front of the Wet/dry row, the Scatter row (p308): one 24 m block, rocks01 patches over sand02 split down the middle (the vertex colour), the toolkit's procedural pebbles, rocks and boulders (generateRock) scattered on the left half's rock by terrainScatter in the rockScatter material over rocks01, and the toolkit's imported ones (Poly Haven namaqualand_stones_01 and namaqualand_boulder_02, decimated; models/nature/) on the right half's with the same params in rockScatter at their own maps' UV, and right of it a 12 m grass02 and mud02 patch under the toolkit's leaf litter cards (generateLeafCard, the leafLitter material over its LeafSet024 atlas), all wet with the ground by the surface conditions, which the debug tab switches between dry and wet. Right of the Live block, the Decals row (p309): the toolkit's decal atlases decalsGround and decalsStructure (the DECAL packing: albedoAlpha, normalRough) on flat unlit panels, an atlas per row and a panel per view (the albedo over a ground colour, the opacity, the normal and roughness, the puddle mask), each cell outlined and named; in front of it the Decals stage (p309 Phase 2): two flat 12 m mud02 blocks with a concrete wall behind each, every cell of both atlases on them as a decal quad in the toolkit's decal materials (decalsGround_blend, decalsStructure_blend on the left; the _cutout ones on the right), coplanar with the ground and the wall, wet with them, which the debug tab sets the weather for, flies the camera to 1, 50 and 200 m and switches the polygon offset and the edge fade off; right of it the tab's bake bench (p309 Phase 5): a generated cell baked from its generator, its seed and params set in the tab, as decals on a third block and wall and on panels beside the atlas's copy, copied as the cell's data or exported as its PNGs. Left of the Anti-tiling row, the Packing row (p310): sand01, grass01 and cliffs01 (the sets that ship every packing) side by side in FULL, LITE and MINIMAL, the other packings loaded with the scene. The Structures row's wall and bunker carry decalsStructure's leaks (p310). In front of the Decals stage, the footprint pad (p310): a 16 m terrain block of wet mud02 (pad/terrainGalleryPad.terrainBlock.json) the debug tab stamps runtime footprints on where it's clicked. Left of the Rules row, the Orientation block (p310): terrainBlockTest's Blender block (the shared src/app/terrainBlocks/terrainBlockTestBlender/), which the debug tab draws by its vertex colours or by its splat map twin's material (terrainBlockTestBlenderSplat), the corner markers on the same corners. The debug tab adds the rows' signposts and list (each row's p310 letter), camera presets per game type (first and third person, top-down, isometric, side view, a flyover) and the measurement mode (a block alone, its frame's GPU ms at each quality tier, a row in turn, the table copied), and a time of day slider. The DAY_NIGHT sky stands still at 10:00 and lights the scene.",
       "cameras": [
         {
@@ -26839,7 +26839,7 @@
           },
           "debugData": {
             "name": "Sand 01 (dry dunes)",
-            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison)."
           },
           "defaultPacking": "LITE",
           "surface": {
@@ -28864,7 +28864,7 @@
       ]
     },
     "terrainShowcase": {
-      "name": "Terrain showcase (p310)",
+      "name": "Terrain showcase",
       "description": "The terrain epic's showcase (p310 §3): art-directed terrain blocks built in Blender with the toolkit's terrain add-on (devTools/blender/buildShowcaseBlocks.py), each spawned from its *.terrainBlock.json with its collider, scatter and decals. The coast (grid 0, 0): dunes falling toward a sea at the surface conditions' 0.5 m water level and a cliff band along its north edge, painted in its vertex colours (sand, beach sand along the waterline, gravel, the cliff face triplanar past a slope gate) with the AO baked in, the shoreline's waves on its beach, pebbles and rocks scattered on its gravel and at the cliff foot, two tyre tracks across the beach. The alpine slope (grid 2, 0): a ridge rising toward +x with a north-facing rock band and a flat south part with a frozen pond, painted in two splat maps (seven layers: grass, forest floor, scree, the rock band triplanar past a slope gate, snow drifts, the wind-swept crest, ice) and laid over by rules (snow on the high north faces, cliffs on the steepest), the sets one array sampled sparsely, the snow cover over it; boulders with colliders scattered in Blender on the scree (its imported scatter), ice cracks on the pond. The wetlands (grid 0, 2): almost flat ground with a meandering channel, two hollows and a pad for the bunker, painted in its vertex colours (mud, the channel's mud, grass, a gravel path crossing the channel at a ford) with the AO baked in and a regional wetness painted in Blender (its _WETNESS attribute), so the channel and the hollows stay wet in any weather; leaf litter and pebbles scattered on it, tyre ruts along the path through the ford, mud splatters on the banks. The procedural block (grid 2, 2): generated by the toolkit's rulesTerrain from world-continuous noise, the alpine block's grass, scree, snow and cliff sets laid into its vertex colours by rules on the CPU (rocks past 30°, snow above 10 m on north-facing slopes, cliffs past 45°) with the horizon AO, rocks and boulders with colliders scattered by terrainScatter: the generated counterpart of the authored alpine block beside it. On the wetlands' pad, a concrete bunker and a wall (an import with box colliders, casting shadows, so the ground inside its doorway stays dry in the rain) in a structure material worn by their vertex colours, rain streaking down them, with leak decals under the roof edge. Every block wets, puddles and dries by the simulated surface conditions, and snows and frosts below freezing. A third-person character (the gym's dynamic controller: WASD, Space, Shift, Ctrl) starts on the coast's beach with the camera following it, and its steps stamp footprints on the block under it. The DAY_NIGHT sky stands still at 10:30 and lights them. The debug drawer's Terrain showcase tab puts the player on a block, plays a rain shower, a snowfall or the day, measures the weather's GPU cost and shows the blocks' debug views, quality tiers and the procedural block's rules on the CPU or in the shader.",
       "cameras": [
         {
@@ -31146,7 +31146,7 @@
           },
           "debugData": {
             "name": "Sand 01 (dry dunes)",
-            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+            "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison)."
           },
           "defaultPacking": "LITE",
           "surface": {
@@ -35546,8 +35546,8 @@
             "distanceExponent": 1,
             "distanceFallOff": 1,
             "scale": 1,
-            "samples": 16,
-            "resolutionScale": 1,
+            "samples": 10,
+            "resolutionScale": 0.39999999999999997,
             "useTemporalFiltering": false
           },
           "paramsMeta": {
@@ -37842,7 +37842,7 @@
       },
       "debugData": {
         "name": "Desert dunes (cube)",
-        "description": "The desert-dunes cube's six 2048 PNGs as one cube texture asset: the asset pipeline encodes them as one ETC1S KTX2 cube at 1024 per face (p311 Phase 2). The faces in the order scene01's desert-dunes lists them (its y faces swapped), so its sky box keeps flipY."
+        "description": "The desert-dunes cube's six 2048 PNGs as one cube texture asset: the asset pipeline encodes them as one ETC1S KTX2 cube at 1024 per face. The faces in the order scene01's desert-dunes lists them (its y faces swapped), so its sky box keeps flipY."
       },
       "faces": [
         "cubemap02_positive_x.png",
@@ -50088,8 +50088,8 @@
         "packing": "LITE"
       },
       "debugData": {
-        "name": "p304 procedural ripples",
-        "description": "p304 Phase 4's JSON path: sandRipples baked on load into LITE (the default packing), with params, a seed and a size; the proceduralSurfaces scene compares it with a code bake of the same values."
+        "name": "Procedural ripples",
+        "description": "A procedural set from JSON: sandRipples baked on load into LITE (the default packing), with params, a seed and a size; the proceduralSurfaces scene compares it with a code bake of the same values."
       },
       "defaultPacking": "LITE",
       "surface": {
@@ -50708,7 +50708,7 @@
       },
       "debugData": {
         "name": "Sand 01 (dry dunes)",
-        "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison, p303 D6)."
+        "description": "ambientCG Ground080, CC0: dry beige sand. All three packings (the gallery's packing comparison)."
       },
       "defaultPacking": "LITE",
       "surface": {
@@ -53586,7 +53586,7 @@
       },
       "debugData": {
         "name": "Desert dunes (KTX2 cube)",
-        "description": "The desert-dunes cube as the cube texture asset desertDunes: one ETC1S KTX2 cube at 1024 per face, its mips in the file, built by the asset pipeline from the six 2048 PNGs (22.6 MB) the PNG cube loads (p311). Switch to it in the sky box tab."
+        "description": "The desert-dunes cube as the cube texture asset desertDunes: one ETC1S KTX2 cube at 1024 per face, its mips in the file, built by the asset pipeline from the six 2048 PNGs (22.6 MB) the PNG cube loads. Switch to it in the sky box tab."
       },
       "__sourcePath": "src/app/scenes/scene01/desertDunesKtx2.skybox.json"
     },
@@ -53841,6 +53841,67 @@
       "debugData": {
         "name": "Ambient Occlusion",
         "description": "Ground Truth Ambient Occlusion (GTAO). Darkens creases and contact points using the scene depth and normal buffers. Screen-space only — cannot see off-screen geometry."
+      },
+      "__saveData": {
+        "largeWorld": [
+          {
+            "__meta": {
+              "date": 1795789312431,
+              "engineVersion": "6.30.1",
+              "toolkitVersion": "3.8.2",
+              "appVersion": "1.38.1",
+              "author": "JarSeal"
+            },
+            "params": {
+              "distanceFallOff": 0.42,
+              "samples": 12,
+              "resolutionScale": 0.5
+            }
+          },
+          {
+            "__meta": {
+              "date": 1795788990793,
+              "engineVersion": "6.30.1",
+              "toolkitVersion": "3.8.2",
+              "appVersion": "1.38.1",
+              "author": "JarSeal"
+            },
+            "params": {
+              "distanceFallOff": 0.42,
+              "samples": 8,
+              "resolutionScale": 0.45
+            }
+          },
+          {
+            "__meta": {
+              "date": 1795788865850,
+              "engineVersion": "6.30.1",
+              "toolkitVersion": "3.8.2",
+              "appVersion": "1.38.1",
+              "author": "JarSeal"
+            },
+            "params": {
+              "distanceFallOff": 0.42,
+              "samples": 8,
+              "resolutionScale": 0.5
+            }
+          }
+        ],
+        "topDownTestScene": [
+          {
+            "__meta": {
+              "date": 1795788921555,
+              "engineVersion": "6.30.1",
+              "toolkitVersion": "3.8.2",
+              "appVersion": "1.38.1",
+              "author": "JarSeal"
+            },
+            "params": {
+              "samples": 10,
+              "resolutionScale": 0.39999999999999997
+            }
+          }
+        ]
       },
       "__sourcePath": "src/app/postFx/ambientOcclusion.postFx.json"
     },

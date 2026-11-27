@@ -132,7 +132,8 @@ const formatPriming = (rt: StreamingRuntime | null) => {
   ].join('\n');
 };
 
-/** The layers' fades (p353 Phase 5 D4): running now, and the counters. */
+// p353 Phase 5 D4
+/** The layers' fades: running now, and the counters. */
 const formatFades = (rt: StreamingRuntime | null) => {
   if (!rt) return '';
   let fadingIn = 0;
@@ -153,7 +154,8 @@ const formatFades = (rt: StreamingRuntime | null) => {
 
 const BODY_TIERS = ['FULL', 'STATIC', 'DISABLED', 'REMOVED'] as const;
 
-/** The cells' bodies by tier (p353 Phase 4): what the Physics API tab's tier counts should match
+// p353 Phase 4
+/** The cells' bodies by tier: what the Physics API tab's tier counts should match
  * for the cells' content. */
 const formatBodies = (rt: StreamingRuntime | null) => {
   const summary = rt?.bodies?.summarize?.(rt.world);

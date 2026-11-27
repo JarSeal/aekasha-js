@@ -98,8 +98,9 @@ const parseNumberList = (text: string) => {
   return parts.length > 0 && numbers.every(Number.isFinite) ? numbers : null;
 };
 
+// p804 D8
 /**
- * Creates a vector field (p804 D8): a spin button per axis in a row, its value an `{ x, y }` to
+ * Creates a vector field: a spin button per axis in a row, its value an `{ x, y }` to
  * `{ x, y, z, w }` object (a `THREE.Vector3` written in place) or an array of 2 to 4 numbers, from
  * its binding (`{ target, key }`, `{ get, set }` or `{ value }`).
  * - Each axis is a number part (as `createNumberField`'s, without the label's scrub): typed
@@ -306,7 +307,8 @@ export type PartsFieldSpec<T> = {
   draw?: (value: T) => void;
   applyDisabled?: (disabled: boolean) => void;
   onRemove?: () => void;
-  /** More forms the fields' context menu copies the value as (p805 D11: a vector's array) */
+  // p805 D11
+  /** More forms the fields' context menu copies the value as (a vector's array) */
   copyAs?: { label: string; getText: (value: T) => string }[];
 };
 

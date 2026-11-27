@@ -34,12 +34,14 @@ type Item = DebuggerPaneItem<SpatialGridTabState>;
 
 /** Which domains the tab lists and shows in a world, and where it edits their cell sizes. */
 export type SpatialDomainView = {
-  /** DEFAULT always is: its settings exist without its grid (p349 §3.6). */
+  // p349 §3.6
+  /** DEFAULT always is: its settings exist without its grid. */
   isRegistered: (id: string) => boolean;
   /** The domain's id, with why it has no grid when it hasn't. */
   getLabel: (id: string) => string;
+  // p349 §3.5
   /** Registered domains first (DEFAULT leading), then the unregistered ones with a cell size
-   * saved for the current scene or id-wide, so it can be seen and cleared (p349 §3.5). */
+   * saved for the current scene or id-wide, so it can be seen and cleared. */
   listIds: () => string[];
   /** The listed domains and their labels as one key: a change rebuilds the tab. */
   getListKey: () => string;

@@ -38,7 +38,8 @@ import {
 } from './TextureSetRefs';
 import { getTextureSet } from './TextureSets';
 
-/** The vec4s each layer takes in a set array's `layerParams` (the fifth p307's wet response's). */
+// p307
+/** The vec4s each layer takes in a set array's `layerParams` (the fifth is the wet response's). */
 const PARAMS_PER_LAYER = 5;
 
 /**
@@ -56,8 +57,9 @@ export type TextureSetSlotMap<P extends TextureSetPacking, T> = P extends Textur
  */
 export type TextureSetLayerParamsNode = THREE.UniformArrayNode<'vec4'>;
 
+// p303 D4
 /**
- * Several texture sets of one packing as array textures (p303 D4), built by
+ * Several texture sets of one packing as array textures, built by
  * {@link buildTextureSetArray}: one array per slot of the packing, layer `i` of each from
  * `sets[i]`, and the sets' physical facts and surface defaults per layer in one uniform array.
  * @template P the packing
@@ -299,8 +301,9 @@ const getStandInBundle = (
   return bundle;
 };
 
+// p303 D4
 /**
- * `{ "textureSetArray": [ids], "packing" }` or `{ "textureSetArray": id }` (p303 D4): the set
+ * `{ "textureSetArray": [ids], "packing" }` or `{ "textureSetArray": id }`: the set
  * array's bundle (`TextureSetArrayInput`). A list's array not built samples white, warned; an id
  * no set array has throws naming the input.
  */
@@ -335,8 +338,9 @@ const TEXTURE_SET_ARRAY_RESOLVER: MaterialInputResolver<TextureSetArrayInputRef>
   dependencies: () => [],
 };
 
+// p303 D4
 /**
- * Builds a texture set array (p303 D4): one array texture per slot of the packing, layer `i` of
+ * Builds a texture set array: one array texture per slot of the packing, layer `i` of
  * each from `sets[i]` (two for `LITE`), registered as `<id>.<slot>`, and the sets' physical facts
  * and surface defaults as one uniform array (`layerParams`, read with
  * {@link getTextureSetLayerParams}). A terrain material then binds the packing's arrays however

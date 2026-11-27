@@ -1,8 +1,8 @@
+// p085 DD2
 /**
- * The material editor's editable params
- * (p085 DD2): the param catalogue (key, folder, kind, range, whether a change rebuilds the render
- * pipeline), reading and setting a param on the editor copy, the TSL inputs (read and set through
- * their uniforms), and the Params tab's pane items.
+ * The material editor's editable params: the param catalogue (key, folder, kind, range, whether a
+ * change rebuilds the render pipeline), reading and setting a param on the editor copy, the TSL
+ * inputs (read and set through their uniforms), and the Params tab's pane items.
  *
  * One catalogue covers every material type: a param is shown and applied only when the copy has
  * the key with the expected kind (eg. `roughness` only on standard and physical materials).
@@ -445,8 +445,9 @@ export const mergeNodeOverrides = (
  */
 export type MaterialNodeInputs = Record<string, Record<string, unknown>>;
 
+// p302 D2
 /**
- * The group of a material's `inputs` among its sockets (p302 D2): their uniforms are
+ * The group of a material's `inputs` among its sockets: their uniforms are
  * `setup_<key>`, as a socket's are `<socket>_<key>`, so every per-socket function here reads and
  * sets them too. Never a socket of `nodes` (NodeMaterial's own `setup` method, which createMaterial
  * skips).

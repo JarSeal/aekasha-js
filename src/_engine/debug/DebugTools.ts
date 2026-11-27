@@ -71,7 +71,8 @@ export type DebugToolsState = {
     /** The roughness it samples the environment at, 0-1 */
     roughness: number;
   };
-  /** The "File server" folder (p342). Top-level, as axesGizmo. Its default is
+  // p342
+  /** The "File server" folder. Top-level, as axesGizmo. Its default is
    * `AppConfig.devFiles`, and it's saved only once changed in the tab. */
   devFiles: {
     /** See `AppConfig.devFiles.saveHistorySize` (-1 = all, 0 = saving off) */
@@ -81,7 +82,8 @@ export type DebugToolsState = {
     /** See `AppConfig.devFiles.confirmWrites` */
     confirmWrites: boolean;
   };
-  /** The debugger's look (p806 D8). Top-level, as axesGizmo. Its default is
+  // p806 D8
+  /** The debugger's look. Top-level, as axesGizmo. Its default is
    * `AppConfig.debugDrawer.theme`, and it's saved only once changed in the tab. */
   appearance: {
     /** The debugger's roots' theme (`ui/overlays/DebuggerRoot.ts`) */

@@ -323,8 +323,9 @@ export const LIGHT_DEBUGGER_ONLY_KEYS: ReadonlySet<string> = new Set([
   '_shadowCameraFolderOpen',
 ]);
 
+// p150
 /**
- * The saved values of a light in the current scene that override its creation props (p150): its
+ * The saved values of a light in the current scene that override its creation props: its
  * saved keys but the debugger's own preferences (the helper, the symbol, the folders).
  */
 export const getLightOverriddenKeys = (appId?: string): string[] =>

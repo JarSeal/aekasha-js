@@ -41,6 +41,7 @@ export enum ECSSystemStage {
   LATE_MAIN = 'LATE_MAIN',
 }
 
+// MERGE_BATCH_SYNC: p375 (a batched member's level swap: p375 Phase 2)
 /**
  * `addSystem` order values for `ECSSystemStage.APP_RENDER_SYNC` (higher runs earlier, equal
  * values run in registration order).
@@ -49,10 +50,10 @@ export enum ECSSystemStage {
  *   frame's build and the group mesh replacing it are in this frame's poses and culling.
  * - POSE_PRODUCERS: systems that write the final Object3D render pose (physicsInterpolationSystem,
  *   lookAtSystem). Plain default order.
- * - MERGE_BATCH_SYNC: mergeBatchSyncSystem (features/merging/MergeBatch.ts, p375), which writes a
+ * - MERGE_BATCH_SYNC: mergeBatchSyncSystem (features/merging/MergeBatch.ts), which writes a
  *   batched merge group's members' instance matrices from their own Object3Ds' final poses: after
  *   every producer, before the consumers (nothing reads a batch's matrices). Before LOD_SELECTION
- *   too: a batched member's level swap (p375 Phase 2) is counted and compacted the next frame.
+ *   too: a batched member's level swap is counted and compacted the next frame.
  * - POSE_CONSUMERS: systems that read the final render pose of another entity (camera rigs).
  *   Deliberately fractional: it has to run after every order-0 producer whatever their
  *   registration sequence (the follow camera rig registers before physics() does), and

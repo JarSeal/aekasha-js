@@ -89,13 +89,14 @@ export type LiveSurface<P extends SurfaceParamSpecs = SurfaceParamSpecs> = {
   setSeed: (seed: number) => void;
 };
 
+// The live layers: p305
 /**
  * Runs a procedural surface generator live: its `build` as a graph for a material, at a
  * world-space point, with noise that isn't periodic. The surface never repeats and takes no
  * texture memory; every pixel it covers pays the whole graph every frame (ALU instead of fetches),
  * and nothing filters it at a distance. For comparison with the baked surface, large stylized
- * surfaces and p305's `PROCEDURAL_LIVE` layers; bake it (`bakeSurfaceGenerator`, a procedural set)
- * for anything seen close on low-end hardware.
+ * surfaces and the terrain material's `PROCEDURAL_LIVE` layers; bake it (`bakeSurfaceGenerator`, a
+ * procedural set) for anything seen close on low-end hardware.
  *
  * Its params' numbers and colours, and its seed, are uniforms: set them without a rebuild.
  * @template P the generator's param specs

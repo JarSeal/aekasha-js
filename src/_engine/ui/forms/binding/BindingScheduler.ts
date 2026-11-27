@@ -54,8 +54,9 @@ type SchedulerState = {
 /** Each scheduler's own functions, kept off its public handle */
 const states = new WeakMap<BindingScheduler, SchedulerState>();
 
+// p804 D4
 /**
- * Creates a refresh scheduler for one host (p804 D4): a debugger tab, a window, an app's panel.
+ * Creates a refresh scheduler for one host: a debugger tab, a window, an app's panel.
  * Fields made with it as their `scheduler` are read by its `refresh()`, and the live ones
  * (monitors, a field with an `interval`) by its tick: one `requestAnimationFrame` loop that runs
  * only while the host shows (`setVisible`), the page isn't hidden and a live field exists, each
@@ -221,8 +222,9 @@ export const createBindingScheduler = (props: BindingSchedulerProps = {}): Bindi
 export const addScheduledBinding = (scheduler: BindingScheduler, binding: ScheduledEntry) =>
   states.get(scheduler)?.add(binding) ?? (() => {});
 
+// p805 D3
 /**
- * Adds a collection (a table, a list, a tree; p805 D3) to a scheduler: its `refresh` runs on the
+ * Adds a collection (a table, a list, a tree) to a scheduler: its `refresh` runs on the
  * scheduler's `refresh()`, on the tick every `interval` ms while `isShown`, and once when it
  * shows again (`revealScheduledBindings`), as a field's read does. The collection calls the
  * remover when it's removed.
@@ -264,8 +266,9 @@ export const revealScheduledBindings = (scheduler: BindingScheduler) => {
 const FLASH_MS = 200;
 const FLASH_ATTR = 'data-flash';
 
+// p804 D4
 /**
- * An edit field's flash (p804 D4): `flash()` sets `data-flash` on `elem` for 200 ms (a second
+ * An edit field's flash: `flash()` sets `data-flash` on `elem` for 200 ms (a second
  * flash restarts it), which the field's stylesheet draws (the accent's soft background, a static
  * tint under reduced motion). Monitors never flash. `dispose()` clears its timer.
  * @internal

@@ -1,5 +1,6 @@
+// p342
 /**
- * A byte-exact RGBA8 PNG encoder (dev files' `encodePNG`, p342). A canvas can't do it: it stores
+ * A byte-exact RGBA8 PNG encoder (dev files' `encodePNG`). A canvas can't do it: it stores
  * premultiplied alpha, so a fully transparent pixel loses its colour (an impostor atlas's
  * dilated texels). Rows are filtered with libpng's heuristic (per row, the filter whose output
  * has the smallest sum of absolute values) and deflated with `CompressionStream`.

@@ -1,11 +1,12 @@
+// p083; docs/plans/p080_multi-viewport-rendering-and-axis-gizmo.md
 /**
- * Axes gizmo (docs/plans/p080_multi-viewport-rendering-and-axis-gizmo.md): a Blender-style
+ * Axes gizmo: a Blender-style
  * navigation gizmo in the top-right corner, showing the active camera's orientation. It is a
  * core viewport (Viewports.ts) with a private scene: unlit, no lights, a fixed orthographic
  * camera looking down −Z, and a root rotated by the inverse of the active camera's world
  * rotation every frame.
  *
- * Views (p083): the camera it follows and drives is resolved per view (Camera/_dbg__CameraRig.ts):
+ * Views: the camera it follows and drives is resolved per view (Camera/_dbg__CameraRig.ts):
  * in the Runtime view the active camera and the debug camera's rig, in an editor view the view's
  * camera rig, which counts as "debug camera active".
  *

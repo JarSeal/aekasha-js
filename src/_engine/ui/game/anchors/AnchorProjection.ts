@@ -48,8 +48,9 @@ export type AnchorPoint = {
 /** A `w` at or under this is behind the camera (or on its plane) */
 const BEHIND_W = 1e-6;
 
+// p808 D7
 /**
- * Projects a world point for the anchor layer (p808 D7), writing `out[0]` and `out[1]` (the
+ * Projects a world point for the anchor layer, writing `out[0]` and `out[1]` (the
  * screen position from the top left, CSS px), `out[2]` (a clamped point's direction from the
  * screen's centre, radians, 0 to the right, clockwise: y down) and `out[3]` (its distance from
  * the camera), and returns `PROJECTED_*`. No allocation: a frame calls it for every anchor.

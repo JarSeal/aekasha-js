@@ -440,8 +440,9 @@ export type WetSurface = {
   masks: SurfaceWetnessMasks;
 };
 
+// p307 T1, T2, T6
 /**
- * Wets a surface by the surface conditions (p307 T1, T2, T6): the conditions' `wetness` where rain
+ * Wets a surface by the surface conditions: the conditions' `wetness` where rain
  * reaches it (the geometry's facing, `shelter`), to the power of its `dryingSpeed`, shifted by the
  * relief (low points first, peaks last) and the cavities, darkens the albedo as the pores fill
  * (`wetDarkening`), lowers the roughness to `wetRoughness` and then, as a film forms over the full

@@ -132,7 +132,8 @@ const getTabSortValue = (def: AnyDebuggerTabDef, tabOrder: string[]) => {
   return index === -1 ? Infinity : index;
 };
 
-/** All tabs in menu order (p806 D6): the engine's and the app's by `orderNr ?? tabOrder index`,
+// p806 D6
+/** All tabs in menu order: the engine's and the app's by `orderNr ?? tabOrder index`,
  * then the scene tabs by the same; ties (and unlisted tabs) in registration order. */
 const getOrderedTabs = () => {
   const tabOrder = getConfig().debugDrawer?.tabOrder || DEFAULT_DEBUG_DRAWER_TAB_ORDER;
@@ -355,7 +356,8 @@ export const _persistDebuggerTabValue = (id: string, key: string) => {
 /** Hidden in an editor view too (_setDrawerSuspendedByView), so updateDebuggerTab skips the tab. */
 export const _isDebuggerTabOpen = (id: string) => isVisible() && host.mountedId === id;
 
-/** The drawer for the test bridge (p806 D14): its element, the mounted tab's container and the
+// p806 D14
+/** The drawer for the test bridge: its element, the mounted tab's container and the
  * tab ids in menu order. */
 export const _getDrawerTestInfo = () => ({
   element: shell?.cmp.elem ?? null,
@@ -369,8 +371,9 @@ export const _updateDebuggerTab = (id: string, opts?: UpdateDebuggerTabOpts) => 
   host.refresh(opts?.rebuild);
 };
 
+// p806 D5
 /** Builds the drawer on the first call (the first `setCurrentScene`). Later calls change the title
- * in place and pass the scene change to the open tab (p806 D5): it's rebuilt from `content`
+ * in place and pass the scene change to the open tab: it's rebuilt from `content`
  * (a tab built from the current scene's data: the Ray cast tab's physics section, LOD), or kept
  * and refreshed with `keepOnSceneChange`. */
 export const _updateDebuggerSceneTitle = (title: string) => {
@@ -383,7 +386,8 @@ export const _updateDebuggerSceneTitle = (title: string) => {
   _createDebugGui();
 };
 
-/** During a scene load (p806 D6, D7): the drawer is `inert`, `aria-busy` and dimmed, and every
+// p806 D6, D7
+/** During a scene load: the drawer is `inert`, `aria-busy` and dimmed, and every
  * on-screen tool `aria-disabled`; the scene loader's overlay is the loading signal. */
 export const _disableDebugger = (disable: boolean) => {
   if (!IS_DEBUG_ENV) return;

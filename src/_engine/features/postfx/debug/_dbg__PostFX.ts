@@ -1,5 +1,6 @@
+// p071
 /**
- * PostFX debugger tab (p071). Debug-only, lazily loaded
+ * PostFX debugger tab. Debug-only, lazily loaded
  * through PostFX.ts's createPostFXDebugGUI().
  */
 import {
@@ -388,10 +389,11 @@ const NOT_LIVE_NOTE: Record<Exclude<PostFxLiveParams, 'setParam'>, string> = {
     'This PostFX pass has not been built yet (disabled, or not rendered): edits are applied when released, and take effect when it is next built.',
 };
 
+// p804 D3
 /**
  * The params' fields, in the pass JSON's order (a `hidden` one left out). An edit follows the drag
- * in a live pass; at the gesture's end it's applied, saved and recorded with the gesture's `prev`
- * (p804 D3). A param no field fits (`json`) is a monitor of its JSON, never left out silently.
+ * in a live pass; at the gesture's end it's applied, saved and recorded with the gesture's `prev`.
+ * A param no field fits (`json`) is a monitor of its JSON, never left out silently.
  */
 const getParamItems = (info: PostFxPassInfo, isLive: boolean): PropertyGridItem[] => {
   const paramsProxy = structuredClone(info.params);
@@ -428,7 +430,8 @@ const getParamItems = (info: PostFxPassInfo, isLive: boolean): PropertyGridItem[
   return items;
 };
 
-/** Content for a PostFX pass's edit window (p806 D10: the UI kit's property grid) */
+// p806 D10
+/** Content for a PostFX pass's edit window (the UI kit's property grid) */
 export const createEditPostFxPassContent = (data?: { [key: string]: unknown }) => {
   const d = data as { id: string };
   const info = findPostFxPass(d.id);

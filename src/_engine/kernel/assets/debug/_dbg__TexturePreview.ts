@@ -4,8 +4,9 @@ import { clearBakeTarget, getBakeRenderer, withBakeRendererState } from '../../r
 import { getTextureDepth, getTextureSize } from './_dbg__AssetStats';
 import { readRenderTargetRGBA8Async } from '../../render/Snapshot';
 
+// p299 D6
 /**
- * The debugger's GPU texture previews (p299 D6). A KTX2 texture can't be drawn into a 2D canvas
+ * The debugger's GPU texture previews. A KTX2 texture can't be drawn into a 2D canvas
  * (its data is in a GPU format), so a preview samples the texture on the GPU at one mip level, one
  * tile per layer side by side in a render target, and reads the target back
  * (`readRenderTargetPixelsAsync`) into an `ImageData` per tile. Any texture kind works: compressed

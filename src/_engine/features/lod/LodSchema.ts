@@ -2,8 +2,9 @@ import { z } from 'zod';
 import type { LodAutoDef, LodDef, MeshLodDef } from './LodTypes';
 import type { FeatureSchemaPart } from '../../schemas/FeatureSchemas';
 
+// p348 §2.2
 /**
- * One level of a mesh's `lod` (LodLevelDef in features/lod/LodTypes.ts, p348 §2.2).
+ * One level of a mesh's `lod` (LodLevelDef in features/lod/LodTypes.ts).
  * A part of {@link lodSchemaPart}.
  * @internal
  */
@@ -36,8 +37,9 @@ export const LodLevelDefSchema = z
   })
   .describe('A level of detail.');
 
+// p348 §2.2
 /**
- * A mesh's `lod` (LodDef in features/lod/LodTypes.ts, p348 §2.2). The type is hand-written there (the
+ * A mesh's `lod` (LodDef in features/lod/LodTypes.ts). The type is hand-written there (the
  * documented API); `satisfies` keeps this schema's output assignable to it.
  * A part of {@link lodSchemaPart}.
  * @internal
@@ -92,8 +94,9 @@ export const LodDefSchema = z
     'Levels of detail (p348): each frame the mesh shows the level its screen size reaches, swapping its geometry, material and castShadow, cross-faded over fadeSeconds.'
   ) satisfies z.ZodType<LodDef>;
 
+// p348 §5
 /**
- * A mesh's `lod: { auto: true, ... }` (LodAutoDef in features/lod/LodTypes.ts, p348 §5).
+ * A mesh's `lod: { auto: true, ... }` (LodAutoDef in features/lod/LodTypes.ts).
  * A part of {@link lodSchemaPart}.
  * @internal
  */
@@ -131,7 +134,8 @@ export const MeshLodDefSchema = z.union([
     ),
 ]) satisfies z.ZodType<MeshLodDef>;
 
-/** The LOD feature's fields (p607 D10): a mesh's `lod` and a scene's exported `impostors`. */
+// p607 D10
+/** The LOD feature's fields: a mesh's `lod` and a scene's exported `impostors`. */
 export const lodSchemaPart = {
   feature: 'lod',
   scene: {
@@ -143,7 +147,8 @@ export const lodSchemaPart = {
       ),
   },
   mesh: {
-    /** Levels of detail (p348), or `AUTO` from the geometry's LOD chain, see setMeshLod. In a save
+    // p348
+    /** Levels of detail, or `AUTO` from the geometry's LOD chain, see setMeshLod. In a save
      * entry it replaces the mesh's whole `lod` in that scene. */
     lod: MeshLodDefSchema.optional(),
   },

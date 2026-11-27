@@ -54,11 +54,12 @@ export function createPhysicsTransformArrayBuffer(
   return buffer;
 }
 
+// p352
 /**
  * Physics-owned per-frame transform hot path. Interleaved layout
  * ([posX, posY, posZ, rotX, rotY, rotZ, rotW, linvelXYZ, angvelXYZ] x maxBodies), one slot per
  * live rigid body that isn't created `FIXED` (a fixed body never moves under simulation, so its
- * proxy keeps its own pose instead, p352), in one or more banks laid out as [slots][header].
+ * proxy keeps its own pose instead), in one or more banks laid out as [slots][header].
  *
  * The worker is the allocation authority (allocateSlot/freeSlot tie to rigid
  * body creation/deletion there) and writes into it after every step(). The

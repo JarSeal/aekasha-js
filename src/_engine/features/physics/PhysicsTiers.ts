@@ -59,8 +59,9 @@ const getPending = (world: ECSWorld) => {
  */
 export const hasAnyJoints = () => hasJoints() || hasMultibodyJoints();
 
+// p250
 /**
- * Calls `fn` with the two body ids of every live joint, impulse and multibody (p250): the joint
+ * Calls `fn` with the two body ids of every live joint, impulse and multibody: the joint
  * groups' edges.
  * @internal
  */
@@ -79,9 +80,10 @@ const MULTIBODY_JOINT = 2;
 const getBodyJointKinds = (bodyId: number) =>
   (isBodyJointed(bodyId) ? IMPULSE_JOINT : 0) | (isBodyInMultibody(bodyId) ? MULTIBODY_JOINT : 0);
 
+// p250 D5; i250
 /**
- * The tier a body or group with joints of `kinds` takes for `tier` (p250 D5): Rapier mishandles
- * impulse joints on disabled bodies (i250: `DISABLED` is `STATIC`), and panics on a multibody link
+ * The tier a body or group with joints of `kinds` takes for `tier`: Rapier mishandles
+ * impulse joints on disabled bodies (`DISABLED` is `STATIC`), and panics on a multibody link
  * that isn't dynamic (`STATIC` is `DISABLED`), so with both kinds neither frozen tier is safe
  * (`FULL`). `FULL` and `REMOVED` pass (`REMOVED` is refused with any joint before this).
  */
@@ -160,8 +162,9 @@ const resolveTierGroup = (
   return members;
 };
 
+// p352
 /**
- * Requests a simulation tier for a dynamic physics entity (p352). It applies at the start of
+ * Requests a simulation tier for a dynamic physics entity. It applies at the start of
  * the next `APP_PHYSICS_STEP` sub-step, so a request from an `APP_PHYSICS_STEP` system or from
  * scene-load code is deterministic. Requests before then collapse into the latest one.
  *
@@ -251,11 +254,11 @@ export const isPhysicsEntityJointed = (world: ECSWorld, entityId: number) => {
   return !!body && isBodyAnyJointed(body.id);
 };
 
+// docs/issues/i250_rapier-joint-on-disabled-bodies-panics.md
 /** The tier a resolved group can have for `tier`, by its joints (`toSafeTier`): an impulse-jointed
  * group's `DISABLED` is `STATIC` (Rapier 0.19.3 panicked on a joint inserted between disabled
- * bodies, and stepping them corrupted other joints' solving, unchecked on 0.21.0:
- * docs/issues/i250_rapier-joint-on-disabled-bodies-panics.md), a multibody's `STATIC` is
- * `DISABLED`, and with both it's `FULL`. */
+ * bodies, and stepping them corrupted other joints' solving, unchecked on 0.21.0), a
+ * multibody's `STATIC` is `DISABLED`, and with both it's `FULL`. */
 const toJointSafeTier = (world: ECSWorld, group: readonly number[], tier: PhysicsTier) =>
   tier === 'STATIC' || tier === 'DISABLED'
     ? toSafeTier(getGroupJointKinds(world, group), tier)
@@ -291,8 +294,9 @@ const setGroupTarget = (world: ECSWorld, group: readonly number[], tier: Physics
 /** A tier's coarseness: a joint group takes its members' finest want. */
 const TIER_RANK: Record<PhysicsTier, number> = { FULL: 0, STATIC: 1, DISABLED: 2, REMOVED: 3 };
 
+// p353 Phase 4 D6
 /**
- * Requests tiers for a batch of entities by what the caller wants for each (p353 Phase 4 D6; the
+ * Requests tiers for a batch of entities by what the caller wants for each (the
  * kernel's `PhysicsTierAccess.requestTiers`, which `physicsTiers()` sets): an entity that can't
  * have tiers, or whose group can't take the tier, is skipped without a warning (the caller asks
  * for whatever its entities are). A joint group takes the finest want of its members, asking
@@ -591,8 +595,9 @@ const getRestoredTier = (world: ECSWorld, entityId: number, data: PhysicsSimTier
   return 'DISABLED';
 };
 
+// p500 Phase 3
 /**
- * The tiers' restore hook (p500 Phase 3, `onPhysicsRestore`): a snapshot restore puts every body's
+ * The tiers' restore hook (`onPhysicsRestore`): a snapshot restore puts every body's
  * type and enabled state back to the snapshot's, so each tiered entity of every ECS world gets the
  * tier its body is in (FIXED: `STATIC`; dynamic and enabled: `FULL`; dynamic and disabled:
  * `DISABLED`) and that tier's bucket, and the requests not applied yet are dropped: the tiers are

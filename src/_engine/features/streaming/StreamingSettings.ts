@@ -2,9 +2,10 @@
 // StreamingSchema.ts builds the scene field's schema on them, so a build ships no schema code.
 import type { SceneStreamingSettings } from './StreamingSchema';
 
+// The terrain blocks: p306
 /**
  * The smallest streaming cell size, in metres: a cell is a power of two of at least this, so
- * p306's terrain blocks (32-256 m) tile it exactly.
+ * terrain blocks (32-256 m) tile it exactly.
  */
 export const STREAMING_MIN_CELL_SIZE = 32;
 
@@ -14,8 +15,9 @@ export const STREAMING_MIN_CELL_SIZE = 32;
  */
 export const DEFAULT_STREAMING_RINGS = { resident: 1, nearby: 2, far: 5 } as const;
 
+// p353 Phase 4 D7
 /**
- * The physics tiers a `NEARBY` cell's dynamic bodies can have (p353 Phase 4 D7), the first the
+ * The physics tiers a `NEARBY` cell's dynamic bodies can have, the first the
  * default: `STATIC` still collides (something can reach it), `DISABLED` keeps its velocities.
  */
 export const STREAMING_NEARBY_PHYSICS_TIERS = ['STATIC', 'DISABLED'] as const;

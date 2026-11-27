@@ -9,9 +9,10 @@ export type TerrainGeneratorOpts = {
   blockId: string;
   /** The block's `geometry.params` (`{}` when its JSON gives none): the generator checks them */
   params: Record<string, unknown>;
+  // p301 §7
   /** The block's `geometry.seed` (default 0). A height noise continuous across blocks uses it as it
    * is, sampled at the block's world place (`grid.x` / `grid.z` × `size`); a block's own
-   * randomness (scattered props) combines it with `grid.x` / `grid.z` (p301 §7). Never draw from a
+   * randomness (scattered props) combines it with `grid.x` / `grid.z`. Never draw from a
    * named stream (`getRandomStream` restarts with each scene load and depends on the draw order). */
   seed: number;
   /** The block's place and grid: the geometry is centred on the block's origin (y = 0 its base),

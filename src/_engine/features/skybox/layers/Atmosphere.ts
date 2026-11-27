@@ -236,8 +236,9 @@ export const applyAtmosphereSunUniforms = (
   computeExtinction(y, u.betaR.value, u.betaM.value, u.extinctionAtSun);
 };
 
+// p112 Phase 5
 /**
- * The atmosphere's per-direction terms (the clouds reuse them, p112 Phase 5).
+ * The atmosphere's per-direction terms (the clouds reuse them).
  * @internal
  */
 export type AtmosphereTerms = {

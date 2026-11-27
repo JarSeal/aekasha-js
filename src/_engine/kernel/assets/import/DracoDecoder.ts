@@ -50,10 +50,11 @@ const setDecoder = (loader: DRACOLoader) => {
   }
 };
 
+// p607 D14
 /**
  * Returns the one shared DRACOLoader, creating it on the first call: GLTFSource.ts asks for it
  * only for a file that uses KHR_draco_mesh_compression, so an app without DRACO models never loads
- * DRACOLoader (p607 D14) or its decoder files (fetched once, by the first parse). Parallel first
+ * DRACOLoader or its decoder files (fetched once, by the first parse). Parallel first
  * calls get the same loader; one created after disposeDracoLoader is a new one.
  * @internal
  */

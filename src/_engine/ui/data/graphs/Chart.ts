@@ -129,8 +129,9 @@ const getValueRange = (series: readonly ChartSeries[], count: number, stacked: b
   return lo <= hi ? { lo, hi } : { lo: NaN, hi: NaN };
 };
 
+// p805 D9
 /**
- * Creates a static chart (p805 D9): lines or bars of a few series over categories or a numeric x,
+ * Creates a static chart: lines or bars of a few series over categories or a numeric x,
  * with a y axis of nice ticks, a legend and the values as a table. SVG for the plot (stretched to
  * its box, so it follows its width with no measuring) and HTML for the labels; redrawn whole by
  * `setSeries`, so it's for figures that change now and then (a benchmark's results, a level's

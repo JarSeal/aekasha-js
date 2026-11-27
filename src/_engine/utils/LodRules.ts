@@ -13,10 +13,11 @@
 /** A `LodDef`'s `hysteresis` when it has none. */
 export const DEFAULT_LOD_HYSTERESIS = 0.1;
 
+// p354 Phase 0
 /**
  * A fade ends once its progress reaches 1 − this, on every path: a 0.25 s fade at a fixed 1/60 s
  * then lasts 15 frames, where the plain `≥ 1` took 16 in f64 (15 steps of 1/15 sum to just under
- * 1) and 15 in a shader's f32 (p354 Phase 0).
+ * 1) and 15 in a shader's f32.
  * @internal
  */
 export const LOD_FADE_END_EPSILON = 1e-5;

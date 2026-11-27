@@ -301,8 +301,9 @@ const getRainOcclusion = (material: NodeMaterial, define: RockDefine) => {
   return occlusion ?? undefined;
 };
 
+// p308 D5
 /**
- * The rock material's graph (p308 D5), the toolkit material `rockScatter`'s `setup`: a texture set
+ * The rock material's graph, the toolkit material `rockScatter`'s `setup`: a texture set
  * on scatter rocks, wet with the ground.
  *
  * - **`tiling: 'TRIPLANAR'`** (default; the procedural rocks, `generateRock`): the input

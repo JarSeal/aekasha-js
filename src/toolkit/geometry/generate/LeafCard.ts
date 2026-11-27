@@ -15,8 +15,9 @@ export interface LeafCardOptions {
 /** The id {@link saveLeafCardGeometry} registers the default card under. */
 export const LEAF_CARD_GEOMETRY_ID = 'leafCard';
 
+// p308 D5
 /**
- * Builds a leaf litter card (p308 D5): a square `size` across lying in the XZ plane, folded along
+ * Builds a leaf litter card: a square `size` across lying in the XZ plane, folded along
  * its midrib (the z axis through its centre) so its left and right edges stand `curl` × `size`
  * over it; its origin is the midrib's centre, on the ground. UV 0..1 over the square, U along +x
  * and V along −z (the midrib: a leaf's tip at V 1), smooth normals. Pair it with the toolkit's

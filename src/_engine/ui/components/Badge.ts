@@ -48,8 +48,9 @@ export type Badge = {
   setTone: (tone: BadgeTone) => void;
 };
 
+// p803 D10
 /**
- * Creates a badge (p803 D10): a short count or status word next to what it's about ("Inbox 3",
+ * Creates a badge: a short count or status word next to what it's about ("Inbox 3",
  * "Beta"), in a status colour on its soft background.
  * - Parts: `.aekBadge` (`data-tone`), `.aekBadge__label` (`aria-hidden` with a `spokenLabel`, which
  *   a visually hidden copy says instead).

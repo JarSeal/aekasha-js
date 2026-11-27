@@ -3,6 +3,7 @@ import path from 'node:path';
 import type MarkdownIt from 'markdown-it';
 import {
   CONTRAST_CONTROLS,
+  CONTRAST_SCROLLBAR,
   CONTRAST_SERIES,
   CONTRAST_SERIES_SURFACES,
   CONTRAST_SOFTS,
@@ -28,7 +29,7 @@ import type { HubGeneratedSection } from './section';
  * from the UI kit's `tokens.css` (and `fonts.css`' opt-in), never written by hand, so the page
  * shows what the kit ships. Each colour role's swatch and value in both themes, the contrast of
  * every pair `Tokens.test.ts` checks (the same computation, `TokenSheet.ts`), the type, space,
- * radius, shadow, layer, motion and focus tokens with the compact density's values beside the
+ * radius, shadow, layer, motion, focus and scrollbar tokens with the compact density's values beside the
  * defaults, and the built-in icons (`BuiltInIcons.ts`). The prose around them is the page's
  * Markdown. A token in no table warns, so a new one can't go missing from the page.
  */
@@ -50,6 +51,7 @@ const SLOTS = {
   motion: 'generated-design-motion',
   icons: 'generated-design-icons',
   focus: 'generated-design-focus',
+  scrollbars: 'generated-design-scrollbars',
 } as const;
 
 /** `export { default as gearIcon } from './svg/gear-fill.svg?raw';` */
@@ -135,6 +137,7 @@ const ROOT_GROUPS: [string, (role: string) => boolean][] = [
   ['elevation', (role) => role.startsWith('radius-') || role.startsWith('z-')],
   ['motion', (role) => role.startsWith('motion-') || role.startsWith('ease-') || isDelay(role)],
   ['focus', isFocusSize],
+  ['scrollbars', (role) => role.startsWith('scrollbar-')],
 ];
 
 const roleOf = (name: string) => name.slice('--aek-'.length);
@@ -197,6 +200,7 @@ const describeRule = (role: string) => {
   if (CONTRAST_SURFACES.includes(role)) return 'A surface';
   if (CONTRAST_TEXTS.includes(role)) return 'Text, 4.5:1 on every surface';
   if (CONTRAST_CONTROLS.includes(role)) return 'A control’s edge, 3:1 on every surface';
+  if (CONTRAST_SCROLLBAR.includes(role)) return 'A scrollbar part, 3:1 on every surface';
   if (CONTRAST_SERIES.includes(role)) {
     return `A chart series, 3:1 on ${CONTRAST_SERIES_SURFACES.map(code).join(' and ')}`;
   }
@@ -220,7 +224,11 @@ const renderSwatch = (value: string, decls: Decls) => {
 
 /** A pair's sample: text in its colour, a control's edge, or a series' bar */
 const getSampleKind = (role: string) =>
-  CONTRAST_CONTROLS.includes(role) ? 'control' : CONTRAST_SERIES.includes(role) ? 'series' : null;
+  CONTRAST_CONTROLS.includes(role)
+    ? 'control'
+    : CONTRAST_SERIES.includes(role) || CONTRAST_SCROLLBAR.includes(role)
+      ? 'series'
+      : null;
 
 const renderContrastCell = (pair: ContrastPair | undefined, fg: string, bg: string) => {
   if (!pair) return '—';
@@ -242,8 +250,8 @@ const renderContrastTable = (theme: string, decls: Decls) => {
   const pairs = listContrastPairs(decls);
   const color = (role: string) => toCssColor(decls.get(`--aek-${role}`) ?? '', decls) ?? '';
   const find = (fg: string, bg: string) => pairs.find((p) => p.fg === fg && p.bg === bg);
-  const rows = [...CONTRAST_TEXTS, ...CONTRAST_CONTROLS].map((fg) => [
-    `${code(fg)}${renderMinimum(CONTRAST_CONTROLS.includes(fg) ? 3 : 4.5)}`,
+  const rows = [...CONTRAST_TEXTS, ...CONTRAST_CONTROLS, ...CONTRAST_SCROLLBAR].map((fg) => [
+    `${code(fg)}${renderMinimum(CONTRAST_TEXTS.includes(fg) ? 4.5 : 3)}`,
     ...CONTRAST_SURFACES.map((bg) => renderContrastCell(find(fg, bg), color(fg), color(bg))),
   ]);
   return renderTable({
@@ -549,6 +557,30 @@ const renderFocus = (tokens: DesignTokens | null, md: MarkdownIt, env: HubMarkdo
   ].join('');
 };
 
+const renderScrollbars = (tokens: DesignTokens | null, md: MarkdownIt, env: HubMarkdownEnv) => {
+  env.file = TOKENS_FILE;
+  if (!tokens) return UNREAD;
+  const sizes = rootTokens(tokens, (role) => role.startsWith('scrollbar-'));
+  return [
+    heading(md, env, 'Scrollbar sizes'),
+    renderTable({
+      head: ['Token', 'Default', 'Value'],
+      rows: sizes.map((name) => {
+        const value = tokens.root.get(name) ?? '';
+        return [code(name), px(toBasePx(value)), code(value)];
+      }),
+    }),
+    // A scroller per theme, both ways (the kit's rule draws them: the page is a kit root), each a
+    // tab stop so the keyboard scrolls it
+    '<div class="hubScrollbarSamples">',
+    ...['dark', 'light'].map(
+      (theme) =>
+        `<div class="hubScrollbarSample" data-aek-theme="${theme}" tabindex="0" role="region" aria-label="A scroller in the ${theme} theme"><p>${'The track is the surface’s colour with a line along its middle; the thumb is inset from its edges, with an arrow button at each end. '.repeat(6)}</p></div>`
+    ),
+    '</div>\n',
+  ].join('');
+};
+
 const renderIcons = (icons: BuiltInIcon[], md: MarkdownIt, env: HubMarkdownEnv) => {
   env.file = BUILT_IN_ICONS_FILE;
   const items = icons.map(
@@ -572,6 +604,7 @@ export const createDesignSection = (diag: HubDiagnostics): HubGeneratedSection =
       [SLOTS.elevation]: (md, env) => renderElevation(tokens, md, env),
       [SLOTS.motion]: (md, env) => renderMotion(tokens, md, env),
       [SLOTS.focus]: (md, env) => renderFocus(tokens, md, env),
+      [SLOTS.scrollbars]: (md, env) => renderScrollbars(tokens, md, env),
       [SLOTS.icons]: (md, env) => renderIcons(icons, md, env),
     },
     pages: [],

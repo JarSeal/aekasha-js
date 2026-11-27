@@ -69,8 +69,9 @@ const createPart = (className: string) => {
 export const getRarityLabel = (item: GameItem) =>
   item.rarityLabel ?? (item.rarity ? item.rarity[0].toUpperCase() + item.rarity.slice(1) : '');
 
+// p808 D11
 /**
- * Creates an item slot (p808 D11): a square button showing an item's picture, its stack's count, its
+ * Creates an item slot: a square button showing an item's picture, its stack's count, its
  * rarity as a border, the key that uses it and, opt-in, a cooldown. The hotbar and the inventory are
  * made of them; alone it's an equipment slot or a quick-use button.
  * - Parts: `.aekItemSlot` (a `<button>`; `data-size`, `data-rarity`, `data-empty` while empty),

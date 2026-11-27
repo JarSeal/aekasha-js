@@ -93,6 +93,7 @@ export const countReleasedAssets = (released: ReleasedAssets) =>
   released.geometries.length +
   released.textures.length;
 
+// i110
 /**
  * Releases the non-persistent assets a scene still holds (see AssetOwners), its streaming cells'
  * included, that nothing uses: its import manifests, its materials and geometries with ref count
@@ -101,7 +102,7 @@ export const countReleasedAssets = (released: ReleasedAssets) =>
  * and environment). An asset another owner holds too only loses the scene's keys; one still in use
  * keeps them, for the scene's next release. SceneLoader runs this for the previous scene once the
  * next one has loaded, so whatever the next scene shares has been re-tagged to it (or has taken
- * refs) and stays, and for a failed load's scene once what it built is deleted (i110), so what it
+ * refs) and stays, and for a failed load's scene once what it built is deleted, so what it
  * shares with the current scene stays the current scene's.
  *
  * A released material disposes the texture clones it holds alone; registered textures are only

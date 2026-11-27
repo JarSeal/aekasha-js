@@ -241,8 +241,9 @@ export const ENGINE_FEATURE_FACTORIES: Record<string, string> = {
   terrain: "terrain() from 'aekasha/terrain'",
 };
 
+// p607 D10
 /**
- * Throws when a gathered scene needs a feature `features` doesn't list (p607 D10): the
+ * Throws when a gathered scene needs a feature `features` doesn't list: the
  * gatherer's manifest, each scene's `__features`, names the features its data uses (a sky box,
  * a mesh's `lod`, …). Every scene is checked, loaded or not, and the error names each scene and
  * feature missing. A scene without a manifest (data gathered before it) isn't checked.

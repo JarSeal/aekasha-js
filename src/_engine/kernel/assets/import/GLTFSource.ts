@@ -13,7 +13,8 @@ const ALLOWED_FILENAME_EXTENSIONS = ['gltf', 'glb'];
 const pendingFetches = new Map<string, Promise<ArrayBuffer>>();
 
 let gltfLoader: GLTFLoader | null = null;
-/** The shared GLTFLoader, imported with the first file (p607 D14): an app without models never
+// p607 D14
+/** The shared GLTFLoader, imported with the first file: an app without models never
  * loads it (with its BufferGeometryUtils and SkeletonUtils). */
 const getGLTFLoaderAsync = async () => {
   if (!gltfLoader) {

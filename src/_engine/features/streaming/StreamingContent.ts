@@ -37,8 +37,9 @@ export type StreamingCellContext = {
   runOwned<T>(fn: () => T): T;
 };
 
+// p353 Phase 5
 /**
- * Where a unit of cell content is loaded (its cell's level, p353 Phase 5): `NEAR` while the cell
+ * Where a unit of cell content is loaded (its cell's level): `NEAR` while the cell
  * is `RESIDENT` or `NEARBY` (its full content), `FAR` only while it's `FAR` (its stand-ins:
  * impostors, coarse levels), `NEAR_AND_FAR` from `FAR` in, kept through every level (a cell's
  * ground, so a far cell has no hole; its bodies are taken out of the physics world while `FAR`).

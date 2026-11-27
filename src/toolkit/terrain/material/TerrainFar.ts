@@ -43,7 +43,8 @@ export type BranchSurface = {
   normal: Node<'vec3'> | null;
   bumpHeight: Node<'float'> | null;
   ao: Node<'float'> | null;
-  /** What the wet response reads (p307), or null without `wet` */
+  // p307
+  /** What the wet response reads, or null without `wet` */
   wet: LayerWet | null;
 };
 
@@ -224,8 +225,9 @@ export type FarBranchProps = {
   buildNear: (inputs: FarBranchInputs) => BranchSurface;
 };
 
+// p305 D7
 /**
- * The surface with a far mode (p305 D7): the far surface everywhere, and where its share is under
+ * The surface with a far mode: the far surface everywhere, and where its share is under
  * 1 (before the `farBlend` band's end) a dynamic branch that builds the near surface and mixes the
  * far one into it by the share; the layers aren't sampled past the band. Returns the surface's
  * members of one struct var.

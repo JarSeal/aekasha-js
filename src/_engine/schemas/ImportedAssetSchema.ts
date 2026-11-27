@@ -68,8 +68,9 @@ const ImportedAssetOverridesSchema = z.object({
   debugData: DebugDataSchema.optional(),
 });
 
+// p371 D3
 /**
- * An import's `merge` (p371 D3), build time only: the asset pipeline joins the file's static
+ * An import's `merge`, build time only: the asset pipeline joins the file's static
  * pieces into one node per glTF material (`BY_MATERIAL`, named `__merged_<material>`) or one node
  * in all (`ALL`, named `__merged`), so a scene draws them with one mesh
  * (`<id>/__merged`). Physics, skinned, morph-target and animated nodes, and the `exclude`d ones,
@@ -115,7 +116,8 @@ export const ImportedAssetSchema = z.object({
   fileName: AssetFileNameSchema,
   /** Build time only: the asset pipeline's settings (not per scene, never read by the runtime). */
   optimize: ImportedAssetOptimizeSchema.optional(),
-  /** Build time only: joins the file's static pieces into `__merged` nodes (p371 D3); not per
+  // p371 D3
+  /** Build time only: joins the file's static pieces into `__merged` nodes; not per
    * scene, never read by the runtime. */
   merge: ImportedAssetMergeSchema.optional(),
   /** Set by the gatherer: the file it came from. */

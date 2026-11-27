@@ -69,8 +69,10 @@ const createPart = <K extends keyof HTMLElementTagNameMap>(tag: K, className: st
   return elem;
 };
 
+// p808 D7
+// aria-hidden: p808 D4
 /**
- * Creates a minimap frame (p808 D7): the frame round a viewport that shows the map (the
+ * Creates a minimap frame: the frame round a viewport that shows the map (the
  * `viewports()` feature's `createViewport`, a top-down camera), with a north mark, the player's
  * arrow at its centre and optional zoom buttons. The app appends it into the viewport's slot,
  * which places it over the rendered map; the map itself is the viewport's. Square: the viewport
@@ -89,7 +91,7 @@ const createPart = <K extends keyof HTMLElementTagNameMap>(tag: K, className: st
  *   action maps); the frame binds no other key (a game's map binds zoom to its own keys and calls
  *   its own zoom).
  * - Assistive tech: the frame is a group named by `label`; the map, the north mark and the arrow
- *   are pictures it can't read (p808 D4: the arrow and the mark `aria-hidden`), so a visually
+ *   are pictures it can't read (the arrow and the mark are `aria-hidden`), so a visually
  *   hidden text says the player's heading ('Facing north-east'), written when the nearest of the
  *   eight directions changes, not live. The frame lets the pointer through to the canvas but for
  *   its buttons.

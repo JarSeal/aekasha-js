@@ -6,17 +6,18 @@ import { retagAssetOwner } from './AssetOwners';
 import { getGeometryRegistry, saveBufferGeometry } from './Geometry';
 import { getTexture, getTextureRegistry } from './Texture';
 
+// p299 D3; mipChain FULL: p351 Phase 4
 /**
- * 2D texture atlases (p299 D3): cells of any size packed into one layout by the asset pipeline
+ * 2D texture atlases: cells of any size packed into one layout by the asset pipeline
  * (`*.textureAtlas.json`), one KTX2 output per map slot. At runtime each slot is an ordinary
  * registered texture, id `<atlasId>.<slot>`, loaded by loadTextureAsync from its output, with the
  * cell table on its `userData.textureAtlas` ({@link getTextureAtlasInfo}). A scene lists the atlas
  * id in its `textures` for every slot, or a slot's id for that one.
  *
  * The mip chain stops at the last level the layout keeps apart (`levels`), so a cell sampled at
- * any level the texture has never reads its neighbour. An atlas with `mipChain: "FULL"` (p351
- * Phase 4: an impostor's neighbouring views) has every level down to 1 × 1 instead, and its
- * levels past `levels` mix neighbouring cells.
+ * any level the texture has never reads its neighbour. An atlas with `mipChain: "FULL"`
+ * (an impostor's neighbouring views) has every level down to 1 × 1 instead, and its levels past
+ * `levels` mix neighbouring cells.
  */
 
 /** A slot texture's cell table and layout, on its `userData.textureAtlas`. */

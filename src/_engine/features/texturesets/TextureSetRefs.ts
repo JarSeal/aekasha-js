@@ -6,8 +6,9 @@
 import type { MaterialInputDependency } from '../../kernel/assets/MaterialInputRefs';
 import type { TextureSetPacking } from '../../schemas/TextureSetSchema';
 
+// p303 D1
 /**
- * A TSL input's texture set (p303 D1): `{ "textureSet": "sand01" }` is a bundle of the set's
+ * A TSL input's texture set: `{ "textureSet": "sand01" }` is a bundle of the set's
  * default packing (`"packing"` picks another): each slot's texture node, and uniforms of the set's
  * `physicalSize`, `heightScale` and `surface` fields, by name (`inputs.ground.albedoRough`,
  * `inputs.ground.physicalSize`).
@@ -28,7 +29,8 @@ export type TextureSetPackingData = {
   defaultPacking: string;
   /** Each packing's texture ids by slot. */
   packings: Partial<Record<string, Record<string, string>>>;
-  /** A procedural set's generator (p304 D3): its textures are baked, not loaded. */
+  // p304 D3
+  /** A procedural set's generator: its textures are baked, not loaded. */
   procedural?: unknown;
 };
 
@@ -57,10 +59,11 @@ export const isTextureSetInputRef = (value: unknown): value is TextureSetInputRe
 export const getTextureSetSlotTextures = (set: TextureSetPackingData, packing: string) =>
   set.packings[packing];
 
+// p304 D3
 /**
  * The textures a texture set input needs: its packing's (the set's default without one). None
  * for another value, a set the lookup doesn't know, a packing the set doesn't have, or a
- * procedural set (p304 D3: the `textureSets()` feature bakes its textures, a scene's with its load
+ * procedural set (the `textureSets()` feature bakes its textures, a scene's with its load
  * and code's with `loadTextureSetAsync`; no texture data declares them).
  * @internal
  */
@@ -75,8 +78,9 @@ export const getTextureSetInputDependencies = (
   return slots ? Object.values(slots).map((id) => ({ type: 'texture', id })) : [];
 };
 
+// p303 D4
 /**
- * A TSL input's texture set array (p303 D4): `{ "textureSetArray": ["sand01", "grass01"],
+ * A TSL input's texture set array: `{ "textureSetArray": ["sand01", "grass01"],
  * "packing": "LITE" }` is a bundle of the packing's array textures, layer `i` from the `i`th set
  * (`inputs.ground.albedoRough.sample(uv).depth(layer)`), and the layers' params (`layerParams`,
  * read with `getTextureSetLayerParams`, and `layerCount`). `{ "textureSetArray": "gallery" }` names

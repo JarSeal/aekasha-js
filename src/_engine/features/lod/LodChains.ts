@@ -65,7 +65,8 @@ export type LodChain = {
   options: ResolvedLodChainOptions;
   /** levels[0] is the base. Can be shorter than the requested ratios, or just the base. */
   levels: LodChainLevel[];
-  /** `BUILD`: the asset pipeline built it into the GLB (p347 Phase 3), the import registered it.
+  // BUILD: p347 Phase 3
+  /** `BUILD`: the asset pipeline built it into the GLB, the import registered it.
    * `RUNTIME`: generateLodChain() simplified it on the client. */
   origin: 'BUILD' | 'RUNTIME';
   /**
@@ -275,9 +276,10 @@ const runGeneration = async (geometryId: string, options: ResolvedLodChainOption
   return chain;
 };
 
+// p347 §2.2
 /**
  * Generates a registered geometry's LOD chain: simplified levels (LOD1, LOD2, …) registered as
- * geometries `${geometryId}#lod${n}`, with their triangle counts and errors (p347 §2.2). Runs where
+ * geometries `${geometryId}#lod${n}`, with their triangle counts and errors. Runs where
  * AppConfig.assets.simplifyWorkerTarget says (the assets worker by default through workerTarget),
  * falling back like an asset load. A chain the geometry already has is replaced. A call while one
  * is pending for the same geometry returns that one.
@@ -303,8 +305,9 @@ export const generateLodChain = (
   return promise;
 };
 
+// p347 Phase 3
 /**
- * Registers a LOD chain the asset pipeline built into a GLB (p347 Phase 3), for a geometry the
+ * Registers a LOD chain the asset pipeline built into a GLB, for a geometry the
  * import just registered: its levels become geometries `${geometryId}#lod${n}` as generated ones
  * do. A chain without levels is registered too (the build found nothing to remove), so a
  * `lodChain` import doesn't simplify it again on the client.

@@ -113,8 +113,9 @@ type Press = {
 
 let descriptionCount = 0;
 
+// p808 D11
 /**
- * Creates a drag group (p808 D11): the grids given it share one held item, so an item moves between
+ * Creates a drag group: the grids given it share one held item, so an item moves between
  * them (a chest and the bag, the equipment's slots and the backpack), by the pointer, the keys or a
  * gamepad. A grid without a group has one of its own. The move is reported to the grid it lands
  * in (its `onMove`, vetoed by its `canMove`).

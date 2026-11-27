@@ -2,7 +2,8 @@ import { z } from 'zod';
 import type { FeatureSchemaPart } from '../../schemas/FeatureSchemas';
 import { SceneTextureSetArraySchema } from '../../schemas/TextureSetSchema';
 
-/** The texture sets feature's scene fields (p303 D1, D4): `textureSets`, the ids of the
+// p303 D1, D4
+/** The texture sets feature's scene fields: `textureSets`, the ids of the
  * `*.textureSet.json` sets code uses (each loads its default packing), and `textureSetArrays`, the
  * set arrays the scene builds with its load. The asset's schema is `schemas/TextureSetSchema.ts`. */
 export const textureSetsSchemaPart = {

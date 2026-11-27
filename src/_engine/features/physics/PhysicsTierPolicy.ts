@@ -180,15 +180,16 @@ const deletePolicy = (world: ECSWorld) => {
   policies.delete(world);
 };
 
+// p352; the cadence: p343
 /**
- * Sets `world`'s physics tier distance policy (p352), or removes it with `null`. On each pass,
+ * Sets `world`'s physics tier distance policy, or removes it with `null`. On each pass,
  * each entity with the PHYSICS_TIER_POLICY component (createPhysicsEntity's `tierPolicy` option,
  * or setPhysicsTierPolicyMember) gets the tier of the first ring whose `within` its position is
  * in, measured from the focus. After its first pass, it moves out to a coarser ring only beyond
  * `within × (1 + hysteresis)`. The policy only calls `requestPhysicsTier`; a request it refuses
  * (eg. `REMOVED` for a body with joints) isn't repeated until the entity's ring changes.
  *
- * `cadence` (p343) says when a pass runs:
+ * `cadence` says when a pass runs:
  * - `STEPS` (default): it measures the members' and the focus' positions on every fixed physics
  *   step whose index is a multiple of `interval` (the world's steps: the phase restarts with
  *   every scene load), and decides `interval` steps later, where its requests apply. With a
@@ -376,8 +377,9 @@ export const getPhysicsTierPolicyFreezeSources = (ecsWorld?: ECSWorld): string[]
 
 const _focus = new THREE.Vector3();
 
+// p612 D7
 /** The main camera's position, the default focus: the default world's main camera is cached
- * (getMainCamera, p612 D7), another world's is queried. */
+ * (getMainCamera), another world's is queried. */
 const readCameraFocus = (world: ECSWorld, out: THREE.Vector3): THREE.Vector3 | null => {
   let camera: THREE.Object3D | undefined;
   if (world.id === DEFAULT_ECS_WORLD_ID) {

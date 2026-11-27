@@ -2,8 +2,9 @@ import { IS_DEBUG_ENV } from '../../kernel/config/Config';
 import type { EngineFeature } from '../../kernel/init/Features';
 import { installTextureSets, registerTextureSetsDebug } from './TextureSets';
 
+// p303
 /**
- * The texture sets feature (p303): `*.textureSet.json` sets, each a named group of packed PBR maps
+ * The texture sets feature: `*.textureSet.json` sets, each a named group of packed PBR maps
  * (`FULL`, `LITE`, `MINIMAL`) with the physical facts of the surface. A scene lists the sets its
  * code uses (`textureSets`, each loading its default packing), and a TSL material's input
  * `{ "textureSet": id, "packing"? }` gets the packing's textures and the set's uniforms. Without

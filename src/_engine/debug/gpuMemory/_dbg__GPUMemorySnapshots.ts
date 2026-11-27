@@ -8,8 +8,9 @@ import {
 import type { AllocationKind } from './_dbg__GPUMemoryAllocations';
 import { BOOT_OWNER, collectGPUAssets, type GPUAssetRow } from './_dbg__GPUMemoryOwners';
 
+// p345 §2.5
 /**
- * One in-memory snapshot of the GPU memory figures and a live diff against it (p345 §2.5): for
+ * One in-memory snapshot of the GPU memory figures and a live diff against it: for
  * leak hunting across scene switches (snapshot in scene A, go to B and back to A, diff).
  *
  * The leak list is by scene visit, not by scene id: whatever was created in the snapshot's visit

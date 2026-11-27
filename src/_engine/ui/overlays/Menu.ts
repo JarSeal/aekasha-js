@@ -67,7 +67,8 @@ export type MenuRadioGroup = {
   onValueChange?: (value: string) => void;
 };
 
-/** A menu's item that opens a submenu (p805 D11): ArrowRight, Enter, Space, a click or a hover
+// p805 D11
+/** A menu's item that opens a submenu: ArrowRight, Enter, Space, a click or a hover
  * of `--aek-submenu-delay` opens it beside the item. */
 export type MenuSubmenuItem = {
   /** A submenu. */
@@ -249,8 +250,9 @@ type Level = {
 /** An entry of an open level, with its level's index */
 type Hit = { depth: number; entry: MenuEntry };
 
+// p803 D10, p805 D11
 /**
- * Makes a menu that opens at an element or a point (p803 D10, p805 D11), with its submenus: one
+ * Makes a menu that opens at an element or a point, with its submenus: one
  * level per open submenu, each anchored to its item (`showAnchored`, on its right, flipped at the
  * bounds) and an overlay stack entry of its own, so Escape closes one level.
  * @internal
@@ -550,9 +552,11 @@ export const createMenuSurface = (props: MenuSurfaceProps): MenuSurface => {
   };
 };
 
+// p805 D11
+// p803 D10
 /**
- * Creates a menu (p803 D10, the APG menu button): a list of actions, on / off items, one-of
- * choices, submenus (p805 D11), groups and separators, opened by its trigger and anchored to it.
+ * Creates a menu (the APG menu button): a list of actions, on / off items, one-of
+ * choices, submenus, groups and separators, opened by its trigger and anchored to it.
  * - Parts: `.aekMenu` (`role="menu"`), in the HUD root while it's open, in the browser's top layer
  *   (else at `--aek-z-tooltip`); `.aekMenu__item` (`menuitem`, `menuitemcheckbox`,
  *   `menuitemradio`; `aria-disabled`, `aria-checked`; `aria-keyshortcuts` from its `kbd`) with

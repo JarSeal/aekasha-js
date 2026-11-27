@@ -61,8 +61,9 @@ const findNeighbourFocus = (elem: HTMLElement) => {
   return null;
 };
 
+// p803 D10
 /**
- * Creates a tag (p803 D10): a short label for a thing's kind or a filter, optionally removable (a
+ * Creates a tag: a short label for a thing's kind or a filter, optionally removable (a
  * picked item in a list) or selectable (a filter's chip).
  * - Parts: `.aekTag` (`data-tone`, `data-selectable`, `data-selected`, `data-removable`), `.aekTag__icon`,
  *   `.aekTag__label` (a `<button>`, `aria-pressed`, when selectable), `.aekTag__remove` (a

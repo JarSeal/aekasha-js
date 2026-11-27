@@ -52,8 +52,9 @@ export const attachMonitorGraph = (build: GraphMonitorBuild, props: GraphMonitor
   build.attach({ cmp: series.cmp, push: series.push });
 };
 
+// p805 D9
 /**
- * Creates a graph monitor (p805 D9, Tweakpane's monitor with `view: 'graph'`): a number shown as
+ * Creates a graph monitor (Tweakpane's monitor with `view: 'graph'`): a number shown as
  * text, as `createMonitor`'s, with a time series of its reads under it, read on its scheduler's
  * tick every `interval` ms (default 200; 0 every frame) and on each `refresh()` (every read is a
  * sample, as Tweakpane's). A value that isn't a number is a gap.

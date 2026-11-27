@@ -62,7 +62,8 @@ export type EngineAPIType = {
   createJoint: (params: JointParams) => JointAPI;
   /** Creates impulse joints, in order. */
   createJoints: (params: JointParams[]) => JointAPI[];
-  /** Creates a multibody joint, `body1Id` the parent (p250); throws on what Rapier would panic on
+  // p250
+  /** Creates a multibody joint, `body1Id` the parent; throws on what Rapier would panic on
    * (a loop, a second parent, a child that isn't dynamic). */
   createMultibodyJoint: (params: MultibodyJointParams) => MultibodyJointAPI;
   /** Frees the world and forgets its bodies, colliders and joints. */
@@ -91,10 +92,12 @@ export type EngineAPIType = {
   deleteJoints: (ids: number[], wakeUps?: boolean[]) => { ids: number[] };
   /** Deletes a multibody joint, waking its bodies when `wakeUp`; its child becomes a root. */
   deleteMultibodyJoint: (id: number, wakeUp?: boolean) => { id: number };
-  /** The world's snapshot (undefined without a world); see p500. */
+  // p500
+  /** The world's snapshot (undefined without a world). */
   takeSnapshot: () => PhysicsSnapshot | undefined;
+  // p500
   /** Puts the world back to a snapshot taken in it, rebinding the API objects both know and
-   * deleting the rest (see `RestoreSnapshotDelta`); see p500. */
+   * deleting the rest (see `RestoreSnapshotDelta`). */
   restoreSnapshot: (snapshot: PhysicsSnapshot, opts?: RestoreSnapshotOpts) => RestoreSnapshotResult;
   /** The body with this id, or undefined. */
   getRigidBodyAPIWithId: (id: number) => RigidBodyAPI | undefined;
@@ -112,10 +115,12 @@ export type EngineAPIType = {
    * `drainPendingOutOfBoundsRecords`. The bodies created, reattached or given their own bounds
    * since the last step are checked before it, asleep or not. */
   step: (eventQueue?: unknown) => void;
-  /** Sets (or clears, with null) the current world's bounds (p102), and checks every enabled
+  // p102
+  /** Sets (or clears, with null) the current world's bounds, and checks every enabled
    * dynamic body against them at once. A new world starts without. */
   setWorldBounds: (box: WorldBoundsBox | null) => void;
-  /** Sets (or clears, with null) one body's own bounds (p102 Phase 2), which replace the world's
+  // p102 Phase 2
+  /** Sets (or clears, with null) one body's own bounds, which replace the world's
    * for it; `'IGNORE'` exempts it. Checked before the next step. An unknown id is ignored; a
    * body's delete forgets them. */
   setBodyWorldBounds: (id: number, bounds: BodyWorldBounds | null) => void;
@@ -138,16 +143,19 @@ export type EngineAPIType = {
    * While none is set a query costs one null check. Only the `*Sync` implementations report,
    * so an async wrapper that delegates to one is not counted twice. */
   setQueryObserver: (observer: PhysicsQueryObserver | null) => void;
+  // p352
   /** MAIN_THREAD only: sets (or clears, with null) the observer told the id of every body moved
-   * by setTranslation/setRotation (p352: BODY_STATIC bodies aren't synced per frame, so a move
+   * by setTranslation/setRotation (BODY_STATIC bodies aren't synced per frame, so a move
    * reaches the body's entity through this). While none is set a move costs one null check. */
   setBodyMovedObserver: (observer: ((rigidBodyId: number) => void) | null) => void;
   /** Counts the awake and sleeping dynamic bodies into `out` and returns it (step stats). */
   countDynamicBodyActivity: (out: PhysicsBodyActivity) => PhysicsBodyActivity;
+  // p343
   /** Writes each body's translation into `out` (x, y, z per id), also for a detached body (the
-   * REMOVED tier), NaN for an unknown id; returns `out`. Exact: Rapier stores f32 (p343). */
+   * REMOVED tier), NaN for an unknown id; returns `out`. Exact: Rapier stores f32. */
   readBodyPositions: (ids: ArrayLike<number>, out: Float32Array) => Float32Array;
-  /** The REMOVED physics tier (p352): takes a body and its colliders out of the world, keeping
+  // p352
+  /** The REMOVED physics tier: takes a body and its colliders out of the world, keeping
    * their state and their ids. Returns the body's pose, or undefined when it has no body to
    * detach (unknown, already detached, or held by a joint of either kind). */
   detachRigidBody: (id: number) => RigidBodyPose | undefined;

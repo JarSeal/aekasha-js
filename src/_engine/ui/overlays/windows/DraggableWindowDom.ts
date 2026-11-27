@@ -26,9 +26,10 @@ const COLLAPSE_TEXT = 'Collapse';
 const EXPAND_TEXT = 'Expand';
 const CLOSE_TEXT = 'Close';
 
+// p806 D8, p803 D7
 /**
- * A debug window's and its backdrop's CMP props as a debugger root (p806 D8: the debugger's theme,
- * kept live, and the compact density; an app's modal dialog leaves it live, p803 D7), else none.
+ * A debug window's and its backdrop's CMP props as a debugger root (the debugger's theme,
+ * kept live, and the compact density; an app's modal dialog leaves it live), else none.
  * @internal
  */
 export const getDebugRootProps = (
@@ -45,9 +46,10 @@ const getResizableAttr = ({ disableHoriResize, disableVertResize }: DraggableWin
       ? 'horizontal'
       : 'both';
 
+// p803 D5
 /**
  * The window element's attributes that its structure fixes (a change remounts it): its role,
- * whether it moves and resizes (p803 D5: states are attributes). A debug window adds
+ * whether it moves and resizes (states are attributes). A debug window adds
  * `getDebugRootProps`' own.
  * @internal
  */
@@ -86,8 +88,9 @@ const getKeysHelp = (config: DraggableWindowConfig) => {
  */
 export const getPartId = (id: string, part: 'title' | 'content' | 'keys') => `${id}__${part}`;
 
+// p803 D8
 /**
- * Names the window and its collapse button (p803 D8): by the title, else by `ariaLabel` (default
+ * Names the window and its collapse button: by the title, else by `ariaLabel` (default
  * 'Window').
  * @internal
  */
@@ -184,8 +187,9 @@ export type HeaderActions = {
   onFit: () => void;
 };
 
+// p803 D8
 /**
- * Builds a mounted window's header (p803 D8): the title (its tooltip shows it whole when it's
+ * Builds a mounted window's header: the title (its tooltip shows it whole when it's
  * cut), the collapse button (`aria-expanded`, `aria-controls`) and the close button with their
  * tooltips, the drag handle and the double-click fit. With a key to act on, the header is a tab
  * stop (`role="group"`, "movable window" when it moves, the keys described) with

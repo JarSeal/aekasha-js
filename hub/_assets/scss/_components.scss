@@ -319,6 +319,28 @@
   border-radius: var(--aek-radius-md);
 }
 
+// The scrollbars' demo: a fixed box on the kit's surface, its text in lines (the wide one's lines
+// don't wrap, so it scrolls both ways)
+.hubDemoScroller {
+  width: min(100%, 20rem);
+  height: 8rem;
+  overflow: auto;
+  padding: var(--aek-space-3) var(--aek-space-4);
+  background: var(--aek-surface);
+  border: 1px solid var(--aek-border);
+  border-radius: var(--aek-radius-md);
+  color: var(--aek-text);
+  font-size: var(--aek-font-size-sm);
+
+  p {
+    margin: 0 0 var(--aek-space-2);
+  }
+}
+
+.hubDemoScroller_both p {
+  white-space: nowrap;
+}
+
 .hubDemoDividerColumn {
   display: flex;
   flex-direction: column;

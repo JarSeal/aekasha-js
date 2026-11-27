@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: MIT (LICENSE-bootstrap-icons.txt)
  */
 
+// p607 D12
 /**
- * The engine's built-in icons (p607 D12), each an SVG string under its name with `Icon` added
+ * The engine's built-in icons, each an SVG string under its name with `Icon` added
  * (`gear` → `gearIcon`). Only re-exports, so a build keeps the ones something registers: the debug
  * tools register them all (`registerBuiltInIcons`, `SvgIcon.ts`), an app the ones its UI uses.
  *

@@ -14,8 +14,9 @@ import {
   TexturePackSchema,
 } from './AssetsConfigSchema';
 
+// p302 D1
 /**
- * three's texture constants a texture JSON names (p302 D1): per `texOpts` field, each name and
+ * three's texture constants a texture JSON names: per `texOpts` field, each name and
  * its number. A JSON gives either (`"wrapS": "REPEAT"` or `"wrapS": 1000`); the schema maps a
  * name to its number, so the gathered data and the runtime see three's constants only.
  * `TextureSchema.test.ts` checks the numbers against three's.
@@ -247,7 +248,8 @@ const TextureOverridesSchema = z.object({
   ...TEXTURE_FIELDS,
 });
 
-/** A cube texture's six faces (p311 D1), each what `fileName` takes. */
+// p311 D1
+/** A cube texture's six faces, each what `fileName` takes. */
 const TextureFacesSchema = z
   .tuple([
     AssetFileNameSchema,
@@ -270,13 +272,15 @@ const TextureAssetObjectSchema = z.object({
   optimize: TextureOptimizeSchema.optional(),
   /** Build time only: the texture packed from source images, in place of `fileName`. */
   pack: TexturePackSchema.optional(),
-  /** A cube texture (p311 D1): six source images in the order +x, −x, +y, −y, +z, −z, each what
+  // p311 D1
+  /** A cube texture: six source images in the order +x, −x, +y, −y, +z, −z, each what
    * `fileName` takes, in place of `fileName` and `pack`. The asset pipeline encodes them as one
    * KTX2 cube, its faces stored as they are (so no `texOpts.flipY`), ETC1S unless the JSON's
    * `optimize` names a codec. */
   faces: TextureFacesSchema.optional(),
-  /** Build time only: the texture is only a source, an atlas cell's or a texture array layer's
-   * (p309 D1). The asset pipeline doesn't encode it on its own, and no scene loads it. */
+  // p309 D1
+  /** Build time only: the texture is only a source, an atlas cell's or a texture array layer's.
+   * The asset pipeline doesn't encode it on its own, and no scene loads it. */
   sourceOnly: z
     .boolean()
     .optional()

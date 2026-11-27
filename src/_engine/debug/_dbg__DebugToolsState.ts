@@ -94,9 +94,10 @@ const loadDebugToolsStateFromLS = () => {
   _fillDevFilesDefaults();
 };
 
+// p355
 /**
- * Fills the `devFiles` keys a saved object lacks (saved before p355 added `gatherToasts` and
- * `confirmWrites`): LS replaces the whole object. After every hydration from LS.
+ * Fills the `devFiles` keys a saved object lacks (saved before `gatherToasts` and
+ * `confirmWrites` existed): LS replaces the whole object. After every hydration from LS.
  */
 export const _fillDevFilesDefaults = () => {
   const devFiles = debugToolsState.devFiles as Partial<DebugToolsState['devFiles']> | undefined;
@@ -123,8 +124,9 @@ export const markDebugToolsTabRegistered = () => {
   isTabRegistered = true;
 };
 
+// p806 D8
 /**
- * Applies the "Debugger theme" setting (p806 D8) to the debugger's roots: the saved one, else
+ * Applies the "Debugger theme" setting to the debugger's roots: the saved one, else
  * `AppConfig.debugDrawer.theme`. The boot's, once the state is read (debug env and prod test mode).
  */
 export const _applyDebuggerTheme = () => setDebuggerTheme(debugToolsState.appearance.theme);

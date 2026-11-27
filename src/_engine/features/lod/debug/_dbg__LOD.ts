@@ -125,8 +125,9 @@ const countLevels = (world: ECSWorld): LodCounts => {
   return counts;
 };
 
-/** The LOD content without entities (instance sets), from the kernel's debug sources (p354
- * D11), in their order. Reading it asks each source for a fresh readback. */
+// p354 D11
+/** The LOD content without entities (instance sets), from the kernel's debug sources, in
+ * their order. Reading it asks each source for a fresh readback. */
 export const getLodContentInfos = () => {
   const infos: LodContentDebugInfo[] = [];
   for (const source of getLodContentDebugSources()) infos.push(...source.getInfos());

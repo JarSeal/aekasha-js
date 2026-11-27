@@ -237,9 +237,10 @@ const matchWord = (text: ScoredText, word: string) => {
   return best;
 };
 
+// p805 D12
 /**
- * Scores a text against a query's words (`getQueryWords`'), the command palette's ranking (p805
- * D12): every word must be in it whole or as its letters in order (`tgdr` finds "Toggle drawer");
+ * Scores a text against a query's words (`getQueryWords`'), the command palette's ranking:
+ * every word must be in it whole or as its letters in order (`tgdr` finds "Toggle drawer");
  * a letter counts more at a word's start and right after the one before, so a whole word's start
  * ranks over the same letters scattered, and an earlier match over a later one.
  * @internal

@@ -69,4 +69,18 @@ describe('focusDebuggerControl', () => {
       expect(document.activeElement).toBe(rain);
     }
   });
+
+  it('finds an open menu’s item outside the debugger roots (the Æ menu’s About Ækasha)', async () => {
+    const menu = document.createElement('div');
+    menu.setAttribute('role', 'menu');
+    const item = document.createElement('div');
+    item.setAttribute('role', 'menuitem');
+    item.tabIndex = -1;
+    item.textContent = 'About Ækasha';
+    menu.append(item);
+    document.body.append(menu);
+    const result = await testBridgeDebugger.focusDebuggerControl({ name: 'About Ækasha' });
+    expect(result).toEqual({ status: 'FOCUSED', tag: 'div' });
+    expect(document.activeElement).toBe(item);
+  });
 });

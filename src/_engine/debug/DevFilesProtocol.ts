@@ -1,5 +1,6 @@
+// p342
 /**
- * The dev file server's routes (p342), under `/__aek/files/`: what the server
+ * The dev file server's routes, under `/__aek/files/`: what the server
  * (`devTools/devFilesPlugin.ts`) and the browser client (`debug/DevFiles.ts`) share.
  * No imports: the dev server (Node) imports this too.
  */
@@ -99,7 +100,8 @@ export type DevFilesStatusBody = {
  */
 export type DevFilesStageBody = { stageId: string; bytes: number; sha256: string };
 
-/** A save entry (p342 §2.6): `entry` goes first in the file's `__saveData[sceneId]`, the older
+// p342 §2.6
+/** A save entry: `entry` goes first in the file's `__saveData[sceneId]`, the older
  * entries after it, and the server stamps its `__meta` */
 export type DevFilesSaveData = {
   /** The scene the entry applies in */
@@ -118,9 +120,10 @@ export type DevFilesSaveData = {
  */
 export type DevFilesSaveDataWrite = DevFilesSaveData & { historySize: number };
 
+// p355; json: p355 §2.6
 /**
- * One write of a `POST commit` batch (`saveData` one entry, or a list of them with each scene once:
- * p355; with `json`, the entries go into that value instead of the file's, p355 §2.6). The
+ * One write of a `POST commit` batch (`saveData` one entry, or a list of them with each scene once;
+ * with `json`, the entries go into that value instead of the file's). The
  * client's and the server's.
  * @internal
  */

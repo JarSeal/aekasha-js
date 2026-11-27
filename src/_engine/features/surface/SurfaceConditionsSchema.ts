@@ -60,7 +60,8 @@ export const SceneSurfaceConditionsSchema = z
 /** A scene's starting surface conditions (its JSON `surfaceConditions`). */
 export type SceneSurfaceConditions = z.infer<typeof SceneSurfaceConditionsSchema>;
 
-/** The surface conditions feature's scene field (p607 D10): a scene that sets it names
+// p607 D10
+/** The surface conditions feature's scene field: a scene that sets it names
  * `surfaceConditions()`. */
 export const surfaceConditionsSchemaPart = {
   feature: 'surfaceconditions',

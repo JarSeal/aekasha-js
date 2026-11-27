@@ -54,12 +54,13 @@ export const OVERLAYS_CHECKS: Record<string, UiDemoChecks> = {
       {
         name: 'the header: the arrows move it, Alt+arrows resize it, Enter collapses it',
         steps: [
-          // Opened at the viewport's centre (320 × 320 px), the focus on its header
+          // Opened at the viewport's centre (320 × 320 px), the focus on its header. The viewport
+          // is 1430 px wide: the page's scrollbar (the kit's, 10 px) takes the rest
           { click: 'Default' },
           { expectFocus: WINDOW_HEADER },
-          { expectStyle: WINDOW, name: 'left', value: '560px' },
+          { expectStyle: WINDOW, name: 'left', value: '555px' },
           { press: 'ArrowRight' },
-          { expectStyle: WINDOW, name: 'left', value: '576px' },
+          { expectStyle: WINDOW, name: 'left', value: '571px' },
           { press: 'Shift+ArrowDown' },
           { expectStyle: WINDOW, name: 'top', value: '354px' },
           { press: 'Alt+ArrowRight' },

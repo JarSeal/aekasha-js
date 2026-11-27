@@ -46,8 +46,9 @@ const dialogOverlays = new Map<
   }
 >();
 
+// p803 D7
 /**
- * Opens a modal dialog (p803 D7): a draggable window centred on the screen over a backdrop, that
+ * Opens a modal dialog: a draggable window centred on the screen over a backdrop, that
  * doesn't move, resize or collapse, 600 × 600 px unless `size` says otherwise (at least 320 px,
  * at most 90 % of the screen). Every open resets its place and size. It closes like any window
  * (its close button, `closeDraggableWindow(id)`, or `backDropClickClosesWindow`), and with Escape

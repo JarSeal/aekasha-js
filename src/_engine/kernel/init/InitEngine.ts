@@ -17,12 +17,13 @@ export type InitEngineOptions = {
   /** The app's gathered scenes and assets: `appData` from `src/generated/`, which
    * `yarn gatherAppData` writes. */
   data: AppData;
-  /** The features to install, in this order, after the kernel (p607 D1): each once, awaiting
+  // p607 D1
+  /** The features to install, in this order, after the kernel: each once, awaiting
    * each `install`. The engine installs nothing else on its own: each engine feature comes from
    * its entry (`physics()` from `aekasha/physics`, …), and one not listed isn't installed
    * (`createLines` throws without `lines()`, a scene's `postFx` is ignored without `postFx()`).
-   * The template lists all ten and the app's own last (`appECSPlugins`); `[]` is the kernel
-   * alone. */
+   * The template lists every engine feature and the app's own last (`appECSPlugins`); `[]` is
+   * the kernel alone. */
   features: EngineFeature[];
   /** The app's start: creates the renderer and the scene loader and loads the first scene. Runs
    * after the engine's own init (and the debug tools' registration), before the main loop

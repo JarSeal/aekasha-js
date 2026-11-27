@@ -31,7 +31,8 @@ import { getEnvSize } from '../SkyComposite';
 /** The sky box tab's id in the debug drawer (`updateDebuggerTab` refreshes or rebuilds it). */
 export const SKYBOX_TAB_ID = 'skyBoxControls';
 
-/** The layers the tab edits. p112-p114 add theirs here (and a folder file each). */
+// p112-p114
+/** The layers the tab edits. A new layer adds its key here (and a folder file). */
 export type SkyBoxLayerKey =
   | 'base'
   | 'env'
@@ -69,7 +70,8 @@ export const LAYER_PATHS: Record<SkyBoxLayerKey, string> = {
   nebula: 'nebulae.0',
 };
 
-/** The definition's lists the tab edits one entry at a time (p114). */
+// p114
+/** The definition's lists the tab edits one entry at a time. */
 export type SkyBoxListKey = 'suns' | 'moons' | 'nebulae';
 
 /** How many entries of each list the sky box draws (MAX_SUNS, MAX_MOONS, MAX_NEBULAE): the tab

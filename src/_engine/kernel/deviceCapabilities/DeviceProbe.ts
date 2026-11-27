@@ -263,8 +263,9 @@ export const classifyGpu = ({ vendor, architecture, description }: GpuIdentity) 
   return { isSoftware: false, isUnifiedMemory: null, isIntegrated: null };
 };
 
+// p240 §1.1
 /**
- * The GPU memory guess (p240 §1.1): no browser tells it, so only a GPU that shares the system
+ * The GPU memory guess: no browser tells it, so only a GPU that shares the system
  * memory gets one, a share of `navigator.deviceMemory`; a discrete GPU's is unknown.
  * @internal
  */
@@ -416,8 +417,9 @@ export const probeDeviceAsync = async (
   };
 };
 
+// p240 §4
 /**
- * The device fingerprint's input (p240 §4): the user agent, the GPU's identity (the adapter's,
+ * The device fingerprint's input: the user agent, the GPU's identity (the adapter's,
  * else WebGL's renderer), the screen's size and pixel ratio, and the cores. A stored result whose
  * fingerprint differs was measured on another device, browser, GPU or display. Costs an adapter
  * request (or a WebGL context without WebGPU), the whole cost of a stored result's boot.

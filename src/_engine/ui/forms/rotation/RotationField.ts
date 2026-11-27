@@ -47,8 +47,9 @@ export type RotationField<T extends EulerValue = EulerValue> = Field<T>;
 
 const KEYS = ['x', 'y', 'z'] as const;
 
+// p804 D8
 /**
- * Creates a rotation field (p804 D8): an Euler's angles (radians, a `THREE.Euler` written in
+ * Creates a rotation field: an Euler's angles (radians, a `THREE.Euler` written in
  * place, its `order` kept), shown and typed in degrees, from its binding (`{ target, key }`,
  * `{ get, set }` or `{ value }`).
  * - Each angle is the vector field's part (its keys, typed expressions with `deg`, `°`, `rad` and

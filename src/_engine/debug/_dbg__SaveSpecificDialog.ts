@@ -38,8 +38,9 @@ const getSceneName = (sceneId: string) => {
   return scene?.name || sceneId;
 };
 
-/** A row's description: its file (an inline asset's scene JSON and the file it moves to, p355
- * §2.6) and its changed keys, folded after five */
+// p355 §2.6
+/** A row's description: its file (an inline asset's scene JSON and the file it moves to)
+ * and its changed keys, folded after five */
 const getRowHint = (change: SaveChange) => {
   const keys = change.summary.slice(0, SUMMARY_KEYS_SHOWN).join(', ');
   const more = change.summary.length - SUMMARY_KEYS_SHOWN;
@@ -285,8 +286,9 @@ const buildContent = () => {
   return root;
 };
 
+// p355 §2.3
 /**
- * Opens the "Save specific data…" dialog (p355 §2.3) with the save sources' changes as they are
+ * Opens the "Save specific data…" dialog with the save sources' changes as they are
  * now; a second call builds it again. The Æ menu's item and the `sc-save-specific` key, through
  * `_openSaveSpecificAsync`, which checks first that something can be saved.
  */

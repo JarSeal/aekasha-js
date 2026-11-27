@@ -53,8 +53,9 @@ const defaultGetKey = (row: unknown) => String((row as { id?: unknown }).id);
 const read = <V>(source: V | (() => V)) =>
   typeof source === 'function' ? (source as () => V)() : source;
 
+// p805 D5
 /**
- * Creates a table (p805 D5): an app's rows under its columns, each cell a value as text (`format`)
+ * Creates a table: an app's rows under its columns, each cell a value as text (`format`)
  * aligned by its kind, a CMP (`cell`) or a bar (`kind: 'bar'`), with groups (a `<tbody>` each,
  * under a header row), a footer, a caption, sticky parts, stripes, a highlight on hover and focus,
  * and a stacked layout for a narrow box. Sortable columns sort the rows (stable; or the app does,

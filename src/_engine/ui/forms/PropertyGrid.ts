@@ -67,8 +67,9 @@ const WIDTH_PROPERTY = '--aek-property-grid-label-width';
 const constrainWidth = (width: number) =>
   Math.round(Math.min(MAX_LABEL_WIDTH, Math.max(MIN_LABEL_WIDTH, width)) * 10) / 10;
 
+// p804 D9
 /**
- * Creates a property grid (p804 D9): the debugger's label column layout. Each field in it, and in
+ * Creates a property grid: the debugger's label column layout. Each field in it, and in
  * its folders at any depth, is a row of two columns: its label (cut with a tooltip when long, its
  * reset button after it) and its control, the controls lined up at every depth while each
  * folder's labels step in. A button or any other child spans both. The label column's width is a

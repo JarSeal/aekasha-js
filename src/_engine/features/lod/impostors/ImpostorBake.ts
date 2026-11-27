@@ -315,10 +315,10 @@ export const createAtlasTarget = (
   return target;
 };
 
+// p058 D3
 /**
  * Lets the next render into an atlas target generate its mips: call it right before the bake's
- * last copy into it, so the chain is built once per atlas (three r187's `mipmapsAutoUpdate`,
- * p058 D3).
+ * last copy into it, so the chain is built once per atlas (three r187's `mipmapsAutoUpdate`).
  * For the generators' bakes.
  * @internal
  */

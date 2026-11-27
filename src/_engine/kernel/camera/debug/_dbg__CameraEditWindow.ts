@@ -167,9 +167,10 @@ type CamWindowContext = {
   refresh: () => void;
 };
 
+// p804 D3
 /**
  * A field's change handler: `apply` on every write; at the gesture's end the value is saved and
- * recorded with the gesture's `prev` (p804 D3), and the grid re-read.
+ * recorded with the gesture's `prev`, and the grid re-read.
  */
 const onCamChange =
   <K extends UndoableCamKey>(
