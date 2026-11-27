@@ -161,24 +161,30 @@ const COLOR_MAP_KEYS: Record<(typeof COLOR_MAP_MODES)[number], string[]> = {
   FAR_ONLY: ['mode'],
 };
 
-/** The anti-tiling defaults (p305 D3) */
+// p305 D3
+/** The anti-tiling defaults */
 const DUAL_SCALE_FAR_SCALE = 0.23;
 const DUAL_SCALE_DISTANCE: [number, number] = [6, 40];
 const HEX_CONTRAST = 0.5;
 const HEX_ROTATION = 1;
-/** The projections' sharpness defaults (p305 D5): Quilez's k, and the exponent on the facing */
+// p305 D5
+/** The projections' sharpness defaults: Quilez's k, and the exponent on the facing */
 const PROJECTION_SHARPNESS = { BIPLANAR: 8, TRIPLANAR: 4 } as const;
-/** The macro variation's defaults (p305 D7) */
+// p305 D7
+/** The macro variation's defaults */
 const MACRO_BRIGHTNESS = 0.2;
 const MACRO_HUE = 8;
 const MACRO_ROUGHNESS = 0.15;
-/** The height blend's and the vertex AO's defaults (p305 D4) */
+// p305 D4
+/** The height blend's and the vertex AO's defaults */
 const HEIGHT_BLEND_DEPTH = 0.2;
 const BAKED_ALBEDO_INFLUENCE = 0.5;
-/** The far surface's band past the fade's end, metres (p305 D7) */
+// p305 D7
+/** The far surface's band past the fade's end, metres */
 const FAR_BLEND = 4;
+// p305 D9
 /**
- * The texture budget's default reserve (p305 D9: shadow maps, the environment).
+ * The texture budget's default reserve (shadow maps, the environment).
  * @internal
  */
 export const DEFAULT_RESERVED_TEXTURES = 6;
@@ -300,7 +306,8 @@ export type TerrainFarDefine = {
   blend: number;
 };
 
-/** The wet response's settings with their defaults filled in (p307 D2) */
+// p307 D2
+/** The wet response's settings with their defaults filled in */
 export type TerrainWetDefine = {
   quality: (typeof WET_QUALITIES)[number];
   heightInfluence: number;
@@ -328,7 +335,8 @@ export type TerrainWetDefine = {
   rainOcclusion: (typeof WET_RAIN_OCCLUSIONS)[number];
 };
 
-/** The wet response's frost with its defaults filled in (p307 T11) */
+// p307 T11
+/** The wet response's frost with its defaults filled in */
 export type TerrainFrostDefine = {
   /** Where frost starts and where it's full, °C, the first the warmer */
   temperature: [number, number];
@@ -341,7 +349,8 @@ export type TerrainFrostDefine = {
   sparkle: { density: number; strength: number; distance: [number, number] } | null;
 };
 
-/** The wet response's snow cover with its defaults filled in (p307 T10) */
+// p307 T10
+/** The wet response's snow cover with its defaults filled in */
 export type TerrainSnowDefine = {
   /** The steepest slope the snow rests on, degrees from flat */
   maxSlope: number;
@@ -353,7 +362,8 @@ export type TerrainSnowDefine = {
   tiling: number;
 };
 
-/** The wet response's shoreline with its defaults filled in (p307 T8) */
+// p307 T8
+/** The wet response's shoreline with its defaults filled in */
 export type TerrainShorelineDefine = {
   /** The metres above the water level that stay damp */
   band: number;
@@ -363,7 +373,8 @@ export type TerrainShorelineDefine = {
   runUp: { height: number; period: number } | null;
 };
 
-/** The wet response's rain streaks with their defaults filled in (p307 T5) */
+// p307 T5
+/** The wet response's rain streaks with their defaults filled in */
 export type TerrainStreaksDefine = {
   /** The gentlest face that streaks, degrees from flat */
   minSlope: number;
@@ -375,7 +386,8 @@ export type TerrainStreaksDefine = {
   speed: number;
 };
 
-/** The wet response's rain ripples with their defaults filled in (p307 T4) */
+// p307 T4
+/** The wet response's rain ripples with their defaults filled in */
 export type TerrainRipplesDefine = {
   /** The metres one atlas tile covers */
   scale: number;
@@ -387,7 +399,8 @@ export type TerrainRipplesDefine = {
   distance: [number, number];
 };
 
-/** The wet response's puddles with their defaults filled in (p307 T3) */
+// p307 T3
+/** The wet response's puddles with their defaults filled in */
 export type TerrainPuddlesDefine = {
   /** The steepest ground a puddle stands on, degrees from flat */
   maxSlope: number;
@@ -446,10 +459,12 @@ export type ResolvedTerrainDefine = {
   far: TerrainFarDefine | null;
   /** The colour map (its texture the input `colorMap`), or null for none */
   colorMap: TerrainColorMapDefine | null;
-  /** The wet response (p307), or null for none: dry */
+  // p307
+  /** The wet response, or null for none: dry */
   wet: TerrainWetDefine | null;
+  // p305 D6
   /**
-   * The layers sampled at a pixel in slots sorted by weight there (p305 D6: sparse sampling's kept
+   * The layers sampled at a pixel in slots sorted by weight there (sparse sampling's kept
    * layers, or every layer for `HEX`'s `DOMINANT`; `ARRAY` storage, each read at a per-pixel
    * index), or null: every layer at its own index. Live layers are sampled beside the slots: they
    * don't count.
@@ -840,8 +855,9 @@ const readRule = (value: unknown, path: string): TerrainRuleDefine => {
   return rule;
 };
 
+// p306
 /**
- * A terrain rule from outside a define (a terrain block generator's params, p306), checked as the
+ * A terrain rule from outside a define (a terrain block generator's params), checked as the
  * define's rules are; the errors name `where` and the path in place of the define's.
  * @internal
  * @param where what holds the rule, eg. `rulesTerrain: block "hills" params`
@@ -1068,8 +1084,9 @@ const describeSlotAntiTiling = (antiTiling: TerrainAntiTilingDefine) => {
 const describeSlotProjection = (projection: TerrainProjectionDefine) =>
   projection.mode === 'PLANAR' ? 'PLANAR' : `${projection.mode} ${projection.normalBlend}`;
 
+// p305 D6
 /**
- * The layers sampled in slots sorted by weight (p305 D6), or null for every layer at its own
+ * The layers sampled in slots sorted by weight, or null for every layer at its own
  * index: sparse sampling keeping fewer layers than there are (its `maxLayers` of them), or `HEX`'s
  * `DOMINANT` over two layers or more (every layer). Live layers are sampled beside the slots and
  * don't count. In slots, every sampled layer's anti-tiling is alike (its mode and `apply`) and the
@@ -1305,8 +1322,9 @@ const readWet = (value: unknown, path: string): TerrainWetDefine | null => {
   };
 };
 
+// p307 T11
 /**
- * The frost's numbers (p307 T11), their defaults filled in; null without: the temperatures two
+ * The frost's numbers, their defaults filled in; null without: the temperatures two
  * finite numbers, the first the warmer
  */
 const readFrost = (value: unknown, path: string): TerrainFrostDefine | null => {
@@ -1333,7 +1351,8 @@ const readFrost = (value: unknown, path: string): TerrainFrostDefine | null => {
   };
 };
 
-/** The sparkle's numbers (p307 T11), their defaults filled in; null without */
+// p307 T11
+/** The sparkle's numbers, their defaults filled in; null without */
 const readSparkle = (value: unknown, path: string): TerrainFrostDefine['sparkle'] => {
   if (value === undefined) return null;
   const sparkle = readObject(value, path);
@@ -1347,7 +1366,8 @@ const readSparkle = (value: unknown, path: string): TerrainFrostDefine['sparkle'
   };
 };
 
-/** The snow cover's numbers (p307 T10), their defaults filled in; null without */
+// p307 T10
+/** The snow cover's numbers, their defaults filled in; null without */
 const readSnow = (value: unknown, path: string): TerrainSnowDefine | null => {
   if (value === undefined) return null;
   const snow = readObject(value, path);
@@ -1362,7 +1382,8 @@ const readSnow = (value: unknown, path: string): TerrainSnowDefine | null => {
   };
 };
 
-/** The shoreline's numbers (p307 T8), their defaults filled in (`band` required); null without */
+// p307 T8
+/** The shoreline's numbers, their defaults filled in (`band` required); null without */
 const readShoreline = (value: unknown, path: string): TerrainShorelineDefine | null => {
   if (value === undefined) return null;
   const shoreline = readObject(value, path);
@@ -1382,7 +1403,8 @@ const readShoreline = (value: unknown, path: string): TerrainShorelineDefine | n
   };
 };
 
-/** The rain streaks' numbers (p307 T5), their defaults filled in; null without */
+// p307 T5
+/** The rain streaks' numbers, their defaults filled in; null without */
 const readStreaks = (value: unknown, path: string): TerrainStreaksDefine | null => {
   if (value === undefined) return null;
   const streaks = readObject(value, path);
@@ -1403,7 +1425,8 @@ const readStreaks = (value: unknown, path: string): TerrainStreaksDefine | null 
   };
 };
 
-/** The rain ripples' numbers (p307 T4), their defaults filled in; null without */
+// p307 T4
+/** The rain ripples' numbers, their defaults filled in; null without */
 const readRipples = (value: unknown, path: string): TerrainRipplesDefine | null => {
   if (value === undefined) return null;
   const ripples = readObject(value, path);
@@ -1418,7 +1441,8 @@ const readRipples = (value: unknown, path: string): TerrainRipplesDefine | null 
   };
 };
 
-/** The puddles' numbers (p307 T3), their defaults filled in; null without */
+// p307 T3
+/** The puddles' numbers, their defaults filled in; null without */
 const readPuddles = (value: unknown, path: string): TerrainPuddlesDefine | null => {
   if (value === undefined) return null;
   const puddles = readObject(value, path);
@@ -1444,7 +1468,8 @@ const readPuddles = (value: unknown, path: string): TerrainPuddlesDefine | null 
   };
 };
 
-/** The regional wetness's source (p307 T7): `{ attribute? }` or `{ splatChannel: 'A' }`; null without */
+// p307 T7
+/** The regional wetness's source: `{ attribute? }` or `{ splatChannel: 'A' }`; null without */
 const readRegional = (value: unknown, path: string): TerrainWetDefine['regional'] => {
   if (value === undefined) return null;
   const regional = readObject(value, path);

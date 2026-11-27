@@ -30,8 +30,9 @@ const readDefine = <T extends string>(
   return value as T;
 };
 
+// p303 D7, p305
 /**
- * One texture set on a surface (p303 D7): the baseline every terrain technique (p305) is compared
+ * One texture set on a surface: the baseline every terrain technique is compared
  * against, the `terrainGallery`'s block material and the simplest structure material. No
  * anti-tiling, no splat, no triplanar.
  *

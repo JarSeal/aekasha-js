@@ -53,7 +53,8 @@ type PresetTier = {
 /** `ULTRA`'s detail normals' fade end, without a far surface: `HIGH`'s far start */
 const ULTRA_FADE_TO = 200;
 
-/** The tiers (p305 D10's table; macro on in every tier, the material's own) */
+// p305 D10's table
+/** The tiers (macro on in every tier, the material's own) */
 const PRESET_TIERS: Record<TerrainQualityLevel, PresetTier> = {
   LOW: {
     antiTiling: { mode: 'NONE' },

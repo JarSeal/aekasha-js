@@ -70,8 +70,9 @@ export type LayerUniforms = {
   projection: ProjectionNodes;
 };
 
+// p307
 /**
- * What the wet response reads of a layer's surface (p307): its height, 0..1, its set's response,
+ * What the wet response reads of a layer's surface: its height, 0..1, its set's response,
  * `porosity`, `wetDarkening`, `wetRoughness` and `dryingSpeed` (x, y, z, w), and its set's
  * `puddleResponse`; blended by weight like the rest
  * @internal
@@ -348,17 +349,18 @@ export type BuiltLayer = {
   normal: Node<'vec3'> | null;
 };
 
+// p307; p303 D2
 /**
- * A layer's surface from its sample (p303 D2's packings): the albedo × the set's and the layer's
+ * A layer's surface from its sample, by its set's packing: the albedo × the set's and the layer's
  * tint (with a `DETAIL` colour map, its detail instead: the albedo over the set's average colour,
- * no tints, the colour map carrying the colour); the normal in world space, a projection's (made with the strength), else the map's
- * (`FULL`, `LITE`) through the tiling's frame (planar world tiling's analytic one, a mesh UV's
- * from its derivatives) or `MINIMAL`'s bump of its height in metres, its slope × the set's and
- * the layer's `normalStrength`; the roughness (`MINIMAL`'s 0.8) × both `roughnessScale`s, capped
- * at 1; `FULL`'s AO with the set's `aoStrength` × the material's influence; with `wet`, its height
- * and its set's wet response (p307). With `deferBump` (slots) the bump is left to the blend: a
- * slot's height jumps where its layer changes, so its own derivatives would draw a seam; the
- * normal is then the geometry's.
+ * no tints, the colour map carrying the colour); the normal in world space, a projection's (made
+ * with the strength), else the map's (`FULL`, `LITE`) through the tiling's frame (planar world
+ * tiling's analytic one, a mesh UV's from its derivatives) or `MINIMAL`'s bump of its height in
+ * metres, its slope × the set's and the layer's `normalStrength`; the roughness (`MINIMAL`'s 0.8)
+ * × both `roughnessScale`s, capped at 1; `FULL`'s AO with the set's `aoStrength` × the material's
+ * influence; with `wet`, its height and its set's wet response. With `deferBump` (slots) the bump
+ * is left to the blend: a slot's height jumps where its layer changes, so its own derivatives
+ * would draw a seam; the normal is then the geometry's.
  * @internal
  */
 export const getLayerSurface = (

@@ -83,8 +83,9 @@ const readWet = (defines: Record<string, unknown> = {}) => {
   return value as (typeof WET_QUALITIES)[number];
 };
 
+// p308 D5
 /**
- * Leaf litter cards (p308 D5): the toolkit's leaf atlas (`leafLitter`, ambientCG LeafSet024) on
+ * Leaf litter cards: the toolkit's leaf atlas (`leafLitter`, ambientCG LeafSet024) on
  * `generateLeafCard`'s quads, a leaf per instance. Each instance of an `InstancedMesh` (a
  * scatter's cell) picks its atlas cell by a hash of its `instanceIndex`, fitted into the card at
  * its own aspect (the rest of the card transparent), so one material and one draw a cell serve

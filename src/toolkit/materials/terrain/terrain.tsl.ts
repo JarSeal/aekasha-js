@@ -1,7 +1,8 @@
 import { setupTerrainMaterial } from 'aekasha/toolkit/terrain';
 
+// p305
 /**
- * The terrain material's JSON route (p305): the toolkit's generator (`setupTerrainMaterial`,
+ * The terrain material's JSON route: the toolkit's generator (`setupTerrainMaterial`,
  * `aekasha/toolkit/terrain`) as a TSL file's `setup`, so a `*.material.json` naming this file
  * builds the same graph `createTerrainMaterial` does. Its static define `terrain` is the config
  * without the id and the layers' sets; the inputs `layer0`, `layer1`, … give the sets

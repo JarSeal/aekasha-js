@@ -163,8 +163,9 @@ const getSharedCoords = (define: ResolvedTerrainDefine): SharedCoords => {
   };
 };
 
+// p305 D6
 /**
- * The slots as built layers (p305 D6): each samples the set array at the layer the selection kept
+ * The slots as built layers: each samples the set array at the layer the selection kept
  * there, with that layer's params and uniforms, its anti-tiling (`DOMINANT`: `HEX` in the first
  * slot, `DUAL_SCALE` in the others) and the slots' projection, every tap with the coordinates'
  * gradients.

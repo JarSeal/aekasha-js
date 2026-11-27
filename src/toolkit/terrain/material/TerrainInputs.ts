@@ -39,11 +39,13 @@ const getSplatInputKey = (index: number) => `splat${index}`;
 const MACRO_INPUT_KEY = 'macro';
 /** The colour map's input key */
 const COLOR_MAP_INPUT_KEY = 'colorMap';
-/** The input the rain ripples' atlas comes in (p307 T4) */
+// p307 T4
+/** The input the rain ripples' atlas comes in */
 const RIPPLES_INPUT_KEY = 'ripples';
 /** The ripple atlas the code route's ripples read without a `rippleTexture` */
 const DEFAULT_RIPPLE_TEXTURE = 'rippleAtlas';
-/** The input the snow cover's texture set comes in (p307 T10) */
+// p307 T10
+/** The input the snow cover's texture set comes in */
 const SNOW_INPUT_KEY = 'snow';
 /** The texture set the code route's snow cover is without a `snowSet` */
 const DEFAULT_SNOW_SET = 'snow01';
@@ -64,7 +66,8 @@ export type LayerParams = {
   normalStrength: Node<'float'>;
   roughnessScale: Node<'float'>;
   aoStrength: Node<'float'>;
-  /** The wet response's (p307): how much water the set soaks up, 0..1 */
+  // p307
+  /** The wet response's: how much water the set soaks up, 0..1 */
   porosity: Node<'float'>;
   /** How much the filled pores darken the albedo, 0..1 */
   wetDarkening: Node<'float'>;

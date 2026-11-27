@@ -86,8 +86,9 @@ export type DecalGenerator<P extends SurfaceParamSpecs = SurfaceParamSpecs> = Re
   readonly description: string;
 };
 
+// p309 D1
 /**
- * The `DECAL` packing's slots as bake outputs (p309 D1): `albedoAlpha` sRGB, `normalRough` linear.
+ * The `DECAL` packing's slots as bake outputs: `albedoAlpha` sRGB, `normalRough` linear.
  * @internal
  */
 export const DECAL_BAKE_OUTPUTS: readonly BakeOutput[] = [

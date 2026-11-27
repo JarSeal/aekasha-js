@@ -11,9 +11,10 @@
 import { z } from 'zod';
 import { TERRAIN_RULE_NOISE_CHANNELS } from 'aekasha/toolkit/geometry';
 
+// p305 Phase 8
 /**
  * What a layer samples: `TEXTURE` its texture set's maps; `PROCEDURAL_LIVE` its procedural set's
- * generator run live in the material (p305 Phase 8: no repetition, no texture memory, the whole
+ * generator run live in the material (no repetition, no texture memory, the whole
  * graph per pixel).
  */
 export const TERRAIN_LAYER_SOURCES = ['TEXTURE', 'PROCEDURAL_LIVE'] as const;
@@ -27,16 +28,18 @@ export const TERRAIN_LIVE_NORMALS = ['BUMP', 'TAPS'] as const;
  * (8 more evaluations of the height a pixel).
  */
 export const TERRAIN_LIVE_AOS = ['NONE', 'CAVITY'] as const;
+// p305 D8
 /**
- * The space the material samples in (p305 D8): `WORLD` (default) the world's position and normal,
+ * The space the material samples in: `WORLD` (default) the world's position and normal,
  * seamless across pieces; `OBJECT` the mesh's own (scaled back to metres), so the texture sticks to
  * a piece that moves or turns (an `InstancedMesh`'s instances share its space).
  */
 export const TERRAIN_SPACES = ['WORLD', 'OBJECT'] as const;
 /** The tiling coordinates: `WORLD` (the world's `(x, −z)`, seen from above) or `MESH_UV`. */
 export const TERRAIN_UV_MODES = ['WORLD', 'MESH_UV'] as const;
+// p305 D4
 /**
- * Where the layers' weights come from (p305 D4): `SINGLE` one layer everywhere, `VERTEX_COLOR` the
+ * Where the layers' weights come from: `SINGLE` one layer everywhere, `VERTEX_COLOR` the
  * mesh's colour attribute, `SPLAT_MAP` one or two RGBA textures at the mesh's UV, `RULES` the base
  * layer under procedural rules (slope, height, facing, noise), and `VERTEX_COLOR_AND_RULES` and
  * `SPLAT_MAP_AND_RULES` the painted weights under rules.
@@ -54,8 +57,9 @@ export const TERRAIN_BLEND_SOURCES = [
  * the higher surface (pebbles, a rock's top) shows through a border; `LINEAR` by the weights alone.
  */
 export const TERRAIN_BLEND_MODES = ['HEIGHT', 'LINEAR'] as const;
+// p301 §4.4
 /**
- * The vertex colour's channels (p301 §4.4): `RGB_AO` R, G and B weigh layers 1-3 and A is a baked
+ * The vertex colour's channels: `RGB_AO` R, G and B weigh layers 1-3 and A is a baked
  * AO; `RGBA` the four weigh layers 1-4. Layer 0 takes what the channels leave (1 − their sum).
  */
 export const TERRAIN_VERTEX_COLOR_LAYOUTS = ['RGB_AO', 'RGBA'] as const;
@@ -74,16 +78,19 @@ export const TERRAIN_BLEND_LAYER_COUNTS = {
   VERTEX_COLOR_AND_RULES: [2, 16],
   SPLAT_MAP_AND_RULES: [2, 16],
 } as const;
-/** The texture set packings a terrain material samples (p303 D2). */
+// p303 D2
+/** The texture set packings a terrain material samples. */
 export const TERRAIN_PACKINGS = ['FULL', 'LITE', 'MINIMAL'] as const;
+// p305 D9
 /**
- * How the code route binds the layers' textures (p305 D9): `AUTO` (default) `SEPARATE` while that
+ * How the code route binds the layers' textures: `AUTO` (default) `SEPARATE` while that
  * fits the texture budget and nothing samples the layers in slots (`sparse`, `HEX`'s `DOMINANT`),
  * else `ARRAY`; `SEPARATE` each layer's packing slots (`{ textureSet }` inputs `layer<i>`); `ARRAY`
  * one array texture per slot for every layer (a `{ textureSetArray }` input `layers`).
  */
 export const TERRAIN_STORAGES = ['AUTO', 'SEPARATE', 'ARRAY'] as const;
-/** The quality tiers a terrain material's `quality` table overrides (p240's scale). */
+// p240
+/** The quality tiers a terrain material's `quality` table overrides (the engine's `QualityLevel` scale). */
 export const TERRAIN_QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'ULTRA'] as const;
 /**
  * The debug views (debug env only): `TEXEL_DENSITY` a 1 m checker in bands of texels per metre,
@@ -102,30 +109,35 @@ export const TERRAIN_DEBUG_VIEWS = [
   'LAYER_COUNT',
   'WETNESS',
 ] as const;
+// p307 D2
 /**
- * The wet response's quality (p307 D2): `FULL` the relief and the cavities shape the wetness and
+ * The wet response's quality: `FULL` the relief and the cavities shape the wetness and
  * the film flattens the normal, `SIMPLE` the layers' response and the sky exposure only.
  */
 export const TERRAIN_WET_QUALITIES = ['FULL', 'SIMPLE'] as const;
+// p307 T6, T12
 /**
- * What keeps the rain off a surface (p307 T6, T12): `NORMAL_Y` its facing alone (overhangs and
+ * What keeps the rain off a surface: `NORMAL_Y` its facing alone (overhangs and
  * undersides), `MAP` also the `rainOcclusion()` feature's map (roofs, trees, bridges).
  */
 export const TERRAIN_WET_RAIN_OCCLUSIONS = ['NORMAL_Y', 'MAP'] as const;
 
+// p307 T7
 /**
- * The splat channels a regional wetness reads (p307 T7): the first splat map's A.
+ * The splat channels a regional wetness reads: the first splat map's A.
  * @internal
  */
 export const TERRAIN_WET_SPLAT_CHANNELS = ['A'] as const;
+// p305 D7
 /**
- * What a far surface shows past `distance.fade`'s end, where the layers aren't sampled (p305 D7):
+ * What a far surface shows past `distance.fade`'s end, where the layers aren't sampled:
  * `NONE` (default) the layers at every distance, `AVERAGE_COLOR` each layer's set's average colour
  * by its weight (no layer fetch), `COLOR_MAP` the colour map (one fetch).
  */
 export const TERRAIN_FAR_MODES = ['NONE', 'AVERAGE_COLOR', 'COLOR_MAP'] as const;
+// p305 D7
 /**
- * How a colour map (a texture at the mesh's UV) colours the surface (p305 D7): `DETAIL` it gives
+ * How a colour map (a texture at the mesh's UV) colours the surface: `DETAIL` it gives
  * the albedo and the layers their detail (each one's albedo over its set's average colour);
  * `FAR_ONLY` it's only the far surface's colour (`distance.far: 'COLOR_MAP'`).
  */
@@ -134,22 +146,26 @@ export const TERRAIN_COLOR_MAP_MODES = ['DETAIL', 'FAR_ONLY'] as const;
 export const TERRAIN_MAX_LAYERS = 16;
 /** The most rules a terrain material's blend takes. */
 export const TERRAIN_MAX_RULES = 16;
+// p305 D3
 /**
- * The anti-tiling modes (p305 D3): `NONE` plain tiling (1 tap), `DUAL_SCALE` a second, larger and
+ * The anti-tiling modes: `NONE` plain tiling (1 tap), `DUAL_SCALE` a second, larger and
  * turned tap mixed in by distance and the macro texture's patches (2), `HEX` Mikkelsen's hex
  * tiling (3).
  */
 export const TERRAIN_ANTI_TILING_MODES = ['NONE', 'DUAL_SCALE', 'HEX'] as const;
+// p305 D3
 /**
- * Which layers `HEX` samples (p305 D3): `ALL` (default) every layer; `DOMINANT` the layer weighing
+ * Which layers `HEX` samples: `ALL` (default) every layer; `DOMINANT` the layer weighing
  * most at the pixel, the others `DUAL_SCALE`. `DOMINANT` sorts the layers by weight at the pixel
  * (the slot path, as `sparse` does), so it needs `ARRAY` storage.
  */
 export const TERRAIN_ANTI_TILING_APPLIES = ['ALL', 'DOMINANT'] as const;
-/** The most layers sparse sampling keeps at a pixel, and the fewest (p305 D6). */
+// p305 D6
+/** The most layers sparse sampling keeps at a pixel, and the fewest. */
 export const TERRAIN_SPARSE_MAX_LAYERS = [2, 4] as const;
+// p305 D5
 /**
- * How a layer's texture meets the surface (p305 D5): `PLANAR` the tiling's coordinates alone (the
+ * How a layer's texture meets the surface: `PLANAR` the tiling's coordinates alone (the
  * world's `(x, −z)` or the mesh's UV; 1 tap per slot), `BIPLANAR` the world projected along the two
  * axes the surface faces most (Quilez; 2), `TRIPLANAR` along all three (3).
  */
@@ -529,8 +545,9 @@ const ruleRange = (unit: string, bounds: [number, number] | null, description: s
     .describe(description);
 };
 
+// p305 D4
 /**
- * A procedural rule (p305 D4; the type is `aekasha/toolkit/geometry`'s `TerrainRule`, which the
+ * A procedural rule (the type is `aekasha/toolkit/geometry`'s `TerrainRule`, which the
  * CPU evaluation shares): where the slope, height and facing are in its ranges, its layer covers
  * the layers under it, the coverage moved by a macro noise channel and × its strength. Its
  * numbers are uniforms (`terrain_r<i>_<name>`), its tests build-time branches.
@@ -854,8 +871,9 @@ const TerrainDistanceSchema = z
   .strict()
   .describe("The view distance's effects on the surface.");
 
+// p307 T3
 /**
- * The puddles (p307 T3): water standing where the surface conditions' `puddleLevel` × the layers'
+ * The puddles: water standing where the surface conditions' `puddleLevel` × the layers'
  * `puddleResponse` is over their blended relief, on flat ground.
  */
 const TerrainPuddlesSchema = z
@@ -913,8 +931,9 @@ const TerrainPuddlesSchema = z
     "The puddles: water where the puddle level × the layers' puddleResponse is over their relief, on flat ground. FULL only."
   );
 
+// p307 T4
 /**
- * The rain ripples (p307 T4): rings where water stands while it rains, a ripple atlas sampled
+ * The rain ripples: rings where water stands while it rains, a ripple atlas sampled
  * twice in a dynamic branch on the rain.
  */
 const TerrainRipplesSchema = z
@@ -954,8 +973,9 @@ const TerrainRipplesSchema = z
     "Rain ripples (p307 T4): rings where water stands (the puddles, a film on the flat) while the surface conditions' rain is over 0, two fetches of a ripple atlas (the code route's rippleTexture, default rippleAtlas; the JSON route's input ripples) in a dynamic branch. FULL only."
   );
 
+// p307 T5
 /**
- * The rain streaks (p307 T5): rivulets down steep faces, damp while it's wet and running while it
+ * The rain streaks: rivulets down steep faces, damp while it's wet and running while it
  * rains, one fetch of the macro texture's R stretched down the face, in a dynamic branch.
  */
 const TerrainStreaksSchema = z
@@ -993,8 +1013,9 @@ const TerrainStreaksSchema = z
     "Rain streaks (p307 T5): rivulets down faces steeper than minSlope that the rain reaches, damp while the surface conditions' wetness is over 0 and running while their rain is, one fetch of the macro texture's R (the code route's macro.texture, else noiseTexture, default macroNoise; the JSON route's input macro) in a dynamic branch."
   );
 
+// p307 T8
 /**
- * The shoreline (p307 T8): the ground along the surface conditions' water level, washed by the
+ * The shoreline: the ground along the surface conditions' water level, washed by the
  * waves, saturated where they reach and damp above, arithmetic only.
  */
 const TerrainShorelineSchema = z
@@ -1037,8 +1058,9 @@ const TerrainShorelineSchema = z
     "The shoreline (p307 T8): along the surface conditions' waterLevel, the waves' wash (standing water), the saturated sand they reach (a film) and a damp band above (a regional wetness); full under the water, none without a water level. Arithmetic only, both qualities."
   );
 
+// p307 T10
 /**
- * The snow cover (p307 T10): a texture set over the layers by the surface conditions' snow cover,
+ * The snow cover: a texture set over the layers by the surface conditions' snow cover,
  * sampled top-down in a dynamic branch.
  */
 const TerrainSnowSchema = z
@@ -1081,8 +1103,9 @@ const TerrainSnowSchema = z
     "Snow cover (p307 T10): a texture set (the code route's snowSet, default snow01; the JSON route's input snow) over the layers by the surface conditions' snowCoverage, flat ground first, nothing past maxSlope; frozen dry below 0 °C, slush above, its meltwater wetting the ground around. Its packing's taps in a dynamic branch on the cover; past a far mode's band its average colour. Both qualities."
   );
 
+// p307 T11
 /**
- * The frost (p307 T11): below freezing the layers whiten a little and roughen, each by 1 − its
+ * The frost: below freezing the layers whiten a little and roughen, each by 1 − its
  * set's porosity; its sparkle glints.
  */
 const TerrainFrostSchema = z
@@ -1139,8 +1162,9 @@ const TerrainFrostSchema = z
     "Frost (p307 T11): below the surface conditions' temperature range the layers whiten a little and roughen (never smoother), each by 1 - its set's porosity, an underside half; after the wetness. Arithmetic, both qualities; its sparkle FULL only."
   );
 
+// p307 T7
 /**
- * The regional wetness (p307 T7): an authored wetness, 0..1, the least the surface shows and the
+ * The regional wetness: an authored wetness, 0..1, the least the surface shows and the
  * least puddle level, in any weather: a float vertex attribute (default `_wetness`, glTF's
  * `_WETNESS`), or the first splat map's A.
  */
@@ -1174,8 +1198,9 @@ const TerrainWetRegionalSchema = z
     'The regional wetness: an authored 0..1, the least wetness and puddle level shown, from a float vertex attribute ({ attribute? }) or the first splat map\'s A ({ splatChannel: "A" }).'
   );
 
+// p307 D2
 /**
- * The wet response (p307 D2): the surface conditions' wetness (`aekasha/surface`) on the layers,
+ * The wet response: the surface conditions' wetness (`aekasha/surface`) on the layers,
  * each by its set's `porosity`, `wetDarkening` and `wetRoughness`, blended by weight.
  */
 const TerrainWetSchema = z
@@ -1348,8 +1373,9 @@ export const TerrainColorMapSchema = z
 /** {@link createTerrainMaterial}'s colour map: its texture and its settings. */
 export type TerrainColorMap = z.infer<typeof TerrainColorMapSchema>;
 
+// p305 D6
 /**
- * Sparse sampling (p305 D6): at each pixel only the layers weighing most are sampled, sorted by
+ * Sparse sampling: at each pixel only the layers weighing most are sampled, sorted by
  * weight, their weights renormalized. Needs `ARRAY` storage (each kept layer read at a per-pixel
  * index) and every layer's anti-tiling alike, the projected layers' projection alike (planar ones
  * mix in). No effect on a material of no more layers than it keeps.
@@ -1836,11 +1862,12 @@ type SampledLayer = {
   projection: Given<TerrainProjection | undefined>;
 };
 
+// p305 D6
 /**
- * Whether a context samples the layers in slots sorted by weight at the pixel (p305 D6, the
- * `ARRAY` storage's per-pixel layer index): sparse sampling that keeps fewer layers than there
- * are, or `HEX` with `apply: 'DOMINANT'` over two layers or more; live layers are sampled beside
- * the slots, so they don't count
+ * Whether a context samples the layers in slots sorted by weight at the pixel (the `ARRAY`
+ * storage's per-pixel layer index): sparse sampling that keeps fewer layers than there are, or
+ * `HEX` with `apply: 'DOMINANT'` over two layers or more; live layers are sampled beside the
+ * slots, so they don't count
  */
 const takesSlots = (sparse: SamplingFields['sparse'], layers: SampledLayer[]) => {
   const sampled = layers.filter((layer) => !layer.isLive);
@@ -1935,8 +1962,9 @@ const checkSlots = (value: SampledValue, ctx: z.RefinementCtx) => {
   }
 };
 
+// p305 Phase 8
 /**
- * The live layers (p305 Phase 8), the material's and each tier's: a live layer takes no
+ * The live layers, the material's and each tier's: a live layer takes no
  * anti-tiling (its surface never repeats), so one given at the layer (its own, or its tier's
  * entry) is refused where it's live (a material-wide one doesn't reach it); and a layer's `live`
  * taps only where some context samples it live. The refinement both schemas share.

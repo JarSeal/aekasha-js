@@ -179,7 +179,8 @@ export const generateRock = (opts: RockOptions = {}): GeneratedRock => {
   };
 };
 
-/** The toolkit's registered rock variants (p308 D5): their ids, kinds and seeds */
+// p308 D5
+/** The toolkit's registered rock variants: their ids, kinds and seeds */
 const ROCK_VARIANTS: readonly { id: string; kind: RockKind; seed: number }[] = [
   { id: 'rockPebble_a', kind: 'PEBBLE', seed: 11 },
   { id: 'rockPebble_b', kind: 'PEBBLE', seed: 12 },

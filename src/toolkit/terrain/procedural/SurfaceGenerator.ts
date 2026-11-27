@@ -217,8 +217,9 @@ export const createSurfaceContext = (opts: {
   };
 };
 
+// p309 D5
 /**
- * What a surface graph is built from: a surface generator, or a decal generator (p309 D5), whose
+ * What a surface graph is built from: a surface generator, or a decal generator, whose
  * outputs carry a height too.
  * @template P the param specs
  * @template O what its `build` returns
@@ -385,10 +386,11 @@ export const prepareSurfaceGraph = <
   };
 };
 
+// p309 D5
 /**
  * Builds a generator's surface at a point, the params and the seed as uniforms: the shared first
  * step of a bake (`buildSurfacePacking`), of the live mode (`createLiveSurface`) and of a decal's
- * bake (`buildDecalPacking`, p309 D5).
+ * bake (`buildDecalPacking`).
  * @internal
  * @throws for a param the generator lacks or a value it refuses, a seed that isn't a whole
  * number, or physical facts out of range

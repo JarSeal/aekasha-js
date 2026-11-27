@@ -343,8 +343,9 @@ const sumOf = <T extends Node<'float'> | Node<'vec3'>>(
 /** A layer's sample and its world normal (null without a normal map: the layer bumps the height) */
 export type ProjectedSample = { sample: TextureSetSample; normal: Node<'vec3'> | null };
 
+// p305 D5
 /**
- * A layer's texture set sampled with its projection (p305 D5): its anti-tiling's taps on each
+ * A layer's texture set sampled with its projection: its anti-tiling's taps on each
  * plane (`TRIPLANAR` three, `BIPLANAR` the two chosen per pixel), every tap with the plane's
  * gradients, blended by the planes' weights into one sample (its height the planes' blend, for the
  * height blend) and, when the packing has a normal map, the planes' normals met with the geometry

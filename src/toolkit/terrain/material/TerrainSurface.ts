@@ -266,8 +266,9 @@ export const getLayerWeights = (near: NearSurface, count: number) => {
   return perLayer;
 };
 
+// p305 D2
 /**
- * The near surface (p305 D2): the layers or slots sampled, their weights blended, their surfaces
+ * The near surface: the layers or slots sampled, their weights blended, their surfaces
  * blended by them; with a `DETAIL` colour map, the albedo the colour map × the layers' detail,
  * faded out over `detailDistance`. With `deferBump` the bump (`MINIMAL`'s, a slot's) is left to
  * the caller as the surface's `bumpHeight` (a far branch can't take its derivatives), else a slot's

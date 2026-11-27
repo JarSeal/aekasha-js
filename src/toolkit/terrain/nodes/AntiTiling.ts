@@ -58,8 +58,9 @@ export type AntiTilingContext = {
 /** A UV's screen-space gradients */
 type TapGradients = { dx: Node<'vec2'>; dy: Node<'vec2'> };
 
+// p305 Phase 8
 /**
- * A layer whose samples are computed, not fetched (a live terrain layer's generator, p305 Phase 8):
+ * A layer whose samples are computed, not fetched (a live terrain layer's generator):
  * sampled at a UV like a bundle, with the UV's gradients when every tap takes them (a branch)
  */
 export type LayerSampler = {
@@ -291,8 +292,9 @@ const sampleHex = (
   );
 };
 
+// p305 D3
 /**
- * A texture set sampled at a layer's tiling UV with the layer's anti-tiling (p305 D3): `NONE` one
+ * A texture set sampled at a layer's tiling UV with the layer's anti-tiling: `NONE` one
  * tap, `DUAL_SCALE` two, `HEX` three (each tap samples every slot of the packing). The taps blend
  * into one sample whose tangent-space normal is in the UV's frame, so the layer turns it into the
  * world as a plain sample's. A sampler (a live layer's) takes no anti-tiling: its one sample at the
